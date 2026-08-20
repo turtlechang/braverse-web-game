@@ -1,8 +1,10 @@
 {
-  "generatedAt": "2026-08-13T04:30:18.380Z",
+  "generatedAt": "2026-08-20T12:27:13.732Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
-  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json",
+  "sources": [
+    "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json"
+  ],
   "scope": "Formal-pool test-state interaction audit for BS6 effect-bearing records plus dedicated A/B paths for 1 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
   "summary": {
     "total": 97,
@@ -88,11 +90,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
-        "skip:replacement",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -144,7 +146,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:flip",
+        "select:flip-discard",
         "confirm:flip"
       ]
     },
@@ -163,7 +165,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -307,7 +311,8 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -414,8 +419,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
+        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -445,6 +449,8 @@
         "confirm:effect-panel:下一步",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
@@ -471,9 +477,14 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "select:trap",
-        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "select:trap-step",
         "confirm:trap",
-        "skip:replacement"
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
       ]
     },
     {
@@ -493,7 +504,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -549,6 +560,8 @@
         "action:hand",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
@@ -599,8 +612,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
-        "action:next-phase",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -723,12 +737,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "start:optional-cost-attack",
-        "select:optional-cost",
-        "confirm:optional-cost",
-        "select:optional-cost",
-        "confirm:optional-cost",
-        "action:next-phase",
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -753,13 +766,16 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:skill",
-        "skip:optional-effect",
-        "action:skill",
-        "skip:optional-effect",
-        "action:skill",
-        "skip:optional-effect",
-        "action:skill",
-        "skip:optional-effect"
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
       ]
     },
     {
@@ -881,7 +897,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:flip",
+        "select:flip-discard",
         "confirm:flip"
       ]
     },
@@ -986,16 +1002,7 @@
           "testState": "bs6-condition:BS6-039:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": [
-            "action:hand",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase"
-          ]
+          "operations": []
         }
       }
     },
@@ -1047,7 +1054,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "skip:replacement"
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap"
       ]
     },
     {
@@ -1067,7 +1078,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1091,8 +1102,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1117,8 +1131,15 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
-        "action:next-phase",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1142,7 +1163,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:flip",
+        "select:flip-discard",
         "confirm:flip"
       ]
     },
@@ -1296,7 +1317,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1364,8 +1385,14 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
-        "action:next-phase",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-cost-support",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1390,7 +1417,9 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1414,7 +1443,8 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1465,8 +1495,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1493,6 +1526,8 @@
       "operations": [
         "action:hand",
         "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-cost-support",
         "confirm:effect-panel:下一步",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
@@ -1521,9 +1556,16 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "select:trap",
-        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
         "confirm:trap",
-        "skip:replacement"
+        "select:.effect-candidates-choice",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
       ]
     },
     {
@@ -1542,7 +1584,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1636,15 +1678,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:.effect-candidates-target",
-        "confirm:effect-panel:確認發動",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase"
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost"
       ]
     },
     {
@@ -1662,7 +1700,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:flip",
+        "select:flip-discard",
         "confirm:flip"
       ]
     },
@@ -1703,11 +1741,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:effect-panel:確認發動",
-        "confirm:hand-discard",
+        "action:hand",
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1734,9 +1770,11 @@
         "action:hand",
         "select:.effect-candidates-payment",
         "confirm:effect-panel:下一步",
+        "select:.effect-candidates-battle-to-hand",
+        "confirm:effect-panel:下一步",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1760,9 +1798,14 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
-        "confirm:draw-up-to",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1786,9 +1829,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:effect-panel:確認發動",
-        "confirm:hand-discard",
-        "confirm:effect-panel:確認發動",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1813,7 +1856,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:effect-panel:確認發動",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1865,11 +1910,14 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
-        "confirm:hand-discard",
         "confirm:effect-panel:確認發動",
-        "action:next-phase",
-        "action:next-phase",
+        "confirm:draw-up-to",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -1918,14 +1966,13 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase"
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "confirm:hand-discard"
       ]
     },
     {
@@ -1945,12 +1992,12 @@
       "operations": [
         "action:hand",
         "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
         "action:next-phase",
         "action:next-phase"
       ]
@@ -1995,12 +2042,13 @@
         "select:.effect-candidates-payment",
         "confirm:effect-panel:下一步",
         "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
-        "select:.effect-candidates-discard-hand",
         "confirm:effect-panel:下一步",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
         "action:next-phase",
         "action:next-phase"
       ]
@@ -2022,9 +2070,14 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "select:trap",
-        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
         "confirm:trap",
-        "skip:replacement"
+        "confirm:draw-up-to"
       ]
     },
     {
@@ -2044,7 +2097,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2068,8 +2121,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:hand",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2136,7 +2190,9 @@
       "name": "Schneeball Cookie",
       "type": "cookie",
       "color": "PURPLE",
-      "effectSurfaces": [],
+      "effectSurfaces": [
+        "skill"
+      ],
       "path": "generic",
       "testState": "card:BS6-091@2",
       "status": "PASS",
@@ -2168,8 +2224,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:hand",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2194,7 +2251,10 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:effect-panel:確認發動",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2223,6 +2283,7 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "skip:replacement",
+        "status:已選擇不補餅乾。",
         "action:hand",
         "action:next-phase",
         "action:next-phase",
@@ -2271,7 +2332,11 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "action:next-phase",
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2296,8 +2361,8 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "confirm:effect-panel:確認發動",
         "action:hand",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2321,8 +2386,8 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
         "action:hand",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2346,8 +2411,9 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:hand",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",
@@ -2371,6 +2437,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "select:faint-payment",
         "select:faint-target",
         "confirm:faint-response",
         "action:next-phase",
@@ -2418,7 +2485,7 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "select:flip",
+        "select:flip-discard",
         "confirm:flip"
       ]
     },
@@ -2461,7 +2528,8 @@
         "select:.effect-candidates-trash-battle",
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
-        "skip:replacement"
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
       ]
     },
     {
@@ -2481,9 +2549,15 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "select:trap",
-        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
         "confirm:trap",
-        "skip:replacement"
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
       ]
     },
     {
@@ -2502,7 +2576,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:hand",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase",
         "action:next-phase",

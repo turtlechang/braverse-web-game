@@ -1,0 +1,241 @@
+{
+  "generatedAt": "2026-08-20T12:34:23.067Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json"
+  ],
+  "scope": "Formal-pool test-state UI audit for every BS6 vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.",
+  "summary": {
+    "total": 10,
+    "effectFlowPassed": 10,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Vanilla deploy and attack flow settled": 10
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS6-005",
+      "baseCardNumber": "BS6-005",
+      "variant": null,
+      "name": "Buttercream Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-005",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-015",
+      "baseCardNumber": "BS6-015",
+      "variant": null,
+      "name": "Choco Ball Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-015",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-026",
+      "baseCardNumber": "BS6-026",
+      "variant": null,
+      "name": "Skater Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-026",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-040",
+      "baseCardNumber": "BS6-040",
+      "variant": null,
+      "name": "Pilot Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-040",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-049",
+      "baseCardNumber": "BS6-049",
+      "variant": null,
+      "name": "Banana Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-049",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-054",
+      "baseCardNumber": "BS6-054",
+      "variant": null,
+      "name": "Orange Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-054",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-070",
+      "baseCardNumber": "BS6-070",
+      "variant": null,
+      "name": "Salt Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-070",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-075",
+      "baseCardNumber": "BS6-075",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-075",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-088",
+      "baseCardNumber": "BS6-088",
+      "variant": null,
+      "name": "Dr. Wasabi Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-088",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS6-100",
+      "baseCardNumber": "BS6-100",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS6-100",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    }
+  ]
+}

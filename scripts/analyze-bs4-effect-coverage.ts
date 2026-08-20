@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import officialBS4Dataset from '../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import {
   convertOfficialAttackEffects,
-  convertOfficialCardEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,
@@ -50,6 +49,12 @@ const hasAttackThen = (card: OfficialCardRecord) =>
   (card.type === 'cookie' || card.type === 'flip') &&
   /\bThen\b/i.test(card.attackText ?? '')
 
+const getEffectText = (card: OfficialCardRecord): string | null => {
+  if (card.type === 'cookie') return card.skill.text
+  if (card.type === 'flip') return card.flipText
+  return card.attackText
+}
+
 const getAbilityConversion = (
   card: OfficialCardRecord,
 ): Bs4EffectCoverageEntry['abilityConversion'] => {
@@ -81,6 +86,19 @@ const increment = <Key extends string>(counts: Record<Key, number>, key: Key) =>
   counts[key] += 1
 }
 
+// Match the runtime's specialised conversion path. A generic CardEffect-only
+// probe incorrectly reports supported Item, Trap, Stage, FLIP, and Cookie
+// abilities as pending.
+const getPrimaryConversion = (
+  card: OfficialCardRecord,
+  abilityConversion: Bs4EffectCoverageEntry['abilityConversion'],
+): Bs4EffectCoverageEntry['primaryConversion'] => {
+  if (!getEffectText(card)) return 'no-effect-text'
+  return abilityConversion === 'converted'
+    ? 'supported'
+    : 'unsupported-effect-text'
+}
+
 export const analyzeBs4EffectCoverage = (
   cards: OfficialCardRecord[],
 ): Bs4EffectCoverageReport => {
@@ -99,10 +117,8 @@ export const analyzeBs4EffectCoverage = (
   }
 
   const entries = baseCards.map((card) => {
-    const primary = convertOfficialCardEffects(card)
-    const primaryStatus =
-      primary.status === 'supported' ? 'supported' : primary.reason
     const abilityStatus = getAbilityConversion(card)
+    const primaryStatus = getPrimaryConversion(card, abilityStatus)
     const attackThen = hasAttackThen(card)
     const attackThenStatus = attackThen
       ? convertOfficialAttackEffects(card)

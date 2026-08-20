@@ -3,6 +3,7 @@ import { getForcedAttackTargetId } from './battle'
 import {
   getFieldToDeckBottomBlocker,
   getOpponentBattleMovementPreventer,
+  isEffectConditionMet,
   isProtectedBySoulJamResolution,
 } from './effects/targeting'
 import type { GameCommand } from './commands'
@@ -615,6 +616,30 @@ const getAttackEffectSourceCard = (
   return sourceInstanceId ? findCard(state, sourceInstanceId) : undefined
 }
 
+/**
+ * 攻擊後效果在進入 pending decision 前就會先檢查條件；若條件不成立，
+ * 規則引擎會直接跳到下一段效果，不會留下可供玩家操作的目標。紀錄層
+ * 必須沿用同一個條件判定，避免把原始卡面文字誤記成「效果已結算」。
+ */
+const isAttackEffectConditionUnmet = (
+  state: GameState,
+  effects: CardEffect[],
+): boolean => {
+  const battle = state.pendingBattle
+  const effect = effects[0]
+  if (!battle || !effect || !('condition' in effect) || !effect.condition) {
+    return false
+  }
+  return !isEffectConditionMet(
+    state,
+    {
+      sourcePlayerId: battle.attackerPlayerId,
+      sourceInstanceId: battle.attackerInstanceId,
+    },
+    effect,
+  )
+}
+
 const getAttackEffectText = (
   sourceCard: GameCard | undefined,
   effect: CardEffect | undefined,
@@ -720,6 +745,9 @@ const describeAttackEffectResultStep = (
   commandPlayerId: PlayerId,
   effects: CardEffect[],
 ): LogStepDetail => {
+  if (isAttackEffectConditionUnmet(previous, effects)) {
+    return { text: '攻擊後效果結果：條件不成立，效果未執行' }
+  }
   const continuation = next.pendingBattle?.effectDamageSequence?.continuation
   if (
     continuation === 'attack-effect' ||
@@ -986,6 +1014,9 @@ export const describeCommand = (
         return next.pendingOptionalCostAttack
           ? `${actor} 等待選擇「${sourceName}」的攻擊後效果：${effectText}`
           : `${actor} 的「${sourceName}」攻擊後效果未生效：沒有合法目標或條件不成立`
+      }
+      if (isAttackEffectConditionUnmet(previous, resolvedEffects)) {
+        return `${actor} 的「${sourceName}」攻擊後效果未生效：條件不成立`
       }
       const outcome = describeDamageOutcome(
         previous,
@@ -1458,6 +1489,10 @@ export const describeCommandSteps = (
             ? { text: '攻擊後效果：等待玩家選擇支付代價或略過' }
             : { text: '攻擊後效果未生效：沒有合法目標或條件不成立' },
         )
+        return steps
+      }
+      if (isAttackEffectConditionUnmet(previous, effects)) {
+        steps.push({ text: '攻擊後效果結果：條件不成立，效果未執行' })
         return steps
       }
       const targetStep = describeAttackEffectTargetStep(

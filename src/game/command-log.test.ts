@@ -678,6 +678,48 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('records an unmet attack-effect condition as a no-op', () => {
+    const base = createBattleState()
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 1, max: 1 },
+      condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = { ...previous, pendingBattle: null }
+    const command = {
+      kind: 'resolve-attack-effect' as const,
+      playerId: 'player-two' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommand(previous, next, command)).toBe(
+      '攻擊玩家 的「attacker」攻擊後效果未生效：條件不成立',
+    )
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：對對手目標造成 1 點傷害',
+      '攻擊後效果結果：條件不成立，效果未執行',
+    ])
+  })
+
   it('records the actual battle Cookie returned for a skill cost', () => {
     const base = createBattleState()
     const returned = cookie('returned-blue-lv1')

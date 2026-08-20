@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialBS5Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import officialBS6Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
@@ -374,6 +375,33 @@ describe('official card adapter', () => {
         effects: [],
       },
     })
+  })
+
+  it('removes the malformed BS6-021 stage damage prefix from displayed text', () => {
+    const source = (officialBS6Inventory.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS6-021',
+    )
+
+    expect(source).toBeDefined()
+    if (!source) return
+
+    const result = convertOfficialCardToGameCard(source)
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        id: 'BS6-021',
+        type: 'stage',
+        stageAbility: {
+          placementCost: { red: 1 },
+          cost: { red: 1 },
+        },
+      },
+    })
+    if (result.status !== 'converted') return
+
+    expect(result.gameCard.effectText).not.toMatch(/^\{da\}/i)
+    expect(result.gameCard.effectText).toContain('Place in your stage area.')
   })
 
   it('does not treat P-059 duplicated attack text as a FLIP ability', () => {

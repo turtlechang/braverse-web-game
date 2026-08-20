@@ -300,6 +300,18 @@ describe('parseTestStateConfig', () => {
     ).toBeNull()
   })
 
+  it('parses the direct BS6-010 movement A/B aliases only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-open', 'localhost'),
+    ).toEqual({ kind: 'bs6-010-movement', blocked: false })
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-blocked', 'localhost'),
+    ).toEqual({ kind: 'bs6-010-movement', blocked: true })
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-blocked', 'example.com'),
+    ).toBeNull()
+  })
+
   it('parses the BS4-077 Timekeeper cost route only on localhost', () => {
     expect(
       parseTestStateConfig('?test-state=bs4-077-timekeeper-cost', 'localhost'),
@@ -511,6 +523,43 @@ describe('createBs6008TrapDemoState', () => {
 })
 
 describe('createCardCheckDemoState', () => {
+  it('keeps a deployed Blocker at positive full HP in card-check fixtures', () => {
+    const state = createCardCheckDemoState('BS4-014')
+    const blocker = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-014',
+    )
+
+    expect(blocker).toBeDefined()
+    expect(blocker?.hpCards).toHaveLength(blocker?.card.hp ?? 0)
+    expect(blocker?.hpCards.length).toBeGreaterThan(0)
+  })
+
+  it.each(['BS4-014', 'BS4-042', 'BS4-072', 'BS5-092'])(
+    'marks the attacker rested in the %s pending-battle card-check fixture',
+    (cardNumber) => {
+      const state = createCardCheckDemoState(cardNumber)
+      const pendingBattle = state.pendingBattle
+      const attacker = pendingBattle
+        ? state.players[pendingBattle.attackerPlayerId].battleArea.find(
+            (entry) =>
+              entry.card.instanceId === pendingBattle.attackerInstanceId,
+          )
+        : undefined
+
+      expect(pendingBattle).not.toBeNull()
+      expect(attacker?.rested).toBe(true)
+    },
+  )
+
+  it('keeps every opposing Cookie rested in generic trap fixtures', () => {
+    const state = createCardCheckDemoState('BS6-085')
+
+    expect(state.pendingBattle?.stage).toBe('trap')
+    expect(
+      state.players['player-two'].battleArea.every((entry) => entry.rested),
+    ).toBe(true)
+  })
+
   it('keeps the generic FLIP scenario below the break-level defeat limit', () => {
     const state = createCardCheckDemoState('BS3-004')
     const breakLevel = state.players['player-one'].breakArea.reduce(
@@ -577,6 +626,155 @@ describe('createCardCheckDemoState', () => {
       kind: 'support-to-trash',
       amount: 1,
     })
+  })
+
+  it('does not open a FLIP decision for attachment records without a FlipAbility', () => {
+    const state = createCardCheckDemoState('BS2-042')
+
+    expect(state.pendingBattle).toBeNull()
+    const attachmentRecord = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS2-042',
+    )
+    expect(attachmentRecord).toMatchObject({
+      type: 'cookie',
+      officialType: 'flip',
+    })
+    expect(attachmentRecord).not.toHaveProperty('flip')
+  })
+
+  it('prepares BS6-013 with a real same-name partner and removes it in the negative route', () => {
+    const positive = createCardCheckDemoState('BS6-013')
+    const positiveCookies = positive.players['player-one'].battleArea.filter(
+      (entry) => entry.card.id === 'BS6-013',
+    )
+    expect(positiveCookies).toHaveLength(2)
+    expect(new Set(positiveCookies.map((entry) => entry.card.instanceId)).size).toBe(2)
+
+    const attackEffect = positive.pendingBattle?.attackEffects[0]
+    const sourceInstanceId = positive.pendingBattle?.attackerInstanceId
+    if (!attackEffect || !sourceInstanceId) throw new Error('BS6-013 attack fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        positive,
+        { sourcePlayerId: 'player-one', sourceInstanceId },
+        attackEffect,
+      ),
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS6-013')
+    expect(
+      negative.players['player-one'].battleArea.filter(
+        (entry) => entry.card.id === 'BS6-013',
+      ),
+    ).toHaveLength(1)
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    const negativeSourceId = negative.pendingBattle?.attackerInstanceId
+    if (!negativeEffect || !negativeSourceId) throw new Error('BS6-013 negative fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        negative,
+        { sourcePlayerId: 'player-one', sourceInstanceId: negativeSourceId },
+        negativeEffect,
+      ),
+    ).toBe(false)
+  })
+
+  it('prepares BS6-007 with faint evidence and opponent supports for both routes', () => {
+    const positive = createCardCheckDemoState('BS6-007')
+    expect(positive.players['player-two'].supportArea).toHaveLength(2)
+    expect(positive.pendingBattle?.faintedColors).toEqual(['red'])
+    expect(positive.pendingBattle?.faintedCookies).toEqual([
+      expect.objectContaining({ playerId: 'player-two', level: 1 }),
+    ])
+    const positiveEffect = positive.pendingBattle?.attackEffects[0]
+    const positiveSourceId = positive.pendingBattle?.attackerInstanceId
+    if (!positiveEffect || !positiveSourceId) throw new Error('BS6-007 attack fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        positive,
+        { sourcePlayerId: 'player-one', sourceInstanceId: positiveSourceId },
+        positiveEffect,
+      ),
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS6-007')
+    expect(negative.players['player-two'].supportArea).toHaveLength(2)
+    expect(negative.pendingBattle?.faintedColors).toEqual([])
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    const negativeSourceId = negative.pendingBattle?.attackerInstanceId
+    if (!negativeEffect || !negativeSourceId) throw new Error('BS6-007 negative fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        negative,
+        { sourcePlayerId: 'player-one', sourceInstanceId: negativeSourceId },
+        negativeEffect,
+      ),
+    ).toBe(false)
+  })
+
+  it('prepares P-053 with met and unmet post-battle faint conditions', () => {
+    const positive = createCardCheckDemoState('P-053')
+    const positiveEffect = positive.pendingBattle?.attackEffects[0]
+    const positiveSourceId = positive.pendingBattle?.attackerInstanceId
+    if (!positiveEffect || !positiveSourceId) {
+      throw new Error('P-053 attack fixture is incomplete')
+    }
+    expect(positive.pendingBattle?.faintedColors).toHaveLength(1)
+    expect(
+      isEffectConditionMet(
+        positive,
+        { sourcePlayerId: 'player-one', sourceInstanceId: positiveSourceId },
+        positiveEffect,
+      ),
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('P-053')
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    const negativeSourceId = negative.pendingBattle?.attackerInstanceId
+    if (!negativeEffect || !negativeSourceId) {
+      throw new Error('P-053 negative fixture is incomplete')
+    }
+    expect(negative.pendingBattle?.faintedColors).toEqual([])
+    expect(
+      isEffectConditionMet(
+        negative,
+        { sourcePlayerId: 'player-one', sourceInstanceId: negativeSourceId },
+        negativeEffect,
+      ),
+    ).toBe(false)
+  })
+
+  it('prepares P-130 above and below its remaining-HP threshold', () => {
+    const assertCondition = (state: GameState, expected: boolean) => {
+      const effect = state.pendingBattle?.attackEffects[0]
+      const sourceInstanceId = state.pendingBattle?.attackerInstanceId
+      if (!effect || !sourceInstanceId) {
+        throw new Error('P-130 attack fixture is incomplete')
+      }
+      expect(
+        isEffectConditionMet(
+          state,
+          { sourcePlayerId: 'player-one', sourceInstanceId },
+          effect,
+        ),
+      ).toBe(expected)
+    }
+
+    const positive = createCardCheckDemoState('P-130')
+    expect(
+      positive.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'P-130',
+      )?.hpCards,
+    ).toHaveLength(3)
+    assertCondition(positive, true)
+
+    const negative = createCardNegativeDemoState('P-130')
+    expect(
+      negative.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'P-130',
+      )?.hpCards,
+    ).toHaveLength(2)
+    assertCondition(negative, false)
   })
 
   it('prepares BS3-113 with the 15 purple discard cards required for its OnPlay damage order', () => {
@@ -1516,6 +1714,14 @@ describe('createCardCheckDemoState', () => {
       .toBeGreaterThanOrEqual(6)
     expect(trapUnmet.players['player-one'].breakArea).toHaveLength(0)
 
+    const petrification = createBs5TrapDemoState('BS5-065', true)
+    expect(petrification.pendingBattle?.stage).toBe('trap')
+    expect(
+      petrification.players['player-two'].battleArea.every(
+        (entry) => entry.rested,
+      ),
+    ).toBe(true)
+
     const itemMet = createBs5Item111DemoState(true)
     const itemUnmet = createBs5Item111DemoState(false)
     expect(itemMet.players['player-one'].battleArea[0].card.keywords).toContain('dragon')
@@ -1580,6 +1786,55 @@ describe('createCardCheckDemoState', () => {
     expect(active.pendingEndOfTurnEffects ?? []).toHaveLength(0)
     expect(active.players['player-one'].supportArea.some((support) => support.rested))
       .toBe(false)
+  })
+
+  it('builds the BS6-016 positive card-check route with one remaining HP', () => {
+    const state = createCardCheckDemoState('BS6-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-016',
+    )
+
+    expect(source).toBeDefined()
+    expect(source?.hpCards).toHaveLength(1)
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackerPlayerId: 'player-one',
+      attackerInstanceId: source?.card.instanceId,
+    })
+
+    const effect = source?.card.attackEffects?.[0]
+    expect(effect).toMatchObject({
+      kind: 'damage',
+      condition: { kind: 'source-hp-less-than', amount: 2 },
+    })
+    expect(
+      isEffectConditionMet(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source!.card.instanceId,
+      }, effect!),
+    ).toBe(true)
+  })
+
+  it('builds the BS6-016 negative card-check route above the HP threshold', () => {
+    const state = createCardNegativeDemoState('BS6-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-016',
+    )
+
+    expect(source).toBeDefined()
+    expect(source?.hpCards).toHaveLength(3)
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackerInstanceId: source?.card.instanceId,
+    })
+
+    const effect = source?.card.attackEffects?.[0]
+    expect(
+      isEffectConditionMet(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source!.card.instanceId,
+      }, effect!),
+    ).toBe(false)
   })
 
   it('keeps BS5 Browser card-check Cookies at legal positive HP', () => {

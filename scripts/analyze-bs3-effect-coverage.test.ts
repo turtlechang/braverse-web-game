@@ -13,11 +13,7 @@ describe('BS3 effect coverage analysis', () => {
     )
 
     expect(report.baseCardCount).toBe(121)
-    expect(report.primaryConversion).toEqual({
-      supported: 73,
-      'no-effect-text': 20,
-      'unsupported-effect-text': 28,
-    })
+    expect(report.primaryConversion['unsupported-effect-text']).toBe(0)
     // BS3-025（休息區啟動＋每局一次）與 BS3-046（戰鬥內延遲觸發＋手牌休息區代價）
     // 是最後兩張額外能力來源轉接，至此 121 張 BS3 基礎卡的能力來源已全數轉接。
     expect(report.abilityConversion.pending).toBe(0)

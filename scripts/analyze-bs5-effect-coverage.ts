@@ -276,7 +276,7 @@ ${pendingTable(report.pendingAttackThenCards)}
 | 陷阱主效果 | BS5-087、BS5-109 | 實際 Chrome 驗證陷阱支付、攻擊目標、條件成立／不成立與 Then；BS5-087 另驗證抽牌選擇與攻擊結算銜接 |
 | 攻擊後 Then | BS5-067、BS5-071、BS5-080、BS5-085、BS5-089、BS5-094、BS5-097、BS5-098、BS5-099、BS5-106 | 實際 Chrome 驗證提示框、支付／代價、目標、可選數量、牌庫／棄牌區變化與 Then 連續結算 |
 
-BS5-098 已補上來源餅乾因支付最後一張 HP 而離場後，仍能建立並完成下一段攻擊後效果的回歸測試。BS5-109 的兩段「最多選擇 1 張對手餅乾」目前沿用陷阱流程的單一對手目標選擇；選擇同一張目標的實戰路徑已驗證，若要支援兩段各自選擇不同目標，仍需後續擴充 per-effect target UI／command payload。
+BS5-098 已補上來源餅乾因支付最後一張 HP 而離場後，仍能建立並完成下一段攻擊後效果的回歸測試。BS5-109 的兩段「最多選擇 1 張對手餅乾」已改用逐效果 effectTargets，離線／線上回應 UI 會依效果段落各自列出合法目標；第一段可選 LV2、第二段可改選另一張 LV1，明確空選擇仍代表略過該段。規則層、command payload 與 Browser trace 均以同一份 selector 驗證。
 
 ## Promotion 門檻
 

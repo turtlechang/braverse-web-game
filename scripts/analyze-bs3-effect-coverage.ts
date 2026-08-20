@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import inventory from '../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import {
   convertOfficialAttackEffects,
-  convertOfficialCardEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,
@@ -50,6 +49,12 @@ const hasAttackThen = (card: OfficialCardRecord) =>
   (card.type === 'cookie' || card.type === 'flip') &&
   /\bThen\b/i.test(card.attackText ?? '')
 
+const getEffectText = (card: OfficialCardRecord): string | null => {
+  if (card.type === 'cookie') return card.skill.text
+  if (card.type === 'flip') return card.flipText
+  return card.attackText
+}
+
 const getAbilityConversion = (
   card: OfficialCardRecord,
 ): Bs3EffectCoverageEntry['abilityConversion'] => {
@@ -81,6 +86,19 @@ const increment = <Key extends string>(counts: Record<Key, number>, key: Key) =>
   counts[key] += 1
 }
 
+// The runtime uses specialised adapters for Cookie, FLIP, Item, Trap, and
+// Stage abilities. The generic CardEffect converter alone therefore cannot
+// decide whether a card's primary effect is supported.
+const getPrimaryConversion = (
+  card: OfficialCardRecord,
+  abilityConversion: Bs3EffectCoverageEntry['abilityConversion'],
+): Bs3EffectCoverageEntry['primaryConversion'] => {
+  if (!getEffectText(card)) return 'no-effect-text'
+  return abilityConversion === 'converted'
+    ? 'supported'
+    : 'unsupported-effect-text'
+}
+
 export const analyzeBs3EffectCoverage = (
   cards: OfficialCardRecord[],
 ): Bs3EffectCoverageReport => {
@@ -99,10 +117,8 @@ export const analyzeBs3EffectCoverage = (
   }
 
   const entries = baseCards.map((card) => {
-    const primary = convertOfficialCardEffects(card)
-    const primaryStatus =
-      primary.status === 'supported' ? 'supported' : primary.reason
     const abilityStatus = getAbilityConversion(card)
+    const primaryStatus = getPrimaryConversion(card, abilityStatus)
     const attackThen = hasAttackThen(card)
     const attackThenStatus = attackThen
       ? convertOfficialAttackEffects(card)

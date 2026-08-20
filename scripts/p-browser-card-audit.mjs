@@ -26,21 +26,57 @@ const requestedSeries = (
     .toUpperCase() ?? 'P'
 )
 const cardAuditConfigs = {
+  BS1: {
+    label: 'BS1',
+    formalPaths: ['data/cards/official-brave-beginning-bs1.en.json'],
+    reportPath: 'docs/bs1-browser-card-audit-2026-08-20.json',
+    expectedRecordCount: 99,
+  },
+  BS2: {
+    label: 'BS2',
+    formalPaths: ['data/cards/official-brave-beginning-bs2.en.json'],
+    reportPath: 'docs/bs2-browser-card-audit-2026-08-20.json',
+    expectedRecordCount: 104,
+  },
+  BS3: {
+    label: 'BS3',
+    formalPaths: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json',
+    ],
+    reportPath: 'docs/bs3-browser-card-audit-2026-08-20.json',
+    expectedRecordCount: 176,
+  },
+  BS4: {
+    label: 'BS4',
+    formalPaths: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json',
+    ],
+    reportPath: 'docs/bs4-browser-card-audit-2026-08-20.json',
+    expectedRecordCount: 170,
+  },
   P: {
     label: 'P-0XX',
-    formalPath: 'data/cards/official-p-0xx-remaining.en.json',
-    reportPath: 'docs/p0xx-browser-audit-2026-08-10.json',
-    expectedRecordCount: 127,
+    formalPaths: [
+      'data/cards/official-promotion-p001-p032.en.json',
+      'data/cards/official-promotion-p001-p032-remaining.en.json',
+      'data/cards/official-p-0xx-remaining.en.json',
+    ],
+    reportPath: 'docs/p0xx-browser-card-audit-2026-08-20.json',
+    expectedRecordCount: 153,
   },
   BS5: {
     label: 'BS5',
-    formalPath: 'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    formalPaths: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    ],
     reportPath: 'docs/bs5-browser-card-audit-2026-08-13.json',
     expectedRecordCount: 153,
   },
   BS6: {
     label: 'BS6',
-    formalPath: 'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    formalPaths: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    ],
     reportPath: 'docs/bs6-browser-card-audit-2026-08-13.json',
     expectedRecordCount: 138,
   },
@@ -48,10 +84,9 @@ const cardAuditConfigs = {
 const auditConfig = cardAuditConfigs[requestedSeries]
 if (!auditConfig) {
   throw new Error(
-    `Unsupported card audit series ${requestedSeries}; expected P, BS5, or BS6`,
+    `Unsupported card audit series ${requestedSeries}; expected ${Object.keys(cardAuditConfigs).join(', ')}`,
   )
 }
-const formalPath = resolve(root, auditConfig.formalPath)
 const reportPath = resolve(
   root,
   process.env.BRAVERSE_AUDIT_REPORT ?? auditConfig.reportPath,
@@ -67,8 +102,12 @@ const browserExecutable =
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   ].find((candidate) => existsSync(candidate))
 
-const source = JSON.parse(await readFile(formalPath, 'utf8'))
-const cards = [...source.cards].sort((left, right) =>
+const sources = await Promise.all(
+  auditConfig.formalPaths.map(async (formalPath) =>
+    JSON.parse(await readFile(resolve(root, formalPath), 'utf8')),
+  ),
+)
+const cards = sources.flatMap((source) => source.cards).sort((left, right) =>
   left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
 )
 assert.equal(
@@ -268,7 +307,7 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: auditConfig.formalPath,
+    sources: auditConfig.formalPaths,
     scope:
       `Formal-pool card-check entry audit for every promoted ${auditConfig.label} record. This report separates route/card rendering from interactive effect proof.`,
     summary: {

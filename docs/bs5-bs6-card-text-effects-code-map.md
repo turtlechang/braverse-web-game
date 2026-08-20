@@ -1,0 +1,8158 @@
+# BS5／BS6 每張卡：文字描述、runtime 效果與程式碼出處
+
+> 本報告依正式 `data/cards/` 卡池產生；保留官方英文卡面文字，不自行補寫未確認的中文翻譯。`runtime effects` 是目前 adapter 產出的結構化 `CardEffect`／能力資料。
+
+## 報告範圍
+
+- 每個 `baseCardNumber` 列一張代表卡：BS5 111 張、BS6 107 張。
+- 另外逐筆列出所有 `@` 異圖／變體記錄；BS6-091 沒有無 `@` 的本體記錄，因此以 `BS6-091@2` 作為代表記錄。
+- 「通用 CardEffect 未直接轉接」不等於卡牌未支援：Item／Stage／Trap 可能由專用 adapter 轉接；報告會分開列出。
+- 每張卡的程式碼出處包含資料檔、adapter 函式、卡號專用 mapping（若有）、runtime 入口，以及 BS5／BS6 adapter 直接測試（若有）。
+
+## 程式碼路由索引
+
+| 層級 | 程式碼出處 | 責任 |
+| --- | --- | --- |
+| 官方資料轉 runtime GameCard | `src/cards/official-card-adapter.ts:219` | 欄位正規化、卡型、數值、能力掛載 |
+| 文字通用效果 parser | `src/cards/official-effect-adapter.ts:353` | 將卡面文字轉成 CardEffect[] |
+| Cookie skill | `src/cards/official-effect-adapter.ts:7153` | Activate／OnPlay／被動／成本／技能效果 |
+| FLIP ability | `src/cards/official-effect-adapter.ts:5950` | FLIP 成本與效果 |
+| Item／Stage／Trap adapter | `src/cards/official-effect-adapter.ts:3921`, `4009`, `6287` | 專用能力、條件與成本 |
+| Attack Then | `src/cards/official-effect-adapter.ts:4538` | 攻擊傷害文字後的效果序列 |
+| 通用效果執行 | `src/game/effects/execute.ts:336` | CardEffect 的規則層結算 |
+| Cookie 技能執行 | `src/game/skills.ts:683`、`src/game/skills.ts:898` | 合法性與發動 |
+| 戰鬥／Attack Then／FLIP | `src/game/battle.ts:1830`、`src/game/battle.ts:2077`、`src/game/battle.ts:2568` | 戰鬥後效果與 FLIP 結算 |
+| Item／Stage command | `src/game/commands.ts:2096`、`src/game/commands.ts:2173` | 主要階段使用與 pending effect |
+| Trap command | `src/game/battle.ts:927`、`src/game/battle.ts:1191` | 陷阱回應窗、條件與效果佇列 |
+
+每張卡下方的 `Adapter` 會列出共用轉接函式與卡號專用 mapping；`Runtime` 會列出卡型入口與實際 effect kind 的第一個執行位置。這些程式碼位置是目前工作樹產生報告時的行號，若後續程式碼移動，請重新執行本報告產生器。
+
+## BS5 全卡對照
+
+## BS5 數量與資料口徑
+- 正式資料檔：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`
+- 官方資料來源：https://cookierunbraverse.com/data/json/cardList_en.json
+- 抓取時間：2026-08-04T17:32:55.114Z
+- 全部記錄：153；不同 baseCardNumber：111；直接本體記錄：111；異圖／變體記錄：42。
+- 基礎卡類型：cookie 86、flip 9、item 6、stage 5、trap 5。
+- 基礎卡顏色：BLUE 22、GREEN 22、PURE 1、PURPLE 22、RED 22、YELLOW 22。
+
+## BS5 基礎卡代表（111）
+
+### BS5-001｜Dark Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Indomitable Will`
+  - Skill text：`If this Cookie's remaining HP is 1, this Cookie gains +1 attack damage.`
+  - Attack text：`<{R}{R}> Dark Swordsmanship {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-001 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-002｜Strawberry Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}{N}> Will you be my friend? {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-002 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-003｜Strawberry Cream Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Sugar Fox Rider {da} 3 Then, <discard 1 card.> Deals 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-003 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5400`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:391`
+
+### BS5-004｜Lollipop Cookie
+- 類型／顏色／等級／HP：flip／RED／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> Winter nights are cold! {da} 2`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-004 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2864`、`src/cards/official-effect-adapter.ts:5993`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:184`
+
+### BS5-005｜Mala Sauce Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time to spice things up!`
+  - Skill text：`【Activate】 【Once Per Turn】 <{R}> <Place 1 card from the top of your {R} LV.2 or higher Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> Morning Star Anise {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"red":1},"discardHand":0,"hpToTrash":{"energyColor":"red","minLevel":2}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-005 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2187`、`src/cards/official-effect-adapter.ts:7046`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:26`
+
+### BS5-006｜Marshmallow Cookie
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}{R}> Follow my lead! {da} 3 Then, if your break area is LV.6 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-006 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5410`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:402`
+
+### BS5-007｜Macaron Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`What a fun parade!`
+  - Skill text：`When this Cookie faints, <discard 1 {R} item card from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}> Macaron Parade {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"item"}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-007 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2196`、`src/cards/official-effect-adapter.ts:7054`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:211`
+
+### BS5-008｜Chestnut Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}> Extra! Extra! {da} 1 Then, if the attacked Cookie's remaining HP is 3 or more, that Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true},"condition":{"kind":"attack-target-remaining-hp-at-least","amount":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-008 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5420`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:413`
+
+### BS5-009｜Butterbear Cookie
+- 類型／顏色／等級／HP：flip／RED／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Toymaker {da} 3`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-009 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2865`、`src/cards/official-effect-adapter.ts:6001`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:190`
+
+### BS5-010｜Starch Noodle Cookie
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pterosaur Flight`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{R}{R}{R}{R}> Diamond Formation! {da} 4 Then, <place 1 card from the top of this Cookie's HP into the trash.> Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true}}`
+  - Attack Then effects：
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-010 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2214`、`src/cards/official-effect-adapter.ts:5430`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:35`
+
+### BS5-011｜Stollen Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Gift Delivery Exam`
+  - Skill text：`When this Cookie faints, <can be used as {R}.> Select up to 1 LV.1 Cookie in your opponent's battle area. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> Veteran Engineer {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1,"maxLevel":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-011 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2206`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:230`
+
+### BS5-012｜Eggnog Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> Great job! HAHAHO! {da} 1 Then, if the attacked Cookie is LV.3, that Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true},"condition":{"kind":"attack-target-level-equals","level":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-012 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5440`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:435`
+
+### BS5-013｜Pitaya Dragon Cookie
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:54`
+
+### BS5-014｜Knight Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Cut the Dragon's Tail`
+  - Skill text：`【Activate】 【Once Per Turn】 Select up to 1 of your opponent's [Pitaya Dragon Cookie]. That Cookie receives 2 damage.`
+  - Attack text：`<{R}{R}{R}{R}> To arms! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"cardName":"Pitaya Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-014 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2238`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:63`
+
+### BS5-015｜Carol Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Magic Songs`
+  - Skill text：`【On Play】 <Place 1 card from the top of your other Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{N}> Songs of Love and Peace {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"excludeSource":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-015 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2252`、`src/cards/official-effect-adapter.ts:7070`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:81`
+
+### BS5-016｜Tiramisu Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} No gifts for you!`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 card from the top of this Cookie's HP into the trash.> If that card is a non-Cookie card, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> Fast and Reliable Delivery {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"last-hp-trash-card-non-cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-016 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2262`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:90`
+
+### BS5-017｜Peppernut Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Gift Artistry {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-017 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-018｜Flat Tofu Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} White Stock Sorcery`
+  - Skill text：`【On Play】 <Discard 1 {R} trap card from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Flat Tofu Staff {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"trap"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-018 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2272`、`src/cards/official-effect-adapter.ts:7077`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:104`
+
+### BS5-019｜Pudding Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Golden Bells`
+  - Skill text：`【Activate】 【Once Per Turn】 <{R}> <Discard 1 {R} Cookie from your hand.> During this turn, this Cookie gains +1 attack damage.`
+  - Attack text：`<{R}{R}{R}> Bell-Ringer {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"red":1},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-019 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2281`、`src/cards/official-effect-adapter.ts:7085`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:113`
+
+### BS5-020｜Crimson Dragon Mask
+- 類型／顏色／等級／HP：item／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> If there are 2 Cookies whose remaining HP is 1 in your battle area, deals 2 damage to all of your opponent's Cookies.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"red":2}`
+  - 1. `damage-all`：`{"kind":"damage-all","amount":2,"side":"opponent","condition":{"kind":"battle-area-remaining-hp-count-at-least","side":"self","remainingHp":1,"count":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-020 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2291`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-all`：`src/game/effects/execute.ts:586`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:127`
+
+### BS5-021｜Draconic Aura
+- 類型／顏色／等級／HP：trap／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}> If there is a LV.3 Cookie in your battle area, select up to 2 of your opponent's Cookies. During this turn, those Cookies deal -1 attack damage each. Then, return up to 1 card from the top of 1 of your Cookies' HP to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"red":1},"discardHand":0}`；condition=`{"kind":"battle-area-has-cookie-with-level","level":3}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":2}}`
+  - 2. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-021 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2309`、`src/cards/official-effect-adapter.ts:6743`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:146`
+
+### BS5-022｜Pitaya Dragon Cookie's Nest
+- 類型／顏色／等級／HP：stage／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}> Place in your stage area. 【Activate】 <{R}> <Rest this card.> <Place 1 card from the top of your LV.2 or higher Cookie's HP into the trash.> During this turn, that Cookie gains +1 attack damage. Then, if [Pitaya Dragon Cookie] is in your battle area, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"red":1}`；activationCost=`{"energy":{"red":1},"discardHand":0,"hpToTrash":{"minLevel":2}}`；restSource=true；endPhase=false
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"costSelected":true}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"battle-area-has-named-cookie","side":"self","name":"Pitaya Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-022 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2328`、`src/cards/official-effect-adapter.ts:4125`、`src/cards/official-effect-adapter.ts:4462`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:161`
+
+### BS5-023｜Dino-Sour Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Jellysaur Rider`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 3 cards from the top of this Cookie's HP into the trash.> During this turn, this Cookie gains +2 attack damage.`
+  - Attack text：`<{Y}{Y}{Y}> I'm a dinosaur! {da} 2 Then, if this Cookie's remaining HP is 3 or less, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":3,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":2,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-023 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2350`、`src/cards/official-effect-adapter.ts:5466`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:494`
+
+### BS5-024｜Dr. Wasabi Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> Wasabi Syrup {da} 1 Then, if the attacked Cookie's remaining HP is 2 or less, that Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true},"condition":{"kind":"attack-target-remaining-hp-at-most","amount":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-024 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5476`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:700`
+
+### BS5-025｜Leek Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> Leek Slash {da} 2 Then, if this Cookie's remaining HP is 1, you can return this Cookie to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-025 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5487`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:711`
+
+### BS5-026｜DJ Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Rainbow DJing`
+  - Skill text：`When this Cookie faints, <place 1 {Y} LV.2 or lower Cookie from your hand into your break area.> Return this Cookie to your hand.`
+  - Attack text：`<{Y}{Y}{Y}> Put your hands up! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hand-to-break`：`{"kind":"hand-to-break","amount":1,"energyColor":"yellow","maxLevel":2}`
+  - 2. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-026 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2363`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hand-to-break`：`src/game/effects/execute.ts:962`
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:510`
+
+### BS5-027｜Mango Tribe Chieftain
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> Welcome, welcome! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-027 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-028｜Mango Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Mango Juice Wave`
+  - Skill text：`【On Play】 <{Y}> If your break area is LV.3 or higher, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{Y}> Mango Canoe {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"break-level-at-least","level":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-028 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2389`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:535`
+
+### BS5-029｜Mustard Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Graffiti`
+  - Skill text：`【On Play】 If there is a {Y} LV.3 Cookie in your break area, draw up to 1 card from your deck.`
+  - Attack text：`<{Y}{Y}> Don't judge me! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"break-area-has-card","side":"self","color":"yellow","minLevel":3,"maxLevel":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-029 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2405`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:555`
+
+### BS5-030｜Buttercream Choco Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> Buttercream Coins {da} 1 Then, <place this Cookie in your break area.> Select up to 1 {Y} LV.1 Cookie from your break area. Play that Cookie.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `battle-to-break`：`{"kind":"battle-to-break","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - 2. `break-to-battle`：`{"kind":"break-to-battle","amount":1,"exactLevel":1,"energyColor":"yellow"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-030 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5497`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `battle-to-break`：`src/game/effects/execute.ts:2670`
+  - Runtime：effect kind `break-to-battle`：`src/game/effects/execute.ts:2476`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:721`
+
+### BS5-031｜Peach Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Hit. Jump. Strike. Win!`
+  - Skill text：`【On Play】 If your break area LV. is higher than your opponent's break area LV., draw up to 1 card from your deck.`
+  - Attack text：`<{Y}{Y}> Peachy Bo-Staff {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"break-level-higher-than-opponent"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-031 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2420`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:574`
+
+### BS5-032｜Birthday Cake Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{N}> Perfect Party {da} 2 Then, if your break area LV. is higher than your opponent's break area LV., select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-higher-than-opponent"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-032 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5511`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:736`
+
+### BS5-033｜Cotton Candy Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{N}> Love at First Sight {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-033 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-034｜Sparkling Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Sparkling Party`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 {Y} Cookie from your hand into your break area.> During this turn, this Cookie gains +1 attack damage.`
+  - Attack text：`<{Y}{Y}> Shall we raise a glass? {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"handToBreakArea":{"count":1,"energyColor":"yellow"}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-034 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-035｜Artichoke Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}> Drum Solo {da} 3 Then, if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"source-hp-less-than","amount":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-035 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5521`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:747`
+
+### BS5-036｜Milk Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Into Pure Light!`
+  - Skill text：`【Activate】 <{Y}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{Y}{Y}> Fortified Shield {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-036 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2430`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:587`
+
+### BS5-037｜Plum Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Know yourself, know your enemy!`
+  - Skill text：`【On Play】 If your break area LV. is higher than your opponent's break area LV., select up to 1 of your other {Y} Cookies in your battle area. During this turn, that Cookie gains +1 attack damage.`
+  - Attack text：`<{Y}{Y}> Plum Fist {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1,"excludeSource":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-037 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-038｜Cherry Cookie
+- 類型／顏色／等級／HP：flip／YELLOW／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`Draw up to 1 card from your deck.`
+  - Attack text：`<{Y}> Do you like fireworks?! {da} 1`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{Y}> Do you like fireworks?! {da} 1`；FLIP=`Draw up to 1 card from your deck.`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-038 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2866`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-039｜Cheesecake Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Coin Fireworks Party`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's LV.2 or lower Cookies whose remaining HP is 3 or more. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}> Fun Parties {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"minRemainingHp":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-039 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2444`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:607`
+
+### BS5-040｜Ananas Dragon Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Radiance of the Golden Dragon`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 card from the top of this Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}{Y}> Dragon Geomancy {da} 3 Then, <can be used as {Y}.> If this Cookie's remaining HP is 4 or less, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-040 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2460`、`src/cards/official-effect-adapter.ts:5532`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:626`
+
+### BS5-041｜Firecracker Cookie
+- 類型／顏色／等級／HP：flip／YELLOW／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}> Here a POW! There a POW! {da} 3`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-041 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2870`、`src/cards/official-effect-adapter.ts:6004`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-042｜Sniffly Cocoa Palm
+- 類型／顏色／等級／HP：item／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}> <Place 1 of your Cookies' HP cards in the trash.> If your break area is LV.5 or higher, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"energy":{"yellow":1},"discardHand":0,"hpToTrash":{"amount":1}}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"break-level-at-least","level":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-042 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2471`、`src/cards/official-effect-adapter.ts:3964`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:643`
+
+### BS5-043｜Seasick Canoeing
+- 類型／顏色／等級／HP：trap／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage for each LV.3 Cookie in your break area.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Trap：cost=`{"energy":{"yellow":1},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-043 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-044｜Ananas Dragon Cookie's Nest
+- 類型／顏色／等級／HP：stage／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}> Place in your stage area. 【Activate】 <{Y}> <Rest this card.> During this turn, if any of your Cookies gained HP, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, <can be used as {Y}.> 1 of your [Ananas Dragon Cookie] gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"yellow":1}`；activationCost=`{"energy":{"yellow":1},"discardHand":0}`；restSource=true；endPhase=false
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"cookie-gained-hp-this-turn"}}`
+  - 2. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":0,"max":1,"cardName":"Ananas Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-044 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2484`、`src/cards/official-effect-adapter.ts:4340`、`src/cards/official-effect-adapter.ts:4470`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:659`
+
+### BS5-045｜Potato Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pigtatoes!`
+  - Skill text：`【On Play】 <Return 1 card from your support area to your hand.> Draw up to 1 card from your deck.`
+  - Attack text：`<{G}> Need some potatoes? {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"optional":true}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-045 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2504`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:773`
+
+### BS5-046｜Goblin Cookie
+- 類型／顏色／等級／HP：flip／GREEN／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+  - Attack text：`<{G}{G}{G}> Gimme! ALL MINE! {da} 3`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{G}{G}{G}> Gimme! ALL MINE! {da} 3`；FLIP=`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-046 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2867`、`src/cards/official-effect-adapter.ts:5997`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-047｜Carrot Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Carrot Harvest`
+  - Skill text：`When this Cookie faints, <place 1 card from your support area into the trash.> Set 1 card from your support area as active.`
+  - Attack text：`<{G}{N}> Carrot Rockets {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0,"supportToTrash":1}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-trash`：`{"kind":"support-to-trash","amount":1}`
+  - 2. `set-active`：`{"kind":"set-active","supportCount":1,"selectable":true,"optional":false}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-047 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2378`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - Runtime：effect kind `support-to-trash`：`src/game/effects/execute.ts:1657`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:243`
+
+### BS5-048｜Bellflower Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Healthy Eating`
+  - Skill text：`【Activate】 <{G}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{G}{G}> Herbal Harvesting {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-048 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2515`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:784`
+
+### BS5-049｜Melon Bun Cookie
+- 類型／顏色／等級／HP：flip／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Time to go home! {da} 2`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-049 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2873`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-050｜Fig Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> Soul of the Forest {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-050 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-051｜Beet Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Expert Camouflager`
+  - Skill text：`When your turn ends, if there are 2 active cards or more in your support area, <can be used as {G}.> Place this Cookie on the bottom of your deck.`
+  - Attack text：`<{G}{G}> Snipe Shot {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `return-to-deck-bottom`：`{"kind":"return-to-deck-bottom","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"active-support-count-at-least","count":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-051 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2531`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `return-to-deck-bottom`：`src/game/effects/execute.ts:2917`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:804`
+
+### BS5-052｜Sandwich Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Fresh Ingredients`
+  - Skill text：`【On Play】 If there are 5 cards or more in your support area, this Cookie gains +1 HP.`
+  - Attack text：`<{G}{G}> Coming right up! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-052 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS5-053｜Shine Muscat Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ready... ACTION!`
+  - Skill text：`【On Play】 <{G}{G}> Place up to 1 card from the top of your deck into your support area as rested.`
+  - Attack text：`<{G}{G}{G}{G}> Mistakes are for amateurs {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":2},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-support`：`{"kind":"deck-to-support","amount":1,"rested":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-053 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2540`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-support`：`src/game/effects/execute.ts:789`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:821`
+
+### BS5-054｜Snake Fruit Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Coiling Grasp`
+  - Skill text：`【Once Per Turn】 When your opponent's Cookie attacks, <can be used as {G}.> <Place 1 card from your support area into the trash.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage.`
+  - Attack text：`<{G}{G}{G}> Aspiring Serpent {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"supportToTrash":1}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-054 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-055｜Spinach Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Eat your veggies!`
+  - Skill text：`【On Play】 If there are 5 cards or more in your support area, during this turn, this Cookie gains +1 attack damage.`
+  - Attack text：`<{G}> Veggies are good for you! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-055 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-056｜Longan Dragon Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <can be used as {G}.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:829`
+
+### BS5-057｜Werewolf Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Just stay calm...`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 card from your support area into the trash.> This Cookie gains +1 HP.`
+  - Attack text：`<{G}{N}> Don't come near! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"supportToTrash":1}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-057 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS5-058｜Ginseng Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ginseng Revival`
+  - Skill text：`When your turn ends, if there are 3 cards or less in your support area, <can be used as {G}.> Draw up to 1 card from your deck.`
+  - Attack text：`<{G}> You seem exhausted! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"support-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-058 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2556`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:845`
+
+### BS5-059｜Purple Yam Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Exploding Rage`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Come at me, NOW! {da} 3 Then, <return 1 card from your support area to your hand.> Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true}}`
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"optional":true}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-059 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2565`、`src/cards/official-effect-adapter.ts:5553`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:859`
+
+### BS5-060｜Croissant Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}{G}> Time Rift Mending {da} 2 Then, when your turn ends, set up to 3 cards from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":3}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-060 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5563`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:967`
+
+### BS5-061｜Pancake Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} ACORN JELLIES!`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <can be used as {G}.> This Cookie gains +1 HP.`
+  - Attack text：`<{G}{G}> Sweet Tooth {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-061 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS5-062｜Pumpkin Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Cheese Stone Appraisal {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-062 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-063｜Hero Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Hero Mode`
+  - Skill text：`When your turn ends, if there are 2 active cards or more in your support area, draw up to 2 cards from your deck.`
+  - Attack text：`<{G}{G}{G}> Caramel Syrup Suit {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"active-support-count-at-least","count":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-063 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2580`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:878`
+
+### BS5-064｜Dragon Orb
+- 類型／顏色／等級／HP：item／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}{G}> Place up to 1 card from the top of your deck into your support area as rested. Then, if there are 7 cards or more in your support area, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Item：cost=`{"green":3}`
+  - 1. `deck-to-support`：`{"kind":"deck-to-support","amount":1,"rested":true}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"support-count-at-least","count":7}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-064 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2591`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-support`：`src/game/effects/execute.ts:789`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:894`
+
+### BS5-065｜Petrification
+- 類型／顏色／等級／HP：trap／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 7 cards or more in your support area, your opponent selects 1 active card from their support area. Rest that card.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"green":3},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `opponent-rests-support`：`{"kind":"opponent-rests-support","amount":1,"activeOnly":true,"condition":{"kind":"support-count-at-least","count":7}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-065 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2603`、`src/cards/official-effect-adapter.ts:6765`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - Runtime：effect kind `opponent-rests-support`：`src/game/effects/execute.ts:1960`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:908`
+
+### BS5-066｜Longan Palace
+- 類型／顏色／等級／HP：stage／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}> Place in your stage area. When your turn ends, <discard 1 card.> Set up to 1 card from your support area as active. Then, if [Longan Dragon Cookie] is in your battle area, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"green":1}`；activationCost=`{"energy":{},"discardHand":0}`；restSource=false；endPhase=true
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1}`
+  - 2. `set-active`：`{"kind":"set-active","supportCount":1}`
+  - 3. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"battle-area-has-named-cookie","side":"self","name":"Longan Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-066 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2654`、`src/cards/official-effect-adapter.ts:4364`、`src/cards/official-effect-adapter.ts:4476`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:928`
+
+### BS5-067｜Snow Sugar Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}> Snow Cones! {da} 1 Then, view 3 cards from the top of your deck and place them on the top of your deck in any order.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":0,"restDestination":"top"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-067 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5570`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:996`
+
+### BS5-068｜GingerBright
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Cheery Vibes`
+  - Skill text：`If this Cookie remains in the battle area after receiving damage, draw up to 1 card from your deck.`
+  - Attack text：`<{B}> Happy mind, happy life! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":true,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-068 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2672`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1075`
+
+### BS5-069｜Pond Dino Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pond Swimmer`
+  - Skill text：`If there are 3 cards or less in your hand, this Cookie gains +1 attack damage.`
+  - Attack text：`<{B}{B}> Muh muh! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"hand-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-069 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-070｜Peppermint Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Whale Surfing`
+  - Skill text：`【On Play】 Select up to 1 Cookie in your opponent's battle area. Return that Cookie to your opponent's hand.`
+  - Attack text：`<{B}{B}> Listen to the waves... {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-070 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2673`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1076`
+
+### BS5-071｜Lotus Dragon Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Blue Dragon's Melody`
+  - Skill text：`【Activate】 【Once Per Turn】 <Discard 3 or more {B} cards.> If your break area is LV.2 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Dragon Tide {da} 2 Then, if there are 3 cards or less in your hand, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":3,"discardHandAtLeast":true,"discardHandColor":"blue"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":2}}`
+  - Attack Then effects：
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-071 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2679`、`src/cards/official-effect-adapter.ts:5578`、`src/cards/official-effect-adapter.ts:7091`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:997`
+
+### BS5-072｜Gumball Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Art-illery`
+  - Skill text：`When this Cookie faints and your break area is LV.6 or higher, draw up to 2 cards from your deck.`
+  - Attack text：`<{B}{B}> Gumball Cannon {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"break-level-at-least","level":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-072 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2687`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1078`
+
+### BS5-073｜Cyborg Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> High Voltage {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-073 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-074｜Sorbet Shark Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} o!00!`
+  - Skill text：`【On Play】 <{B}> Draw up to 2 cards from your deck.`
+  - Attack text：`<{B}{B}{B}> 0Ooo0ooOo! {da} 3`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-074 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2694`、`src/cards/official-effect-adapter.ts:7097`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1079`
+
+### BS5-075｜Hydrangea Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Hydrangea Field`
+  - Skill text：`【On Play】 If there are 5 cards or more in your hand, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Let us go see some flowers! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"hand-count-at-least","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-075 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2695`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1080`
+
+### BS5-076｜Cream Puff Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Jellius Extremus!`
+  - Skill text：`【Activate】 <{B}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{B}{B}> I can do it...! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-076 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2709`、`src/cards/official-effect-adapter.ts:7101`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1081`
+
+### BS5-077｜Ice Candy Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> Rainbow Dribble {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-077 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-078｜Aloe Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Data Defragmentation`
+  - Skill text：`【On Play】 <{B}> Draw up to 1 card from your deck.`
+  - Attack text：`<{B}{B}> Science Prevails {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-078 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2721`、`src/cards/official-effect-adapter.ts:7105`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1082`
+
+### BS5-079｜Lotus Root Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Diving for Herbs {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-079 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-080｜Alchemist Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> Rainbow Alchemy {da} 2 Then, <discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":2}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-080 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5585`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:998`
+
+### BS5-081｜Squid Ink Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Hungry Giant Squid`
+  - Skill text：`【Once Per Turn】 When your opponent's Cookie attacks, <discard 4 cards.> During this battle, this Cookie's HP cannot reach 0.`
+  - Attack text：`<{B}{B}> Shiny... things... {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=opponent-attack；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":4}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `prevent-knockout`：`{"kind":"prevent-knockout","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-081 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2722`、`src/cards/official-effect-adapter.ts:7109`、`src/cards/official-effect-adapter.ts:7138`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `prevent-knockout`：`src/game/effects/execute.ts:3464`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1083`
+
+### BS5-082｜Ion Cookie Robot
+- 類型／顏色／等級／HP：flip／BLUE／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}{B}> Upload in progress... {da} 3`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-082 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2871`、`src/cards/official-effect-adapter.ts:6008`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-083｜Bell Pepper Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} PepperBot`
+  - Skill text：`【On Play】 <Discard your entire hand.> This Cookie gains +2 HP. Draw up to 1 card from your deck.`
+  - Attack text：`<{B}{B}{B}> Pepper Grenade {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0,"discardAllHand":true}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":2,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-083 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2728`、`src/cards/official-effect-adapter.ts:7113`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1084`
+
+### BS5-084｜Apple Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Bubbles! Bubbles!`
+  - Skill text：`【Activate】 <Rest this card.> <Discard 1 card.> Select up to 1 of your other {B} Cookies. Set that Cookie as active.`
+  - Attack text：`<{B}{B}> Let's play outside! YAY! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `set-cookie-active`：`{"kind":"set-cookie-active","target":{"side":"self","min":0,"max":1,"excludeSource":true,"energyColor":"blue"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-084 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2736`、`src/cards/official-effect-adapter.ts:7118`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `set-cookie-active`：`src/game/effects/execute.ts:1326`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1085`
+
+### BS5-085｜Pirate Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}{N}> Treasures! Treasures!!! {da} 2 Then, if your opponent's Cookie faints from this Cookie's attack, this Cookie gains +1 HP. Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"opponent-cookie-fainted-in-current-battle"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-085 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5593`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:999`
+
+### BS5-086｜Tales of the Lotus
+- 類型／顏色／等級／HP：item／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> If there is 1 Cookie in your battle area, view 3 cards from the top of your deck and select up to 1 {B} Cookie from the viewed cards. Play that Cookie with +1 HP. Then, place the remaining cards on the bottom of your deck in any order.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Item：cost=`{"energy":{"blue":2},"discardHand":0}`
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":1,"restDestination":"bottom","pickDestination":"battle","filterColor":"blue","filterType":"cookie","optionalPick":true,"extraHp":1,"condition":{"kind":"battle-area-count-at-most","count":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-086 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2748`、`src/cards/official-effect-adapter.ts:3969`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1086`
+
+### BS5-087｜Dino Greetings
+- 類型／顏色／等級／HP：trap／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if your break area is LV.6 or higher, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"blue":2},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"break-level-at-least","level":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-087 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2619`、`src/cards/official-effect-adapter.ts:6781`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1044`
+
+### BS5-088｜Lotus Palace
+- 類型／顏色／等級／HP：stage／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}> Place in your stage area. 【Activate】 <{B}> <Rest this card.> If there are 3 cards or less in your hand, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage. Then, if [Lotus Dragon Cookie] is in your battle area, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"blue":1}`；activationCost=`{"energy":{"blue":1},"discardHand":0}`；restSource=true；endPhase=false
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1},"condition":{"kind":"hand-count-at-most","count":3}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"battle-area-has-named-cookie","side":"self","name":"Lotus Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-088 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2762`、`src/cards/official-effect-adapter.ts:4377`、`src/cards/official-effect-adapter.ts:4480`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1087`
+
+### BS5-089｜Muscle Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-089 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5602`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:133`、`src/cards/official-card-adapter.ts:137`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1007`
+
+### BS5-090｜Strawberry Stick Cookie
+- 類型／顏色／等級／HP：flip／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> Feel the Rhythm! {da} 2`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-090 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2874`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-091｜Lilac Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Desert Winds`
+  - Skill text：`【On Play】 If there are 15 cards or more in your trash, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{P}{P}{P}> Razor-Sharp Chakrams {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"trash-count-at-least","count":15}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-091 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2781`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1088`
+
+### BS5-092｜Rambutan Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Leader of the Tribe`
+  - Skill text：`【Once Per Turn】 When your opponent's Cookie attacks, <return 3 non-Cookie cards from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage.`
+  - Attack text：`<{P}{P}{P}> Raise your spears! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-092 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-093｜Lychee Dragon Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Captivating Charm`
+  - Skill text：`【Activate】 【Once Per Turn】 <{P}> <Return 3 {P} Cookies that do not have FLIP from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{P}{P}{P}> Dragon Enchantment {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"purple":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-093 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-094｜Mangosteen Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{N}> You'll play with me, won't you? {da} 2 Then, <return 5 {P} Cookies that do not have FLIP from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `trash-to-deck`：`{"kind":"trash-to-deck","min":5,"max":5,"excludeFlip":true,"energyColor":"purple","cookieOnly":true}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-094 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5603`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `trash-to-deck`：`src/game/effects/execute.ts:2370`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1008`
+
+### BS5-095｜Mint Wafer Cookie
+- 類型／顏色／等級／HP：flip／PURPLE／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}{P}> Enchanting Melody {da} 3`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-095 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2872`、`src/cards/official-effect-adapter.ts:6012`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-096｜Mint Choco Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Any requests? {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-096 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-097｜Peppercorn Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}{P}> Pepper Smoke Balls {da} 4 Then, if your opponent's Cookie faints from this Cookie's attack, draw up to 2 cards from your deck and discard 2 cards.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `draw-up-to-then-discard`：`{"kind":"draw-up-to-then-discard","max":2,"discardCount":2,"condition":{"kind":"opponent-cookie-fainted-in-current-battle"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-097 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5618`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to-then-discard`：`src/game/effects/execute.ts:538`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1019`
+
+### BS5-098｜Centipede Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Desert's Patience`
+  - Skill text：`When your turn ends, place 1 card from the top of this Cookie's HP into the trash.`
+  - Attack text：`<{P}{P}> Summon Centipede King {da} 1 Then, <place 1 card from the top of this Cookie's HP into the trash.> If the attacked Cookie is LV.1, place that Cookie into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"self","min":0,"max":1,"sourceOnly":true}}`
+  - Attack Then effects：
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - 2. `field-to-trash`：`{"kind":"field-to-trash","target":{"side":"opponent","min":1,"max":1,"maxLevel":1,"attackTargetOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-098 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2795`、`src/cards/official-effect-adapter.ts:5626`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `field-to-trash`：`src/game/effects/execute.ts:2134`
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1025`
+
+### BS5-099｜Avocado Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> Dragonscale Armorsmith {da} 2 Then, both players place 2 cards from the top of their decks into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"self"}`
+  - 2. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-099 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5643`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1032`
+
+### BS5-100｜Yogurt Cream Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Magical Spirits of the Lamp`
+  - Skill text：`When this Cookie is placed from the battle area into the trash, view 3 cards from the top of your deck, reveal up to 1 {P} card from the viewed cards, and add it to your hand. Then, place the remaining cards in the trash.`
+  - Attack text：`<{P}{P}> Magic Carpet Ride {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":1,"restDestination":"trash","filterColor":"purple","optionalPick":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-100 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2802`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1090`
+
+### BS5-101｜GingerBrave
+- 類型／顏色／等級／HP：cookie／PURPLE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} BRAVE! Buff`
+  - Skill text：`【On Play】 If there are 10 cards or more in your trash, select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP into the trash.`
+  - Attack text：`<{P}{P}{P}> I need to escape! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"trash-count-at-least","count":10}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-101 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2812`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1091`
+
+### BS5-102｜Purple Yam Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Raging Tornado`
+  - Skill text：`【On Play】 Place up to 3 cards from the top of your deck into the trash.`
+  - Attack text：`<{P}{P}> Violet Dragonstorm {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-102 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2820`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1092`
+
+### BS5-103｜Scorpion Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Venom Sting`
+  - Skill text：`For every 15 cards in your trash, this Cookie gains +1 attack damage.`
+  - Attack text：`<{P}{P}{P}> This might sting a little {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-103 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-104｜Chili Pepper Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Treasure Hunting`
+  - Skill text：`【On Play】 Both players place 2 cards from the top of their decks into the trash.`
+  - Attack text：`<{P}> Watch your pockets! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"self"}`
+  - 2. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-104 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2821`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1093`
+
+### BS5-105｜Cocoa Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Cup of Cocoa {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-105 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS5-106｜Plain Yogurt Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}{P}> Sinister Plot {da} 1 Then, draw 1 card from your deck and place up to 3 cards from the top of your deck into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `draw`：`{"kind":"draw","amount":1}`
+  - 2. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-106 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5647`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - Runtime：effect kind `draw`：`src/game/effects/execute.ts:349`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1036`
+
+### BS5-107｜Red Pepper Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Undying Fighting Spirit`
+  - Skill text：`When this Cookie faints, both players place 2 cards from the top of their decks into the trash.`
+  - Attack text：`<{P}> Red Hot Fiery Punch {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"self"}`
+  - 2. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-107 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2825`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1094`
+
+### BS5-108｜Rambirdtan Handler Glove
+- 類型／顏色／等級／HP：item／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> View 3 cards from the top of your deck, reveal up to 1 {P} Cookie from the viewed cards, and add it to your hand. Then, place the remaining cards in the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Item：cost=`{"energy":{"purple":1},"discardHand":0}`
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":1,"restDestination":"trash","filterColor":"purple","filterType":"cookie","optionalPick":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-108 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2829`、`src/cards/official-effect-adapter.ts:3973`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1095`
+
+### BS5-109｜Charmed Miners
+- 類型／顏色／等級／HP：trap／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 15 cards or more in your trash, select up to 1 of your opponent's LV.1 Cookies. During this turn, that Cookie deals -1 attack damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"purple":1},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1,"maxLevel":1},"condition":{"kind":"trash-count-at-least","count":15}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-109 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2634`、`src/cards/official-effect-adapter.ts:6797`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1044`
+
+### BS5-110｜Lychee Dragon Cookie's Cave
+- 類型／顏色／等級／HP：stage／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> Place in your stage area. 【Activate】 <{P}> <Rest this card.> Place up to 2 cards from the top of your deck into the trash. Then, if [Lychee Dragon Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"purple":1}`；activationCost=`{"energy":{"purple":1},"discardHand":0}`；restSource=true；endPhase=false
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"self"}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"battle-area-has-named-cookie","side":"self","name":"Lychee Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-110 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2840`、`src/cards/official-effect-adapter.ts:4395`、`src/cards/official-effect-adapter.ts:4484`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1096`
+
+### BS5-111｜Wrath of the Dragons
+- 類型／顏色／等級／HP：item／PURE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> 【Equip】 this card to one of your 【Dragon】 Cookies. If that Cookie's remaining HP is 3 or less, that Cookie gains +1 attack damage and receives -1 attack damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"energy":{"neutral":1},"discardHand":0}`
+  - 1. `equip-source`：`{"kind":"equip-source","target":{"side":"self","min":1,"max":1,"keyword":"dragon"},"requiredKeyword":"dragon","bonusMaxRemainingHp":3,"attackBonus":1,"damageReceivedReduction":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-111 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2854`、`src/cards/official-effect-adapter.ts:3977`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `equip-source`：`src/game/effects/execute.ts:1580`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1097`
+
+## BS5 異圖／變體記錄（42）
+
+### BS5-005@1｜Mala Sauce Cookie（base BS5-005）
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time to spice things up!`
+  - Skill text：`【Activate】 【Once Per Turn】 <{R}> <Place 1 card from the top of your {R} LV.2 or higher Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> Morning Star Anise {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"red":1},"discardHand":0,"hpToTrash":{"energyColor":"red","minLevel":2}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-005@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2187`、`src/cards/official-effect-adapter.ts:7046`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-010@1｜Starch Noodle Cookie（base BS5-010）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pterosaur Flight`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{R}{R}{R}{R}> Diamond Formation! {da} 4 Then, <place 1 card from the top of this Cookie's HP into the trash.> Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true}}`
+  - Attack Then effects：
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-010@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2214`、`src/cards/official-effect-adapter.ts:5430`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+
+### BS5-011@1｜Stollen Cookie（base BS5-011）
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Gift Delivery Exam`
+  - Skill text：`When this Cookie faints, <can be used as {R}.> Select up to 1 LV.1 Cookie in your opponent's battle area. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> Veteran Engineer {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1,"maxLevel":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-011@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2206`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-013@1｜Pitaya Dragon Cookie（base BS5-013）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:459`
+
+### BS5-013@2｜Pitaya Dragon Cookie（base BS5-013）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：NA Regionals I；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-013@3｜Pitaya Dragon Cookie（base BS5-013）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：NA Regionals I；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013@3 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-013@4｜Pitaya Dragon Cookie（base BS5-013）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：NA Regionals I；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013@4 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-013@5｜Pitaya Dragon Cookie（base BS5-013）
+- 類型／顏色／等級／HP：cookie／RED／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：NA Regionals I；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Red Dragon's Ferocity`
+  - Skill text：`【On Play】 <Discard 1 {R} Cookie from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Draconic Bladestorm {da} 3 Then, <can be used as {R}.> If this Cookie's remaining HP is 4 or less, select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"cookie"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":2},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-013@5 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2229`、`src/cards/official-effect-adapter.ts:5454`、`src/cards/official-effect-adapter.ts:7062`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-014@1｜Knight Cookie（base BS5-014）
+- 類型／顏色／等級／HP：cookie／RED／2／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Cut the Dragon's Tail`
+  - Skill text：`【Activate】 【Once Per Turn】 Select up to 1 of your opponent's [Pitaya Dragon Cookie]. That Cookie receives 2 damage.`
+  - Attack text：`<{R}{R}{R}{R}> To arms! {da} 3`
+  - FLIP text：`<{R}{R}{R}{R}> To arms!`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"cardName":"Pitaya Dragon Cookie"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-014@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2238`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:475`
+
+### BS5-018@1｜Flat Tofu Cookie（base BS5-018）
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} White Stock Sorcery`
+  - Skill text：`【On Play】 <Discard 1 {R} trap card from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}{R}> Flat Tofu Staff {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandColor":"red","discardHandType":"trap"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-018@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2272`、`src/cards/official-effect-adapter.ts:7077`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-023@1｜Dino-Sour Cookie（base BS5-023）
+- 類型／顏色／等級／HP：cookie／YELLOW／2／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Jellysaur Rider`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 3 cards from the top of this Cookie's HP into the trash.> During this turn, this Cookie gains +2 attack damage.`
+  - Attack text：`<{Y}{Y}{Y}> I'm a dinosaur! {da} 2 Then, if this Cookie's remaining HP is 3 or less, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":3,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":2,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-023@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2350`、`src/cards/official-effect-adapter.ts:5466`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-028@1｜Mango Cookie（base BS5-028）
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Mango Juice Wave`
+  - Skill text：`【On Play】 <{Y}> If your break area is LV.3 or higher, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{Y}> Mango Canoe {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"break-level-at-least","level":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-028@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2389`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-036@1｜Milk Cookie（base BS5-036）
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Into Pure Light!`
+  - Skill text：`【Activate】 <{Y}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{Y}{Y}> Fortified Shield {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-036@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2430`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+
+### BS5-039@1｜Cheesecake Cookie（base BS5-039）
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Coin Fireworks Party`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's LV.2 or lower Cookies whose remaining HP is 3 or more. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}> Fun Parties {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"minRemainingHp":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-039@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2444`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-039@2｜Cheesecake Cookie（base BS5-039）
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Coin Fireworks Party`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's LV.2 or lower Cookies whose remaining HP is 3 or more. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}> Fun Parties {da} 2`
+  - FLIP text：`<{Y}{Y}> Fun Parties`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"minRemainingHp":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-039@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2444`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-040@1｜Ananas Dragon Cookie（base BS5-040）
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Radiance of the Golden Dragon`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 card from the top of this Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}{Y}> Dragon Geomancy {da} 3 Then, <can be used as {Y}.> If this Cookie's remaining HP is 4 or less, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-040@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2460`、`src/cards/official-effect-adapter.ts:5532`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS5-048@1｜Bellflower Cookie（base BS5-048）
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Healthy Eating`
+  - Skill text：`【Activate】 <{G}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{G}{G}> Herbal Harvesting {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-048@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2515`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+
+### BS5-052@1｜Sandwich Cookie（base BS5-052）
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Fresh Ingredients`
+  - Skill text：`【On Play】 If there are 5 cards or more in your support area, this Cookie gains +1 HP.`
+  - Attack text：`<{G}{G}> Coming right up! {da} 1`
+  - FLIP text：`<{G}{G}> Coming right up!`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-052@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS5-053@1｜Shine Muscat Cookie（base BS5-053）
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ready... ACTION!`
+  - Skill text：`【On Play】 <{G}{G}> Place up to 1 card from the top of your deck into your support area as rested.`
+  - Attack text：`<{G}{G}{G}{G}> Mistakes are for amateurs {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":2},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-support`：`{"kind":"deck-to-support","amount":1,"rested":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-053@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2540`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-support`：`src/game/effects/execute.ts:789`
+
+### BS5-054@1｜Snake Fruit Cookie（base BS5-054）
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Coiling Grasp`
+  - Skill text：`【Once Per Turn】 When your opponent's Cookie attacks, <can be used as {G}.> <Place 1 card from your support area into the trash.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage.`
+  - Attack text：`<{G}{G}{G}> Aspiring Serpent {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"supportToTrash":1}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-054@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-056@1｜Longan Dragon Cookie（base BS5-056）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <can be used as {G}.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 . Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:978`
+
+### BS5-056@2｜Longan Dragon Cookie（base BS5-056）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <can be used as {G}.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`<{G}{G}{G}> Draconic Ascension`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+
+### BS5-056@3｜Longan Dragon Cookie（base BS5-056）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：2026 Brave League Season 2 FINAL Champion；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <{G}> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056@3 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+
+### BS5-056@4｜Longan Dragon Cookie（base BS5-056）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：2026 Brave League Season 2 FINAL Runner-Up；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <{G}> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056@4 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+
+### BS5-056@5｜Longan Dragon Cookie（base BS5-056）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：2026 Brave League Season 2 FINAL Top 4；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ivory Dragon's Eye`
+  - Skill text：`When your turn ends, if there are 3 active cards or more in your support area, <{G}> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Draconic Ascension {da} 2 Then, when your turn ends, set up to 1 card from your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"active-support-count-at-least","count":3}}`
+  - Attack Then effects：
+  - 1. `deferred-end-of-turn`：`{"kind":"deferred-end-of-turn","effects":[{"kind":"set-active","supportCount":1}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-056@5 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2545`、`src/cards/official-effect-adapter.ts:5545`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `deferred-end-of-turn`：`src/game/effects/execute.ts:1939`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+
+### BS5-058@1｜Ginseng Cookie（base BS5-058）
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ginseng Revival`
+  - Skill text：`When your turn ends, if there are 3 cards or less in your support area, <can be used as {G}.> Draw up to 1 card from your deck.`
+  - Attack text：`<{G}> You seem exhausted! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"support-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-058@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2556`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+
+### BS5-059@1｜Purple Yam Cookie（base BS5-059）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Exploding Rage`
+  - Skill text：`【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{G}{G}{G}> Come at me, NOW! {da} 3 Then, <return 1 card from your support area to your hand.> Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true}}`
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"optional":true}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-059@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2565`、`src/cards/official-effect-adapter.ts:5553`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+
+### BS5-069@1｜Pond Dino Cookie（base BS5-069）
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pond Swimmer`
+  - Skill text：`If there are 3 cards or less in your hand, this Cookie gains +1 attack damage.`
+  - Attack text：`<{B}{B}> Muh muh! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"hand-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-069@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-071@1｜Lotus Dragon Cookie（base BS5-071）
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Blue Dragon's Melody`
+  - Skill text：`【Activate】 【Once Per Turn】 <Discard 3 or more {B} cards.> If your break area is LV.2 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Dragon Tide {da} 2 Then, if there are 3 cards or less in your hand, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":3,"discardHandAtLeast":true,"discardHandColor":"blue"}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":2}}`
+  - Attack Then effects：
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-071@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2679`、`src/cards/official-effect-adapter.ts:5578`、`src/cards/official-effect-adapter.ts:7091`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+
+### BS5-075@1｜Hydrangea Cookie（base BS5-075）
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Hydrangea Field`
+  - Skill text：`【On Play】 If there are 5 cards or more in your hand, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Let us go see some flowers! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"hand-count-at-least","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-075@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2695`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-076@1｜Cream Puff Cookie（base BS5-076）
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Jellius Extremus!`
+  - Skill text：`【Activate】 <{B}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{B}{B}> I can do it...! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-076@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2709`、`src/cards/official-effect-adapter.ts:7101`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+
+### BS5-076@2｜Cream Puff Cookie（base BS5-076）
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Jellius Extremus!`
+  - Skill text：`【Activate】 <{B}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint.`
+  - Attack text：`<{B}{B}> I can do it...! {da} 1`
+  - FLIP text：`<{B}{B}> I can do it...!`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":1}`；flags=`{"restSource":true,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1,"noSkillOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-076@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2709`、`src/cards/official-effect-adapter.ts:7101`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+
+### BS5-080@1｜Alchemist Cookie（base BS5-080）
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> Rainbow Alchemy {da} 2 Then, <discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":2}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-080@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5585`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+
+### BS5-089@1｜Muscle Cookie（base BS5-089）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-089@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5602`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:133`、`src/cards/official-card-adapter.ts:137`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+
+### BS5-089@2｜Muscle Cookie（base BS5-089）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`—`
+  - FLIP text：`<{P}{P}> Kettlebell Throw`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：能力待查；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-089@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5602`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:133`、`src/cards/official-card-adapter.ts:137`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs5.test.ts:1063`
+
+### BS5-091@1｜Lilac Cookie（base BS5-091）
+- 類型／顏色／等級／HP：cookie／PURPLE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Desert Winds`
+  - Skill text：`【On Play】 If there are 15 cards or more in your trash, select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{P}{P}{P}> Razor-Sharp Chakrams {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1,"maxLevel":2,"restedOnly":true},"condition":{"kind":"trash-count-at-least","count":15}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-091@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2781`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-092@1｜Rambutan Cookie（base BS5-092）
+- 類型／顏色／等級／HP：cookie／PURPLE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Leader of the Tribe`
+  - Skill text：`【Once Per Turn】 When your opponent's Cookie attacks, <return 3 non-Cookie cards from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage.`
+  - Attack text：`<{P}{P}{P}> Raise your spears! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-092@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-093@1｜Lychee Dragon Cookie（base BS5-093）
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Captivating Charm`
+  - Skill text：`【Activate】 【Once Per Turn】 <{P}> <Return 3 {P} Cookies that do not have FLIP from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{P}{P}{P}> Dragon Enchantment {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"purple":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-093@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS5-100@1｜Yogurt Cream Cookie（base BS5-100）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Magical Spirits of the Lamp`
+  - Skill text：`When this Cookie is placed from the battle area into the trash, view 3 cards from the top of your deck, reveal up to 1 {P} card from the viewed cards, and add it to your hand. Then, place the remaining cards in the trash.`
+  - Attack text：`<{P}{P}> Magic Carpet Ride {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":1,"restDestination":"trash","filterColor":"purple","optionalPick":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-100@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2802`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+
+### BS5-100@2｜Yogurt Cream Cookie（base BS5-100）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：promotion card；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Magical Spirits of the Lamp`
+  - Skill text：`When this Cookie is placed from the battle area into the trash, view 3 cards from the top of your deck, reveal up to 1 {P} card from the viewed cards, and add it to your hand. Then, place the remaining cards in the trash.`
+  - Attack text：`<{P}{P}> Magic Carpet Ride {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `inspect-deck`：`{"kind":"inspect-deck","lookCount":3,"pickCount":1,"restDestination":"trash","filterColor":"purple","optionalPick":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-100@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2802`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `inspect-deck`：`src/game/effects/execute.ts:3129`
+
+### BS5-103@1｜Scorpion Cookie（base BS5-103）
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Venom Sting`
+  - Skill text：`For every 15 cards in your trash, this Cookie gains +1 attack damage.`
+  - Attack text：`<{P}{P}{P}> This might sting a little {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-103@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS5-111@1｜Wrath of the Dragons（base BS5-111）
+- 類型／顏色／等級／HP：item／PURE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> 【Equip】 this card to one of your 【Dragon】 Cookies. If that Cookie's remaining HP is 3 or less, that Cookie gains +1 attack damage and receives -1 attack damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"energy":{"neutral":1},"discardHand":0}`
+  - 1. `equip-source`：`{"kind":"equip-source","target":{"side":"self","min":1,"max":1,"keyword":"dragon"},"requiredKeyword":"dragon","bonusMaxRemainingHp":3,"attackBonus":1,"damageReceivedReduction":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json`（以 cardNumber=BS5-111@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2854`、`src/cards/official-effect-adapter.ts:3977`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `equip-source`：`src/game/effects/execute.ts:1580`
+
+## BS6 全卡對照
+
+## BS6 數量與資料口徑
+- 正式資料檔：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`
+- 官方資料來源：https://cookierunbraverse.com/data/json/cardList_en.json
+- 抓取時間：2026-08-11T06:00:39.434Z
+- 全部記錄：138；不同 baseCardNumber：107；直接本體記錄：106；異圖／變體記錄：32。
+- 基礎卡類型：cookie 82、flip 10、item 5、stage 5、trap 5。
+- 基礎卡顏色：BLUE 22、GREEN 21、PURPLE 21、RED 21、YELLOW 22。
+
+## BS6 基礎卡代表（107）
+
+### BS6-001｜Blue Lily Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Sweet Heartmender`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 2 cards from the top of 1 of your {R} Cookies' HP into the trash.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.`
+  - Attack text：`<{R}{R}> Feelings of Fondness {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":2,"energyColor":"red"}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-001 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2899`、`src/cards/official-effect-adapter.ts:6960`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:90`
+
+### BS6-002｜Dark Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Someone's Hero`
+  - Skill text：`【Activate】 【Once Per Turn】 <{R}> If this Cookie's remaining HP is 2 or less, during this turn, this Cookie gains +1 attack damage.`
+  - Attack text：`<{R}{R}{R}> It's dark... {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"red":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"source-hp-less-than","amount":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-002 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2890`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:130`
+
+### BS6-003｜Strawberry Stick Cookie
+- 類型／顏色／等級／HP：cookie／RED／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Let's have fun! {da} 2 Then, <place 1 card from the top of your {R} Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"self","min":1,"max":1,"energyColor":"red"}}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-003 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5654`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:259`
+
+### BS6-004｜Mint Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Enchanting Performance`
+  - Skill text：`【On Play】 <Place 1 card from the top of your {R} Cookie's HP into the trash.> Draw up to 2 cards from your deck.`
+  - Attack text：`<{R}{R}> Look forward to it! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":1,"energyColor":"red"}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-004 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2907`、`src/cards/official-effect-adapter.ts:6965`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:90`
+
+### BS6-005｜Buttercream Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> Just let me know {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-005 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-006｜Cherry Blossom Cookie
+- 類型／顏色／等級／HP：flip／RED／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Yay! This is fun! {da} 3`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-006 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2877`、`src/cards/official-effect-adapter.ts:6016`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:24`
+
+### BS6-007｜Blue Slushy Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Relentless Chirping {da} 3 Then, if your opponent's Cookie faints from this Cookie's attack, rest up to 2 cards in your opponent's support area.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `rest-support`：`{"kind":"rest-support","side":"opponent","amount":2,"activeOnly":true,"optional":true,"condition":{"kind":"opponent-cookie-fainted-in-current-battle"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-007 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5666`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `rest-support`：`src/game/effects/execute.ts:1467`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:271`
+
+### BS6-008｜Sugar Swan Cookie
+- 類型／顏色／等級／HP：cookie／RED／3／6
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} True Love's Vow`
+  - Skill text：`When this Cookie attacks, if this Cookie's remaining HP is 4 or less, during this battle, your opponent cannot activate traps.`
+  - Attack text：`<{R}{R}{R}> Sweet First Love {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `disable-traps`：`{"kind":"disable-traps","duration":"current-battle","condition":{"kind":"source-hp-at-most","amount":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-008 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2908`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `disable-traps`：`src/game/effects/execute.ts:3230`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:147`
+
+### BS6-009｜Cotton Candy Cookie
+- 類型／顏色／等級／HP：flip／RED／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}> Words of Love {da} 3`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-009 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2878`、`src/cards/official-effect-adapter.ts:6020`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:32`
+
+### BS6-010｜Timekeeper Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Shackles of Love`
+  - Skill text：`If this Cookie is in the battle area, your opponent cannot use effects to move either player's Cookies from the battle area.`
+  - Attack text：`<{R}{R}{R}> Sweet Despair {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `prevent-opponent-battle-movement`：`{"kind":"prevent-opponent-battle-movement"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-010 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2915`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-011｜Rose Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Rose Finale`
+  - Skill text：`When this Cookie faints, select up to 1 of your Cookies. Return 1 card from the top of that Cookie's HP to your hand.`
+  - Attack text：`<{R}{R}> Shall we dance? {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-011 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2916`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:183`
+
+### BS6-012｜Lilybell Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Song of Nature`
+  - Skill text：`When your turn ends, if there are 5 cards or less in your hand, return up to 1 card from the top of your Cookie's HP to your hand.`
+  - Attack text：`<{R}{R}> Nature is beautiful {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-012 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2923`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:183`
+
+### BS6-013｜Chess Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> We only need each other {da} 1 Then, if there is another [Chess Choco Cookie] in your battle area, deals 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"battle-area-has-named-cookie","side":"self","name":"Chess Choco Cookie","excludeSource":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-013 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5690`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:279`
+
+### BS6-014｜Choco Bar Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Stunt Action`
+  - Skill text：`【On Play】 <Place 2 cards from the top of 1 of your Cookies' HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{R}{R}> I can do it all! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":2}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-014 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2931`、`src/cards/official-effect-adapter.ts:6970`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:90`
+
+### BS6-015｜Choco Ball Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{N}> I was the best today again! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-015 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-016｜Crunchy Chip Cookie
+- 類型／顏色／等級／HP：cookie／RED／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> Never met a mountain Cookie before?! {da} 1 Then, if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"source-hp-less-than","amount":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-016 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5703`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:292`
+
+### BS6-017｜Pink Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Love Virus`
+  - Skill text：`【On Play】 <{R}> Select up to 1 of your opponent's Cookies. During this turn, the FLIP effects of that Cookie's HP cards cannot be activated.`
+  - Attack text：`<{R}> Ready for action! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"red":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `disable-flip`：`{"kind":"disable-flip","duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-017 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2953`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `disable-flip`：`src/game/effects/execute.ts:3472`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:208`
+
+### BS6-018｜White Choco Cookie
+- 類型／顏色／等級／HP：cookie／RED／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> Victory is a matter of a moment! Then, if this Cookie's remaining HP is 1, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{R}{R}> Victory is a matter of a moment! {da} 1 Then, if this Cookie's remaining HP is 1, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1},"condition":{"kind":"source-hp-less-than","amount":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-018 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5711`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:188`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:42`
+
+### BS6-019｜Squishy Jelly Watch
+- 類型／顏色／等級／HP：item／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}> <Return 1 card from the top of your Cookie's HP to your hand.> If there is 1 Cookie or less in your opponent's break area, select up to 2 cards in your opponent's support area. Rest those cards.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"red":1}`
+  - 1. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":1,"max":1}}`
+  - 2. `rest-support`：`{"kind":"rest-support","side":"opponent","amount":2,"activeOnly":true,"optional":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-019 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2962`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - Runtime：effect kind `rest-support`：`src/game/effects/execute.ts:1467`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:222`
+
+### BS6-020｜Tonic Spray
+- 類型／顏色／等級／HP：trap／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 card from the top of your Cookie's HP to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"red":2},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-020 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2976`、`src/cards/official-effect-adapter.ts:6815`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:222`
+
+### BS6-021｜TBD Hallway
+- 類型／顏色／等級／HP：stage／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`{da} 1 <{R}> Place in your stage area. 【Activate】 <{R}> <Rest this card.> Select up to 1 of your Cookies that is LV.2 or higher with 3 or less HP remaining. During this turn, that Cookie gains +1 attack damage. Then, if that Cookie's remaining HP is 1, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"red":1}`；activationCost=`{"red":1}`；restSource=true；endPhase=false
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1,"minLevel":2,"maxRemainingHp":3},"thenDrawUpToIfTargetRemainingHp":{"remainingHp":1,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-021 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2938`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:160`
+
+### BS6-022｜Ninja Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> Cloning Practice {da} 1 Then, <can be used as {Y}.> If your break area is LV.3 or higher, return this Cookie to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"yellow":1}},"effects":[{"kind":"return-to-hand","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"break-level-at-least","level":3}}],"effectText":"Use this Cookie as {Y}. If your break area is LV.3 or higher, return this Cookie to your hand."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-022 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5721`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:310`
+
+### BS6-023｜Dark Fondue Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pleasure to meet you`
+  - Skill text：`【On Play】 <Place 1 Cookie from your hand into your break area.> All of your opponent's Cookies receive 1 damage.`
+  - Attack text：`<{Y}{Y}> I'll look forward to it {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hand-to-break`：`{"kind":"hand-to-break","amount":1}`
+  - 2. `damage-all`：`{"kind":"damage-all","amount":1,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-023 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2991`、`src/cards/official-effect-adapter.ts:6938`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-all`：`src/game/effects/execute.ts:586`
+  - Runtime：effect kind `hand-to-break`：`src/game/effects/execute.ts:962`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:469`
+
+### BS6-024｜Roll Cake Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}> Vroom, VROOM! {da} 2 Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage for each LV.3 Cookie in your break area.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage-by-break-count`：`{"kind":"damage-by-break-count","perCount":1,"exactBreakLevel":3,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-024 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5736`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-by-break-count`：`src/game/effects/execute.ts:3354`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:323`
+
+### BS6-025｜Baguette Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Registry Head Manager`
+  - Skill text：`【Activate】 【Once Per Turn】 <{Y}> If your break area is LV.2 or lower and there are 6 cards or less in your hand, draw up to 1 card from your deck.`
+  - Attack text：`<{Y}{Y}{Y}> Focus on the basics {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"all-of","conditions":[{"kind":"break-level-at-most","level":2},{"kind":"hand-count-at-most","count":6}]}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-025 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2995`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:489`
+
+### BS6-026｜Skater Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Let's skate! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-026 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-027｜S'more Cookie
+- 類型／顏色／等級／HP：flip／YELLOW／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}> The Joy of Camping {da} 2`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-027 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2879`、`src/cards/official-effect-adapter.ts:6023`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:33`
+
+### BS6-028｜TBD Delivery Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Delivery Time!`
+  - Skill text：`【On Play】 If there are 3 Cookies or more in your break area, draw up to 1 card from your deck.`
+  - Attack text：`<{Y}{Y}> Not done delivering! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"break-area-card-count-at-least","side":"self","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-028 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3010`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:443`
+
+### BS6-029｜TBD Office Clerk Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Talent Recruiting`
+  - Skill text：`【On Play】 <{Y}{Y}> Select up to 1 of your Cookies. That Cookie gains +1 HP.`
+  - Attack text：`<{Y}{Y}> How useful! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":2},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-029 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS6-030｜TBD Mender Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Gear Mending`
+  - Skill text：`【On Play】 Draw up to 1 card from your deck for each Cookie that is LV.2 or higher in your break area.`
+  - Attack text：`<{Y}{Y}{Y}> I'm tired! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to-break-cookie-count`：`{"kind":"draw-up-to-break-cookie-count","minLevel":2,"amountPerCookie":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-030 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3021`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to-break-cookie-count`：`src/game/effects/execute.ts:500`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:457`
+
+### BS6-031｜Timekeeper Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} A Moment of Fun`
+  - Skill text：`【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"yellow":1}},"effects":[{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":4}}],"effectText":"Use this Cookie as {Y}. If your break area is LV.4 or higher, deal 2 damage to up to 1 opponent Cookie."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-031 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5744`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:331`
+
+### BS6-032｜Spinach Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Eat your veggies!`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 1 Cookie from your hand into your break area.> Draw up to 2 cards from your deck.`
+  - Attack text：`<{Y}{Y}{Y}> Veggies are the best! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hand-to-break`：`{"kind":"hand-to-break","amount":1}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-032 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3028`、`src/cards/official-effect-adapter.ts:6939`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `hand-to-break`：`src/game/effects/execute.ts:962`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:469`
+
+### BS6-033｜Cinnamon Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} The Great and Terrible!`
+  - Skill text：`【On Play】 If your break area is LV.4 or higher, draw up to 2 cards from your deck and discard 2 cards.`
+  - Attack text：`<{Y}{Y}> Prepare to be amazed! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to-then-discard`：`{"kind":"draw-up-to-then-discard","max":2,"discardCount":2,"condition":{"kind":"break-level-at-least","level":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-033 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3032`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to-then-discard`：`src/game/effects/execute.ts:538`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:489`
+
+### BS6-034｜Prophet Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} The Future Speaks!`
+  - Skill text：`【On Play】 Select up to 1 of your Cookies. View all of that Cookie's HP cards and rearrange them in any order.`
+  - Attack text：`<{Y}{Y}> Place your trust in me {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `reorder-hp`：`{"kind":"reorder-hp","target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-034 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3040`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `reorder-hp`：`src/game/commands.ts:1784`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:676`
+
+### BS6-035｜GingerBrave
+- 類型／顏色／等級／HP：cookie／YELLOW／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Our Search for Paradise`
+  - Skill text：`When your turn ends, if there are 2 or more Cookies in your break area, set up to 1 card from your support area as active.`
+  - Attack text：`<{Y}{Y}{N}> Let's run together! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `set-active`：`{"kind":"set-active","supportCount":1,"selectable":true,"optional":true,"condition":{"kind":"break-area-card-count-at-least","side":"self","count":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-035 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3049`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:489`
+
+### BS6-036｜Zombie Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}{Y}> Fresh Jellies... Want... {da} 2 Then, <can be used as {Y}.> This Cookie gains +1 HP for each LV.3 Cookie in your break area.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"yellow":1}},"effects":[{"kind":"gain-hp","amount":1,"perBreakCard":{"exactLevel":3},"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}],"effectText":"Use this Cookie as {Y}. This Cookie gains +1 HP for each LV.3 Cookie in your break area."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-036 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5804`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:387`
+
+### BS6-037｜Cannoli Cookie
+- 類型／顏色／等級／HP：flip／YELLOW／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> Is this the place? {da} 1`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-037 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2880`、`src/cards/official-effect-adapter.ts:6026`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:25`
+
+### BS6-038｜Coffee Candy Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> I wasn't dozing off! {da} 3 Then, if there is a {Y} Cookie that is LV.2 or higher in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-area-has-card","side":"self","color":"yellow","minLevel":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-038 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5676`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:574`
+
+### BS6-039｜Croissant Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／3／6
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Greatest Time Engineer`
+  - Skill text：`【On Play】 <{Y}> If your opponent's break area is LV.6 or lower, place 1 Cookie from your opponent's break area into the trash. Then, select up to 1 Cookie in your opponent's battle area that is 1 LV. higher than that Cookie. Place the selected Cookie in your opponent's break area.`
+  - Attack text：`<{Y}{Y}{Y}> Time travel! WOOT! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `opponent-break-to-trash-then-battle-to-break`：`{"kind":"opponent-break-to-trash-then-battle-to-break","condition":{"kind":"opponent-break-level-at-most","level":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-039 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3043`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `opponent-break-to-trash-then-battle-to-break`：`src/game/commands.ts:1688`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-040｜Pilot Cookie
+- 類型／顏色／等級／HP：cookie／YELLOW／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Always follow your heart!`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{N}{N}> Always follow your heart! {da} 3`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-040 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:190`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:43`
+
+### BS6-041｜Hourglass of Aeternus Tempora
+- 類型／顏色／等級／HP：item／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}{Y}> If there are 3 Cookies or more in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Item：cost=`{"yellow":3}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-area-card-count-at-least","side":"self","count":3}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"break-area-card-count-at-least","side":"self","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-041 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3062`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:537`
+
+### BS6-042｜Clever Advice
+- 類型／顏色／等級／HP：trap／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}> If there are 3 or more Cookies in your break area, select up to 1 of your opponent's Cookies that is LV.2 or higher. During this turn, that Cookie deals -2 attack damage. Then, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 未直接轉接；請看專用 adapter；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"yellow":1},"discardHand":0}`；condition=`{"kind":"break-area-card-count-at-least","count":3}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1,"minLevel":2}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-042 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:6859`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1082`
+
+### BS6-043｜Timecraft Garage
+- 類型／顏色／等級／HP：stage／YELLOW／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}> Place in your stage area. When your turn ends, <place 1 {Y} Cookie from your hand into your break area.> Set up to 2 cards from your support area as active. Then, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"yellow":1}`；activationCost=`{"energy":{},"discardHand":0}`；restSource=false；endPhase=true
+  - 1. `hand-to-break`：`{"kind":"hand-to-break","amount":1,"energyColor":"yellow"}`
+  - 2. `set-active`：`{"kind":"set-active","supportCount":2,"selectable":true,"optional":true}`
+  - 3. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-043 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3083`、`src/cards/official-effect-adapter.ts:4410`、`src/cards/official-effect-adapter.ts:4490`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `hand-to-break`：`src/game/effects/execute.ts:962`
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:537`
+
+### BS6-044｜Roguefort Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Searching For The Past {da} 1 Then, <return 1 Cookie from your support area to your hand.> Deals 2 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-044 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5788`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:371`
+
+### BS6-045｜Lime Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Somewhat Rough`
+  - Skill text：`【Activate】 <{G}> <Place this Cookie in the trash.> If your support area has 4 or more cards less than your opponent's support area, draw 1 card from your deck. Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{G}{G}> Hmph! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0,"trashBattleCookie":{"count":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw`：`{"kind":"draw","amount":1,"condition":{"kind":"support-count-less-than-opponent","difference":4}}`
+  - 2. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"support-count-less-than-opponent","difference":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-045 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3089`、`src/cards/official-effect-adapter.ts:6940`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw`：`src/game/effects/execute.ts:349`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:622`
+
+### BS6-046｜Langue de Chat Cookie
+- 類型／顏色／等級／HP：flip／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> You are in good hands {da} 1`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-046 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2881`、`src/cards/official-effect-adapter.ts:6030`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:26`
+
+### BS6-047｜Lemon Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Sweet and Stinging`
+  - Skill text：`If there are 5 cards or less in your support area, this Cookie gains +3 attack damage.`
+  - Attack text：`<{G}{G}{G}> The power flows through me! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":3,"duration":"this-turn","target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-047 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS6-048｜Marble Bread Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Facility Manager`
+  - Skill text：`When this Cookie faints, if there are less cards in your support area than your opponent's support area, draw 1 card from your deck. Then, your opponent discards 1 card.`
+  - Attack text：`<{G}{G}{G}> Ugh... *Yawn* {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw`：`{"kind":"draw","amount":1,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+  - 2. `opponent-discard-hand`：`{"kind":"opponent-discard-hand","count":1,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-048 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3102`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw`：`src/game/effects/execute.ts:349`
+  - Runtime：effect kind `opponent-discard-hand`：`src/game/effects/execute.ts:1916`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:622`
+
+### BS6-049｜Banana Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> It's Showtime! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-049 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-050｜Butter Pretzel Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Making a Masterpiece`
+  - Skill text：`【Activate】 【Once Per Turn】 Select any number of {G} cards in your support area. Return those cards to your hand.`
+  - Attack text：`<{G}{G}> Shush! I need to focus! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":0,"anyNumber":true,"optional":true,"energyColor":"green"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-050 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3116`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:692`
+
+### BS6-051｜Timekeeper Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ruler of the Ephemeral Flow`
+  - Skill text：`When your turn ends, select 5 cards to keep in your support area and return the rest to your hand.`
+  - Attack text：`<{G}{G}{G}> It's impossible! {da} 2 Then, <can be used as {G}.> If there are 3 or more cards in your opponent's support area, select up to 2 {G} cards from your hand. Place those cards in your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":0,"keepCount":5,"condition":{"kind":"support-count-at-least","count":6}}`
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"green":1}},"effects":[{"kind":"hand-to-support","amount":2,"rested":false,"optional":true,"energyColor":"green","condition":{"kind":"opponent-support-count-at-least","count":3}}],"effectText":"Use this Cookie as {G}. If your opponent has 3 or more support cards, place up to 2 {G} cards from your hand into your support area as active."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-051 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3125`、`src/cards/official-effect-adapter.ts:5820`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hand-to-support`：`src/game/effects/execute.ts:1749`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:400`
+
+### BS6-052｜Almond Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Sharp Detective`
+  - Skill text：`【Activate】 【Once Per Turn】 <{G}{G}> <Return 2 cards from your support area to your hand.> Select up to 1 of your opponent's LV.1 Cookies. Make that Cookie faint.`
+  - Attack text：`<{G}{G}> Coffee Break {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"green":2},"discardHand":0,"supportToHand":2}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `make-faint`：`{"kind":"make-faint","target":{"side":"opponent","min":0,"max":1,"maxLevel":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-052 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3133`、`src/cards/official-effect-adapter.ts:6945`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `make-faint`：`src/game/effects/execute.ts:2081`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-053｜Cherry Ball Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> We can do better than this! {da} 3 Then, if there are 5 cards in your support area, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"all-of","conditions":[{"kind":"support-count-at-least","count":5},{"kind":"support-count-at-most","count":5}]}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-053 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5761`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:344`
+
+### BS6-054｜Orange Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Let's play outside! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-054 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-055｜Grapefruit Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Candy Skates`
+  - Skill text：`【Your Turn】 If there are less cards in your support area than your opponent's support area, this Cookie takes no damage.`
+  - Attack text：`<{G}{G}{N}> Put some disco music on! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=true；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-damage-received`：`{"kind":"modify-damage-received","amount":0,"duration":"persistent","target":{"side":"self","min":1,"max":1,"sourceOnly":true},"minimumDamage":0,"setDamageTo":0,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-055 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3139`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-damage-received`：`src/game/effects/execute.ts:194`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-056｜Cappuccino Cookie
+- 類型／顏色／等級／HP：flip／GREEN／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}> See you in court {da} 1`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-056 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2882`、`src/cards/official-effect-adapter.ts:6034`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:34`
+
+### BS6-057｜Coffee Candy Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Registry Manager`
+  - Skill text：`【Activate】 <{G}> <Place this Cookie in the trash.> <Return 1 Cookie from your support area to your hand.> Draw up to 1 card from your deck.`
+  - Attack text：`<{G}{G}> I won't doze off again! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0,"trashBattleCookie":{"count":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-057 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3196`、`src/cards/official-effect-adapter.ts:6950`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:764`
+
+### BS6-058｜Kiwi Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Life of a Biker`
+  - Skill text：`【On Play】 If your support area has 2 or more cards less than your opponent's support area, all of your opponent's Cookies receive 2 damage.`
+  - Attack text：`<{G}{G}> I ride, therefore I live! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage-all`：`{"kind":"damage-all","amount":2,"side":"opponent","condition":{"kind":"support-count-less-than-opponent","difference":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-058 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3150`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-all`：`src/game/effects/execute.ts:586`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:622`
+
+### BS6-059｜Apple Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Let's play together! {da} 3 Then, if there are 5 cards in your support area, you can return this Cookie to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"self","min":0,"max":1,"sourceOnly":true},"condition":{"kind":"all-of","conditions":[{"kind":"support-count-at-least","count":5},{"kind":"support-count-at-most","count":5}]}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-059 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5775`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:358`
+
+### BS6-060｜Pistachio Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Without hesitation or fear! {da} 2 Then, return 1 card from your support area to your hand.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-060 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5689`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-061｜Walnut Cookie
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> A Case? Leave it to me! Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{G}{G}> A Case? Leave it to me! {da} 2 Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":0,"max":1,"maxRemainingHp":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-061 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5796`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:191`、`src/cards/official-card-adapter.ts:197`、`src/cards/official-card-adapter.ts:198`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:44`
+
+### BS6-062｜Time Rend Scissors
+- 類型／顏色／等級／HP：item／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}> <Return 1 Cookie from your support area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"green":1}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-062 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-063｜Into a Time Pocket...
+- 類型／顏色／等級／HP：trap／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 5 cards in your support area, place up to 1 card from the top of your deck into your support area as rested.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"green":2},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `choose-one`：`{"kind":"choose-one","condition":{"kind":"all-of","conditions":[{"kind":"support-count-at-least","count":5},{"kind":"support-count-at-most","count":5}]},"modes":[{"label":"將牌庫頂 1 張卡以休息狀態放入支援區","effects":[{"kind":"deck-to-support","amount":1,"rested":true}]},{"label":"不放置卡牌","effects":[]}]}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-063 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3168`、`src/cards/official-effect-adapter.ts:6832`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `choose-one`：`src/game/effects/execute.ts:1100`
+  - Runtime：effect kind `deck-to-support`：`src/game/effects/execute.ts:789`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:592`
+
+### BS6-064｜Broken Central Clock
+- 類型／顏色／等級／HP：stage／GREEN／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}> Place in your stage area. 【Activate】 <{G}> <Rest this card.> If there are less cards in your support area than your opponent's support area, place 1 card from your hand into your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Stage：placementCost=`{"green":1}`；activationCost=`{"green":1}`；restSource=true；endPhase=false
+  - 1. `hand-to-support`：`{"kind":"hand-to-support","amount":1,"rested":false,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-064 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3158`、`src/cards/official-effect-adapter.ts:4415`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hand-to-support`：`src/game/effects/execute.ts:1749`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:671`
+
+### BS6-065｜Marble Bread Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> More trash...? {da} 2 Then, if there are 6 or more cards in your hand, discard 1 card.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1,"condition":{"kind":"hand-count-at-least","count":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-065 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5862`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:924`
+
+### BS6-066｜Maple Taffy Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Relic Manager`
+  - Skill text：`【On Play】 <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Draw up to 1 card from your deck.`
+  - Attack text：`<{B}{B}> What is this place...? {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"self","min":1,"max":1,"maxLevel":1,"energyColor":"blue"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-066 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3204`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:790`
+
+### BS6-067｜Vampire Cookie
+- 類型／顏色／等級／HP：flip／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> Cheers to love! {da} 2`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-067 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2883`、`src/cards/official-effect-adapter.ts:6037`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:35`
+
+### BS6-068｜Blackberry Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> What was that noise? {da} 3 Then, <can be used as {B}.> If there are 5 or less cards in your hand, select up to 1 LV.1 Cookie in your opponent's battle area. Place that Cookie on the bottom of the deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `field-to-deck-bottom`：`{"kind":"field-to-deck-bottom","target":{"side":"opponent","min":0,"max":1,"maxLevel":1},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-068 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5886`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `field-to-deck-bottom`：`src/game/effects/execute.ts:2959`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:946`
+
+### BS6-069｜Sandwich Cookie
+- 類型／顏色／等級／HP：flip／BLUE／3／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}{B}> This'll keep you up all night! {da} 3`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-069 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2884`、`src/cards/official-effect-adapter.ts:6040`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:27`
+
+### BS6-070｜Salt Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> The Smell of Salt {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-070 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-071｜Soda Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} I want more fun...`
+  - Skill text：`When this Cookie faints, draw up to 2 cards from your deck.`
+  - Attack text：`<{B}> Always surfing! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-071 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3200`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:782`
+
+### BS6-072｜Chocolate Bonbon Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Timeless Classic`
+  - Skill text：`【On Play】 Draw up to 3 cards from your deck.`
+  - Attack text：`<{B}{B}{B}> Perfect Measurements {da} 3 Then, <discard 2 cards.> Draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":3}`
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":2}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-072 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3201`、`src/cards/official-effect-adapter.ts:5869`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:786`
+
+### BS6-073｜Schneeball Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Relic Management Ace`
+  - Skill text：`【On Play】 <{B}> <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{B}{B}{B}> Relics?! Let me see them first! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-073 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-074｜String Gummy Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} String Gummy Blaster`
+  - Skill text：`【On Play】 <{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Don't get in my way {da} 1 Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":2}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-074 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5873`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:935`
+
+### BS6-075｜Onion Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}> WAAAH! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-075 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-076｜Fairy Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> You can keep your teeth... {da} 2 Then, <discard 1 card.> Draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-076 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5880`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:942`
+
+### BS6-077｜Cheerleader Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> Pillow Fight! {da} 2 Then, <can be used as {B}.> If there are 5 cards or less in your hand, this Cookie gains +1 HP.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-077 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5893`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:953`
+
+### BS6-078｜Coffee Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Organic Brew`
+  - Skill text：`【On Play】 <{B}> If there are 5 cards or less in your hand, this Cookie gains +1 HP.`
+  - Attack text：`<{B}{B}> Coffee Studies {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-078 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS6-079｜Croissant Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Director of the TBD`
+  - Skill text：`【On Play】 <Place 1 {B} Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> Draw up to 2 cards from your deck.`
+  - Attack text：`<{B}{B}{B}> This is my final order {da} 1 Then, <discard 1 card.> Select up to 3 cards in your opponent's support area. Rest those cards.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-deck-bottom`：`{"kind":"field-to-deck-bottom","target":{"side":"self","min":1,"max":1,"maxLevel":2,"energyColor":"blue"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1}`
+  - 2. `rest-support`：`{"kind":"rest-support","side":"opponent","amount":3,"activeOnly":true,"optional":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-079 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3219`、`src/cards/official-effect-adapter.ts:5901`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `field-to-deck-bottom`：`src/game/effects/execute.ts:2959`
+  - Runtime：effect kind `rest-support`：`src/game/effects/execute.ts:1467`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:806`
+
+### BS6-080｜Adventurer Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Rope Throw`
+  - Skill text：`【On Play】 If there are 5 cards or less in your hand, select up to 1 Cookie in your opponent's battle area. Return that Cookie to the hand.`
+  - Attack text：`<{B}{B}> Where could it be... {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-080 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3232`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:822`
+
+### BS6-081｜Truffle Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Friend to All Spiders`
+  - Skill text：`【Activate】 【Once Per Turn】 <{B}> Select up to 1 LV.1 Cookie in your opponent's battle area or 1 stage card from either player's stage area. Place that card on the bottom of its owner's deck. Then, if there are 5 cards or more in your hand, discard 1 card.`
+  - Attack text：`<{B}{B}> No one here but me {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-deck-bottom`：`{"kind":"field-to-deck-bottom","target":{"side":"either","min":0,"max":1,"maxLevel":1},"allowStage":true,"battleSide":"opponent"}`
+  - 2. `discard-hand`：`{"kind":"discard-hand","count":1,"condition":{"kind":"hand-count-at-least","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-081 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3241`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `field-to-deck-bottom`：`src/game/effects/execute.ts:2959`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:902`
+
+### BS6-082｜Popcorn Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Movies & Popcorn`
+  - Skill text：`【On Play】 <Discard 1 card or more.> If there are 5 cards or less in your hand, draw up to 2 cards from your deck.`
+  - Attack text：`<{B}> Movie Night {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":1,"discardHandAtLeast":true}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-082 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3254`、`src/cards/official-effect-adapter.ts:6955`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:831`
+
+### BS6-083｜Skating Queen Cookie
+- 類型／顏色／等級／HP：cookie／BLUE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} My only rival is myself!`
+  - Skill text：`When this Cookie faints, draw up to 2 cards from your deck and discard 1 card.`
+  - Attack text：`<{B}{B}> Continuous Effort`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`When this Cookie faints, draw up to 2 cards from your deck and discard 1 card.`；Attack=`<{B}{B}> Continuous Effort {da} 2`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to-then-discard`：`{"kind":"draw-up-to-then-discard","max":2,"discardCount":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-083 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3261`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:193`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to-then-discard`：`src/game/effects/execute.ts:538`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:46`
+
+### BS6-084｜Time Manipulator
+- 類型／顏色／等級／HP：item／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}> <Discard 1 card or more.> If there are 5 cards or less in your hand, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"energy":{"blue":1},"discardHand":1,"discardHandAtLeast":true}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-084 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3262`、`src/cards/official-effect-adapter.ts:3981`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:849`
+
+### BS6-085｜Destruction of a Pastless Future
+- 類型／顏色／等級／HP：trap／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"blue":1},"discardHand":2}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-085 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3270`、`src/cards/official-effect-adapter.ts:6871`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:859`
+
+### BS6-086｜Messy TBD Director's Office
+- 類型／顏色／等級／HP：stage／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}> Place in your stage area. 【Activate】 <Rest this card.> <Discard 2 cards.> Select up to 1 of your {B} Cookies. During this turn, that Cookie gains +1 attack damage. Then, if there are 3 cards or less in your hand, draw up to 1 card from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Stage：placementCost=`{"blue":1}`；activationCost=`{"energy":{},"discardHand":2}`；restSource=true；endPhase=false
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1,"energyColor":"blue"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"hand-count-at-most","count":3}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-086 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3283`、`src/cards/official-effect-adapter.ts:4423`、`src/cards/official-effect-adapter.ts:4491`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:870`
+
+### BS6-087｜Peeled Carrot Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} TIME FOR MAYHEM!`
+  - Skill text：`When this Cookie is played from the trash, return up to 1 {P} card from your trash to your hand.`
+  - Attack text：`<{P}{P}{P}> Ugh, so annoying! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `trash-to-hand`：`{"kind":"trash-to-hand","max":1,"energyColor":"purple"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-087 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3350`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `trash-to-hand`：`src/game/effects/execute.ts:2343`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1016`
+
+### BS6-088｜Dr. Wasabi Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}> Heh-heh! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-088 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-089｜Mustard Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Dawn Rebel`
+  - Skill text：`【On Play】 Return up to 1 card from your trash to your hand.`
+  - Attack text：`<{P}{P}{P}{P}> Don't limit my freedom! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `trash-to-hand`：`{"kind":"trash-to-hand","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-089 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3296`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `trash-to-hand`：`src/game/effects/execute.ts:2343`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:970`
+
+### BS6-090｜Candlelight Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Melting Wax`
+  - Skill text：`When your turn ends, place up to 2 cards from the top of your deck into the trash.`
+  - Attack text：`<{P}{P}> My Treasure! Ptooey! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":2,"side":"self"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-090 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3297`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:974`
+
+### BS6-091@2｜Schneeball Cookie（base BS6-091；代表卡）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`{sk} Time Researcher When this Cookie is played from the trash, Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash. <{P}{P}> Relic Analysis {da} 2`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`When this Cookie is played from the trash, Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash.`；Attack=`<{P}{P}> Relic Analysis {da} 2`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `break-to-trash`：`{"kind":"break-to-trash","max":1,"energyColor":"purple","exactLevel":1,"excludeCardId":"BS6-091"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-091@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3301`、`src/cards/official-effect-adapter.ts:3307`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:150`、`src/cards/official-card-adapter.ts:154`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `break-to-trash`：`src/game/effects/execute.ts:848`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:978`
+
+### BS6-092｜String Gummy Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Timeline Lawbringer`
+  - Skill text：`【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{P}{P}{P}> There's no use in running! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=true；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-092 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-093｜Timekeeper Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Rift Villain`
+  - Skill text：`【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash.`
+  - Attack text：`<{P}{P}{P}> Wanna change the past? {da} 3 Then, <can be used as {P}.> Play up to 1 {P} Cookie with 2 or less HP from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-trash`：`{"kind":"field-to-trash","target":{"side":"self","min":0,"max":1,"maxLevel":1}}`
+  - Attack Then effects：
+  - 1. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple","maxHp":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-093 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3310`、`src/cards/official-effect-adapter.ts:5911`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `field-to-trash`：`src/game/effects/execute.ts:2134`
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:998`
+
+### BS6-094｜Half-Avocado Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} I HATE JOKES!`
+  - Skill text：`【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash.`
+  - Attack text：`<{P}{P}> You'll play with me, won't you? {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-trash`：`{"kind":"field-to-trash","target":{"side":"self","min":0,"max":1,"maxLevel":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-094 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3316`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `field-to-trash`：`src/game/effects/execute.ts:2134`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1007`
+
+### BS6-095｜Wild Strawberry Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}{P}> Enough with the drama {da} 2 Then, play up to 1 {P} Cookie with 2 or less HP from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple","maxHp":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-095 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5920`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1059`
+
+### BS6-096｜Cherry Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> You can't catch me! {da} 2 Then, if there is a LV.3 Cookie in your battle area, <can be used as {P}.> <Place this Cookie in the trash.> Play 1 {P} LV.1 Cookie from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"purple":1},"selfToTrash":true},"effects":[{"kind":"trash-to-battle","amount":1,"exactLevel":1,"energyColor":"purple","condition":{"kind":"battle-area-has-cookie-with-level","side":"self","level":3}}],"effectText":"Use this Cookie as {P}. Place this Cookie in the trash, then play 1 {P} LV.1 Cookie from your trash."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-096 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5841`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:419`
+
+### BS6-097｜Toothpaste Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Are you for real?`
+  - Skill text：`When this Cookie is played from the trash, this Cookie gains +2 HP.`
+  - Attack text：`<{P}{P}> Ugh... It's so hot {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `gain-hp`：`{"kind":"gain-hp","amount":2,"target":{"side":"self","min":1,"max":1,"sourceOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-097 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+
+### BS6-098｜Currant Cream Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Fashion World Rebel`
+  - Skill text：`When this Cookie is played from the trash, place up to 5 cards from the top of your opponent's deck into the trash.`
+  - Attack text：`<{P}> Punk Spirit {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":5,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-098 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3351`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1021`
+
+### BS6-099｜Crowberry Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Jewel Thief`
+  - Skill text：`When this Cookie is played from the trash, select up to 1 of your opponent's Cookies with 2 or more HP remaining. Place 1 card from the top of that Cookie's HP into the trash.`
+  - Attack text：`<{P}> Large Black Wings {da} 4`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `hp-to-trash`：`{"kind":"hp-to-trash","amount":1,"target":{"side":"opponent","min":0,"max":1,"minRemainingHp":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-099 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3352`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-trash`：`src/game/effects/execute.ts:2761`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1026`
+
+### BS6-100｜Croissant Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／3／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{N}{N}{N}> Got you! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-100 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-101｜Twizzly Gummy Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Remember My Name!!!`
+  - Skill text：`When this Cookie faints, <can be used as {P}.> Play up to 1 {P} Cookie from your trash.`
+  - Attack text：`<{P}{P}> Gimme everything you got! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-101 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3324`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1065`
+
+### BS6-102｜Pastel Meringue Cookie
+- 類型／顏色／等級／HP：cookie／PURPLE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> This is not cute at all {da} 1 Then, both players place 3 cards from the top of their decks into the trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"self"}`
+  - 2. `deck-to-trash`：`{"kind":"deck-to-trash","amount":3,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-102 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5929`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `deck-to-trash`：`src/game/effects/execute.ts:834`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1076`
+
+### BS6-103｜White Ghost Cookie
+- 類型／顏色／等級／HP：flip／PURPLE／1／1
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> ... You can see me? {da} 2`
+  - FLIP text：`<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":1}`；attachedHpBonus=1
+  - 無 runtime effect（純文字／數值／時機或無效果文字）。
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-103 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2885`、`src/cards/official-effect-adapter.ts:6044`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:28`
+
+### BS6-104｜Black Garlic Cookie
+- 類型／顏色／等級／HP：flip／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> A sub would be... Terrific!`
+  - FLIP text：`Draw up to 1 card from your deck.`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{P}{P}> A sub would be... Terrific! {da} 2`；FLIP=`Draw up to 1 card from your deck.`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - FLIP：cost=`{"energy":{},"discardHand":0}`；attachedHpBonus=—
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-104 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:5950` (convertOfficialFlipAbility)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2886`、`src/cards/official-effect-adapter.ts:6048`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:194`、`src/cards/official-card-adapter.ts:203`
+  - Runtime：`src/game/battle.ts:2568` (resolveFlip)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:36`
+
+### BS6-105｜Butterfly Key Relic
+- 類型／顏色／等級／HP：item／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> <Place 1 {P} LV.1 Cookie from your battle area into the trash.> Draw up to 2 cards from your deck and discard 1 card.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Item：cost=`{"energy":{"purple":1},"discardHand":0,"trashBattleCookie":{"count":1,"level":1,"energyColor":"purple"}}`
+  - 1. `draw-up-to-then-discard`：`{"kind":"draw-up-to-then-discard","max":2,"discardCount":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-105 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:3921` (convertOfficialItemAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3332`、`src/cards/official-effect-adapter.ts:3986`
+  - Runtime：`src/game/commands.ts:2096` (play-item command)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to-then-discard`：`src/game/effects/execute.ts:538`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1037`
+
+### BS6-106｜Peak Engineer Performance
+- 類型／顏色／等級／HP：trap／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, play up to 1 {P} Cookie with 2 or less HP from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；Attack Then 待查
+- runtime 效果：
+  - Trap：cost=`{"energy":{"purple":2},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-1,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple","maxHp":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-106 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3333`、`src/cards/official-effect-adapter.ts:6887`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:1055`
+
+### BS6-107｜TBD Machine Room
+- 類型／顏色／等級／HP：stage／PURPLE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}> Place in your stage area. 【Activate】 <{P}> <Rest this card.> During this turn, if a Cookie was played from your trash, all of your opponent's Cookies receive 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Stage：placementCost=`{"purple":1}`；activationCost=`{"purple":1}`；restSource=true；endPhase=false
+  - 1. `damage-all`：`{"kind":"damage-all","amount":1,"side":"opponent","condition":{"kind":"cookie-played-from-trash-this-turn"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-107 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:4009` (convertOfficialStageAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3361`
+  - Runtime：`src/game/commands.ts:2173` (play-stage command)
+  - Runtime：`src/game/turn.ts:209` (stage end-phase processing)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-all`：`src/game/effects/execute.ts:586`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:887`
+
+## BS6 異圖／變體記錄（31）
+
+### BS6-001@1｜Blue Lily Cookie（base BS6-001）
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Sweet Heartmender`
+  - Skill text：`【Activate】 【Once Per Turn】 <Place 2 cards from the top of 1 of your {R} Cookies' HP into the trash.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.`
+  - Attack text：`<{R}{R}> Feelings of Fondness {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{},"discardHand":0,"hpToTrash":{"amount":2,"energyColor":"red"}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":1,"duration":"this-turn","target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-001@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2899`、`src/cards/official-effect-adapter.ts:6960`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS6-007@1｜Blue Slushy Cookie（base BS6-007）
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{R}{R}{R}> Relentless Chirping {da} 3 Then, if your opponent's Cookie faints from this Cookie's attack, rest up to 2 cards in your opponent's support area.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `rest-support`：`{"kind":"rest-support","side":"opponent","amount":2,"activeOnly":true,"optional":true,"condition":{"kind":"opponent-cookie-fainted-in-current-battle"}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-007@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5666`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `rest-support`：`src/game/effects/execute.ts:1467`
+
+### BS6-008@1｜Sugar Swan Cookie（base BS6-008）
+- 類型／顏色／等級／HP：cookie／RED／3／6
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} True Love's Vow`
+  - Skill text：`When this Cookie attacks, if this Cookie's remaining HP is 4 or less, during this battle, your opponent cannot activate traps.`
+  - Attack text：`<{R}{R}{R}> Sweet First Love {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `disable-traps`：`{"kind":"disable-traps","duration":"current-battle","condition":{"kind":"source-hp-at-most","amount":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-008@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2908`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `disable-traps`：`src/game/effects/execute.ts:3230`
+
+### BS6-010@1｜Timekeeper Cookie（base BS6-010）
+- 類型／顏色／等級／HP：cookie／RED／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Shackles of Love`
+  - Skill text：`If this Cookie is in the battle area, your opponent cannot use effects to move either player's Cookies from the battle area.`
+  - Attack text：`<{R}{R}{R}> Sweet Despair {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `prevent-opponent-battle-movement`：`{"kind":"prevent-opponent-battle-movement"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-010@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2915`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+
+### BS6-012@1｜Lilybell Cookie（base BS6-012）
+- 類型／顏色／等級／HP：cookie／RED／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Song of Nature`
+  - Skill text：`When your turn ends, if there are 5 cards or less in your hand, return up to 1 card from the top of your Cookie's HP to your hand.`
+  - Attack text：`<{R}{R}> Nature is beautiful {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1},"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-012@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2923`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+
+### BS6-020@1｜Tonic Spray（base BS6-020）
+- 類型／顏色／等級／HP：trap／RED／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`<{R}{R}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 card from the top of your Cookie's HP to your hand.`
+  - Attack text：`—`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Trap：cost=`{"energy":{"red":2},"discardHand":0}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `hp-to-hand`：`{"kind":"hp-to-hand","amount":1,"target":{"side":"self","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-020@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2976`、`src/cards/official-effect-adapter.ts:6815`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hp-to-hand`：`src/game/effects/execute.ts:1202`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS6-023@1｜Dark Fondue Cookie（base BS6-023）
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Pleasure to meet you`
+  - Skill text：`【On Play】 <Place 1 Cookie from your hand into your break area.> All of your opponent's Cookies receive 1 damage.`
+  - Attack text：`<{Y}{Y}> I'll look forward to it {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `hand-to-break`：`{"kind":"hand-to-break","amount":1}`
+  - 2. `damage-all`：`{"kind":"damage-all","amount":1,"side":"opponent"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-023@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2991`、`src/cards/official-effect-adapter.ts:6938`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage-all`：`src/game/effects/execute.ts:586`
+  - Runtime：effect kind `hand-to-break`：`src/game/effects/execute.ts:962`
+
+### BS6-025@1｜Baguette Cookie（base BS6-025）
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Registry Head Manager`
+  - Skill text：`【Activate】 【Once Per Turn】 <{Y}> If your break area is LV.2 or lower and there are 6 cards or less in your hand, draw up to 1 card from your deck.`
+  - Attack text：`<{Y}{Y}{Y}> Focus on the basics {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":1,"condition":{"kind":"all-of","conditions":[{"kind":"break-level-at-most","level":2},{"kind":"hand-count-at-most","count":6}]}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-025@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:2995`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+
+### BS6-031@1｜Timekeeper Cookie（base BS6-031）
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} A Moment of Fun`
+  - Skill text：`【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"yellow":1}},"effects":[{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":4}}],"effectText":"Use this Cookie as {Y}. If your break area is LV.4 or higher, deal 2 damage to up to 1 opponent Cookie."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-031@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5744`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+
+### BS6-031@2｜Timekeeper Cookie（base BS6-031）
+- 類型／顏色／等級／HP：cookie／YELLOW／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} A Moment of Fun`
+  - Skill text：`【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"yellow":1}},"effects":[{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-level-at-least","level":4}}],"effectText":"Use this Cookie as {Y}. If your break area is LV.4 or higher, deal 2 damage to up to 1 opponent Cookie."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-031@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5744`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+
+### BS6-035@1｜GingerBrave（base BS6-035）
+- 類型／顏色／等級／HP：cookie／YELLOW／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Our Search for Paradise`
+  - Skill text：`When your turn ends, if there are 2 or more Cookies in your break area, set up to 1 card from your support area as active.`
+  - Attack text：`<{Y}{Y}{N}> Let's run together! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `set-active`：`{"kind":"set-active","supportCount":1,"selectable":true,"optional":true,"condition":{"kind":"break-area-card-count-at-least","side":"self","count":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-035@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3049`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `set-active`：`src/game/effects/execute.ts:3041`
+
+### BS6-038@1｜Coffee Candy Cookie（base BS6-038）
+- 類型／顏色／等級／HP：cookie／YELLOW／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{Y}{Y}> I wasn't dozing off! {da} 3 Then, if there is a {Y} Cookie that is LV.2 or higher in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1},"condition":{"kind":"break-area-has-card","side":"self","color":"yellow","minLevel":2}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-038@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5676`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-039@1｜Croissant Cookie（base BS6-039）
+- 類型／顏色／等級／HP：cookie／YELLOW／3／6
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Greatest Time Engineer`
+  - Skill text：`【On Play】 <{Y}> If your opponent's break area is LV.6 or lower, place 1 Cookie from your opponent's break area into the trash. Then, select up to 1 Cookie in your opponent's battle area that is 1 LV. higher than that Cookie. Place the selected Cookie in your opponent's break area.`
+  - Attack text：`<{Y}{Y}{Y}> Time travel! WOOT! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"yellow":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `opponent-break-to-trash-then-battle-to-break`：`{"kind":"opponent-break-to-trash-then-battle-to-break","condition":{"kind":"opponent-break-level-at-most","level":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-039@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3043`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `opponent-break-to-trash-then-battle-to-break`：`src/game/commands.ts:1688`
+
+### BS6-044@1｜Roguefort Cookie（base BS6-044）
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> Searching For The Past {da} 1 Then, <return 1 Cookie from your support area to your hand.> Deals 2 damage.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":1,"max":1,"attackTargetOnly":true}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-044@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5788`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+
+### BS6-048@1｜Marble Bread Cookie（base BS6-048）
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Facility Manager`
+  - Skill text：`When this Cookie faints, if there are less cards in your support area than your opponent's support area, draw 1 card from your deck. Then, your opponent discards 1 card.`
+  - Attack text：`<{G}{G}{G}> Ugh... *Yawn* {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `draw`：`{"kind":"draw","amount":1,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+  - 2. `opponent-discard-hand`：`{"kind":"opponent-discard-hand","count":1,"condition":{"kind":"support-count-less-than-opponent","difference":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-048@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3102`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw`：`src/game/effects/execute.ts:349`
+  - Runtime：effect kind `opponent-discard-hand`：`src/game/effects/execute.ts:1916`
+
+### BS6-051@1｜Timekeeper Cookie（base BS6-051）
+- 類型／顏色／等級／HP：cookie／GREEN／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Ruler of the Ephemeral Flow`
+  - Skill text：`When your turn ends, select 5 cards to keep in your support area and return the rest to your hand.`
+  - Attack text：`<{G}{G}{G}> It's impossible! {da} 2 Then, <can be used as {G}.> If there are 3 or more cards in your opponent's support area, select up to 2 {G} cards from your hand. Place those cards in your support area as active.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":true,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":0,"keepCount":5,"condition":{"kind":"support-count-at-least","count":6}}`
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"green":1}},"effects":[{"kind":"hand-to-support","amount":2,"rested":false,"optional":true,"energyColor":"green","condition":{"kind":"opponent-support-count-at-least","count":3}}],"effectText":"Use this Cookie as {G}. If your opponent has 3 or more support cards, place up to 2 {G} cards from your hand into your support area as active."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-051@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3125`、`src/cards/official-effect-adapter.ts:5820`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `hand-to-support`：`src/game/effects/execute.ts:1749`
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+
+### BS6-057@1｜Coffee Candy Cookie（base BS6-057）
+- 類型／顏色／等級／HP：cookie／GREEN／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Registry Manager`
+  - Skill text：`【Activate】 <{G}> <Place this Cookie in the trash.> <Return 1 Cookie from your support area to your hand.> Draw up to 1 card from your deck.`
+  - Attack text：`<{G}{G}> I won't doze off again! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"green":1},"discardHand":0,"trashBattleCookie":{"count":1,"sourceOnly":true}}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-057@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3196`、`src/cards/official-effect-adapter.ts:6950`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+
+### BS6-061@1｜Walnut Cookie（base BS6-061）
+- 類型／顏色／等級／HP：cookie／GREEN／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{G}{G}> A Case? Leave it to me! Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`—`；Attack=`<{G}{G}> A Case? Leave it to me! {da} 2 Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `support-to-hand`：`{"kind":"support-to-hand","amount":1,"cardType":"cookie"}`
+  - 2. `gain-hp`：`{"kind":"gain-hp","amount":1,"target":{"side":"self","min":0,"max":1,"maxRemainingHp":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-061@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5796`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:191`、`src/cards/official-card-adapter.ts:197`、`src/cards/official-card-adapter.ts:198`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `gain-hp`：`src/game/effects/execute.ts:908`
+  - Runtime：effect kind `support-to-hand`：`src/game/effects/execute.ts:1700`
+  - 直接 adapter 測試：`src/cards/official-effect-adapter-bs6.test.ts:45`
+
+### BS6-065@1｜Marble Bread Cookie（base BS6-065）
+- 類型／顏色／等級／HP：cookie／BLUE／1／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{B}{B}> More trash...? {da} 2 Then, if there are 6 or more cards in your hand, discard 1 card.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1,"condition":{"kind":"hand-count-at-least","count":6}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-065@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5862`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+
+### BS6-066@1｜Maple Taffy Cookie（base BS6-066）
+- 類型／顏色／等級／HP：cookie／BLUE／2／3
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Relic Manager`
+  - Skill text：`【On Play】 <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Draw up to 1 card from your deck.`
+  - Attack text：`<{B}{B}> What is this place...? {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `return-to-hand`：`{"kind":"return-to-hand","target":{"side":"self","min":1,"max":1,"maxLevel":1,"energyColor":"blue"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":1}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-066@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3204`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `return-to-hand`：`src/game/effects/execute.ts:2861`
+
+### BS6-073@1｜Schneeball Cookie（base BS6-073）
+- 類型／顏色／等級／HP：cookie／BLUE／2／4
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Relic Management Ace`
+  - Skill text：`【On Play】 <{B}> <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.`
+  - Attack text：`<{B}{B}{B}> Relics?! Let me see them first! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":1,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-073@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-074@1｜String Gummy Cookie（base BS6-074）
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} String Gummy Blaster`
+  - Skill text：`【On Play】 <{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{B}{B}{B}> Don't get in my way {da} 1 Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":2}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1}}`
+  - Attack Then effects：
+  - 1. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-074@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5873`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+
+### BS6-079@1｜Croissant Cookie（base BS6-079）
+- 類型／顏色／等級／HP：cookie／BLUE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Director of the TBD`
+  - Skill text：`【On Play】 <Place 1 {B} Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> Draw up to 2 cards from your deck.`
+  - Attack text：`<{B}{B}{B}> This is my final order {da} 1 Then, <discard 1 card.> Select up to 3 cards in your opponent's support area. Rest those cards.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-deck-bottom`：`{"kind":"field-to-deck-bottom","target":{"side":"self","min":1,"max":1,"maxLevel":2,"energyColor":"blue"}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2}`
+  - Attack Then effects：
+  - 1. `discard-hand`：`{"kind":"discard-hand","count":1}`
+  - 2. `rest-support`：`{"kind":"rest-support","side":"opponent","amount":3,"activeOnly":true,"optional":true}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-079@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3219`、`src/cards/official-effect-adapter.ts:5901`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `field-to-deck-bottom`：`src/game/effects/execute.ts:2959`
+  - Runtime：effect kind `rest-support`：`src/game/effects/execute.ts:1467`
+
+### BS6-081@1｜Truffle Cookie（base BS6-081）
+- 類型／顏色／等級／HP：cookie／BLUE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Friend to All Spiders`
+  - Skill text：`【Activate】 【Once Per Turn】 <{B}> Select up to 1 LV.1 Cookie in your opponent's battle area or 1 stage card from either player's stage area. Place that card on the bottom of its owner's deck. Then, if there are 5 cards or more in your hand, discard 1 card.`
+  - Attack text：`<{B}{B}> No one here but me {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=activate；oncePerTurn=true；yourTurn=false；cost=`{"energy":{"blue":1},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-deck-bottom`：`{"kind":"field-to-deck-bottom","target":{"side":"either","min":0,"max":1,"maxLevel":1},"allowStage":true,"battleSide":"opponent"}`
+  - 2. `discard-hand`：`{"kind":"discard-hand","count":1,"condition":{"kind":"hand-count-at-least","count":5}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-081@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3241`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `discard-hand`：`src/game/effects/execute.ts:1986`
+  - Runtime：effect kind `field-to-deck-bottom`：`src/game/effects/execute.ts:2959`
+
+### BS6-085@1｜Destruction of a Pastless Future（base BS6-085）
+- 類型／顏色／等級／HP：trap／BLUE／—／—
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：2-ON-2 Event；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck.`
+  - Attack text：`—`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：專用能力 adapter 已轉接；無 Attack Then
+- runtime 效果：
+  - Trap：cost=`{"energy":{"blue":1},"discardHand":2}`；condition=—
+  - 1. `modify-attack`：`{"kind":"modify-attack","amount":-2,"duration":"this-turn","target":{"side":"opponent","min":0,"max":1}}`
+  - 2. `draw-up-to`：`{"kind":"draw-up-to","max":2,"condition":{"kind":"hand-count-at-most","count":4}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-085@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:6287` (convertOfficialTrapAbility)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3270`、`src/cards/official-effect-adapter.ts:6871`
+  - Runtime：`src/game/battle.ts:927` (playTrap)
+  - Runtime：`src/game/battle.ts:1191` (trap effect queue)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `draw-up-to`：`src/game/effects/execute.ts:422`
+  - Runtime：effect kind `modify-attack`：`src/game/effects/execute.ts:193`
+
+### BS6-091@3｜Schneeball Cookie（base BS6-091）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`{sk} Time Researcher When this Cookie is played from the trash, Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash. <{P}{P}> Relic Analysis {da} 2`
+  - FLIP text：`—`
+- runtime 正規化後文字：Skill=`When this Cookie is played from the trash, Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash.`；Attack=`<{P}{P}> Relic Analysis {da} 2`；FLIP=`—`。
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：無能力文字；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `break-to-trash`：`{"kind":"break-to-trash","max":1,"energyColor":"purple","exactLevel":1,"excludeCardId":"BS6-091"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-091@3 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3301`、`src/cards/official-effect-adapter.ts:3307`
+  - Adapter：資料正規化／官方欄位修正：`src/cards/official-card-adapter.ts:150`、`src/cards/official-card-adapter.ts:154`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `break-to-trash`：`src/game/effects/execute.ts:848`
+
+### BS6-092@1｜String Gummy Cookie（base BS6-092）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Timeline Lawbringer`
+  - Skill text：`【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{P}{P}{P}> There's no use in running! {da} 3`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=true；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-092@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-092@2｜String Gummy Cookie（base BS6-092）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：PROMOTION CARD；限制：無
+- 官方卡面文字：
+  - Skill name：`Timeline Lawbringer`
+  - Skill text：`【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.`
+  - Attack text：`<{P}{P}{P}> There's no use in running! {da} 2`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=true；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":true,"fromSupportArea":false}`
+  - 1. `damage`：`{"kind":"damage","amount":2,"target":{"side":"opponent","min":0,"max":1}}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-092@2 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `damage`：`src/game/effects/execute.ts:192`
+
+### BS6-093@1｜Timekeeper Cookie（base BS6-093）
+- 類型／顏色／等級／HP：cookie／PURPLE／3／5
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Time Rift Villain`
+  - Skill text：`【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash.`
+  - Attack text：`<{P}{P}{P}> Wanna change the past? {da} 3 Then, <can be used as {P}.> Play up to 1 {P} Cookie with 2 or less HP from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；Attack Then 已轉接
+- runtime 效果：
+  - Cookie skill：trigger=on-play；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":false,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `field-to-trash`：`{"kind":"field-to-trash","target":{"side":"self","min":0,"max":1,"maxLevel":1}}`
+  - Attack Then effects：
+  - 1. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple","maxHp":2}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-093@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3310`、`src/cards/official-effect-adapter.ts:5911`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `field-to-trash`：`src/game/effects/execute.ts:2134`
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+
+### BS6-096@1｜Cherry Cookie（base BS6-096）
+- 類型／顏色／等級／HP：cookie／PURPLE／2／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`—`
+  - Skill text：`—`
+  - Attack text：`<{P}{P}> You can't catch me! {da} 2 Then, if there is a LV.3 Cookie in your battle area, <can be used as {P}.> <Place this Cookie in the trash.> Play 1 {P} LV.1 Cookie from your trash.`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：無主效果文字（通常為僅攻擊文字）；Ability：無能力文字；Attack Then 已轉接
+- runtime 效果：
+  - 無可轉接的主動／觸發能力。
+  - Attack Then effects：
+  - 1. `optional-cost-attack`：`{"kind":"optional-cost-attack","cost":{"energy":{"purple":1},"selfToTrash":true},"effects":[{"kind":"trash-to-battle","amount":1,"exactLevel":1,"energyColor":"purple","condition":{"kind":"battle-area-has-cookie-with-level","side":"self","level":3}}],"effectText":"Use this Cookie as {P}. Place this Cookie in the trash, then play 1 {P} LV.1 Cookie from your trash."}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-096@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:5841`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `optional-cost-attack`：`src/game/effects/execute.ts:3228`
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+
+### BS6-101@1｜Twizzly Gummy Cookie（base BS6-101）
+- 類型／顏色／等級／HP：cookie／PURPLE／1／2
+- 官方資料：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`；產品：BOOSTER PACK [Operation Timeguard]；限制：無
+- 官方卡面文字：
+  - Skill name：`{sk} Remember My Name!!!`
+  - Skill text：`When this Cookie faints, <can be used as {P}.> Play up to 1 {P} Cookie from your trash.`
+  - Attack text：`<{P}{P}> Gimme everything you got! {da} 1`
+  - FLIP text：`—`
+- 轉接狀態：GameCard converted；Primary：通用 CardEffect 已轉接；Ability：能力已轉接；無 Attack Then
+- runtime 效果：
+  - Cookie skill：trigger=passive；oncePerTurn=false；yourTurn=false；cost=`{"energy":{},"discardHand":0}`；flags=`{"restSource":false,"faint":true,"endPhase":false,"afterDamage":false,"oncePerGame":false,"fromBreakArea":false,"fromTrashArea":false,"fromSupportArea":false}`
+  - 1. `trash-to-battle`：`{"kind":"trash-to-battle","amount":1,"optional":true,"energyColor":"purple"}`
+- 對應程式碼：
+  - 資料記錄：`data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json`（以 cardNumber=BS6-101@1 搜尋該 JSON 記錄）。
+  - Adapter：`src/cards/official-card-adapter.ts:219` (convertOfficialCardToGameCard)
+  - Adapter：`src/cards/official-card-adapter.ts:85` (normalizeOfficialCardRecord)
+  - Adapter：`src/cards/official-effect-adapter.ts:353` (convertOfficialCardEffects)
+  - Adapter：`src/cards/official-effect-adapter.ts:7153` (convertOfficialCookieSkill)
+  - Adapter：`src/cards/official-effect-adapter.ts:4538` (convertOfficialAttackEffects)
+  - Adapter：卡號專用 mapping：`src/cards/official-effect-adapter.ts:3324`
+  - Runtime：`src/game/skills.ts:683` (canActivateCookieSkill)
+  - Runtime：`src/game/skills.ts:898` (activateCookieSkill)
+  - Runtime：`src/game/battle.ts:1830` (advanceAttackEffect)
+  - Runtime：`src/game/battle.ts:2077` (resolveAttackEffect)
+  - Runtime：`src/game/effects/execute.ts:336` (executeCardEffect)
+  - Runtime：effect kind `trash-to-battle`：`src/game/effects/execute.ts:1811`
+
+## 使用方式
+
+- 查卡面文字：看每張卡的「官方卡面文字」。
+- 查規則層輸入：看「runtime 效果」的 `kind` 與 JSON。
+- 查實際程式：先看「程式碼路由索引」，再依每張卡的 `Adapter`／`Runtime` 行號進入對應檔案。
+- 查驗證：BS5／BS6 的 adapter 測試與逐色 Browser 稽核檔案位於 `src/cards/official-effect-adapter-bs5.test.ts`、`src/cards/official-effect-adapter-bs6.test.ts` 與 `docs/`。

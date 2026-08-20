@@ -2187,6 +2187,75 @@ describe('usePendingEffect BS3-113 sequential all-target OnPlay', () => {
   })
 })
 
+describe('usePendingEffect trash-to-break candidates', () => {
+  it('exposes P-016 yellow LV.2 trash Cookies to the OnPlay target picker', async () => {
+    const baseState = createCardCheckDemoState('P-016')
+    const source = baseState.players['player-one'].hand.find(
+      (card) => card.id === 'P-016',
+    )
+    if (source?.type !== 'cookie' || !source.skill) {
+      throw new Error('P-016 card-check fixture requires its OnPlay skill.')
+    }
+    const gameState = applyGameCommand(baseState, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+    })
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => undefined,
+        dispatch: createDispatch(gameState, () => undefined),
+        viewerPlayerId: 'player-one',
+        setMessage: () => undefined,
+        clearAttacker: () => undefined,
+        setInspectedHpPile: () => undefined,
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => undefined,
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => undefined,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => {
+      captured!.beginCookieSkill(
+        gameState,
+        source,
+        'player-one',
+        'on-play',
+        'OnPlay 登場觸發',
+        false,
+      )
+    })
+
+    expect(captured!.currentEffect).toMatchObject({
+      kind: 'trash-to-break',
+      amount: 1,
+      exactLevel: 2,
+      energyColor: 'yellow',
+    })
+    await act(() => {
+      captured!.toggleSkillPayment('support-pay-0')
+    })
+    expect(
+      captured!.genericEffectCandidateCards.map((card) => card.instanceId),
+    ).toEqual(['trash-cookie-2'])
+
+    await act(() => root.unmount())
+  })
+})
+
 /**
  * 攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011 甜辣醬餅乾）
  * 必須先等本次戰鬥收尾，再結算完整的攻擊後效果；效果鏈完成後才建立對手的

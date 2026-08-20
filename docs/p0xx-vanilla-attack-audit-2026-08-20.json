@@ -1,0 +1,359 @@
+{
+  "generatedAt": "2026-08-20T12:53:31.513Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-promotion-p001-p032.en.json",
+    "data/cards/official-promotion-p001-p032-remaining.en.json",
+    "data/cards/official-p-0xx-remaining.en.json"
+  ],
+  "scope": "Formal-pool test-state UI audit for every P-0XX vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.",
+  "summary": {
+    "total": 15,
+    "effectFlowPassed": 15,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Vanilla deploy and attack flow settled": 15
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "P-047",
+      "baseCardNumber": "P-047",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-047",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-048",
+      "baseCardNumber": "P-048",
+      "variant": null,
+      "name": "Sparkling Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-048",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-049",
+      "baseCardNumber": "P-049",
+      "variant": null,
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-049",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-076",
+      "baseCardNumber": "P-076",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-076",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-078",
+      "baseCardNumber": "P-078",
+      "variant": null,
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-078",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-078@1",
+      "baseCardNumber": "P-078",
+      "variant": "1",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-078@1",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-078@2",
+      "baseCardNumber": "P-078",
+      "variant": "2",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-078@2",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-087",
+      "baseCardNumber": "P-087",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-087",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-087@1",
+      "baseCardNumber": "P-087",
+      "variant": "1",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-087@1",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-087@2",
+      "baseCardNumber": "P-087",
+      "variant": "2",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-087@2",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-089",
+      "baseCardNumber": "P-089",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-089",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-123",
+      "baseCardNumber": "P-123",
+      "variant": null,
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-123",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-149",
+      "baseCardNumber": "P-149",
+      "variant": null,
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-149",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-149@1",
+      "baseCardNumber": "P-149",
+      "variant": "1",
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-149@1",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "P-149@2",
+      "baseCardNumber": "P-149",
+      "variant": "2",
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:P-149@2",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    }
+  ]
+}

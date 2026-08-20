@@ -146,4 +146,50 @@ describe('runtime decision descriptor compiler', () => {
       candidateIds: [target.card.instanceId],
     })
   })
+
+  it('includes an opposing Stage in field-to-trash candidates', () => {
+    const base = createDemoGame(25)
+    const source = base.players['player-one'].battleArea[0]
+    const stageCard = {
+      id: 'descriptor-stage',
+      instanceId: 'descriptor-stage-instance',
+      name: 'Descriptor Stage',
+      type: 'stage' as const,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          stage: { card: stageCard, rested: false },
+        },
+      },
+    }
+
+    const descriptor = compileEffectDecisionDescriptor({
+      state,
+      playerId: 'player-one',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      sourceCardName: source.card.name,
+      context: {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      effect: {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        stageOnly: true,
+      },
+      viewerPlayerId: 'player-one',
+    })
+
+    expect(descriptor.status).toBe('ready')
+    expect(descriptor.steps.find((step) => step.kind === 'target')).toMatchObject({
+      candidateIds: [stageCard.instanceId],
+      min: 0,
+      max: 1,
+    })
+  })
 })

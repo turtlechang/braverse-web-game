@@ -207,6 +207,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
     }
+    if (testStateConfig?.kind === 'bs6-010-movement') {
+      return createBs6079OnPlayDemoState(testStateConfig.blocked)
+    }
     if (testStateConfig?.kind === 'bs6-008-trap') {
       return createBs6008TrapDemoState(testStateConfig.remainingHp)
     }
@@ -394,6 +397,21 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+    }
+    if (testStateConfig?.kind === 'bs6-010-movement') {
+      return testStateConfig.blocked
+        ? 'BS6-010 Timekeeper Cookie 反向驗證：阻止 BS6-079 的戰鬥區移動。'
+        : 'BS6-010 Timekeeper Cookie 正向驗證：沒有阻擋者時允許 BS6-079 移動。'
+    }
+    if (testStateConfig?.kind === 'bs6-079-on-play') {
+      return testStateConfig.blocked
+        ? 'BS6-079 OnPlay 反向驗證：BS6-010 阻止戰鬥區移動。'
+        : 'BS6-079 OnPlay 正向驗證：選擇目標後移動至牌庫底。'
+    }
+    if (testStateConfig?.kind === 'bs6-008-trap') {
+      return testStateConfig.remainingHp === 4
+        ? 'BS6-008 Sugar Swan 正向驗證：HP≤4，Tonic Spray 不可發動。'
+        : 'BS6-008 Sugar Swan 反向驗證：HP=5，Tonic Spray 可進入回應。'
     }
     if (testStateConfig?.kind === 'bs3-061-condition') {
       return `BS3-061 Silverbell Cookie 昏厥測試：支援區 ${testStateConfig.conditionMet ? 6 : 5} 張，支付後條件${testStateConfig.conditionMet ? '成立' : '不成立'}。`

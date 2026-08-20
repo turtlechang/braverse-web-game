@@ -8,7 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import type { CardEffect, CardSkill, GameCard } from '../../game'
-import { isEffectUntargeted } from '../../game'
+import { isEffectUntargeted, requiresEffectCardSelection } from '../../game'
 import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
@@ -375,8 +375,12 @@ function EffectPanelContent({
       : !selectionLimits ||
         Boolean(
           pendingEffect &&
-            pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
-            pendingEffect.selectedTargetIds.length <= selectionLimits.max,
+            ((selectionLimits.min > 0 &&
+              candidateCards.length === 0 &&
+              currentEffect !== null &&
+              requiresEffectCardSelection(currentEffect)) ||
+              (pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
+                pendingEffect.selectedTargetIds.length <= selectionLimits.max)),
         ))
   const restSupportReady =
     !isRestSupportAndDamageEffect ||

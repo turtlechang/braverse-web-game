@@ -170,6 +170,37 @@ const createPendingEffect = (
 })
 
 describe('EffectPanel', () => {
+  it('allows confirmation when a mandatory card-selection effect has no legal candidates', async () => {
+    const onConfirm = vi.fn()
+    const effect: CardEffect = {
+      kind: 'hand-to-break',
+      amount: 1,
+      energyColor: 'yellow',
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={createPendingEffect({ effects: [effect] })}
+        currentEffect={effect}
+        effectHistory={[]}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+        candidateCards={[]}
+        onToggleCandidate={() => undefined}
+      />,
+    ))
+
+    const confirmButton = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(confirmButton.disabled).toBe(false)
+    await act(() => confirmButton.click())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+
+    act(() => root.unmount())
+  })
+
   it('returns null when no pending effect and empty history', () => {
     const container = document.createElement('div')
     const root = createRoot(container)

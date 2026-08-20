@@ -1,0 +1,2316 @@
+{
+  "generatedAt": "2026-08-20T12:05:50.503Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-brave-beginning-bs2.en.json"
+  ],
+  "scope": "Formal-pool test-state interaction audit for BS2 effect-bearing records plus dedicated A/B paths for 0 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 86,
+    "effectFlowPassed": 86,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 86
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS2-001",
+      "baseCardNumber": "BS2-001",
+      "variant": null,
+      "name": "Muscle Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-001",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-002",
+      "baseCardNumber": "BS2-002",
+      "variant": null,
+      "name": "Macaron Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-002",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-003",
+      "baseCardNumber": "BS2-003",
+      "variant": null,
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-003",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-003@1",
+      "baseCardNumber": "BS2-003",
+      "variant": "1",
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-003@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-004",
+      "baseCardNumber": "BS2-004",
+      "variant": null,
+      "name": "Cherry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-004",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-006",
+      "baseCardNumber": "BS2-006",
+      "variant": null,
+      "name": "Prickly Cacti Gloves",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-006",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-007",
+      "baseCardNumber": "BS2-007",
+      "variant": null,
+      "name": "Prickly Cactus Bat",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-007",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-009",
+      "baseCardNumber": "BS2-009",
+      "variant": null,
+      "name": "Carrot Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-009",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-010",
+      "baseCardNumber": "BS2-010",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-010",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-011",
+      "baseCardNumber": "BS2-011",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-011",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect"
+      ]
+    },
+    {
+      "cardNumber": "BS2-011@1",
+      "baseCardNumber": "BS2-011",
+      "variant": "1",
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-011@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "skip:optional-effect"
+      ]
+    },
+    {
+      "cardNumber": "BS2-012",
+      "baseCardNumber": "BS2-012",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-012",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-013",
+      "baseCardNumber": "BS2-013",
+      "variant": null,
+      "name": "Wind-Up Pocket Watch",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-013",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-014",
+      "baseCardNumber": "BS2-014",
+      "variant": null,
+      "name": "Erratic Yakgwa Robot",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-014",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-015",
+      "baseCardNumber": "BS2-015",
+      "variant": null,
+      "name": "Lemon Thyme Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-015",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-015@1",
+      "baseCardNumber": "BS2-015",
+      "variant": "1",
+      "name": "Lemon Thyme Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-015@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-017",
+      "baseCardNumber": "BS2-017",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-017",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-018",
+      "baseCardNumber": "BS2-018",
+      "variant": null,
+      "name": "Candlelight Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-018",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-019",
+      "baseCardNumber": "BS2-019",
+      "variant": null,
+      "name": "Cheesecake Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-019",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip-discard",
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-020",
+      "baseCardNumber": "BS2-020",
+      "variant": null,
+      "name": "Carrot Jelly Stew",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-020",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-021",
+      "baseCardNumber": "BS2-021",
+      "variant": null,
+      "name": "Carrot Farm Scarecrow",
+      "type": "trap",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-021",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-022",
+      "baseCardNumber": "BS2-022",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-022",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-022@1",
+      "baseCardNumber": "BS2-022",
+      "variant": "1",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-022@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-025",
+      "baseCardNumber": "BS2-025",
+      "variant": null,
+      "name": "Mango Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-025",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:hand-discard",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-026",
+      "baseCardNumber": "BS2-026",
+      "variant": null,
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-026",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap"
+      ]
+    },
+    {
+      "cardNumber": "BS2-026@1",
+      "baseCardNumber": "BS2-026",
+      "variant": "1",
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-026@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap"
+      ]
+    },
+    {
+      "cardNumber": "BS2-027",
+      "baseCardNumber": "BS2-027",
+      "variant": null,
+      "name": "Cotton Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-027",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-027@1",
+      "baseCardNumber": "BS2-027",
+      "variant": "1",
+      "name": "Cotton Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-027@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-028",
+      "baseCardNumber": "BS2-028",
+      "variant": null,
+      "name": "Pond Dino Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-028",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-028@1",
+      "baseCardNumber": "BS2-028",
+      "variant": "1",
+      "name": "Pond Dino Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-028@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-029",
+      "baseCardNumber": "BS2-029",
+      "variant": null,
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-029",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-029@1",
+      "baseCardNumber": "BS2-029",
+      "variant": "1",
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-029@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-031",
+      "baseCardNumber": "BS2-031",
+      "variant": null,
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-031",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-031@1",
+      "baseCardNumber": "BS2-031",
+      "variant": "1",
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-031@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-033",
+      "baseCardNumber": "BS2-033",
+      "variant": null,
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-033",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-034",
+      "baseCardNumber": "BS2-034",
+      "variant": null,
+      "name": "Frost Queen Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-034",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-034@1",
+      "baseCardNumber": "BS2-034",
+      "variant": "1",
+      "name": "Frost Queen Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-034@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-036",
+      "baseCardNumber": "BS2-036",
+      "variant": null,
+      "name": "Sherbet Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-036",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-036@1",
+      "baseCardNumber": "BS2-036",
+      "variant": "1",
+      "name": "Sherbet Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-036@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-037",
+      "baseCardNumber": "BS2-037",
+      "variant": null,
+      "name": "Chocolate Bonbon Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-037",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-039",
+      "baseCardNumber": "BS2-039",
+      "variant": null,
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-039",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-040",
+      "baseCardNumber": "BS2-040",
+      "variant": null,
+      "name": "Aloe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-040",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-040@1",
+      "baseCardNumber": "BS2-040",
+      "variant": "1",
+      "name": "Aloe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-040@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-043",
+      "baseCardNumber": "BS2-043",
+      "variant": null,
+      "name": "Captain Ice Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-043",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:faint-cost-hand",
+        "select:faint-cost-hand",
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-044",
+      "baseCardNumber": "BS2-044",
+      "variant": null,
+      "name": "Tiramisu Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-044",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-045",
+      "baseCardNumber": "BS2-045",
+      "variant": null,
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-045",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-045@1",
+      "baseCardNumber": "BS2-045",
+      "variant": "1",
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-045@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-046",
+      "baseCardNumber": "BS2-046",
+      "variant": null,
+      "name": "Caramel Arrow Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-046",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-047",
+      "baseCardNumber": "BS2-047",
+      "variant": null,
+      "name": "Diving Goggles",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-047",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-048",
+      "baseCardNumber": "BS2-048",
+      "variant": null,
+      "name": "Jellied Jellyfish Potion",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-048",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-049",
+      "baseCardNumber": "BS2-049",
+      "variant": null,
+      "name": "Salt Crystal Trident",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-049",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "confirm:draw-up-to",
+        "confirm:hand-discard",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-050",
+      "baseCardNumber": "BS2-050",
+      "variant": null,
+      "name": "Hermit Crab's Shell",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-050",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-051",
+      "baseCardNumber": "BS2-051",
+      "variant": null,
+      "name": "Whipped Snowcream Village",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-051",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-055",
+      "baseCardNumber": "BS2-055",
+      "variant": null,
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-055",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-055@1",
+      "baseCardNumber": "BS2-055",
+      "variant": "1",
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-055@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-056",
+      "baseCardNumber": "BS2-056",
+      "variant": null,
+      "name": "Raspberry Mousse Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-056",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip-discard",
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-057",
+      "baseCardNumber": "BS2-057",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-057",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-058",
+      "baseCardNumber": "BS2-058",
+      "variant": null,
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-058",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-058@1",
+      "baseCardNumber": "BS2-058",
+      "variant": "1",
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-058@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-060",
+      "baseCardNumber": "BS2-060",
+      "variant": null,
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-060",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-061",
+      "baseCardNumber": "BS2-061",
+      "variant": null,
+      "name": "Hydrangea Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-061",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-061@1",
+      "baseCardNumber": "BS2-061",
+      "variant": "1",
+      "name": "Hydrangea Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-061@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-062",
+      "baseCardNumber": "BS2-062",
+      "variant": null,
+      "name": "Starfruit Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-062",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-062@1",
+      "baseCardNumber": "BS2-062",
+      "variant": "1",
+      "name": "Starfruit Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-062@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-063",
+      "baseCardNumber": "BS2-063",
+      "variant": null,
+      "name": "Space Doughnut",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-063",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip-discard",
+        "select:flip-target",
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-063@1",
+      "baseCardNumber": "BS2-063",
+      "variant": "1",
+      "name": "Space Doughnut",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-063@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip-discard",
+        "select:flip-target",
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-064",
+      "baseCardNumber": "BS2-064",
+      "variant": null,
+      "name": "Alchemist Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-064",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-065",
+      "baseCardNumber": "BS2-065",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-065",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-067",
+      "baseCardNumber": "BS2-067",
+      "variant": null,
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-067",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap"
+      ]
+    },
+    {
+      "cardNumber": "BS2-067@1",
+      "baseCardNumber": "BS2-067",
+      "variant": "1",
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-067@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap"
+      ]
+    },
+    {
+      "cardNumber": "BS2-068",
+      "baseCardNumber": "BS2-068",
+      "variant": null,
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-068",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-068@1",
+      "baseCardNumber": "BS2-068",
+      "variant": "1",
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-068@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-069",
+      "baseCardNumber": "BS2-069",
+      "variant": null,
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-069",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-069@1",
+      "baseCardNumber": "BS2-069",
+      "variant": "1",
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-069@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-071",
+      "baseCardNumber": "BS2-071",
+      "variant": null,
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-071",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-071@1",
+      "baseCardNumber": "BS2-071",
+      "variant": "1",
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-071@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-072",
+      "baseCardNumber": "BS2-072",
+      "variant": null,
+      "name": "Pastry Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-072",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip"
+      ]
+    },
+    {
+      "cardNumber": "BS2-073",
+      "baseCardNumber": "BS2-073",
+      "variant": null,
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-073",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-073@1",
+      "baseCardNumber": "BS2-073",
+      "variant": "1",
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-073@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-074",
+      "baseCardNumber": "BS2-074",
+      "variant": null,
+      "name": "Pink Choco Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-074",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:faint-target",
+        "confirm:faint-response"
+      ]
+    },
+    {
+      "cardNumber": "BS2-075",
+      "baseCardNumber": "BS2-075",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-075",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS2-077",
+      "baseCardNumber": "BS2-077",
+      "variant": null,
+      "name": "Forbidden Incantation",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-077",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-trash-battle",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-078",
+      "baseCardNumber": "BS2-078",
+      "variant": null,
+      "name": "Dragon's Breath",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-078",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-079",
+      "baseCardNumber": "BS2-079",
+      "variant": null,
+      "name": "Yew Village Scroll",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-079",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ]
+    },
+    {
+      "cardNumber": "BS2-080",
+      "baseCardNumber": "BS2-080",
+      "variant": null,
+      "name": "Abandoned Cloud Nest",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-080",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap"
+      ]
+    },
+    {
+      "cardNumber": "BS2-081",
+      "baseCardNumber": "BS2-081",
+      "variant": null,
+      "name": "Blue Dragon's Eye",
+      "type": "stage",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "generic",
+      "testState": "card:BS2-081",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

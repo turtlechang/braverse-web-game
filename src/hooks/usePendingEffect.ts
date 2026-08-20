@@ -345,6 +345,7 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'cycle-hp' ||
       currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
+      currentEffect.kind === 'trash-to-break' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
       currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
@@ -352,7 +353,16 @@ export function usePendingEffect(params: {
               game,
               pendingEffect.context,
               currentEffect,
-        ).filter((card) => isDescriptorCandidate(card.instanceId))
+            ).filter(
+              (card) =>
+                // P-016 selects from the acting player's own public trash.
+                // During the pre-activation payment step the descriptor can
+                // temporarily omit this otherwise legal candidate ID. The
+                // rules layer still validates this exact filtered list on
+                // resolve, so do not hide the public-zone choice from the UI.
+                currentEffect.kind === 'trash-to-break' ||
+                isDescriptorCandidate(card.instanceId),
+            )
       : []
   const nonBattleEffectCandidateCards = [
     ...supportEffectCandidates.map((support) => support.card),

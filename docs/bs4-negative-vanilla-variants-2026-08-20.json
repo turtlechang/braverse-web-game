@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-08-20T12:59:07.266Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json"
+  ],
+  "scope": "Formal-pool negative A/B UI audit for every BS4 record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.",
+  "summary": {
+    "total": 2,
+    "effectFlowPassed": 2,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Negative no-payment attack path settled": 2
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS4-045@1",
+      "baseCardNumber": "BS4-045",
+      "variant": "1",
+      "name": "Tangerine Tanghulu Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS4-045@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ]
+    },
+    {
+      "cardNumber": "BS4-097@1",
+      "baseCardNumber": "BS4-097",
+      "variant": "1",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS4-097@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ]
+    }
+  ]
+}

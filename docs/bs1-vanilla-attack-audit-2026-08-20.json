@@ -1,0 +1,426 @@
+{
+  "generatedAt": "2026-08-20T12:32:56.469Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-brave-beginning-bs1.en.json"
+  ],
+  "scope": "Formal-pool test-state UI audit for every BS1 vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.",
+  "summary": {
+    "total": 18,
+    "effectFlowPassed": 18,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Vanilla deploy and attack flow settled": 18
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS1-007",
+      "baseCardNumber": "BS1-007",
+      "variant": null,
+      "name": "Melon Bun Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-007",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-010",
+      "baseCardNumber": "BS1-010",
+      "variant": null,
+      "name": "Devil Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-010",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-011",
+      "baseCardNumber": "BS1-011",
+      "variant": null,
+      "name": "Cherry Ball Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-011",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-019",
+      "baseCardNumber": "BS1-019",
+      "variant": null,
+      "name": "Walnut Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-019",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-020",
+      "baseCardNumber": "BS1-020",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-020",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-021",
+      "baseCardNumber": "BS1-021",
+      "variant": null,
+      "name": "Whipped Cream Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-021",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-027",
+      "baseCardNumber": "BS1-027",
+      "variant": null,
+      "name": "Ice Juggler Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-027",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-032",
+      "baseCardNumber": "BS1-032",
+      "variant": null,
+      "name": "Banana Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-032",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-043",
+      "baseCardNumber": "BS1-043",
+      "variant": null,
+      "name": "Cheesecake Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-043",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-045",
+      "baseCardNumber": "BS1-045",
+      "variant": null,
+      "name": "Firecracker Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-045",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-046",
+      "baseCardNumber": "BS1-046",
+      "variant": null,
+      "name": "Apple Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-046",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-047",
+      "baseCardNumber": "BS1-047",
+      "variant": null,
+      "name": "Pizza Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-047",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-057",
+      "baseCardNumber": "BS1-057",
+      "variant": null,
+      "name": "Bellflower Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-057",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-059",
+      "baseCardNumber": "BS1-059",
+      "variant": null,
+      "name": "Fig Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-059",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-060",
+      "baseCardNumber": "BS1-060",
+      "variant": null,
+      "name": "Butterbear Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-060",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-061",
+      "baseCardNumber": "BS1-061",
+      "variant": null,
+      "name": "Peach Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-061",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-065",
+      "baseCardNumber": "BS1-065",
+      "variant": null,
+      "name": "Plum Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-065",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS1-072",
+      "baseCardNumber": "BS1-072",
+      "variant": null,
+      "name": "Pudding Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS1-072",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    }
+  ]
+}

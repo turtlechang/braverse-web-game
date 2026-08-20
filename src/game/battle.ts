@@ -2713,35 +2713,29 @@ export const resolveOptionalCostAttack = (
       [playerId]: playerAfterSourceCosts,
     },
   }
-  const selectableEffects = applicableEffects.filter((effect) =>
-    requiresEffectCardSelection(effect),
+  const isAutomaticSourceTarget = (effect: CardEffect) =>
+    (effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+    effect.target.sourceOnly
+  const firstSelectableEffect = applicableEffects.find(
+    (effect) =>
+      requiresEffectCardSelection(effect) && !isAutomaticSourceTarget(effect),
   )
-  if (selectableEffects.length > 0) {
+  if (firstSelectableEffect) {
     const uniqueTargetIds = [...new Set(targetIds)]
     if (uniqueTargetIds.length !== targetIds.length) {
       throw new GameRuleError('Invalid battle action.')
     }
-    const hasValidTarget = selectableEffects.every((effect) => {
-      const effectTargetIds =
-        ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
-          effect.target.sourceOnly)
-          ? [pending.sourceInstanceId]
-          : uniqueTargetIds
-      const limits = getEffectSelectionLimits(effect)
-      if (!limits) return false
-      const { min, max } = limits
-      if (effectTargetIds.length < min || effectTargetIds.length > max) {
-        return false
-      }
-      const candidates = getEffectSelectionCandidates(
-        stateAfterSourceCost,
-        effectContext,
-        effect,
+    const limits = getEffectSelectionLimits(firstSelectableEffect)
+    const hasValidTarget = Boolean(limits) &&
+      uniqueTargetIds.length >= limits!.min &&
+      uniqueTargetIds.length <= limits!.max &&
+      uniqueTargetIds.every((targetId) =>
+        getEffectSelectionCandidates(
+          stateAfterSourceCost,
+          effectContext,
+          firstSelectableEffect,
+        ).some((card) => card.instanceId === targetId),
       )
-      return effectTargetIds.every((targetId) =>
-        candidates.some((card) => card.instanceId === targetId),
-      )
-    })
     if (!hasValidTarget) {
       throw new GameRuleError('Invalid battle action.')
     }
@@ -2800,14 +2794,34 @@ export const resolveOptionalCostAttack = (
       uniqueTrashToDeckIds,
     )
   }
+  let usedSubmittedTargets = false
   for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
     const effect = applicableEffects[effectIndex]
     if (nextState.status !== 'playing') break
-    const effectTargetIds =
-      ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
-        effect.target.sourceOnly)
-        ? [pending.sourceInstanceId]
-        : targetIds
+    const automaticSourceTarget = isAutomaticSourceTarget(effect)
+    const needsPlayerTarget =
+      requiresEffectCardSelection(effect) && !automaticSourceTarget
+    if (needsPlayerTarget && usedSubmittedTargets) {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: pending.sourceInstanceId,
+          sourceCardName: pending.sourceCardName,
+          sourceKind: 'skill',
+          effects: applicableEffects,
+          effectIndex,
+          battleContinuation: 'attack-effect',
+        },
+      }
+    }
+    const effectTargetIds = automaticSourceTarget
+      ? [pending.sourceInstanceId]
+      : needsPlayerTarget
+        ? targetIds
+        : []
+    if (needsPlayerTarget) usedSubmittedTargets = true
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
     if (nextState.pendingBattle?.effectDamageSequence) {
       return {
