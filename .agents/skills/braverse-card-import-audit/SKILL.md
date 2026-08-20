@@ -1,6 +1,6 @@
 ---
 name: braverse-card-import-audit
-description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列匯入、候選資料驗證、效果覆蓋稽核、promote 到正式卡池，並在 Chrome 實際對戰逐色逐卡驗證紅、綠、藍、紫卡牌的卡面文字、UI 提示、能量支付、代價、目標、Then、FLIP、陷阱與錯誤；使用者要求新增系列、補卡牌效果、promote 候選卡，或重測尚未完整測試的卡牌時使用。
+description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列匯入、parser／契約 shadow audit、候選資料驗證、效果覆蓋稽核、promote 到正式卡池，並以 test-state 與 Chrome Browser A/B 逐卡驗證卡面文字、UI、支付、代價、目標、Then、FLIP、陷阱與公開 effect trace；使用者要求新增系列、補卡牌效果、promote 候選卡，或重測尚未完整測試的卡牌時使用。
 ---
 
 # Braverse 卡牌匯入與 Chrome 效果稽核
@@ -14,6 +14,7 @@ description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列
 - 明確區分「瀏覽器載入 smoke test」和「逐卡效果驗證」；前者通過不得宣稱後者完成。
 - 規則文件標記 `[待確認]` 的行為不得自行猜測；記為阻塞／待官方確認並保留原文與依據。
 - 保留既有未提交修改；不要提交 `node_modules/`、`dist/`、`test-results/`、截圖、token 或個人設定。除非使用者明確要求，不要自動 commit 或 push。
+- 從 shadow compile 到 Browser 的逐卡停止閘門、A/B 證據與 `test-state` 邊界，集中記錄於 [contract-browser-serial-gate.md](references/contract-browser-serial-gate.md)；開始契約稽核或單卡效果驗證時先讀該參考。
 
 ## 先建立任務契約
 
@@ -38,20 +39,17 @@ description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列
 4. 檢查候選檔、`docs/<series>-card-inventory.md` 與 `docs/<series>-effect-coverage.md`：卡號、基礎卡號、變體、顏色、類型、官方文字、來源 URL 與數量必須互相一致。把 `unsupported`、空 ability、尚未轉接的 `Then` 或條件分支列成待辦，不要直接 promote。
 5. 若需新增效果型別，先更新 `src/game/types.ts`，再更新 adapter／規則／UI／AI 與對應測試；依 `src/game/`、`src/cards/`、React UI 分層，不在 UI 另寫規則。
 
-## 階段二：候選驗證與 promote
+## 階段二：候選靜態驗證（不得先 promote）
 
-先確認要 promote 的候選檔清單、正式卡池是否有同名檔，以及工作樹沒有不應被覆蓋的資料；再依序執行：
+先確認候選檔清單、正式卡池是否有同名檔，以及工作樹沒有不應被覆蓋的資料；此階段只做唯讀／候選區驗證：
 
 ```powershell
 npm.cmd run validate:candidate
-npm.cmd run promote:candidate
-npm.cmd run validate:cards
-npm.cmd run check:card-pool
 ```
 
-`promote:candidate` 會把候選資料移入 `data/cards/`、重建 `src/game/generated-card-pool.ts` 並清除已 promote 的候選檔；它是有狀態變更的步驟。若驗證失敗，停在候選區修正，不手動複製正式檔案。完成後確認 `data/candidates/` 沒有殘留本輪候選、`validate:cards` 與 `check:card-pool` 都通過。
+若驗證失敗，停在候選區修正，不手動複製正式檔案。不得為了讓 `test-state` 看得到候選卡而先執行 `promote:candidate`；候選卡尚無安全 Browser preview 路徑時，列為 Browser 驗收 blocker，先提出 preview fixture／staging route 的 scoped 設計。
 
-若只要求匯入或效果轉接，不要擅自 promote；若使用者明確要求併入正式卡池，才執行 promote 並回報正式卡池數量與 registry 檢查結果。
+若只要求匯入或效果轉接，不要擅自 promote。即使使用者要求併入正式卡池，也要等逐卡契約與 Browser A/B 閘門全部通過後，才進入階段六。
 
 ## 階段三：準備 Chrome 對戰稽核
 
@@ -67,6 +65,8 @@ npm.cmd run check:card-pool
 4. 逐張卡先查看卡牌詳情，再在正式戰鬥狀態中執行效果。若只能透過 demo／`test-state` 觸發，標記為局部驗證，不得宣稱正式流程已通過。
 
 ## 階段四：逐卡、逐色語意驗證
+
+逐卡驗收遵循 [contract-browser-serial-gate.md](references/contract-browser-serial-gate.md)：每張卡都要有合法 effect trace 或有理由的合法 no-op，並完成一條阻擋／負向路徑；任一張失敗即停止目前批次，不得先做下一個 offset 或 promote。
 
 對紅、綠、藍、紫各色的每張基礎卡，依 `references/card-audit-matrix.md` 記錄結果。至少覆蓋下列檢查；不適用項目寫 `N/A` 並說明原因：
 
@@ -89,6 +89,19 @@ npm.cmd run check:card-pool
 - UI 或付款／目標流程修改：測合法與不合法兩條路徑；若本機與線上共用流程，兩者都確認。
 - 每次修正後先跑目標測試，再重跑受影響顏色；不得只依賴一個「剛好通過」的牌序或種子。
 - `test-results/` 可存放暫時證據但不得提交；回報時提供檔名或 console 摘要即可。
+
+## 階段六：全部逐卡驗收後才 promote
+
+只有下列條件同時成立才能 promote：使用者明確授權、目前逐卡 cursor 沒有 `needs-review`／`blocked`、每張卡都有 Browser A/B 的 effect trace 或合格的被動／合法 no-op 證據、受影響回歸測試已通過。任一證據缺失就停止，不得以「先進正式卡池再測」取代驗收。
+
+```powershell
+npm.cmd run validate:candidate
+npm.cmd run promote:candidate
+npm.cmd run validate:cards
+npm.cmd run check:card-pool
+```
+
+`promote:candidate` 會移動候選資料、重建 `src/game/generated-card-pool.ts`，是有狀態變更的步驟。完成後確認本輪候選已正確移出 `data/candidates/`、正式卡池數量符合預期且 registry 一致；若 promote 後的正式 build／smoke 失敗，停止後續批次並回報，不自行清理或覆寫工作樹。
 
 ## 完成前驗證與回報
 
@@ -121,6 +134,7 @@ Git：是否 stage／commit／push：
 ## 直接參考
 
 - `references/card-audit-matrix.md`：逐卡矩陣、案例欄位與 Bug 紀錄格式。
+- `references/contract-browser-serial-gate.md`：parser／contract shadow compile、runtime／pending、test-state 邊界、Browser A/B、公開 trace 與逐卡 serial gate。
 - `docs/card-data-import.md`：官方資料欄位、候選區、validate／promote 與 registry 流程。
 - `docs/game-rules.md`：規則裁決優先順序與待確認項目。
 - `docs/card-effects.md`：可用 runtime `CardEffect` 型別。

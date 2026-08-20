@@ -13,6 +13,7 @@ import {
 } from '../modals/GameModals'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 import { getUnmetTrapConditionWarning } from './trapWarnings'
+import { shouldShowAttackResponseChooser } from './battleResponseSelectors'
 
 export interface BattleResponseModalsProps {
   match: BattleUiMatchLike
@@ -68,12 +69,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
 
   return (
     <>
-      {match.game.pendingBattle?.stage === 'trap' &&
-        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.pendingResponseMode === null &&
-        (match.playerTrapCandidates.length > 0 ||
-          match.playerBlockerCandidates.length > 0 ||
-          match.playerAttackResponseCandidates.length > 0) && (
+      {shouldShowAttackResponseChooser({
+        pendingBattle: match.game.pendingBattle,
+        viewerPlayerId: match.viewerPlayerId,
+        pendingResponseMode: match.pendingResponseMode,
+        trapCount: match.playerTrapCandidates.length,
+        blockerCount: match.playerBlockerCandidates.length,
+        attackResponseCount: match.playerAttackResponseCandidates.length,
+      }) && (
           <AttackResponseModal
             trapCards={match.playerTrapCandidates}
             blockerCards={match.playerBlockerCandidates}
@@ -89,6 +92,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
+              match.setSelectedTrapEffectTargets([])
               match.setTrapSelectNoTarget(false)
               match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapTrashToDeckIds([])
@@ -180,6 +184,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             }
             attackTargetCard={attackTargetCard}
             trapTargetCandidates={match.trapTargetCandidates}
+            trapEffectTargetSteps={match.trapEffectTargetSteps}
             selectedTrapTargetId={match.selectedTrapTargetId}
             trapSelfTargetCandidates={match.trapSelfTargetCandidates}
             trapSelfTargetRequired={match.trapSelfTargetRequired}
@@ -193,6 +198,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
+              match.setSelectedTrapEffectTargets([])
               match.setSelectedTrapSelfTargetId(null)
               match.setTrapSelectNoTarget(false)
               match.setSelectedTrapSupportTrashIds([])
@@ -204,6 +210,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTargetId(id)
               match.setTrapSelectNoTarget(false)
             }}
+            onSelectTrapEffectTarget={match.selectTrapEffectTarget}
+            onSkipTrapEffectTarget={match.skipTrapEffectTarget}
             onSelectTrapSelfTarget={(id) => {
               match.setSelectedTrapSelfTargetId(id)
             }}
@@ -235,6 +243,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapHandToBreakIds([])
                     match.setSelectedTrapTrashBattleCookieIds([])
                     match.setSelectedTrapTargetId(null)
+                    match.setSelectedTrapEffectTargets([])
                     match.setTrapSelectNoTarget(false)
                     match.setSelectedTrapSupportTrashIds([])
                     match.setPendingResponseMode(null)
@@ -252,6 +261,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
+              match.setSelectedTrapEffectTargets([])
               match.setPendingResponseMode(null)
               match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapSupportToHandIds([])
@@ -268,12 +278,22 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onConfirm={() => {
               if (!match.selectedTrap) return
               const trap = match.selectedTrap
+              const hasPerEffectTargetSelection =
+                match.trapEffectTargetSteps.length > 0
+              const trapEffectTargets =
+                hasPerEffectTargetSelection && trap.trap
+                  ? trap.trap.effects.map(
+                      (_, effectIndex) =>
+                        match.selectedTrapEffectTargets[effectIndex] ?? [],
+                    )
+                  : undefined
               match.setSelectedTrapId(null)
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
+              match.setSelectedTrapEffectTargets([])
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
               match.setSelectedTrapSupportTrashIds([])
@@ -286,9 +306,12 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 trapInstanceId: trap.instanceId,
                 costOptionIndex: match.selectedTrapCostOptionIndex,
                 paymentIds: match.selectedTrapPaymentIds,
-                targetIds: match.selectedTrapTargets.map(
-                  (target) => target.card.instanceId,
-                ),
+                targetIds: hasPerEffectTargetSelection
+                  ? []
+                  : match.selectedTrapTargets.map(
+                      (target) => target.card.instanceId,
+                    ),
+                effectTargets: trapEffectTargets,
                 selfTargetIds: match.selectedTrapSelfTargets.map(
                   (target) => target.card.instanceId,
                 ),
@@ -307,7 +330,11 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 `已發動${trap.name}。`,
               )
             }}
-            allowEmptyTarget={match.trapAllowEmptyTarget}
+            allowEmptyTarget={
+              match.trapEffectTargetSteps.length === 0
+                ? match.trapAllowEmptyTarget
+                : false
+            }
             emptyTargetActive={match.trapSelectNoTarget}
             onToggleEmptyTarget={() =>
               match.setTrapSelectNoTarget((v) => !v)

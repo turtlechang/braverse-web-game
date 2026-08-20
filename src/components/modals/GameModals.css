@@ -1391,6 +1391,16 @@
   flex-basis: 96px;
 }
 
+.stage-placement-modal {
+  width: min(700px, 100%);
+}
+
+.stage-placement-payment-error {
+  display: block;
+  margin-top: 8px;
+  color: #ffb4a8;
+}
+
 .faint-effect-card-detail {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);

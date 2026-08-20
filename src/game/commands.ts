@@ -563,6 +563,8 @@ export interface PlayTrapCommand {
   costOptionIndex?: number
   paymentIds: string[]
   targetIds: string[]
+  /** Trap effect target selections aligned with the trap.effects indexes. */
+  effectTargets?: string[][]
   supportTrashIds?: string[]
   supportToHandIds?: string[]
   handToSupportIds?: string[]
@@ -2326,6 +2328,7 @@ const applyPlayerActionCommand = (
         costOptionIndex: command.costOptionIndex,
         paymentIds: command.paymentIds,
         targetIds: command.targetIds,
+        effectTargets: command.effectTargets,
         supportTrashIds: command.supportTrashIds,
         supportToHandIds: command.supportToHandIds,
         handToSupportIds: command.handToSupportIds,

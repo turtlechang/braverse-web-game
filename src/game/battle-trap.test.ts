@@ -4,6 +4,7 @@ import {
   applyGameCommand,
   createOfficialRedStarterDeck,
   explainUnavailableTraps,
+  GameRuleError,
   getPendingDecision,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
@@ -1368,6 +1369,159 @@ describe('R15: trap multi-effect targeting (BS2-079)', () => {
   })
 })
 
+describe('BS5-109: per-effect trap target selections', () => {
+  const bs5109Trap = (): GameCard => ({
+    id: 'BS5-109',
+    instanceId: 'bs5-109-test',
+    name: 'Charmed Miners',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'purple',
+    trap: {
+      text: '《{P}》 Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 15 cards or more in your trash, select up to 1 of your opponent\'s LV.1 Cookies. During this turn, that Cookie deals -1 attack damage.',
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          condition: { kind: 'trash-count-at-least', count: 15 },
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        },
+      ],
+    },
+  })
+
+  const createBs5109State = () => {
+    const trap = bs5109Trap()
+    const levelTwoAttacker = {
+      ...cookie('attacker', 3, 3),
+      level: 2,
+    }
+    const levelOneOpponent = cookie('opponent-lv1', 1, 2)
+    const state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-purple', 'purple'), rested: false },
+    ]
+    state.players['player-one'].discardPile = Array.from(
+      { length: 15 },
+      (_, index) => item(`p1-trash-${index}`),
+    )
+    state.players['player-two'].battleArea = [
+      {
+        card: levelTwoAttacker,
+        hpCards: [item('attacker-hp-a'), item('attacker-hp-b'), item('attacker-hp-c')],
+        rested: false,
+        battleEntryId: 'attacker:battle:2',
+      },
+      {
+        card: levelOneOpponent,
+        hpCards: [item('opponent-lv1-hp-a'), item('opponent-lv1-hp-b')],
+        rested: false,
+        battleEntryId: 'opponent-lv1:battle:3',
+      },
+    ]
+    return { state: declareAttack(state), trap, levelOneOpponent }
+  }
+
+  it('lets the first effect target LV2 and the second effect target a different LV1 Cookie', () => {
+    const { state, trap, levelOneOpponent } = createBs5109State()
+
+    const result = applyGameCommand(state, {
+      kind: 'play-trap',
+      playerId: 'player-one',
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple'],
+      targetIds: [],
+      effectTargets: [['attacker'], [levelOneOpponent.instanceId]],
+    })
+
+    expect(result.attackModifiers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceInstanceId: trap.instanceId,
+          targetInstanceId: 'attacker',
+          amount: -1,
+        }),
+        expect.objectContaining({
+          sourceInstanceId: trap.instanceId,
+          targetInstanceId: levelOneOpponent.instanceId,
+          amount: -1,
+        }),
+      ]),
+    )
+  })
+
+  it('allows an explicit empty second selection without falling back to another Cookie', () => {
+    const { state, trap, levelOneOpponent } = createBs5109State()
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple'],
+      targetIds: [],
+      effectTargets: [['attacker'], []],
+    })
+
+    expect(result.attackModifiers).toEqual([
+      expect.objectContaining({
+        sourceInstanceId: trap.instanceId,
+        targetInstanceId: 'attacker',
+        amount: -1,
+      }),
+    ])
+    expect(
+      result.attackModifiers.some(
+        (modifier) => modifier.targetInstanceId === levelOneOpponent.instanceId,
+      ),
+    ).toBe(false)
+  })
+
+  it('rejects an explicit second target that is not LV1', () => {
+    const { state, trap } = createBs5109State()
+
+    expect(() =>
+      playTrap(state, 'player-one', {
+        trapInstanceId: trap.instanceId,
+        paymentIds: ['p1-purple'],
+        targetIds: [],
+        effectTargets: [['attacker'], ['attacker']],
+      }),
+    ).toThrowError(GameRuleError)
+  })
+
+  it('keeps legacy targetIds behavior when effectTargets is omitted', () => {
+    const { state, trap, levelOneOpponent } = createBs5109State()
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple'],
+      targetIds: [levelOneOpponent.instanceId],
+    })
+
+    expect(result.attackModifiers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceInstanceId: trap.instanceId,
+          targetInstanceId: levelOneOpponent.instanceId,
+          amount: -1,
+        }),
+      ]),
+    )
+    expect(
+      result.attackModifiers.filter(
+        (modifier) => modifier.sourceInstanceId === trap.instanceId,
+      ),
+    ).toHaveLength(2)
+  })
+})
+
 describe('BS6-106 Peak Engineer Performance: trap Then selection', () => {
   const bs6106Trap = (): GameCard => ({
     id: 'BS6-106',
@@ -1729,6 +1883,65 @@ describe('BS6-020 Tonic Spray: selectable self HP return', () => {
         (card) => card.instanceId,
       ),
     ).toEqual(['self-hp-1', 'self-hp-2'])
+  })
+
+  it('uses per-effect targets for the self HP return and ignores the legacy self target field', () => {
+    const trap = tonicSprayTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+    ]
+    state = declareAttack(state)
+
+    const selected = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: [],
+      effectTargets: [['attacker'], ['defender']],
+      selfTargetIds: [],
+    })
+
+    expect(selected.players['player-one'].hand.map((card) => card.instanceId)).toContain(
+      'self-hp-2',
+    )
+    expect(selected.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('treats an explicit empty self effect target as a skip even with a stale legacy target', () => {
+    const trap = tonicSprayTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+    ]
+    state = declareAttack(state)
+
+    const skipped = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: [],
+      effectTargets: [['attacker'], []],
+      selfTargetIds: ['defender'],
+    })
+
+    expect(skipped.players['player-one'].hand.map((card) => card.instanceId)).not.toContain(
+      'self-hp-2',
+    )
+    expect(skipped.players['player-one'].battleArea[0].hpCards.map((card) => card.instanceId)).toEqual([
+      'self-hp-1',
+      'self-hp-2',
+    ])
   })
 })
 

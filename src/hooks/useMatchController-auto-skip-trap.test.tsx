@@ -3,7 +3,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { createDemoGame, type GameState } from '../game'
+import { applyGameCommand, createDemoGame, type GameState } from '../game'
+import { createCardCheckDemoState } from '../game/demo'
 import { useMatchController } from './useMatchController'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -82,6 +83,58 @@ describe('useMatchController auto-skip-trap effect', () => {
     )
     expect(captured!.game.pendingBattle?.stage).toBe('trap')
     expect(captured!.game.pendingBattle?.trapUsed).toBe(true)
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
+
+  it('does not auto-finish a card-check battle before the local attacker chooses its attack effect', async () => {
+    vi.useFakeTimers()
+    let captured: ReturnType<typeof useMatchController> | null = null
+
+    function TestHarness() {
+      captured = useMatchController({
+        testStateConfig: { kind: 'card-check', cardNumber: 'BS6-018' },
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    const initial = createCardCheckDemoState('BS6-018')
+    const source = initial.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-018',
+    )!
+    const target = initial.players['player-two'].battleArea[0]
+    const declared = applyGameCommand(initial, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: source.card.instanceId,
+      targetInstanceId: target.card.instanceId,
+      supportPaymentIds: initial.players['player-one'].supportArea
+        .slice(0, 2)
+        .map((support) => support.card.instanceId),
+    })
+    const damagePending = applyGameCommand(declared, {
+      kind: 'skip-trap',
+      playerId: 'player-two',
+    })
+    expect(damagePending.pendingBattle?.stage).toBe('damage')
+
+    await act(() => {
+      captured!.setGame(damagePending)
+    })
+    await act(() => {
+      vi.advanceTimersByTime(50)
+    })
+
+    // test-state may accelerate the damage one formal command at a time, but
+    // must stop at attack-effect instead of using resolve-battle to consume
+    // the human attacker's pending target choice.
+    expect(captured!.game.pendingBattle?.stage).toBe('attack-effect')
+    expect(captured!.game.pendingBattle?.attackEffectIndex).toBe(0)
 
     await act(() => root.unmount())
     vi.useRealTimers()

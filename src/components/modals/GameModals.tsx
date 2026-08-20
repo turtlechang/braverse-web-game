@@ -17,6 +17,7 @@ import type {
   GameCard,
   PlayerId,
 } from '../../game'
+import type { BattleUiTrapEffectTargetStep } from '../../hooks/battleUiContracts'
 import type { CookieInBattle } from '../../game'
 import { OFFICIAL_DECK_RECIPES } from '../../game'
 import type { CustomDeck } from '../../game/custom-deck'
@@ -41,6 +42,109 @@ const DeckEditorModal = lazy(async () => {
 })
 
 export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal, OpponentRestSupportResponseModal, PlaceHandHpModal, ReorderHpModal } from './PendingDecisionModals'
+
+export interface StagePlacementModalProps {
+  card: GameCard
+  placementCost: EnergyCost
+  paymentCandidates: GameCard[]
+  selectedPaymentIds: string[]
+  paymentValid: boolean
+  paymentValidationReason?: string
+  onTogglePayment: (instanceId: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+/**
+ * 場景卡放置時的明確能量付款選擇。
+ *
+ * 場景的 placement cost 是放置動作本身的費用，不應由 UI 自動挑卡代付；
+ * 這個視窗只負責收集玩家選擇，最後仍由 play-stage GameCommand 的規則驗證
+ * `paymentIds` 顏色、活躍狀態與數量。
+ */
+export function StagePlacementModal({
+  card,
+  placementCost,
+  paymentCandidates,
+  selectedPaymentIds,
+  paymentValid,
+  paymentValidationReason,
+  onTogglePayment,
+  onCancel,
+  onConfirm,
+}: StagePlacementModalProps) {
+  const totalCost = Object.values(placementCost).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+  const selectedIds = new Set(selectedPaymentIds)
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal stage-placement-modal"
+        role="alertdialog"
+        aria-label={`${card.name} 場景放置付款`}
+      >
+        <span>場景放置</span>
+        <h2>放置「{card.name}」</h2>
+        <div className="faint-effect-card-detail">
+          <CardFace card={card} />
+          <div>
+            <span>{card.id}</span>
+            <strong>{card.name}</strong>
+            <p>請從支援區選擇要橫置支付放置費用的活躍支援卡。</p>
+          </div>
+        </div>
+        <div className="faint-payment-section stage-placement-payment">
+          <strong>放置費用</strong>
+          <div className="faint-payment-cost">
+            <EnergyCostIcons cost={placementCost} />
+            <span>
+              已選 {selectedPaymentIds.length}/{totalCost}
+            </span>
+          </div>
+          {paymentCandidates.length > 0 ? (
+            <div className="modal-card-options compact faint-payment-candidates">
+              {paymentCandidates.map((candidate) => {
+                const selected = selectedIds.has(candidate.instanceId)
+                return (
+                  <button
+                    type="button"
+                    key={candidate.instanceId}
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    onClick={() => onTogglePayment(candidate.instanceId)}
+                  >
+                    <CardFace card={candidate} selected={selected} />
+                    <span>{candidate.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <small>沒有可支付的活躍支援卡</small>
+          )}
+          {!paymentValid && selectedPaymentIds.length > 0 && (
+            <small className="stage-placement-payment-error">
+              {paymentValidationReason ?? '所選支援卡無法支付此費用。'}
+            </small>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button type="button" onClick={onCancel}>取消</button>
+          <button
+            type="button"
+            disabled={!paymentValid}
+            onClick={onConfirm}
+          >
+            支付並放置
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
 
 export type OpeningSetupStep =
   | 'deck-selection'
@@ -547,9 +651,12 @@ export interface TrapResponseModalProps {
   attackerCard?: GameCard | null
   attackTargetCard?: GameCard | null
   trapTargetCandidates?: CookieInBattle[]
+  trapEffectTargetSteps?: BattleUiTrapEffectTargetStep[]
   selectedTrapTargetId?: string | null
   onSelectTrap: (instanceId: string) => void
   onSelectTrapTarget?: (instanceId: string) => void
+  onSelectTrapEffectTarget?: (effectIndex: number, instanceId: string) => void
+  onSkipTrapEffectTarget?: (effectIndex: number) => void
   trapSelfTargetCandidates?: CookieInBattle[]
   trapSelfTargetRequired?: boolean
   selectedTrapSelfTargetId?: string | null
@@ -654,9 +761,12 @@ export function TrapResponseModal({
   attackerCard = null,
   attackTargetCard = null,
   trapTargetCandidates = [],
+  trapEffectTargetSteps = [],
   selectedTrapTargetId = null,
   onSelectTrap,
   onSelectTrapTarget,
+  onSelectTrapEffectTarget,
+  onSkipTrapEffectTarget,
   trapSelfTargetCandidates = [],
   trapSelfTargetRequired = true,
   selectedTrapSelfTargetId = null,
@@ -703,6 +813,7 @@ export function TrapResponseModal({
   const hasCostPhase =
     discardHandCost > 0 || battleCookieCost > 0 || handToBreakCost > 0
   const hasTargetPhase =
+    (trapEffectTargetSteps.length > 0 && Boolean(onSelectTrapEffectTarget)) ||
     (trapTargetCandidates.length > 0 && Boolean(onSelectTrapTarget)) ||
     supportTrashAmount > 0 ||
     supportToHandAmount > 0 ||
@@ -746,7 +857,12 @@ export function TrapResponseModal({
       selectedSupportToHandIds.length === supportToHandAmount) &&
     (handToSupportAmount === 0 ||
       handToSupportCards.length === 0 ||
-      selectedHandToSupportIds.length === handToSupportAmount)
+      selectedHandToSupportIds.length === handToSupportAmount) &&
+    trapEffectTargetSteps.every(
+      (targetStep) =>
+        targetStep.selectedTargetIds.length >= targetStep.min ||
+        targetStep.allowEmpty,
+    )
   const selfTargetReady =
     !trapSelfTargetRequired ||
     trapSelfTargetCandidates.length === 0 ||
@@ -1118,7 +1234,69 @@ export function TrapResponseModal({
                     <span>已選 {selectedTrashToDeckIds.length}／最多 {trashToDeckAmount}</span>
                   </>
                 )}
-                {trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
+                {trapEffectTargetSteps.length > 0 && onSelectTrapEffectTarget ? (
+                  <>
+                    <strong>依效果順序選擇目標餅乾</strong>
+                    {trapEffectTargetSteps.map((targetStep, stepIndex) => (
+                      <div className="trap-effect-target-step" key={targetStep.effectIndex}>
+                        <span>
+                          第 {stepIndex + 1} 段目標（最多 {targetStep.max} 張）
+                        </span>
+                        <div className="modal-card-options compact trap-target-options">
+                          {targetStep.candidates.map((candidate) => {
+                            const isAttacker =
+                              attackerCard?.instanceId === candidate.card.instanceId
+                            const selected = targetStep.selectedTargetIds.includes(
+                              candidate.card.instanceId,
+                            )
+                            return (
+                              <button
+                                type="button"
+                                className={[
+                                  selected ? 'is-selected' : '',
+                                  isAttacker ? 'is-attacker' : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                                key={candidate.card.instanceId}
+                                onClick={() =>
+                                  onSelectTrapEffectTarget(
+                                    targetStep.effectIndex,
+                                    candidate.card.instanceId,
+                                  )
+                                }
+                              >
+                                <CardFace card={candidate.card} selected={selected} />
+                                <span>{candidate.card.name}</span>
+                                {isAttacker && (
+                                  <small className="attacker-badge">⚔ 攻擊中</small>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <span>
+                          已選 {targetStep.selectedTargetIds.length}／最多 {targetStep.max}
+                        </span>
+                        {targetStep.allowEmpty && (
+                          <button
+                            type="button"
+                            className={
+                              targetStep.selectedTargetIds.length === 0
+                                ? 'is-selected trap-target-skip'
+                                : 'trap-target-skip'
+                            }
+                            onClick={() =>
+                              onSkipTrapEffectTarget?.(targetStep.effectIndex)
+                            }
+                          >
+                            略過第 {stepIndex + 1} 段效果
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                ) : trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
                   <>
                     <strong>選擇目標餅乾</strong>
                     <div className="modal-card-options compact trap-target-options">

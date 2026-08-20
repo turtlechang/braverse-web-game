@@ -6,8 +6,10 @@ import {
   canPlayItem,
   canPlayStage,
   canSpecialPlayCookie,
+  getEnergyCostTotal,
   getTrashBattleCookieCostCandidates,
   selectEnergyPayment,
+  validateEnergyPayment,
   type BuiltInDeckChoice,
   type DeckChoice,
   type GameCard,
@@ -72,6 +74,11 @@ const SpecialPlayModal = lazy(async () => {
   return { default: module.SpecialPlayModal }
 })
 
+const StagePlacementModal = lazy(async () => {
+  const module = await import('./components/modals/GameModals')
+  return { default: module.StagePlacementModal }
+})
+
 const OpeningSetupModal = lazy(async () => {
   const module = await import('./components/modals/GameModals')
   return { default: module.OpeningSetupModal }
@@ -107,6 +114,10 @@ function App() {
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
   const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [stagePlacement, setStagePlacement] = useState<{
+    instanceId: string
+    paymentIds: string[]
+  } | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -176,6 +187,7 @@ function App() {
     setSelectedHandCardId(null)
     setSpecialPlaySourceId(null)
     setSpecialPlayCandidateId(null)
+    setStagePlacement(null)
     dialogs.closeResourcePopover()
     match.resetMatchState(nextConfig)
     pending.resetEffectContext()
@@ -214,6 +226,55 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const stagePlacementCard = stagePlacement
+    ? playerHand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
+    : null
+  const stagePlacementValidation = stagePlacementCard?.stageAbility
+    ? validateEnergyPayment(
+        stagePlacementCard.stageAbility.placementCost,
+        match.game.players[match.viewerPlayerId].supportArea,
+        stagePlacement?.paymentIds ?? [],
+      )
+    : { valid: false, reason: '場景卡已不存在。' }
+  const stagePlacementCandidates = match.game.players[match.viewerPlayerId].supportArea
+    .filter((support) => !support.rested)
+    .map((support) => support.card)
+  const openStagePlacement = (instanceId: string) => {
+    const card = playerHand.find((candidate) => candidate.instanceId === instanceId)
+    if (!card?.stageAbility || !canPlayStage(match.game, match.viewerPlayerId, instanceId)) {
+      match.setMessage('目前無法放置場景卡。')
+      return
+    }
+    setStagePlacement({ instanceId, paymentIds: [] })
+  }
+  const toggleStagePlacementPayment = (instanceId: string) => {
+    setStagePlacement((current) => {
+      if (!current || !stagePlacementCard?.stageAbility) return current
+      const total = getEnergyCostTotal(stagePlacementCard.stageAbility.placementCost)
+      const paymentIds = current.paymentIds.includes(instanceId)
+        ? current.paymentIds.filter((id) => id !== instanceId)
+        : current.paymentIds.length < total
+          ? [...current.paymentIds, instanceId]
+          : current.paymentIds
+      return { ...current, paymentIds }
+    })
+  }
+  const confirmStagePlacement = () => {
+    if (!stagePlacementCard?.stageAbility || !stagePlacement || !stagePlacementValidation.valid) {
+      return
+    }
+    const { instanceId, paymentIds } = stagePlacement
+    match.dispatch(
+      {
+        kind: 'play-stage',
+        playerId: match.viewerPlayerId,
+        instanceId,
+        paymentIds,
+      },
+      `${stagePlacementCard.name}已放置到場景區。`,
+      () => setStagePlacement(null),
+    )
+  }
   const specialPlaySourceCard = playerHand.find(
     (card) => card.instanceId === specialPlaySourceId,
   ) ?? null
@@ -464,34 +525,7 @@ function App() {
         pending.beginCardAbility(card, card.item, 'item', '使用物品')
       }
     },
-    onPlayStage: (instanceId) => {
-      if (!canPlayStage(match.game, match.activePlayer.id, instanceId)) {
-        match.setMessage('目前無法放置場景卡。')
-        return
-      }
-      const card = match.activePlayer.hand.find(
-        (candidate) => candidate.instanceId === instanceId,
-      )
-      const ability = card?.stageAbility
-      if (!card || !ability) return
-      const paymentIds = selectEnergyPayment(
-        ability.placementCost,
-        match.activePlayer.supportArea,
-      )
-      if (!paymentIds) {
-        match.setMessage(`${card.name}目前無法支付放置費用。`)
-        return
-      }
-      match.dispatch(
-        {
-          kind: 'play-stage',
-          playerId: match.activePlayer.id,
-          instanceId,
-          paymentIds,
-        },
-        `${card.name}已放置到場景區。`,
-      )
-    },
+    onPlayStage: openStagePlacement,
     onActivateStage: () => {
       const stage = match.activePlayer.stage
       const ability = stage?.card.stageAbility
@@ -805,6 +839,20 @@ function App() {
         <PendingDecisionModals match={match} pending={pending} />
 
         <InformationModals match={match} ai={ai} dialogs={dialogs} />
+
+        {stagePlacementCard?.stageAbility && stagePlacement && (
+          <StagePlacementModal
+            card={stagePlacementCard}
+            placementCost={stagePlacementCard.stageAbility.placementCost}
+            paymentCandidates={stagePlacementCandidates}
+            selectedPaymentIds={stagePlacement.paymentIds}
+            paymentValid={stagePlacementValidation.valid}
+            paymentValidationReason={stagePlacementValidation.reason}
+            onTogglePayment={toggleStagePlacementPayment}
+            onCancel={() => setStagePlacement(null)}
+            onConfirm={confirmStagePlacement}
+          />
+        )}
 
         {specialPlaySourceCard && specialPlayCandidates.length > 0 && (
           <SpecialPlayModal

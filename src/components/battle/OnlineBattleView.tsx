@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { GameState, PlayerId } from '../../game'
 import {
   canSpecialPlayCookie,
+  canPlayStage,
   getEnergyCostTotal,
   getTrashBattleCookieCostCandidates,
-  selectEnergyPayment,
+  validateEnergyPayment,
 } from '../../game'
 import { useOnlineMatchController } from '../../hooks/useOnlineMatchController'
 import type { OnlineConnectionMode } from '../../hooks/useOnlineMatch'
@@ -34,6 +35,7 @@ import {
   CardPileModal,
   ResultModal,
   SpecialPlayModal,
+  StagePlacementModal,
 } from '../modals/GameModals'
 import type { GameCard } from '../../game'
 import type {
@@ -115,6 +117,10 @@ export function OnlineBattleView({
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
   const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [stagePlacement, setStagePlacement] = useState<{
+    instanceId: string
+    paymentIds: string[]
+  } | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
 
@@ -143,6 +149,55 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+  const stagePlacementCard = stagePlacement
+    ? viewerPlayer.hand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
+    : null
+  const stagePlacementValidation = stagePlacementCard?.stageAbility
+    ? validateEnergyPayment(
+        stagePlacementCard.stageAbility.placementCost,
+        viewerPlayer.supportArea,
+        stagePlacement?.paymentIds ?? [],
+      )
+    : { valid: false, reason: '場景卡已不存在。' }
+  const stagePlacementCandidates = viewerPlayer.supportArea
+    .filter((support) => !support.rested)
+    .map((support) => support.card)
+  const openStagePlacement = (instanceId: string) => {
+    const card = viewerPlayer.hand.find((candidate) => candidate.instanceId === instanceId)
+    if (!card?.stageAbility || !canPlayStage(game, viewerPlayerId, instanceId)) {
+      match.setMessage('目前無法放置場景卡。')
+      return
+    }
+    setStagePlacement({ instanceId, paymentIds: [] })
+  }
+  const toggleStagePlacementPayment = (instanceId: string) => {
+    setStagePlacement((current) => {
+      if (!current || !stagePlacementCard?.stageAbility) return current
+      const total = getEnergyCostTotal(stagePlacementCard.stageAbility.placementCost)
+      const paymentIds = current.paymentIds.includes(instanceId)
+        ? current.paymentIds.filter((id) => id !== instanceId)
+        : current.paymentIds.length < total
+          ? [...current.paymentIds, instanceId]
+          : current.paymentIds
+      return { ...current, paymentIds }
+    })
+  }
+  const confirmStagePlacement = () => {
+    if (!stagePlacementCard?.stageAbility || !stagePlacement || !stagePlacementValidation.valid) {
+      return
+    }
+    const { instanceId, paymentIds } = stagePlacement
+    match.dispatch(
+      {
+        kind: 'play-stage',
+        playerId: viewerPlayerId,
+        instanceId,
+        paymentIds,
+      },
+      `${stagePlacementCard.name}已放置到場景區。`,
+      () => setStagePlacement(null),
+    )
+  }
   const specialPlaySourceCard = viewerPlayer.hand.find(
     (card) => card.instanceId === specialPlaySourceId,
   ) ?? null
@@ -546,30 +601,7 @@ export function OnlineBattleView({
       )
       if (card) pending.beginPlayItem(card)
     },
-    onPlayStage: (instanceId) => {
-      const card = viewerPlayer.hand.find(
-        (candidate) => candidate.instanceId === instanceId,
-      )
-      const ability = card?.stageAbility
-      if (!card || !ability) return
-      const paymentIds = selectEnergyPayment(
-        ability.placementCost,
-        viewerPlayer.supportArea,
-      )
-      if (!paymentIds) {
-        match.setMessage(`${card.name}目前無法支付放置費用。`)
-        return
-      }
-      match.dispatch(
-        {
-          kind: 'play-stage',
-          playerId: match.activePlayer.id,
-          instanceId,
-          paymentIds,
-        },
-        `${card.name}已放置到場景區。`,
-      )
-    },
+    onPlayStage: openStagePlacement,
     onActivateStage: () => pending.beginActivateStage(),
     onToggleResource: (kind) =>
       dialogs.toggleResourcePopover(viewerPlayerId, kind),
@@ -776,6 +808,20 @@ export function OnlineBattleView({
       <BattleResponseModals match={match} />
       <DamageEffectModals match={match} pending={pending} />
       <PendingDecisionModals match={match} pending={pending} />
+
+      {stagePlacementCard?.stageAbility && stagePlacement && (
+        <StagePlacementModal
+          card={stagePlacementCard}
+          placementCost={stagePlacementCard.stageAbility.placementCost}
+          paymentCandidates={stagePlacementCandidates}
+          selectedPaymentIds={stagePlacement.paymentIds}
+          paymentValid={stagePlacementValidation.valid}
+          paymentValidationReason={stagePlacementValidation.reason}
+          onTogglePayment={toggleStagePlacementPayment}
+          onCancel={() => setStagePlacement(null)}
+          onConfirm={confirmStagePlacement}
+        />
+      )}
 
       {specialPlaySourceCard && specialPlayCandidates.length > 0 && (
         <SpecialPlayModal

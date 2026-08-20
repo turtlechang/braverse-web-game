@@ -987,6 +987,26 @@ try {
       await placeButton.waitFor({ state: 'visible' })
       await placeButton.click()
 
+      const placementModal = page.locator('.stage-placement-modal')
+      await placementModal.waitFor({ state: 'visible' })
+      const paymentCandidates = placementModal.locator(
+        '.stage-placement-payment .faint-payment-candidates > button',
+      )
+      assert.ok(
+        (await paymentCandidates.count()) >= 1,
+        '可支付場景應顯示至少一張支援付款卡',
+      )
+      await paymentCandidates.first().click()
+      const confirmPlacementButton = placementModal.getByRole('button', {
+        name: '支付並放置',
+      })
+      await confirmPlacementButton.waitFor({ state: 'visible' })
+      assert.ok(
+        !(await confirmPlacementButton.isDisabled()),
+        '選取合法支援卡後，場景放置確認按鈕應可使用',
+      )
+      await confirmPlacementButton.click()
+
       const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /已放置到場景區/ }).waitFor()
 
@@ -1304,9 +1324,17 @@ try {
     await page.waitForTimeout(100)
     await selectPretzelPayment()
     await battleModal.getByRole('button', { name: '下一步' }).click()
-    const noTargetCheckbox = page.locator('.trap-target-toggle input[type="checkbox"]')
-    await noTargetCheckbox.waitFor({ state: 'visible' })
-    await noTargetCheckbox.click()
+    const noTargetSkip = battleModal.locator('.trap-target-skip').first()
+    if ((await noTargetSkip.count()) > 0) {
+      await noTargetSkip.waitFor({ state: 'visible' })
+      await noTargetSkip.click()
+    } else {
+      const noTargetCheckbox = battleModal.locator(
+        '.trap-target-toggle input[type="checkbox"]',
+      )
+      await noTargetCheckbox.waitFor({ state: 'visible' })
+      await noTargetCheckbox.click()
+    }
     await battleModal.getByRole('button', { name: '確認發動' }).click()
     const secondTrapRevealModal = page.locator('.card-reveal-modal')
     const hasSecondTrapRevealModal = await secondTrapRevealModal

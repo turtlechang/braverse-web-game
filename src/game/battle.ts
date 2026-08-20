@@ -582,8 +582,25 @@ const resolveTrapEffectTargetIds = (
   target: EffectTargetSelector | undefined,
   requestedIds: string[],
   selfTargetIds: string[] | undefined,
+  explicitEffectTargets = false,
 ): string[] => {
   if (!target) return requestedIds
+
+  // `effectTargets` is an explicit per-effect selection.  Unlike the legacy
+  // shared targetIds path, an empty array deliberately skips an optional
+  // effect and a non-empty array must contain only legal candidates.  Never
+  // silently substitute another candidate: that would make a later effect
+  // hit a Cookie the player did not select.
+  if (explicitEffectTargets) {
+    if (requestedIds.length === 0) return []
+    const candidates = getEffectTargetCandidates(state, context, target)
+    const candidateIds = new Set(candidates.map((c) => c.card.instanceId))
+    if (requestedIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('Invalid battle action.')
+    }
+    return requestedIds
+  }
+
   if (target.side === 'self') {
     if (selfTargetIds && selfTargetIds.length > 0) return selfTargetIds
     // An explicitly supplied empty selfTargetIds means the UI deliberately
@@ -607,9 +624,9 @@ const validateTrapTargets = (
   effects: CardEffect[],
   targetIds: string[],
   selfTargetIds?: string[],
+  effectTargets?: string[][],
 ) => {
-  const targetEffects = effects.filter(
-    (effect) =>
+  const isTargetEffect = (effect: CardEffect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
@@ -621,11 +638,11 @@ const validateTrapTargets = (
       effect.kind === 'return-to-hand' ||
       effect.kind === 'return-to-deck-bottom' ||
       effect.kind === 'hp-to-hand' ||
-      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
-  )
-  if (targetEffects.length === 0) {
-    if (targetIds.length > 0) {
-    throw new GameRuleError('Invalid battle action.')
+      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly)
+
+  if (effects.every((effect) => !isTargetEffect(effect))) {
+    if (targetIds.length > 0 || effectTargets?.some((ids) => ids.length > 0)) {
+      throw new GameRuleError('Invalid battle action.')
     }
     return
   }
@@ -634,15 +651,19 @@ const validateTrapTargets = (
     sourcePlayerId: playerId,
     sourceInstanceId: 'pending-trap',
   }
-  for (const effect of targetEffects) {
+  for (const [effectIndex, effect] of effects.entries()) {
+    if (!isTargetEffect(effect)) continue
     const target = 'target' in effect ? effect.target : undefined
     if (!target) continue
+    const explicitTargetIds = effectTargets?.[effectIndex]
+    const requestedTargetIds = explicitTargetIds ?? targetIds
     const effectiveIds = resolveTrapEffectTargetIds(
       state,
       context,
       target,
-      targetIds,
+      requestedTargetIds,
       selfTargetIds,
+      explicitTargetIds !== undefined,
     )
     selectEffectTargets(state, context, target, effectiveIds)
   }
@@ -707,6 +728,12 @@ export interface PlayTrapOptions {
   costOptionIndex?: number
   paymentIds: string[]
   targetIds: string[]
+  /**
+   * Optional per-effect target selections aligned with trap.effects indexes.
+   * An omitted entry falls back to targetIds; an explicit [] skips that
+   * optional target effect without falling back to another Cookie.
+   */
+  effectTargets?: string[][]
   supportTrashIds?: string[]
   supportToHandIds?: string[]
   handToSupportIds?: string[]
@@ -717,10 +744,9 @@ export interface PlayTrapOptions {
   trashCookieToBreakAreaIds?: string[]
   /**
    * trash-to-deck 效果的獨立目標欄位（例如 BS2-079 第二段「洗回牌庫」）。
-   * 陷阱效果不像物品/技能有逐效果的 effectTargets 陣列，只有單一共用
-   * targetIds；trash-to-deck 與其他可能同時出現的目標式效果（如
-   * modify-attack）語意不同、選擇對象也不同，需要自己的欄位才能與
-   * targetIds 並存，不會互相覆蓋。
+   * trash-to-deck 與戰鬥區目標式效果（如 modify-attack）語意不同、選擇
+   * 對象也不同，因此仍需要自己的欄位，才能與 targetIds/effectTargets
+   * 並存而不互相覆蓋。
    */
   trashToDeckIds?: string[]
   /**
@@ -1068,7 +1094,14 @@ export const playTrap = (
     throw new GameRuleError(`Invalid trap payment: ${paymentValidation.reason}`)
   }
 
-  validateTrapTargets(state, playerId, trap.effects, options.targetIds, options.selfTargetIds)
+  validateTrapTargets(
+    state,
+    playerId,
+    trap.effects,
+    options.targetIds,
+    options.selfTargetIds,
+    options.effectTargets,
+  )
 
   const discardHandIds = options.discardHandIds ?? []
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
@@ -1288,6 +1321,9 @@ export const playTrap = (
 
   for (let effectIndex = 0; effectIndex < trap.effects.length; effectIndex += 1) {
     const effect = trap.effects[effectIndex]
+    const explicitTargetIds = options.effectTargets?.[effectIndex]
+    const requestedTargetIds = explicitTargetIds ?? options.targetIds
+    const hasExplicitTargetIds = explicitTargetIds !== undefined
     if (
       trap.condition?.kind === 'friendly-color-fainted-this-battle' ||
       trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
@@ -1313,7 +1349,14 @@ export const playTrap = (
           nextState,
           context,
           effect.target,
-          options.targetIds,
+          resolveTrapEffectTargetIds(
+            nextState,
+            context,
+            effect.target,
+            requestedTargetIds,
+            options.selfTargetIds,
+            hasExplicitTargetIds,
+          ),
         )
         nextState = {
           ...nextState,
@@ -1342,8 +1385,9 @@ export const playTrap = (
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        requestedTargetIds,
         options.selfTargetIds,
+        hasExplicitTargetIds,
       )
       const targets = selectEffectTargets(
         nextState,
@@ -1384,8 +1428,9 @@ export const playTrap = (
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        requestedTargetIds,
         options.selfTargetIds,
+        hasExplicitTargetIds,
       )
       const targets = selectEffectTargets(
         nextState,
@@ -1550,8 +1595,9 @@ export const playTrap = (
             nextState,
             context,
             'target' in effect ? effect.target : undefined,
-            options.targetIds,
+            requestedTargetIds,
             options.selfTargetIds,
+            hasExplicitTargetIds,
           ),
     )
     if (nextState.pendingRevealTopDeck) break

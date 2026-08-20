@@ -891,6 +891,18 @@ export const describeCommand = (
         }
         return `${actor} 選擇了「${findCardName(previous, command.targetIds[0])}」作為放置 HP 的目標`
       }
+      const modifyAttack = effects.find(
+        (effect): effect is Extract<CardEffect, { kind: 'modify-attack' }> =>
+          effect.kind === 'modify-attack',
+      )
+      if (modifyAttack) {
+        const targetName = command.targetIds[0]
+          ? findCardName(previous, command.targetIds[0])
+          : undefined
+        return targetName
+          ? `${actor} 使「${targetName}」攻擊力 ${modifyAttack.amount >= 0 ? '+' : ''}${modifyAttack.amount}`
+          : `${actor} 未選擇攻擊力效果目標，未套用攻擊力修改`
+      }
       const outcome = describeDamageOutcome(
         previous,
         next,
@@ -1168,15 +1180,18 @@ const describeEffectTargetsSteps = (
   state: GameState,
   effectTargets: string[][] | undefined,
   effects: CardEffect[] = [],
+  labelForIndex: (index: number, effect: CardEffect | undefined) => string =
+    (index, effect) =>
+      effect?.kind === 'opponent-battle-to-trash'
+        ? '效果結算：放入棄牌區'
+        : `第 ${index + 1} 個效果目標`,
 ): LogStepDetail[] =>
   (effectTargets ?? [])
     .map((targetIds, index) => {
       const effect = effects[index]
       return describeCardListStep(
         state,
-        effect?.kind === 'opponent-battle-to-trash'
-          ? '效果結算：放入棄牌區'
-          : `第 ${index + 1} 個效果目標`,
+        labelForIndex(index, effect),
         targetIds,
       )
     })
@@ -1201,6 +1216,14 @@ export const describeCommandSteps = (
   const state = previous
 
   switch (command.kind) {
+    case 'play-stage': {
+      const paymentStep = describeCardListStep(
+        state,
+        '支付場景放置費用（橫置）',
+        command.paymentIds,
+      )
+      return paymentStep ? [paymentStep] : undefined
+    }
     case 'play-trap': {
       const steps: LogStepDetail[] = []
       const trapCard = findCard(state, command.trapInstanceId)
@@ -1244,14 +1267,33 @@ export const describeCommandSteps = (
         command.handToSupportIds,
       )
       if (handToSupportStep) steps.push(handToSupportStep)
+      if (command.effectTargets !== undefined) {
+        steps.push(
+          ...describeEffectTargetsSteps(
+            state,
+            command.effectTargets,
+            trapCard?.type === 'trap' ? trapCard.trap?.effects : [],
+            (index, effect) =>
+              effect?.kind === 'opponent-battle-to-trash'
+                ? '效果結算：放入棄牌區'
+                : index === 0
+                  ? '選擇目標'
+                  : `選擇目標（第 ${index + 1} 段）`,
+          ),
+        )
+      } else {
+        const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
+        if (targetStep) steps.push(targetStep)
+      }
+      // play-trap 的 trashToDeckIds 是 `trash-to-deck` 效果選擇，不是
+      // AbilityCost。它必須依卡面順序排在前段目標之後，不能誤標成
+      // 「額外代價」而讓公開 trace 看起來先付款、再選第一段目標。
       const trashToDeckStep = describeCardListStep(
         state,
-        '額外代價：棄牌區卡片洗回牌庫',
+        'Then 效果：棄牌區卡片洗回牌庫',
         command.trashToDeckIds,
       )
       if (trashToDeckStep) steps.push(trashToDeckStep)
-      const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
-      if (targetStep) steps.push(targetStep)
       const selfTargetStep = describeCardListStep(state, '選擇自身目標', command.selfTargetIds)
       if (selfTargetStep) steps.push(selfTargetStep)
       return steps
@@ -1345,6 +1387,7 @@ export const describeCommandSteps = (
       return steps
     }
     case 'play-item':
+    case 'begin-activate-stage':
     case 'activate-stage': {
       const steps: LogStepDetail[] = []
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
@@ -1352,7 +1395,9 @@ export const describeCommandSteps = (
       const supportTrashStep = describeCardListStep(
         state,
         '額外代價：支援區送入棄牌區',
-        command.supportToTrashIds,
+        'supportToTrashIds' in command
+          ? command.supportToTrashIds
+          : undefined,
       )
       if (supportTrashStep) steps.push(supportTrashStep)
       const supportToHandStep = describeCardListStep(
@@ -1378,7 +1423,7 @@ export const describeCommandSteps = (
       steps.push(
         ...describeEffectTargetsSteps(
           state,
-          command.effectTargets,
+          'effectTargets' in command ? command.effectTargets : undefined,
           getResolvedEffects(state, command),
         ),
       )
@@ -1390,6 +1435,14 @@ export const describeCommandSteps = (
         getResolvedEffects(previous, command),
       )
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
+      if (command.kind === 'begin-activate-stage' && 'targetIds' in command) {
+        const targetStep = describeCardListStep(
+          state,
+          '效果目標',
+          command.targetIds,
+        )
+        if (targetStep) steps.push(targetStep)
+      }
       return steps
     }
     case 'resolve-attack-effect': {
@@ -1413,7 +1466,14 @@ export const describeCommandSteps = (
         command.targetIds,
         sourceCard,
       )
-      if (targetStep) steps.push(targetStep)
+      if (targetStep) {
+        steps.push(targetStep)
+        // An optional target may legitimately be left empty, and a required
+        // selector may have no legal candidate. In both cases the target step
+        // already records that the effect did not apply; do not append a
+        // generic action description that falsely claims the result happened.
+        if (targetStep.text.includes('未生效')) return steps
+      }
       if (effect) {
         steps.push(
           describeAttackEffectResultStep(
@@ -1518,7 +1578,34 @@ export const describeCommandSteps = (
       const fieldToDeckBottom = getFieldToDeckBottomEffect(resolvedEffects)
       return fieldToDeckBottom
         ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
-        : undefined
+        : (() => {
+            const effect = resolvedEffects[0]
+            if (!effect) return undefined
+            const steps: LogStepDetail[] = []
+            const targetStep = describeCardListStep(
+              state,
+              effect.kind === 'modify-attack'
+                ? '攻擊力效果目標'
+                : '效果目標',
+              command.targetIds,
+            )
+            if (targetStep) steps.push(targetStep)
+            if (effect.kind === 'modify-attack') {
+              const amount = effect.amount
+              const targetNames = command.targetIds
+                .map((id) => findCardName(state, id))
+                .join('、')
+              steps.push({
+                text: targetNames
+                  ? `效果結算：${targetNames} 攻擊力 ${amount >= 0 ? '+' : ''}${amount}`
+                  : '效果結算：未選擇攻擊力效果目標，未套用攻擊力修改',
+                cards: command.targetIds
+                  .map((id) => findCard(state, id))
+                  .filter((card): card is GameCard => card !== undefined),
+              })
+            }
+            return steps.length > 0 ? steps : undefined
+          })()
     }
     case 'resolve-faint-effect': {
       const pending = previous.pendingFaintEffects?.[0]
