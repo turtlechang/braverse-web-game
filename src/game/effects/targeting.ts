@@ -825,6 +825,24 @@ export const getEffectSelectionCandidates = (
     }
     return [...battleCards, ...stageCards]
   }
+  if (effect.kind === 'field-to-trash') {
+    const battleCards = effect.stageOnly
+      ? []
+      : getEffectTargetCandidatesForEffect(state, context, effect).map(
+          (cookie) => cookie.card,
+        )
+    if (!effect.allowStage && !effect.stageOnly) return battleCards
+
+    const ownerIds: PlayerId[] =
+      effect.target.side === 'either'
+        ? ['player-one', 'player-two']
+        : [getTargetPlayerId(context, effect.target)]
+    const stageCards = ownerIds.flatMap((ownerId) => {
+      const stage = state.players[ownerId].stage
+      return stage ? [stage.card] : []
+    })
+    return [...battleCards, ...stageCards]
+  }
   if (effect.kind === 'set-active' && effect.selectable) {
     return getSupportEffectCandidates(state, context, { activeOnly: false })
       .filter((support) => support.rested)

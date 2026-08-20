@@ -1,8 +1,10 @@
 {
-  "generatedAt": "2026-08-13T05:16:04.454Z",
+  "generatedAt": "2026-08-20T08:56:37.120Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
-  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "sources": [
+    "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json"
+  ],
   "scope": "Formal-pool card-check entry audit for every promoted BS5 record. This report separates route/card rendering from interactive effect proof.",
   "summary": {
     "total": 153,
@@ -86,9 +88,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Strawberry Cream Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Strawberry Cream Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-004",
@@ -156,7 +158,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "已略過 Marshmallow Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 42
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-007",
@@ -190,7 +192,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Chestnut Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 45
     },
     {
       "cardNumber": "BS5-009",
@@ -223,9 +225,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Starch Noodle Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Starch Noodle Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 46
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-010@1",
@@ -241,9 +243,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Starch Noodle Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Starch Noodle Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 46
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-011",
@@ -294,7 +296,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "已略過 Eggnog Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 42
+      "actionableControls": 44
     },
     {
       "cardNumber": "BS5-013",
@@ -310,9 +312,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-013@1",
@@ -328,9 +330,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-013@2",
@@ -346,9 +348,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-013@3",
@@ -364,9 +366,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-013@4",
@@ -382,9 +384,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-013@5",
@@ -400,9 +402,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Pitaya Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 50
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-014",
@@ -538,7 +540,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-020",
@@ -607,9 +609,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Dino-Sour Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Dino-Sour Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-023@1",
@@ -625,9 +627,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Dino-Sour Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Dino-Sour Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-024",
@@ -644,7 +646,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "已略過 Dr. Wasabi Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 42
+      "actionableControls": 43
     },
     {
       "cardNumber": "BS5-025",
@@ -659,7 +661,7 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Leek Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Leek Cookie 的攻擊後續效果。",
       "modalVisible": false,
       "actionableControls": 44
     },
@@ -761,9 +763,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Buttercream Choco Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Buttercream Choco Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-031",
@@ -797,7 +799,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Birthday Cake Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 46
+      "actionableControls": 50
     },
     {
       "cardNumber": "BS5-033",
@@ -846,7 +848,7 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Artichoke Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Artichoke Cookie 的攻擊後續效果。",
       "modalVisible": false,
       "actionableControls": 46
     },
@@ -983,9 +985,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Ananas Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Ananas Dragon Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-040@1",
@@ -1001,9 +1003,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Ananas Dragon Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "已略過 Ananas Dragon Cookie 的攻擊後續效果。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-041",
@@ -1037,7 +1039,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
-      "actionableControls": 39
+      "actionableControls": 41
     },
     {
       "cardNumber": "BS5-043",
@@ -1345,7 +1347,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-056@1",
@@ -1363,7 +1365,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-056@2",
@@ -1381,7 +1383,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-056@3",
@@ -1399,7 +1401,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-056@4",
@@ -1417,7 +1419,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-056@5",
@@ -1435,7 +1437,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Longan Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 49
     },
     {
       "cardNumber": "BS5-057",
@@ -1502,7 +1504,7 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Purple Yam Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Purple Yam Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 50
     },
@@ -1520,7 +1522,7 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Purple Yam Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Purple Yam Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 50
     },
@@ -1539,7 +1541,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Croissant Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-061",
@@ -1661,7 +1663,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Snow Sugar Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-068",
@@ -1747,7 +1749,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Lotus Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 42
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-071@1",
@@ -1765,7 +1767,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Lotus Dragon Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 42
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-072",
@@ -1797,9 +1799,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": null,
+      "promptVisible": "flip-attacker",
       "modalVisible": false,
-      "actionableControls": 38
+      "actionableControls": 34
     },
     {
       "cardNumber": "BS5-074",
@@ -1814,9 +1816,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": null,
+      "promptVisible": "flip-attacker",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 34
     },
     {
       "cardNumber": "BS5-075",
@@ -1967,9 +1969,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Alchemist Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Alchemist Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-080@1",
@@ -1984,9 +1986,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Alchemist Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Alchemist Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-081",
@@ -2001,7 +2003,7 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": null,
+      "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 44
     },
@@ -2071,7 +2073,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Pirate Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-086",
@@ -2142,7 +2144,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Muscle Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-089@1",
@@ -2159,7 +2161,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Muscle Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-089@2",
@@ -2176,7 +2178,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Muscle Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-090",
@@ -2242,9 +2244,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": null,
+      "promptVisible": "攻擊宣告",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 45
     },
     {
       "cardNumber": "BS5-092@1",
@@ -2259,9 +2261,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": null,
+      "promptVisible": "攻擊宣告",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 45
     },
     {
       "cardNumber": "BS5-093",
@@ -2310,9 +2312,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Mangosteen Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Mangosteen Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 49
+      "actionableControls": 47
     },
     {
       "cardNumber": "BS5-095",
@@ -2363,7 +2365,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Peppercorn Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 48
     },
     {
       "cardNumber": "BS5-098",
@@ -2379,9 +2381,9 @@
       "status": "PASS",
       "auditStatus": "載入通過",
       "flow": "candidate-card-check-entry",
-      "promptVisible": "Centipede Cookie等待選擇攻擊後續效果目標。",
+      "promptVisible": "Centipede Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
-      "actionableControls": 45
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-099",
@@ -2398,7 +2400,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Avocado Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-100",
@@ -2568,7 +2570,7 @@
       "flow": "candidate-card-check-entry",
       "promptVisible": "Plain Yogurt Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
-      "actionableControls": 44
+      "actionableControls": 46
     },
     {
       "cardNumber": "BS5-107",

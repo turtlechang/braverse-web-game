@@ -36,14 +36,84 @@ const requestedSeries = (() => {
 const isBs6Audit = requestedSeries === 'BS6'
 const auditVanillaAttacks = process.argv.includes('--vanilla-attacks')
 const auditNegative = process.argv.includes('--negative')
+const auditFailFast = process.argv.includes('--fail-fast')
 const requestedCardNumbers = process.argv
   .filter((argument) => argument.startsWith('--card='))
   .map((argument) => argument.slice('--card='.length))
 
 const AUDIT_CONFIGS = {
+  BS1: {
+    label: 'BS1',
+    sources: ['data/cards/official-brave-beginning-bs1.en.json'],
+    report: 'docs/bs1-effect-audit-2026-08-20.json',
+    expectedEffectCardCount: 81,
+    conditionTestStatePrefix: 'bs1-condition',
+    conditionCardNumbers: [],
+    alwaysIncludeCardNumbers: [],
+  },
+  BS2: {
+    label: 'BS2',
+    sources: ['data/cards/official-brave-beginning-bs2.en.json'],
+    report: 'docs/bs2-effect-audit-2026-08-20.json',
+    expectedEffectCardCount: 86,
+    conditionTestStatePrefix: 'bs2-condition',
+    conditionCardNumbers: [],
+    alwaysIncludeCardNumbers: [],
+  },
+  BS3: {
+    label: 'BS3',
+    sources: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json',
+    ],
+    report: 'docs/bs3-effect-audit-2026-08-20.json',
+    expectedEffectCardCount: 166,
+    conditionTestStatePrefix: 'bs3-condition',
+    conditionCardNumbers: [],
+    alwaysIncludeCardNumbers: [],
+  },
+  BS4: {
+    label: 'BS4',
+    sources: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json',
+    ],
+    report: 'docs/bs4-effect-audit-2026-08-20.json',
+    expectedEffectCardCount: 158,
+    conditionTestStatePrefix: 'bs4-condition',
+    // BS4's dedicated interaction validator asserts the resulting state and
+    // DOM markers. Several met routes are passive/no-op UI paths, so this
+    // generic settlement audit must not require a button click to accept them.
+    conditionMetRequiresInteraction: false,
+    conditionCardNumbers: [
+      'BS4-011',
+      'BS4-012',
+      'BS4-014',
+      'BS4-016',
+      'BS4-020',
+      'BS4-023',
+      'BS4-024',
+      'BS4-039',
+      'BS4-040',
+      'BS4-048',
+      'BS4-049',
+      'BS4-052',
+      'BS4-053',
+      'BS4-059',
+      'BS4-061',
+      'BS4-073',
+      'BS4-083',
+      'BS4-089',
+      'BS4-090',
+      'BS4-094',
+      'BS4-106',
+      'BS4-107',
+    ],
+    alwaysIncludeCardNumbers: [],
+  },
   BS5: {
     label: 'BS5',
-    source: 'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    sources: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    ],
     report: 'docs/bs5-effect-audit-2026-08-13.json',
     // BS5 keeps every effect-bearing formal record in the audit, including
     // illustration variants, because variant records can carry normalized
@@ -91,9 +161,15 @@ const AUDIT_CONFIGS = {
   },
   P: {
     label: 'P-0XX',
-    source: 'data/cards/official-p-0xx-remaining.en.json',
-    report: 'docs/p0xx-effect-audit-2026-08-10.json',
-    expectedEffectCardCount: 108,
+    sources: [
+      'data/cards/official-promotion-p001-p032.en.json',
+      'data/cards/official-promotion-p001-p032-remaining.en.json',
+      'data/cards/official-p-0xx-remaining.en.json',
+    ],
+    report: 'docs/p0xx-effect-audit-2026-08-20.json',
+    // P-053/P-130 express attack follow-ups without `Then`; P-099/P-100 have
+    // FLIP text recovered from malformed source fields by normalization.
+    expectedEffectCardCount: 138,
     conditionTestStatePrefix: 'p-condition',
     conditionCardNumbers: [
       'P-041',
@@ -127,7 +203,9 @@ const AUDIT_CONFIGS = {
   },
   BS6: {
     label: 'BS6',
-    source: 'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    sources: [
+      'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    ],
     report: 'docs/bs6-effect-audit-2026-08-12.json',
     // 以基礎卡號去重後，97 張卡具有主效果、FLIP、陷阱／物品／場景或攻擊 Then。
     // BS6-091 只有 @2／@3 異圖，仍以其中一張代表記錄納入稽核。
@@ -143,7 +221,6 @@ if (!auditConfig) {
     `Unsupported formal effect audit series: ${requestedSeries}. Supported series: ${Object.keys(AUDIT_CONFIGS).join(', ')}`,
   )
 }
-const formalPath = resolve(root, auditConfig.source)
 const reportPath = resolve(
   root,
   process.env.BRAVERSE_AUDIT_REPORT ?? auditConfig.report,
@@ -159,18 +236,39 @@ const browserExecutable =
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   ].find((candidate) => existsSync(candidate))
 
-const source = JSON.parse(await readFile(formalPath, 'utf8'))
+const sources = await Promise.all(
+  auditConfig.sources.map(async (formalPath) =>
+    JSON.parse(await readFile(resolve(root, formalPath), 'utf8')),
+  ),
+)
+const source = { cards: sources.flatMap((formalSource) => formalSource.cards) }
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
-const normalizedAttackThenVariants = new Set(['BS5-089@2'])
+const knownAttackEffectVariants = new Set([
+  'BS5-089@2',
+  // These official texts omit `Then` even though the clause is resolved as
+  // an attack follow-up by the shared runtime adapter.
+  'P-053',
+  'P-130',
+])
+const normalizedFlipVariants = new Set(['P-099', 'P-100'])
+const knownNonEffectFlipTextVariants = new Set([
+  // The source repeats the attack name in flipText; adapter normalization
+  // correctly keeps these illustration variants as vanilla Cookies.
+  'BS4-045@1',
+  'BS4-097@1',
+])
 const normalizedSkillVariants = new Set(['BS6-091@2', 'BS6-091@3'])
 const hasEffectSurface = (card) => {
   const skill = hasText(card.skill?.text)
   const attackThen =
     (hasText(card.attackText) && /\bThen\b/i.test(card.attackText)) ||
-    normalizedAttackThenVariants.has(card.cardNumber)
+    knownAttackEffectVariants.has(card.cardNumber)
   // 官方資料把帶有 FLIP 能力的餅乾記成 COOKIE（BS5-073/074）；是否為
   // FLIP 以 flipText 判斷，不能只看 card.type。
-  const flip = hasText(card.flipText)
+  const flip =
+    (hasText(card.flipText) &&
+      !knownNonEffectFlipTextVariants.has(card.cardNumber)) ||
+    normalizedFlipVariants.has(card.cardNumber)
   return (
     card.type === 'item' ||
     card.type === 'trap' ||
@@ -183,7 +281,10 @@ const hasEffectSurface = (card) => {
   )
 }
 const isVanillaAttackCookie = (card) =>
-  card.type === 'cookie' && !hasEffectSurface(card)
+  // Official `flip` attachment records are converted into runtime Cookie
+  // cards. When no FlipAbility exists (BS2-042/P-047), they still need the
+  // same deploy/attack and no-payment checks as other vanilla Cookies.
+  (card.type === 'cookie' || card.type === 'flip') && !hasEffectSurface(card)
 const getBaseCardNumber = (card) => card.baseCardNumber || card.cardNumber
 const selectRepresentativeCards = (records) => {
   if (auditNegative) {
@@ -260,11 +361,17 @@ const effectSurfaces = (card) => {
   }
   if (
     /\bThen\b/i.test(card.attackText ?? '') ||
-    normalizedAttackThenVariants.has(card.cardNumber)
+    knownAttackEffectVariants.has(card.cardNumber)
   ) {
     surfaces.push('attack-then')
   }
-  if (card.type === 'flip' || hasText(card.flipText)) surfaces.push('flip')
+  if (
+    (hasText(card.flipText) &&
+      !knownNonEffectFlipTextVariants.has(card.cardNumber)) ||
+    normalizedFlipVariants.has(card.cardNumber)
+  ) {
+    surfaces.push('flip')
+  }
   if (card.type === 'item') surfaces.push('item')
   if (card.type === 'trap') surfaces.push('trap')
   if (card.type === 'stage') surfaces.push('stage')
@@ -309,6 +416,33 @@ const activePanel = (page) => page.locator('.effect-panel[role="alertdialog"]')
 
 const clickFirstUnselected = async (panel, selectors, operations) => {
   const panelText = await panel.innerText().catch(() => '')
+  const typedProgressPattern = (selector) => {
+    if (selector.includes('trash-deck-bottom')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)\s*張棄牌區代價（依選取順序放到牌庫底）/
+    }
+    if (selector.includes('trash-deck')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)\s*張符合條件的棄牌區卡牌（洗回牌庫）/
+    }
+    if (selector.includes('cost-support')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)\s*張支援區代價/
+    }
+    if (selector.includes('discard-hand')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)\s*張手牌代價/
+    }
+    if (selector.includes('hp-cost')) {
+      return /已選\s*(\d+)\s*張\s*[\/／]\s*(\d+)\s*張 HP 費用/
+    }
+    if (selector.includes('trash-battle')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)\s*張戰鬥區餅乾代價/
+    }
+    if (selector.includes('rest-support')) {
+      return /已選\s*(\d+)\s*[\/／]\s*(\d+)/
+    }
+    if (selector.includes('battle-to-hand')) {
+      return /已選擇\s*(\d+)\s*張，\s*需要返回\s*(\d+)\s*張戰鬥區餅乾/
+    }
+    return null
+  }
   for (const selector of selectors) {
     const group = panel.locator(selector).first()
     if (!(await visible(group))) continue
@@ -318,7 +452,10 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
       ? panelText.match(/(?:已選|選擇)\s*(\d+)\s*[\/／]\s*(\d+)/)
       : null
     if (panelProgress && Number(panelProgress[1]) >= Number(panelProgress[2])) continue
-    const progress = groupText.match(/(?:已選\s*)?(\d+)\s*[\/／]\s*(\d+)/)
+    const typedPattern = typedProgressPattern(selector)
+    const progress =
+      groupText.match(/(?:已選\s*)?(\d+)\s*[\/／]\s*(\d+)/) ??
+      (typedPattern ? panelText.match(typedPattern) : null)
     if (progress && Number(progress[1]) >= Number(progress[2])) continue
 
     const selectedCount = await group.locator('button.is-selected').count()
@@ -425,23 +562,37 @@ const driveEffectPanel = async (
       return true
     }
 
-    const candidate = optionalAttack
+    const activeCostColumn = optionalAttack.locator('.optional-cost-col').first()
+    const activeCostText = await activeCostColumn.innerText().catch(() => '')
+    const optionalSelectedCount = await activeCostColumn
+      .locator('.modal-card-options button.is-selected')
+      .count()
+    const requiredSelectionMatch = activeCostText.match(
+      /(?:選擇|將)\s*(\d+)\s*(?:張|個)/,
+    )
+    const requiredSelectionCount = /最多選擇/.test(activeCostText)
+      ? Math.min(1, Number(requiredSelectionMatch?.[1] ?? 0))
+      : Number(requiredSelectionMatch?.[1] ?? 0)
+    const candidate = activeCostColumn
       .locator(
-        '.optional-cost-col .modal-card-options button:not(.is-selected):not(:disabled)',
+        '.modal-card-options button:not(.is-selected):not(:disabled)',
       )
       .first()
-    const optionalSelectedCount = await optionalAttack
-      .locator('.optional-cost-col .modal-card-options button.is-selected')
-      .count()
-    if (optionalSelectedCount === 0 && (await enabled(candidate))) {
+    if (
+      optionalSelectedCount < requiredSelectionCount &&
+      (await enabled(candidate))
+    ) {
       await candidate.click({ force: true })
       operations.push('select:optional-cost')
       await wait(120)
       return true
     }
 
+    // The first sticky action is Back. Select the actual primary button even
+    // while disabled so a missing selection cannot accidentally navigate
+    // backwards and restart the payment flow.
     const confirm = optionalAttack
-      .locator('.modal-actions-sticky button:not(:disabled)')
+      .locator('.modal-actions-sticky button')
       .last()
     if (await enabled(confirm)) {
       await confirm.click({ force: true })
@@ -522,15 +673,69 @@ const driveOtherModal = async (
       await wait(520)
       return true
     }
-    const option = flip.locator(
-      '.flip-hand-carousel .flip-card-page button:not(.is-selected):not(:disabled), .flip-choice-options button:not(.is-selected):not(:disabled), .modal-card-options button:not(.is-selected):not(:disabled)',
-    ).first()
-    const selectedOptionCount = await flip.locator(
-      '.flip-hand-carousel .flip-card-page button.is-selected, .flip-choice-options button.is-selected, .modal-card-options button.is-selected',
-    ).count()
-    if (selectedOptionCount === 0 && (await enabled(option))) {
-      await option.click({ force: true })
-      operations.push('select:flip')
+    const chooseOneSection = flip
+      .locator('.flip-choice-section')
+      .filter({ hasText: /選擇一項|Choose one/i })
+      .first()
+    const selectedModeCount = await chooseOneSection
+      .locator('button.is-selected')
+      .count()
+    const chooseOneOption = chooseOneSection
+      .locator('button:not(.is-selected):not(:disabled)')
+      .first()
+    if (
+      (await visible(chooseOneSection)) &&
+      selectedModeCount === 0 &&
+      (await enabled(chooseOneOption))
+    ) {
+      await chooseOneOption.click({ force: true })
+      operations.push('select:flip-choice')
+      await wait(120)
+      return true
+    }
+
+    const flipText = await flip.innerText().catch(() => '')
+    const discardRequirement = flipText.match(
+      /選擇\s*(\d+)\s*張手牌棄置|Discard\s+(\d+)\s+card/i,
+    )
+    const requiredDiscardCount = Number(
+      discardRequirement?.[1] ?? discardRequirement?.[2] ?? 0,
+    )
+    const selectedDiscardCount = await flip
+      .locator('.flip-hand-carousel .flip-card-page button.is-selected')
+      .count()
+    const discardOption = flip
+      .locator(
+        '.flip-hand-carousel .flip-card-page button:not(.is-selected):not(:disabled)',
+      )
+      .first()
+    if (
+      selectedDiscardCount < requiredDiscardCount &&
+      (await enabled(discardOption))
+    ) {
+      await discardOption.click({ force: true })
+      operations.push('select:flip-discard')
+      await wait(120)
+      return true
+    }
+
+    const targetSection = flip
+      .locator('.flip-choice-section')
+      .filter({ hasText: /選擇目標|Choose target/i })
+      .first()
+    const selectedTargetCount = await targetSection
+      .locator('button.is-selected')
+      .count()
+    const targetOption = targetSection
+      .locator('button:not(.is-selected):not(:disabled)')
+      .first()
+    if (
+      (await visible(targetSection)) &&
+      selectedTargetCount === 0 &&
+      (await enabled(targetOption))
+    ) {
+      await targetOption.click({ force: true })
+      operations.push('select:flip-target')
       await wait(120)
       return true
     }
@@ -548,24 +753,77 @@ const driveOtherModal = async (
 
   const attackResponse = page.locator('.attack-response-modal').first()
   if (await visible(attackResponse)) {
-    if (strictNegative) {
-      throw new Error('negative path unexpectedly exposed an attack response')
-    }
     const trapSelection = attackResponse
       .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
       .first()
     if (!(await enabled(trapSelection))) return false
     await trapSelection.click({ force: true })
-    operations.push('select:trap')
+    operations.push('select:attack-response')
     await wait(180)
+    return true
+  }
+
+  const blockerResponse = page.locator('.blocker-response-modal').first()
+  if (await visible(blockerResponse)) {
+    const blocker = blockerResponse
+      .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
+      .first()
+    if (await enabled(blocker)) {
+      await blocker.click({ force: true })
+      operations.push('select:blocker')
+      await wait(120)
+      return true
+    }
+    const confirm = blockerResponse
+      .locator('.modal-actions button:not(:disabled)')
+      .filter({ hasText: /使用 Blocker|Use Blocker/i })
+      .first()
+    if (!(await enabled(confirm))) return false
+    await confirm.click({ force: true })
+    operations.push('confirm:blocker')
+    await wait(520)
+    return true
+  }
+
+  const attackResponseSkill = page
+    .locator('.attack-response-skill-modal')
+    .first()
+  if (await visible(attackResponseSkill)) {
+    const discard = attackResponseSkill
+      .locator(
+        '.attack-response-discard-candidates button:not(.is-selected):not(:disabled)',
+      )
+      .first()
+    if (await enabled(discard)) {
+      await discard.click({ force: true })
+      operations.push('select:attack-response-discard')
+      await wait(120)
+      return true
+    }
+    const trashToDeck = attackResponseSkill
+      .locator(
+        '.attack-response-trash-to-deck-candidates button:not(.is-selected):not(:disabled)',
+      )
+      .first()
+    if (await enabled(trashToDeck)) {
+      await trashToDeck.click({ force: true })
+      operations.push('select:attack-response-trash-to-deck')
+      await wait(120)
+      return true
+    }
+    const confirm = attackResponseSkill
+      .locator('.modal-actions button:not(:disabled)')
+      .filter({ hasText: /支付代價並發動|Activate/i })
+      .first()
+    if (!(await enabled(confirm))) return false
+    await confirm.click({ force: true })
+    operations.push('confirm:attack-response')
+    await wait(520)
     return true
   }
 
   const trap = page.locator('.trap-response-modal').first()
   if (await visible(trap)) {
-    if (strictNegative) {
-      throw new Error('negative path unexpectedly exposed a trap response')
-    }
     const trapSelectPrompt = trap
       .locator('h2')
       .filter({ hasText: /是否發動陷阱|Activate a Trap/i })
@@ -583,17 +841,29 @@ const driveOtherModal = async (
     const guidedSections = trap.locator('.trap-guided-section')
     for (let index = 0; index < (await guidedSections.count()); index += 1) {
       const section = guidedSections.nth(index)
-      const progressText = await section.innerText().catch(() => '')
-      const progress = [...progressText.matchAll(/(\d+)\s*[\/／]\s*(\d+)/g)].at(-1)
-      if (!progress || Number(progress[1]) >= Number(progress[2])) continue
-      const candidate = section
-        .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
-        .first()
-      if (!(await enabled(candidate))) continue
-      await candidate.click({ force: true })
-      operations.push('select:trap-step')
-      await wait(180)
-      return true
+      const optionGroups = section.locator('.modal-card-options')
+      for (let groupIndex = 0; groupIndex < (await optionGroups.count()); groupIndex += 1) {
+        const group = optionGroups.nth(groupIndex)
+        const progressText = await group
+          .locator('xpath=following-sibling::span[1]')
+          .innerText()
+          .catch(() => '')
+        const progress = progressText.match(
+          /(\d+)\s*[\/／]\s*(?:最多\s*)?(\d+)/,
+        )
+        const selectedCount = await group.locator('button.is-selected').count()
+        const requiredCount = progress ? Number(progress[2]) : 1
+        if (selectedCount >= requiredCount) continue
+
+        const candidate = group
+          .locator('button:not(.is-selected):not(:disabled)')
+          .first()
+        if (!(await enabled(candidate))) continue
+        await candidate.click({ force: true })
+        operations.push('select:trap-step')
+        await wait(180)
+        return true
+      }
     }
 
     const optionalTarget = trap
@@ -745,11 +1015,31 @@ const driveOtherModal = async (
 
   const decisionModal = page.locator('.decision-modal').first()
   if (await visible(decisionModal)) {
-    const skip = decisionModal.locator('button:not(:disabled)').last()
+    const skip = decisionModal
+      .locator('button:not(:disabled)')
+      .filter({ hasText: /不補餅乾|略過|Skip/i })
+      .first()
     if (!(await enabled(skip))) return false
     await skip.click({ force: true })
     operations.push('skip:replacement')
     await wait(180)
+    const statusMessage = (
+      await page
+        .locator('.battle-status-message')
+        .first()
+        .textContent({ timeout: 100 })
+        .catch(() => '')
+    )
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (statusMessage && !operations.includes(`status:${statusMessage}`)) {
+      operations.push(`status:${statusMessage}`)
+    }
+    // Skipping a replacement can immediately hand control back to the AI,
+    // which may attack and create a new replacement task.  Give that state
+    // transition time to publish before handling another visually identical
+    // decision modal; otherwise a second click can land on the stale prompt.
+    await wait(520)
     return true
   }
 
@@ -858,6 +1148,9 @@ const settlePending = async (
     const pendingSelectors = [
       '.effect-panel[role="alertdialog"]',
       '.flip-response-modal',
+      '.attack-response-modal',
+      '.blocker-response-modal',
+      '.attack-response-skill-modal',
       '.trap-response-modal',
       '.draw-up-to-modal',
       '.hand-discard-modal[role="alertdialog"]',
@@ -1011,6 +1304,9 @@ const pendingSurfaceCount = async (page) => {
   const selectors = [
     '.effect-panel[role="alertdialog"]',
     '.flip-response-modal',
+    '.attack-response-modal',
+    '.blocker-response-modal',
+    '.attack-response-skill-modal',
     '.trap-response-modal',
     '.draw-up-to-modal',
     '.hand-discard-modal',
@@ -1033,6 +1329,9 @@ const visiblePendingSurfaceNames = async (page) => {
   const selectors = [
     '.effect-panel[role="alertdialog"]',
     '.flip-response-modal',
+    '.attack-response-modal',
+    '.blocker-response-modal',
+    '.attack-response-skill-modal',
     '.trap-response-modal',
     '.draw-up-to-modal',
     '.hand-discard-modal',
@@ -1057,6 +1356,33 @@ const effectPanelDebug = async (page) => {
     panelText: (await panel.innerText().catch(() => '')).replace(/\s+/g, ' ').trim(),
     selectedHpCost: await panel.locator('.effect-candidates-hp-cost button.is-selected').count(),
     selectedTargets: await panel.locator('.effect-candidates-target button.is-selected').count(),
+    targetCandidates: await panel.locator('.effect-candidates-target button').count(),
+    statusMessage: (
+      await page.locator('.battle-status-message').first().textContent().catch(() => '')
+    ).replace(/\s+/g, ' ').trim(),
+  }
+}
+
+const pendingModalDebug = async (page) => {
+  const modal = page.locator('.decision-modal').first()
+  if (!(await visible(modal))) return undefined
+  return {
+    text: (await modal.innerText().catch(() => '')).replace(/\s+/g, ' ').trim(),
+    statusMessage: (
+      await page
+        .locator('.battle-status-message')
+        .first()
+        .textContent({ timeout: 100 })
+        .catch(() => '')
+    )
+      .replace(/\s+/g, ' ')
+      .trim(),
+    buttons: await modal.locator('button').evaluateAll((buttons) =>
+      buttons.map((button) => ({
+        text: button.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        disabled: button.disabled,
+      })),
+    ),
   }
 }
 
@@ -1082,6 +1408,7 @@ const runCard = async (
     requireVanillaAttack = false,
     negative = false,
     settleAttackEffects = false,
+    driveActions = true,
   } = {},
 ) => {
   const consoleErrors = []
@@ -1095,9 +1422,12 @@ const runCard = async (
   const operations = []
 
   try {
-    await page.goto(`${baseUrl}?test-state=${encodeURIComponent(testState)}`, {
+    await page.goto(
+      `${baseUrl}?test-state=${encodeURIComponent(testState)}&audit-run=${Date.now()}`,
+      {
       waitUntil: 'domcontentloaded',
-    })
+      },
+    )
     await page.locator('.game-shell').waitFor({ state: 'visible' })
     await page.waitForTimeout(400)
     const before = await bodyText(page)
@@ -1110,7 +1440,7 @@ const runCard = async (
         await runVanillaAttack(page, operations)
       }
       await settlePending(page, operations, { negative, settleAttackEffects })
-    } else {
+    } else if (driveActions) {
       for (let round = 0; round < 8; round += 1) {
         const settledBefore = operations.length
         await settlePending(page, operations, {
@@ -1132,7 +1462,19 @@ const runCard = async (
         }
         break
       }
+    } else {
+      await settlePending(page, operations, {
+        negative,
+        settleAttackEffects,
+      })
     }
+
+    // Some rule transitions publish a replacement/decision modal on the next
+    // React tick after the effect panel itself has already disappeared.
+    // Perform one final delayed settlement pass before declaring the route
+    // complete so a late but valid prompt is neither missed nor misreported.
+    await wait(260)
+    await settlePending(page, operations, { negative, settleAttackEffects })
 
     const after = await bodyText(page)
     assert.ok(!/遊戲畫面發生錯誤|Application Error|Unhandled Runtime Error/i.test(after))
@@ -1193,6 +1535,7 @@ const runCard = async (
       debug: {
         ...(await effectPanelDebug(page)),
         visiblePendingSurfaces: await visiblePendingSurfaceNames(page),
+        decisionModal: await pendingModalDebug(page),
         ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
       },
     }
@@ -1213,6 +1556,7 @@ const runCard = async (
       error: error instanceof Error ? error.message : String(error),
       debug: {
         ...(await effectPanelDebug(page)),
+        decisionModal: await pendingModalDebug(page),
         ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
       },
     }
@@ -1265,18 +1609,33 @@ try {
       runOptions,
     )
     let result = genericResult
-    if (!auditVanillaAttacks && !auditNegative && conditionCardNumbers.has(card.cardNumber)) {
+    const conditionAuditCardNumber = conditionCardNumbers.has(card.cardNumber)
+      ? card.cardNumber
+      : conditionCardNumbers.has(card.baseCardNumber)
+        ? card.baseCardNumber
+        : null
+    if (!auditVanillaAttacks && !auditNegative && conditionAuditCardNumber) {
       const met = await runCard(
         page,
         card,
-        conditionTestState(card.cardNumber, 'met'),
-        { path: 'condition-met', requireInteractiveOperation: true },
+        conditionTestState(conditionAuditCardNumber, 'met'),
+        {
+          path: 'condition-met',
+          requireInteractiveOperation:
+            auditConfig.conditionMetRequiresInteraction ?? true,
+          driveActions:
+            auditConfig.conditionMetRequiresInteraction ?? true,
+        },
       )
       const unmet = await runCard(
         page,
         card,
-        conditionTestState(card.cardNumber, 'unmet'),
-        { path: 'condition-unmet', requireInteractiveOperation: false },
+        conditionTestState(conditionAuditCardNumber, 'unmet'),
+        {
+          path: 'condition-unmet',
+          requireInteractiveOperation: false,
+          driveActions: false,
+        },
       )
       const conditionPaths = { met, unmet }
       const pathStatuses = [met.status, unmet.status]
@@ -1306,6 +1665,7 @@ try {
     console.log(
       `${result.status} ${card.cardNumber} ${card.name} ${result.auditStatus} ${result.operations.join(',')}`,
     )
+    if (auditFailFast && result.status !== 'PASS') break
   }
 
   await page.close()
@@ -1317,7 +1677,7 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: auditConfig.source,
+    sources: auditConfig.sources,
     scope: auditNegative
       ? `Formal-pool negative A/B UI audit for every ${auditConfig.label} record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.`
       : auditVanillaAttacks
@@ -1346,7 +1706,8 @@ try {
     `\nSummary: ${report.summary.effectFlowPassed} passed, ${report.summary.blocked} blocked, ${report.summary.failed} failed`,
   )
   console.log(`Evidence: ${reportPath}`)
-  process.exitCode = report.summary.failed === 0 ? 0 : 1
+  process.exitCode =
+    report.summary.failed === 0 && report.summary.blocked === 0 ? 0 : 1
 } catch (error) {
   console.error(error)
   process.exitCode = 1

@@ -2992,13 +2992,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-two': {
           ...state.players['player-two'],
           battleArea: [
-            cardCheckBattleEntry(attacker, attackerHpCards, 5),
+            cardCheckBattleEntry(attacker, attackerHpCards, 5, true),
             cardCheckBattleEntry(
               trapOpponentSecondCookie,
               trapOpponentSecondCookie === opp1.cookie
                 ? opp1.hpCards
                 : opp2.hpCards,
               6,
+              true,
             ),
           ],
           stage: { card: opponentStage, rested: false },
@@ -3026,7 +3027,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
 
   // Flip-attachment cards trigger when revealed as an HP card during an
   // attack, not from the player's hand — mirror createFlipResponseDemoState.
-  if (card.officialType === 'flip' || card.flip) {
+  if (card.flip) {
     const defender = cardCheckFillerCookie('flip-defender', 2, 5, 4, payColor) // 1 HP card left: the flip card itself
     const attacker = cardCheckFillerCookie('flip-attacker', 2, 5, 0, 'black')
     // Keep enough break level for the generic FLIP fixture while leaving room
@@ -3056,7 +3057,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         },
         'player-two': {
           ...state.players['player-two'],
-          battleArea: [cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5)],
+          battleArea: [
+            cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5, true),
+          ],
           breakArea: opponentBreakArea,
         },
       },
@@ -3195,6 +3198,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ? 4
             : cookieCard.id === 'BS5-010'
               ? 2
+              : cookieCard.id === 'P-130'
+                ? 3
               : cookieCard.id.startsWith('P-')
                 ? Math.max(1, cookieCard.hp)
           // A card-check attack fixture represents the attack as already
@@ -3394,7 +3399,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             revealedHpCard: null,
             preventKnockoutTargetIds: [],
             faintedColors:
-              cookieCard.id === 'BS6-007'
+              cookieCard.id === 'BS6-007' || cookieCard.id === 'P-053'
                 ? [
                     opp1.cookie.energyColor && opp1.cookie.energyColor !== 'wild'
                       ? opp1.cookie.energyColor
@@ -3407,7 +3412,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             // latter is the condition key used by the shared effect engine;
             // this richer field makes the fixture traceable to the opponent
             // Cookie that supposedly fainted during the preceding damage.
-            ...(cookieCard.id === 'BS6-007'
+            ...(cookieCard.id === 'BS6-007' || cookieCard.id === 'P-053'
               ? {
                   faintedCookies: [
                     {
@@ -3462,7 +3467,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           'player-two': {
             ...state.players['player-two'],
             battleArea: [
-              cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5),
+              cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5, true),
               cardCheckBattleEntry(opp1.cookie, opp1.hpCards, 7),
             ],
           },
@@ -3493,6 +3498,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       // the player's cookies — mirror createBlockerResponseDemoState.
       const defender = cardCheckFillerCookie('blocker-defender', 2, 5, 0, payColor)
       const attacker = cardCheckFillerCookie('blocker-attacker', 2, 5, 0, 'black')
+      const blockerCard = card as CookieCard
+      const blockerHpCards = Array.from({ length: blockerCard.hp }, (_, index) =>
+        testSupportCard(`${card.id}-blocker-hp-${index + 1}`, payColor),
+      )
       return {
         ...state,
         firstPlayerId: 'player-two',
@@ -3504,14 +3513,19 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             hand: handFillers,
             battleArea: [
               cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
-              cardCheckBattleEntry(card as CookieCard, [], 6),
+              // A deployed Cookie must retain a legal HP stack.  An empty
+              // stack made the fixture treat a healthy Blocker as fainted
+              // immediately after redirection and opened a replacement loop.
+              cardCheckBattleEntry(blockerCard, blockerHpCards, 6),
             ],
             supportArea: energySupports.map((c) => ({ card: c, rested: false })),
             discardPile: trashFillers,
           },
           'player-two': {
             ...state.players['player-two'],
-            battleArea: [cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5)],
+            battleArea: [
+              cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5, true),
+            ],
           },
         },
         pendingBattle: {
@@ -3867,6 +3881,38 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
         rested: false,
       })),
       discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'P-053') {
+    // The positive fixture records the attacked opponent Cookie as fainted so
+    // the post-battle deck-to-support effect is observable. The negative
+    // route keeps the same resolved attack window but removes that evidence.
+    return state.pendingBattle
+      ? {
+          ...state,
+          pendingBattle: {
+            ...state.pendingBattle,
+            faintedColors: [],
+            faintedCookies: [],
+          },
+        }
+      : state
+  }
+  if (baseCardNumber === 'P-130') {
+    // P-130's printed HP is below its attack-follow-up threshold. The
+    // positive fixture supplies the gained HP; return to printed HP here so
+    // the negative path proves the threshold blocks target selection.
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.id === 'P-130'
+          ? {
+              ...entry,
+              hpCards: Array.from({ length: entry.card.hp }, (_, index) =>
+                testSupportCard(`P-130-negative-hp-${index + 1}`),
+              ),
+            }
+          : entry,
+      ),
     })
   }
   if (baseCardNumber === 'BS6-013') {
@@ -5166,6 +5212,15 @@ export const createBs5TrapDemoState = (
       })
       setPlayer('player-two', {
         supportArea: scenarioSupports('BS5-065-opponent-support', 2, 'blue'),
+        // The pending battle already represents the attack under audit. Keep
+        // every opposing Cookie rested after that attack so the dedicated
+        // test-state settles on Petrification's result instead of letting the
+        // AI immediately start an unrelated second attack and replacement
+        // chain while the Browser auditor is still observing this card.
+        battleArea: state.players['player-two'].battleArea.map((entry) => ({
+          ...entry,
+          rested: true,
+        })),
       })
       return state
     case 'BS5-087':

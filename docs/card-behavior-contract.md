@@ -22,7 +22,9 @@
   effect、then、order 或 unsupported）、位置、token 與信心等級。
 - `payments`：能量支付、來源能量或替代支付的來源 clause。
 - `costs`：手牌、支援區、HP、戰鬥區移動等代價；不能把代價誤當成效果。
-- `targets`：side、min/max 與後續可擴充的 selector binding。
+- `targets`：side、min/max 與 selector binding；同一張陷阱含多段目標效果時，
+  以效果索引對齊的 `effectTargets` 保留每一段各自的選擇，明確的空陣列代表
+  該段選擇性效果略過，不回退到另一段的目標。
 - `steps`：效果順序與 `Then` 關係，保留 runtime effect kind 證據。
 - `status`／`blockers`：`verified`、`needs-review`、`blocked`；不確定項目不得被
   標成已驗證。
@@ -59,16 +61,20 @@ npm run cards:migrate:batch -- --offset 50 --limit 25
 驗證。
 
 本輪已把本機 pending modal 的效果順序、手牌／支援區回應，以及線上效果候選接到同一
-descriptor bridge；尚未接入的舊精靈仍可保留自己的暫態選取，但送出的 command 不得
-繞過規則層。P5 的 `migration.ts` 與 `cards:migrate:batch` 只做 deterministic shadow
+descriptor bridge；陷阱回應的多段目標則以 `PlayTrapCommand.effectTargets` 與舊
+`targetIds` 相容，規則層會逐段驗證 selector，避免把第一段目標誤套到 `Then` 段。
+尚未接入的舊精靈仍可保留自己的暫態選取，但送出的 command 不得繞過規則層。P5 的 `migration.ts` 與 `cards:migrate:batch` 只做 deterministic shadow
 批次（依 `card.id` 排序），來源記錄則以 `cardNumber` 綁定以保留 `@1` 異圖變體；不修改正式 adapter、卡牌資料或 runtime registry。
 
 稽核報告會同步列出 `needs-review` 的原因計數，將 parser、payment、cost、target、
-Then、timing 與 resolution-order 證據分開；目前的主要缺口仍是來源目標語句與未分類
-條款，不會因為 runtime 有相似效果就自動升格。`scripts/card-contract-browser-attestation.ts`
+Then、timing 與 resolution-order 證據分開；2026-08-20 的正式卡池結果為
+`verified=1,101`、`needs-review=0`、`blocked=0`。後續來源資料變更仍須重新產生證據，
+不會因為 runtime 有相似效果就自動升格。`scripts/card-contract-browser-attestation.ts`
 以 `?test-state=attack-effect&contract-card=...` 啟動公開 trace，先驗證未操作的負向
 pending，再透過 modal 內的 selector candidate 完成正向支付／目標／結算；trace 僅保留
-command kind、摘要與步驟文字，不含手牌、牌庫或未公開 HP 識別資訊。
+command kind、摘要與步驟文字，不含手牌、牌庫或未公開 HP 識別資訊。BS6-036／042／043
+另有專用正向／阻擋 Browser attestation；BS5-109 的兩段陷阱目標則驗證第一段 LV2、
+第二段另一張 LV1，以及明確略過第二段的公開 trace。
 
 每張卡進入 promotion-ready 或下一個 shadow migration 批次前至少需要：
 

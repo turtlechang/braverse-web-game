@@ -1785,6 +1785,26 @@ export const convertOfficialCardEffects = (
     ],
     'BS4-014': [
       {
+        kind: 'redirect-attack',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
+        kind: 'modify-damage-received',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'attacker-level-at-most', level: 1 },
+      },
+    ],
+    // Captain Ice 的三個正式版本都是 Blocker，且同時具有對 LV.1
+    // 攻擊減傷。不能讓一般 Blocker parser 提前 return 而遺失第二段，
+    // 也不能讓全形標記版本只留下減傷而失去 redirect-attack。
+    'BS4-080': [
+      {
+        kind: 'redirect-attack',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
         kind: 'modify-damage-received',
         amount: -1,
         duration: 'this-turn',
@@ -5240,8 +5260,15 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // === BS4 藍色餅乾卡攻擊 Then ===
-    // BS4-080@2 異圖的攻擊文字帶有基礎版沒有的 Then 段：
+    // BS4-080@1／@2 異圖的攻擊文字帶有基礎版沒有的 Then 段：
     // 「Then, if there are 5 cards or less in your hand, draw up to 2 cards.」
+    'BS4-080@1': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
     'BS4-080@2': [
       {
         kind: 'draw-up-to',

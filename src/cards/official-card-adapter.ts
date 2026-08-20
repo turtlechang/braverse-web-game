@@ -87,6 +87,21 @@ export const normalizeOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
   const knownNormalized = normalizeKnownOfficialCardRecord(sourceCard)
+
+  // BS6-021 的官方 STAGE 記錄把普通攻擊的傷害標記併在場景文字最前方；
+  // 場景沒有普通攻擊，這個 `{da} 1` 會被 UI 誤顯示成額外的 Damage 1。
+  // 只在轉接邊界移除該明確的前綴，不修改原始官方資料。
+  if (
+    knownNormalized.baseCardNumber === 'BS6-021' &&
+    knownNormalized.type === 'stage' &&
+    /^\{da\}\s*1(?:\s+|$)/i.test(knownNormalized.attackText ?? '')
+  ) {
+    return {
+      ...knownNormalized,
+      attackText: knownNormalized.attackText!.replace(/^\{da\}\s*1\s*/i, ''),
+    }
+  }
+
   if (knownNormalized !== sourceCard) return knownNormalized
 
   // 部分官方 FLIP 記錄把 FLIP 文案誤放在 skill.text；在轉接邊界移回

@@ -1,12 +1,12 @@
 # P-0XX 特典卡效果稽核
 
-更新日期：2026-08-10
+更新日期：2026-08-20
 
-本次稽核以正式卡池中的 26 張 P-0XX 卡為範圍。官方資料目前沒有 P-004～P-006、P-020～P-021、P-023、P-033 以後的卡，因此缺號不是匯入遺漏。完整官方 P-0XX 記錄（含異圖變體）共 153 筆，最新候選盤點與轉換狀態見 [P-0XX 匯入盤點](p0xx-card-inventory.md)；本文件仍只描述已 promote 的 26 張正式卡，不能視為其餘 127 張已進入正式牌池。
+本次稽核涵蓋正式卡池中的全部 153 筆 P-0XX 官方記錄（含異圖變體）。原先後續匯入的 127 筆已於 2026-08-11 promote 至 `data/cards/official-p-0xx-remaining.en.json`；目前 `data/candidates/` 沒有待驗證 P 卡。完整匯入狀態見 [P-0XX 匯入盤點](p0xx-card-inventory.md)。
 
-## 逐卡清單
+## 早期 26 張高風險清單
 
-所有 26 張卡都通過官方資料轉接、效果 payload 存在性回歸，以及 `?test-state=card:P-0XX` 路由載入／卡名掃描。複雜效果另以規則引擎測試與瀏覽器代表性流程驗證。
+下表保留最初 26 張正式卡的人工稽核重點；全量 153 筆另以正式卡路由、效果互動、負向與無效果攻擊四個 Browser 矩陣驗證，不以這份早期清單代替全量結果。
 
 | 卡號 | 卡名 | 效果範圍 | 稽核重點 |
 |---|---|---|---|
@@ -47,23 +47,24 @@
 6. **P-032 場景**：補上 Ancient 關鍵字目標與本回合任意攻擊費用修正，並在回合結束或來源／目標離場時清理修正，避免效果跨回合殘留。
 7. **卡池資料**：候選 8 張 P-017、P-024～P-029、P-032 已通過 `--require-promotion-ready`，正式 promote 並重新生成 `src/game/generated-card-pool.ts`。
 
-## 候選特殊流程驗證
+## 全量特殊流程驗證
 
-本輪新增的 127 張候選資料已全部通過 adapter conversion；其中三個需要額外 runtime／UI 支援的流程已用專用 `test-state` 完成正反與多段操作驗證：
+後續 promote 的 127 筆正式資料已全部通過 adapter conversion；其中三個需要額外 runtime／UI 支援的流程以專用 `test-state` 完成正反與多段操作驗證：
 
 - **P-082 Sugar Gnome Cake Shop**：`p082-trap:energy` 驗證 `{Y}{N}` 主支付、兩張支援卡橫置、對手與我方各一個目標、雙方各增加 2 HP；`p082-trap:cookie` 驗證棄牌區 1 HP 且無 FLIP 的餅乾移至休息區替代支付。兩條路徑都能繼續戰鬥，沒有卡死。
 - **P-084 Magic Lettering Pens**：`p084-item:met` 驗證昏厥後啟動費用改為 `{N}`，完成「我方餅乾橫置 → 對手目標 → 1 傷害」；`p084-item:unmet` 驗證條件未成立時不提供發動流程。
 - **P-147 Licorice Cookie**：`p147-special-play` 驗證支付黑色 LV.1 餅乾的 Special Play、進入戰鬥區後接續 On Play，以及對手有 4 張手牌時的棄牌提示；完成後可回到主要階段。
 
-上述 `test-state` 僅是局部 demo fixture；127 張候選的逐卡效果、正式牌組與完整 Browser 稽核仍未完成，因此尚未執行 `promote:candidate`。
+上述專用 `test-state` 與全量 Browser 矩陣均使用正式卡池、正式 adapter、規則引擎與 UI command path；127 筆資料已完成 promote。fixture 只用來快速建立可重現局面，正式整合另由 AI、牌組編輯器與本機雙瀏覽器好友房 smoke 覆核。
 
 ## 驗證證據
 
-- P-0XX 聚焦測試：54/54 通過；包含 26 張轉接 fixture，以及 P-016、P-017、P-018、P-024～P-029、P-032 的高風險規則回歸。
-- 全套 Vitest：148 個 test files、2277 tests 通過。
-- `npm run typecheck`、`npm run lint`、`npm run build` 通過；lint 僅保留既有 `useBattleActions.ts` hook dependency warning，build 僅有既有 chunk size warning。
-- 卡池流程：候選驗證、promote、`validate:cards`（10 個資料檔／513 張卡號）、`check:card-pool` 通過。
-- in-app Browser：26/26 P-0XX 路由可載入且卡名可見，未出現遊戲錯誤、找不到卡片或 `Invalid battle action.`；另實際操作 P-008、P-012、P-022、P-024～P-029、P-030～P-032 的物品、FLIP、攻擊後、陷阱、場景與技能分支。
-- 專案既有 `npm run test:ai:browser` 在 `break-to-trash-lv1` fixture 的 `.effect-panel` 等待有間歇性競速；同一建置路由以 in-app Browser 逐步操作可正常顯示並完成效果面板，因此未將此測試工具競速誤列為 P-0XX 卡牌邏輯錯誤。完整 AI browser regression 不宣稱全綠。
+- 正式卡牌路由：153／153 載入成功，卡名與卡面資料可見。
+- 效果互動矩陣：138／138 通過，含 26 張條件／時機卡的 met／unmet A/B；0 blocked、0 failed。證據見 [P 卡效果報告](p0xx-effect-audit-2026-08-20.json)。
+- 全記錄負向矩陣：153／153 通過；無效果普通攻擊矩陣：15／15 通過。證據見 [負向報告](p0xx-negative-audit-2026-08-20.json) 與 [無效果攻擊報告](p0xx-vanilla-attack-audit-2026-08-20.json)。
+- P-015 攻擊後可選代價的多段效果、P-016 棄牌區移至 break 候選、P-053／P-130 條件與 P-099／P-100 FLIP 正規化皆有回歸或 Browser 證據。
+- 全套 Vitest：211 個 test files、3,401 tests 通過；`npm run lint` 與 `npm run build` 通過，build 只有既有 chunk size warning。
+- 卡池流程：`validate:cards`（14 個資料檔／1,101 筆記錄）、`check:card-pool` 與嚴格契約稽核（1,101 verified／0 needs-review／0 blocked）通過；`validate:candidate` 確認沒有待驗證 JSON。
+- 正式整合 smoke：AI 20／20、牌組編輯器 4 個 viewport、本機雙瀏覽器好友房的開局、同步、對戰、拒絕、斷線與連線失敗路徑均通過。
 
 `test-state` 是本機 demo fixture，只用於局部流程驗證；正式卡池是否可用仍以真實 `data/cards/`、規則測試、正式狀態流程與瀏覽器結果交叉確認。

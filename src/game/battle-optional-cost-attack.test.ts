@@ -760,6 +760,94 @@ describe('optional-cost-attack', () => {
     expect(state.pendingBattle).toBeNull()
   })
 
+  it('resolves P-015 opponent damage before asking for its separate friendly HP target', () => {
+    let state = createBattleState()
+    const attacker = state.players['player-two'].battleArea[0]
+    const defender = state.players['player-one'].battleArea[0]
+    state.players['player-two'].battleArea = [
+      {
+        ...attacker,
+        hpCards: [
+          item('p015-attacker-hp-1', 'red'),
+          item('p015-attacker-hp-2', 'red'),
+          item('p015-attacker-hp-3', 'red'),
+        ],
+      },
+    ]
+    state.players['player-two'].supportArea = [
+      { card: item('p015-red-support', 'red'), rested: false },
+    ]
+    state = {
+      ...state,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: defender.card.instanceId,
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: attacker.card.instanceId,
+        sourceCardName: 'Muscle Cookie',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'hp-to-trash',
+            amount: 2,
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        effectText: 'P-015 attack effect',
+      },
+    }
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      [defender.card.instanceId],
+      ['p015-red-support'],
+    )
+
+    expect(state.pendingOptionalCostAttack).toBeNull()
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    expect(state.pendingAbilityEffect).toMatchObject({
+      effectIndex: 1,
+      effects: [
+        { kind: 'damage' },
+        { kind: 'hp-to-trash', target: { side: 'self' } },
+      ],
+    })
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [attacker.card.instanceId],
+    })
+
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.pendingBattle).toBeNull()
+  })
+
   it('rejects pay with wrong discard count', () => {
     let state = createBattleState()
     state.players['player-two'].hand = [handCookie('hc1'), handCookie('hc2')]

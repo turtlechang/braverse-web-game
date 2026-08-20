@@ -105,6 +105,48 @@ describe('contract payment/cost/then evidence regression', () => {
     )
   })
 
+  it.each([
+    'BS4-014',
+    'BS4-014@1',
+    'BS4-080',
+    'BS4-080@1',
+    'BS4-080@2',
+  ])('%s keeps both the Blocker redirect and its printed modifier', (cardNumber) => {
+    const record = records.find((card) => card.cardNumber === cardNumber)!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+
+    expect(converted.gameCard.skill?.trigger).toBe('block')
+    expect(converted.gameCard.skill?.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'redirect-attack' }),
+        expect.objectContaining({ kind: 'modify-damage-received', amount: -1 }),
+      ]),
+    )
+  })
+
+  it.each(['BS4-080@1', 'BS4-080@2'])(
+    '%s carries the promotion-only attack Then draw',
+    (cardNumber) => {
+      const record = records.find((card) => card.cardNumber === cardNumber)!
+      const converted = convertOfficialCardToGameCard(record)
+      expect(converted.status).toBe('converted')
+      if (converted.status !== 'converted') throw new Error('conversion failed')
+      if (converted.gameCard.type !== 'cookie') {
+        throw new Error('expected cookie card')
+      }
+
+      expect(converted.gameCard.attackEffects).toContainEqual(
+        expect.objectContaining({
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'hand-count-at-most', count: 5 },
+        }),
+      )
+    },
+  )
+
   it('BS2-079 binds the printed Then order to runtime effect indexes', () => {
     const record = records.find((card) => card.cardNumber === 'BS2-079')!
     const converted = convertOfficialCardToGameCard(record)

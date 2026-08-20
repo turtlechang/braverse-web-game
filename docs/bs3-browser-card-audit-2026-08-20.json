@@ -1,0 +1,3099 @@
+{
+  "generatedAt": "2026-08-20T08:53:09.684Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json"
+  ],
+  "scope": "Formal-pool card-check entry audit for every promoted BS3 record. This report separates route/card rendering from interactive effect proof.",
+  "summary": {
+    "total": 176,
+    "passed": 176,
+    "failed": 0,
+    "effectBearingRecords": 166,
+    "interactiveEffectProof": 0,
+    "byType": {
+      "cookie": {
+        "total": 115,
+        "passed": 115,
+        "failed": 0
+      },
+      "flip": {
+        "total": 11,
+        "passed": 11,
+        "failed": 0
+      },
+      "item": {
+        "total": 20,
+        "passed": 20,
+        "failed": 0
+      },
+      "trap": {
+        "total": 11,
+        "passed": 11,
+        "failed": 0
+      },
+      "stage": {
+        "total": 19,
+        "passed": 19,
+        "failed": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS3-001",
+      "baseCardNumber": "BS3-001",
+      "variant": null,
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-002",
+      "baseCardNumber": "BS3-002",
+      "variant": null,
+      "name": "Raspberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Raspberry Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-003",
+      "baseCardNumber": "BS3-003",
+      "variant": null,
+      "name": "Royal Margarine Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-004",
+      "baseCardNumber": "BS3-004",
+      "variant": null,
+      "name": "Royal Berry Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-005",
+      "baseCardNumber": "BS3-005",
+      "variant": null,
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-006",
+      "baseCardNumber": "BS3-006",
+      "variant": null,
+      "name": "Snapdragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-006@1",
+      "baseCardNumber": "BS3-006",
+      "variant": "1",
+      "name": "Snapdragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-006@2",
+      "baseCardNumber": "BS3-006",
+      "variant": "2",
+      "name": "Snapdragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-007",
+      "baseCardNumber": "BS3-007",
+      "variant": null,
+      "name": "Tea Knight Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-008",
+      "baseCardNumber": "BS3-008",
+      "variant": null,
+      "name": "Devil Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-009",
+      "baseCardNumber": "BS3-009",
+      "variant": null,
+      "name": "Wildberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Wildberry Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-009@1",
+      "baseCardNumber": "BS3-009",
+      "variant": "1",
+      "name": "Wildberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Wildberry Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-009@2",
+      "baseCardNumber": "BS3-009",
+      "variant": "2",
+      "name": "Wildberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Wildberry Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-010",
+      "baseCardNumber": "BS3-010",
+      "variant": null,
+      "name": "Pitaya Dragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-010@1",
+      "baseCardNumber": "BS3-010",
+      "variant": "1",
+      "name": "Pitaya Dragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pitaya Dragon Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-011",
+      "baseCardNumber": "BS3-011",
+      "variant": null,
+      "name": "Knight Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Knight Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "BS3-012",
+      "baseCardNumber": "BS3-012",
+      "variant": null,
+      "name": "Jungleberry Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "BS3-013",
+      "baseCardNumber": "BS3-013",
+      "variant": null,
+      "name": "Tiger Lily Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Tiger Lily Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-013@1",
+      "baseCardNumber": "BS3-013",
+      "variant": "1",
+      "name": "Tiger Lily Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Tiger Lily Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-014",
+      "baseCardNumber": "BS3-014",
+      "variant": null,
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-015",
+      "baseCardNumber": "BS3-015",
+      "variant": null,
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-016",
+      "baseCardNumber": "BS3-016",
+      "variant": null,
+      "name": "Tarte Tatin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Tarte Tatin Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-016@1",
+      "baseCardNumber": "BS3-016",
+      "variant": "1",
+      "name": "Tarte Tatin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Tarte Tatin Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-017",
+      "baseCardNumber": "BS3-017",
+      "variant": null,
+      "name": "Hollyberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Hollyberry Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-017@1",
+      "baseCardNumber": "BS3-017",
+      "variant": "1",
+      "name": "Hollyberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Hollyberry Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-017@2",
+      "baseCardNumber": "BS3-017",
+      "variant": "2",
+      "name": "Hollyberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Hollyberry Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-018",
+      "baseCardNumber": "BS3-018",
+      "variant": null,
+      "name": "Mushroom Spore Punch",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-019",
+      "baseCardNumber": "BS3-019",
+      "variant": null,
+      "name": "Soul Jam: Light of Passion",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-019@1",
+      "baseCardNumber": "BS3-019",
+      "variant": "1",
+      "name": "Soul Jam: Light of Passion",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-020",
+      "baseCardNumber": "BS3-020",
+      "variant": null,
+      "name": "Miniature Dragon Boat",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-021",
+      "baseCardNumber": "BS3-021",
+      "variant": null,
+      "name": "Oath on the Shield",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-022",
+      "baseCardNumber": "BS3-022",
+      "variant": null,
+      "name": "Banquet of Victory",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 40
+    },
+    {
+      "cardNumber": "BS3-023",
+      "baseCardNumber": "BS3-023",
+      "variant": null,
+      "name": "Passionate Hollyberry Kingdom",
+      "type": "stage",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-024",
+      "baseCardNumber": "BS3-024",
+      "variant": null,
+      "name": "Dragon's Valley",
+      "type": "stage",
+      "color": "RED",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-025",
+      "baseCardNumber": "BS3-025",
+      "variant": null,
+      "name": "Golden Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-025@1",
+      "baseCardNumber": "BS3-025",
+      "variant": "1",
+      "name": "Golden Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-025@2",
+      "baseCardNumber": "BS3-025",
+      "variant": "2",
+      "name": "Golden Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-026",
+      "baseCardNumber": "BS3-026",
+      "variant": null,
+      "name": "Linzer Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-027",
+      "baseCardNumber": "BS3-027",
+      "variant": null,
+      "name": "Marzipan Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-027@1",
+      "baseCardNumber": "BS3-027",
+      "variant": "1",
+      "name": "Marzipan Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-028",
+      "baseCardNumber": "BS3-028",
+      "variant": null,
+      "name": "Mozzarella Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Mozzarella Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-028@1",
+      "baseCardNumber": "BS3-028",
+      "variant": "1",
+      "name": "Mozzarella Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Mozzarella Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-029",
+      "baseCardNumber": "BS3-029",
+      "variant": null,
+      "name": "Burnt Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-029@1",
+      "baseCardNumber": "BS3-029",
+      "variant": "1",
+      "name": "Burnt Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-030",
+      "baseCardNumber": "BS3-030",
+      "variant": null,
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-031",
+      "baseCardNumber": "BS3-031",
+      "variant": null,
+      "name": "Pancake Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-032",
+      "baseCardNumber": "BS3-032",
+      "variant": null,
+      "name": "Smoked Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Smoked Cheese Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-032@1",
+      "baseCardNumber": "BS3-032",
+      "variant": "1",
+      "name": "Smoked Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Smoked Cheese Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-032@2",
+      "baseCardNumber": "BS3-032",
+      "variant": "2",
+      "name": "Smoked Cheese Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Smoked Cheese Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-033",
+      "baseCardNumber": "BS3-033",
+      "variant": null,
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Stardust Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-033@1",
+      "baseCardNumber": "BS3-033",
+      "variant": "1",
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Stardust Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-034",
+      "baseCardNumber": "BS3-034",
+      "variant": null,
+      "name": "Sparkling Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-035",
+      "baseCardNumber": "BS3-035",
+      "variant": null,
+      "name": "High Priest Cheesenbird",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "BS3-036",
+      "baseCardNumber": "BS3-036",
+      "variant": null,
+      "name": "Olive Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-037",
+      "baseCardNumber": "BS3-037",
+      "variant": null,
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Angel Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-038",
+      "baseCardNumber": "BS3-038",
+      "variant": null,
+      "name": "Cocoa Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-039",
+      "baseCardNumber": "BS3-039",
+      "variant": null,
+      "name": "Crème Brûlée Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-040",
+      "baseCardNumber": "BS3-040",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-041",
+      "baseCardNumber": "BS3-041",
+      "variant": null,
+      "name": "Fettuccine Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Fettuccine Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-041@1",
+      "baseCardNumber": "BS3-041",
+      "variant": "1",
+      "name": "Fettuccine Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Fettuccine Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-042",
+      "baseCardNumber": "BS3-042",
+      "variant": null,
+      "name": "Golden Cheese Guardian Golem",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-043",
+      "baseCardNumber": "BS3-043",
+      "variant": null,
+      "name": "Soul Jam: Light of Abundance",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-043@1",
+      "baseCardNumber": "BS3-043",
+      "variant": "1",
+      "name": "Soul Jam: Light of Abundance",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-044",
+      "baseCardNumber": "BS3-044",
+      "variant": null,
+      "name": "Cheesepad Tablet",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-045",
+      "baseCardNumber": "BS3-045",
+      "variant": null,
+      "name": "Golden Monarch's Counterattack",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-046",
+      "baseCardNumber": "BS3-046",
+      "variant": null,
+      "name": "Golden Cheese Colosseum",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 40
+    },
+    {
+      "cardNumber": "BS3-047",
+      "baseCardNumber": "BS3-047",
+      "variant": null,
+      "name": "Kingdom of Eternal Abundance",
+      "type": "stage",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-048",
+      "baseCardNumber": "BS3-048",
+      "variant": null,
+      "name": "Golden City's Control Chamber",
+      "type": "stage",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-049",
+      "baseCardNumber": "BS3-049",
+      "variant": null,
+      "name": "Carrot Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-050",
+      "baseCardNumber": "BS3-050",
+      "variant": null,
+      "name": "Matcha Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-050@1",
+      "baseCardNumber": "BS3-050",
+      "variant": "1",
+      "name": "Matcha Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-051",
+      "baseCardNumber": "BS3-051",
+      "variant": null,
+      "name": "Fig Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-052",
+      "baseCardNumber": "BS3-052",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-053",
+      "baseCardNumber": "BS3-053",
+      "variant": null,
+      "name": "Butter Roll Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-053@1",
+      "baseCardNumber": "BS3-053",
+      "variant": "1",
+      "name": "Butter Roll Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-054",
+      "baseCardNumber": "BS3-054",
+      "variant": null,
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-055",
+      "baseCardNumber": "BS3-055",
+      "variant": null,
+      "name": "White Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "White Lily Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-055@1",
+      "baseCardNumber": "BS3-055",
+      "variant": "1",
+      "name": "White Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "White Lily Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-055@2",
+      "baseCardNumber": "BS3-055",
+      "variant": "2",
+      "name": "White Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "White Lily Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-056",
+      "baseCardNumber": "BS3-056",
+      "variant": null,
+      "name": "Pinecone Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "BS3-057",
+      "baseCardNumber": "BS3-057",
+      "variant": null,
+      "name": "Mercurial Knight Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-057@1",
+      "baseCardNumber": "BS3-057",
+      "variant": "1",
+      "name": "Mercurial Knight Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-058",
+      "baseCardNumber": "BS3-058",
+      "variant": null,
+      "name": "Avocado Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-059",
+      "baseCardNumber": "BS3-059",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-060",
+      "baseCardNumber": "BS3-060",
+      "variant": null,
+      "name": "Elder Faerie Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Elder Faerie Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "BS3-060@1",
+      "baseCardNumber": "BS3-060",
+      "variant": "1",
+      "name": "Elder Faerie Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Elder Faerie Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "BS3-061",
+      "baseCardNumber": "BS3-061",
+      "variant": null,
+      "name": "Silverbell Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-061@1",
+      "baseCardNumber": "BS3-061",
+      "variant": "1",
+      "name": "Silverbell Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-062",
+      "baseCardNumber": "BS3-062",
+      "variant": null,
+      "name": "Carol Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-063",
+      "baseCardNumber": "BS3-063",
+      "variant": null,
+      "name": "Carameleon Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-064",
+      "baseCardNumber": "BS3-064",
+      "variant": null,
+      "name": "Clover Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-065",
+      "baseCardNumber": "BS3-065",
+      "variant": null,
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-066",
+      "baseCardNumber": "BS3-066",
+      "variant": null,
+      "name": "Soul Jam: Light of Freedom",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-066@1",
+      "baseCardNumber": "BS3-066",
+      "variant": "1",
+      "name": "Soul Jam: Light of Freedom",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-067",
+      "baseCardNumber": "BS3-067",
+      "variant": null,
+      "name": "Faerie Kingdom's Music",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-068",
+      "baseCardNumber": "BS3-068",
+      "variant": null,
+      "name": "Elder Faerie's Sword",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-069",
+      "baseCardNumber": "BS3-069",
+      "variant": null,
+      "name": "The New Guardian's Power",
+      "type": "trap",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-069@1",
+      "baseCardNumber": "BS3-069",
+      "variant": "1",
+      "name": "The New Guardian's Power",
+      "type": "trap",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-070",
+      "baseCardNumber": "BS3-070",
+      "variant": null,
+      "name": "Puppet Theater of Chaos",
+      "type": "trap",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-071",
+      "baseCardNumber": "BS3-071",
+      "variant": null,
+      "name": "Ancient Silver Tree",
+      "type": "stage",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-072",
+      "baseCardNumber": "BS3-072",
+      "variant": null,
+      "name": "Mystical Faerie Kingdom",
+      "type": "stage",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-073",
+      "baseCardNumber": "BS3-073",
+      "variant": null,
+      "name": "Candy Diver Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-074",
+      "baseCardNumber": "BS3-074",
+      "variant": null,
+      "name": "Grand Madeleine Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-075",
+      "baseCardNumber": "BS3-075",
+      "variant": null,
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-076",
+      "baseCardNumber": "BS3-076",
+      "variant": null,
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Strawberry Crepe Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-076@1",
+      "baseCardNumber": "BS3-076",
+      "variant": "1",
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Strawberry Crepe Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-076@2",
+      "baseCardNumber": "BS3-076",
+      "variant": "2",
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Strawberry Crepe Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "BS3-077",
+      "baseCardNumber": "BS3-077",
+      "variant": null,
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-077@1",
+      "baseCardNumber": "BS3-077",
+      "variant": "1",
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-078",
+      "baseCardNumber": "BS3-078",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-079",
+      "baseCardNumber": "BS3-079",
+      "variant": null,
+      "name": "Sugar Gnome",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-080",
+      "baseCardNumber": "BS3-080",
+      "variant": null,
+      "name": "Espresso Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Espresso Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "BS3-081",
+      "baseCardNumber": "BS3-081",
+      "variant": null,
+      "name": "Oyster Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-081@1",
+      "baseCardNumber": "BS3-081",
+      "variant": "1",
+      "name": "Oyster Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-082",
+      "baseCardNumber": "BS3-082",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-083",
+      "baseCardNumber": "BS3-083",
+      "variant": null,
+      "name": "Captain Caviar Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-084",
+      "baseCardNumber": "BS3-084",
+      "variant": null,
+      "name": "Custard Cookie III",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-085",
+      "baseCardNumber": "BS3-085",
+      "variant": null,
+      "name": "Custard Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "BS3-086",
+      "baseCardNumber": "BS3-086",
+      "variant": null,
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Kouign-Amann Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 43
+    },
+    {
+      "cardNumber": "BS3-087",
+      "baseCardNumber": "BS3-087",
+      "variant": null,
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Clotted Cream Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "BS3-087@1",
+      "baseCardNumber": "BS3-087",
+      "variant": "1",
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Clotted Cream Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "BS3-088",
+      "baseCardNumber": "BS3-088",
+      "variant": null,
+      "name": "Pure Vanilla Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pure Vanilla Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "BS3-088@1",
+      "baseCardNumber": "BS3-088",
+      "variant": "1",
+      "name": "Pure Vanilla Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pure Vanilla Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "BS3-088@2",
+      "baseCardNumber": "BS3-088",
+      "variant": "2",
+      "name": "Pure Vanilla Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pure Vanilla Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "BS3-089",
+      "baseCardNumber": "BS3-089",
+      "variant": null,
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-089@1",
+      "baseCardNumber": "BS3-089",
+      "variant": "1",
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-090",
+      "baseCardNumber": "BS3-090",
+      "variant": null,
+      "name": "Sword of Radiant Light",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-091",
+      "baseCardNumber": "BS3-091",
+      "variant": null,
+      "name": "Soul Jam: Light of Truth",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-091@1",
+      "baseCardNumber": "BS3-091",
+      "variant": "1",
+      "name": "Soul Jam: Light of Truth",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-092",
+      "baseCardNumber": "BS3-092",
+      "variant": null,
+      "name": "Old Vanilla Orchid Locket",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-093",
+      "baseCardNumber": "BS3-093",
+      "variant": null,
+      "name": "Convocation of Elders",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-094",
+      "baseCardNumber": "BS3-094",
+      "variant": null,
+      "name": "Radiant Coronation",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-095",
+      "baseCardNumber": "BS3-095",
+      "variant": null,
+      "name": "Glorious Crème Republic",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-095@1",
+      "baseCardNumber": "BS3-095",
+      "variant": "1",
+      "name": "Glorious Crème Republic",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-095@2",
+      "baseCardNumber": "BS3-095",
+      "variant": "2",
+      "name": "Glorious Crème Republic",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-096",
+      "baseCardNumber": "BS3-096",
+      "variant": null,
+      "name": "Peaceful Vanilla Kingdom",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-097",
+      "baseCardNumber": "BS3-097",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-097@1",
+      "baseCardNumber": "BS3-097",
+      "variant": "1",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-098",
+      "baseCardNumber": "BS3-098",
+      "variant": null,
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-099",
+      "baseCardNumber": "BS3-099",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Dark Choco Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-099@1",
+      "baseCardNumber": "BS3-099",
+      "variant": "1",
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Dark Choco Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-100",
+      "baseCardNumber": "BS3-100",
+      "variant": null,
+      "name": "Dark Cacao Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Dark Cacao Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 51
+    },
+    {
+      "cardNumber": "BS3-100@1",
+      "baseCardNumber": "BS3-100",
+      "variant": "1",
+      "name": "Dark Cacao Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Dark Cacao Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 51
+    },
+    {
+      "cardNumber": "BS3-100@2",
+      "baseCardNumber": "BS3-100",
+      "variant": "2",
+      "name": "Dark Cacao Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Dark Cacao Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 51
+    },
+    {
+      "cardNumber": "BS3-101",
+      "baseCardNumber": "BS3-101",
+      "variant": null,
+      "name": "Moon Rabbit Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Moon Rabbit Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "BS3-102",
+      "baseCardNumber": "BS3-102",
+      "variant": null,
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Poison Mushroom Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "BS3-103",
+      "baseCardNumber": "BS3-103",
+      "variant": null,
+      "name": "Red Velvet Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "效果目標",
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-104",
+      "baseCardNumber": "BS3-104",
+      "variant": null,
+      "name": "Pomegranate Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "BS3-105",
+      "baseCardNumber": "BS3-105",
+      "variant": null,
+      "name": "Affogato Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Affogato Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-105@1",
+      "baseCardNumber": "BS3-105",
+      "variant": "1",
+      "name": "Affogato Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Affogato Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-106",
+      "baseCardNumber": "BS3-106",
+      "variant": null,
+      "name": "Alchemist Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "BS3-107",
+      "baseCardNumber": "BS3-107",
+      "variant": null,
+      "name": "Prophet Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "BS3-108",
+      "baseCardNumber": "BS3-108",
+      "variant": null,
+      "name": "Milk Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-109",
+      "baseCardNumber": "BS3-109",
+      "variant": null,
+      "name": "Werewolf Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Werewolf Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-110",
+      "baseCardNumber": "BS3-110",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "BS3-111",
+      "baseCardNumber": "BS3-111",
+      "variant": null,
+      "name": "Crunchy Chip Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Crunchy Chip Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-111@1",
+      "baseCardNumber": "BS3-111",
+      "variant": "1",
+      "name": "Crunchy Chip Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Crunchy Chip Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-112",
+      "baseCardNumber": "BS3-112",
+      "variant": null,
+      "name": "Prune Juice Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-113",
+      "baseCardNumber": "BS3-113",
+      "variant": null,
+      "name": "Caramel Arrow Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-113@1",
+      "baseCardNumber": "BS3-113",
+      "variant": "1",
+      "name": "Caramel Arrow Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-113@2",
+      "baseCardNumber": "BS3-113",
+      "variant": "2",
+      "name": "Caramel Arrow Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "BS3-114",
+      "baseCardNumber": "BS3-114",
+      "variant": null,
+      "name": "Bittersweet Incense",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-115",
+      "baseCardNumber": "BS3-115",
+      "variant": null,
+      "name": "Soul Jam: Light of Resolution",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-115@1",
+      "baseCardNumber": "BS3-115",
+      "variant": "1",
+      "name": "Soul Jam: Light of Resolution",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-116",
+      "baseCardNumber": "BS3-116",
+      "variant": null,
+      "name": "First Watcher's Bow",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "BS3-117",
+      "baseCardNumber": "BS3-117",
+      "variant": null,
+      "name": "Chocolate Altar of the Fallen",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 40
+    },
+    {
+      "cardNumber": "BS3-118",
+      "baseCardNumber": "BS3-118",
+      "variant": null,
+      "name": "Founding Resolution",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "BS3-119",
+      "baseCardNumber": "BS3-119",
+      "variant": null,
+      "name": "Roiling Licorice Sea",
+      "type": "stage",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-120",
+      "baseCardNumber": "BS3-120",
+      "variant": null,
+      "name": "Resolute Dark Cacao Kingdom",
+      "type": "stage",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121",
+      "baseCardNumber": "BS3-121",
+      "variant": null,
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@1",
+      "baseCardNumber": "BS3-121",
+      "variant": "1",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@2",
+      "baseCardNumber": "BS3-121",
+      "variant": "2",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@5",
+      "baseCardNumber": "BS3-121",
+      "variant": "5",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@6",
+      "baseCardNumber": "BS3-121",
+      "variant": "6",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@7",
+      "baseCardNumber": "BS3-121",
+      "variant": "7",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "BS3-121@8",
+      "baseCardNumber": "BS3-121",
+      "variant": "8",
+      "name": "Age of Heroes and Kingdoms",
+      "type": "stage",
+      "color": "PURE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    }
+  ]
+}
