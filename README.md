@@ -36,6 +36,8 @@ BS6-042「Clever Advice」的 `card:` test-state 會提供 3 張休息區餅乾�
 
 BS6-043「Timecraft Garage」的 `card:` test-state 會提供 1 張黃色手牌餅乾，以及 2 張已橫置支援卡，讓回合結束時的放置、支援卡重置與抽牌效果可以依序測試。
 
+BS6-013「Chess Choco Cookie」的正向 `card:` 夾具會提供第二張真正同名餅乾；BS6-007「Blue Slushy Cookie」則提供對手昏厥證據與 2 張支援卡，兩張卡均有對應 `card-negative:` 條件未成立路徑。BS6-010「Timekeeper Cookie」與 BS6-008「Sugar Swan Cookie」分別提供 `bs6-010-open／blocked`、`bs6-008-trap-open／blocked` A/B 路徑，詳見 [docs/bs6-card-check-routes.md](docs/bs6-card-check-routes.md)。
+
 BS6-031「Timekeeper Cookie」的 `test-state` 會將同時具有 OnPlay 與攻擊後效果的卡牌留在手牌，必須透過正式「登場」指令開啟黃色能量支付與對手餅乾目標選擇，避免攻擊後 fixture 遮蔽登場技能。
 
 BS6-016「Crunchy Chip Cookie」的 `card:` 正向 fixture 會提供 1/3 剩餘 HP，讓「剩餘 HP 為 1」的攻擊後效果能進入目標選擇；負向 fixture 恢復滿 HP，確認條件不成立時只留下合法略過／零傷害 trace。
@@ -90,7 +92,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 210 個測試檔、3,376 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-023／BS6-024／BS6-031／BS6-036／BS6-042／BS6-043／BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、休息區／支援區門檻、合法候選、OnPlay 登場與 Then 續接；BS6-023 登場全體傷害現在依序選擇對手餅乾，逐張完成傷害、FLIP 與昏厥後才處理下一張。並讓 BS4-005／BS2-015 代價昏厥後先完成原效果、再建立補位，完整記錄於 Browser／AI／規則回歸流程。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 210 個測試檔、3,380 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-023／BS6-024／BS6-031／BS6-036／BS6-042／BS6-043／BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、休息區／支援區門檻、合法候選、OnPlay 登場與 Then 續接；BS6-023 登場全體傷害現在依序選擇對手餅乾，逐張完成傷害、FLIP 與昏厥後才處理下一張。並讓 BS4-005／BS2-015 代價昏厥後先完成原效果、再建立補位，完整記錄於 Browser／AI／規則回歸流程。
 
 BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量支援卡付款，再進入棄牌區紫色餅乾登場目標；本機、線上與 AI 共用同一套規則驗證，並保留不支付而略過的合法路徑。
 
@@ -302,6 +304,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-20 | 補強 BS6-013／BS6-007 `card-check` 正反向夾具，新增 BS6-010 Timekeeper movement A/B 別名與 BS6-008 Sugar Swan Trap A/B 驗證路徑；修正條件未成立時的攻擊後 command trace；同步補上 `docs/bs6-card-check-routes.md` 與 demo 回歸測試，完整 Vitest 210 檔／3,380 項、lint、build 與 Browser A/B 通過。 |
 | 2026-08-20 | 修正 Browser smoke fixture 與現行 UI 契約：場景放置先選擇支援區付款卡再確認，Pretzel Snare 改用新的逐段目標略過控制；另修正 BS6-016 Crunchy Chip Cookie 的 card-check 正／負向 HP fixture 與回歸測試；完整 Vitest 210 檔／3,376 項、lint、build 與 BS6-016 Browser A/B 通過。 |
 | 2026-08-19 | 修正陷阱是唯一攻擊回應時重複掛載通用回應選擇器與陷阱視窗的問題；BS6-020 現在只顯示一個回應流程，並補上 selector 回歸與 Browser 驗證。 |
 | 2026-08-19 | 修正 BS6-031 Timekeeper Cookie 的 card-check fixture：同時具備 OnPlay 與攻擊後效果時，保留在手牌並透過正式登場指令測試黃色能量支付、對手目標與 1 點傷害；新增回歸測試，完整 Vitest 209 檔／3,341 項通過。 |

@@ -300,6 +300,18 @@ describe('parseTestStateConfig', () => {
     ).toBeNull()
   })
 
+  it('parses the direct BS6-010 movement A/B aliases only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-open', 'localhost'),
+    ).toEqual({ kind: 'bs6-010-movement', blocked: false })
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-blocked', 'localhost'),
+    ).toEqual({ kind: 'bs6-010-movement', blocked: true })
+    expect(
+      parseTestStateConfig('?test-state=bs6-010-blocked', 'example.com'),
+    ).toBeNull()
+  })
+
   it('parses the BS4-077 Timekeeper cost route only on localhost', () => {
     expect(
       parseTestStateConfig('?test-state=bs4-077-timekeeper-cost', 'localhost'),
@@ -577,6 +589,76 @@ describe('createCardCheckDemoState', () => {
       kind: 'support-to-trash',
       amount: 1,
     })
+  })
+
+  it('prepares BS6-013 with a real same-name partner and removes it in the negative route', () => {
+    const positive = createCardCheckDemoState('BS6-013')
+    const positiveCookies = positive.players['player-one'].battleArea.filter(
+      (entry) => entry.card.id === 'BS6-013',
+    )
+    expect(positiveCookies).toHaveLength(2)
+    expect(new Set(positiveCookies.map((entry) => entry.card.instanceId)).size).toBe(2)
+
+    const attackEffect = positive.pendingBattle?.attackEffects[0]
+    const sourceInstanceId = positive.pendingBattle?.attackerInstanceId
+    if (!attackEffect || !sourceInstanceId) throw new Error('BS6-013 attack fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        positive,
+        { sourcePlayerId: 'player-one', sourceInstanceId },
+        attackEffect,
+      ),
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS6-013')
+    expect(
+      negative.players['player-one'].battleArea.filter(
+        (entry) => entry.card.id === 'BS6-013',
+      ),
+    ).toHaveLength(1)
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    const negativeSourceId = negative.pendingBattle?.attackerInstanceId
+    if (!negativeEffect || !negativeSourceId) throw new Error('BS6-013 negative fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        negative,
+        { sourcePlayerId: 'player-one', sourceInstanceId: negativeSourceId },
+        negativeEffect,
+      ),
+    ).toBe(false)
+  })
+
+  it('prepares BS6-007 with faint evidence and opponent supports for both routes', () => {
+    const positive = createCardCheckDemoState('BS6-007')
+    expect(positive.players['player-two'].supportArea).toHaveLength(2)
+    expect(positive.pendingBattle?.faintedColors).toEqual(['red'])
+    expect(positive.pendingBattle?.faintedCookies).toEqual([
+      expect.objectContaining({ playerId: 'player-two', level: 1 }),
+    ])
+    const positiveEffect = positive.pendingBattle?.attackEffects[0]
+    const positiveSourceId = positive.pendingBattle?.attackerInstanceId
+    if (!positiveEffect || !positiveSourceId) throw new Error('BS6-007 attack fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        positive,
+        { sourcePlayerId: 'player-one', sourceInstanceId: positiveSourceId },
+        positiveEffect,
+      ),
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS6-007')
+    expect(negative.players['player-two'].supportArea).toHaveLength(2)
+    expect(negative.pendingBattle?.faintedColors).toEqual([])
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    const negativeSourceId = negative.pendingBattle?.attackerInstanceId
+    if (!negativeEffect || !negativeSourceId) throw new Error('BS6-007 negative fixture is incomplete')
+    expect(
+      isEffectConditionMet(
+        negative,
+        { sourcePlayerId: 'player-one', sourceInstanceId: negativeSourceId },
+        negativeEffect,
+      ),
+    ).toBe(false)
   })
 
   it('prepares BS3-113 with the 15 purple discard cards required for its OnPlay damage order', () => {

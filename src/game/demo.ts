@@ -194,6 +194,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
   | { kind: 'card-negative'; cardNumber: string }
+  | { kind: 'bs6-010-movement'; blocked: boolean }
   | { kind: 'bs6-079-on-play'; blocked: boolean }
   | { kind: 'bs6-008-trap'; remainingHp: 4 | 5 }
   | { kind: 'bs4-077-timekeeper-cost' }
@@ -384,6 +385,16 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs6-008-trap-open') {
     return { kind: 'bs6-008-trap', remainingHp: 5 }
+  }
+  // BS6-010 is a passive movement blocker.  These aliases expose the same
+  // real BS6-079 movement command with and without the Timekeeper on the
+  // opponent's field, so the card's positive/negative behaviour is testable
+  // directly without changing the formal battle rules.
+  if (testState === 'bs6-010-open') {
+    return { kind: 'bs6-010-movement', blocked: false }
+  }
+  if (testState === 'bs6-010-blocked') {
+    return { kind: 'bs6-010-movement', blocked: true }
   }
   if (testState === 'bs4-077-timekeeper-cost') {
     return { kind: 'bs4-077-timekeeper-cost' }
@@ -3260,6 +3271,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ? scenarioSupports('BS4-049-condition-support', 7, 'green')
         : cookieCard.id === 'BS6-079'
           ? scenarioSupports('BS6-079-condition-support', 4, 'blue')
+          : cookieCard.id === 'BS6-007'
+            ? scenarioSupports('BS6-007-condition-support', 2, 'red')
           : []
     const attackPlayerHand =
       cookieCard.id === 'BS4-073' || cookieCard.id === 'BS4-083'
@@ -3288,6 +3301,23 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ),
           ]
         : trashFillers
+    // BS6-013's Then condition is specifically another *Chess Choco Cookie*
+    // in the same battle area.  A generic filler Cookie is not a legal
+    // substitute, so keep a second real card instance in the positive route.
+    const chessChocoPartner =
+      cookieCard.id === 'BS6-013'
+        ? {
+            ...cookieCard,
+            instanceId: `${cookieCard.instanceId}-partner`,
+          }
+        : null
+    const chessChocoPartnerHpCards = chessChocoPartner
+      ? Array.from(
+          { length: chessChocoPartner.hp },
+          (_, index) =>
+            testSupportCard(`BS6-013-partner-hp-${index + 1}`, payColor),
+        )
+      : []
     const attackBattleArea =
       cookieCard.id === 'BS4-029'
         ? [
@@ -3298,15 +3328,25 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               !usesManualAttackFixture,
             ),
           ]
-        : [
-            cardCheckBattleEntry(
-              card as CookieCard,
-              attackSourceHpCards,
-              4,
-              !usesManualAttackFixture,
-            ),
-            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
-          ]
+        : cookieCard.id === 'BS6-013' && chessChocoPartner
+          ? [
+              cardCheckBattleEntry(
+                card as CookieCard,
+                attackSourceHpCards,
+                4,
+                !usesManualAttackFixture,
+              ),
+              cardCheckBattleEntry(chessChocoPartner, chessChocoPartnerHpCards, 6),
+            ]
+          : [
+              cardCheckBattleEntry(
+                card as CookieCard,
+                attackSourceHpCards,
+                4,
+                !usesManualAttackFixture,
+              ),
+              cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+            ]
     const attackPlayerDiscard =
       cookieCard.id === 'BS4-090'
         ? [
@@ -3354,9 +3394,30 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             revealedHpCard: null,
             preventKnockoutTargetIds: [],
             faintedColors:
-              cookieCard.id === 'BS5-085' || cookieCard.id === 'BS5-097'
-                ? ['yellow']
-                : [],
+              cookieCard.id === 'BS6-007'
+                ? [
+                    opp1.cookie.energyColor && opp1.cookie.energyColor !== 'wild'
+                      ? opp1.cookie.energyColor
+                      : 'red',
+                  ]
+                : cookieCard.id === 'BS5-085' || cookieCard.id === 'BS5-097'
+                  ? ['yellow']
+                  : [],
+            // Keep the public faint metadata alongside faintedColors.  The
+            // latter is the condition key used by the shared effect engine;
+            // this richer field makes the fixture traceable to the opponent
+            // Cookie that supposedly fainted during the preceding damage.
+            ...(cookieCard.id === 'BS6-007'
+              ? {
+                  faintedCookies: [
+                    {
+                      playerId: 'player-two' as const,
+                      energyColor: opp1.cookie.energyColor,
+                      level: opp1.cookie.level,
+                    },
+                  ],
+                }
+              : {}),
             attackEffects: cookieCard.attackEffects,
             attackEffectIndex: 0,
           },
@@ -3781,6 +3842,45 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
               rested: false,
             }
           : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-007') {
+    // Keep the attack and two active opponent supports available, but clear
+    // the recorded faint metadata.  This makes the negative route prove that
+    // Blue Slushy's conditional rest-support effect is skipped for the actual
+    // reason (no opponent Cookie fainted), rather than because payment failed.
+    const withoutFaintEvidence = state.pendingBattle
+      ? {
+          ...state,
+          pendingBattle: {
+            ...state.pendingBattle,
+            faintedColors: [],
+            faintedCookies: [],
+          },
+        }
+      : state
+    return updateDemoPlayer(withoutFaintEvidence, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-013') {
+    // Retain the real attacker but remove the second same-name Cookie.  The
+    // attack-after condition must therefore be false while the rest of the
+    // attack fixture remains intact.
+    const sourceInstanceId = state.pendingBattle?.attackerInstanceId
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.filter(
+        (entry) => entry.card.instanceId === sourceInstanceId,
       ),
       discardPile: negativeDiscardPile,
     })
