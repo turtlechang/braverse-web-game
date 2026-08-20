@@ -300,6 +300,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-20 | 修正 Browser smoke fixture 與現行 UI 契約：場景放置先選擇支援區付款卡再確認，Pretzel Snare 改用新的逐段目標略過控制；完整 Browser smoke（AI 20／20、牌組編輯器、好友房）通過。 |
 | 2026-08-19 | 修正陷阱是唯一攻擊回應時重複掛載通用回應選擇器與陷阱視窗的問題；BS6-020 現在只顯示一個回應流程，並補上 selector 回歸與 Browser 驗證。 |
 | 2026-08-19 | 修正 BS6-031 Timekeeper Cookie 的 card-check fixture：同時具備 OnPlay 與攻擊後效果時，保留在手牌並透過正式登場指令測試黃色能量支付、對手目標與 1 點傷害；新增回歸測試，完整 Vitest 209 檔／3,341 項通過。 |
 | 2026-08-19 | 修正 PR Browser Smoke 的 Playwright 安裝步驟：避免使用會觸發 Ubuntu apt mirror 的 `--with-deps`，改為只下載 Chromium 並加上安裝步驟逾時，避免依賴安裝卡住導致 Gate 被取消。 |
