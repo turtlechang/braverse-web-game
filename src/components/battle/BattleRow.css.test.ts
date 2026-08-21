@@ -99,13 +99,13 @@ describe('player hand hover styles', () => {
 
   it('uses the same red border for every opponent board and resource zone', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.combat-zone,\s*\.top-field \.support-zone,\s*\.top-field \.break-zone > \.resource-summary,\s*\.top-field \.deck-zone > \.resource-summary,\s*\.top-field \.stage-zone > \.resource-summary,\s*\.top-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*rgba\(220, 38, 38, 0\.76\)[^}]*}/,
+      /\.top-field \.combat-zone,\s*\.top-field \.support-zone,\s*\.top-field \.extra-zone,\s*\.top-field \.break-zone > \.resource-summary,\s*\.top-field \.deck-zone > \.resource-summary,\s*\.top-field \.stage-zone > \.resource-summary,\s*\.top-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*rgba\(220, 38, 38, 0\.76\)[^}]*}/,
     )
   })
 
   it('uses the same blue border for every player board and resource zone', () => {
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.combat-zone,\s*\.bottom-field \.support-zone,\s*\.bottom-field \.break-zone > \.resource-summary,\s*\.bottom-field \.deck-zone > \.resource-summary,\s*\.bottom-field \.stage-zone > \.resource-summary,\s*\.bottom-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*#2179d1[^}]*}/,
+      /\.bottom-field \.combat-zone,\s*\.bottom-field \.support-zone,\s*\.bottom-field \.extra-zone,\s*\.bottom-field \.break-zone > \.resource-summary,\s*\.bottom-field \.deck-zone > \.resource-summary,\s*\.bottom-field \.stage-zone > \.resource-summary,\s*\.bottom-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*#2179d1[^}]*}/,
     )
   })
 
@@ -127,15 +127,18 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('matches the opponent break dock height to the opponent combat zone', () => {
+  it('aligns the opponent extra and break docks with the support and combat tracks', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 73\.4px\)[^}]*top:\s*-30px[^}]*}/,
+      /\.top-field \.side-zones\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(30% \+ 13px\)\) minmax\(0, calc\(70% - 23px\)\)[^}]*}/,
     )
   })
 
-  it('matches the player break dock height and position to the player combat zone', () => {
+  it('aligns the player break and extra docks with the combat and support tracks', () => {
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 73\.4px\)[^}]*top:\s*-30px[^}]*}/,
+      /\.bottom-field \.side-zones\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(70% - 23px\)\) minmax\(0, calc\(30% \+ 13px\)\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.side-zones\s*\{[^}]*gap:\s*10px[^}]*top:\s*-30px[^}]*}/,
     )
   })
 
@@ -219,7 +222,7 @@ describe('player hand hover styles', () => {
       /\.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, 62fr\) minmax\(0, 38fr\)[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, 38fr\) minmax\(0, 62fr\)[^}]*}/,
+      /\.bottom-field \.field-stack,\s*\.bottom-field \.side-zones\s*\{[^}]*grid-template-rows:\s*minmax\(0, 38fr\) minmax\(0, 62fr\)[^}]*}/,
     )
     expect(normalizedCss).not.toContain(
       'grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);\n}\n\n.combat-zone',

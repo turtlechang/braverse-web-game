@@ -234,6 +234,14 @@ try {
       const topSupportZone = document.querySelector(
         '.top-field .support-zone',
       )
+      const topExtraZone = document.querySelector('.top-field .extra-zone')
+      const bottomExtraZone = document.querySelector(
+        '.bottom-field .extra-zone',
+      )
+      const topBreakZone = document.querySelector('.top-field .break-zone')
+      const bottomBreakZone = document.querySelector(
+        '.bottom-field .break-zone',
+      )
       const bottomCombatCard = document.querySelector(
         '.bottom-field .combat-card-wrap',
       )
@@ -243,13 +251,21 @@ try {
       const topRowMeta = document.querySelector('.top-field .row-meta')
       if (
         !(topSupportZone instanceof HTMLElement) ||
+        !(topExtraZone instanceof HTMLElement) ||
+        !(bottomExtraZone instanceof HTMLElement) ||
+        !(topBreakZone instanceof HTMLElement) ||
+        !(bottomBreakZone instanceof HTMLElement) ||
         !(bottomCombatCard instanceof HTMLElement) ||
         !(topCombatCard instanceof HTMLElement) ||
         !(topRowMeta instanceof HTMLElement)
       ) {
-        throw new Error('找不到支援區、戰鬥卡或對手名稱牌')
+        throw new Error('找不到支援區、額外區、休息區、戰鬥卡或對手名稱牌')
       }
       const topSupportRect = topSupportZone.getBoundingClientRect()
+      const topExtraRect = topExtraZone.getBoundingClientRect()
+      const bottomExtraRect = bottomExtraZone.getBoundingClientRect()
+      const topBreakRect = topBreakZone.getBoundingClientRect()
+      const bottomBreakRect = bottomBreakZone.getBoundingClientRect()
       const bottomCombatCardRect = bottomCombatCard.getBoundingClientRect()
       const topCombatCardRect = topCombatCard.getBoundingClientRect()
       const topRowMetaRect = topRowMeta.getBoundingClientRect()
@@ -273,7 +289,7 @@ try {
       const topFieldRect = topField.getBoundingClientRect()
       const majorRegions = [
         ...document.querySelectorAll(
-          '.battle-row, .combat-zone, .support-zone, .break-zone, .utility-zones',
+          '.battle-row, .combat-zone, .support-zone, .break-zone, .extra-zone, .utility-zones',
         ),
       ].map((element) => ({
         name: element.className,
@@ -289,7 +305,9 @@ try {
         ...document.querySelectorAll('.combat-card-wrap'),
       ].map((element) => element.getBoundingClientRect())
       const sideZones = [
-        ...document.querySelectorAll('.break-zone, .utility-zones'),
+        ...document.querySelectorAll(
+          '.break-zone, .extra-zone, .utility-zones',
+        ),
       ].map((element) => element.getBoundingClientRect())
       const supportZones = [
         ...document.querySelectorAll('.support-zone'),
@@ -418,6 +436,29 @@ try {
           topSupportCards.length === 0 ||
           topSupportRect.right - topSupportCards[0].right <
             topSupportRect.width / 3,
+        extraZoneLayoutValid:
+          Math.abs(topExtraRect.top - topSupportRect.top) <= 2 &&
+          Math.abs(topExtraRect.bottom - topSupportRect.bottom) <= 2 &&
+          topExtraRect.left >= topSupportRect.right &&
+          topExtraRect.bottom < topBreakRect.top &&
+          Math.abs(bottomExtraRect.top - bottomSupportRect.top) <= 2 &&
+          Math.abs(bottomExtraRect.bottom - bottomSupportRect.bottom) <= 2 &&
+          bottomExtraRect.right <= bottomSupportRect.left &&
+          bottomExtraRect.top > bottomBreakRect.bottom,
+        extraZoneRects: {
+          top: {
+            left: topExtraRect.left,
+            right: topExtraRect.right,
+            top: topExtraRect.top,
+            bottom: topExtraRect.bottom,
+          },
+          bottom: {
+            left: bottomExtraRect.left,
+            right: bottomExtraRect.right,
+            top: bottomExtraRect.top,
+            bottom: bottomExtraRect.bottom,
+          },
+        },
         // The opponent's card keeps a little more room from the middle so its
         // HP dock remains inside the field; the player card stays on the
         // original near-center threshold.
@@ -551,6 +592,10 @@ try {
     assert.ok(
       metrics.bottomSupportBottom <= metrics.shellBottom + 1,
       `${viewport.width}x${viewport.height} 的玩家支援區必須完整位於遊戲畫布內（支援區底部 ${metrics.bottomSupportBottom}、畫布底部 ${metrics.shellBottom}）`,
+    )
+    assert.ok(
+      metrics.extraZoneLayoutValid,
+      `${viewport.width}x${viewport.height} 的額外區必須與支援區同列，並位於玩家休息區下方／對手休息區上方：${JSON.stringify(metrics.extraZoneRects)}`,
     )
     assert.ok(
       metrics.outsideMajorRegions.length === 0,
