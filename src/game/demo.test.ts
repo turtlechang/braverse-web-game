@@ -36,6 +36,8 @@ import {
   createCardCheckDemoState,
   createCardNegativeDemoState,
   createBs4077TimekeeperCostDemoState,
+  createBs4026OnPlayDemoState,
+  createBs6031AttackAfterDemoState,
   createBs6008TrapDemoState,
   createBs6079OnPlayDemoState,
   createP082TrapDemoState,
@@ -297,6 +299,18 @@ describe('parseTestStateConfig', () => {
     ).toEqual({ kind: 'bs6-008-trap', remainingHp: 5 })
     expect(
       parseTestStateConfig('?test-state=bs6-008-trap-blocked', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('parses the BS4-026 OnPlay and BS6-031 attack-after routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs4-026-on-play-blocked', 'localhost'),
+    ).toEqual({ kind: 'bs4-026-on-play', blocked: true })
+    expect(
+      parseTestStateConfig('?test-state=bs6-031-attack-after-unpayable', 'localhost'),
+    ).toEqual({ kind: 'bs6-031-attack-after', payable: false })
+    expect(
+      parseTestStateConfig('?test-state=bs6-031-attack-after-unpayable', 'example.com'),
     ).toBeNull()
   })
 
@@ -1428,6 +1442,40 @@ describe('createCardCheckDemoState', () => {
       trigger: 'passive',
       effects: [{ kind: 'prevent-opponent-battle-movement' }],
     })
+  })
+
+  it('builds BS4-026 OnPlay A/B fixtures with a valid target and Timekeeper', () => {
+    const clear = createBs4026OnPlayDemoState(false)
+    const blocked = createBs4026OnPlayDemoState(true)
+    const clearSource = clear.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-026',
+    )
+
+    expect(clear.pendingOnPlay).toMatchObject({
+      sourceInstanceId: clearSource?.card.instanceId,
+    })
+    expect(
+      clear.players['player-two'].battleArea.some(
+        (entry) => entry.card.level <= 2,
+      ),
+    ).toBe(true)
+    expect(blocked.players['player-two'].battleArea[0]?.card.id).toBe('BS6-010')
+  })
+
+  it('builds BS6-031 attack-after fixtures through the real resolve command', () => {
+    const payable = createBs6031AttackAfterDemoState(true)
+    const unpayable = createBs6031AttackAfterDemoState(false)
+
+    expect(payable.pendingOptionalCostAttack).toMatchObject({
+      sourceCardName: 'Timekeeper Cookie',
+      cost: { energy: { yellow: 1 } },
+    })
+    expect(
+      payable.players['player-one'].supportArea.every((support) => !support.rested),
+    ).toBe(true)
+    expect(
+      unpayable.players['player-one'].supportArea.every((support) => support.rested),
+    ).toBe(true)
   })
 
   it('builds BS4-077 with a blue ally and BS6-010 for the cost-not-effect Browser flow', () => {

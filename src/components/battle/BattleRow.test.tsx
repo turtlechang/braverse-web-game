@@ -130,6 +130,25 @@ describe('player hand fan pure functions', () => {
 })
 
 describe('BattleRow desktop interactions', () => {
+  it('places the reserved extra area below the player break area and mirrors it for the opponent', () => {
+    const bottomMarkup = renderToStaticMarkup(
+      <BattleRow {...createProps({ position: 'bottom' })} />,
+    )
+    const topMarkup = renderToStaticMarkup(
+      <BattleRow {...createProps({ position: 'top' })} />,
+    )
+
+    expect(bottomMarkup).toContain('class="side-zones"')
+    expect(bottomMarkup).toContain('class="extra-zone"')
+    expect(bottomMarkup).toContain('額外區（預留）')
+    expect(bottomMarkup.indexOf('class="break-zone')).toBeLessThan(
+      bottomMarkup.indexOf('class="extra-zone"'),
+    )
+    expect(topMarkup.indexOf('class="extra-zone"')).toBeLessThan(
+      topMarkup.indexOf('class="break-zone'),
+    )
+  })
+
   it('marks a single battle cookie so its zone label can avoid the card', () => {
     const markup = renderToStaticMarkup(
       <BattleRow {...createProps()} />,
@@ -1202,6 +1221,22 @@ describe('HP flip chain reveal indicator', () => {
     )
 
     expect(markup).toContain('combat-card-wrap is-attack-target')
+  })
+
+  it('marks the defender as active while an opponent attack awaits a response', () => {
+    const game = {
+      ...withPendingBattle(createItemUsageDemoState(true), {
+        stage: 'trap',
+      }),
+      activePlayerId: 'player-two' as const,
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+
+    expect(markup).toContain('row-status" data-active="true"')
+    expect(markup).toContain('row-stat-status is-active')
+    expect(markup).toContain('aria-label="玩家狀態：行動中，手牌 1"')
   })
 
   it('does not show the indicator when there is no pending battle', () => {

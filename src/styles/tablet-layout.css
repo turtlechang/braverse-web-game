@@ -30,7 +30,9 @@
   }
 
   :root[data-theme] .game-shell .top-field .field-stack,
-  :root[data-theme] .game-shell .bottom-field .field-stack {
+  :root[data-theme] .game-shell .top-field .side-zones,
+  :root[data-theme] .game-shell .bottom-field .field-stack,
+  :root[data-theme] .game-shell .bottom-field .side-zones {
     top: 0;
     height: 100%;
     gap: 6px;
@@ -40,7 +42,12 @@
     grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
   }
 
-  :root[data-theme] .game-shell .bottom-field .field-stack {
+  :root[data-theme] .game-shell .top-field .side-zones {
+    grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
+  }
+
+  :root[data-theme] .game-shell .bottom-field .field-stack,
+  :root[data-theme] .game-shell .bottom-field .side-zones {
     grid-template-rows: minmax(0, 64fr) minmax(0, 36fr);
   }
 
@@ -51,9 +58,9 @@
     transform: none;
   }
 
-  :root[data-theme] .game-shell .top-field .break-zone,
+  :root[data-theme] .game-shell .top-field .side-zones,
   :root[data-theme] .game-shell .top-field .utility-zones,
-  :root[data-theme] .game-shell .bottom-field .break-zone,
+  :root[data-theme] .game-shell .bottom-field .side-zones,
   :root[data-theme] .game-shell .bottom-field .utility-zones {
     top: 0;
     height: 100%;

@@ -1011,6 +1011,42 @@ describe('OptionalCostAttackModal', () => {
     container.remove()
   })
 
+  it('shows why an attack-after effect cannot be paid when no energy is available', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Timekeeper Cookie"
+          effectText="Use this Cookie as {Y}. Deal 2 damage."
+          discardHandCost={0}
+          energyCostTotal={1}
+          supportCandidates={[]}
+          playerHand={[]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetMax={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+          paymentUnavailableWarning="目前沒有足夠的可支付黃色能量，無法執行攻擊後效果，請選擇「略過」。"
+        />,
+      ),
+    )
+
+    const warning = container.querySelector(
+      '.optional-cost-attack-condition-warning',
+    )
+    expect(warning).not.toBeNull()
+    expect(warning!.textContent).toContain('目前沒有足夠的可支付黃色能量')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('does not show the warning when there is nothing unmet', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)

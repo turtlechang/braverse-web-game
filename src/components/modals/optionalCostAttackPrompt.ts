@@ -9,6 +9,7 @@ import {
   isEffectConditionMet,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
+  selectEnergyPayment,
   type CardEffect,
   type EnergyCost,
   type GameCard,
@@ -54,6 +55,8 @@ export interface OptionalCostAttackPromptData {
    * 但玩家付款前完全看不到任何說明，只會覺得「付了代價卻什麼事都沒發生」。
    */
   unmetConditionWarning: string | null
+  /** 支援區沒有足夠的合法能量支付剩餘代價時的明確提示。 */
+  paymentUnavailableWarning: string | null
 }
 
 const getUnmetConditionWarning = (
@@ -273,6 +276,17 @@ export function getOptionalCostAttackPrompt(
       ),
     )
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
+  const paymentUnavailableWarning =
+    energyCostTotal > 0 &&
+    selectEnergyPayment(
+      energyCost,
+      game.players[viewerPlayerId].supportArea,
+    ) === null
+      ? `目前沒有足夠的可支付${Object.entries(energyCost)
+          .filter(([, amount]) => (amount ?? 0) > 0)
+          .map(([color]) => `${energyColorLabel[color] ?? color}`)
+          .join('、')}能量，無法執行攻擊後效果，請選擇「略過」。`
+      : null
   const supportToHandCandidates =
     supportToHandCost === 0
       ? []
@@ -319,5 +333,6 @@ export function getOptionalCostAttackPrompt(
       pending.sourceInstanceId,
       pending.effects,
     ),
+    paymentUnavailableWarning,
   }
 }

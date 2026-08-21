@@ -9,7 +9,7 @@
   align-items: stretch;
 }
 
-.top-field .break-zone {
+.top-field .side-zones {
   grid-column: 3;
   grid-row: 1;
 }
@@ -24,7 +24,7 @@
   grid-row: 1;
 }
 
-.bottom-field .break-zone {
+.bottom-field .side-zones {
   grid-column: 1;
   grid-row: 1;
 }
@@ -35,6 +35,15 @@
 }
 
 .field-stack {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
+  gap: 7px;
+}
+
+.side-zones {
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -54,7 +63,8 @@
   transform: translateX(-50%);
 }
 
-.bottom-field .field-stack {
+.bottom-field .field-stack,
+.bottom-field .side-zones {
   grid-template-rows: minmax(0, 38fr) minmax(0, 62fr);
 }
 
@@ -634,6 +644,36 @@
     transform 150ms ease;
 }
 
+.extra-zone {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(153, 207, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(3, 24, 65, 0.34);
+  color: rgba(227, 242, 255, 0.76);
+}
+
+.extra-zone svg {
+  width: 25px;
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.extra-zone strong {
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.extra-zone span {
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
 .deck-zone > .resource-summary,
 .stage-zone > .resource-summary,
 .discard-zone.resource-summary {
@@ -977,13 +1017,21 @@
     --field-stack-reserve: 72px;
   }
 
-  .top-field .break-zone,
+  .top-field .side-zones {
+    align-self: end;
+    height: calc(100% - var(--field-stack-reserve));
+  }
+
   .top-field .utility-zones {
     align-self: end;
     height: calc(100% - var(--break-summary-start));
   }
 
-  .bottom-field .break-zone,
+  .bottom-field .side-zones {
+    align-self: start;
+    height: calc(100% - var(--field-stack-reserve));
+  }
+
   .bottom-field .utility-zones {
     align-self: start;
     height: calc(100% - var(--break-summary-end));
@@ -1002,18 +1050,12 @@
     grid-template-rows: minmax(0, calc(30% + 13px)) minmax(0, calc(70% - 23px));
   }
 
-  /* The top field reserves 72px above its stack, while the combat track is
-   * 70% of that remaining height minus 23px (shifted 22px from the support
-   * track so the combat zone has more headroom on short viewports — support
-   * cards are deliberately smaller and don't need the space). Mirror that
-   * exact size for the visible opponent break dock. */
-  .top-field .break-zone {
-    height: calc(70% - 73.4px);
-    top: -30px;
+  .top-field .side-zones {
+    grid-template-rows: minmax(0, calc(30% + 13px)) minmax(0, calc(70% - 23px));
   }
 
-  .bottom-field .break-zone {
-    height: calc(70% - 73.4px);
+  .side-zones {
+    gap: 10px;
     top: -30px;
   }
 
@@ -1021,6 +1063,10 @@
     grid-template-rows: minmax(0, calc(70% - 23px)) minmax(0, calc(30% + 13px));
     gap: 10px;
     top: -30px;
+  }
+
+  .bottom-field .side-zones {
+    grid-template-rows: minmax(0, calc(70% - 23px)) minmax(0, calc(30% + 13px));
   }
 
   .combat-zone,
@@ -1483,19 +1529,34 @@
   }
 
   .field-stack,
+  .side-zones,
   .bottom-field .field-stack {
     grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 3px;
   }
 
-  .bottom-field .field-stack {
+  .bottom-field .field-stack,
+  .bottom-field .side-zones {
     grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
   .combat-zone,
   .support-zone,
+  .extra-zone,
   .resource-summary {
     border-radius: 4px;
+  }
+
+  .extra-zone svg {
+    width: 18px;
+  }
+
+  .extra-zone strong {
+    font-size: 0.6rem;
+  }
+
+  .extra-zone span {
+    font-size: 0.48rem;
   }
 
   .combat-slots {
@@ -1711,12 +1772,14 @@
   }
 
   .field-stack,
+  .side-zones,
   .bottom-field .field-stack {
     grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 2px;
   }
 
-  .bottom-field .field-stack {
+  .bottom-field .field-stack,
+  .bottom-field .side-zones {
     grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
@@ -2311,6 +2374,7 @@
 /* Opponent zones share the same red side identity as the opponent nameplate. */
 .top-field .combat-zone,
 .top-field .support-zone,
+.top-field .extra-zone,
 .top-field .break-zone > .resource-summary,
 .top-field .deck-zone > .resource-summary,
 .top-field .stage-zone > .resource-summary,
@@ -2320,6 +2384,7 @@
 
 .bottom-field .combat-zone,
 .bottom-field .support-zone,
+.bottom-field .extra-zone,
 .bottom-field .break-zone > .resource-summary,
 .bottom-field .deck-zone > .resource-summary,
 .bottom-field .stage-zone > .resource-summary,
@@ -2345,6 +2410,7 @@
 
 :root[data-theme="tactical-clean"] .top-field .combat-zone,
 :root[data-theme="tactical-clean"] .top-field .support-zone,
+:root[data-theme="tactical-clean"] .top-field .extra-zone,
 :root[data-theme="tactical-clean"] .top-field .break-zone > .resource-summary,
 :root[data-theme="tactical-clean"] .top-field .deck-zone > .resource-summary,
 :root[data-theme="tactical-clean"] .top-field .stage-zone > .resource-summary,
@@ -2354,6 +2420,7 @@
 
 :root[data-theme="tactical-clean"] .bottom-field .combat-zone,
 :root[data-theme="tactical-clean"] .bottom-field .support-zone,
+:root[data-theme="tactical-clean"] .bottom-field .extra-zone,
 :root[data-theme="tactical-clean"] .bottom-field .break-zone > .resource-summary,
 :root[data-theme="tactical-clean"] .bottom-field .deck-zone > .resource-summary,
 :root[data-theme="tactical-clean"] .bottom-field .stage-zone > .resource-summary,

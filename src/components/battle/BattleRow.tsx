@@ -10,6 +10,7 @@ import {
   getBreakAreaLevel,
   getEffectiveAttackBreakdown,
   getEnergyCostTotal,
+  getActingPlayerId,
   getForcedAttackTargetId,
   selectEnergyPayment,
   type GameState,
@@ -127,7 +128,9 @@ export function BattleRow({
   onFocusCard,
 }: BattleRowProps) {
   const player = game.players[playerId]
-  const isActivePlayer = game.activePlayerId === playerId
+  // Pending battle stages can hand control to the defender or attacker without
+  // changing activePlayerId; reflect the actual decision owner in the row UI.
+  const isActivePlayer = getActingPlayerId(game) === playerId
   const isOpponent = position === 'top'
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
   const forcedAttackTargetId =
@@ -251,13 +254,26 @@ export function BattleRow({
       </div>
     </div>
   )
+  const extraZone = (
+    <div
+      className="extra-zone"
+      role="group"
+      aria-label={`${player.name}額外區（預留）`}
+    >
+      <Layers3 aria-hidden="true" />
+      <strong>0 張</strong>
+      <span>額外區</span>
+    </div>
+  )
 
   return (
     <section
       className={`battle-row ${position}-field`}
       aria-label={`${player.name}場地`}
     >
-      <div className="break-zone resource-dock">
+      <div className="side-zones">
+        {position === 'top' && extraZone}
+        <div className="break-zone resource-dock">
         <div className="zone-heading" data-level-band={breakLevelBand}>
           <span>休息</span>
           <strong>LV. {breakLevel}/10</strong>
@@ -360,6 +376,8 @@ export function BattleRow({
             )}
           </div>
         )}
+        </div>
+        {position === 'bottom' && extraZone}
       </div>
 
       <div className="field-stack">
