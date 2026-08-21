@@ -697,6 +697,8 @@ export interface OptionalCostAttackModalProps {
    * 玩家知道確認後這個子效果會被略過，跟陷阱／技能效果的提示一致。
    */
   unmetConditionWarning?: string | null
+  /** 支援區沒有足夠的合法能量支付攻擊後效果時的提示。 */
+  paymentUnavailableWarning?: string | null
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -725,6 +727,7 @@ export function OptionalCostAttackModal({
   onPay,
   embedded = false,
   unmetConditionWarning = null,
+  paymentUnavailableWarning = null,
 }: OptionalCostAttackModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<AttackPayStep>('decision')
@@ -970,6 +973,12 @@ export function OptionalCostAttackModal({
           <div className="optional-cost-attack-condition-warning" role="alert">
             <AlertTriangle aria-hidden="true" />
             <span>{unmetConditionWarning}</span>
+          </div>
+        )}
+        {paymentUnavailableWarning && (
+          <div className="optional-cost-attack-condition-warning" role="alert">
+            <AlertTriangle aria-hidden="true" />
+            <span>{paymentUnavailableWarning}</span>
           </div>
         )}
 

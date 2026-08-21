@@ -1,6 +1,12 @@
 import { getOpponentId } from './helpers'
 import { getForcedAttackTargetId } from './battle'
 import {
+  getEnergyCostTotal,
+  getRemainingEnergyCost,
+  selectEnergyPayment,
+} from './energy'
+import {
+  getBattleToBreakBlocker,
   getFieldToDeckBottomBlocker,
   getOpponentBattleMovementPreventer,
   isEffectConditionMet,
@@ -93,6 +99,16 @@ const describeForcedAttackRestriction = (
   }
 }
 
+const pendingBattleProgressText: Record<
+  NonNullable<GameState['pendingBattle']>['stage'],
+  string
+> = {
+  trap: '戰鬥進行中：等待防守方回應',
+  damage: '戰鬥進行中：等待傷害結算',
+  flip: '戰鬥進行中：等待 FLIP 處理',
+  'attack-effect': '戰鬥進行中：等待攻擊後效果處理',
+}
+
 const cardTypeLabels: Record<GameCard['type'], string> = {
   cookie: '餅乾',
   item: '物品',
@@ -182,6 +198,14 @@ const getFieldToDeckBottomEffect = (
   effects.find(
     (effect): effect is Extract<CardEffect, { kind: 'field-to-deck-bottom' }> =>
       effect.kind === 'field-to-deck-bottom',
+  )
+
+const getBattleToBreakEffect = (
+  effects: CardEffect[],
+): Extract<CardEffect, { kind: 'battle-to-break' }> | undefined =>
+  effects.find(
+    (effect): effect is Extract<CardEffect, { kind: 'battle-to-break' }> =>
+      effect.kind === 'battle-to-break',
   )
 
 const getOpponentBattleToTrashBlocker = (
@@ -339,6 +363,44 @@ const describeFieldToDeckBottomStep = (
   }
 }
 
+const describeBattleToBreakStep = (
+  previous: GameState,
+  command: Extract<GameCommand, { kind: 'resolve-ability-effect' }>,
+  effect: Extract<CardEffect, { kind: 'battle-to-break' }>,
+): LogStepDetail => {
+  const targetCard = command.targetIds[0]
+    ? findCard(previous, command.targetIds[0])
+    : undefined
+  if (targetCard) {
+    return {
+      text: `效果結算：將「${targetCard.name}」放入休息區`,
+      cards: [targetCard],
+    }
+  }
+
+  const blocker = getBattleToBreakBlocker(
+    previous,
+    {
+      sourcePlayerId: command.playerId,
+      sourceInstanceId: previous.pendingAbilityEffect?.sourceInstanceId ?? '',
+    },
+    effect,
+  )
+  if (blocker) {
+    return {
+      text: `效果未生效：被「${blocker.card.name}」的效果阻止，無法將餅乾移出戰鬥區`,
+      cards: [blocker.card],
+    }
+  }
+
+  return {
+    text:
+      effect.target.min > 0
+        ? '效果未生效：沒有符合條件的目標'
+        : '效果未生效：未選擇目標',
+  }
+}
+
 const describeBlockedOnPlayMovement = (
   state: GameState,
   sourceInstanceId: string,
@@ -357,6 +419,20 @@ const describeBlockedOnPlayMovement = (
       return {
         text: `效果未生效：被「${block.card.name}」的效果阻止，無法將餅乾移出戰鬥區`,
         cards: [block.card],
+      }
+    }
+  }
+  const battleToBreak = getBattleToBreakEffect(sourceEffects)
+  if (battleToBreak) {
+    const blocker = getBattleToBreakBlocker(
+      state,
+      { sourcePlayerId, sourceInstanceId },
+      battleToBreak,
+    )
+    if (blocker) {
+      return {
+        text: `效果未生效：被「${blocker.card.name}」的效果阻止，無法將餅乾移出戰鬥區`,
+        cards: [blocker.card],
       }
     }
   }
@@ -805,6 +881,47 @@ const describeAttackEffectEnergyStep = (
   }
 }
 
+/**
+ * 攻擊後效果若停在待支付視窗，紀錄也要指出支付失敗的原因；否則玩家
+ * 只會看到「等待選擇」或「略過」，無法知道是支援區沒有合法能量。
+ * 這裡直接重用規則層的付款選擇，避免紀錄自行判斷顏色與橫置狀態。
+ */
+const describeOptionalCostAttackPaymentWarning = (
+  state: GameState,
+): string | undefined => {
+  const pending = state.pendingOptionalCostAttack
+  if (!pending) return undefined
+
+  const remainingEnergyCost = getRemainingEnergyCost(
+    pending.cost.energy ?? {},
+    pending.sourceEnergy,
+  )
+  if (getEnergyCostTotal(remainingEnergyCost) === 0) return undefined
+
+  const supportArea = state.players[pending.playerId]?.supportArea ?? []
+  if (selectEnergyPayment(remainingEnergyCost, supportArea) !== null) {
+    return undefined
+  }
+
+  const labels: Record<string, string> = {
+    red: '紅色',
+    yellow: '黃色',
+    green: '綠色',
+    blue: '藍色',
+    purple: '紫色',
+    black: '黑色',
+    pure: '純色',
+    neutral: '無色',
+  }
+  const requiredColors = Object.entries(remainingEnergyCost)
+    .filter(([, amount]) => (amount ?? 0) > 0)
+    .map(([color]) => labels[color] ?? color)
+  const colorText = requiredColors.length > 0
+    ? `${requiredColors.join('、')}`
+    : ''
+  return `目前沒有足夠的可支付${colorText}能量`
+}
+
 export const describeCommand = (
   previous: GameState,
   next: GameState,
@@ -893,6 +1010,15 @@ export const describeCommand = (
           previous,
           command,
           fieldToDeckBottom,
+        )
+        return `${actor} ${step.text}`
+      }
+      const battleToBreak = getBattleToBreakEffect(effects)
+      if (battleToBreak) {
+        const step = describeBattleToBreakStep(
+          previous,
+          command,
+          battleToBreak,
         )
         return `${actor} ${step.text}`
       }
@@ -1011,8 +1137,13 @@ export const describeCommand = (
       const sourceName = sourceCard?.name ?? '未知餅乾'
       const effectText = getAttackEffectText(sourceCard, resolvedEffects[0])
       if (resolvedEffects[0]?.kind === 'optional-cost-attack') {
+        const paymentWarning = next.pendingOptionalCostAttack
+          ? describeOptionalCostAttackPaymentWarning(next)
+          : undefined
         return next.pendingOptionalCostAttack
-          ? `${actor} 等待選擇「${sourceName}」的攻擊後效果：${effectText}`
+          ? `${actor} 等待選擇「${sourceName}」的攻擊後效果：${effectText}${
+              paymentWarning ? `；${paymentWarning}` : ''
+            }`
           : `${actor} 的「${sourceName}」攻擊後效果未生效：沒有合法目標或條件不成立`
       }
       if (isAttackEffectConditionUnmet(previous, resolvedEffects)) {
@@ -1086,7 +1217,10 @@ export const describeCommand = (
           pending?.effectText,
         )
         if (command.action === 'skip') {
-          return `${actor} 選擇略過「${sourceName}」的攻擊後效果（未支付代價，後續動作未執行）`
+          const paymentWarning = describeOptionalCostAttackPaymentWarning(previous)
+          return paymentWarning
+            ? `${actor} 選擇略過「${sourceName}」的攻擊後效果（${paymentWarning}，未支付代價，後續動作未執行）`
+            : `${actor} 選擇略過「${sourceName}」的攻擊後效果（未支付代價，後續動作未執行）`
         }
         const outcome = describeAttackEffectResultStep(
           previous,
@@ -1484,9 +1618,16 @@ export const describeCommandSteps = (
         describeAttackEffectSourceStep(previous, command, effect),
       ]
       if (effect?.kind === 'optional-cost-attack') {
+        const paymentWarning = next.pendingOptionalCostAttack
+          ? describeOptionalCostAttackPaymentWarning(next)
+          : undefined
         steps.push(
           next.pendingOptionalCostAttack
-            ? { text: '攻擊後效果：等待玩家選擇支付代價或略過' }
+            ? {
+                text: paymentWarning
+                  ? `攻擊後效果：等待玩家選擇支付代價或略過；${paymentWarning}，請選擇「略過」`
+                  : '攻擊後效果：等待玩家選擇支付代價或略過',
+              }
             : { text: '攻擊後效果未生效：沒有合法目標或條件不成立' },
         )
         return steps
@@ -1534,8 +1675,11 @@ export const describeCommandSteps = (
         ),
       ]
       if (command.action === 'skip') {
+        const paymentWarning = describeOptionalCostAttackPaymentWarning(previous)
         steps.push({
-          text: '玩家選擇略過攻擊後效果，未支付代價，後續動作未執行',
+          text: paymentWarning
+            ? `攻擊後效果未生效：${paymentWarning}，未支付代價，後續動作未執行`
+            : '玩家選擇略過攻擊後效果，未支付代價，後續動作未執行',
         })
         return steps
       }
@@ -1611,8 +1755,12 @@ export const describeCommandSteps = (
         return [describeOpponentBattleToTrashStep(previous, command, effect)]
       }
       const fieldToDeckBottom = getFieldToDeckBottomEffect(resolvedEffects)
-      return fieldToDeckBottom
-        ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
+      if (fieldToDeckBottom) {
+        return [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
+      }
+      const battleToBreak = getBattleToBreakEffect(resolvedEffects)
+      return battleToBreak
+        ? [describeBattleToBreakStep(previous, command, battleToBreak)]
         : (() => {
             const effect = resolvedEffects[0]
             if (!effect) return undefined
@@ -1722,6 +1870,9 @@ export const describeCommandSteps = (
           : damage > 0
             ? `造成 ${damage} 點傷害`
             : '未造成傷害'
+      const pendingProgress = next.pendingBattle
+        ? pendingBattleProgressText[next.pendingBattle.stage]
+        : undefined
       return [
         {
           text: `宣告攻擊：「${attackerCard?.name ?? '未知卡牌'}」→「${targetCard?.name ?? '未知卡牌'}」`,
@@ -1736,7 +1887,9 @@ export const describeCommandSteps = (
           )
           return restriction ? [restriction] : []
         })(),
-        { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
+        pendingProgress
+          ? { text: pendingProgress, cards: targetCard ? [targetCard] : undefined }
+          : { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
       ]
     }
     case 'resolve-draw-up-to': {

@@ -30,6 +30,34 @@ describe('getOptionalCostAttackPrompt', () => {
     expect(prompt?.costText).toBe('支付支援區 1 點藍色能量')
   })
 
+  it('explains when the remaining attack-after cost has no payable energy', () => {
+    const state = createBattleState()
+    state.players['player-two'].supportArea = [
+      { card: item('red-support', 'red'), rested: false },
+    ]
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Timekeeper Cookie',
+      cost: { energy: { yellow: 2 } },
+      sourceEnergy: { yellow: 1 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+      effectText: 'Use this Cookie as {Y}. Deal 2 damage.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt?.paymentUnavailableWarning).toBe(
+      '目前沒有足夠的可支付黃色能量，無法執行攻擊後效果，請選擇「略過」。',
+    )
+  })
+
   it('describes multi-colour energy and hand discard together', () => {
     const state = createBattleState()
     state.pendingOptionalCostAttack = {

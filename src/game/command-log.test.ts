@@ -640,6 +640,62 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('records when an attack-after effect is waiting because no payable energy remains', () => {
+    const base = createBattleState()
+    base.players['player-two'].supportArea = [
+      { card: item('red-support', 'red'), rested: false },
+    ]
+    const effect: CardEffect = {
+      kind: 'optional-cost-attack',
+      cost: { energy: { yellow: 2 } },
+      sourceEnergy: { yellow: 1 },
+      effects: [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
+      effectText: 'Use this Cookie as {Y}. Deal 2 damage.',
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Timekeeper Cookie',
+        cost: effect.cost,
+        effects: effect.effects,
+        effectText: effect.effectText,
+        sourceEnergy: effect.sourceEnergy,
+      },
+    }
+    const command = {
+      kind: 'resolve-attack-effect' as const,
+      playerId: 'player-two' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      '目前沒有足夠的可支付黃色能量',
+    )
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：Use this Cookie as {Y}. Deal 2 damage.',
+      '攻擊後效果：等待玩家選擇支付代價或略過；目前沒有足夠的可支付黃色能量，請選擇「略過」',
+    ])
+  })
+
   it('does not claim an attack modifier was applied when no optional target was selected', () => {
     const base = createBattleState()
     const effect: CardEffect = {
@@ -943,12 +999,34 @@ describe('describeCommandSteps', () => {
       targetInstanceId: 'kumiho',
       supportPaymentIds: ['p2-support'],
     }
+    const next: GameState = {
+      ...previous,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'kumiho',
+        declaredDamage: 3,
+        remainingDamage: 3,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+    }
 
     expect(describeCommand(previous, previous, command)).toContain(
       '目標限制：因「Kumiho Cookie」的被動效果（場上有黃色 LV.3 餅乾），只能攻擊「Kumiho Cookie」',
     )
-    const steps = describeCommandSteps(previous, previous, command)
-    expect(steps?.[1].text).toContain('只能攻擊「Kumiho Cookie」')
+    const steps = describeCommandSteps(previous, next, command)
+    expect(steps?.map((step) => step.text)).toEqual([
+      '宣告攻擊：「attacker」→「Kumiho Cookie」',
+      '目標限制：因「Kumiho Cookie」的被動效果（場上有黃色 LV.3 餅乾），只能攻擊「Kumiho Cookie」',
+      '戰鬥進行中：等待防守方回應',
+    ])
     expect(steps?.[1].cards?.map((card) => card.id)).toEqual(['BS4-024'])
   })
 
@@ -1606,6 +1684,94 @@ describe('effect resolution log outcome', () => {
     )?.[0]
     expect(skipStep?.text).toContain(`被「${timekeeper.name}」的效果阻止`)
     expect(skipStep?.cards).toEqual([timekeeper])
+  })
+
+  it('records the Timekeeper blocker when BS4-026 cannot move a valid Cookie to the break area', () => {
+    const base = createBattleState()
+    const stormbringer = {
+      ...cookie('stormbringer', 3, 5),
+      id: 'BS4-026',
+      name: 'Stormbringer Cookie',
+      energyColor: 'yellow' as const,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { yellow: 2 },
+        text: "If your opponent's break area is LV.5 or lower, select up to 1 of your opponent's LV.2 or lower Cookies. Place that Cookie in your opponent's break area.",
+        effects: [
+          {
+            kind: 'battle-to-break' as const,
+            target: {
+              side: 'opponent' as const,
+              min: 0,
+              max: 1,
+              maxLevel: 2,
+            },
+          },
+        ],
+      },
+    }
+    const timekeeper = {
+      ...cookie('timekeeper', 2, 4),
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: "Your opponent can't use effects to move Cookies from the battle area.",
+        effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+      },
+    }
+    const target = {
+      ...cookie('target-lv2', 2, 4),
+      name: 'Target LV.2 Cookie',
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            { ...base.players['player-one'].battleArea[0], card: stormbringer },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...base.players['player-two'].battleArea[0], card: timekeeper },
+            {
+              ...base.players['player-two'].battleArea[0],
+              card: target,
+              battleEntryId: 'target-lv2:battle:2',
+            },
+          ],
+        },
+      },
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: stormbringer.instanceId,
+        origin: 'hand',
+      },
+    }
+    const command = {
+      kind: 'skip-on-play' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: stormbringer.instanceId,
+    }
+    const next = { ...previous, pendingOnPlay: null }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      `被「${timekeeper.name}」的效果阻止`,
+    )
+    const step = describeCommandSteps(previous, next, command)?.[0]
+    expect(step?.text).toContain(`被「${timekeeper.name}」的效果阻止`)
+    expect(step?.cards).toEqual([timekeeper])
   })
 })
 

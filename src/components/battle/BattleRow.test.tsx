@@ -1204,6 +1204,22 @@ describe('HP flip chain reveal indicator', () => {
     expect(markup).toContain('combat-card-wrap is-attack-target')
   })
 
+  it('marks the defender as active while an opponent attack awaits a response', () => {
+    const game = {
+      ...withPendingBattle(createItemUsageDemoState(true), {
+        stage: 'trap',
+      }),
+      activePlayerId: 'player-two' as const,
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+
+    expect(markup).toContain('row-status" data-active="true"')
+    expect(markup).toContain('row-stat-status is-active')
+    expect(markup).toContain('aria-label="玩家狀態：行動中，手牌 1"')
+  })
+
   it('does not show the indicator when there is no pending battle', () => {
     const game = createItemUsageDemoState(true)
     const markup = renderToStaticMarkup(

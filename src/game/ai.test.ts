@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { takeAiStep, simulateAiMatch } from './ai'
 import { handleAiPendingDecision } from './ai/pending-handler'
+import { getAttackResponseSkillCandidates, getBlockerCandidates, getTrapCandidates } from './battle'
+import { applyGameCommand } from './commands'
+import { createCardCheckDemoState } from './demo'
 import { advancePhase } from './turn'
 import { deployCookie } from './actions'
 import { createBattleState } from './test-helpers/battle-helpers'
@@ -150,6 +153,82 @@ describe('AI optional attack source energy', () => {
     expect(decision?.action).toBe('resolve-optional-cost-attack')
     expect(decision?.state.pendingOptionalCostAttack).toBeNull()
     expect(decision?.state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+  })
+})
+
+describe('BS3-010 attacks BS4-024', () => {
+  it('continues past the defender response window instead of leaving the AI battle pending', () => {
+    const defenderFixture = createCardCheckDemoState('BS4-024')
+    const attackerFixture = createCardCheckDemoState('BS3-010')
+    const kumiho = defenderFixture.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-024',
+    )!
+    const yellowLv3 = defenderFixture.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )!
+    const pitaya = attackerFixture.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS3-010',
+    )!
+
+    const state: GameState = {
+      ...defenderFixture,
+      firstPlayerId: 'player-two',
+      activePlayerId: 'player-two',
+      players: {
+        ...defenderFixture.players,
+        'player-one': {
+          ...defenderFixture.players['player-one'],
+          hand: [],
+          battleArea: [
+            kumiho,
+            {
+              ...yellowLv3,
+              card: { ...yellowLv3.card, level: 3 },
+            },
+          ],
+          supportArea: [],
+        },
+        'player-two': {
+          ...defenderFixture.players['player-two'],
+          battleArea: [{ ...pitaya, rested: false }],
+          supportArea: attackerFixture.players['player-one'].supportArea,
+        },
+      },
+    }
+
+    const attack = takeAiStep(state, 'player-two', { level: 4, seed: 7 })
+
+    expect(attack.action).toBe('attack')
+    expect(attack.state.pendingBattle?.stage).toBe('trap')
+    expect(attack.state.pendingBattle?.targetInstanceId).toBe(kumiho.card.instanceId)
+    expect(attack.state.commandLog?.at(-1)?.steps?.at(-1)?.text).toBe(
+      '戰鬥進行中：等待防守方回應',
+    )
+    expect(getTrapCandidates(attack.state, 'player-one')).toEqual([])
+    expect(getBlockerCandidates(attack.state, 'player-one')).toEqual([])
+    expect(getAttackResponseSkillCandidates(attack.state, 'player-one')).toEqual([])
+
+    let current = applyGameCommand(attack.state, {
+      kind: 'skip-trap',
+      playerId: 'player-one',
+    })
+    const actions: string[] = []
+
+    for (let step = 0; step < 3; step += 1) {
+      const decision = takeAiStep(current, 'player-two', { level: 4, seed: 7 })
+      expect(decision.action).not.toBe('error')
+      expect(decision.state).not.toBe(current)
+      actions.push(decision.action)
+      current = decision.state
+    }
+
+    expect(actions).toEqual([
+      'resolve-damage',
+      'resolve-attack-effect',
+      'resolve-optional-cost-attack',
+    ])
+    expect(current.pendingBattle).toBeNull()
+    expect(current.pendingOptionalCostAttack).toBeNull()
   })
 })
 

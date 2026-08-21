@@ -27,6 +27,7 @@ export {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getBattleToBreakBlocker,
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,

@@ -196,6 +196,8 @@ export const parseTestStateConfig = (
   | { kind: 'card-negative'; cardNumber: string }
   | { kind: 'bs6-010-movement'; blocked: boolean }
   | { kind: 'bs6-079-on-play'; blocked: boolean }
+  | { kind: 'bs4-026-on-play'; blocked: boolean }
+  | { kind: 'bs6-031-attack-after'; payable: boolean }
   | { kind: 'bs6-008-trap'; remainingHp: 4 | 5 }
   | { kind: 'bs4-077-timekeeper-cost' }
   | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
@@ -379,6 +381,18 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs6-079-on-play-blocked') {
     return { kind: 'bs6-079-on-play', blocked: true }
+  }
+  if (testState === 'bs4-026-on-play-clear') {
+    return { kind: 'bs4-026-on-play', blocked: false }
+  }
+  if (testState === 'bs4-026-on-play-blocked') {
+    return { kind: 'bs4-026-on-play', blocked: true }
+  }
+  if (testState === 'bs6-031-attack-after-payable') {
+    return { kind: 'bs6-031-attack-after', payable: true }
+  }
+  if (testState === 'bs6-031-attack-after-unpayable') {
+    return { kind: 'bs6-031-attack-after', payable: false }
   }
   if (testState === 'bs6-008-trap-blocked') {
     return { kind: 'bs6-008-trap', remainingHp: 4 }
@@ -3996,6 +4010,155 @@ export const createBs6079OnPlayDemoState = (blocked: boolean): GameState => {
       },
     },
   }
+}
+
+/**
+ * BS4-026 登場效果的正式卡池 A/B fixture。反向情境保留對手原本的 LV.1
+ * 合法目標，再放入真正的 BS6-010，確保紀錄說明的是「被阻止」而不是「沒有目標」。
+ */
+export const createBs4026OnPlayDemoState = (blocked: boolean): GameState => {
+  const cardCheckState = createCardCheckDemoState('BS4-026')
+  const battleSource = cardCheckState.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS4-026',
+  )
+  if (!battleSource || battleSource.card.type !== 'cookie') {
+    throw new Error('BS4-026 Browser fixture source is missing')
+  }
+
+  // The generic BS4-026 card-check state keeps the source in the battle area
+  // so its OnPlay target selector is available. Move that same official card
+  // back to hand, then use the real deploy command for this dedicated route.
+  const handState: GameState = {
+    ...cardCheckState,
+    pendingBattle: null,
+    players: {
+      ...cardCheckState.players,
+      'player-one': {
+        ...cardCheckState.players['player-one'],
+        hand: [
+          battleSource.card,
+          ...cardCheckState.players['player-one'].hand,
+        ],
+        battleArea: cardCheckState.players['player-one'].battleArea.filter(
+          (entry) => entry.card.instanceId !== battleSource.card.instanceId,
+        ),
+      },
+    },
+  }
+
+  const state = applyGameCommand(handState, {
+    kind: 'deploy-cookie',
+    playerId: 'player-one',
+    instanceId: battleSource.card.instanceId,
+  })
+  const source = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS4-026',
+  )
+  if (!source) throw new Error('BS4-026 Browser fixture source is missing')
+
+  if (!blocked) {
+    return {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: null,
+      pendingAbilityEffect: undefined,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+        origin: 'hand',
+      },
+    }
+  }
+
+  const blockerCard = getCardCheckCard('BS6-010')
+  if (blockerCard.type !== 'cookie') {
+    throw new Error('BS6-010 Browser fixture blocker is not a Cookie')
+  }
+  const blocker = { ...blockerCard, instanceId: 'demo-bs6-010' }
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: {
+      playerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      origin: 'hand',
+    },
+    players: {
+      ...state.players,
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: [
+          cardCheckBattleEntry(blocker, [], 1),
+          ...state.players['player-two'].battleArea,
+        ],
+      },
+    },
+  }
+}
+
+/**
+ * BS6-031 的攻擊後效果由正式卡池卡片與 `resolve-attack-effect` 指令建立。
+ * `payable=false` 只橫置支援區，保留完整待支付視窗以驗證玩家提示與紀錄。
+ */
+export const createBs6031AttackAfterDemoState = (payable: boolean): GameState => {
+  const cardCheckState = createCardCheckDemoState('BS6-031')
+  const handSource = cardCheckState.players['player-one'].hand.find(
+    (card) => card.id === 'BS6-031',
+  )
+  if (!handSource || handSource.type !== 'cookie' || !handSource.attackEffects?.length) {
+    throw new Error('BS6-031 Browser fixture attack card is missing')
+  }
+
+  const sourceHpCards = Array.from({ length: handSource.hp }, (_, index) =>
+    testSupportCard(`BS6-031-attack-hp-${index + 1}`, 'yellow'),
+  )
+  const attackState: GameState = {
+    ...cardCheckState,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    players: {
+      ...cardCheckState.players,
+      'player-one': {
+        ...cardCheckState.players['player-one'],
+        hand: cardCheckState.players['player-one'].hand.filter(
+          (card) => card.instanceId !== handSource.instanceId,
+        ),
+        battleArea: [
+          cardCheckBattleEntry(handSource, sourceHpCards, 4, true),
+          ...cardCheckState.players['player-one'].battleArea,
+        ],
+        supportArea: cardCheckState.players['player-one'].supportArea.map(
+          (support) => ({ ...support, rested: !payable }),
+        ),
+      },
+    },
+    pendingBattle: {
+      attackerPlayerId: 'player-one',
+      defenderPlayerId: 'player-two',
+      attackerInstanceId: handSource.instanceId,
+      targetInstanceId: cardCheckState.players['player-two'].battleArea[0].card.instanceId,
+      declaredDamage: handSource.attack,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: handSource.attackEffects,
+      attackEffectIndex: 0,
+    },
+  }
+
+  return applyGameCommand(attackState, {
+    kind: 'resolve-attack-effect',
+    playerId: 'player-one',
+    targetIds: [],
+  })
 }
 
 /**

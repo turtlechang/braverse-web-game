@@ -8,6 +8,7 @@ export {
   getCookieOwnerId,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getBattleToBreakBlocker,
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,

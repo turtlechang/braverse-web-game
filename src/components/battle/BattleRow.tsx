@@ -10,6 +10,7 @@ import {
   getBreakAreaLevel,
   getEffectiveAttackBreakdown,
   getEnergyCostTotal,
+  getActingPlayerId,
   getForcedAttackTargetId,
   selectEnergyPayment,
   type GameState,
@@ -127,7 +128,9 @@ export function BattleRow({
   onFocusCard,
 }: BattleRowProps) {
   const player = game.players[playerId]
-  const isActivePlayer = game.activePlayerId === playerId
+  // Pending battle stages can hand control to the defender or attacker without
+  // changing activePlayerId; reflect the actual decision owner in the row UI.
+  const isActivePlayer = getActingPlayerId(game) === playerId
   const isOpponent = position === 'top'
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
   const forcedAttackTargetId =

@@ -298,6 +298,26 @@ export const getFieldToDeckBottomBlocker = (
 }
 
 /**
+ * 回傳阻止 `battle-to-break` 的 BS6-010；只有在原本確實有合法目標時
+ * 才回傳阻擋者，讓紀錄能區分「被動效果阻止」與「本來就沒有目標」。
+ */
+export const getBattleToBreakBlocker = (
+  state: GameState,
+  context: EffectContext,
+  effect: Extract<CardEffect, { kind: 'battle-to-break' }>,
+): CookieInBattle | undefined => {
+  const blocker = getOpponentBattleMovementPreventer(
+    state,
+    context.sourcePlayerId,
+  )
+  if (!blocker) return undefined
+
+  return getEffectTargetCandidates(state, context, effect.target).length > 0
+    ? blocker
+    : undefined
+}
+
+/**
  * 回傳沒有標準 `target` selector 的卡牌效果之合法目標。
  *
  * `opponent-battle-to-trash` 使用效果本身的等級／剩餘 HP 條件，

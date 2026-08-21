@@ -52,6 +52,8 @@ import {
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
   createBs4077TimekeeperCostDemoState,
+  createBs4026OnPlayDemoState,
+  createBs6031AttackAfterDemoState,
   createBs6079OnPlayDemoState,
   createBs6008TrapDemoState,
   createPConditionDemoState,
@@ -206,6 +208,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
+    }
+    if (testStateConfig?.kind === 'bs4-026-on-play') {
+      return createBs4026OnPlayDemoState(testStateConfig.blocked)
+    }
+    if (testStateConfig?.kind === 'bs6-031-attack-after') {
+      return createBs6031AttackAfterDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'bs6-010-movement') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
@@ -407,6 +415,16 @@ export function useMatchController(params: {
       return testStateConfig.blocked
         ? 'BS6-079 OnPlay 反向驗證：BS6-010 阻止戰鬥區移動。'
         : 'BS6-079 OnPlay 正向驗證：選擇目標後移動至牌庫底。'
+    }
+    if (testStateConfig?.kind === 'bs4-026-on-play') {
+      return testStateConfig.blocked
+        ? 'BS4-026 OnPlay 反向驗證：BS6-010 阻止餅乾移入休息區。'
+        : 'BS4-026 OnPlay 正向驗證：選擇對手 LV.2 或以下餅乾。'
+    }
+    if (testStateConfig?.kind === 'bs6-031-attack-after') {
+      return testStateConfig.payable
+        ? 'BS6-031 攻擊後效果正向驗證：有可支付的黃色能量。'
+        : 'BS6-031 攻擊後效果反向驗證：沒有可支付的黃色能量。'
     }
     if (testStateConfig?.kind === 'bs6-008-trap') {
       return testStateConfig.remainingHp === 4
@@ -1349,6 +1367,9 @@ export function useMatchController(params: {
       // 擋下拋錯，把整個 App 炸掉。
       battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
+      // A nested decision owns the turn. It must reach its own UI before the
+      // response window can be closed automatically.
+      getPendingDecision(game) ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
       getBlockerCandidates(game, viewerPlayerId).length > 0 ||
       getAttackResponseSkillCandidates(game, viewerPlayerId).length > 0
@@ -1379,7 +1400,12 @@ export function useMatchController(params: {
       )
     }
 
-    const timer = window.setTimeout(() => {
+    // Do not route this mandatory transition through a zero-delay timer. A
+    // separate render can cancel that timer while the attack is still pending,
+    // leaving a live AI attack with no legal control on screen. A microtask is
+    // scheduled after this committed effect but cannot be cancelled by its
+    // cleanup; the current-state guard keeps nested decisions untouched.
+    queueMicrotask(() => {
       setSelectedTrapId(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
@@ -1392,6 +1418,7 @@ export function useMatchController(params: {
           currentBattle?.stage !== 'trap' ||
           currentBattle.trapUsed ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
+          getPendingDecision(current) ||
           getTrapCandidates(current, viewerPlayerId).length > 0 ||
           getBlockerCandidates(current, viewerPlayerId).length > 0 ||
           getAttackResponseSkillCandidates(current, viewerPlayerId).length > 0
@@ -1403,9 +1430,7 @@ export function useMatchController(params: {
           playerId: viewerPlayerId,
         })
       })
-    }, 0)
-
-    return () => window.clearTimeout(timer)
+    })
   }, [game, testStateConfig, viewerPlayerId])
 
   // resetMatchState: resets all match-owned state (used by App's resetGame)
