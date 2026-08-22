@@ -1,0 +1,6024 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-08-21T08:05:09.792Z",
+    "totalAvailable": 2093,
+    "matchedAvailable": 143,
+    "importedCount": 143,
+    "filter": {
+      "categoryTitle": null
+    },
+    "candidateStatus": "inventory",
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 44877,
+      "locale": "en",
+      "cardNumber": "BS7-001",
+      "baseCardNumber": "BS7-001",
+      "variant": null,
+      "name": "Nutmeg Tiger Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Swarm! Prepare to attack!",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 card from the top of this Cookie's HP into the trash.> Select up to 1 of your LV.3 Cookies. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{N}> Claws out! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pOwKiEjOttC8QWOp3ICxug.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44878,
+      "locale": "en",
+      "cardNumber": "BS7-002",
+      "baseCardNumber": "BS7-002",
+      "variant": null,
+      "name": "Red Osmanthus Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}>  Beautiful Pipa Performance 2",
+      "flipText": "If there is a {R} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/r2QROAj8VfsdvFpVcGFljw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44879,
+      "locale": "en",
+      "cardNumber": "BS7-003",
+      "baseCardNumber": "BS7-003",
+      "variant": null,
+      "name": "Raspberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} In it to win it!",
+        "text": "【On Play】 If there is another 【Arena】 Cookie in your battle area, during this turn, your opponent cannot activate 【Blocker】."
+      },
+      "attackText": "<{R}>  Devotion to the Blade 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/szqYt19lqhobHcciAPFH4w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44881,
+      "locale": "en",
+      "cardNumber": "BS7-004@1",
+      "baseCardNumber": "BS7-004",
+      "variant": "1",
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Even Spicier!",
+        "text": "【Activate】 【Once Per Turn】 <{R}> During this turn, if your 【Arena】 Cookie has dealt effect damage, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}>  Spicy, isn't it? 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jfWKmk2AuhLHe1nQ4XcZOg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44880,
+      "locale": "en",
+      "cardNumber": "BS7-004",
+      "baseCardNumber": "BS7-004",
+      "variant": null,
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Even Spicier!",
+        "text": "【Activate】 【Once Per Turn】 <{R}> During this turn, if your 【Arena】 Cookie has dealt effect damage, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}>  Spicy, isn't it? 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/58QdCXD74FZuDy0X2a2nFg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44882,
+      "locale": "en",
+      "cardNumber": "BS7-005",
+      "baseCardNumber": "BS7-005",
+      "variant": null,
+      "name": "Marble Danish Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> I will reclaim it! 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZtCzUHC43sj--JimRrrwAw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44883,
+      "locale": "en",
+      "cardNumber": "BS7-006",
+      "baseCardNumber": "BS7-006",
+      "variant": null,
+      "name": "Basil Pesto Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Exquisite Cuisine",
+        "text": "【On Play】 <Place 1 card from the top of this Cookie's HP into the trash.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{R}{N}> No Picky Eating! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/NA38IQjeJsD7hSjcpbJJqQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44884,
+      "locale": "en",
+      "cardNumber": "BS7-007",
+      "baseCardNumber": "BS7-007",
+      "variant": null,
+      "name": "Street Urchin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} The Spiky Tornado",
+        "text": "【On Play】 Select up to 1 【Arena】 Cookie in either player's battle area. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{N}> My spikes will sting ya! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aMqoD5HjhvxaTKznpIiDgQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44885,
+      "locale": "en",
+      "cardNumber": "BS7-008",
+      "baseCardNumber": "BS7-008",
+      "variant": null,
+      "name": "Earl Grey Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Grand Banquet",
+        "text": "【On Play】 <Place 1 card from the top of your 【Arena】 Cookie's HP in your battle area into the trash.> Select up to 1 of your Cookies. That Cookie gains +1 HP."
+      },
+      "attackText": "<{R}{R}{N}> It is an honor to welcome you 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/A21YV1wKI4UkaPDA_BZQkQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44886,
+      "locale": "en",
+      "cardNumber": "BS7-009",
+      "baseCardNumber": "BS7-009",
+      "variant": null,
+      "name": "Spicy Scovillia Student",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Spicy Strike 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OJAbcjgZr48-eyuj5Zd6Jg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44887,
+      "locale": "en",
+      "cardNumber": "BS7-010",
+      "baseCardNumber": "BS7-010",
+      "variant": null,
+      "name": "Olive Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Successful Excavation!",
+        "text": "When this Cookie faints, if there is an 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}> A fellow archaeologist? 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JAkt2nXPtags6otPKcW4Dw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44888,
+      "locale": "en",
+      "cardNumber": "BS7-011",
+      "baseCardNumber": "BS7-011",
+      "variant": null,
+      "name": "Yoga Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> Namaste 3",
+      "flipText": "If your hand contains 5 cards or less and there is a {R} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uq64tZmSFeiwEZwJZHC4Lw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44889,
+      "locale": "en",
+      "cardNumber": "BS7-012",
+      "baseCardNumber": "BS7-012",
+      "variant": null,
+      "name": "Sachertorte Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} I despise liars",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 card from the top of your 【Arena】 Cookie's HP in your battle area into the trash.> During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}{N}>  Clemens, the Aberrant Parasol 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fXLCPN2GiKorGB9Anrd_nw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44891,
+      "locale": "en",
+      "cardNumber": "BS7-013@1",
+      "baseCardNumber": "BS7-013",
+      "variant": "1",
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Opportunity Strike",
+        "text": "If this Cookie is in the battle area, your {R} 【Arena】 Cookies that are LV.2 or higher deal +1 effect damage."
+      },
+      "attackText": "<{R}> Hand it over! NOW! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HyT_GWTQW3BZdkM5eDPNaw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44890,
+      "locale": "en",
+      "cardNumber": "BS7-013",
+      "baseCardNumber": "BS7-013",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Opportunity Strike",
+        "text": "If this Cookie is in the battle area, your {R} 【Arena】 Cookies that are LV.2 or higher deal +1 effect damage."
+      },
+      "attackText": "<{R}> Hand it over! NOW! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fWxSNH2DXdFI1oZ5qBnjzw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44893,
+      "locale": "en",
+      "cardNumber": "BS7-014@1",
+      "baseCardNumber": "BS7-014",
+      "variant": "1",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Climbing up the Spice Scale!",
+        "text": "If [Kouign-Amann Cookie] or [Prune Juice Cookie] are in your battle area, this Cookie gains +1 attack damage.\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your opponent's Cookies that is LV.2 or higher. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}> I'm not gonna stop! 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sRxRvJ-UI98R-aJNtWtkFg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44892,
+      "locale": "en",
+      "cardNumber": "BS7-014",
+      "baseCardNumber": "BS7-014",
+      "variant": null,
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Climbing up the Spice Scale!",
+        "text": "If [Kouign-Amann Cookie] or [Prune Juice Cookie] are in your battle area, this Cookie gains +1 attack damage.\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your opponent's Cookies that is LV.2 or higher. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}> I'm not gonna stop! 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/c3tCEACUyj7WYFNVAszO5A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44895,
+      "locale": "en",
+      "cardNumber": "BS7-015@1",
+      "baseCardNumber": "BS7-015",
+      "variant": "1",
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{N}> Pepper Pummel 1 \r\nThen, if there is another 【Arena】 Cookie in your battle area, deals 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4_Oj9AFa9NRd-USX33QLBA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44894,
+      "locale": "en",
+      "cardNumber": "BS7-015",
+      "baseCardNumber": "BS7-015",
+      "variant": null,
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{N}> Pepper Pummel 1 \r\nThen, if there is another 【Arena】 Cookie in your battle area, deals 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lNL3edkT1SXZqXIN2mDmcg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44896,
+      "locale": "en",
+      "cardNumber": "BS7-016",
+      "baseCardNumber": "BS7-016",
+      "variant": null,
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Midsummer Night's Dream",
+        "text": "【On Play】 During this turn, if your 【Arena】 Cookie has dealt effect damage, draw up to 1 card from your deck."
+      },
+      "attackText": "<{R}{R}{N}> Welcome to CookieLand... 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GGd8ADujwx2RAFQjq2vxEg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44897,
+      "locale": "en",
+      "cardNumber": "BS7-017",
+      "baseCardNumber": "BS7-017",
+      "variant": null,
+      "name": "Tarte Tatin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Don't fear the dragons",
+        "text": "【On Play】 If there is an 【Arena】 Cookie with 2 or less HP remaining in your battle area, draw up to 2 cards from your deck and discard 1 card."
+      },
+      "attackText": "<{R}{N} Dragon Hunter 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/NVN_QqF2CI_kj-VVx5Jz_g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44899,
+      "locale": "en",
+      "cardNumber": "BS7-018@1",
+      "baseCardNumber": "BS7-018",
+      "variant": "1",
+      "name": "Jalapeño Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}{N}> Aim Down Spice 4 \r\nThen, if there is another 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5Y0hbjzdPQfoBgN9J2NVyw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44898,
+      "locale": "en",
+      "cardNumber": "BS7-018",
+      "baseCardNumber": "BS7-018",
+      "variant": null,
+      "name": "Jalapeño Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}{N}> Aim Down Spice 4 \r\nThen, if there is another 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/cGULyvXodOFnOTY0jUP8cQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44901,
+      "locale": "en",
+      "cardNumber": "BS7-019@1",
+      "baseCardNumber": "BS7-019",
+      "variant": "1",
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> I only need one shot! 1 \r\nThen, <can be used as {R}.> If there is another 【Arena】 Cookie in your battle area, deals 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4uN-rWgLpkiJmDSV8EQLyQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44900,
+      "locale": "en",
+      "cardNumber": "BS7-019",
+      "baseCardNumber": "BS7-019",
+      "variant": null,
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> I only need one shot! 1 \r\nThen, <can be used as {R}.> If there is another 【Arena】 Cookie in your battle area, deals 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v9UuHKseqH7_-ag67yxelA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44902,
+      "locale": "en",
+      "cardNumber": "BS7-020",
+      "baseCardNumber": "BS7-020",
+      "variant": null,
+      "name": "Scovilsky Manuscript",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> If your break area's LV. is 2 or more levels higher than your opponent's break area LV., select up to 1 of your opponent's LV.1 Cookies. That Cookie receives 3 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZpgntulMfy5WCvEcsdeXLA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44903,
+      "locale": "en",
+      "cardNumber": "BS7-021",
+      "baseCardNumber": "BS7-021",
+      "variant": null,
+      "name": "Labyrinth Golem Attack",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{N}> If there is an 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, <can be used as {R}{R}.> That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/P6Ai_lVo3S4PUK6EO3mLOQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44904,
+      "locale": "en",
+      "cardNumber": "BS7-022",
+      "baseCardNumber": "BS7-022",
+      "variant": null,
+      "name": "Scovillia Quarters",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> Place in your stage area.\r\n \r\n 【Activate】 <{R}> <Rest this card.> During this turn, if your 【Arena】 Cookie has dealt effect damage, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_D4nqbDXeT65qEjfcBWPoA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44905,
+      "locale": "en",
+      "cardNumber": "BS7-023",
+      "baseCardNumber": "BS7-023",
+      "variant": null,
+      "name": "Honorable Paladin Trainee",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{N}> Glory of Victory 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XHUV7lKrwY2LR_vlIEjf0A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44906,
+      "locale": "en",
+      "cardNumber": "BS7-024",
+      "baseCardNumber": "BS7-024",
+      "variant": null,
+      "name": "Ice Juggler Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{N}> Circus Juggling 2 \r\nThen, <return 1 card from the top of your 【Arena】 Cookie's HP to your hand.> Deals 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xyCKW_FYhfNd__PiR5alHw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44907,
+      "locale": "en",
+      "cardNumber": "BS7-025",
+      "baseCardNumber": "BS7-025",
+      "variant": null,
+      "name": "Golden Osmanthus Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}> May the scent envelop you! 1",
+      "flipText": "If there is a {Y} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TOeje2rqqOaYnYes_9hQbg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44908,
+      "locale": "en",
+      "cardNumber": "BS7-026",
+      "baseCardNumber": "BS7-026",
+      "variant": null,
+      "name": "Twisted Donut Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}>  Train Repairs 1 \r\nThen, <place this Cookie in your break area.> Select up to 1 of your 【Arena】 Cookies. That Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SWqT0s039sDMygnuzRXdjg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44909,
+      "locale": "en",
+      "cardNumber": "BS7-027",
+      "baseCardNumber": "BS7-027",
+      "variant": null,
+      "name": "Lemon Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Lightning Rush",
+        "text": "【Activate】 【Once Per Turn】 <{Y}> During this turn, if an 【Arena】 Cookie has been placed in your break area, select up to 1 of your Cookies. During this turn, that Cookie gains +2 attack damage."
+      },
+      "attackText": "<{Y}{N}> Static shocks can sting 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-zxTqBOSVYpW2miVHjcMng.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44910,
+      "locale": "en",
+      "cardNumber": "BS7-028",
+      "baseCardNumber": "BS7-028",
+      "variant": null,
+      "name": "Lemon Zest Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Think you can beat me?",
+        "text": "【Activate】 【Once Per Turn】 During this turn, if an 【Arena】 Cookie has been placed in your break area, draw up to 1 card from your deck."
+      },
+      "attackText": "<{Y}{Y}{N}> Focused Lightning 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9peNDR4iS-dW0zRH37hMVA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44912,
+      "locale": "en",
+      "cardNumber": "BS7-029@1",
+      "baseCardNumber": "BS7-029",
+      "variant": "1",
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Commander's Honor",
+        "text": "【Activate】 【Once Per Turn】 <{Y}> During this turn, if an 【Arena】 Cookie has been placed in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{Y}{N}{N}> The Light shall protect us! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/p816IWY-18WxNtyEo6yDUQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44911,
+      "locale": "en",
+      "cardNumber": "BS7-029",
+      "baseCardNumber": "BS7-029",
+      "variant": null,
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Commander's Honor",
+        "text": "【Activate】 【Once Per Turn】 <{Y}> During this turn, if an 【Arena】 Cookie has been placed in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{Y}{N}{N}> The Light shall protect us! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HCjTniHa98NH_dHzKF5YOw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44913,
+      "locale": "en",
+      "cardNumber": "BS7-030",
+      "baseCardNumber": "BS7-030",
+      "variant": null,
+      "name": "Rainbow Sherbet Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "If there are 5 cards or less in your hand and there is a {Y} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{Y}> You can call me for anything! 1",
+      "flipText": "If there are 5 cards or less in your hand and there is a {Y} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yM0mE43Qd50nUdZQWQ8i3A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44914,
+      "locale": "en",
+      "cardNumber": "BS7-031",
+      "baseCardNumber": "BS7-031",
+      "variant": null,
+      "name": "Vanilla Sugar Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} I do not want another war...!",
+        "text": "【On Play】 <{Y}> <Discard 1 card.> Select up to 1 【Arena】 Cookie in your battle area. That Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{N}> Paladin Training 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LQDsOGge1J8XaH68Xat4iQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44915,
+      "locale": "en",
+      "cardNumber": "BS7-032",
+      "baseCardNumber": "BS7-032",
+      "variant": null,
+      "name": "Onyx Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} It's dangerous, follow me",
+        "text": "【Activate】 【Once Per Turn】 During this turn, if an 【Arena】 Cookie has been placed in your break area, set this Cookie as active."
+      },
+      "attackText": "<{Y}{Y}{N}> Finishing Slash 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sdP-1yWT6Cn4u8tczHH5fQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44916,
+      "locale": "en",
+      "cardNumber": "BS7-033",
+      "baseCardNumber": "BS7-033",
+      "variant": null,
+      "name": "Candy Drop Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Virtuous Precepts",
+        "text": "【On Play】 <Place 1 other 【Arena】 Cookie from your battle area in your break area.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{Y}{Y}{N}> Lotus Jade 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CJ2bnb-LYAsLb9T4FRUQAQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44917,
+      "locale": "en",
+      "cardNumber": "BS7-034",
+      "baseCardNumber": "BS7-034",
+      "variant": null,
+      "name": "Serious Paladin Trainee",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Training for Victory 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6JOWfNnsH-cX6g0Z92FYyA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44919,
+      "locale": "en",
+      "cardNumber": "BS7-035@1",
+      "baseCardNumber": "BS7-035",
+      "variant": "1",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Strike of Light",
+        "text": "【On Play】 When [Capsaicin Cookie] or [Prune Juice Cookie] is in your battle area, this Cookie gains +1 HP.\r\n【Activate】 <{N}> <Rest this card.> When another 【Arena】 Cookie is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> The Paladin's Way 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JSZeCjakE8f-De3vYKIf0g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44918,
+      "locale": "en",
+      "cardNumber": "BS7-035",
+      "baseCardNumber": "BS7-035",
+      "variant": null,
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Strike of Light",
+        "text": "【On Play】 When [Capsaicin Cookie] or [Prune Juice Cookie] is in your battle area, this Cookie gains +1 HP.\r\n【Activate】 <{N}> <Rest this card.> When another 【Arena】 Cookie is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> The Paladin's Way 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/qX1v0ZaAAP5OAdYLC2gWbw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44920,
+      "locale": "en",
+      "cardNumber": "BS7-036",
+      "baseCardNumber": "BS7-036",
+      "variant": null,
+      "name": "Crème Knights Preceptor",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Unfaltering Stance",
+        "text": "【On Play】 Select up to 1 【Arena】 Cookie that does not have 【Skill】 in your battle area. That Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{Y}{N}> Preceptor's Command 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/NejBTuEa_jJFgeO9Y7_fiw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44922,
+      "locale": "en",
+      "cardNumber": "BS7-037@1",
+      "baseCardNumber": "BS7-037",
+      "variant": "1",
+      "name": "Crème Brûlée Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} New Variation",
+        "text": "【Activate】 If there is another {Y} 【Arena】 Cookie in your battle area, <place this Cookie in your break area.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> Prestissimo! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HpnwEi243FVem49dfnr_RQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44921,
+      "locale": "en",
+      "cardNumber": "BS7-037",
+      "baseCardNumber": "BS7-037",
+      "variant": null,
+      "name": "Crème Brûlée Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} New Variation",
+        "text": "【Activate】 If there is another {Y} 【Arena】 Cookie in your battle area, <place this Cookie in your break area.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> Prestissimo! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/nZJNCCPUdvfQOYsVO-SOaw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44924,
+      "locale": "en",
+      "cardNumber": "BS7-038@1",
+      "baseCardNumber": "BS7-038",
+      "variant": "1",
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{N}> Light Cage 2 \r\nThen, <place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/RSyQ3dE0FJ7KC2MrH2ufAQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44923,
+      "locale": "en",
+      "cardNumber": "BS7-038",
+      "baseCardNumber": "BS7-038",
+      "variant": null,
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{N}> Light Cage 2 \r\nThen, <place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/RDqVpQDblPWgDc3Cxqmz0A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44926,
+      "locale": "en",
+      "cardNumber": "BS7-039@1",
+      "baseCardNumber": "BS7-039",
+      "variant": "1",
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Light's Shield",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 Cookie from your hand into your break area.> This Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{Y}{N}> Unwavering Oath 3 \r\nThen, during this turn, if an 【Arena】 Cookie has been placed in your break area, all of your opponent's Cookies receive 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ThkoRLd-EhhUX5ApphGItw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44925,
+      "locale": "en",
+      "cardNumber": "BS7-039",
+      "baseCardNumber": "BS7-039",
+      "variant": null,
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Light's Shield",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 Cookie from your hand into your break area.> This Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{Y}{N}> Unwavering Oath 3 \r\nThen, during this turn, if an 【Arena】 Cookie has been placed in your break area, all of your opponent's Cookies receive 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hig3oWgFHDqSwdioYLeRUA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44927,
+      "locale": "en",
+      "cardNumber": "BS7-040",
+      "baseCardNumber": "BS7-040",
+      "variant": null,
+      "name": "Whipped Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Cream Rose Bouquets",
+        "text": "When this Cookie faints, <can be used as {Y}.> Select up to 1 of your 【Arena】 Cookies. That Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}> I breathe ballet! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lmGCzTEaKR1TpQL5V7GlcQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44928,
+      "locale": "en",
+      "cardNumber": "BS7-041",
+      "baseCardNumber": "BS7-041",
+      "variant": null,
+      "name": "The Key to Unbreakable Faith",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}> During this turn, if an 【Arena】 Cookie has been placed in your break area, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage. Then, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9YLTLULQpD9TPPAJWuK0hQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44929,
+      "locale": "en",
+      "cardNumber": "BS7-042",
+      "baseCardNumber": "BS7-042",
+      "variant": null,
+      "name": "Valiant Victor's Salvation",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 3 【Arena】 Cookies or more in your break area, select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/IlwWx7fEB35RHzdrgo71zg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44930,
+      "locale": "en",
+      "cardNumber": "BS7-043",
+      "baseCardNumber": "BS7-043",
+      "variant": null,
+      "name": "Crème Knights' Quarters",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> Place in your stage area.\r\n\r\n【Activate】 <{Y}> <Rest this card.> During this turn, if an 【Arena】 Cookie has been placed in your break area, select up to 1 of your Cookies. That Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/p4iV0LX5eF5kcuMYInFXew.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44932,
+      "locale": "en",
+      "cardNumber": "BS7-044@1",
+      "baseCardNumber": "BS7-044",
+      "variant": "1",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Secret Diary",
+        "text": "【Your Turn】 When this Cookie is played from the support area, rest up to 2 cards in your opponent's support area."
+      },
+      "attackText": "<{G}{G}{N}> Licorice Servants 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Q6ZrMyWC5VaF6tR-bGs1hw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44931,
+      "locale": "en",
+      "cardNumber": "BS7-044",
+      "baseCardNumber": "BS7-044",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Secret Diary",
+        "text": "【Your Turn】 When this Cookie is played from the support area, rest up to 2 cards in your opponent's support area."
+      },
+      "attackText": "<{G}{G}{N}> Licorice Servants 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/EBaYqc4y2ilmVHL9270qEA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:07.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44933,
+      "locale": "en",
+      "cardNumber": "BS7-045",
+      "baseCardNumber": "BS7-045",
+      "variant": null,
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Cookie Transformation Magic",
+        "text": "【On Play】 Play up to 1 【Arena】 Cookie from your support area."
+      },
+      "attackText": "<{G}> Kyawoo! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/e5DaYV7DbolIYviNbrjY9w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44935,
+      "locale": "en",
+      "cardNumber": "BS7-046@1",
+      "baseCardNumber": "BS7-046",
+      "variant": "1",
+      "name": "Green Tea Mousse Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Winner takes all!",
+        "text": "When this Cookie is played from the support area, <discard 1 card.> Place up to 1 card from the top of your deck into your support area as active."
+      },
+      "attackText": "<{G}{G}{N}> I'll handle this 3 \r\nThen, play up to 1 【Arena】 Cookie from your support area.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lNTM2xAUOsG4lup2AJWf0g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44934,
+      "locale": "en",
+      "cardNumber": "BS7-046",
+      "baseCardNumber": "BS7-046",
+      "variant": null,
+      "name": "Green Tea Mousse Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Winner takes all!",
+        "text": "When this Cookie is played from the support area, <discard 1 card.> Place up to 1 card from the top of your deck into your support area as active."
+      },
+      "attackText": "<{G}{G}{N}> I'll handle this 3 \r\nThen, play up to 1 【Arena】 Cookie from your support area.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bhUKt7Kstm7pJsyjhOfTwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44936,
+      "locale": "en",
+      "cardNumber": "BS7-047",
+      "baseCardNumber": "BS7-047",
+      "variant": null,
+      "name": "Moon Rabbit Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Tho tafty! 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sK2ZjQIsWgwetRpMsNisZQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44938,
+      "locale": "en",
+      "cardNumber": "BS7-048@1",
+      "baseCardNumber": "BS7-048",
+      "variant": "1",
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Odd Mushrooms",
+        "text": "When this Cookie faints, <can be used as {G}.> Place up to 1 【Arena】 card from your hand into your support area as active."
+      },
+      "attackText": "<{G}{G}> Come with me, little spores...! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/tj6NDR1s4UB_jMM4NquIDA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44937,
+      "locale": "en",
+      "cardNumber": "BS7-048",
+      "baseCardNumber": "BS7-048",
+      "variant": null,
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Odd Mushrooms",
+        "text": "When this Cookie faints, <can be used as {G}.> Place up to 1 【Arena】 card from your hand into your support area as active."
+      },
+      "attackText": "<{G}{G}> Come with me, little spores...! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/drJ_k77Ev1XocSMnNciHcA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44939,
+      "locale": "en",
+      "cardNumber": "BS7-049",
+      "baseCardNumber": "BS7-049",
+      "variant": null,
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} How curious!",
+        "text": "【Activate】 【Once Per Turn】 <{G}> <Place 1 【Arena】 card from your support area into the trash.> If there are 6 cards or less in your hand, draw 1 card from your deck and place 1 card from the top of your deck in your support area as rested."
+      },
+      "attackText": "<{G}{G}{N}> Ha ha! Elementary! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_LNXOxI5E-z9X4QnyTHjeA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44940,
+      "locale": "en",
+      "cardNumber": "BS7-050",
+      "baseCardNumber": "BS7-050",
+      "variant": null,
+      "name": "Rockstar Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Gift From a Fan",
+        "text": "When this Cookie faints, <return 1 card from your support area to your hand.> Select up to 1 of your opponent's rested Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{G}> Wooohooo! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Wsq-YdTaEdCpzYGXuPjNrA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44941,
+      "locale": "en",
+      "cardNumber": "BS7-051",
+      "baseCardNumber": "BS7-051",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Consistent Practice",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 【Arena】 card from your support area into the trash.> View 3 cards from the top of your deck and place up to 1 of them in your support area as rested. Then, place the remaining cards in the trash."
+      },
+      "attackText": "<{G}{N}> A light piece to start off! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8vaUxsJo7EPpruERu1M47A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44942,
+      "locale": "en",
+      "cardNumber": "BS7-052",
+      "baseCardNumber": "BS7-052",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 6,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}{G}{N}> Vampirism 4",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/U_7l8_5PLMkO8UHV9tbKYg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44943,
+      "locale": "en",
+      "cardNumber": "BS7-053",
+      "baseCardNumber": "BS7-053",
+      "variant": null,
+      "name": "Red Velvet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} TO BATTLE!",
+        "text": "【Activate】 【Once Per Turn】 If there are 5 【Arena】 cards or more in your support area, set this Cookie as active."
+      },
+      "attackText": "<{G}{N}> Cake Blade 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CXuCJ5Qspoxr-SXDHH6jjg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44944,
+      "locale": "en",
+      "cardNumber": "BS7-054",
+      "baseCardNumber": "BS7-054",
+      "variant": null,
+      "name": "Black Lemonade Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Let's start the show",
+        "text": "【On Play】 <Return 1 card from your support area to your hand.> Place up to 1 card from your hand into your support area as rested."
+      },
+      "attackText": "<{G}{G}> Intense Song 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CHlnmybVEyqhoHmw5X7cRg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44945,
+      "locale": "en",
+      "cardNumber": "BS7-055",
+      "baseCardNumber": "BS7-055",
+      "variant": null,
+      "name": "Shining Glitter Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Pink Supercar",
+        "text": "【Activate】 【Once Per Turn】 Play up to 1 Cookie from your support area."
+      },
+      "attackText": "<{G}{N}{N}> Spectacular Performance 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Nwu4qOXacC1YKl2BDg6tkg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44946,
+      "locale": "en",
+      "cardNumber": "BS7-056",
+      "baseCardNumber": "BS7-056",
+      "variant": null,
+      "name": "Sting Durian Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Durian Stink 2",
+      "flipText": "If there is a {G} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Q5T6NThuRs8rLobPYNiDzA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44948,
+      "locale": "en",
+      "cardNumber": "BS7-057@1",
+      "baseCardNumber": "BS7-057",
+      "variant": "1",
+      "name": "Pudding à la Mode Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Elimination mode on!",
+        "text": "【Activate】 <{G}{G}> <Select 1 LV.2 or higher 【Arena】 Cookie from your support area.> Place this card in your support area as rested. Then, play that Cookie."
+      },
+      "attackText": "<{G}{N}> Zap! Boom! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/dN7xnRwN70dScf3ULsBkIg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44947,
+      "locale": "en",
+      "cardNumber": "BS7-057",
+      "baseCardNumber": "BS7-057",
+      "variant": null,
+      "name": "Pudding à la Mode Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Elimination mode on!",
+        "text": "【Activate】 <{G}{G}> <Select 1 LV.2 or higher 【Arena】 Cookie from your support area.> Place this card in your support area as rested. Then, play that Cookie."
+      },
+      "attackText": "<{G}{N}> Zap! Boom! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Y1PKwQuqEeXxZgIugygZCA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44950,
+      "locale": "en",
+      "cardNumber": "BS7-058@1",
+      "baseCardNumber": "BS7-058",
+      "variant": "1",
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Ginormous Hammer",
+        "text": "If there are 5 【Arena】 cards or more in your support area, this Cookie gains +2 attack damage."
+      },
+      "attackText": "<{G}{G}{N}> Brutal Smash! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/o4staPQF69zvCb0k65aJ3A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44949,
+      "locale": "en",
+      "cardNumber": "BS7-058",
+      "baseCardNumber": "BS7-058",
+      "variant": null,
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Ginormous Hammer",
+        "text": "If there are 5 【Arena】 cards or more in your support area, this Cookie gains +2 attack damage."
+      },
+      "attackText": "<{G}{G}{N}> Brutal Smash! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8FplRA5TFtLcDUjsDAhCHg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44952,
+      "locale": "en",
+      "cardNumber": "BS7-059@1",
+      "baseCardNumber": "BS7-059",
+      "variant": "1",
+      "name": "Choco Drizzle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Choco Shadow",
+        "text": "When this Cookie is played from the support area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{G}{G}{G}> Thick Choco Syrup 3 \r\nThen, <place 1 card from your support area into the trash.> Select up to 1 {G} LV.2 or lower Cookie in your battle area. Place that Cookie in your support area as active.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WoIDdV09o65aQIYboKZ05A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44951,
+      "locale": "en",
+      "cardNumber": "BS7-059",
+      "baseCardNumber": "BS7-059",
+      "variant": null,
+      "name": "Choco Drizzle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Choco Shadow",
+        "text": "When this Cookie is played from the support area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{G}{G}{G}> Thick Choco Syrup 3 \r\nThen, <place 1 card from your support area into the trash.> Select up to 1 {G} LV.2 or lower Cookie in your battle area. Place that Cookie in your support area as active.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XZczqyw50atH2sIMWrYw_w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44953,
+      "locale": "en",
+      "cardNumber": "BS7-060",
+      "baseCardNumber": "BS7-060",
+      "variant": null,
+      "name": "Custard Cookie III",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Royal Blessing",
+        "text": "When this Cookie is played from the support area, draw up to 1 card from your deck."
+      },
+      "attackText": "<{G}{N}> Royal, coming through! 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Z5hGl77QwIw5qLQxW13C_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44954,
+      "locale": "en",
+      "cardNumber": "BS7-061",
+      "baseCardNumber": "BS7-061",
+      "variant": null,
+      "name": "Pancake Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Wink Attack",
+        "text": "【On Play】 <Place 1 【Arena】 card from your support area into the trash.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{G}{G}{N}> Acorn Shower 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TEkMPfyBsW0coGDh0N4z5Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44955,
+      "locale": "en",
+      "cardNumber": "BS7-062",
+      "baseCardNumber": "BS7-062",
+      "variant": null,
+      "name": "Plantain Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> Hearty Meal 1",
+      "flipText": "If there are 5 cards or less in your hand and there is a {G} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UkfiuUEh5ZA1r0eiwKDw0A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44956,
+      "locale": "en",
+      "cardNumber": "BS7-063",
+      "baseCardNumber": "BS7-063",
+      "variant": null,
+      "name": "Grand Cookie Games Trophy",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> View 3 cards from the top of your deck and place up to 1 【Arena】 card from those in your support area as rested. Then, place the remaining cards in the trash.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/00yPdHfRsvV8ONrDnNaDrQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44957,
+      "locale": "en",
+      "cardNumber": "BS7-064",
+      "baseCardNumber": "BS7-064",
+      "variant": null,
+      "name": "Cookie Windmill",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <place 1 card from your support area into the trash.> Place up to 1 Cookie from your trash into your support area as rested.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BBZYmoZgPJ-XzDa5pGpO3Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44958,
+      "locale": "en",
+      "cardNumber": "BS7-065",
+      "baseCardNumber": "BS7-065",
+      "variant": null,
+      "name": "Cookie Games Stadium",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> Place in your stage area.\r\n \r\n【Activate】 <Rest this card.> Play up to 1 【Arena】 Cookie from your support area. If you do, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SQXhHizvpv9cAUYBpi0K0A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44959,
+      "locale": "en",
+      "cardNumber": "BS7-066",
+      "baseCardNumber": "BS7-066",
+      "variant": null,
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> The Spirit of Love 1 \r\nThen, <discard 2 【Arena】 cards from your hand.> Deals 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6vuDncs3pp77XMsLBFassQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44961,
+      "locale": "en",
+      "cardNumber": "BS7-067@1",
+      "baseCardNumber": "BS7-067",
+      "variant": "1",
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Sword of Darkness",
+        "text": "【Activate】 【Once Per Turn】 <{B}> If there are 5 cards or less in your hand, set this Cookie as active."
+      },
+      "attackText": "<{B}{B}> Dark Swordsmanship 1 \r\nThen, <discard 1 【Arena】 card from your hand.> Select up to 1 of your opponent's LV.2 or higher Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Mqjf5k2lLztSUDTVbXsMwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44960,
+      "locale": "en",
+      "cardNumber": "BS7-067",
+      "baseCardNumber": "BS7-067",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Sword of Darkness",
+        "text": "【Activate】 【Once Per Turn】 <{B}> If there are 5 cards or less in your hand, set this Cookie as active."
+      },
+      "attackText": "<{B}{B}> Dark Swordsmanship 1 \r\nThen, <discard 1 【Arena】 card from your hand.> Select up to 1 of your opponent's LV.2 or higher Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UKOH6weis7MXhZbgxC9vMA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44962,
+      "locale": "en",
+      "cardNumber": "BS7-068",
+      "baseCardNumber": "BS7-068",
+      "variant": null,
+      "name": "General Jujube Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Hot Cup of Tea",
+        "text": "When your turn ends, you can draw cards from your deck until there are 4 cards in your hand."
+      },
+      "attackText": "<{B}{B}{N}> Cavalry Charge 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0h95zGdvEnEDMiGp94Y9JQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44963,
+      "locale": "en",
+      "cardNumber": "BS7-069",
+      "baseCardNumber": "BS7-069",
+      "variant": null,
+      "name": "Leek Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} The Day of Vengeance",
+        "text": "【Activate】 【Once Per Turn】 <Discard 2 cards.> Select up to 1 other 【Arena】 Cookie in your battle area. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{B}> Lone Blade 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JxOnuEpl65Nc6kpmvTsI5w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44965,
+      "locale": "en",
+      "cardNumber": "BS7-070@1",
+      "baseCardNumber": "BS7-070",
+      "variant": "1",
+      "name": "Raspberry Mousse Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{N}> Family's Pride 3 \r\nThen, <place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5HWR2KvGEYayLUvvCsTZ0Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44964,
+      "locale": "en",
+      "cardNumber": "BS7-070",
+      "baseCardNumber": "BS7-070",
+      "variant": null,
+      "name": "Raspberry Mousse Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{N}> Family's Pride 3 \r\nThen, <place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Bvp3FXxZ37KYTg7yc_QVyg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44966,
+      "locale": "en",
+      "cardNumber": "BS7-071",
+      "baseCardNumber": "BS7-071",
+      "variant": null,
+      "name": "Marbleberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 6,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}{N}> Glitch Shock 4",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TcER8TcrFLXuvsIFR1htCw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44967,
+      "locale": "en",
+      "cardNumber": "BS7-072",
+      "baseCardNumber": "BS7-072",
+      "variant": null,
+      "name": "Ice Mint Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> Perfect Technique 2",
+      "flipText": "If there are 5 cards or less in your hand and there is a {B} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GpgAmXDI4lFv75tfDzBKGA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44968,
+      "locale": "en",
+      "cardNumber": "BS7-073",
+      "baseCardNumber": "BS7-073",
+      "variant": null,
+      "name": "Knight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{N}> Candy Lance 1 \r\nThen, if there are 3 cards or less in your hand and the attacked Cookie is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WeRii18KsJ7leBDJ5tef2w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44969,
+      "locale": "en",
+      "cardNumber": "BS7-074",
+      "baseCardNumber": "BS7-074",
+      "variant": null,
+      "name": "Laurel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Mysterious Advice",
+        "text": "【On Play】 If there are 3 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{B}> Explaining the Rules 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jgWHxLMRPRDmsSbVO85NBQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44971,
+      "locale": "en",
+      "cardNumber": "BS7-075@1",
+      "baseCardNumber": "BS7-075",
+      "variant": "1",
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Rose Tango",
+        "text": "When this Cookie faints, <discard 1 【Arena】 Cookie from your hand.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{N}> Finale 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/esn2D0XI9Zo8SpUVKHx7Kg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44970,
+      "locale": "en",
+      "cardNumber": "BS7-075",
+      "baseCardNumber": "BS7-075",
+      "variant": null,
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Rose Tango",
+        "text": "When this Cookie faints, <discard 1 【Arena】 Cookie from your hand.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{N}> Finale 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/f2ofQwlF7oFurFzQNqSstw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44973,
+      "locale": "en",
+      "cardNumber": "BS7-076@1",
+      "baseCardNumber": "BS7-076",
+      "variant": "1",
+      "name": "Cherry Cola Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Cherry Twin Swords",
+        "text": "【Activate】 If there is another {B} 【Arena】 Cookie in your battle area, <place this Cookie on the bottom of your deck.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{N}> I must become stronger! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hnyBQJi329wM7aev2oIY0Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44972,
+      "locale": "en",
+      "cardNumber": "BS7-076",
+      "baseCardNumber": "BS7-076",
+      "variant": null,
+      "name": "Cherry Cola Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Cherry Twin Swords",
+        "text": "【Activate】 If there is another {B} 【Arena】 Cookie in your battle area, <place this Cookie on the bottom of your deck.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{N}> I must become stronger! 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6QLGgKfwURwYecjK9vjd4w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44974,
+      "locale": "en",
+      "cardNumber": "BS7-077",
+      "baseCardNumber": "BS7-077",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Opportunity Strike",
+        "text": "If this Cookie is in the battle area, your {R} 【Arena】 Cookies that are LV.2 or higher deal +1 effect damage."
+      },
+      "attackText": "<{B}{N}> 1\\\\% Spicy 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wVnvFyYWIVOyTK1XK1Wlsg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44975,
+      "locale": "en",
+      "cardNumber": "BS7-078",
+      "baseCardNumber": "BS7-078",
+      "variant": null,
+      "name": "Frostrock Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> The Sound of Winter 1",
+      "flipText": "If there is a {B} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yezR5d3aDvTacZ_htJg0sA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44977,
+      "locale": "en",
+      "cardNumber": "BS7-079@1",
+      "baseCardNumber": "BS7-079",
+      "variant": "1",
+      "name": "Cream Soda Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "【Once Per Turn】 When your opponent's Cookie attacks, <discard 1 card.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage."
+      },
+      "attackText": "<{B}{B}{N}> Sparkling Swordsmanship 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ipVOnfRekUdo83wR9f_fvQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44976,
+      "locale": "en",
+      "cardNumber": "BS7-079",
+      "baseCardNumber": "BS7-079",
+      "variant": null,
+      "name": "Cream Soda Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Soda Drop",
+        "text": "【Once Per Turn】 When your opponent's Cookie attacks, <discard 1 card.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage."
+      },
+      "attackText": "<{B}{B}{N}> Sparkling Swordsmanship 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JHHgo3kCtERRMun31jwHOw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44978,
+      "locale": "en",
+      "cardNumber": "BS7-080",
+      "baseCardNumber": "BS7-080",
+      "variant": null,
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": "{sk}",
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Greatpepper Blade 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/igviT6AxA8jzWeZ6UxFQUg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44979,
+      "locale": "en",
+      "cardNumber": "BS7-081",
+      "baseCardNumber": "BS7-081",
+      "variant": null,
+      "name": "Habanero Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Fire Jellyworm Takedown",
+        "text": "【On Play】 If there are 3 cards or less in your hand, during this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "<{B}{B}{N}> Out of my way! 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fKqmn0fOzBI0_HnEIpvK7g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44980,
+      "locale": "en",
+      "cardNumber": "BS7-082",
+      "baseCardNumber": "BS7-082",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> Indomitable Will 1 \r\nThen, <discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VPqYf4y4XdpZOIAbeybIag.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44981,
+      "locale": "en",
+      "cardNumber": "BS7-083",
+      "baseCardNumber": "BS7-083",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Piercing Gaze",
+        "text": "When your turn ends, if there are 5 cards or less in your hand and there is another 【Arena】 Cookie in your battle area, draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}> Lightning-fast Swordsmanship 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/RWErazTCYT8fflohaORJbQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44982,
+      "locale": "en",
+      "cardNumber": "BS7-084",
+      "baseCardNumber": "BS7-084",
+      "variant": null,
+      "name": "The Sunblade",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> <Discard 2 cards.> Select up to 1 of your Cookies. During this turn, that Cookie gains +2 attack damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8AlNdcOaauvFfyp-8f_5AA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44983,
+      "locale": "en",
+      "cardNumber": "BS7-085",
+      "baseCardNumber": "BS7-085",
+      "variant": null,
+      "name": "A Victory For You",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 2 cards or less in your hand and there is an 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/867LSK_wxK2yR6eD20Q8Dg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44984,
+      "locale": "en",
+      "cardNumber": "BS7-086",
+      "baseCardNumber": "BS7-086",
+      "variant": null,
+      "name": "Temple of the Sun Central Arena",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> Place in your stage area.\r\n\r\n【Activate】 <Rest this card.> <Discard 1 {B} 【Arena】 card from your hand.> Draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TBhDHbYmGMZkn7B3M9-8gg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44985,
+      "locale": "en",
+      "cardNumber": "BS7-087",
+      "baseCardNumber": "BS7-087",
+      "variant": null,
+      "name": "Berry Parfaedia Student",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> We can win... Right? 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/FFV3vqBJDkWD09GJg9Xmeg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44987,
+      "locale": "en",
+      "cardNumber": "BS7-088@1",
+      "baseCardNumber": "BS7-088",
+      "variant": "1",
+      "name": "Camellia Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Camellia Pattern 3 \r\nThen, <can be used as {P}.> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bw34PBaSghCcwE3d04y3iw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44986,
+      "locale": "en",
+      "cardNumber": "BS7-088",
+      "baseCardNumber": "BS7-088",
+      "variant": null,
+      "name": "Camellia Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Camellia Pattern 3 \r\nThen, <can be used as {P}.> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/h8uu11TrV12jwjfXl4s98w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44989,
+      "locale": "en",
+      "cardNumber": "BS7-089@1",
+      "baseCardNumber": "BS7-089",
+      "variant": "1",
+      "name": "Latte Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Take notes, class! 2 \r\nThen, if there are 6 cards or more in your opponent's hand, place 2 random cards from your opponent's hand into the trash.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/NkUZ1omD7nIyoiq5ZmZ2fw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44988,
+      "locale": "en",
+      "cardNumber": "BS7-089",
+      "baseCardNumber": "BS7-089",
+      "variant": null,
+      "name": "Latte Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Take notes, class! 2 \r\nThen, if there are 6 cards or more in your opponent's hand, place 2 random cards from your opponent's hand into the trash.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jqJspmqoGpAWu7trIVGe7A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44991,
+      "locale": "en",
+      "cardNumber": "BS7-090@1",
+      "baseCardNumber": "BS7-090",
+      "variant": "1",
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} It's Showtime!",
+        "text": "When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash."
+      },
+      "attackText": "<{P}{N}> Black Sapphire Gem 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KFlJwMPVl1hZETmHrhnpPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44990,
+      "locale": "en",
+      "cardNumber": "BS7-090",
+      "baseCardNumber": "BS7-090",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} It's Showtime!",
+        "text": "When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash."
+      },
+      "attackText": "<{P}{N}> Black Sapphire Gem 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/W7tNShBKZrPDlBI52l3peQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44993,
+      "locale": "en",
+      "cardNumber": "BS7-091",
+      "baseCardNumber": "BS7-091",
+      "variant": null,
+      "name": "Gelato Trio Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Stadium Entrance! 1 \r\nThen, place up to 3 cards from the top of your deck into the trash.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/nOO8CBXiRnkz3YYf2qCrTQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44994,
+      "locale": "en",
+      "cardNumber": "BS7-092",
+      "baseCardNumber": "BS7-092",
+      "variant": null,
+      "name": "Citrus Parfaedia Student",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Let's go, Parfaedia!!!",
+        "text": "When this Cookie faints, if there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{P}{N}> Can we do it...? 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/nsh5sR6uj9D20PwuKbqGAw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44996,
+      "locale": "en",
+      "cardNumber": "BS7-093@1",
+      "baseCardNumber": "BS7-093",
+      "variant": "1",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Cream Buff",
+        "text": "【Activate】 <{P}> <Place this Cookie in the trash.> Draw up to 2 cards from your deck and discard 2 cards."
+      },
+      "attackText": "<{P}{P}> Cream Puff Jellies 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pvkTYWuQG3UtKcBihKQTlA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44995,
+      "locale": "en",
+      "cardNumber": "BS7-093",
+      "baseCardNumber": "BS7-093",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Cream Buff",
+        "text": "【Activate】 <{P}> <Place this Cookie in the trash.> Draw up to 2 cards from your deck and discard 2 cards."
+      },
+      "attackText": "<{P}{P}> Cream Puff Jellies 1",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BObSMrItptSzNLd5CGtjbQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44997,
+      "locale": "en",
+      "cardNumber": "BS7-094",
+      "baseCardNumber": "BS7-094",
+      "variant": null,
+      "name": "Tea Knight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} The Silver Oath",
+        "text": "If there are 30 【Arena】 cards or more in your trash, this Cookie gains +3 attack damage."
+      },
+      "attackText": "<{P}{N}{N}> Pride of the Tea Leaf Knights 2",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sHWUZck-X_giCjAJfoD2tQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44998,
+      "locale": "en",
+      "cardNumber": "BS7-095",
+      "baseCardNumber": "BS7-095",
+      "variant": null,
+      "name": "Almond Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{N}> Hardened Detective 1 \r\nThen, if there are 7 or more 【Arena】 cards in your trash, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mFJx_cX7ZPYGCTYP1sus_g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44999,
+      "locale": "en",
+      "cardNumber": "BS7-096",
+      "baseCardNumber": "BS7-096",
+      "variant": null,
+      "name": "Espresso Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Light Roast 1",
+      "flipText": "If there is a {P} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/h6uzOPTnH1otqdcCUt9Llg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45000,
+      "locale": "en",
+      "cardNumber": "BS7-097",
+      "baseCardNumber": "BS7-097",
+      "variant": null,
+      "name": "Eclair Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Book of History 2 \r\nThen, if there are 7 【Arena】 cards or more in your trash, this Cookie receives -1 attack damage until the end of your opponent's turn.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/AP6eDzAnM8FcxA22w7qf_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45001,
+      "locale": "en",
+      "cardNumber": "BS7-098",
+      "baseCardNumber": "BS7-098",
+      "variant": null,
+      "name": "Milk Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Calcium-rich Milk 2 \r\nThen, if there are 7 【Arena】 cards or more in your trash, this Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/16GAfsYUdzrdEyEVSjx42Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45002,
+      "locale": "en",
+      "cardNumber": "BS7-099",
+      "baseCardNumber": "BS7-099",
+      "variant": null,
+      "name": "Werewolf Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Razor Claws 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/86bIzKL86rfEMDLsjKYU5g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45003,
+      "locale": "en",
+      "cardNumber": "BS7-100",
+      "baseCardNumber": "BS7-100",
+      "variant": null,
+      "name": "Witchberry Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Myaha! 1",
+      "flipText": "If there are 5 cards or less in your hand and there is a {P} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ar9-rVO8Xb90ZVatY_NX_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45004,
+      "locale": "en",
+      "cardNumber": "BS7-101",
+      "baseCardNumber": "BS7-101",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{N}> Purple Tornado 2 \r\nThen, if there are 7 【Arena】 cards or more in your trash, place up to 1 of your opponent's stages in the trash.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9NdQ6RDN_lnSCaYSFWSc0g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45005,
+      "locale": "en",
+      "cardNumber": "BS7-102",
+      "baseCardNumber": "BS7-102",
+      "variant": null,
+      "name": "Kohlrabi Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Primed Senses 1 \r\nThen, <can be used as {P}.> <Return 5 【Arena】 cards that do not have FLIP from your trash to your deck and shuffle it.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/R33bTV9cNXukJ5_68xsRZQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45006,
+      "locale": "en",
+      "cardNumber": "BS7-103",
+      "baseCardNumber": "BS7-103",
+      "variant": null,
+      "name": "Parfaedia Principal",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{N}> For Victory! 2 \r\nThen, return up to 1 LV.1 【Arena】 Cookie from your trash to your hand.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wHRlKEbnc2A_H4d8fhy_9g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45008,
+      "locale": "en",
+      "cardNumber": "BS7-104@1",
+      "baseCardNumber": "BS7-104",
+      "variant": "1",
+      "name": "Prune Juice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} One special potion, coming up!",
+        "text": "If your break area is LV.3 or higher, or if there is a [Capsaicin Cookie] or [Kouign-Amann Cookie] in your battle area, each cost required for this Cookie's attack becomes {N}.\r\n【Activate】 【Once Per Turn】 <{N}> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{P}{P}{N}> The Strongest Potion 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/L2xRcg1M0ID5fdMc5U4mTg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45007,
+      "locale": "en",
+      "cardNumber": "BS7-104",
+      "baseCardNumber": "BS7-104",
+      "variant": null,
+      "name": "Prune Juice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} One special potion, coming up!",
+        "text": "If your break area is LV.3 or higher, or if there is a [Capsaicin Cookie] or [Kouign-Amann Cookie] in your battle area, each cost required for this Cookie's attack becomes {N}.\r\n【Activate】 【Once Per Turn】 <{N}> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{P}{P}{N}> The Strongest Potion 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/43aztytRcPs7KmyUS-Fcmg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45009,
+      "locale": "en",
+      "cardNumber": "BS7-105",
+      "baseCardNumber": "BS7-105",
+      "variant": null,
+      "name": "Golem Core",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> Play up to 1 【Arena】 Cookie from your trash. Then, that Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KTY2GbaCgubS0BYXWfyWnQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45010,
+      "locale": "en",
+      "cardNumber": "BS7-106",
+      "baseCardNumber": "BS7-106",
+      "variant": null,
+      "name": "Securing the First Victory",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <discard 1 card.> Return up to 1 【Arena】 Cookie from your trash to your hand.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GZ1_8ZE3KmQh0OSUVAqfnA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45011,
+      "locale": "en",
+      "cardNumber": "BS7-107",
+      "baseCardNumber": "BS7-107",
+      "variant": null,
+      "name": "Parfaedia Quarters",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Place in your stage area.\r\n \r\n【Activate】 <Rest this card.> Place up to 2 【Arena】 Cookies that do not have FLIP from your trash on the bottom of your deck in any order.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3_Am-VAKz8gJDR-fnNv3Zg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45013,
+      "locale": "en",
+      "cardNumber": "BS7-108@1",
+      "baseCardNumber": "BS7-108",
+      "variant": "1",
+      "name": "Arena of Glory",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "EXR",
+      "grade": "EXTRA RARE",
+      "level": null,
+      "hp": null,
+      "energyType": "MIX",
+      "color": "PURE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if your break area's LV. is 3 or more levels higher than your opponent's break area LV., select up to 1 of your opponent's LV.3 Cookies. During this turn, that Cookie deals -2 attack damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DNtDIrN3TmeWtjC_LAFoiA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45012,
+      "locale": "en",
+      "cardNumber": "BS7-108",
+      "baseCardNumber": "BS7-108",
+      "variant": null,
+      "name": "Arena of Glory",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": null,
+      "hp": null,
+      "energyType": "MIX",
+      "color": "PURE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if your break area's LV. is 3 or more levels higher than your opponent's break area LV., select up to 1 of your opponent's LV.3 Cookies. During this turn, that Cookie deals -2 attack damage.",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 210,
+        "title": "BOOSTER PACK [Arena of Glory]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3eSG2VgOuok2nUKtOsysXQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:09.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 52834,
+      "locale": "en",
+      "cardNumber": "BS7-035@2",
+      "baseCardNumber": "BS7-035",
+      "variant": "2",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Strike of Light",
+        "text": "【On Play】 When [Capsaicin Cookie] or [Prune Juice Cookie] is in your battle area, this Cookie gains +1 HP.\r\n【Activate】 <{N}> <Rest this card.> When another 【Arena】 Cookie is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> The Paladin's Way {da} 2",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "promotion card",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bxOumo7LOT0mM2DPJTwmOA.webp",
+      "officialUpdatedAt": "2026-03-30T10:42:08.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44992,
+      "locale": "en",
+      "cardNumber": "BS7-090@2",
+      "baseCardNumber": "BS7-090",
+      "variant": "2",
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} It's Showtime!",
+        "text": "When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash."
+      },
+      "attackText": "<{P}{N}> Black Sapphire Gem {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/R7sYnlCYfKLFs8gur8QFVA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:03.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 52953,
+      "locale": "en",
+      "cardNumber": "BS7-014@2",
+      "baseCardNumber": "BS7-014",
+      "variant": "2",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Climbing up the Spice Scale!",
+        "text": "If [Kouign-Amann Cookie] or [Prune Juice Cookie] are in your battle area, this Cookie gains +1 attack damage.\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your opponent's Cookies that is LV.2 or higher. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}> I'm not gonna stop! 3",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "promotion-card",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rmcqyaUBVuEUFYezPSytSw.webp",
+      "officialUpdatedAt": "2026-05-19T07:23:52.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 52954,
+      "locale": "en",
+      "cardNumber": "BS7-014@3",
+      "baseCardNumber": "BS7-014",
+      "variant": "3",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Climbing up the Spice Scale!",
+        "text": "If [Kouign-Amann Cookie] or [Prune Juice Cookie] are in your battle area, this Cookie gains +1 attack damage.\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your opponent's Cookies that is LV.2 or higher. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}> I'm not gonna stop! 3",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "promotion-card",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v1vtLFBM-LE4PEO4Gce4CQ.webp",
+      "officialUpdatedAt": "2026-05-19T07:23:52.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 52955,
+      "locale": "en",
+      "cardNumber": "BS7-014@4",
+      "baseCardNumber": "BS7-014",
+      "variant": "4",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Climbing up the Spice Scale!",
+        "text": "If [Kouign-Amann Cookie] or [Prune Juice Cookie] are in your battle area, this Cookie gains +1 attack damage.\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your opponent's Cookies that is LV.2 or higher. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{N}> I'm not gonna stop! 3",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "promotion-card",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/D7HGd3eUPwnW3NWyza06aQ.webp",
+      "officialUpdatedAt": "2026-05-19T07:23:52.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 54267,
+      "locale": "en",
+      "cardNumber": "BS7-035@3",
+      "baseCardNumber": "BS7-035",
+      "variant": "3",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Strike of Light",
+        "text": "【On Play】 When [Capsaicin Cookie] or [Prune Juice Cookie] is in your battle area, this Cookie gains +1 HP.\r\n【Activate】 <{N}> <Rest this card.> When another 【Arena】 Cookie is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{N}> The Paladin's Way {da} 2",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "2026 NA Brave League",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/cAlUAE7avZz1C_HZN5cPUw.webp",
+      "officialUpdatedAt": "2026-07-23T01:57:02.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 54230,
+      "locale": "en",
+      "cardNumber": "BS7-044@2",
+      "baseCardNumber": "BS7-044",
+      "variant": "2",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Secret Diary",
+        "text": "【Your Turn】 When this Cookie is played from the support area, rest up to 2 cards in your opponent's support area."
+      },
+      "attackText": "<{G}{G}{N}> Licorice Servants {da} 3",
+      "flipText": null,
+      "keywords": [
+        "ARENA"
+      ],
+      "product": {
+        "id": 99,
+        "title": "BS11 Release Event",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/J1dARuDOaPQ9NS6xJd3LhQ.webp",
+      "officialUpdatedAt": "2026-07-21T01:45:37.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

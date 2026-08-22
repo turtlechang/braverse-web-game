@@ -265,13 +265,14 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               effectText={effectText}
               hand={hand}
               requiredCount={handDiscard.count}
+              atLeast={handDiscard.atLeast}
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
               onToggleCard={(instanceId) =>
                 match.setSelectedOpponentDiscardIds((current) =>
                   current.includes(instanceId)
                     ? current.filter((id) => id !== instanceId)
-                    : current.length < handDiscard.count
+                    : (handDiscard.atLeast || current.length < handDiscard.count)
                       ? [...current, instanceId]
                       : current,
                 )
@@ -565,6 +566,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           pickDestination={pendingInspect.pickDestination}
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
+          filterKeyword={pendingInspect.filterKeyword}
           optionalPick={pendingInspect.optionalPick}
           onConfirm={(pickedCardIds, restOrder) => {
             const restLabel =
@@ -580,11 +582,13 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 pickedCardIds,
                 restOrder,
               },
-              pickedCardIds.length > 0
-                ? `已選擇卡牌${
+                  pickedCardIds.length > 0
+                    ? `已選擇卡牌${
                     pendingInspect.pickDestination === 'battle'
                       ? '登場'
-                      : '加入手牌'
+                      : pendingInspect.pickDestination === 'support'
+                        ? '放入支援區'
+                        : '加入手牌'
                   }，其餘放入${restLabel}。`
                 : `沒有選擇卡牌，全部放入${restLabel}。`,
             )

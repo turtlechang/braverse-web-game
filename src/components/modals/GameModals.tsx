@@ -1571,6 +1571,10 @@ export interface FaintEffectResponseModalProps {
   costSupportCandidates?: GameCard[]
   selectedCostSupportIds?: string[]
   onSelectCostSupport?: (instanceId: string) => void
+  costSupportToHandAmount?: number
+  costSupportToHandCandidates?: GameCard[]
+  selectedCostSupportToHandIds?: string[]
+  onSelectCostSupportToHand?: (instanceId: string) => void
   allowSkip?: boolean
   onSkip?: () => void
   onConfirm: () => void
@@ -1602,6 +1606,10 @@ export function FaintEffectResponseModal({
   costSupportCandidates = [],
   selectedCostSupportIds = [],
   onSelectCostSupport,
+  costSupportToHandAmount = 0,
+  costSupportToHandCandidates = [],
+  selectedCostSupportToHandIds = [],
+  onSelectCostSupportToHand,
   allowSkip = false,
   onSkip,
   onConfirm,
@@ -1612,10 +1620,14 @@ export function FaintEffectResponseModal({
   const selectedPaymentIdSet = new Set(selectedPaymentIds)
   const selectedCostHandIdSet = new Set(selectedCostHandIds)
   const selectedCostSupportIdSet = new Set(selectedCostSupportIds)
+  const selectedCostSupportToHandIdSet = new Set(
+    selectedCostSupportToHandIds,
+  )
   const paymentReady = paymentCostTotal === 0 || paymentValid
   const faintCostReady =
     selectedCostHandIds.length === costHandAmount &&
-    selectedCostSupportIds.length === costSupportAmount
+    selectedCostSupportIds.length === costSupportAmount &&
+    selectedCostSupportToHandIds.length === costSupportToHandAmount
   const canConfirm =
     selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
@@ -1725,7 +1737,7 @@ export function FaintEffectResponseModal({
             )}
           </div>
         )}
-        {(costHandAmount > 0 || costSupportAmount > 0) && (
+        {(costHandAmount > 0 || costSupportAmount > 0 || costSupportToHandAmount > 0) && (
           <div className="faint-cost-section">
             <strong>先支付昏厥技能代價</strong>
             {costHandAmount > 0 && (
@@ -1783,6 +1795,40 @@ export function FaintEffectResponseModal({
                   </div>
                 ) : (
                   <small>沒有可支付的支援區卡牌，無法支付此效果。</small>
+                )}
+              </div>
+            )}
+            {costSupportToHandAmount > 0 && (
+              <div className="faint-cost-group">
+                <span>
+                  從支援區返回 {costSupportToHandAmount} 張卡至手牌（已選{' '}
+                  {selectedCostSupportToHandIds.length}/
+                  {costSupportToHandAmount}）
+                </span>
+                {costSupportToHandCandidates.length > 0 ? (
+                  <div className="modal-card-options compact faint-cost-support-candidates">
+                    {costSupportToHandCandidates.map((candidate) => {
+                      const selected = selectedCostSupportToHandIdSet.has(
+                        candidate.instanceId,
+                      )
+                      return (
+                        <button
+                          type="button"
+                          key={candidate.instanceId}
+                          className={selected ? 'is-selected' : ''}
+                          aria-pressed={selected}
+                          onClick={() =>
+                            onSelectCostSupportToHand?.(candidate.instanceId)
+                          }
+                        >
+                          <CardFace card={candidate} selected={selected} />
+                          <span>{candidate.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <small>沒有可返回手牌的支援區卡牌，無法支付此效果。</small>
                 )}
               </div>
             )}

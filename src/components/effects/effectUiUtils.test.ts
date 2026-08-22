@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { describeEffect, describeEffectResult, getSkillLabels } from './effectUiUtils'
 import type { BreakToTrashEffect, TrashToBattleEffect } from '../../game'
-import type { DeckToTrashEffect } from '../../game/types'
+import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
 
 describe('getSkillLabels for end-phase effects', () => {
   it('does not present a queued end-phase effect as Activate', () => {
@@ -48,6 +48,48 @@ describe('describeEffectResult for optional trash-to-battle', () => {
     expect(describeEffectResult(effect, ['BS6-106-purple-hp2-trash-cookie'])).toBe(
       '棄牌區餅乾已登場。',
     )
+  })
+})
+
+describe('describeEffectResult for optional damage and support-to-battle', () => {
+  it('does not report damage when the optional target selection is empty', () => {
+    const effect: DamageEffect = {
+      kind: 'damage',
+      amount: 2,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+
+    expect(describeEffectResult(effect, [])).toBe(
+      '未選擇傷害目標，效果未造成傷害。',
+    )
+  })
+
+  it('does not report a support Cookie entering battle when none was selected', () => {
+    const effect: SupportToBattleEffect = {
+      kind: 'support-to-battle',
+      amount: 1,
+      optional: true,
+    }
+
+    expect(describeEffectResult(effect, [])).toBe(
+      '未選擇支援區餅乾，已略過登場。',
+    )
+  })
+})
+
+describe('describeEffectResult for optional attack modification', () => {
+  it('does not claim an attack modifier applied when no target was selected', () => {
+    expect(
+      describeEffectResult(
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 0, max: 1 },
+        },
+        [],
+      ),
+    ).toBe('未選擇攻擊力效果目標，未套用攻擊力修改。')
   })
 })
 

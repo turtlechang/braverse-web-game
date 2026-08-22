@@ -6,6 +6,7 @@ export type GuidedPhaseId =
   | 'cost'
   | 'support-cost'
   | 'hp-cost'
+  | 'hp-hand-cost'
   | 'trash-cost'
   | 'choice'
   | 'support'

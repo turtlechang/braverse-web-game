@@ -636,6 +636,67 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
+  it('opens a Cookie HP-cost modal before resolving a costSelected effect target', async () => {
+    const state = createCardCheckDemoState('BS7-012')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-012',
+    )?.card
+    if (!source || source.type !== 'cookie' || !source.skill) {
+      throw new Error('BS7-012 cookie fixture is incomplete')
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    const setMessage = vi.fn()
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage,
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    await act(() => {
+      captured!.beginCookieSkill(
+        state,
+        source,
+        'player-one',
+        'activate',
+        '主動技能',
+      )
+    })
+
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.pendingEffect?.skill.effects[0]).toMatchObject({
+      kind: 'modify-attack',
+      target: { costSelected: true },
+    })
+    expect(setMessage).not.toHaveBeenCalledWith(
+      `${source.name}目前沒有合法的效果目標。`,
+    )
+
+    await act(() => root.unmount())
+  })
+
   it('passes a stage trashBattleCookie cost through to the game command', async () => {
     const baseGame = createItemUsageDemoState(true)
     const stageCard: GameCard = {

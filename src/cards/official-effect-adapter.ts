@@ -1,5 +1,6 @@
 import type {
   AbilityCost,
+  EnergyCost,
   CardAbility,
   CardSkill,
   CardEffect,
@@ -2973,6 +2974,496 @@ export const convertOfficialCardEffects = (
     'BS6-056': [{ kind: 'draw-up-to', max: 1 }],
     'BS6-067': [{ kind: 'draw-up-to', max: 1 }],
     'BS6-069': [],
+    // BS7-002／BS7-025 的主效果為條件式 FLIP；實際 runtime 效果在 exactFlipEffects。
+    'BS7-002': [],
+    'BS7-025': [],
+    // BS7-030 Rainbow Sherbet Cookie：黃色 Arena 與手牌上限雙條件 FLIP，
+    // 具體效果由 exactFlipEffects 綁定。
+    'BS7-030': [],
+    // BS7-027 Lemon Cookie：若本回合己方有【Arena】餅乾進入休息區，
+    // 可選至多 1 張己方 Cookie，本回合攻擊傷害 +2。事件旗標由 break
+    // 解析流程累積，條件保留在 runtime effect 以供 UI／AI 共用。
+    'BS7-027': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-028 Lemon Zest Cookie：本回合有 Arena 餅乾進入休息區時，抽最多 1 張。
+    'BS7-028': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-029 Madeleine Cookie：同一事件條件成立時，選對手餅乾造成 2 傷害。
+    'BS7-029': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-031 Vanilla Sugar Cookie：登場支付黃色能量與棄 1 張手牌，
+    // 再選己方戰鬥區 Arena Cookie 增加 1 HP。
+    'BS7-031': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, keyword: 'arena' },
+      },
+    ],
+    // BS7-032 Onyx Cream Cookie：本回合事件條件成立時將來源設為 active。
+    'BS7-032': [
+      {
+        kind: 'set-cookie-active',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-033 Candy Drop Cookie：登場時先將另一張己方 Arena Cookie
+    // 放入休息區，再選對手餅乾造成 2 傷害；前段是必須選擇的移動效果，
+    // 不能只把後段傷害交給通用 parser，否則會漏掉成本的目標邊界。
+    'BS7-033': [
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS7-044 Licorice Cookie：從支援區登場時，只在自己的回合橫置對手
+    // 支援區最多 2 張卡。來源區與 Your Turn 時機由 skill 欄位保留。
+    'BS7-044': [
+      { kind: 'rest-support', side: 'opponent', amount: 2, optional: true },
+    ],
+    // BS7-045 Kumiho Cookie：從支援區登場時，再讓 1 張 Arena Cookie 登場。
+    'BS7-045': [
+      { kind: 'support-to-battle', amount: 1, keyword: 'arena' },
+    ],
+    // BS7-046 Green Tea Mousse Cookie：支援區登場先把牌庫頂 1 張放入
+    // 支援區（active），攻擊 Then 再從支援區登場 1 張 Arena Cookie；攻擊
+    // 的第二段另由 exactAttackEffects 綁定，避免把兩個時機混在一起。
+    'BS7-046': [
+      { kind: 'deck-to-support', amount: 1, rested: false },
+    ],
+    // BS7-034 Serious Paladin Trainee 沒有技能；不放入 exact map，讓
+    // vanilla card-check 仍以正式攻擊支付路徑驗證。
+    // BS7-035 的 On Play 子句由 exactCookieSkillOnPlayEffects 承載，
+    // Activate 傷害則沿用 generic conversion 的效果。
+    'BS7-036': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          keyword: 'arena',
+          noSkillOnly: true,
+        },
+      },
+    ],
+    'BS7-037': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'yellow',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-040 Whipped Cream Cookie：昏厥時可支付自身提供的黃色能量，
+    // 選擇至多 1 張己方 Arena Cookie 增加 1 HP。sourceEnergy 由技能表承載，
+    // faint queue 會在實際結算時要求同一筆支付。
+    'BS7-040': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, keyword: 'arena' },
+      },
+    ],
+    // BS7-041 The Key to Unbreakable Faith：休息區事件只限制攻擊加成；
+    // Then 抽牌不再重複掛同一條件，保持官方句子中的先後語意。
+    'BS7-041': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS7-048 Poison Mushroom Cookie：昏厥時支付自身提供的綠色能量，
+    // 將手牌中的 1 張 Arena 卡放入支援區並保持 active。
+    'BS7-048': [
+      {
+        kind: 'hand-to-support',
+        amount: 1,
+        rested: false,
+        keyword: 'arena',
+        optional: true,
+      },
+    ],
+    // BS7-053 Red Velvet Cookie：支援區至少 5 張 Arena 卡時解除自身休息狀態。
+    'BS7-053': [
+      {
+        kind: 'set-cookie-active',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'support-count-at-least',
+          count: 5,
+          keyword: 'arena',
+        },
+      },
+    ],
+    // BS7-054 Black Lemonade Cookie：On Play 的回手是技能代價，然後把
+    // 手牌至多 1 張以疲勞狀態放入支援區。
+    'BS7-054': [
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
+    ],
+    // BS7-055 Shining Glitter Cookie：從支援區登場至多 1 張 Cookie。
+    'BS7-055': [{ kind: 'support-to-battle', amount: 1 }],
+    // BS7-060 Custard Cookie III：從支援區登場時抽最多 1 張。
+    'BS7-060': [{ kind: 'draw-up-to', max: 1 }],
+    // BS7-061 Pancake Cookie：On Play 先支付 1 張 Arena 支援卡，再抽最多 2 張。
+    'BS7-061': [{ kind: 'draw-up-to', max: 2 }],
+    // BS7-063 Grand Cookie Games Trophy：檢視牌庫頂 3 張，至多挑 1 張
+    // Arena 放入休息支援，其餘牌直接進棄牌區。
+    'BS7-063': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        restDestination: 'trash',
+        pickDestination: 'support',
+        filterKeyword: 'arena',
+        optionalPick: true,
+      },
+    ],
+    // BS7-067 Dark Choco Cookie：手牌至多 5 張時解除自身休息狀態。
+    'BS7-067': [
+      {
+        kind: 'set-cookie-active',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    // BS7-069 Leek Cookie：棄 2 張手牌後，讓另一張己方 Arena Cookie
+    // 本回合造成的攻擊傷害 +1。
+    'BS7-069': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-074 Laurel Cookie：手牌至多 3 張時，登場抽最多 2 張。
+    'BS7-074': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    // BS7-075 Rose Cookie：昏厥效果支付 Arena 手牌後抽最多 2 張。
+    'BS7-075': [{ kind: 'draw-up-to', max: 2 }],
+    // BS7-076 Cherry Cola Cookie：將來源放到牌庫底後，若仍有另一張
+    // 藍色 Arena Cookie，抽最多 1 張。
+    'BS7-076': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'blue',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-077 Chili Pepper Cookie：只要來源仍在戰鬥區，己方紅色 LV.2+
+    // Arena Cookie 造成的效果傷害 +1。
+    'BS7-077': [
+      {
+        kind: 'modify-all-effect-damage',
+        amount: 1,
+        duration: 'persistent',
+        side: 'self',
+        energyColor: 'red',
+        keyword: 'arena',
+        minLevel: 2,
+      },
+    ],
+    // BS7-068 General Jujube Cookie：回合結束時抽牌直到手牌有 4 張。
+    'BS7-068': [{ kind: 'draw-up-to', max: 4, untilHandSize: 4 }],
+    // BS7-083 White Choco Cookie：回合結束時，手牌至多 5 張且有另一張
+    // Arena Cookie 時抽最多 1 張。
+    'BS7-083': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'hand-count-at-most', count: 5 },
+            {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'arena',
+              excludeSource: true,
+            },
+          ],
+        },
+      },
+    ],
+    // BS7-090 Black Sapphire Cookie：昏厥時棄 2 張，再檢視牌庫頂 5 張，
+    // 至多把 Arena 卡加入手牌，其餘進棄牌區。
+    'BS7-090': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 5,
+        pickCount: 2,
+        pickDestination: 'hand',
+        restDestination: 'trash',
+        filterKeyword: 'arena',
+        optionalPick: true,
+      },
+    ],
+    // BS7-093 Cream Puff Cookie：支付紫能量並將自身置入棄牌，再抽最多 2
+    // 張後棄 2 張；支付自我移動由 exactCookieSkillCosts 綁定。
+    'BS7-093': [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 2 }],
+    // BS7-105 Golem Core：從棄牌區登場至多 1 張 Arena Cookie，成功登場
+    // 後只讓剛登場的那張 Cookie 增加 1 HP。
+    'BS7-105': [
+      {
+        kind: 'trash-to-battle',
+        amount: 1,
+        optional: true,
+        keyword: 'arena',
+        thenEffects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 1,
+              max: 1,
+              previousEffectTargetOnly: true,
+            },
+          },
+        ],
+      },
+    ],
+    // BS7-057 Pudding à la Mode Cookie：先把來源卡疲勞放入支援區，
+    // 再從支援區登場 1 張 LV.2 以上 Arena Cookie。
+    'BS7-057': [
+      { kind: 'place-source-to-support', rested: true },
+      {
+        kind: 'support-to-battle',
+        amount: 1,
+        optional: false,
+        minLevel: 2,
+        keyword: 'arena',
+      },
+    ],
+    // BS7-058 Schwarzwälder：5 張 Arena 支援卡以上時，持續獲得 +2 攻擊。
+    // 這是 passive skill 的條件式光環，不能套用「this turn」的一次性修正。
+    'BS7-058': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'support-count-at-least',
+          count: 5,
+          keyword: 'arena',
+        },
+      },
+    ],
+    // BS7-049 Strawberry Crepe Cookie：啟動時先將 Arena 支援卡送入棄牌，
+    // 手牌不超過 6 張才抽 1 張並把牌庫頂放入休息支援區。
+    'BS7-049': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+      {
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+    ],
+    // BS7-050 Rockstar Cookie：昏厥時先支付「將 1 張支援卡返回手牌」的
+    // 觸發代價，再讓對手 1 張已橫置餅乾受到 1 傷害。
+    'BS7-050': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, restedOnly: true },
+      },
+    ],
+    // BS7-051 Mint Choco Cookie：支付 1 張 Arena 支援卡後檢視牌庫頂 3
+    // 張，至多挑 1 張 Arena 放入休息支援區，其餘進棄牌區。
+    'BS7-051': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        restDestination: 'trash',
+        pickDestination: 'support',
+        filterKeyword: 'arena',
+        optionalPick: true,
+      },
+    ],
+    // BS7-003 Raspberry Cookie：登場時若己方有另一張【Arena】Cookie，
+    // 本回合對手不能發動 Blocker。關鍵字條件不應被誤縮成顏色條件，
+    // 因此使用獨立的 battle-area-has-keyword selector 並排除來源卡。
+    'BS7-003': [
+      {
+        kind: 'disable-block',
+        duration: 'this-turn',
+        side: 'opponent',
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-004 Mala Sauce Cookie：只有本回合己方 Arena Cookie 已造成效果傷害
+    // 時，才可支付紅色能量對對手餅乾造成 1 傷害。
+    'BS7-004': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+      },
+    ],
+    // BS7-006 Basil Pesto Cookie：登場時支付自身 1 張 HP，接著抽至多 1 張。
+    'BS7-006': [{ kind: 'draw-up-to', max: 1 }],
+    // BS7-007 Street Urchin Cookie：登場時可從任一方戰鬥區選擇【Arena】Cookie，
+    // 讓該 Cookie 受到 1 點傷害；`either` 必須保留，不能誤縮成對手側。
+    'BS7-007': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'either', min: 0, max: 1, keyword: 'arena' },
+      },
+    ],
+    // BS7-008 Earl Grey Cookie：先由己方【Arena】Cookie 支付 1 張 HP，
+    // 再讓己方至多 1 張 Cookie 增加 1 HP；代價限制放在 exactCookieSkillCosts。
+    'BS7-008': [
+      { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 } },
+    ],
+    // BS7-010 Olive Cookie：昏厥時只有己方戰鬥區仍有【Arena】Cookie，
+    // 才能選擇對手餅乾造成 1 點傷害；條件必須保留在 faint pending queue。
+    'BS7-010': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+        },
+      },
+    ],
+    // BS7-012 Sachertorte Cookie：先從己方任一【Arena】Cookie 支付 1 張 HP，
+    // 再讓同一張已支付 HP 的 Cookie 本回合攻擊傷害 +1；`costSelected`
+    // 透過 costRecord 把「that Cookie」鎖回 HP 代價目標。
+    'BS7-012': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, costSelected: true },
+      },
+    ],
+    // BS7-013 Chili Pepper Cookie：只要本卡仍在戰鬥區，己方紅色、
+    // LV.2 以上【Arena】餅乾造成的效果傷害 +1。
+    'BS7-013': [
+      {
+        kind: 'modify-all-effect-damage',
+        amount: 1,
+        duration: 'persistent',
+        side: 'self',
+        energyColor: 'red',
+        keyword: 'arena',
+        minLevel: 2,
+      },
+    ],
+    // BS7-016 Cream Unicorn Cookie：本回合己方 Arena Cookie 已造成效果傷害
+    // 時，登場後最多抽 1 張；條件沿用回合旗標，不把效果傷害誤當普通攻擊。
+    'BS7-016': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+      },
+    ],
+    // BS7-017 Tarte Tatin Cookie：己方戰鬥區有剩餘 HP 2 以下的 Arena
+    // Cookie 時，抽至多 2 張再棄 1 張；HP 門檻是同一張關鍵字餅乾的條件。
+    'BS7-017': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 2,
+        discardCount: 1,
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          maxRemainingHp: 2,
+        },
+      },
+    ],
+    // BS7-020 Scovilsky Manuscript：只有己方休息區等級總和至少高出對手 2
+    // 級時，才可選對手 LV.1 餅乾造成 3 傷害。
+    'BS7-020': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        condition: {
+          kind: 'break-level-higher-than-opponent',
+          minDifference: 2,
+        },
+      },
+    ],
     'BS6-103': [],
     'BS6-104': [{ kind: 'draw-up-to', max: 1 }],
     // BS6 RED: the first runtime batch uses existing target, HP, end-phase and
@@ -3485,6 +3976,17 @@ export const convertOfficialCardEffects = (
         amount: 1,
         side: 'opponent',
         condition: { kind: 'cookie-played-from-trash-this-turn' },
+      },
+    ],
+    // BS7-001 Nutmeg Tiger Cookie：Activate／每回合一次，將自身 1 張 HP
+    // 放進棄牌區後，可選至多 1 張己方 LV.3 Cookie，本回合攻擊傷害 +1。
+    // HP 代價由 parseAbilityCost 的 sourceOnly 規則保留，目標須限於 LV.3。
+    'BS7-001': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
       },
     ],
   }
@@ -4567,6 +5069,51 @@ export const convertOfficialStageAbility = (
         condition: { kind: 'hand-count-at-most', count: 3 },
       },
     ],
+    // BS7-022 Scovillia Quarters：本回合己方【Arena】Cookie 造成過效果傷害
+    // 後，選擇至多 1 張對手餅乾造成 1 傷害。
+    'BS7-022': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+      },
+    ],
+    // BS7-043 Crème Knights' Quarters：啟動費用 1 黃色能量；本回合有
+    // Arena Cookie 進入休息區後，選擇至多 1 張己方 Cookie +1 HP。
+    'BS7-043': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-065 Cookie Games Stadium：橫置場景後從支援區登場至多 1 張
+    // Arena Cookie；只有真的登場才進入後續抽牌。
+    'BS7-065': [
+      {
+        kind: 'support-to-battle',
+        amount: 1,
+        keyword: 'arena',
+        thenEffects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    ],
+    // BS7-086 Temple of the Sun Central Arena：啟動後抽最多 1 張；藍色
+    // Arena 手牌是啟動代價，見 exactStageCosts。
+    'BS7-086': [{ kind: 'draw-up-to', max: 1 }],
+    // BS7-107 Parfaedia Quarters：把棄牌區最多 2 張沒有 FLIP 的 Arena
+    // Cookie 依選擇順序放到牌庫底。
+    'BS7-107': [
+      {
+        kind: 'trash-to-deck',
+        max: 2,
+        excludeFlip: true,
+        cookieOnly: true,
+        keyword: 'arena',
+        destination: 'bottom',
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -4623,6 +5170,16 @@ export const convertOfficialStageAbility = (
     // 不是場景啟動代價；避免走尚未通用化的 AbilityCost.handToBreakArea。
     'BS6-043': { energy: {}, discardHand: 0 },
     'BS6-086': { energy: {}, discardHand: 2 },
+    'BS7-022': { energy: { red: 1 }, discardHand: 0 },
+    'BS7-043': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS7-065': { energy: {}, discardHand: 0 },
+    'BS7-086': {
+      energy: {},
+      discardHand: 1,
+      discardHandColor: 'blue',
+      discardHandKeyword: 'arena',
+    },
+    'BS7-107': { energy: {}, discardHand: 0 },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber] ?? P_EXACT_EFFECTS[card.baseCardNumber]
   if (stageEffects) {
@@ -6171,6 +6728,345 @@ export const convertOfficialAttackEffects = (
       { kind: 'deck-to-trash', amount: 3, side: 'self' },
       { kind: 'deck-to-trash', amount: 3, side: 'opponent' },
     ],
+    // BS7-015 Crushed Pepper Cookie：Then, if there is another 【Arena】
+    // Cookie in your battle area, the attacked Cookie receives 2 damage.
+    // 「another」必須排除攻擊來源；傷害沒有另行指定目標，因此鎖定本次
+    // 攻擊的對象，沿用 attackTargetOnly 的攻擊後效果語意。
+    'BS7-015': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-018 Jalapeño Cookie：Then, if there is another 【Arena】 Cookie in
+    // your battle area, select up to 1 opponent Cookie and deal 1 damage.
+    'BS7-018': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS7-019 Rye Cookie：Then, optionally use this Cookie as 1 red energy;
+    // if another Arena Cookie exists, deal 1 damage to the attacked Cookie.
+    'BS7-019': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+            condition: {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'arena',
+              excludeSource: true,
+            },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R}. If there is another Arena Cookie in your battle area, deal 1 damage to the attacked Cookie.',
+      },
+    ],
+    // BS7-024 Ice Juggler Cookie：Then, <return 1 card from the top of your
+    // Arena Cookie's HP to your hand.> deals 1 damage to the attacked Cookie.
+    // The HP movement is an optional attack cost, not a generic HP effect;
+    // keep the Arena selector on AbilityCost so the UI, AI and strict ledger
+    // all enforce the same candidate boundary.
+    'BS7-024': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { hpToHand: { amount: 1, keyword: 'arena' } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+        effectText:
+          "Return 1 card from the top of your Arena Cookie's HP to your hand to deal 1 damage to the attacked Cookie.",
+      },
+    ],
+    // BS7-026 Twisted Donut Cookie：Then, <place this Cookie in your break
+    // area.> select up to 1 other Arena Cookie and give it +1 HP.
+    'BS7-026': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToBreakArea: true },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true },
+            condition: {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'arena',
+              excludeSource: true,
+            },
+          },
+        ],
+        effectText:
+          'Place this Cookie in your break area to give up to 1 other Arena Cookie +1 HP.',
+      },
+    ],
+    // BS7-038 Clotted Cream Cookie：Then, 先將手牌 1 張 Cookie 放入休息區，
+    // 再選擇至多 1 張 LV.1 黃色 Arena Cookie 返回手牌；第二段不得選回剛放入
+    // 休息區的同一張卡。兩段拆成可互動的 attackEffects，讓 Browser 與 AI
+    // 都能在第一段後重新取得正確的休息區候選。
+    'BS7-038': [
+      {
+        kind: 'hand-to-break',
+        amount: 1,
+        thenEffects: [
+          {
+            kind: 'break-to-hand',
+            amount: 1,
+            energyColor: 'yellow',
+            keyword: 'arena',
+            minLevel: 1,
+            maxLevel: 1,
+            optional: true,
+            excludePreviousHandToBreak: true,
+          },
+        ],
+      },
+    ],
+    // BS7-039 Financier Cookie：攻擊後只在本回合有 Arena Cookie 進入休息區
+    // 時，對手全體餅乾各受 1 點傷害。
+    'BS7-039': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        // 全體傷害仍需逐張選取；每張 Cookie 的 HP／FLIP／昏厥流程
+        // 完成後，才進入下一個對手目標。
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+        condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+      },
+    ],
+    // BS7-046 Green Tea Mousse Cookie：Then，從支援區登場至多 1 張 Arena
+    // Cookie；支援區登場本身會開啟該卡的 On Play pending（若有）。
+    'BS7-046': [
+      { kind: 'support-to-battle', amount: 1, keyword: 'arena' },
+    ],
+    // BS7-059 Choco Drizzle Cookie：Then 的尖括號是可選攻擊代價；支付
+    // 1 張支援卡後，將己方至多 1 張綠色 LV.2 以下餅乾以 active 放入支援區。
+    'BS7-059': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToTrash: 1 },
+        effects: [
+          {
+            kind: 'battle-to-support',
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              energyColor: 'green',
+              maxLevel: 2,
+            },
+            rested: false,
+          },
+        ],
+        effectText:
+          'Place 1 card from your support area into the trash to place up to 1 {G} LV.2 or lower Cookie from your battle area into your support area as active.',
+      },
+    ],
+    // BS7-066 Princess Cookie：攻擊後可棄 2 張 Arena 手牌，對攻擊目標
+    // 造成 1 點效果傷害。
+    'BS7-066': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2, discardHandKeyword: 'arena' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+        effectText: 'Discard 2 Arena cards to deal 1 damage to the attacked Cookie.',
+      },
+    ],
+    // BS7-067 Dark Choco Cookie：攻擊後可棄 1 張 Arena 手牌，選對手
+    // LV.2 以上餅乾造成 2 點效果傷害。
+    'BS7-067': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1, discardHandKeyword: 'arena' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, minLevel: 2 },
+          },
+        ],
+        effectText: 'Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie.',
+      },
+    ],
+    // BS7-073 Knight Cookie：只有手牌至多 3 張且攻擊目標為 LV.1 時，
+    // 才對該攻擊目標造成 3 點效果傷害。
+    'BS7-073': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'hand-count-at-most', count: 3 },
+            { kind: 'attack-target-level-equals', level: 1 },
+          ],
+        },
+      },
+    ],
+    // BS7-070 Raspberry Mousse Cookie：將己方另一張藍色 LV.2 以下
+    // Arena Cookie 放到牌庫底，再抽最多 1 張。
+    'BS7-070': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          maxLevel: 2,
+          energyColor: 'blue',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS7-082 Red Pepper Cookie：至少棄 1 張手牌；若棄完後手牌只剩
+    // 1 張以下，對手戰鬥區所有餅乾各受 1 傷害。
+    'BS7-082': [
+      { kind: 'discard-hand', count: 1, atLeast: true },
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        // 官方「all of your opponent's Cookies」仍按目標逐張結算，
+        // 不可把兩張餅乾合併成一次批次傷害。
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+        condition: { kind: 'hand-count-at-most', count: 1 },
+      },
+    ],
+    // BS7-088 Camellia Cookie：可支付 1 紫色能量後，若棄牌區有至少
+    // 7 張 Arena 卡，對手至多 1 張餅乾受 2 傷害。
+    'BS7-088': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {P}. If there are 7 Arena cards or more in your trash, deal 2 damage to up to 1 opponent Cookie.',
+      },
+    ],
+    // BS7-089 Latte Cookie：對手手牌至少 6 張時，隨機棄置對手 2 張手牌。
+    'BS7-089': [
+      {
+        kind: 'opponent-random-discard',
+        count: 2,
+        condition: { kind: 'opponent-hand-count-at-least', count: 6 },
+      },
+    ],
+    // BS7-091 Gelato Trio Cookie：將牌庫頂最多 3 張直接置入棄牌區。
+    'BS7-091': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    // BS7-095 Almond Cookie：自己的棄牌區有至少 7 張 Arena 卡時抽最多 1 張。
+    'BS7-095': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ],
+    // BS7-097 Eclair Cookie：自己的棄牌區有至少 7 張 Arena 卡時，
+    // 本餅乾直到對手回合結束攻擊傷害 -1。
+    'BS7-097': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'opponent-next-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ],
+    // BS7-098 Milk Cookie：自己的棄牌區有至少 7 張 Arena 卡時自身 +1 HP。
+    'BS7-098': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ],
+    // BS7-101 Purple Yam Cookie：自己的棄牌區有至少 7 張 Arena 卡時，
+    // 將對手至多 1 張場景卡置入棄牌區。
+    'BS7-101': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        stageOnly: true,
+        allowStage: true,
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    // BS7-102 Kohlrabi Cookie：支付 1 紫色能量並將 5 張未 FLIP 的
+    // Arena 棄牌洗回牌庫後，對手至多 1 張餅乾受 1 傷害。
+    'BS7-102': [
+      {
+        kind: 'optional-cost-attack',
+        cost: {
+          energy: { purple: 1 },
+          trashToDeck: { count: 5, keyword: 'arena', excludeFlip: true },
+        },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {P}. Return 5 Arena cards without FLIP from your trash to your deck to deal 1 damage to up to 1 opponent Cookie.',
+      },
+    ],
+    // BS7-103 Parfaedia Principal：將自己的棄牌區最多 1 張 LV.1
+    // Arena Cookie 返回手牌。
+    'BS7-103': [
+      {
+        kind: 'trash-to-hand',
+        max: 1,
+        maxLevel: 1,
+        keyword: 'arena',
+      },
+    ],
   }
 
   if (exactAttackEffects[card.cardNumber]) {
@@ -6301,6 +7197,231 @@ export const convertOfficialFlipAbility = (
     },
     'BS6-104': {
       effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS7-002 Red Osmanthus Cookie：只有己方戰鬥區存在紅色【Arena】Cookie
+    // 時，且這張 FLIP 所附著的受傷餅乾為 LV.2 以上，才從牌庫補 1 張 HP。
+    // 這是翻開時的一次性條件式 gain-hp，不是 attachedHpBonus 的持續加成。
+    'BS7-002': {
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'red',
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-025 Golden Osmanthus Cookie：與 BS7-002 同樣是附著卡翻開時的
+    // 一次性 +1 HP，但條件改為己方戰鬥區存在黃色【Arena】Cookie。
+    'BS7-025': {
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'yellow',
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-030 Rainbow Sherbet Cookie：手牌至多 5 張且己方有黃色【Arena】
+    // Cookie 時，FLIP 翻開後從牌庫抽最多 2 張。
+    'BS7-030': {
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'yellow',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS7-056 Sting Durian Cookie：有綠色 Arena Cookie 時，附著目標若為
+    // LV.2 以上，翻開效果使其增加 1 HP。
+    'BS7-056': {
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'green',
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-062 Plantain Cookie：手牌至多 5 張且有綠色 Arena Cookie 時抽最多 2 張。
+    'BS7-062': {
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'green',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS7-072 Ice Mint Cookie：手牌至多 5 張且有藍色 Arena Cookie 時抽最多 2 張。
+    'BS7-072': {
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'blue',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS7-078 Frostrock Cookie：有藍色 Arena Cookie 時，LV.2 以上的
+    // 附著目標增加 1 HP。
+    'BS7-078': {
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'blue',
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-096 Espresso Cookie：有紫色 Arena Cookie 時，LV.2 以上附著
+    // 餅乾增加 1 HP。
+    'BS7-096': {
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'purple',
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-100 Witchberry Cookie：手牌至多 5 張且有紫色 Arena Cookie
+    // 時，翻開後抽最多 2 張。
+    'BS7-100': {
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'purple',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS7-011 Yoga Cookie：翻開時同時檢查手牌至多 5 張，以及己方戰鬥區
+    // 存在紅色【Arena】Cookie，成立後最多抽 2 張；兩個條件不可被 generic
+    // parser 拆掉或遺漏，必須由同一個 all-of condition 綁在 draw-up-to 上。
+    'BS7-011': {
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'red',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
     },
     'BS1-040': {
       effects: [
@@ -6701,6 +7822,7 @@ export const convertOfficialTrapAbility = (
       {
         effects: CardEffect[]
         cost?: AbilityCost
+        sourceEnergy?: EnergyCost
         alternativeCosts?: AbilityCost[]
         condition?: TrapAbility['condition']
         ignoreParsedCondition?: boolean
@@ -7214,6 +8336,128 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    // BS7-021 Labyrinth Golem Attack：己方戰鬥區有【Arena】Cookie 時，
+    // 對手選定的攻擊餅乾本回合攻擊傷害 -2，Then 同一目標再受 1 傷害。
+    'BS7-021': {
+      cost: { energy: { red: 1, neutral: 1 }, discardHand: 0 },
+      sourceEnergy: { red: 2 },
+      condition: { kind: 'battle-area-has-keyword', keyword: 'arena' },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      ],
+    },
+    // BS7-042 Valiant Victor's Salvation：第一段攻擊下降總是可選；
+    // 第二段是 Then 條件，只有自己的休息區至少有 3 張 Arena Cookie
+    // 才建立同樣的攻擊下降效果，不把條件誤當成陷阱發動門檻。
+    'BS7-042': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'break-area-card-count-at-least',
+            side: 'self',
+            count: 3,
+            keyword: 'arena',
+          },
+        },
+      ],
+    },
+    // BS7-064 Cookie Windmill：第一段攻擊下降後，支付 1 張支援卡，
+    // 再從棄牌區選至多 1 張 Cookie 以橫置狀態放入支援區。
+    'BS7-064': {
+      cost: { energy: { green: 1 }, supportToTrash: 1 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'support-to-trash', amount: 1 },
+        { kind: 'trash-to-support', amount: 1, rested: true, optional: true },
+      ],
+    },
+    // BS7-085 A Victory For You：攻擊下降後，只有手牌至多 2 張且
+    // 己方戰鬥區有 Arena Cookie 時才抽最多 2 張。
+    'BS7-085': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 2 },
+              { kind: 'battle-area-has-keyword', side: 'self', keyword: 'arena' },
+            ],
+          },
+        },
+      ],
+    },
+    // BS7-106 Securing the First Victory：支付 1 張手牌後，
+    // 從棄牌區回收至多 1 張 Arena Cookie。
+    'BS7-106': {
+      cost: { energy: { purple: 1 }, discardHand: 1 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'trash-to-hand', max: 1, keyword: 'arena' },
+      ],
+    },
+    // BS7-108 Arena of Glory：第一段攻擊下降後，若己方休息區 LV
+    // 比對手高至少 3，才可再選對手 LV.3 餅乾使其攻擊傷害 -2。
+    'BS7-108': {
+      cost: { energy: { neutral: 1 } },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+          condition: {
+            kind: 'break-level-higher-than-opponent',
+            minDifference: 3,
+          },
+        },
+      ],
+    },
   }
 
   const exactTrap =
@@ -7222,6 +8466,9 @@ export const convertOfficialTrapAbility = (
     return {
       text,
       cost: exactTrap.cost ?? parseAbilityCost(text),
+      ...(exactTrap.sourceEnergy
+        ? { sourceEnergy: exactTrap.sourceEnergy }
+        : {}),
       ...(exactTrap.alternativeCosts
         ? { alternativeCosts: exactTrap.alternativeCosts }
         : {}),
@@ -7290,6 +8537,81 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHand: 0,
     hpToTrash: { amount: 1, energyColor: 'red' },
   },
+  // BS7-006 的 On Play 尖括號代價是自身 HP，官方文字沒有 generic
+  // parser 所需的標準「this Cookie」句型，明確保留 sourceOnly。
+  'BS7-006': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, sourceOnly: true },
+  },
+  'BS7-008': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, keyword: 'arena' },
+  },
+  'BS7-012': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, keyword: 'arena' },
+  },
+  // BS7-027 的 Activate 費用只有 1 黃色能量；明確覆寫可避免官方
+  // 尖括號標記在不同語系／格式化版本下被誤分類成一般效果成本。
+  'BS7-027': {
+    energy: { yellow: 1 },
+    discardHand: 0,
+  },
+  'BS7-028': { energy: {}, discardHand: 0 },
+  'BS7-029': { energy: { yellow: 1 }, discardHand: 0 },
+  'BS7-031': { energy: { yellow: 1 }, discardHand: 1 },
+  'BS7-032': { energy: {}, discardHand: 0 },
+  // BS7-033 的尖括號是登場時的戰鬥區移動成本；先以零能量技能成本
+  // 開啟 pending effect，再由第一個 battle-to-break 效果完成選卡。
+  'BS7-033': { energy: {}, discardHand: 0 },
+  'BS7-036': { energy: {}, discardHand: 0 },
+  // BS7-037 的 Activate 代價是將自身放入休息區，不是一般能量支付。
+  'BS7-037': { energy: {}, discardHand: 0, selfToBreakArea: true },
+  'BS7-044': { energy: {}, discardHand: 0 },
+  'BS7-045': { energy: {}, discardHand: 0 },
+  // BS7-046 的登場成本是棄 1 張牌；支援區登場效果本身另由 exact effects
+  // 展開，避免把「Then」攻擊效果誤算進 On Play。
+  'BS7-046': { energy: {}, discardHand: 1 },
+  'BS7-048': { energy: {}, discardHand: 0 },
+  'BS7-049': {
+    energy: { green: 1 },
+    discardHand: 0,
+    supportToTrash: 1,
+    supportToTrashKeyword: 'arena',
+  },
+  'BS7-050': { energy: {}, discardHand: 0, supportToHand: 1 },
+  'BS7-051': {
+    energy: {},
+    discardHand: 0,
+    supportToTrash: 1,
+    supportToTrashKeyword: 'arena',
+  },
+  'BS7-053': { energy: {}, discardHand: 0 },
+  'BS7-054': { energy: {}, discardHand: 0, supportToHand: 1 },
+  'BS7-055': { energy: {}, discardHand: 0 },
+  'BS7-057': { energy: { green: 2 }, discardHand: 0 },
+  'BS7-060': { energy: {}, discardHand: 0 },
+    'BS7-061': {
+      energy: {},
+      discardHand: 0,
+      supportToTrash: 1,
+      supportToTrashKeyword: 'arena',
+    },
+  'BS7-067': { energy: { blue: 1 }, discardHand: 0 },
+  'BS7-069': { energy: {}, discardHand: 2 },
+  'BS7-074': { energy: {}, discardHand: 0 },
+  'BS7-075': {
+    energy: {},
+    discardHand: 1,
+    discardHandKeyword: 'arena',
+  },
+  'BS7-076': { energy: {}, discardHand: 0, selfToDeckBottom: true },
+  'BS7-090': { energy: {}, discardHand: 2 },
+  'BS7-093': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  'BS7-105': { energy: { purple: 2 }, discardHand: 0 },
   'BS6-014': {
     energy: {},
     discardHand: 0,
@@ -7459,10 +8781,71 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   },
 }
 
+/** 卡面同時含靜態被動句與 Activate 技能時，分開保留靜態效果。 */
+const exactCookieSkillPassiveEffects: Partial<Record<string, CardEffect[]>> = {
+  // BS7-014 Capsaicin Cookie：指定卡名任一張在己方戰鬥區時自身 +1 攻擊。
+  'BS7-014': [
+    {
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'persistent',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: {
+        kind: 'any-of',
+        conditions: [
+          {
+            kind: 'battle-area-has-named-cookie',
+            side: 'self',
+            name: 'Kouign-Amann Cookie',
+          },
+          {
+            kind: 'battle-area-has-named-cookie',
+            side: 'self',
+            name: 'Prune Juice Cookie',
+          },
+        ],
+      },
+    },
+  ],
+}
+
+/** 卡面同時有獨立 On Play 與 Activate 子句時，保留登場效果的單次時機。 */
+const exactCookieSkillOnPlayEffects: Partial<Record<string, CardEffect[]>> = {
+  // BS7-035 Kouign-Amann Cookie：登場時若己方戰鬥區有 Capsaicin 或
+  // Prune Juice，這張卡本身增加 1 HP；不能放入 Activate effects，否則
+  // 每次啟動傷害技能都會重複補 HP。
+  'BS7-035': [
+    {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: {
+        kind: 'any-of',
+        conditions: [
+          {
+            kind: 'battle-area-has-named-cookie',
+            side: 'self',
+            name: 'Capsaicin Cookie',
+          },
+          {
+            kind: 'battle-area-has-named-cookie',
+            side: 'self',
+            name: 'Prune Juice Cookie',
+          },
+        ],
+      },
+    },
+  ],
+}
+
 const exactCookieSkillSourceEnergy: Partial<
   Record<string, CardSkill['sourceEnergy']>
 > = {
   'P-017': { green: 1 },
+  // BS7-040 Whipped Cream Cookie：昏厥效果可由自身作為 1 黃色能量支付。
+  'BS7-040': { yellow: 1 },
+  // BS7-048 Poison Mushroom Cookie：昏厥效果可由自身作為 1 綠色能量支付。
+  'BS7-048': { green: 1 },
 }
 
 /**
@@ -7477,6 +8860,16 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   // BS5-092 與 BS5-081 同樣是「When your opponent's Cookie attacks」的
   // 防守方一次性回應技能，在陷阱視窗內宣告並支付代價。
   'BS5-092': 'opponent-attack',
+  // BS7-079 uses the same defensive timing in plain prose without an
+  // explicit `{mob}` marker: it triggers when the opponent declares an
+  // attack, so it must enter the real attack-response window rather than be
+  // treated as a passive aura.
+  'BS7-079': 'opponent-attack',
+  // BS7-044～046 的技能都寫成「從支援區登場時」，但官方資料未提供
+  // `{ap}` 標記；固定為 On Play，並由 fromSupportArea 限定來源。
+  'BS7-044': 'on-play',
+  'BS7-045': 'on-play',
+  'BS7-046': 'on-play',
 }
 
 /**
@@ -7528,7 +8921,7 @@ export const convertOfficialCookieSkill = (
     trigger:
       P_EXACT_SKILL_TRIGGERS[cardKey] ??
       exactCookieSkillTriggers[cardKey] ??
-      (/when this Cookie is played from the trash/i.test(card.skill.text)
+      (/(?:when|if) this Cookie is played from the (?:trash|support)(?: area)?/i.test(card.skill.text)
         ? 'on-play'
         : undefined) ??
       (parsed.markers.includes('bl') &&
@@ -7554,6 +8947,15 @@ export const convertOfficialCookieSkill = (
       : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
+    ...(exactCookieSkillPassiveEffects[cardKey]
+      ? { passiveEffects: exactCookieSkillPassiveEffects[cardKey] }
+      : {}),
+    ...(exactCookieSkillOnPlayEffects[cardKey]
+      ? { onPlayEffects: exactCookieSkillOnPlayEffects[cardKey] }
+      : {}),
+    ...(exactCookieSkillOnPlayEffects[cardKey]
+      ? { onPlayCost: { energy: {}, discardHand: 0 } }
+      : {}),
     faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),
     endPhase: endPhaseScope !== undefined,
     ...(endPhaseScope ? { endPhaseScope } : {}),
@@ -7570,6 +8972,8 @@ export const convertOfficialCookieSkill = (
     fromTrashArea:
       P_FROM_TRASH.has(cardKey) ||
       /when this Cookie is played from the trash/i.test(card.skill.text),
-    fromSupportArea: P_FROM_SUPPORT.has(cardKey),
+    fromSupportArea:
+      P_FROM_SUPPORT.has(cardKey) ||
+      /when this Cookie is played from the support area/i.test(card.skill.text),
   }
 }

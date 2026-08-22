@@ -8,6 +8,8 @@ import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.j
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
 import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
+import officialBS7Candidates from '../../data/candidates/official-arena-of-glory-bs7.en.json'
+import { convertOfficialCardToGameCard } from './official-card-adapter'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
@@ -29,6 +31,7 @@ const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
 const bs4DatasetCards = officialBS4Dataset.cards as OfficialCardRecord[]
+const bs7CandidateCards = officialBS7Candidates.cards as OfficialCardRecord[]
 // 保留少量內嵌官方資料作為明確 fixture，避免測試依賴完整卡池內容；找不到
 // fixture 的 BS4 卡牌才回退到已 promote 的正式資料集。
 const bs4Cards: OfficialCardRecord[] = [
@@ -393,6 +396,18 @@ const findBs4Card = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing BS4 card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBs7Candidate = (cardNumber: string) => {
+  const card = bs7CandidateCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing BS7 candidate card ${cardNumber}`)
   }
 
   return card
@@ -3943,6 +3958,1246 @@ describe('Starter Deck RED official effect adapter', () => {
           },
         ],
       })
+    })
+  })
+})
+
+describe('BS7 candidate effect adapter', () => {
+  it('keeps BS7-001 activation timing, source-only HP cost, and LV.3 target boundary', () => {
+    const card = findBs7Candidate('BS7-001')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { hpToTrash: { amount: 1, sourceOnly: true } },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-002 into a conditional one-time FLIP HP gain, not an attached HP bonus', () => {
+    const card = findBs7Candidate('BS7-002')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [],
+    })
+    expect(convertOfficialFlipAbility(card)).toMatchObject({
+      cost: { energy: {}, discardHand: 0 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'red',
+            keyword: 'arena',
+          },
+        },
+      ],
+    })
+    expect(convertOfficialFlipAbility(card)).not.toHaveProperty('attachedHpBonus')
+  })
+
+  it('converts BS7-003 On Play into a keyword-scoped anti-Blocker effect', () => {
+    const card = findBs7Candidate('BS7-003')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'disable-block',
+          duration: 'this-turn',
+          side: 'opponent',
+          condition: {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'arena',
+            excludeSource: true,
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'disable-block',
+          duration: 'this-turn',
+          side: 'opponent',
+          condition: {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'arena',
+            excludeSource: true,
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-004 into a once-per-turn conditional effect-damage skill', () => {
+    const card = findBs7Candidate('BS7-004')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { red: 1 } },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-006 On Play HP payment followed by optional draw', () => {
+    const card = findBs7Candidate('BS7-006')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      cost: { hpToTrash: { amount: 1, sourceOnly: true } },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+  })
+
+  it('converts BS7-007 On Play into an either-side Arena Cookie damage selector', () => {
+    const card = findBs7Candidate('BS7-007')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'either', min: 0, max: 1, keyword: 'arena' },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'damage',
+          target: { side: 'either', keyword: 'arena' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-008 into an Arena HP cost followed by optional self HP gain', () => {
+    const card = findBs7Candidate('BS7-008')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 } }],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      cost: { hpToTrash: { amount: 1, keyword: 'arena' } },
+      effects: [{ kind: 'gain-hp', amount: 1 }],
+    })
+  })
+
+  it('converts BS7-010 faint damage with the remaining Arena condition', () => {
+    const card = findBs7Candidate('BS7-010')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'arena',
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      effects: [
+        {
+          kind: 'damage',
+          condition: {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'arena',
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-011 FLIP draw with both hand and red Arena conditions', () => {
+    const card = findBs7Candidate('BS7-011')
+
+    expect(convertOfficialFlipAbility(card)).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'red',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-012 Arena HP payment into a cost-selected attack bonus', () => {
+    const card = findBs7Candidate('BS7-012')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 1, max: 1, costSelected: true },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { hpToTrash: { amount: 1, keyword: 'arena' } },
+      effects: [
+        {
+          kind: 'modify-attack',
+          target: { side: 'self', costSelected: true },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-013 into a persistent red Arena effect-damage aura', () => {
+    const card = findBs7Candidate('BS7-013')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'modify-all-effect-damage',
+          amount: 1,
+          duration: 'persistent',
+          side: 'self',
+          energyColor: 'red',
+          keyword: 'arena',
+          minLevel: 2,
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'passive',
+      effects: [
+        {
+          kind: 'modify-all-effect-damage',
+          amount: 1,
+          energyColor: 'red',
+          keyword: 'arena',
+          minLevel: 2,
+        },
+      ],
+    })
+  })
+
+  it('keeps BS7-014 static named-cookie attack text separate from Activate damage', () => {
+    const card = findBs7Candidate('BS7-014')
+
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 1 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 2 },
+        },
+      ],
+      passiveEffects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'persistent',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Kouign-Amann Cookie',
+              },
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Prune Juice Cookie',
+              },
+            ],
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-015 Arena attack Then damage to the attacked Cookie', () => {
+    const card = findBs7Candidate('BS7-015')
+
+    expect(convertOfficialAttackEffects(card)).toEqual([
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ])
+  })
+
+  it('converts BS7-016 On Play effect-damage condition into optional draw', () => {
+    const card = findBs7Candidate('BS7-016')
+
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-017 low-HP Arena condition into draw-then-discard', () => {
+    const card = findBs7Candidate('BS7-017')
+
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'draw-up-to-then-discard',
+          max: 2,
+          discardCount: 1,
+          condition: {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'arena',
+            maxRemainingHp: 2,
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-018 Arena attack Then target damage', () => {
+    const card = findBs7Candidate('BS7-018')
+
+    expect(convertOfficialAttackEffects(card)).toEqual([
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+    ])
+  })
+
+  it('converts BS7-019 optional red-energy attack Then damage', () => {
+    const card = findBs7Candidate('BS7-019')
+
+    expect(convertOfficialAttackEffects(card)).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+            condition: {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'arena',
+              excludeSource: true,
+            },
+          },
+        ],
+      },
+    ])
+  })
+
+  it('converts BS7-020 break-level gap item condition', () => {
+    const card = findBs7Candidate('BS7-020')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 3,
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          condition: {
+            kind: 'break-level-higher-than-opponent',
+            minDifference: 2,
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-021 Arena trap condition and two-step response', () => {
+    const card = findBs7Candidate('BS7-021')
+
+    expect(convertOfficialTrapAbility(card)).toMatchObject({
+      cost: { energy: { red: 1, neutral: 1 } },
+      sourceEnergy: { red: 2 },
+      condition: { kind: 'battle-area-has-keyword', keyword: 'arena' },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-022 Arena effect-damage stage activation', () => {
+    const card = findBs7Candidate('BS7-022')
+
+    expect(convertOfficialStageAbility(card)).toMatchObject({
+      placementCost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      restSource: true,
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+  })
+
+  it('keeps BS7-023 as a converted attack-only Arena Cookie with no skill effect', () => {
+    const card = findBs7Candidate('BS7-023')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'unsupported',
+      cardNumber: 'BS7-023',
+      reason: 'no-effect-text',
+    })
+    expect(convertOfficialCookieSkill(card)).toBeUndefined()
+  })
+
+  it('converts BS7-024 Arena HP-return attack cost into attacked-Cookie damage', () => {
+    const card = findBs7Candidate('BS7-024')
+
+    expect(convertOfficialAttackEffects(card)).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { hpToHand: { amount: 1, keyword: 'arena' } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+      },
+    ])
+  })
+
+  it('converts BS7-025 into a conditional yellow Arena FLIP HP gain', () => {
+    const card = findBs7Candidate('BS7-025')
+
+    expect(convertOfficialCardEffects(card)).toMatchObject({
+      status: 'supported',
+      effects: [],
+    })
+    expect(convertOfficialFlipAbility(card)).toMatchObject({
+      cost: { energy: { }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+            minLevel: 2,
+          },
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'yellow',
+            keyword: 'arena',
+          },
+        },
+      ],
+    })
+    expect(convertOfficialFlipAbility(card)).not.toHaveProperty('attachedHpBonus')
+  })
+
+  it('converts BS7-026 optional self-break cost into an Arena HP target', () => {
+    const card = findBs7Candidate('BS7-026')
+
+    expect(convertOfficialAttackEffects(card)).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToBreakArea: true },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true },
+            condition: {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'arena',
+              excludeSource: true,
+            },
+          },
+        ],
+      },
+    ])
+  })
+
+  it('converts BS7-027 into a yellow Activate with break-event condition', () => {
+    const card = findBs7Candidate('BS7-027')
+
+    expect(convertOfficialCookieSkill(card)).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 2,
+          duration: 'this-turn',
+          target: { side: 'self', min: 0, max: 1 },
+          condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-028 through BS7-032 with their break-event selectors', () => {
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-028'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-029'))).toMatchObject({
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+        },
+      ],
+    })
+    expect(convertOfficialFlipAbility(findBs7Candidate('BS7-030'))).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              {
+                kind: 'battle-area-has-color',
+                side: 'self',
+                color: 'yellow',
+                keyword: 'arena',
+              },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-031'))).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { yellow: 1 }, discardHand: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1, keyword: 'arena' },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-032'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'set-cookie-active',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-033 through BS7-037 with their Arena boundaries', () => {
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-033'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'battle-to-break',
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            keyword: 'arena',
+            excludeSource: true,
+          },
+        },
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-034'))).toBeUndefined()
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-035'))).toMatchObject({
+      trigger: 'activate',
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      onPlayCost: { energy: {}, discardHand: 0 },
+      onPlayEffects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              { kind: 'battle-area-has-named-cookie', name: 'Capsaicin Cookie' },
+              { kind: 'battle-area-has-named-cookie', name: 'Prune Juice Cookie' },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-036'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'gain-hp',
+          target: { side: 'self', min: 0, max: 1, keyword: 'arena', noSkillOnly: true },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-037'))).toMatchObject({
+      trigger: 'activate',
+      cost: { energy: {}, discardHand: 0, selfToBreakArea: true },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          condition: {
+            kind: 'battle-area-has-color',
+            side: 'self',
+            color: 'yellow',
+            keyword: 'arena',
+            excludeSource: true,
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-038 through BS7-040 with ordered movement and faint payment', () => {
+    expect(convertOfficialCardToGameCard(findBs7Candidate('BS7-038'))).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attackEffects: [
+          {
+            kind: 'hand-to-break',
+            amount: 1,
+            thenEffects: [
+              {
+                kind: 'break-to-hand',
+                amount: 1,
+                energyColor: 'yellow',
+                keyword: 'arena',
+                minLevel: 1,
+                maxLevel: 1,
+                optional: true,
+                excludePreviousHandToBreak: true,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    expect(convertOfficialCardToGameCard(findBs7Candidate('BS7-039'))).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        skill: {
+          oncePerTurn: true,
+          effects: [{ kind: 'gain-hp', amount: 1 }],
+        },
+        attackEffects: [
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+            condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+          },
+        ],
+      },
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-040'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      sourceEnergy: { yellow: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1, keyword: 'arena' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-041 item Then draw and BS7-042 trap follow-up condition', () => {
+    expect(convertOfficialItemAbility(findBs7Candidate('BS7-041'))).toMatchObject({
+      cost: { yellow: 1 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          condition: { kind: 'arena-cookie-placed-in-break-this-turn' },
+        },
+        { kind: 'draw-up-to', max: 1 },
+      ],
+    })
+    expect(convertOfficialTrapAbility(findBs7Candidate('BS7-042'))).toMatchObject({
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -1 },
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          condition: {
+            kind: 'break-area-card-count-at-least',
+            side: 'self',
+            count: 3,
+            keyword: 'arena',
+          },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-063 and BS7-065 with Arena selectors and conditional follow-up draw', () => {
+    expect(convertOfficialItemAbility(findBs7Candidate('BS7-063'))).toMatchObject({
+      cost: { green: 2 },
+      effects: [
+        {
+          kind: 'inspect-deck',
+          lookCount: 3,
+          pickCount: 1,
+          pickDestination: 'support',
+          restDestination: 'trash',
+          filterKeyword: 'arena',
+          optionalPick: true,
+        },
+      ],
+    })
+    expect(convertOfficialStageAbility(findBs7Candidate('BS7-065'))).toMatchObject({
+      placementCost: { green: 1 },
+      cost: { energy: {}, discardHand: 0 },
+      restSource: true,
+      effects: [
+        {
+          kind: 'support-to-battle',
+          amount: 1,
+          keyword: 'arena',
+          thenEffects: [{ kind: 'draw-up-to', max: 1 }],
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-066, BS7-067, BS7-069 and BS7-073 with strict hand/level boundaries', () => {
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-066'))).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { discardHand: 2, discardHandKeyword: 'arena' },
+        effects: [{ kind: 'damage', amount: 1, target: { attackTargetOnly: true } }],
+      },
+    ])
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-067'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { blue: 1 } },
+      effects: [
+        {
+          kind: 'set-cookie-active',
+          condition: { kind: 'hand-count-at-most', count: 5 },
+        },
+      ],
+    })
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-067'))).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { discardHand: 1, discardHandKeyword: 'arena' },
+        effects: [{ kind: 'damage', amount: 2, target: { minLevel: 2 } }],
+      },
+    ])
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-069'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 2 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          target: { keyword: 'arena', excludeSource: true },
+        },
+      ],
+    })
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-073'))).toMatchObject([
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { attackTargetOnly: true },
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'hand-count-at-most', count: 3 },
+            { kind: 'attack-target-level-equals', level: 1 },
+          ],
+        },
+      },
+    ])
+  })
+
+  it('converts BS7-072, BS7-074, BS7-075, BS7-076, BS7-077 and BS7-078', () => {
+    expect(convertOfficialFlipAbility(findBs7Candidate('BS7-072'))).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              { kind: 'battle-area-has-color', color: 'blue', keyword: 'arena' },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-074'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [{ kind: 'draw-up-to', max: 2, condition: { kind: 'hand-count-at-most', count: 3 } }],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-075'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      cost: { discardHand: 1, discardHandKeyword: 'arena' },
+      effects: [{ kind: 'draw-up-to', max: 2 }],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-076'))).toMatchObject({
+      trigger: 'activate',
+      cost: { selfToDeckBottom: true },
+      effects: [
+        {
+          kind: 'draw-up-to',
+          condition: { kind: 'battle-area-has-color', color: 'blue', keyword: 'arena', excludeSource: true },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-077'))).toMatchObject({
+      trigger: 'passive',
+      effects: [
+        {
+          kind: 'modify-all-effect-damage',
+          amount: 1,
+          side: 'self',
+          energyColor: 'red',
+          keyword: 'arena',
+          minLevel: 2,
+        },
+      ],
+    })
+    expect(convertOfficialFlipAbility(findBs7Candidate('BS7-078'))).toMatchObject({
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { sourceOnly: true, minLevel: 2 },
+          condition: { kind: 'battle-area-has-color', color: 'blue', keyword: 'arena' },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-068, BS7-083, BS7-090, BS7-093 and BS7-105', () => {
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-068'))).toMatchObject({
+      trigger: 'passive',
+      endPhase: true,
+      effects: [{ kind: 'draw-up-to', max: 4, untilHandSize: 4 }],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-083'))).toMatchObject({
+      trigger: 'passive',
+      endPhase: true,
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              { kind: 'battle-area-has-keyword', keyword: 'arena', excludeSource: true },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-090'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      cost: { discardHand: 2 },
+      effects: [
+        {
+          kind: 'inspect-deck',
+          lookCount: 5,
+          pickCount: 2,
+          pickDestination: 'hand',
+          restDestination: 'trash',
+          filterKeyword: 'arena',
+          optionalPick: true,
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-093'))).toMatchObject({
+      trigger: 'activate',
+      cost: { energy: { purple: 1 }, selfToTrash: true },
+      effects: [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 2 }],
+    })
+    expect(convertOfficialItemAbility(findBs7Candidate('BS7-105'))).toMatchObject({
+      cost: { purple: 2 },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          keyword: 'arena',
+          thenEffects: [
+            {
+              kind: 'gain-hp',
+              amount: 1,
+              target: { previousEffectTargetOnly: true },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('keeps BS7-079 in the opponent-attack response window', () => {
+    expect(convertOfficialCookieSkill(findBs7Candidate('BS7-079'))).toMatchObject({
+      trigger: 'opponent-attack',
+      oncePerTurn: true,
+      cost: { discardHand: 1 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('converts BS7-086, BS7-096, BS7-100 and BS7-107 with color/FLIP boundaries', () => {
+    expect(convertOfficialStageAbility(findBs7Candidate('BS7-086'))).toMatchObject({
+      placementCost: { blue: 1 },
+      cost: {
+        discardHand: 1,
+        discardHandColor: 'blue',
+        discardHandKeyword: 'arena',
+      },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+    expect(convertOfficialFlipAbility(findBs7Candidate('BS7-096'))).toMatchObject({
+      effects: [
+        {
+          kind: 'gain-hp',
+          target: { sourceOnly: true, minLevel: 2 },
+          condition: { kind: 'battle-area-has-color', color: 'purple', keyword: 'arena' },
+        },
+      ],
+    })
+    expect(convertOfficialFlipAbility(findBs7Candidate('BS7-100'))).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              { kind: 'battle-area-has-color', color: 'purple', keyword: 'arena' },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialStageAbility(findBs7Candidate('BS7-107'))).toMatchObject({
+      placementCost: { purple: 1 },
+      effects: [
+        {
+          kind: 'trash-to-deck',
+          max: 2,
+          destination: 'bottom',
+          cookieOnly: true,
+          keyword: 'arena',
+          excludeFlip: true,
+        },
+      ],
+    })
+  })
+
+  it('converts the remaining BS7 attack Then effects with exact target and cost boundaries', () => {
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-070'))).toMatchObject([
+      {
+        kind: 'field-to-deck-bottom',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          maxLevel: 2,
+          energyColor: 'blue',
+          keyword: 'arena',
+          excludeSource: true,
+        },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-082'))).toMatchObject([
+      { kind: 'discard-hand', count: 1, atLeast: true },
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+        condition: { kind: 'hand-count-at-most', count: 1 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-088'))).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+          },
+        ],
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-089'))).toMatchObject([
+      {
+        kind: 'opponent-random-discard',
+        count: 2,
+        condition: { kind: 'opponent-hand-count-at-least', count: 6 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-091'))).toMatchObject([
+      { kind: 'deck-to-trash', amount: 3, side: 'self' },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-095'))).toMatchObject([
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-097'))).toMatchObject([
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'opponent-next-turn',
+        target: { sourceOnly: true },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-098'))).toMatchObject([
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { sourceOnly: true },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-101'))).toMatchObject([
+      {
+        kind: 'field-to-trash',
+        stageOnly: true,
+        allowStage: true,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 7 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-102'))).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: {
+          energy: { purple: 1 },
+          trashToDeck: { count: 5, keyword: 'arena', excludeFlip: true },
+        },
+        effects: [{ kind: 'damage', amount: 1 }],
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs7Candidate('BS7-103'))).toMatchObject([
+      { kind: 'trash-to-hand', max: 1, maxLevel: 1, keyword: 'arena' },
+    ])
+  })
+
+  it('keeps the remaining BS7 trap Then clauses as ordered runtime effects', () => {
+    expect(convertOfficialTrapAbility(findBs7Candidate('BS7-064'))).toMatchObject({
+      cost: { energy: { green: 1 }, supportToTrash: 1 },
+      effects: [
+        { kind: 'modify-attack', amount: -1 },
+        { kind: 'support-to-trash', amount: 1 },
+        { kind: 'trash-to-support', amount: 1, rested: true, optional: true },
+      ],
+    })
+    expect(convertOfficialTrapAbility(findBs7Candidate('BS7-085'))).toMatchObject({
+      effects: [
+        { kind: 'modify-attack', amount: -1 },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 2 },
+              { kind: 'battle-area-has-keyword', side: 'self', keyword: 'arena' },
+            ],
+          },
+        },
+      ],
+    })
+    expect(convertOfficialTrapAbility(findBs7Candidate('BS7-106'))).toMatchObject({
+      cost: { energy: { purple: 1 }, discardHand: 1 },
+      effects: [
+        { kind: 'modify-attack', amount: -1 },
+        { kind: 'trash-to-hand', max: 1, keyword: 'arena' },
+      ],
+    })
+    expect(convertOfficialTrapAbility(findBs7Candidate('BS7-108'))).toMatchObject({
+      cost: { energy: { neutral: 1 } },
+      effects: [
+        { kind: 'modify-attack', amount: -1 },
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          target: { side: 'opponent', minLevel: 3, maxLevel: 3 },
+          condition: { kind: 'break-level-higher-than-opponent', minDifference: 3 },
+        },
+      ],
     })
   })
 })

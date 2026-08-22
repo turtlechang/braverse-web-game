@@ -139,6 +139,7 @@ export interface RuntimeCardEvidence {
   ability?: {
     cost?: AbilityCost
     restSource?: boolean
+    sourceEnergy?: EnergyCost
     effects?: CardEffect[]
   }
   unsupportedReason?: string

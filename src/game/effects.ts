@@ -33,6 +33,7 @@ export {
 } from './effects/targeting'
 export {
   getAttackDamageAgainst,
+  getEffectDamageAmount,
   getEffectiveAttack,
   getEffectiveAttackBreakdown,
   type AttackModifierBreakdownEntry,

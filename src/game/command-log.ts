@@ -147,6 +147,30 @@ const describeHpTrashStep = (
   }
 }
 
+const describeHpToHandStep = (
+  previous: GameState,
+  next: GameState,
+  hpToHandTargetIds: string[] | undefined,
+): LogStepDetail | undefined => {
+  const targetId = hpToHandTargetIds?.[0]
+  if (!targetId) return undefined
+  const previousCookie = Object.values(previous.players)
+    .flatMap((player) => player.battleArea)
+    .find((cookie) => cookie.card.instanceId === targetId)
+  const nextCookie = Object.values(next.players)
+    .flatMap((player) => player.battleArea)
+    .find((cookie) => cookie.card.instanceId === targetId)
+  const movedCount = previousCookie && nextCookie
+    ? previousCookie.hpCards.length - nextCookie.hpCards.length
+    : previousCookie
+      ? previousCookie.hpCards.length
+      : 0
+  if (movedCount <= 0) return undefined
+  return {
+    text: `攻擊後代價：從「${findCardName(previous, targetId)}」返回 ${movedCount} 張 HP 卡至手牌`,
+  }
+}
+
 /**
  * 找出 resolve-next-damage 這筆指令實際翻開的 HP 卡。不能只看
  * `pendingBattle.revealedHpCard`：沒有 FLIP 能力的卡翻開後會在同一個指令裡
@@ -1610,6 +1634,23 @@ export const describeCommandSteps = (
       }
       return steps
     }
+    case 'resolve-flip': {
+      const flippedCard = previous.pendingBattle?.revealedHpCard
+      if (!command.activate) {
+        return [
+          {
+            text: 'FLIP 效果結果：選擇不發動，效果未執行',
+            cards: flippedCard ? [flippedCard] : undefined,
+          },
+        ]
+      }
+      return [
+        {
+          text: `FLIP 效果結果：已發動${flippedCard ? `「${flippedCard.name}」` : ''}`,
+          cards: flippedCard ? [flippedCard] : undefined,
+        },
+      ]
+    }
     case 'resolve-attack-effect': {
       const effects = getResolvedEffects(previous, command)
       const effect = effects[0]
@@ -1713,6 +1754,12 @@ export const describeCommandSteps = (
         command.hpToTrashIds,
       )
       if (hpToTrashStep) steps.push(hpToTrashStep)
+      const hpToHandStep = describeHpToHandStep(
+        state,
+        next,
+        command.hpToHandIds,
+      )
+      if (hpToHandStep) steps.push(hpToHandStep)
       const trashToDeckStep = describeCardListStep(
         state,
         '攻擊後代價：棄牌區卡片洗回牌庫',
@@ -1725,6 +1772,7 @@ export const describeCommandSteps = (
         !discardStep &&
         !supportToHandStep &&
         !hpToTrashStep &&
+        !hpToHandStep &&
         !trashToDeckStep
       ) {
         steps.push({ text: '攻擊後代價：已支付（無需額外選牌）' })
@@ -1821,6 +1869,12 @@ export const describeCommandSteps = (
         command.supportToTrashIds,
       )
       if (supportTrashStep) steps.push(supportTrashStep)
+      const supportToHandStep = describeCardListStep(
+        state,
+        '昏厥效果代價：支援區返回手牌',
+        command.supportToHandIds,
+      )
+      if (supportToHandStep) steps.push(supportToHandStep)
       const targetStep = describeCardListStep(
         state,
         '昏厥效果目標',
@@ -1951,6 +2005,15 @@ export const resolveLogCard = (
     case 'attack':
     case 'declare-attack':
       return findCard(previous, command.attackerInstanceId)
+    case 'resolve-battle':
+      // The automatic battle resolver does not carry an attacker ID in its
+      // command payload, but the pending battle still identifies the source
+      // while the command-log entry is built. Associating that entry with the
+      // attacker lets Browser contract traces prove passive attack modifiers
+      // and ordinary damage resolution without exposing private payloads.
+      return previous.pendingBattle?.attackerInstanceId
+        ? findCard(previous, previous.pendingBattle.attackerInstanceId)
+        : undefined
     case 'resolve-attack-effect':
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)

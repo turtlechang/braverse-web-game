@@ -549,6 +549,79 @@ describe('pending battle and FLIP', () => {
     expect(state.pendingBattle?.stage).toBe('damage')
   })
 
+  it('resolves BS7-002 only for an attached LV.2+ Cookie with a red Arena Cookie in battle', () => {
+    const bs7002Flip: GameCard = {
+      ...cookie('BS7-002'),
+      name: 'Red Osmanthus Cookie',
+      officialType: 'flip',
+      flip: {
+        text: 'If there is a {R} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 1,
+              max: 1,
+              sourceOnly: true,
+              minLevel: 2,
+            },
+            condition: {
+              kind: 'battle-area-has-color',
+              side: 'self',
+              color: 'red',
+              keyword: 'arena',
+            },
+          },
+        ],
+      },
+    }
+
+    const prepare = (targetLevel: number, isArena: boolean) => {
+      let state = createBattleState()
+      state.players['player-one'].battleArea = [
+        {
+          ...state.players['player-one'].battleArea[0],
+          card: {
+            ...state.players['player-one'].battleArea[0].card,
+            level: targetLevel,
+          },
+          hpCards: [bs7002Flip],
+        },
+        {
+          card: {
+            ...cookie('bs7-red-companion'),
+            energyColor: 'red',
+            ...(isArena ? { keywords: ['arena'] as const } : {}),
+          },
+          hpCards: [item('bs7-red-companion-hp')],
+          rested: false,
+          battleEntryId: 'bs7-red-companion:battle:3',
+        },
+      ]
+      state = declareAttack(state)
+      return resolveNextDamage(skipTrap(state, 'player-one'))
+    }
+
+    let state = prepare(2, true)
+
+    expect(state.pendingBattle?.stage).toBe('flip')
+    state = resolveFlip(state, 'player-one', { activate: true })
+    expect(state.players['player-one'].battleArea[0]?.hpCards).toHaveLength(1)
+    expect(state.players['player-one'].deck).toHaveLength(1)
+    expect(state.players['player-one'].discardPile).toContainEqual(bs7002Flip)
+
+    const lv1Target = prepare(1, true)
+    expect(lv1Target.pendingBattle?.stage).toBe('damage')
+    expect(lv1Target.players['player-one'].discardPile).toContainEqual(bs7002Flip)
+
+    const nonArenaTarget = prepare(2, false)
+    expect(nonArenaTarget.pendingBattle?.stage).toBe('damage')
+    expect(nonArenaTarget.players['player-one'].discardPile).toContainEqual(bs7002Flip)
+  })
+
   it('re-evaluates BS5-111 attack damage when a FLIP lowers the attacker to 3 HP', () => {
     const kumihoFlip: GameCard = {
       ...cookie('BS1-002'),

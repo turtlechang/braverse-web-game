@@ -1,6 +1,7 @@
 import { GameRuleError } from '../errors'
 import { getRefreshCandidates } from '../refresh'
 import { continuePendingReplacements } from '../replacement'
+import { hasCookieOnPlayEffects } from '../skills'
 import type { GameCard, GameState, PlayerId, PlayerState } from '../types'
 import { finishWithDefeat } from '../victory'
 
@@ -19,8 +20,16 @@ export const resolveOpponentHandDiscard = (
   }
 
   const uniqueIds = [...new Set(selectedCardIds)]
-  if (uniqueIds.length !== pending.count) {
-    throw new GameRuleError(`必須選擇 ${pending.count} 張手牌棄置。`)
+  if (
+    pending.atLeast
+      ? uniqueIds.length < pending.count
+      : uniqueIds.length !== pending.count
+  ) {
+    throw new GameRuleError(
+      pending.atLeast
+        ? `至少必須選擇 ${pending.count} 張手牌棄置。`
+        : `必須選擇 ${pending.count} 張手牌棄置。`,
+    )
   }
 
   const player = state.players[playerId]
@@ -156,7 +165,8 @@ export const resolveInspectDeck = (
   const pickableCount = pending.revealedCards.filter(
     (c) =>
       (!pending.filterColor || c.energyColor === pending.filterColor) &&
-      (!pending.filterType || c.type === pending.filterType),
+      (!pending.filterType || c.type === pending.filterType) &&
+      (!pending.filterKeyword || c.keywords?.includes(pending.filterKeyword)),
   ).length
   if (
     pending.pickCount > 0 &&
@@ -178,6 +188,9 @@ export const resolveInspectDeck = (
     }
     if (pending.filterType && card.type !== pending.filterType) {
       throw new GameRuleError('選取的卡牌類型不符合此效果。')
+    }
+    if (pending.filterKeyword && !card.keywords?.includes(pending.filterKeyword)) {
+      throw new GameRuleError('選取的卡牌關鍵字不符合此效果。')
     }
     pickedCards.push(card)
   }
@@ -225,6 +238,16 @@ export const resolveInspectDeck = (
         ],
       }
     }
+  } else if (pending.pickDestination === 'support') {
+    if (pickedCards.length > 0) {
+      player = {
+        ...player,
+        supportArea: [
+          ...player.supportArea,
+          ...pickedCards.map((card) => ({ card, rested: true })),
+        ],
+      }
+    }
   } else if (pickedCards.length > 0) {
     player = { ...player, hand: [...player.hand, ...pickedCards] }
   }
@@ -245,7 +268,7 @@ export const resolveInspectDeck = (
       ? {
           nextBattleEntrySequence: state.nextBattleEntrySequence + playedCookies.length,
           pendingOnPlay:
-            lastPlayedCookie.skill?.trigger === 'on-play'
+            hasCookieOnPlayEffects(lastPlayedCookie)
               ? { playerId, sourceInstanceId: lastPlayedCookie.instanceId }
               : null,
         }

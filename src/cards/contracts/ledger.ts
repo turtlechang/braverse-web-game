@@ -367,6 +367,9 @@ const runtimeSelectorForEffect = (
     ...(typeof record.noSkillOnly === 'boolean'
       ? { noSkillOnly: record.noSkillOnly }
       : {}),
+    ...(typeof record.keyword === 'string'
+      ? { keyword: record.keyword as EffectTargetSelector['keyword'] }
+      : {}),
   }
   const movementKinds = new Set([
     'trash-to-battle',
@@ -386,11 +389,13 @@ const runtimeSelectorForEffect = (
     'flip-to-support',
   ])
   if (movementKinds.has(record.kind)) {
-    // break-to-battle/support-to-battle are defined as "up to" selections in
-    // the rules layer even when the adapter has no optional flag.  Preserve
-    // that evidence instead of manufacturing a required target of one.
+    // break-to-battle is defined as an "up to" selection in the rules layer.
+    // support-to-battle keeps that legacy default when no explicit optional
+    // flag is present, but an official "Select 1" clause (for example
+    // BS7-057) is required and the adapter records `optional: false`.
     const upToByRule =
-      record.kind === 'break-to-battle' || record.kind === 'support-to-battle'
+      record.kind === 'break-to-battle' ||
+      (record.kind === 'support-to-battle' && record.optional !== false)
     const max =
       record.kind === 'support-to-hand' && typeof record.keepCount === 'number'
         ? record.keepCount
@@ -453,6 +458,9 @@ const runtimeSelectorForEffect = (
         : {}),
       ...(typeof record.filterType === 'string'
         ? { cardType: record.filterType as EffectTargetSelector['cardType'] }
+        : {}),
+      ...(typeof record.filterKeyword === 'string'
+        ? { keyword: record.filterKeyword as EffectTargetSelector['keyword'] }
         : {}),
     }
   }
@@ -520,6 +528,25 @@ const runtimeSelectorsForCost = (
         : {}),
       ...(typeof hp.minLevel === 'number' ? { minLevel: hp.minLevel } : {}),
       ...(typeof hp.maxLevel === 'number' ? { maxLevel: hp.maxLevel } : {}),
+      ...(typeof hp.keyword === 'string'
+        ? { keyword: hp.keyword as EffectTargetSelector['keyword'] }
+        : {}),
+    })
+  }
+  const hpToHand = value.hpToHand
+  if (hpToHand && typeof hpToHand === 'object') {
+    const hp = hpToHand as Record<string, unknown>
+    add(typeof hp.amount === 'number' ? hp.amount : 1, {
+      ...(hp.sourceOnly === true ? { sourceOnly: true } : {}),
+      ...(hp.excludeSource === true ? { excludeSource: true } : {}),
+      ...(typeof hp.energyColor === 'string'
+        ? { energyColor: hp.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(typeof hp.minLevel === 'number' ? { minLevel: hp.minLevel } : {}),
+      ...(typeof hp.maxLevel === 'number' ? { maxLevel: hp.maxLevel } : {}),
+      ...(typeof hp.keyword === 'string'
+        ? { keyword: hp.keyword as EffectTargetSelector['keyword'] }
+        : {}),
     })
   }
   const battleCookie = value.trashBattleCookie ?? value.battleCookieToHand
@@ -596,14 +623,24 @@ const bracketClauses = (
       payments.push({ kind: 'source-energy', energy, clauseIds: [clauseId] })
       continue
     }
+    // A bracketed `Select ... from ... support area` is a target selector,
+    // not a payment/cost.  Leave its contract target classification to
+    // `targetClauses`; otherwise the generic bracket fallback would add an
+    // unknown cost and permanently mask valid support-to-battle evidence.
+    const bracketTargetSelection = /^select\s+(?:up\s+to\s+)?(?:\d+|any\s+number)\s+(?:(?:\{[RYGBPK]\}|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?|(?:【Arena】|\[Arena\]|Arena))\s+)*(?:other\s+)?(?:cards?|cookies?)\s+(?:from|in)\s+(?:your opponent's|opponent's|your|the|either player's)\s+(?:trash|break\s+area|support\s+area|hand|deck)\.?$/i
+    if (bracketTargetSelection.test(inner)) {
+      continue
+    }
     const discard = inner.match(
       /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
     )
     const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
-    const supportTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+your\s+support/i)
+    const supportTrash = inner.match(
+      /place\s+(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cards?\s+from\s+your\s+support/i,
+    )
     const hpTrash =
       inner.match(
-        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?\s+(?:into|in)\s+the\s+trash/i,
+        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?(?:\s+in\s+your\s+battle\s+area)?\s+(?:into|in)\s+the\s+trash/i,
       ) ??
       inner.match(/place\s+(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
@@ -620,7 +657,7 @@ const bracketClauses = (
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
     const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
-    const hpToHand = /return\s+\d+\s+card\s+from\s+the\s+top\s+of\s+your\s+cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.test(inner)
+    const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+your\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+cookie.*from\s+your\s+trash\s+into\s+your\s+break\s+area/i.test(inner)
@@ -644,7 +681,7 @@ const bracketClauses = (
       breakToTrash ||
       handToDeckBottom ||
       battleToHand ||
-      hpToHand ||
+        hpToHand ||
       supportHand ||
       trashDeck ||
       trashDeckBottom ||
@@ -712,7 +749,8 @@ const bracketClauses = (
         handBreak ??
         supportHand ??
         trashDeck ??
-        trashDeckBottom
+        trashDeckBottom ??
+        hpToHand
       costs.push({
         kind,
         amount: amountMatch ? Number(amountMatch[1]) : 1,
@@ -799,7 +837,7 @@ const targetClauses = (
       clauseIds: [clauseId],
     })
   }
-  const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:other\s+)?(?:cookies?|cards?)(?:\s+other\s+than\s+\[[^\]]+\])?\s+(?:from|in)\s+(your opponent's|opponent's|your|the|either player's)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
+  const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:other\s+)?(?:cookies?|cards?)(?:\s+other\s+than\s+\[[^\]]+\])?\s+(?:from|in)\s+(your opponent's|opponent's|your|the|either player's)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
   for (const match of text.matchAll(zoneSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -808,6 +846,9 @@ const targetClauses = (
     const level = match[4] ? Number(match[4]) : undefined
     const qualifier = match[0].match(/LV\.\s*\d+\s+(or\s+(?:lower|higher))/i)?.[1]?.toLowerCase()
     const color = match[3] ? ENERGY_TOKEN_TO_COLOR[match[3].toUpperCase()] : undefined
+    const keyword = /(?:【Arena】|\[Arena\]|\bArena\b)/i.test(match[0])
+      ? ('arena' as const)
+      : undefined
     const sideText = match[5]?.toLowerCase() ?? ''
     const zoneText = match[6]?.toLowerCase() ?? ''
     const side = sideText.includes('opponent') ? 'opponent' : 'self'
@@ -828,6 +869,7 @@ const targetClauses = (
         min: match[1] ? 0 : amount,
         max: amount,
         ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+        ...(keyword ? { keyword } : {}),
         ...(level !== undefined && qualifier === 'or lower'
           ? { maxLevel: level }
           : level !== undefined && qualifier === 'or higher'
@@ -841,11 +883,15 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
   for (const match of text.matchAll(battleAreaSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
     if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const fullPhrase = text.slice(
+      start,
+      Math.min(text.length, start + match[0].length + 180),
+    )
     const descriptor = match[3] ?? ''
     const sideText = (match[4] ?? '').toLowerCase()
     const side = sideText.includes('opponent')
@@ -856,6 +902,15 @@ const targetClauses = (
     const amount = Number(match[2])
     const colorToken = descriptor.match(/\{([RYGBPK])\}/i)?.[1]?.toUpperCase()
     const color = colorToken ? ENERGY_TOKEN_TO_COLOR[colorToken] : undefined
+    const keyword = /\barena\b/i.test(descriptor) ? ('arena' as const) : undefined
+    // Official card text commonly qualifies an Arena battle target as a
+    // Cookie that does not have Skill (or, equivalently, "without Skill").
+    // Keep that restriction in the contract selector so the runtime's
+    // `noSkillOnly` binding is audited instead of treating any Arena Cookie
+    // as sufficient evidence (for example BS7-036).
+    const noSkillOnly = /\b(?:does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill)/i.test(
+      fullPhrase,
+    )
     const levelMatch = descriptor.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
     const level = levelMatch ? Number(levelMatch[1]) : undefined
     const qualifier = levelMatch?.[2]?.toLowerCase()
@@ -867,6 +922,8 @@ const targetClauses = (
         min: match[1] ? 0 : amount,
         max: amount,
         ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+        ...(keyword ? { keyword } : {}),
+        ...(noSkillOnly ? { noSkillOnly: true } : {}),
         ...(level !== undefined && qualifier === 'or lower'
           ? { maxLevel: level }
           : level !== undefined && qualifier === 'or higher'
@@ -1075,6 +1132,9 @@ const targetClauses = (
       min: /up\s+to/i.test(match[0]) ? 0 : amount,
       max: amount,
       ...(targetEnergyColor ? { energyColor: targetEnergyColor } : {}),
+      ...( /(?:【Arena】|\[Arena\]|\bArena\b)/i.test(match[0])
+        ? { keyword: 'arena' as const }
+        : {}),
     }
     const zone = /trash/i.test(match[0])
       ? 'trash'
@@ -1290,7 +1350,11 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
           restSource: card.skill.restSource,
           cost: card.skill.cost,
           sourceEnergy: card.skill.sourceEnergy,
-          effects: card.skill.effects,
+          effects: [
+            ...card.skill.effects,
+            ...(card.skill.onPlayEffects ?? []),
+            ...(card.skill.passiveEffects ?? []),
+          ],
         }
       : undefined,
     attackEffects: card.type === 'cookie' ? card.attackEffects : undefined,
@@ -1304,7 +1368,11 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
             effects: card.stageAbility.effects,
           }
         : card.trap
-          ? { cost: card.trap.cost, effects: card.trap.effects }
+          ? {
+              cost: card.trap.cost,
+              sourceEnergy: card.trap.sourceEnergy,
+              effects: card.trap.effects,
+            }
           : undefined,
   }
 }
@@ -1562,6 +1630,14 @@ const buildContract = (
   }
   const blockers: string[] = []
   if (evidence.unsupportedReason) blockers.push(`runtime:${evidence.unsupportedReason}`)
+  // A FLIP card is still rendered as a Cookie at runtime, so merely seeing
+  // its normal attack fields is not evidence that its HP-attached text was
+  // converted.  Require a FlipAbility whenever official FLIP text exists;
+  // otherwise an omitted adapter branch can incorrectly pass every generic
+  // payment/attack check (as BS7-002 did).
+  if (record.type === 'flip' && segments.flip && evidence.flip === undefined) {
+    blockers.push('FLIP text has no runtime flip ability')
+  }
   if (clauses.some((clause) => clause.role === 'unsupported')) blockers.push('source contains unclassified clause')
   const runtimeArrays = {
     targetSelectors: [] as Partial<EffectTargetSelector>[],
@@ -1569,7 +1645,12 @@ const buildContract = (
     abilityCostKeys: new Set<string>(),
   }
   collectRuntime(evidence.card, { effectKinds: new Set<string>(), ...runtimeArrays })
-  if (payments.length > 0 && runtimeArrays.energyCosts.length === 0 && !evidence.skill?.sourceEnergy) {
+  if (
+    payments.length > 0 &&
+    runtimeArrays.energyCosts.length === 0 &&
+    !evidence.skill?.sourceEnergy &&
+    !evidence.ability?.sourceEnergy
+  ) {
     blockers.push('payment clause has no runtime energy evidence')
   }
   const thenCount = clauses.filter((clause) => clause.role === 'then').length
@@ -1642,7 +1723,8 @@ export const analyzeOfficialCardBehavior = (
   runtime.timing = contract.timing.runtime
   const paymentCovered = contract.payments.every((payment) =>
     runtime.energyCosts.some((energy) => energyMatches(payment.energy, energy)) ||
-      (payment.kind === 'source-energy' && Boolean(evidence.skill?.sourceEnergy)),
+      (payment.kind === 'source-energy' &&
+        Boolean(evidence.skill?.sourceEnergy ?? evidence.ability?.sourceEnergy)),
   )
   const costCovered = contract.costs.every((cost) => {
     if (cost.kind === 'unknown') return false
@@ -1654,6 +1736,7 @@ export const analyzeOfficialCardBehavior = (
     }
     if (cost.kind === 'support-to-trash') return keys.has('supportToTrash') || kinds.has('support-to-trash')
     if (cost.kind === 'hp-to-trash') return keys.has('hpToTrash') || kinds.has('hp-to-trash')
+    if (cost.kind === 'hp-to-hand') return keys.has('hpToHand') || kinds.has('hp-to-hand')
     if (cost.kind === 'battle-to-trash') return keys.has('trashBattleCookie') || kinds.has('battle-to-trash')
     if (cost.kind === 'battle-to-break' || cost.kind === 'faint') {
       return keys.has('trashBattleCookie') || kinds.has('battle-to-break')

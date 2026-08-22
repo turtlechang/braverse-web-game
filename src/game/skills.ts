@@ -38,6 +38,28 @@ export const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
 ) => source.battleEntryId ?? source.card.instanceId
 
+/** 回傳指定觸發時機真正要進入效果佇列的技能效果。 */
+export const getCookieSkillEffects = (
+  skill: CardSkill,
+  trigger: SkillTrigger,
+): CardEffect[] =>
+  trigger === 'on-play' && skill.onPlayEffects
+    ? skill.onPlayEffects
+    : skill.effects
+
+/** 回傳指定觸發時機的技能代價；複合卡文的 On Play 預設不支付 Activate 費用。 */
+export const getCookieSkillCost = (
+  skill: CardSkill,
+  trigger: SkillTrigger,
+): AbilityCost =>
+  trigger === 'on-play'
+    ? skill.onPlayCost ?? (skill.onPlayEffects ? { energy: {}, discardHand: 0 } : skill.cost)
+    : skill.cost
+
+/** 卡面是否在登場時有可處理的技能效果。 */
+export const hasCookieOnPlayEffects = (card: GameCard): boolean =>
+  card.skill?.trigger === 'on-play' || Boolean(card.skill?.onPlayEffects?.length)
+
 /**
  * 官方釋疑：「本場遊戲只能使用 1 次」是每位玩家限定一次，即使同一位玩家的
  * 休息區有多張同名卡（例如兩張 BS3-025），也只能共用這一次額度——不是每張
@@ -201,7 +223,10 @@ export const canPaySupportToTrashCost = (
   if (!cost.supportToTrash) return true
   return (
     supports.filter(
-      (support) => !excludedSupportIds.has(support.card.instanceId),
+      (support) =>
+        !excludedSupportIds.has(support.card.instanceId) &&
+        (cost.supportToTrashKeyword === undefined ||
+          support.card.keywords?.includes(cost.supportToTrashKeyword)),
     ).length >= cost.supportToTrash
   )
 }
@@ -409,11 +434,14 @@ export const getFaintTriggeredCost = (
   | 'discardHandColor'
   | 'discardHandType'
   | 'discardHandKeyword'
-  | 'discardHandHasFlip'
+ | 'discardHandHasFlip'
   | 'supportToTrash'
+  | 'supportToHand'
+  | 'supportToHandType'
 > | undefined => {
   const discardHand = skill.cost.discardHand ?? 0
   const supportToTrash = skill.cost.supportToTrash ?? 0
+  const supportToHand = skill.cost.supportToHand ?? 0
   const discardCoveredByHandPlacement =
     discardHand > 0 &&
     skill.effects.some(
@@ -435,10 +463,20 @@ export const getFaintTriggeredCost = (
     skill.effects.some(
       (effect) => effect.kind === 'support-to-trash' && effect.amount >= supportToTrash,
     )
+  const supportToHandCovered =
+    supportToHand > 0 &&
+    skill.effects.some(
+      (effect) =>
+        effect.kind === 'support-to-hand' &&
+        effect.amount >= supportToHand &&
+        (skill.cost.supportToHandType === undefined ||
+          effect.cardType === skill.cost.supportToHandType),
+    )
 
   if (
     (discardHand === 0 || discardCovered) &&
-    (supportToTrash === 0 || supportCovered)
+    (supportToTrash === 0 || supportCovered) &&
+    (supportToHand === 0 || supportToHandCovered)
   ) {
     return undefined
   }
@@ -458,6 +496,12 @@ export const getFaintTriggeredCost = (
       ? { discardHandHasFlip: skill.cost.discardHandHasFlip }
       : {}),
     ...(supportToTrash > 0 && !supportCovered ? { supportToTrash } : {}),
+    ...(supportToHand > 0 && !supportToHandCovered
+      ? { supportToHand }
+      : {}),
+    ...(skill.cost.supportToHandType && !supportToHandCovered
+      ? { supportToHandType: skill.cost.supportToHandType }
+      : {}),
   }
 }
 
@@ -502,6 +546,12 @@ export const getHpToTrashCostCandidates = (
       return false
     }
     if (
+      cost.hpToTrash?.keyword &&
+      !cookie.card.keywords?.includes(cost.hpToTrash.keyword)
+    ) {
+      return false
+    }
+    if (
       cost.hpToTrash?.minLevel !== undefined &&
       (cookie.card.level ?? 0) < cost.hpToTrash.minLevel
     ) {
@@ -527,6 +577,117 @@ export const getHpToTrashCostCandidates = (
       ? true
       : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp
   })
+}
+
+export const getHpToHandCostCandidates = (
+  cost: AbilityCost,
+  battleArea: CookieInBattle[],
+  sourceInstanceId?: string,
+): CookieInBattle[] => {
+  const hpToHand = cost.hpToHand
+  if (!hpToHand) return []
+  return battleArea.filter((cookie) => {
+    if (
+      hpToHand.sourceOnly &&
+      cookie.card.instanceId !== sourceInstanceId
+    ) {
+      return false
+    }
+    if (
+      hpToHand.excludeSource &&
+      cookie.card.instanceId === sourceInstanceId
+    ) {
+      return false
+    }
+    if (
+      hpToHand.energyColor &&
+      cookie.card.energyColor !== hpToHand.energyColor
+    ) {
+      return false
+    }
+    if (
+      hpToHand.keyword &&
+      !cookie.card.keywords?.includes(hpToHand.keyword)
+    ) {
+      return false
+    }
+    if (
+      hpToHand.minLevel !== undefined &&
+      (cookie.card.level ?? 0) < hpToHand.minLevel
+    ) {
+      return false
+    }
+    if (
+      hpToHand.maxLevel !== undefined &&
+      (cookie.card.level ?? Number.POSITIVE_INFINITY) > hpToHand.maxLevel
+    ) {
+      return false
+    }
+    return cookie.hpCards.length >= (hpToHand.amount ?? 1)
+  })
+}
+
+export const payHpToHandCost = (
+  player: PlayerState,
+  cost: AbilityCost,
+  selectedIds: string[],
+  sourceInstanceId?: string,
+): { player: PlayerState; departedCount: number } => {
+  const uniqueIds = [...new Set(selectedIds)]
+  if (uniqueIds.length !== selectedIds.length) {
+    throw new GameRuleError('HP 回手代價不能重複選同一張餅乾。')
+  }
+  if (!cost.hpToHand) {
+    if (uniqueIds.length > 0) {
+      throw new GameRuleError('此攻擊後效果不需要支付 HP 回手代價。')
+    }
+    return { player, departedCount: 0 }
+  }
+  if (uniqueIds.length !== 1) {
+    throw new GameRuleError('必須選擇 1 張餅乾支付 HP 回手代價。')
+  }
+
+  const target = getHpToHandCostCandidates(
+    cost,
+    player.battleArea,
+    sourceInstanceId,
+  ).find((cookie) => cookie.card.instanceId === uniqueIds[0])
+  if (!target) {
+    throw new GameRuleError('選擇的 HP 回手餅乾不合法。')
+  }
+
+  const targetIndex = player.battleArea.findIndex(
+    (cookie) => cookie.card.instanceId === target.card.instanceId,
+  )
+  const removeCount = cost.hpToHand.amount ?? 1
+  const movedHpCards = target.hpCards.slice(-removeCount)
+  const remainingHpCards = target.hpCards.slice(
+    0,
+    Math.max(0, target.hpCards.length - movedHpCards.length),
+  )
+  if (remainingHpCards.length === 0) {
+    return {
+      player: {
+        ...player,
+        battleArea: player.battleArea.filter((_, index) => index !== targetIndex),
+        breakArea: [...player.breakArea, target.card],
+        hand: [...player.hand, ...movedHpCards],
+      },
+      departedCount: 1,
+    }
+  }
+  return {
+    player: {
+      ...player,
+      battleArea: player.battleArea.map((cookie, index) =>
+        index === targetIndex
+          ? { ...cookie, hpCards: remainingHpCards }
+          : cookie,
+      ),
+      hand: [...player.hand, ...movedHpCards],
+    },
+    departedCount: 0,
+  }
 }
 
 export const payHpToTrashCost = (
@@ -791,12 +952,12 @@ export const payTrashCookieToBreakAreaCost = (
 }
 
 const validatePayment = (
-  skill: CardSkill,
+  cost: AbilityCost,
   supports: SupportCard[],
   paymentIds: string[],
 ) => {
   const validation = validateEnergyPayment(
-    skill.cost.energy ?? skill.cost,
+    cost.energy ?? cost,
     supports,
     paymentIds,
   )
@@ -816,9 +977,17 @@ export const canActivateCookieSkill = (
   const source = findSkillSource(player, sourceInstanceId)
   const skill = source?.card.skill
 
-  if (!source || !skill || skill.trigger !== trigger) {
+  if (
+    !source ||
+    !skill ||
+    (skill.trigger !== trigger &&
+      !(trigger === 'on-play' && Boolean(skill.onPlayEffects?.length)))
+  ) {
     return false
   }
+
+  const cost = getCookieSkillCost(skill, trigger)
+  const skillEffects = getCookieSkillEffects(skill, trigger)
 
   if (
     state.status !== 'playing' ||
@@ -890,7 +1059,7 @@ export const canActivateCookieSkill = (
   }
 
   if (
-    skill.cost.selfToTrash &&
+    cost.selfToTrash &&
     !player.battleArea.some(
       (cookie) => cookie.card.instanceId === sourceInstanceId,
     )
@@ -898,65 +1067,69 @@ export const canActivateCookieSkill = (
     return false
   }
 
-  const discardHandCandidates = skill.cost.discardAllHand
+  const discardHandCandidates = cost.discardAllHand
     ? getDiscardAllHandCostCandidates(
-        skill.cost,
+        cost,
         player.hand,
         sourceInstanceId,
       )
-    : getDiscardHandCostCandidates(skill.cost, player.hand, sourceInstanceId)
+    : getDiscardHandCostCandidates(cost, player.hand, sourceInstanceId)
   if (
-    skill.cost.discardAllHand &&
+    cost.discardAllHand &&
     (player.hand.length === 0 ||
       discardHandCandidates.length !== player.hand.length)
   ) {
     return false
   }
   if (
-    (skill.cost.discardHand ?? 0) > 0 &&
-    discardHandCandidates.length < (skill.cost.discardHand ?? 0)
+    (cost.discardHand ?? 0) > 0 &&
+    discardHandCandidates.length < (cost.discardHand ?? 0)
   ) {
     return false
   }
 
   const energyPayment = selectEnergyPayment(
-    skill.cost.energy ?? skill.cost,
+    cost.energy ?? cost,
     player.supportArea,
   )
   if (!energyPayment) return false
 
   if (!canPaySupportToTrashCost(
-    skill.cost,
+    cost,
     player.supportArea,
     new Set(energyPayment),
   )) {
     return false
   }
   const availableSupportForSecondaryCosts = player.supportArea.filter(
-    (support) => !energyPayment.includes(support.card.instanceId),
+    (support) =>
+      !energyPayment.includes(support.card.instanceId) &&
+      (cost.supportToTrash === undefined ||
+        cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(cost.supportToTrashKeyword)),
   ).length
   if (
     availableSupportForSecondaryCosts <
-    (skill.cost.supportToTrash ?? 0) + (skill.cost.supportToHand ?? 0)
+    (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
   ) {
     return false
   }
 
-  if (!canPayTrashToDeckBottomCost(skill.cost, player.discardPile)) {
+  if (!canPayTrashToDeckBottomCost(cost, player.discardPile)) {
     return false
   }
 
-  if (!canPayTrashToDeckCost(skill.cost, player.discardPile)) {
+  if (!canPayTrashToDeckCost(cost, player.discardPile)) {
     return false
   }
 
-  if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea, sourceInstanceId)) {
+  if (!canPayTrashBattleCookieCost(cost, player.battleArea, sourceInstanceId)) {
     return false
   }
 
   if (
     !canPayBattleCookieToHandCost(
-      skill.cost,
+      cost,
       player.battleArea,
       sourceInstanceId,
     )
@@ -964,21 +1137,21 @@ export const canActivateCookieSkill = (
     return false
   }
   if (
-    (skill.cost.supportToHand ?? 0) > 0 &&
+    (cost.supportToHand ?? 0) > 0 &&
     player.supportArea.filter(
       (support) =>
         !energyPayment.includes(support.card.instanceId) &&
-        (skill.cost.supportToHandType === undefined ||
-          support.card.type === skill.cost.supportToHandType),
-    ).length < (skill.cost.supportToHand ?? 0)
+        (cost.supportToHandType === undefined ||
+          support.card.type === cost.supportToHandType),
+    ).length < (cost.supportToHand ?? 0)
   ) {
     return false
   }
 
   if (
-    skill.cost.hpToTrash &&
+    cost.hpToTrash &&
     getHpToTrashCostCandidates(
-      skill.cost,
+      cost,
       player.battleArea,
       sourceInstanceId,
     ).length === 0
@@ -987,7 +1160,7 @@ export const canActivateCookieSkill = (
   }
 
   const context = { sourcePlayerId: playerId, sourceInstanceId }
-  for (const effect of skill.effects) {
+  for (const effect of skillEffects) {
     if (!isEffectConditionMet(state, context, effect)) {
       if (!isSkillEffectConditionDeferredUntilCost(skill, effect)) return false
     }
@@ -1040,6 +1213,11 @@ export const canActivateCookieSkill = (
       return false
     }
     if (isEffectTargeted(effect) && effect.target.min > 0) {
+      // `costSelected` targets are chosen by the HP-cost payment step and do
+      // not exist in costRecord until activation is confirmed. The HP-cost
+      // candidate check above already proves that a legal Cookie exists, so
+      // do not reject the skill by querying an empty pre-payment record.
+      if (effect.target.costSelected) continue
       const candidates = getEffectTargetCandidates(state, context, effect.target)
       if (candidates.length < effect.target.min) {
         return false
@@ -1079,14 +1257,14 @@ export const activateCookieSkill = (
     throw new GameRuleError('找不到要發動的餅乾技能。')
   }
 
-  validatePayment(source.card.skill, player.supportArea, paymentIds)
+  const cost = getCookieSkillCost(source.card.skill, trigger)
+  validatePayment(cost, player.supportArea, paymentIds)
 
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
   if (uniqueDiscardHandIds.length !== discardHandIds.length) {
     throw new GameRuleError('不能重複選擇同一張手牌作為代價。')
   }
 
-  const cost = source.card.skill.cost
   const uniqueCostSupportToTrashIds = [...new Set(costSupportToTrashIds)]
   const uniqueCostSupportToHandIds = [...new Set(supportToHandIds)]
 
@@ -1103,6 +1281,15 @@ export const activateCookieSkill = (
 
     if (trashed.length !== cost.supportToTrash) {
       throw new GameRuleError('只能選擇自己的支援區卡牌作為代價。')
+    }
+    if (
+      cost.supportToTrashKeyword !== undefined &&
+      trashed.some(
+        (support) =>
+          !support.card.keywords?.includes(cost.supportToTrashKeyword!),
+      )
+    ) {
+      throw new GameRuleError('支援區代價卡不符合指定關鍵字。')
     }
   } else if (uniqueCostSupportToTrashIds.length > 0) {
     throw new GameRuleError('此技能不需要支付支援區卡牌代價。')
@@ -1383,6 +1570,7 @@ export const activateCookieSkill = (
         battleArea: playerAfterCosts.battleArea
           .map((cookie) =>
             cookie.card.instanceId === sourceInstanceId &&
+            trigger !== 'on-play' &&
             source.card.skill?.restSource
               ? { ...cookie, rested: true }
               : cookie,

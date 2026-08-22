@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import type {
+  CardKeyword,
   EnergyColor,
   GameCard,
   InspectDeckRestDestination,
@@ -226,6 +227,7 @@ export interface HandDiscardResponseModalProps {
   effectText?: string
   hand: GameCard[]
   requiredCount: number
+  atLeast?: boolean
   selectedIds: string[]
   onToggleCard: (instanceId: string) => void
   onConfirm: () => void
@@ -243,13 +245,16 @@ export function HandDiscardResponseModal({
   effectText,
   hand,
   requiredCount,
+  atLeast = false,
   selectedIds,
   onToggleCard,
   onConfirm,
   continuesFromDraw = false,
 }: HandDiscardResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const canConfirm = selectedIds.length === requiredCount
+  const canConfirm = atLeast
+    ? selectedIds.length >= requiredCount
+    : selectedIds.length === requiredCount
 
   if (minimized) {
     return (
@@ -261,7 +266,7 @@ export function HandDiscardResponseModal({
         <span>
           <strong>{sourceCardName}</strong>
           <small>
-            已選擇 {selectedIds.length}/{requiredCount} 張手牌
+            已選擇 {selectedIds.length}{atLeast ? `（至少 ${requiredCount}）` : `/${requiredCount}`} 張手牌
           </small>
         </span>
         <Maximize2 aria-hidden="true" />
@@ -307,7 +312,9 @@ export function HandDiscardResponseModal({
           </div>
         </div>
         <p className="faint-target-hint">
-          必須選擇 {requiredCount} 張手牌棄置。
+          {atLeast
+            ? `至少選擇 ${requiredCount} 張手牌棄置。`
+            : `必須選擇 ${requiredCount} 張手牌棄置。`}
         </p>
         <div className="modal-card-options hand-discard-options">
           {hand.map((card) => (
@@ -663,9 +670,13 @@ export interface OptionalCostAttackModalProps {
   sourceCard?: GameCard
   effectText: string
   discardHandCost: number
+  /** 可作為棄手牌代價的合法候選；省略時相容既有呼叫端，退回整副手牌。 */
+  discardHandCandidates?: { card: GameCard; instanceId: string }[]
   supportToHandCost?: number
   hpToTrashCost?: number
   hpToTrashCandidates?: { card: GameCard; instanceId: string }[]
+  hpToHandCost?: number
+  hpToHandCandidates?: { card: GameCard; instanceId: string }[]
   trashToDeckCost?: number
   trashToDeckCandidates?: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
@@ -689,6 +700,7 @@ export interface OptionalCostAttackModalProps {
     supportToHandIds: string[],
     hpToTrashIds: string[],
     trashToDeckIds: string[],
+    hpToHandIds: string[],
   ) => void
   embedded?: boolean
   /**
@@ -707,14 +719,17 @@ export function OptionalCostAttackModal({
   sourceCardName,
   effectText,
   discardHandCost,
+  playerHand,
+  discardHandCandidates = playerHand.map((card) => ({ card, instanceId: card.instanceId })),
   supportToHandCost = 0,
   hpToTrashCost = 0,
   hpToTrashCandidates = [],
+  hpToHandCost = 0,
+  hpToHandCandidates = [],
   trashToDeckCost = 0,
   trashToDeckCandidates = [],
   energyCostTotal,
   costText,
-  playerHand,
   supportCandidates,
   supportToHandCandidates = [],
   targetCandidates,
@@ -736,16 +751,18 @@ export function OptionalCostAttackModal({
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [selectedSupportToHandIds, setSelectedSupportToHandIds] = useState<string[]>([])
   const [selectedHpToTrashIds, setSelectedHpToTrashIds] = useState<string[]>([])
+  const [selectedHpToHandIds, setSelectedHpToHandIds] = useState<string[]>([])
   const [selectedTrashToDeckIds, setSelectedTrashToDeckIds] = useState<string[]>([])
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
 
   const canPay =
-    playerHand.length >= discardHandCost &&
+    discardHandCandidates.length >= discardHandCost &&
     supportCandidates.length >= energyCostTotal &&
     supportToHandCandidates.filter(
       (entry) => !selectedPaymentIds.includes(entry.instanceId),
     ).length >= supportToHandCost &&
     hpToTrashCandidates.length >= hpToTrashCost &&
+    hpToHandCandidates.length >= hpToHandCost &&
     trashToDeckCandidates.length >= trashToDeckCost &&
     (!needsTarget || targetCandidates.length >= targetMin)
 
@@ -793,6 +810,16 @@ export function OptionalCostAttackModal({
     )
   }, [hpToTrashCost])
 
+  const toggleHpToHand = useCallback((instanceId: string) => {
+    setSelectedHpToHandIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < hpToHandCost
+          ? [...current, instanceId]
+          : current,
+    )
+  }, [hpToHandCost])
+
   const toggleTrashToDeck = useCallback((instanceId: string) => {
     setSelectedTrashToDeckIds((current) =>
       current.includes(instanceId)
@@ -818,6 +845,7 @@ export function OptionalCostAttackModal({
     selectedPaymentIds.length === energyCostTotal &&
     selectedSupportToHandIds.length === supportToHandCost &&
     selectedHpToTrashIds.length === hpToTrashCost &&
+    selectedHpToHandIds.length === hpToHandCost &&
     selectedTrashToDeckIds.length === trashToDeckCost &&
     (!needsTarget ||
       (selectedTargetIds.length >= targetMin &&
@@ -832,6 +860,7 @@ export function OptionalCostAttackModal({
       selectedSupportToHandIds,
       selectedHpToTrashIds,
       selectedTrashToDeckIds,
+      selectedHpToHandIds,
     )
   }, [
     readyToConfirm,
@@ -841,6 +870,7 @@ export function OptionalCostAttackModal({
     selectedSupportToHandIds,
     selectedHpToTrashIds,
     selectedTrashToDeckIds,
+    selectedHpToHandIds,
     onPay,
   ])
 
@@ -851,6 +881,7 @@ export function OptionalCostAttackModal({
     ...(discardHandCost > 0 ? (['cost'] as const) : []),
     ...(supportToHandCost > 0 ? (['support-cost'] as const) : []),
     ...(hpToTrashCost > 0 ? (['hp-cost'] as const) : []),
+    ...(hpToHandCost > 0 ? (['hp-hand-cost'] as const) : []),
     ...(trashToDeckCost > 0 ? (['trash-cost'] as const) : []),
     ...(needsTarget ? (['target'] as const) : []),
   ]
@@ -866,8 +897,10 @@ export function OptionalCostAttackModal({
             ? '支援代價'
             : id === 'hp-cost'
               ? 'HP 代價'
-              : id === 'trash-cost'
-                ? '棄牌區代價'
+              : id === 'hp-hand-cost'
+                ? 'HP 回手'
+                : id === 'trash-cost'
+                  ? '棄牌區代價'
             : '目標',
     complete: index < phaseIndex,
   }))
@@ -880,6 +913,8 @@ export function OptionalCostAttackModal({
           ? selectedSupportToHandIds.length === supportToHandCost
           : activePhase === 'hp-cost'
             ? selectedHpToTrashIds.length === hpToTrashCost
+            : activePhase === 'hp-hand-cost'
+              ? selectedHpToHandIds.length === hpToHandCost
             : activePhase === 'trash-cost'
               ? selectedTrashToDeckIds.length === trashToDeckCost
           : activePhase === 'target'
@@ -903,6 +938,7 @@ export function OptionalCostAttackModal({
     setSelectedPaymentIds([])
     setSelectedSupportToHandIds([])
     setSelectedHpToTrashIds([])
+    setSelectedHpToHandIds([])
     setSelectedTrashToDeckIds([])
     setSelectedTargetIds([])
     setPhaseIndex(0)
@@ -942,6 +978,7 @@ export function OptionalCostAttackModal({
       ? `將 ${supportToHandCost} 張支援區卡返回手牌`
       : null,
     hpToTrashCost > 0 ? `選擇 ${hpToTrashCost} 張餅乾支付 HP 代價` : null,
+    hpToHandCost > 0 ? `將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌` : null,
     trashToDeckCost > 0
       ? `將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`
       : null,
@@ -1034,19 +1071,19 @@ export function OptionalCostAttackModal({
                   選擇 {discardHandCost} 張手牌棄置
                 </strong>
                 <div className="modal-card-options">
-                  {playerHand.map((card) => (
+                  {discardHandCandidates.map((entry) => (
                     <button
                       type="button"
-                      key={card.instanceId}
+                      key={entry.instanceId}
                       className={
-                        selectedDiscardIds.includes(card.instanceId)
+                        selectedDiscardIds.includes(entry.instanceId)
                           ? 'is-selected'
                           : ''
                       }
-                      onClick={() => toggleDiscard(card.instanceId)}
+                      onClick={() => toggleDiscard(entry.instanceId)}
                     >
-                      <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
-                      <span>{card.name}</span>
+                      <CardFace card={entry.card} selected={selectedDiscardIds.includes(entry.instanceId)} />
+                      <span>{entry.card.name}</span>
                     </button>
                   ))}
                 </div>
@@ -1105,6 +1142,36 @@ export function OptionalCostAttackModal({
                       <CardFace
                         card={entry.card}
                         selected={selectedHpToTrashIds.includes(entry.instanceId)}
+                      />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activePhase === 'hp-hand-cost' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">HP 回手代價</span>
+                <strong>
+                  將 {hpToHandCost} 張餅乾的 HP 卡返回手牌（已選{' '}
+                  {selectedHpToHandIds.length}）
+                </strong>
+                <div className="modal-card-options">
+                  {hpToHandCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedHpToHandIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleHpToHand(entry.instanceId)}
+                    >
+                      <CardFace
+                        card={entry.card}
+                        selected={selectedHpToHandIds.includes(entry.instanceId)}
                       />
                       <span>{entry.card.name}</span>
                     </button>
@@ -1215,9 +1282,10 @@ export interface InspectDeckModalProps {
   revealedCards: GameCard[]
   pickCount: number
   restDestination?: InspectDeckRestDestination
-  pickDestination?: 'hand' | 'battle'
+  pickDestination?: 'hand' | 'battle' | 'support'
   filterColor?: EnergyColor
   filterType?: GameCard['type']
+  filterKeyword?: CardKeyword
   optionalPick?: boolean
   onConfirm: (pickedCardIds: string[], restOrder: string[]) => void
 }
@@ -1236,6 +1304,7 @@ export function InspectDeckModal({
   pickDestination = 'hand',
   filterColor,
   filterType,
+  filterKeyword,
   optionalPick,
   onConfirm,
 }: InspectDeckModalProps) {
@@ -1249,7 +1318,8 @@ export function InspectDeckModal({
   const canPick = pickCount > 0
   const isPickable = (card: GameCard) =>
     (filterColor == null || card.energyColor === filterColor) &&
-    (filterType == null || card.type === filterType)
+    (filterType == null || card.type === filterType) &&
+    (filterKeyword == null || card.keywords?.includes(filterKeyword))
   const hasNoPickableCard = !revealedCards.some(isPickable)
   const restLabel = REST_DESTINATION_LABEL[restDestination]
   const showReorder = restDestination !== 'trash' && restOrder.length > 1
@@ -1337,7 +1407,11 @@ export function InspectDeckModal({
           查看 {revealedCards.length} 張牌
           {canPick
             ? `，${optionalPick ? '最多選' : '選擇'} ${pickCount} 張${
-                pickDestination === 'battle' ? '登場' : '加入手牌'
+                pickDestination === 'battle'
+                  ? '登場'
+                  : pickDestination === 'support'
+                    ? '放入支援區'
+                    : '加入手牌'
               }`
             : ''}
           ，其餘

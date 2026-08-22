@@ -2,6 +2,7 @@ import { GameRuleError } from '../errors'
 import { getCookieEffectiveHp, getOpponentId } from '../helpers'
 import type {
   CookieInBattle,
+  EffectContext,
   GameCard,
   GameState,
   ModifyAttackEffect,
@@ -57,6 +58,69 @@ const getAuraAttackBonus = (
     return total + auraTotal
   }, 0)
 
+/**
+ * 計算由場上餅乾造成的效果傷害。效果傷害不是攻擊力，不能共用
+ * `attackModifiers`；這裡即時掃描仍在戰鬥區的被動光環，讓來源餅乾離場或
+ * 光環失效時不會留下過期修正。BS7-013 使用此路徑提高紅色 LV.2+
+ * 【Arena】餅乾的效果傷害。
+ */
+export const getEffectDamageAmount = (
+  state: GameState,
+  context: EffectContext,
+  amount: number,
+): number => {
+  if (amount <= 0) return amount
+
+  const sourceOwner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    ),
+  )
+  const sourceCookie = sourceOwner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+  )
+  if (!sourceOwner || !sourceCookie) return amount
+
+  const bonus = Object.values(state.players).reduce((total, auraOwner) => {
+    const auraTotal = auraOwner.battleArea.reduce((subtotal, auraSource) => {
+      const skill = auraSource.card.skill
+      if (skill?.trigger !== 'passive' && skill?.trigger !== 'block') return subtotal
+      if (skill.yourTurn && state.activePlayerId !== auraOwner.id) return subtotal
+
+      const auraContext = {
+        sourcePlayerId: auraOwner.id,
+        sourceInstanceId: auraSource.card.instanceId,
+      }
+      return subtotal + skill.effects.reduce((effectTotal, effect) => {
+        if (effect.kind !== 'modify-all-effect-damage') return effectTotal
+        const targetOwnerId =
+          effect.side === 'self' ? auraOwner.id : getOpponentId(auraOwner.id)
+        if (targetOwnerId !== sourceOwner.id) return effectTotal
+        if (
+          effect.energyColor &&
+          sourceCookie.card.energyColor !== effect.energyColor
+        ) {
+          return effectTotal
+        }
+        if (
+          effect.keyword &&
+          !sourceCookie.card.keywords?.includes(effect.keyword)
+        ) {
+          return effectTotal
+        }
+        if (effect.minLevel && sourceCookie.card.level < effect.minLevel) {
+          return effectTotal
+        }
+        if (!isEffectConditionMet(state, auraContext, effect)) return effectTotal
+        return effectTotal + effect.amount
+      }, 0)
+    }, 0)
+    return total + auraTotal
+  }, 0)
+
+  return Math.max(0, amount + bonus)
+}
+
 const getCookieByInstanceId = (
   state: GameState,
   instanceId: string,
@@ -99,12 +163,18 @@ export const getEffectiveAttack = (
         isConditionalModifierActive(state, modifier),
     )
     .reduce((total, modifier) => total + modifier.amount, 0)
+  const skill = target.card.skill
+  const staticAttackEffects = skill
+    ? [
+        ...(skill.trigger === 'passive' || skill.trigger === 'block'
+          ? skill.effects
+          : []),
+        ...(skill.passiveEffects ?? []),
+      ]
+    : []
   const passiveModifierTotal =
-    (target.card.skill?.trigger === 'passive' ||
-      target.card.skill?.trigger === 'block') &&
-    (!target.card.skill.yourTurn ||
-      state.activePlayerId === owner.id)
-      ? target.card.skill.effects
+    skill && (!skill.yourTurn || state.activePlayerId === owner.id)
+      ? staticAttackEffects
           .filter(
             (effect) =>
               effect.kind === 'modify-attack' &&
@@ -195,17 +265,22 @@ export const getEffectiveAttackBreakdown = (
     })
   }
 
-  if (
-    (target.card.skill?.trigger === 'passive' ||
-      target.card.skill?.trigger === 'block') &&
-    (!target.card.skill.yourTurn || state.activePlayerId === owner.id)
-  ) {
+  const skill = target.card.skill
+  const staticAttackEffects = skill
+    ? [
+        ...(skill.trigger === 'passive' || skill.trigger === 'block'
+          ? skill.effects
+          : []),
+        ...(skill.passiveEffects ?? []),
+      ]
+    : []
+  if (skill && (!skill.yourTurn || state.activePlayerId === owner.id)) {
     const context = {
       sourcePlayerId: owner.id,
       sourceInstanceId: targetInstanceId,
       attackTargetInstanceId,
     }
-    for (const effect of target.card.skill.effects) {
+    for (const effect of staticAttackEffects) {
       if (effect.kind !== 'modify-attack' || !effect.target.sourceOnly) continue
       if (!isEffectConditionMet(state, context, effect)) continue
       entries.push({ sourceCardName: target.card.name, amount: effect.amount })

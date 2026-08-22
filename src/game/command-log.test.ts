@@ -1323,6 +1323,12 @@ describe('effect resolution log outcome', () => {
         playerId: 'player-one',
       }),
     ).toContain('「attacker」受到 1 點傷害')
+    expect(
+      resolveLogCard(previous, next, {
+        kind: 'resolve-battle',
+        playerId: 'player-one',
+      }),
+    ).toEqual(previous.players['player-one'].battleArea[0].card)
   })
 
   it('reports when a damage effect resolves without dealing damage', () => {

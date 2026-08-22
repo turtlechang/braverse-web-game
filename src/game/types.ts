@@ -37,6 +37,16 @@ export interface CardSkill {
   cost: AbilityCost
   text: string
   effects: CardEffect[]
+  /**
+   * 複合官方卡文可同時包含獨立的 On Play 與 Activate 子句（例如
+   * BS7-035）。On Play 只在登場 pending 中使用，Activate 仍走 `effects`；
+   * 兩者不能合併，否則啟動技能會重複結算登場增益。
+   */
+  onPlayEffects?: CardEffect[]
+  /** On Play 子句若有獨立代價，使用這筆代價；未指定時視為零成本。 */
+  onPlayCost?: AbilityCost
+  /** Static clauses that share a card with an Activate/On Play skill. */
+  passiveEffects?: CardEffect[]
   /** Energy supplied by the Cookie itself when a triggered skill is used. */
   sourceEnergy?: EnergyCost
   /**
@@ -202,6 +212,8 @@ export interface EffectTargetSelector {
    * `CookieCard.skill` 為準（沒有技能文字的餅乾為 `null`）。
    */
   noSkillOnly?: boolean
+  /** Nested `Then` effects may reuse the cards selected by the immediately preceding effect. */
+  previousEffectTargetOnly?: boolean
 }
 
 export interface BreakLevelCondition {
@@ -217,6 +229,8 @@ export interface OpponentTrashCountAtLeastCondition {
 export interface SupportCountAtLeastCondition {
   kind: 'support-count-at-least'
   count: number
+  /** Optional official keyword filter (for example Arena cards). */
+  keyword?: CardKeyword
 }
 
 /** 支援區指定顏色張數達到門檻（BS4-048 的「support area contains 7 {G} cards or more」）。 */
@@ -296,6 +310,8 @@ export interface BattleAreaHasColorCondition {
   kind: 'battle-area-has-color'
   side: EffectTargetSide
   color: EnergyColor
+  /** 同時要求官方關鍵字（例如 BS7-002 的 {R} 【Arena】Cookie）。 */
+  keyword?: CardKeyword
   /** 「another」：不算來源自己。 */
   excludeSource?: boolean
   /**
@@ -304,6 +320,17 @@ export interface BattleAreaHasColorCondition {
    * 不是分開各自判定存在）。不給則只看顏色。
    */
   level?: number
+}
+
+/** 場上有指定官方關鍵字的餅乾（例如 BS7-003 的「another 【Arena】 Cookie」）。 */
+export interface BattleAreaHasKeywordCondition {
+  kind: 'battle-area-has-keyword'
+  side: EffectTargetSide
+  keyword: CardKeyword
+  /** 「another」：不算來源自己。 */
+  excludeSource?: boolean
+  /** 只計入剩餘 HP 不超過門檻的關鍵字餅乾（BS7-017）。 */
+  maxRemainingHp?: number
 }
 
 /** 官方文字「某色 LV.N 餅乾在你的休息區」。 */
@@ -408,6 +435,8 @@ export interface OpponentBreakLevelAtMostCondition {
 /** 己方休息區等級總和高於對手（P-009 的「if your break area LV. is higher than your opponent's」）。 */
 export interface BreakLevelHigherThanOpponentCondition {
   kind: 'break-level-higher-than-opponent'
+  /** Official text may require a gap larger than one level (for example BS7-020). */
+  minDifference?: number
 }
 
 export interface SourceHpLessThanCondition {
@@ -557,6 +586,7 @@ export type EffectCondition =
   | OpponentBattleAreaCookieCountCondition
   | BattleAreaHasCookieWithLevelCondition
   | BattleAreaHasColorCondition
+  | BattleAreaHasKeywordCondition
   | BreakAreaHasCardCondition
   | BreakAreaCardCountAtLeastCondition
   | SupportCountLessThanOpponentCondition
@@ -629,7 +659,8 @@ export interface DamageAllEffect {
   excludeSource?: boolean
   /**
    * 逐一選定並處理所有目標；每一張 HP 卡的 FLIP 都必須在下一個目標前完成。
-   * 僅用於卡面明確要求全體傷害仍需依序結算的效果（BS4-005）。
+   * 僅用於卡面明確要求全體傷害仍需依序結算的效果（BS4-005、BS7-039、
+   * BS7-082）。
    */
   sequential?: boolean
   /** `sequential` 時用於 UI 選取所有合法目標，點擊順序即傷害順序。 */
@@ -676,6 +707,8 @@ export interface ModifyAttackEffect {
   duration: EffectDuration
   target: EffectTargetSelector
   condition?: EffectCondition
+  /** 以同一批已選目標依序結算的後續效果（例如「that Cookie」）。 */
+  thenEffects?: CardEffect[]
   /** Resolve an optional draw only when this effect's selected target meets the HP check. */
   thenDrawUpToIfTargetRemainingHp?: {
     remainingHp: number
@@ -717,6 +750,8 @@ export interface DrawEffect {
 export interface DrawUpToEffect {
   kind: 'draw-up-to'
   max: number
+  /** Draw only enough cards to reach this hand size (BS7-068). */
+  untilHandSize?: number
   condition?: EffectCondition
 }
 
@@ -810,6 +845,8 @@ export interface SupportToTrashEffect {
   amount: number
   side?: EffectTargetSide
   activeOnly?: boolean
+  /** Restrict support cards by an official keyword (for example Arena). */
+  keyword?: CardKeyword
   optional?: boolean
   condition?: EffectCondition
 }
@@ -831,6 +868,7 @@ export interface DisableBlockEffect {
   kind: 'disable-block'
   duration: 'this-turn'
   side: 'opponent'
+  condition?: EffectCondition
 }
 
 /** Prevent the defending player from activating Trap cards during this battle. */
@@ -874,6 +912,18 @@ export interface ModifyAllAttackEffect {
   minLevel?: number
 }
 
+/** 持續光環：符合條件的己方餅乾造成效果傷害時提高傷害。 */
+export interface ModifyAllEffectDamageEffect {
+  kind: 'modify-all-effect-damage'
+  amount: number
+  duration: EffectDuration
+  side: EffectTargetSide
+  condition?: EffectCondition
+  energyColor?: CookieCard['energyColor']
+  keyword?: CardKeyword
+  minLevel?: number
+}
+
 export interface BattleToSupportEffect {
   kind: 'battle-to-support'
   target: EffectTargetSelector
@@ -899,6 +949,8 @@ export interface TrashToBattleEffect {
   energyCost?: EnergyCost
   keyword?: CardKeyword
   condition?: EffectCondition
+  /** Effects that resolve only after a Cookie was actually played. */
+  thenEffects?: CardEffect[]
 }
 
 export interface SupportToHandEffect {
@@ -921,6 +973,8 @@ export interface HandToSupportEffect {
   amount: number
   rested?: boolean
   energyColor?: EnergyColor
+  /** Restrict the hand cards by an official keyword (for example Arena). */
+  keyword?: CardKeyword
   optional?: boolean
   condition?: EffectCondition
 }
@@ -936,6 +990,8 @@ export interface OpponentDiscardHandEffect {
 export interface DiscardHandEffect {
   kind: 'discard-hand'
   count: number
+  /** 官方文字「discard N card(s) or more」允許玩家在最低張數以上多棄。 */
+  atLeast?: boolean
   /** 選出的手牌去向；預設棄牌區，`deck-top` 用於「放到牌庫頂」（BS3-088）。 */
   destination?: 'trash' | 'deck-top' | 'deck-bottom'
   condition?: EffectCondition
@@ -1056,6 +1112,11 @@ export interface HandToBreakEffect {
   nonCookieOnly?: boolean
   keyword?: CardKeyword
   optional?: boolean
+  /**
+   * 選到手牌送入休息區後才展開的後續效果（例如 BS7-038 的
+   * 「選一張 LV.1 Arena Cookie 返回手牌」）。
+   */
+  thenEffects?: CardEffect[]
 }
 
 export interface HandToBreakBySumEffect {
@@ -1068,6 +1129,7 @@ export interface BreakToHandEffect {
   kind: 'break-to-hand'
   amount: number
   energyColor?: EnergyColor
+  keyword?: CardKeyword
   minLevel?: number
   maxLevel?: number
   optional?: boolean
@@ -1078,6 +1140,11 @@ export interface BreakToHandEffect {
    * 前一步後仍被錯誤要求支付／選擇後續效果。
    */
   thenEffects?: CardEffect[]
+  /**
+   * 只排除同一攻擊後效果前一步剛放入休息區的卡（BS7-038）。
+   * 實際 instance ids 由攻擊結算時暫存於 PendingBattle。
+   */
+  excludePreviousHandToBreak?: boolean
 }
 
 export interface HandToHpEffect {
@@ -1232,10 +1299,12 @@ export interface InspectDeckEffect {
   restDestination: InspectDeckRestDestination
   condition?: EffectCondition
   /** 被選走的卡去向；預設加入手牌，`battle` 代表直接登場（BS3-114）。 */
-  pickDestination?: 'hand' | 'battle'
+  pickDestination?: 'hand' | 'battle' | 'support'
   filterColor?: EnergyColor
   /** 只有此類型的卡可被選走，例如 BS3-114 限定 Cookie。 */
   filterType?: GameCard['type']
+  /** 只有帶有指定官方關鍵字的卡可被選走（例如 BS7-051 的 Arena 卡）。 */
+  filterKeyword?: CardKeyword
   /** 官方文字的「up to」：可以一張都不選（BS3-114）。 */
   optionalPick?: boolean
   /**
@@ -1269,6 +1338,7 @@ export interface ReturnToDeckBottomEffect {
 export interface OpponentRandomDiscardEffect {
   kind: 'opponent-random-discard'
   count: number
+  condition?: EffectCondition
 }
 
 export interface HpToTrashEffect {
@@ -1358,11 +1428,16 @@ export interface BreakToBattleEffect {
 export interface SupportToBattleEffect {
   kind: 'support-to-battle'
   amount: number
+  /** 「Play up to」允許 0 張；未標示 up to 的官方效果可設為 false。 */
+  optional?: boolean
   exactLevel?: number
+  minLevel?: number
   maxLevel?: number
   energyColor?: EnergyColor
   keyword?: CardKeyword
   condition?: EffectCondition
+  /** 成功登場後才執行的後續效果（例如 BS7-065 的「If you do, draw up to 1」）。 */
+  thenEffects?: CardEffect[]
 }
 
 export interface BattleToBreakEffect {
@@ -1477,6 +1552,7 @@ export type CardEffect =
   | ViewHpEffect
   | ReorderHpEffect
   | ModifyAllAttackEffect
+  | ModifyAllEffectDamageEffect
   | BattleToSupportEffect
   | TrashToBattleEffect
   | SupportToHandEffect
@@ -1594,6 +1670,8 @@ export type AbilityCost = EnergyCost & {
   /** 限定棄置的手牌類型，例如「Discard 1 {R} Trap card」。 */
   discardHandType?: GameCard['type']
   supportToTrash?: number
+  /** 限定送入棄牌區的支援卡關鍵字（例如 BS7-049／051 的 Arena）。 */
+  supportToTrashKeyword?: CardKeyword
   supportToHand?: number
   /** Optional restriction for support cards returned as a cost (for example, Cookie only). */
   supportToHandType?: GameCard['type']
@@ -1609,6 +1687,20 @@ export type AbilityCost = EnergyCost & {
     /** 限定可支付 HP 的餅乾等級範圍。 */
     minLevel?: number
     maxLevel?: number
+    /** 限定可支付 HP 的餅乾必須帶有官方關鍵字。 */
+    keyword?: CardKeyword
+  }
+  /** 「return 1 card from the top of your Cookie's HP to your hand」類代價。 */
+  hpToHand?: {
+    amount?: number
+    /** 限定由攻擊來源餅乾支付。 */
+    sourceOnly?: boolean
+    /** 限定不能選擇攻擊來源餅乾。 */
+    excludeSource?: boolean
+    energyColor?: EnergyColor
+    minLevel?: number
+    maxLevel?: number
+    keyword?: CardKeyword
   }
   trashBattleCookie?: {
     count: number
@@ -1744,10 +1836,17 @@ export type TrapCondition =
       kind: 'battle-area-has-cookie-with-level'
       level: number
     }
+  | {
+      /** 陷阱擁有者戰鬥區存在指定關鍵字餅乾（BS7-021）。 */
+      kind: 'battle-area-has-keyword'
+      keyword: CardKeyword
+    }
 
 export interface TrapAbility {
   text: string
   cost: AbilityCost
+  /** 官方「can be used as {R}」的來源能量敘述；不屬於陷阱啟動費用。 */
+  sourceEnergy?: EnergyCost
   /** 陷阱可選的替代支付方式；未指定時只使用 `cost`。 */
   alternativeCosts?: AbilityCost[]
   condition?: TrapCondition
@@ -1855,7 +1954,17 @@ export interface PendingFaintEffect {
    * 觸發昏厥技能本身的手牌／支援區代價。這些代價必須在效果目標前
    * 完成，並與一般技能啟動共用同一套候選卡判定。
    */
-  cost?: Pick<AbilityCost, 'discardHand' | 'discardHandColor' | 'discardHandType' | 'supportToTrash'>
+  cost?: Pick<
+    AbilityCost,
+    | 'discardHand'
+    | 'discardHandColor'
+    | 'discardHandType'
+    | 'supportToTrash'
+    | 'supportToHand'
+    | 'supportToHandType'
+  >
+  /** 昏厥技能來源餅乾可提供的替代能量（例如 BS7-040 的 {Y}）。 */
+  sourceEnergy?: EnergyCost
 }
 
 export interface PendingAfterDamageEffect {
@@ -1895,6 +2004,8 @@ export interface PendingReplacement {
 export interface PendingOpponentHandDiscard {
   playerId: PlayerId
   count: number
+  /** 允許在最低張數以上多選手牌（例如 BS7-082）。 */
+  atLeast?: boolean
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName: string
@@ -2055,9 +2166,10 @@ export interface GameState {
     pickCount: number
     /** 未指定時視為 `bottom`，與此欄位加入前的行為一致。 */
     restDestination?: InspectDeckRestDestination
-    pickDestination?: 'hand' | 'battle'
+    pickDestination?: 'hand' | 'battle' | 'support'
     filterColor?: EnergyColor
     filterType?: GameCard['type']
+    filterKeyword?: CardKeyword
     optionalPick?: boolean
     extraHp?: number
   } | null
@@ -2132,6 +2244,8 @@ export interface GameState {
     trigger?: 'activate' | 'on-play' | 'passive' | 'attacker-faint'
     effects: CardEffect[]
     effectIndex: number
+    /** IDs selected by the preceding effect for a nested `Then` target. */
+    previousEffectTargetIds?: string[]
     /**
      * 兩階段選擇的第一階段結算完且目標未昏厥時，停在
      * 此處等待玩家決定第二階段「選擇手牌放到該餅乾 HP 最上方」
@@ -2218,6 +2332,8 @@ export interface PendingBattle {
   }[]
   attackEffects: CardEffect[]
   attackEffectIndex: number
+  /** 攻擊後「手牌放休息區」剛選取的 instance，供後續排除該張卡。 */
+  lastHandToBreakIds?: string[]
   damagePlayerId?: PlayerId
   damageTargetInstanceId?: string
   suspendedAttackDamage?: number

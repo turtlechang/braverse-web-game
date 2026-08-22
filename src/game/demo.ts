@@ -1,5 +1,5 @@
 import { createSeededShuffle, defaultShuffle } from './helpers'
-import { getFaintTriggeredCost } from './skills'
+import { getFaintTriggeredCost, hasCookieOnPlayEffects } from './skills'
 import { beginAttack } from './battle'
 import { applyGameCommand } from './commands'
 import {
@@ -20,6 +20,7 @@ import {
 import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import bs7CandidateDocument from '../../data/candidates/official-arena-of-glory-bs7.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
@@ -2482,6 +2483,29 @@ const getBs6FormalTestCard = (cardNumber: string): GameCard | null => {
   }
 }
 
+/**
+ * BS7 維持 inventory 候選狀態；這個 fallback 只讓 localhost 的 card-check
+ * Browser fixture 經相同 adapter 驗證，絕不寫入 generated card pool。
+ */
+const getBs7CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  const source = (bs7CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === trimmed,
+  ) ?? (bs7CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === trimmed,
+  )
+  if (!source) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS7 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
   // BS6-091 is represented only by variants in the formal API. Resolve it
@@ -2502,6 +2526,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
   if (!source) {
     const bs6Formal = getBs6FormalTestCard(trimmed)
     if (bs6Formal) return bs6Formal
+    const bs7Candidate = getBs7CandidateTestCard(trimmed)
+    if (bs7Candidate) return bs7Candidate
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -2564,17 +2590,36 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     0,
     card.id === 'BS5-005' ? 'red' : payColor,
   )
-  const selfExtra1 = card.id === 'P-117'
-    ? {
-        ...selfExtra1Base,
-        cookie: {
-          ...selfExtra1Base.cookie,
-          level: 2,
-          energyColor: 'blue' as EnergyColor,
-          keywords: ['arena'] as ['arena'],
-        },
+  const selfExtra1 = card.id === 'P-117' || card.id === 'BS7-002' || card.id === 'BS7-003' || card.id === 'BS7-008' || card.id === 'BS7-010' || card.id === 'BS7-011' || card.id === 'BS7-012' || card.id === 'BS7-014' || card.id === 'BS7-015' || card.id === 'BS7-017' || card.id === 'BS7-018' || card.id === 'BS7-019' || card.id === 'BS7-021' || card.id === 'BS7-022' || card.id === 'BS7-024' || card.id === 'BS7-025' || card.id === 'BS7-026' || card.id === 'BS7-027' || card.id === 'BS7-028' || card.id === 'BS7-029' || card.id === 'BS7-030' || card.id === 'BS7-031' || card.id === 'BS7-032' || card.id === 'BS7-033' || card.id === 'BS7-035' || card.id === 'BS7-036' || card.id === 'BS7-037' || card.id === 'BS7-038' || card.id === 'BS7-039' || card.id === 'BS7-040' || card.id === 'BS7-041' || card.id === 'BS7-043' || card.id === 'BS7-044' || card.id === 'BS7-045' || card.id === 'BS7-046' || card.id === 'BS7-048' || card.id === 'BS7-049' || card.id === 'BS7-050' || card.id === 'BS7-051' || card.id === 'BS7-053' || card.id === 'BS7-055' || card.id === 'BS7-056' || card.id === 'BS7-057' || card.id === 'BS7-058' || card.id === 'BS7-059' || card.id === 'BS7-060' || card.id === 'BS7-061' || card.id === 'BS7-062' || card.id === 'BS7-068' || card.id === 'BS7-069' || card.id === 'BS7-070' || card.id === 'BS7-072' || card.id === 'BS7-075' || card.id === 'BS7-076' || card.id === 'BS7-078' || card.id === 'BS7-083' || card.id === 'BS7-096' || card.id === 'BS7-100' || card.id === 'BS7-105'
+      ? {
+          ...selfExtra1Base,
+          cookie: {
+            ...selfExtra1Base.cookie,
+            ...(card.id === 'P-117'
+              ? { level: 2, energyColor: 'blue' as EnergyColor }
+              : card.id === 'BS7-025' || card.id === 'BS7-027' || card.id === 'BS7-028' || card.id === 'BS7-029' || card.id === 'BS7-030' || card.id === 'BS7-031' || card.id === 'BS7-032' || card.id === 'BS7-033' || card.id === 'BS7-035' || card.id === 'BS7-036' || card.id === 'BS7-037' || card.id === 'BS7-038' || card.id === 'BS7-039' || card.id === 'BS7-040' || card.id === 'BS7-041' || card.id === 'BS7-043' || card.id === 'BS7-044' || card.id === 'BS7-045' || card.id === 'BS7-046' || card.id === 'BS7-048' || card.id === 'BS7-049' || card.id === 'BS7-050' || card.id === 'BS7-051'
+                ? { energyColor: 'yellow' as EnergyColor }
+              : card.id === 'BS7-053' || card.id === 'BS7-055' || card.id === 'BS7-056' || card.id === 'BS7-057' || card.id === 'BS7-058' || card.id === 'BS7-059' || card.id === 'BS7-060' || card.id === 'BS7-061' || card.id === 'BS7-062'
+                  ? { energyColor: 'green' as EnergyColor }
+              : card.id === 'BS7-069' || card.id === 'BS7-070' || card.id === 'BS7-072' || card.id === 'BS7-075' || card.id === 'BS7-076' || card.id === 'BS7-078' || card.id === 'BS7-083'
+                  ? { energyColor: 'blue' as EnergyColor }
+                : card.id === 'BS7-096' || card.id === 'BS7-100' || card.id === 'BS7-105'
+                  ? { energyColor: 'purple' as EnergyColor }
+                : { energyColor: 'red' as EnergyColor }),
+            ...(card.id === 'BS7-014'
+              ? { name: 'Kouign-Amann Cookie' }
+              : card.id === 'BS7-035'
+                ? { name: 'Capsaicin Cookie' }
+              : {}),
+            keywords: ['arena'] as ['arena'],
+          },
+          ...(card.id === 'BS7-017'
+            ? { hpCards: selfExtra1Base.hpCards.slice(0, 2) }
+            : card.id === 'BS7-026'
+              ? { hpCards: selfExtra1Base.hpCards.slice(0, 2) }
+            : {}),
       }
-    : card.id === 'BS6-096'
+    : card.id === 'BS6-096' || card.id === 'BS7-001'
       ? {
           ...selfExtra1Base,
           cookie: {
@@ -2591,6 +2636,29 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const energySupports = energySupportColors.map((color, i) =>
     testSupportCard(`support-pay-${i}`, color),
   )
+  const arenaSupportCookie = (
+    instanceId: string,
+    level = 1,
+    energyColor: EnergyColor = payColor,
+  ): CookieCard => ({
+    ...cardCheckFillerCookie(instanceId, level, Math.max(2, level + 1), 0, energyColor).cookie,
+    instanceId,
+    keywords: ['arena'] as ['arena'],
+  })
+  const arenaSupportEntries = (
+    prefix: string,
+    count: number,
+    level = 1,
+    energyColor: EnergyColor = payColor,
+  ) =>
+    Array.from({ length: count }, (_, index) => ({
+      card: arenaSupportCookie(`${prefix}-${index + 1}`, level, energyColor),
+      rested: false,
+    }))
+  const arenaConditionSupportArea =
+    card.id === 'BS7-053' || card.id === 'BS7-058'
+      ? arenaSupportEntries(`${card.id}-arena-condition`, 5, 1, 'green')
+      : null
   // 物品／技能的支援區回手代價若限定卡牌種類，通用 card-check fixture
   // 也要提供同類型候選，才能在正式 UI 實際走過支付代價而不是只測到
   // 「沒有合法候選」的略過路徑（例如 BS6-062 的 Cookie 代價）。
@@ -2729,7 +2797,26 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // "Select {Y} Cookies from your break area" — colorless fillers would give
   // such skills zero legal candidates and silently never activate).
   const ownBreakArea: CookieCard[] =
-    card.id === 'BS5-042'
+    card.id === 'BS7-027' || card.id === 'BS7-028' || card.id === 'BS7-029' || card.id === 'BS7-032' || card.id === 'BS7-039' || card.id === 'BS7-043'
+      ? [
+          {
+            ...cardCheckFillerCookie('BS7-027-arena-break', 1, 3, 0, 'yellow').cookie,
+            keywords: ['arena'] as ['arena'],
+          },
+        ]
+    : card.id === 'BS7-038'
+      ? [
+          {
+            ...cardCheckFillerCookie('BS7-038-arena-break', 1, 2, 0, 'yellow').cookie,
+            keywords: ['arena'] as ['arena'],
+          },
+        ]
+    : card.id === 'BS7-020'
+      ? [
+          cardCheckFillerCookie('BS7-020-break-lv3-a', 3, 4, 0, payColor).cookie,
+          cardCheckFillerCookie('BS7-020-break-lv3-b', 3, 4, 0, payColor).cookie,
+        ]
+      : card.id === 'BS5-042'
       ? [
           cardCheckFillerCookie('BS5-042-break-lv3', 3, 4, 0, payColor).cookie,
           cardCheckFillerCookie('BS5-042-break-lv2', 2, 4, 0, payColor).cookie,
@@ -2795,7 +2882,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
 
   // The real game caps each side's battle area at 2 cookies.
   const opponentBattleArea = [
-    cardCheckBattleEntry(opp1.cookie, opp1.hpCards, 1),
+    cardCheckBattleEntry(
+      card.id === 'BS7-007'
+        ? { ...opp1.cookie, keywords: ['arena'] as ['arena'] }
+        : opp1.cookie,
+      opp1.hpCards,
+      1,
+    ),
     cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 2),
   ]
 
@@ -2803,7 +2896,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (card.type === 'item') {
     const state = baseState()
     const itemBreakArea =
-      card.id === 'BS6-041'
+      card.id === 'BS7-020'
+        ? ownBreakArea
+      : card.id === 'BS6-041'
         ? [
             ...ownBreakArea,
             cardCheckFillerCookie('bs6-041-break-3', 1, 3, 0, 'yellow').cookie,
@@ -2811,6 +2906,21 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         : card.id === 'BS5-042'
           ? ownBreakArea
         : undefined
+    const itemDeck = card.id === 'BS7-063'
+      ? [
+          arenaSupportCookie('BS7-063-deck-arena', 1, 'green'),
+          ...deckFiller('p1').slice(1),
+        ]
+      : deckFiller('p1')
+    const itemDiscardPile = card.id === 'BS7-105'
+      ? [
+          ...trashFillers,
+          {
+            ...cardCheckFillerCookie('BS7-105-trash-arena', 1, 3, 0, 'purple').cookie,
+            keywords: ['arena'] as ['arena'],
+          },
+        ]
+      : trashFillers
     return {
       ...state,
       players: {
@@ -2819,12 +2929,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
           battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          deck: itemDeck,
           supportArea: [...energySupports, ...supportCostCandidates].map((c) => ({
             card: c,
             rested: false,
           })),
           ...(itemBreakArea ? { breakArea: itemBreakArea } : {}),
-          discardPile: trashFillers,
+          discardPile: itemDiscardPile,
         },
         'player-two': {
           ...state.players['player-two'],
@@ -2840,8 +2951,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
                 breakArea: [],
               }
             : {}),
+          ...(card.id === 'BS7-020' ? { breakArea: opponentBreakArea } : {}),
         },
       },
+      ...(card.id === 'BS7-041'
+        ? {
+            arenaCookiesPlacedInBreakThisTurn: {
+              'player-one': 1,
+              'player-two': 0,
+            },
+          }
+        : {}),
     }
   }
 
@@ -2853,6 +2973,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       ? [card, handCookieFiller, ...handFillers]
       : card.id === 'BS6-043'
         ? [card, handCookieFiller, ...handFillers]
+        : card.id === 'BS7-086'
+          ? [
+              card,
+              {
+                ...handCookieFiller,
+                instanceId: 'BS7-086-hand-blue-arena',
+                energyColor: 'blue' as EnergyColor,
+                keywords: ['arena'] as ['arena'],
+              },
+              ...handFillers,
+            ]
         : [card, ...handFillers]
     const stageBreakArea = card.id === 'P-028'
       ? [
@@ -2861,6 +2992,19 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ]
       : ownBreakArea
     const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
+    const stageDiscardPile = card.id === 'BS7-107'
+      ? [
+          ...trashFillers,
+          {
+            ...cardCheckFillerCookie('BS7-107-trash-arena-1', 1, 3, 0, 'purple').cookie,
+            keywords: ['arena'] as ['arena'],
+          },
+          {
+            ...cardCheckFillerCookie('BS7-107-trash-arena-2', 2, 4, 0, 'purple').cookie,
+            keywords: ['arena'] as ['arena'],
+          },
+        ]
+      : trashFillers
     const state = baseState()
     const stageBattleFixture = card.id === 'BS6-021'
       ? cardCheckFillerCookie(
@@ -2879,8 +3023,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const stagePlayerSupportArea =
       card.id === 'BS6-064'
         ? energySupports.slice(0, 2).map((c) => ({ card: c, rested: false }))
-        : card.id === 'BS6-043'
+      : card.id === 'BS6-043'
           ? energySupports.map((c, index) => ({ card: c, rested: index < 2 }))
+        : card.id === 'BS7-065'
+          ? [
+              ...energySupports.map((c) => ({ card: c, rested: false })),
+              ...arenaSupportEntries('BS7-065-support-arena', 1, 1, 'green'),
+            ]
         : [...energySupports, ...supportCostCandidates].map((c) => ({
             card: c,
             rested: false,
@@ -2906,7 +3055,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           supportArea: stagePlayerSupportArea,
           stage: { card: oldStage, rested: false },
           breakArea: stageBreakArea,
-          discardPile: trashFillers,
+          discardPile: stageDiscardPile,
         },
         'player-two': {
           ...state.players['player-two'],
@@ -2916,6 +3065,26 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             : {}),
         },
       },
+      ...(card.id === 'BS7-022'
+        ? {
+            // BS7-022 的正向路徑直接以正式回合旗標表示己方 Arena Cookie
+            // 本回合已造成效果傷害，保留場景登場／Activate／目標流程。
+            arenaCookieDealtEffectDamageThisTurn: {
+              'player-one': true,
+              'player-two': false,
+            },
+          }
+        : {}),
+      ...(card.id === 'BS7-043'
+        ? {
+            // BS7-043 的正向路徑保留正式事件旗標與 Arena 休息區卡，
+            // 讓場景啟動效果在 Browser 可選到合法 Cookie。
+            arenaCookiesPlacedInBreakThisTurn: {
+              'player-one': 1,
+              'player-two': 0,
+            },
+          }
+        : {}),
     }
   }
 
@@ -2958,12 +3127,40 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             cardCheckFillerCookie('BS6-042-break-2', 1, 3).cookie,
             cardCheckFillerCookie('BS6-042-break-3', 2, 4).cookie,
           ]
+        : card.id === 'BS7-042'
+          ? Array.from({ length: 3 }, (_, index) => ({
+              ...cardCheckFillerCookie(
+                `BS7-042-arena-break-${index + 1}`,
+                index === 2 ? 2 : 1,
+                3,
+                0,
+                'yellow',
+              ).cookie,
+              keywords: ['arena'] as ['arena'],
+            }))
+        : card.id === 'BS7-108'
+          ? [cardCheckFillerCookie('BS7-108-break-lv4', 4, 4, 0, 'purple').cookie]
         : []
     const trapOpponentSecondCookie =
-      card.id === 'BS5-109' ? opp1.cookie : opp2.cookie
+      card.id === 'BS5-109'
+        ? opp1.cookie
+        : card.id === 'BS7-108'
+          ? cardCheckFillerCookie('BS7-108-opponent-lv3', 3, 6, 0, 'black').cookie
+          : opp2.cookie
     const trapBattleArea =
       card.id === 'BS6-106'
         ? [cardCheckBattleEntry(defender.cookie, defender.hpCards, 4)]
+        : card.id === 'BS7-108'
+          ? [
+              cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+              cardCheckBattleEntry(
+                trapOpponentSecondCookie,
+                Array.from({ length: trapOpponentSecondCookie.hp }, (_, index) =>
+                  testSupportCard(`BS7-108-opponent-lv3-hp-${index + 1}`, 'black'),
+                ),
+                6,
+              ),
+            ]
         : [
             cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
@@ -2981,7 +3178,22 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               'purple',
             ).cookie,
           ]
-        : [...trashFillers, ...bigTrashFillers]
+        : card.id === 'BS7-106'
+          ? [
+              ...trashFillers,
+              ...bigTrashFillers,
+              {
+                ...cardCheckFillerCookie(
+                  'BS7-106-trash-arena',
+                  1,
+                  3,
+                  0,
+                  'purple',
+                ).cookie,
+                keywords: ['arena'] as ['arena'],
+              },
+            ]
+          : [...trashFillers, ...bigTrashFillers]
     const state = baseState()
     return {
       ...state,
@@ -2991,8 +3203,16 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: [card, ...handFillers],
-          battleArea: trapBattleArea,
+          hand: card.id === 'BS7-085'
+            ? [card, handFillers[0]!]
+            : [card, ...handFillers],
+          battleArea: card.id === 'BS7-085'
+            ? trapBattleArea.map((entry, index) =>
+                index === 1
+                  ? { ...entry, card: { ...entry.card, keywords: ['arena'] as ['arena'] } }
+                  : entry,
+              )
+            : trapBattleArea,
           // BS6-063 的卡面寫的是「有 5 張卡牌」，不是「5 張以上」；
           // 付款只會將支援卡橫置，不會減少張數，因此要以恰好 5 張
           // 建立成立分支，才能在支付後繼續進入牌庫頂放置效果。
@@ -3005,18 +3225,37 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         },
         'player-two': {
           ...state.players['player-two'],
-          battleArea: [
-            cardCheckBattleEntry(attacker, attackerHpCards, 5, true),
-            cardCheckBattleEntry(
-              trapOpponentSecondCookie,
-              trapOpponentSecondCookie === opp1.cookie
-                ? opp1.hpCards
-                : opp2.hpCards,
-              6,
-              true,
-            ),
-          ],
+          battleArea: card.id === 'BS7-108'
+            ? [
+                cardCheckBattleEntry(attacker, attackerHpCards, 5, true),
+                cardCheckBattleEntry(
+                  trapOpponentSecondCookie,
+                  Array.from({ length: trapOpponentSecondCookie.hp }, (_, index) =>
+                    testSupportCard(`BS7-108-opponent-lv3-hp-${index + 1}`, 'black'),
+                  ),
+                  6,
+                  true,
+                ),
+              ]
+            : [
+                cardCheckBattleEntry(attacker, attackerHpCards, 5, true),
+                cardCheckBattleEntry(
+                  trapOpponentSecondCookie,
+                  trapOpponentSecondCookie === opp1.cookie
+                    ? opp1.hpCards
+                    : opp2.hpCards,
+                  6,
+                  true,
+                ),
+              ],
           stage: { card: opponentStage, rested: false },
+          ...(card.id === 'BS7-108'
+            ? {
+                breakArea: [
+                  cardCheckFillerCookie('BS7-108-opponent-break-lv1', 1, 3, 0, 'black').cookie,
+                ],
+              }
+            : {}),
         },
       },
       pendingBattle: {
@@ -3116,6 +3355,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           sourcePlayerId: 'player-one',
           sourceInstanceId: faintCard.instanceId,
         },
+        ...(card.skill?.sourceEnergy
+          ? { sourceEnergy: card.skill.sourceEnergy }
+          : {}),
         ...(faintCost && index === 0 ? { cost: faintCost } : {}),
       }),
     )
@@ -3128,12 +3370,43 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             testSupportCard(`BS2-060-opponent-trash-${index + 1}`, 'purple'),
           )
         : []
+    const faintArenaHand =
+      card.id === 'BS7-048' || card.id === 'BS7-075'
+        ? {
+            ...handCookieFiller,
+            instanceId: `${card.id}-hand-arena`,
+            keywords: ['arena'] as ['arena'],
+          }
+        : null
+    const faintSupportArea =
+      card.id === 'BS7-050'
+        ? [
+            ...energySupports.map((c) => ({ card: c, rested: false })),
+            {
+              card: testSupportCard('BS7-050-support-return', payColor),
+              rested: false,
+            },
+          ]
+        : card.id === 'BS7-048'
+          ? energySupports.map((c) => ({ card: c, rested: false }))
+          : undefined
+    const faintDeck = card.id === 'BS7-090'
+      ? [
+          arenaSupportCookie('BS7-090-deck-arena-1', 1, 'red'),
+          testSupportCard('BS7-090-deck-non-arena-1', 'purple'),
+          arenaSupportCookie('BS7-090-deck-arena-2', 2, 'blue'),
+          testSupportCard('BS7-090-deck-non-arena-2', 'green'),
+          arenaSupportCookie('BS7-090-deck-arena-3', 1, 'yellow'),
+          ...deckFiller('p1').slice(5),
+        ]
+      : state.players['player-one'].deck
     return {
       ...state,
       players: {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
+          deck: faintDeck,
           breakArea: [faintCard, ...ownBreakArea],
           // Keep a legal Cookie in the battle area so resolving the faint
           // effect can continue through draw/Then UI without ending the demo
@@ -3142,20 +3415,29 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           // BS3-061 pays its faint cost from the support area before checking
           // the 5-card condition. Start with six cards so the default
           // card-check route exercises the condition-met path.
-          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101'
+          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101' || card.id === 'BS7-040'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
+            : faintSupportArea
+              ? { supportArea: faintSupportArea }
             : {}),
-          ...(card.id === 'BS2-043' || card.id === 'BS5-007'
+          ...(card.id === 'BS2-043' || card.id === 'BS5-007' || card.id === 'BS7-090'
             ? { hand: handFillers }
             : card.id === 'BS5-026'
               ? { hand: [handCookieFiller, ...handFillers] }
-              : {}),
+              : faintArenaHand
+                ? { hand: [faintArenaHand, ...handFillers] }
+                : {}),
           discardPile: trashFillers,
         },
         'player-two': {
           ...state.players['player-two'],
           battleArea: [
-            cardCheckBattleEntry(target.cookie, target.hpCards, 4),
+            cardCheckBattleEntry(
+              target.cookie,
+              target.hpCards,
+              4,
+              card.id === 'BS7-050',
+            ),
             ...opponentBattleArea,
           ],
           ...(opponentTrashForFaint.length > 0
@@ -3176,14 +3458,16 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (
     cookieCard.attackEffects &&
     cookieCard.attackEffects.length > 0 &&
-    // BS3-113, BS6-031, BS6-072, BS6-074, and BS6-079 are card-check entries used to verify an
+    // BS3-113, BS6-031, BS6-072, BS6-074, BS6-079, and BS7-046 are card-check entries used to verify an
     // OnPlay skill. Their secondary attack effects must not hide the deploy
     // UI; dedicated attack fixtures still cover those later effects.
     cookieCard.id !== 'BS3-113' &&
     cookieCard.id !== 'BS6-031' &&
     cookieCard.id !== 'BS6-072' &&
     cookieCard.id !== 'BS6-074' &&
-    cookieCard.id !== 'BS6-079'
+    cookieCard.id !== 'BS6-079' &&
+    cookieCard.id !== 'BS7-046' &&
+    cookieCard.id !== 'BS7-059'
   ) {
     const state = baseState()
     // BS6-018 needs the player to declare a real attack while its source is at
@@ -3293,6 +3577,16 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           : cookieCard.id === 'BS6-007'
             ? scenarioSupports('BS6-007-condition-support', 2, 'red')
           : []
+    const attackArenaHand = Array.from({ length: 2 }, (_, index) => ({
+      ...cardCheckFillerCookie(
+        `${cookieCard.id}-attack-arena-hand-${index + 1}`,
+        1,
+        2,
+        0,
+        payColor,
+      ).cookie,
+      keywords: ['arena'] as ['arena'],
+    }))
     const attackPlayerHand =
       cookieCard.id === 'BS4-073' || cookieCard.id === 'BS4-083'
         ? [
@@ -3308,6 +3602,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               },
               ...handFillers,
             ]
+        : cookieCard.id === 'BS7-038' || cookieCard.id === 'BS7-039'
+          ? [handCookieFiller, ...handFillers]
+        : cookieCard.id === 'BS7-066' || cookieCard.id === 'BS7-067'
+          ? [...attackArenaHand, ...handFillers]
+        : cookieCard.id === 'BS7-082'
+          ? handFillers.slice(0, 3)
+        : cookieCard.id === 'BS7-073'
+          ? handFillers.slice(0, 3)
         : cookieCard.id === 'BS5-071'
           ? handFillers.slice(0, 2)
           : handFillers
@@ -3318,8 +3620,49 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...Array.from({ length: 8 }, (_, index) =>
               testSupportCard(`BS4-089-condition-trash-${index + 1}`),
             ),
-          ]
+        ]
         : trashFillers
+    const attackArenaTrash = Array.from(
+      { length: cookieCard.id === 'BS7-094' ? 30 : 7 },
+      (_, index) => ({
+      ...cardCheckFillerCookie(
+        `${cookieCard.id}-attack-arena-trash-${index + 1}`,
+        1,
+        2,
+        0,
+        'purple',
+      ).cookie,
+      keywords: ['arena'] as ['arena'],
+      }),
+    )
+    const attackPlayerDiscard =
+      cookieCard.id === 'BS4-090'
+        ? [
+            ...trashFillers,
+            ...Array.from({ length: 3 }, (_, index) =>
+              createCard(
+                getCardPoolEntry('BS4-102')!,
+                'player-one',
+                300 + index,
+              ),
+            ),
+          ]
+        : cookieCard.id === 'BS7-088' ||
+            cookieCard.id === 'BS7-094' ||
+            cookieCard.id === 'BS7-095' ||
+            cookieCard.id === 'BS7-097' ||
+            cookieCard.id === 'BS7-098' ||
+            cookieCard.id === 'BS7-101' ||
+            cookieCard.id === 'BS7-102' ||
+            cookieCard.id === 'BS7-103'
+          ? [...trashFillers, ...attackArenaTrash]
+          : trashFillers
+    const attackOpponentHand =
+      cookieCard.id === 'BS7-089'
+        ? Array.from({ length: 6 }, (_, index) =>
+            testSupportCard(`${cookieCard.id}-opponent-hand-${index + 1}`, 'purple'),
+          )
+        : []
     // BS6-013's Then condition is specifically another *Chess Choco Cookie*
     // in the same battle area.  A generic filler Cookie is not a legal
     // substitute, so keep a second real card instance in the positive route.
@@ -3366,19 +3709,6 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               ),
               cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
             ]
-    const attackPlayerDiscard =
-      cookieCard.id === 'BS4-090'
-        ? [
-            ...trashFillers,
-            ...Array.from({ length: 3 }, (_, index) =>
-              createCard(
-                getCardPoolEntry('BS4-102')!,
-                'player-one',
-                300 + index,
-              ),
-            ),
-          ]
-        : trashFillers
     return {
       ...state,
       players: {
@@ -3393,12 +3723,21 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         },
         'player-two': {
           ...state.players['player-two'],
+          ...(attackOpponentHand.length > 0 ? { hand: attackOpponentHand } : {}),
           battleArea: attackOpponentBattleArea,
           supportArea: attackOpponentSupportArea,
           stage: { card: opponentStage, rested: false },
           discardPile: attackOpponentDiscard,
         },
       },
+      ...(cookieCard.id === 'BS7-039'
+        ? {
+            arenaCookiesPlacedInBreakThisTurn: {
+              'player-one': 1,
+              'player-two': 0,
+            },
+          }
+        : {}),
       pendingBattle: usesManualAttackFixture
         ? null
         : {
@@ -3560,7 +3899,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       }
     }
 
-    if (card.skill.trigger === 'on-play') {
+    if (hasCookieOnPlayEffects(card)) {
       // On-play skills ({ap} in the card text) resolve when the cookie is
       // deployed from hand, not via a battlefield "activate skill" button —
       // mirror createOpponentDiscardHandDemoState / createSt5010OnPlayDemoState:
@@ -3569,6 +3908,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       // cookie already on the field) providing legal targets for whatever
       // the on-play effect selects.
       const fromTrashOnPlay = Boolean(card.skill.fromTrashArea)
+      const fromSupportOnPlay = Boolean(card.skill.fromSupportArea)
       const bs6091BreakArea =
         card.id === 'BS6-091'
           ? [
@@ -3591,7 +3931,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       const bs6091Hand =
         fromTrashOnPlay
           ? [handCookieFiller, ...handFillers]
-          : [card, handCookieFiller, ...handFillers]
+          : fromSupportOnPlay
+            ? [handCookieFiller, ...handFillers]
+          : card.id === 'BS7-074'
+            ? [card, ...handFillers.slice(0, 3)]
+          : card.id === 'BS7-081'
+            ? [card, ...handFillers.slice(0, 2)]
+            : [card, handCookieFiller, ...handFillers]
       const bs6091BattleArea =
         fromTrashOnPlay
           ? [
@@ -3606,7 +3952,26 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
                 6,
               ),
             ]
-          : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)]
+          : fromSupportOnPlay
+            ? [
+                cardCheckBattleEntry(
+                  card as CookieCard,
+                  Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+                    testSupportCard(
+                      `${card.id}-support-source-hp-${index + 1}`,
+                      payColor,
+                    ),
+                  ),
+                  6,
+                ),
+              ]
+          // BS7-045 plays an Arena Cookie from the support area during its
+          // OnPlay resolution. Keep one open battle slot after Kumiho enters;
+          // otherwise the legal support candidate is hidden by the real
+          // two-Cookie battle-area cap.
+          : card.id === 'BS7-045'
+            ? []
+            : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)]
       const bs6091PendingOnPlay =
         fromTrashOnPlay
           ? {
@@ -3614,14 +3979,43 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               sourceInstanceId: card.instanceId,
               origin: 'trash' as const,
             }
+          : fromSupportOnPlay
+            ? {
+                playerId: 'player-one' as const,
+                sourceInstanceId: card.instanceId,
+                origin: 'support' as const,
+              }
           : null
+      const onPlayArenaSupport = {
+        ...cardCheckFillerCookie(
+          `${card.id}-onplay-arena-support`,
+          1,
+          3,
+          0,
+          'yellow',
+        ).cookie,
+        instanceId: `${card.id}-onplay-arena-support`,
+        keywords: ['arena'] as ['arena'],
+      }
       const onPlayPlayerSupportArea =
         card.id === 'BS6-058'
           ? scenarioSupports('BS6-058-player-support', 2, 'green')
+          : card.id === 'BS7-045'
+            ? [
+                ...energySupports.map((c) => ({ card: c, rested: false })),
+                { card: onPlayArenaSupport, rested: false },
+              ]
+          : card.id === 'BS7-061'
+            ? [
+                ...energySupports.map((c) => ({ card: c, rested: false })),
+                ...arenaSupportEntries('BS7-061-onplay-arena', 1, 1, 'green'),
+              ]
           : energySupports.map((c) => ({ card: c, rested: false }))
       const onPlayOpponentSupportArea =
         card.id === 'BS6-058'
           ? scenarioSupports('BS6-058-opponent-support', 4, 'green')
+          : card.id === 'BS7-044'
+            ? scenarioSupports('BS7-044-opponent-support', 3, 'green')
           : []
       return {
         ...state,
@@ -3647,6 +4041,74 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         cookiesPlayedFromTrashThisTurn: fromTrashOnPlay
           ? { 'player-one': true }
           : undefined,
+        ...(card.id === 'BS7-016'
+          ? {
+              // BS7-016 的正向 fixture 讓 On Play 條件直接讀取正式回合旗標。
+              arenaCookieDealtEffectDamageThisTurn: {
+                'player-one': true,
+                'player-two': false,
+              },
+            }
+          : {}),
+      }
+    }
+
+    if (card.id === 'BS7-013' || card.id === 'BS7-077') {
+      // BS7-013／BS7-077 本身是持續被動，單靠 generic card-check 沒有可按的
+      // 啟動按鈕；放入一張只供 fixture 使用的 LV.2 紅色【Arena】餅乾，
+      // 讓 Browser 能以正式 On Play 效果傷害路徑觀察 +1／未加成 A/B。
+      const effectDamageSourceId = `${card.id}-effect-source`
+      const effectDamageSource: CookieCard = {
+        id: effectDamageSourceId,
+        instanceId: `${effectDamageSourceId}-1`,
+        name: 'Arena LV.2 效果傷害測試餅乾',
+        type: 'cookie',
+        level: 2,
+        hp: 3,
+        attack: 1,
+        attackCost: 0,
+        energyColor: 'red',
+        keywords: ['arena'],
+        skill: {
+          trigger: 'on-play',
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: { energy: {} },
+          text: '測試：造成 1 點效果傷害。',
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      }
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          'player-one': {
+            ...state.players['player-one'],
+            hand: [effectDamageSource, ...handFillers],
+            battleArea: [
+              cardCheckBattleEntry(
+                card as CookieCard,
+                Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+                  testSupportCard(`BS7-013-source-hp-${index + 1}`, 'red'),
+                ),
+                4,
+              ),
+            ],
+            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            discardPile: trashFillers,
+          },
+          'player-two': {
+            ...state.players['player-two'],
+            battleArea: opponentBattleArea,
+          },
+        },
       }
     }
 
@@ -3661,12 +4123,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
               testSupportCard(`BS6-055-source-hp-${index + 1}`, 'green'),
             )
-        // BS6-001 需要從同一張紅色餅乾的 HP 堆丟 2 張。卡面 HP 為 3，
-        // 因此 card-check 也必須提供完整堆疊，才能驗證付款後仍可選擇
-        // 自己的餅乾套用 +1 攻擊傷害。
-        : card.id === 'BS6-001'
+        // BS6-001 與 BS7-001 需要從同一張紅色餅乾的 HP 堆支付；card-check
+        // 提供完整堆疊，讓支付後仍保留可結算的來源與目標選擇。
+        : card.id === 'BS6-001' || card.id === 'BS7-001' || card.id === 'BS7-012'
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
-              testSupportCard(`BS6-001-source-hp-${index + 1}`, 'red'),
+              testSupportCard(`${card.id}-source-hp-${index + 1}`, 'red'),
             )
         : card.id === 'BS5-005'
           ? [testSupportCard('BS5-005-source-hp')]
@@ -3683,25 +4144,71 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               testSupportCard(`BS6-012-source-hp-${index + 1}`, 'red'),
             )
           : [testSupportCard(`${card.id}-source-hp`)]
+    const arenaSkillSupport =
+      card.id === 'BS7-049' || card.id === 'BS7-051'
+        ? arenaSupportCookie(`${card.id}-arena-support-cost`, 1, 'yellow')
+        : card.id === 'BS7-055'
+          ? arenaSupportCookie(`${card.id}-support-cookie`, 1, 'green')
+          : card.id === 'BS7-057'
+            ? arenaSupportCookie(`${card.id}-support-arena-lv2`, 2, 'green')
+            : null
+    const skillDeck =
+      card.id === 'BS7-051'
+        ? [
+            {
+              ...cardCheckFillerCookie(
+                'BS7-051-deck-arena',
+                1,
+                3,
+                0,
+                'yellow',
+              ).cookie,
+              keywords: ['arena'] as ['arena'],
+            },
+            testSupportCard('BS7-051-deck-item-1', payColor),
+            testSupportCard('BS7-051-deck-item-2', payColor),
+            ...deckFiller('p1').slice(3),
+          ]
+        : deckFiller('p1')
     return {
       ...state,
       players: {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
+          deck: skillDeck,
           hand:
-            card.id === 'BS5-019' || card.id === 'BS6-032'
+            card.id === 'BS7-068'
+              ? handFillers.slice(0, 2)
+              : card.id === 'BS5-019' || card.id === 'BS6-032'
               ? [handCookieFiller, ...handFillers]
               : card.id === 'BS6-081'
                 ? [...handFillers, testSupportCard('BS6-081-condition-hand', payColor)]
                 : handFillers,
           battleArea: [
-            cardCheckBattleEntry(card as CookieCard, sourceHpCards, 4),
-            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+            {
+              ...cardCheckBattleEntry(card as CookieCard, sourceHpCards, 4),
+              ...(card.id === 'BS7-032' || card.id === 'BS7-053'
+                ? { rested: true }
+                : {}),
+            },
+            ...(card.id === 'BS7-055'
+              ? []
+              : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)]),
           ],
           supportArea:
             card.id === 'BS6-055'
               ? scenarioSupports('BS6-055-player-support', 4, 'green')
+              : arenaConditionSupportArea
+                ? [
+                    ...energySupports.map((c) => ({ card: c, rested: false })),
+                    ...arenaConditionSupportArea,
+                  ]
+              : arenaSkillSupport
+                ? [
+                    ...energySupports.map((c) => ({ card: c, rested: false })),
+                    { card: arenaSkillSupport, rested: false },
+                  ]
               : [...energySupports, ...supportCostCandidates].map((c) => ({
                   card: c,
                   rested: false,
@@ -3733,6 +4240,27 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           breakArea: opponentBreakArea,
         },
       },
+      ...(card.id === 'BS7-004' || card.id === 'BS7-016'
+        ? {
+            // BS7-004／BS7-016 的正向 Browser fixture 以正式 runtime flag
+            // 表示「己方 Arena Cookie 本回合已造成效果傷害」，不直接改寫
+            // 技能效果或付款規則。
+            arenaCookieDealtEffectDamageThisTurn: {
+              'player-one': true,
+              'player-two': false,
+            },
+          }
+        : {}),
+      ...(card.id === 'BS7-027' || card.id === 'BS7-028' || card.id === 'BS7-029' || card.id === 'BS7-032'
+        ? {
+            // BS7-027 的正向 fixture 以正式回合旗標表示己方 Arena
+            // 餅乾本回合已進入休息區，並在 breakArea 保留實體卡作為證據。
+            arenaCookiesPlacedInBreakThisTurn: {
+              'player-one': 1,
+              'player-two': 0,
+            },
+          }
+        : {}),
     }
   }
 
@@ -3871,6 +4399,1061 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
             }
           : entry,
       ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-001') {
+    // 保留自身 HP 費用的合法選項，僅將正向路徑的唯一 LV.3 目標降為 LV.2。
+    // Browser B 因此能證明規則層不會讓「最多 1 張己方 LV.3」誤選 LV.2，
+    // 而不是退化成只因沒有能量而無法操作。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, level: 2 } }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-002' || baseCardNumber === 'BS7-025' || baseCardNumber === 'BS7-030') {
+    // 保留同色同伴與附著的 LV.2 餅乾，只移除【Arena】關鍵字；Browser B
+    // 因此驗證的是官方的「指定顏色【Arena】Cookie」合併條件，而非付款或等級。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-003') {
+    // 保留紅色／能量支付，僅移除另一張餅乾的【Arena】關鍵字；Browser B
+    // 因此驗證的是「another Arena Cookie」條件，而不是因為沒有能量而無法登場。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-004') {
+    // 保留紅色付款能量與對手目標，只清除「Arena Cookie 已造成效果傷害」
+    // 的回合旗標，讓 Browser B 針對真正的條件失敗，而不是支付失敗。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookieDealtEffectDamageThisTurn: {
+          'player-one': false,
+          'player-two': false,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-010') {
+    // 保留昏厥 pending effect 與對手目標，只移除己方同伴的【Arena】關鍵字；
+    // Browser B 因此驗證的是條件失敗，而不是因為沒有可選目標或支付失敗。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-011') {
+    // 保留紅色同伴與 FLIP 翻牌流程，只移除同伴的【Arena】關鍵字；
+    // Browser B 因此證明雙重條件中的場上條件會阻擋抽牌，而不是因為
+    // 沒有 pending FLIP 或沒有牌庫可抽。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-012') {
+    // 保留啟動技能所需的來源餅乾與支援區支付，但移除戰鬥區所有
+    // Arena 關鍵字；Browser B 因此會在真正的 HP payment 邊界被阻擋，
+    // 而不是用疲勞支援卡掩蓋條件。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) => ({
+        ...entry,
+        card: { ...entry.card, keywords: [] },
+      })),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-013' || baseCardNumber === 'BS7-077') {
+    // 保留 BS7-013／BS7-077 光環與測試餅乾的正式 On Play 傷害路徑，只移除
+    // 傷害來源餅乾的 Arena 關鍵字；Browser B 會由 2 點降為 1 點，
+    // 證明顏色／等級／關鍵字 selector 確實參與效果傷害計算。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.map((card) =>
+        card.id === `${baseCardNumber}-effect-source`
+          ? { ...card, keywords: [] }
+          : card,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-014') {
+    // 保留 Activate 的棄牌／LV.2+ 傷害流程，但移除 Kouign-Amann 名稱，
+    // 讓 Browser B 只阻擋靜態 +1 攻擊光環，不是因為支付或目標不足。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, name: 'self-extra-1' } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-016') {
+    // 只清除回合效果傷害旗標；保留登場、抽牌與牌庫資料，讓 Browser B
+    // 證明條件不成立，而不是被支付或目標缺失提早擋住。
+    return {
+      ...state,
+      arenaCookieDealtEffectDamageThisTurn: {
+        'player-one': false,
+        'player-two': false,
+      },
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          supportArea: player.supportArea.map((support) => ({
+            ...support,
+            rested: false,
+          })),
+          discardPile: negativeDiscardPile,
+        },
+      },
+    }
+  }
+  if (baseCardNumber === 'BS7-017') {
+    // 保留 2 HP 的同伴與所有手牌／牌庫資料，只移除 Arena 關鍵字，讓
+    // Browser B 走到同一張 On Play 的抽 2／棄 1 UI 後證明條件不成立。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-018' || baseCardNumber === 'BS7-019' || baseCardNumber === 'BS7-021' || baseCardNumber === 'BS7-024' || baseCardNumber === 'BS7-026') {
+    // 保留攻擊後目標／支付流程。BS7-018/019/021 的效果明確是「another」
+    // Arena，因此只移除同伴；BS7-024 的 HP 回手代價則可選攻擊來源本身，
+    // 所以要把來源與同伴的 Arena 關鍵字都移除，Browser B 才能證明沒有
+    // 合法 HP 候選而略過追加傷害。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        baseCardNumber === 'BS7-024'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-027') {
+    // 保留黃色支付與戰鬥區 Cookie，但清除「本回合 Arena 餅乾進入休息區」
+    // 的事件旗標並移除 breakArea 證據；Browser B 因此驗證條件失敗，而非
+    // 因為能量不足或沒有合法 Cookie 目標。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookiesPlacedInBreakThisTurn: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        breakArea: player.breakArea.filter(
+          (breakCard) => !breakCard.keywords?.includes('arena'),
+        ),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-028' || baseCardNumber === 'BS7-029' || baseCardNumber === 'BS7-032') {
+    // 保留技能與黃色支付，但清除本回合 Arena 餅乾進入休息區的事件旗標，
+    // 讓 Browser B 走條件阻擋而不是能量不足。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookiesPlacedInBreakThisTurn: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        breakArea: player.breakArea.filter(
+          (breakCard) => !breakCard.keywords?.includes('arena'),
+        ),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-033') {
+    // 保留登場流程與對手目標，但移除唯一其他餅乾的 Arena 關鍵字；
+    // Browser B 會在第一段沒有合法目標時阻擋，而不是因為支付失敗。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-035') {
+    // 保留 OnPlay 來源目標與支付流程，只移除 Capsaicin Cookie 名稱；
+    // Browser B 因此證明名稱條件不成立，而不是沒有來源卡。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, name: 'self-extra-1' } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-036') {
+    // 保留 OnPlay 的 no-Skill 目標位置，只移除唯一同伴的 Arena 關鍵字；
+    // Browser B 會在 Arena selector 沒有候選時阻擋。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-037') {
+    // 保留自身送入休息區的 Activate 代價與對手目標，只移除另一張
+    // 黃色 Arena Cookie；Browser B 因條件失敗而不建立 1 點傷害目標。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-038') {
+    // 保留手牌 Cookie 與攻擊後第一段，僅移除既有休息區 Cookie 的 Arena
+    // 關鍵字；Browser B 仍能實際放牌，但第二段返回手牌沒有合法候選。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      breakArea: player.breakArea.map((breakCard) => ({
+        ...breakCard,
+        keywords: [],
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-039') {
+    // 保留黃色支付與攻擊目標，只清除「Arena Cookie 已進入休息區」事件；
+    // Browser B 因此驗證全體 1 傷害的條件分支，而非支付失敗。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookiesPlacedInBreakThisTurn: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-040') {
+    // 保留昏厥觸發與黃色來源能量，僅移除己方目標的 Arena 關鍵字；
+    // Browser B 因此證明「最多 1 張己方 Arena」沒有合法目標。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-041') {
+    // 保留物品支付與攻擊目標，只清除本回合 Arena Cookie 進入休息區旗標；
+    // Browser B 會略過 +1 攻擊段，但仍可進入後續抽牌段。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookiesPlacedInBreakThisTurn: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-042') {
+    // 保留陷阱攻擊回應與第一段 -1 攻擊，僅將自己的 Arena 休息區候選降至
+    // 2 張；Browser B 因 Then 的「至少 3 張」條件不成立而不套用第二段。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      breakArea: player.breakArea.slice(0, 2),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-043') {
+    // 保留場景放置與黃色啟動能量，但清除本回合 Arena Cookie 進入休息區
+    // 的事件旗標與 break 區證據；Browser B 會在真正的 HP 條件分支被略過。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookiesPlacedInBreakThisTurn: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        breakArea: player.breakArea.filter(
+          (breakCard) => !breakCard.keywords?.includes('arena'),
+        ),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-044') {
+    // 保留來源餅乾的 OnPlay 視窗，但將對手支援區全部預先橫置；Browser B
+    // 因「最多橫置 2 張」沒有合法候選而略過效果。
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          supportArea: player.supportArea.map((support) => ({
+            ...support,
+            rested: false,
+          })),
+          discardPile: negativeDiscardPile,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: state.players['player-two'].supportArea.map((support) => ({
+            ...support,
+            rested: true,
+          })),
+        },
+      },
+    }
+  }
+  if (baseCardNumber === 'BS7-045') {
+    // 保留 OnPlay 來源與流程，只移除唯一的 Arena 支援區 Cookie，驗證
+    // 「Play up to 1 Arena Cookie」的目標篩選。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-046') {
+    // 保留支援區登場的 OnPlay 視窗，但清空手牌使「棄置 1 張牌」代價
+    // 真正不可支付；不可把後續牌庫頂效果誤當成已執行。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-048') {
+    // 保留綠色來源能量，移除手牌中的 Arena 卡；Browser B 會在昏厥
+    // 的關鍵字目標邊界被阻擋，而不是因為替代能量不可支付。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.filter((card) => !card.keywords?.includes('arena')),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-050') {
+    // 保留昏厥待處理與對手橫置目標，但移除所有支援區卡牌；Browser B
+    // 因「返回 1 張支援卡」代價無法支付而只能略過，不會誤套用傷害。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: [],
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-049' || baseCardNumber === 'BS7-051') {
+    // 保留主動技能來源與一般能量，但移除唯一可支付的【Arena】支援卡；
+    // Browser B 因官方尖括號代價無法支付而不能啟動技能。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-053' || baseCardNumber === 'BS7-058') {
+    // 保留同一張正式來源與一般能量，但移除 5 張 Arena 支援卡；Browser B
+    // 因此驗證支援區關鍵字門檻失敗，而不是把任意支援卡誤算成 Arena。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-054') {
+    // On Play 的第一段是「返回 1 張支援卡」代價；清空支援區後應在
+    // 真正的代價邊界阻擋，不得直接執行後續放置效果。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: [],
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-055') {
+    // 保留 Activate 的來源與回合條件，只移除支援區 Cookie 候選；能量
+    // 支援仍在場，Browser B 針對「Play 1 Cookie」的目標邊界驗證。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => support.card.type !== 'cookie')
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-056' || baseCardNumber === 'BS7-062') {
+    // 保留正式 FLIP 戰鬥流程與附著卡，只移除綠色 Arena 同伴；Browser B
+    // 因此分別驗證場上顏色／關鍵字條件，而不是牌庫或 HP 目標缺失。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? {
+              ...entry,
+              card: {
+                ...entry.card,
+                keywords: [],
+                energyColor: 'green',
+              },
+            }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-057') {
+    // 保留綠色能量支付，但移除 LV.2+ Arena 支援餅乾；因此 Activate
+    // 不會建立合法選擇，避免將任意能量支援卡當成登場目標。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-059') {
+    // 這張卡的 card-check 正向路徑驗證「從支援區登場」的 On Play；
+    // 反向移除對手餅乾，讓可選 2 傷害效果保持可發動但沒有目標。
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          supportArea: player.supportArea.map((support) => ({
+            ...support,
+            rested: false,
+          })),
+          discardPile: negativeDiscardPile,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [],
+        },
+      },
+    }
+  }
+  if (baseCardNumber === 'BS7-060') {
+    // Browser B must prove the source-zone gate, not merely skip an optional
+    // draw. Move the test Cookie back to hand and clear the pending support
+    // placement so deploying it from hand does not create the OnPlay window.
+    const sourceEntry = player.battleArea.find(
+      (entry) => entry.card.id === baseCardNumber,
+    )
+    if (!sourceEntry) return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+    return updateDemoPlayer(
+      { ...state, pendingOnPlay: null },
+      'player-one',
+      {
+        hand: [sourceEntry.card, ...player.hand],
+        battleArea: player.battleArea.filter(
+          (entry) => entry.card.instanceId !== sourceEntry.card.instanceId,
+        ),
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-061') {
+    // 保留 On Play 的抽牌效果與其他能量支援，只移除 Arena 支援代價。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-063') {
+    // 保留綠色能量支付與檢視 3 張流程，但把牌庫頂的 Arena 候選改成
+    // 一般卡，Browser B 因此證明關鍵字篩選而不是付款失敗。
+    return updateDemoPlayer(state, 'player-one', {
+      deck: player.deck.map((card) => ({ ...card, keywords: [] })),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-064') {
+    // 保留綠色能量與第一段攻擊下降，只移除棄牌區 Cookie 候選；
+    // Browser B 因此不會誤執行 Then 的「回到支援區」移動。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile.filter((card) => card.type !== 'cookie'),
+    })
+  }
+  if (baseCardNumber === 'BS7-065') {
+    // 保留場景啟動與能量支援，只移除支援區的 Arena Cookie；登場段可
+    // 略過且不應錯誤執行「If you do」抽牌。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea
+        .filter((support) => !support.card.keywords?.includes('arena'))
+        .map((support) => ({ ...support, rested: false })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-068') {
+    // 正向只有兩張手牌，反向補到四張；回合結束效果仍可被觀察，但不再
+    // 需要抽牌，證明「直到 4 張」的動態上限。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [
+        ...player.hand,
+        testSupportCard('BS7-068-negative-hand-1', 'blue'),
+        testSupportCard('BS7-068-negative-hand-2', 'green'),
+      ],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-081') {
+    // Keep the real On Play deployment and blue payment path, but leave four
+    // cards after the tested Cookie enters the battle area so the "3 cards or
+    // less" condition is demonstrably false rather than payment-blocked.
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [
+        ...player.hand,
+        testSupportCard('BS7-081-negative-extra-hand-1', 'blue'),
+        testSupportCard('BS7-081-negative-extra-hand-2', 'green'),
+      ],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-083') {
+    // 保留手牌門檻，但移除另一張 Arena Cookie，讓「another Arena」條件
+    // 失敗而不建立抽牌決策。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-086') {
+    // 保留藍色能量與場景啟動，只移除藍色 Arena 手牌代價。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.filter(
+        (card) => card.id === baseCardNumber || !card.keywords?.includes('arena'),
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-085') {
+    // 保留藍色支付與第一段攻擊下降，但讓支付後手牌超過 2 張，
+    // 並移除己方 Arena 關鍵字；Browser B 只跳過條件式抽牌 Then。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [
+        ...player.hand,
+        testSupportCard('BS7-085-negative-hand-1', 'blue'),
+        testSupportCard('BS7-085-negative-hand-2', 'green'),
+      ],
+      battleArea: player.battleArea.map((entry) => ({
+        ...entry,
+        card: { ...entry.card, keywords: [] },
+      })),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-090') {
+    // 保留昏厥流程與兩張手牌代價，只把牌庫頂的 Arena 牌替換成普通卡；
+    // 檢視 5 張仍會完成，但不會有合法加入手牌的候選。
+    return updateDemoPlayer(state, 'player-one', {
+      deck: player.deck.map((card) => ({ ...card, keywords: [] })),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-096' || baseCardNumber === 'BS7-100') {
+    // FLIP A/B 保留附著目標與手牌數，只移除紫色 Arena 同伴。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? {
+              ...entry,
+              card: {
+                ...entry.card,
+                keywords: [],
+                energyColor: 'purple',
+              },
+            }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-105') {
+    // 保留紫色雙能量支付，只移除棄牌區 Arena Cookie；Then +1 HP 不應執行。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: player.discardPile.filter(
+        (card) => !card.keywords?.includes('arena'),
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS7-106') {
+    // 保留紫色能量與棄 1 張手牌代價，只移除棄牌區 Arena Cookie；
+    // Browser B 仍可結算第一段攻擊下降，但無法進入回收 Then。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: player.discardPile.filter(
+        (card) => !card.keywords?.includes('arena'),
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS7-107') {
+    // 保留場景啟動與牌庫底效果，只移除棄牌區中沒有 FLIP 的 Arena
+    // Cookie 候選，Browser B 會看到 0 張合法卡可選。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: player.discardPile.filter(
+        (card) => !card.keywords?.includes('arena'),
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS7-108') {
+    // 保留無色支付、對手 LV.3 目標與第一段 -1 攻擊，將己方休息區
+    // 降為不足 3 級差；Browser B 因此只略過條件式第二段 -2。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      breakArea: [],
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-066' || baseCardNumber === 'BS7-067') {
+    // 保留攻擊後目標與流程，只移除 Arena 手牌代價；Browser B 不得把
+    // 一般手牌誤當作合法支付。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.filter((card) => !card.keywords?.includes('arena')),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-069') {
+    // 保留棄 2 張手牌的 Activate 代價，但移除另一張餅乾的 Arena 關鍵字，
+    // 讓技能在無合法目標時不產生攻擊修正。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-072' || baseCardNumber === 'BS7-078') {
+    // 保留正式 FLIP／附著目標，只移除藍色 Arena 同伴，讓條件分支失敗。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-073') {
+    // 保留 LV.1 攻擊目標，但把手牌增加到 4 張，證明低手牌門檻會阻擋
+    // 3 點追加傷害而不是因為攻擊目標不存在。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [...player.hand, testSupportCard('BS7-073-negative-extra-hand', 'blue')],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-070') {
+    // 保留藍色能量與攻擊後抽牌，只移除另一張藍色 Arena Cookie；第一段
+    // 牌庫底目標因此不成立，Browser B 不會誤移除一般餅乾。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? {
+              ...entry,
+              card: { ...entry.card, keywords: [], energyColor: 'blue' },
+            }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-094') {
+    // Keep the purple attack payment available while removing the 30 Arena
+    // trash cards that satisfy Tea Knight's passive +3 attack condition.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: player.discardPile.filter(
+        (card) => !card.keywords?.includes('arena'),
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS7-088' ||
+      baseCardNumber === 'BS7-095' ||
+      baseCardNumber === 'BS7-097' ||
+      baseCardNumber === 'BS7-098' ||
+      baseCardNumber === 'BS7-101' ||
+      baseCardNumber === 'BS7-102' ||
+      baseCardNumber === 'BS7-103') {
+    // 保留紫色能量與攻擊目標，只移除棄牌區 Arena 候選；各卡的 Then
+    // 條件／洗回代價因此在正式 runtime 入口被擋下。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: player.discardPile.filter(
+        (card) => !card.keywords?.includes('arena'),
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS7-089') {
+    // 保留攻擊流程，但將對手手牌降到 5 張，證明「至少 6 張」是攻擊後
+    // 隨機棄牌的真正條件，而不是因為對手沒有手牌 UI。
+    const updated = updateDemoPlayer(state, 'player-one', {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      })
+    return {
+      ...updated,
+      players: {
+        ...updated.players,
+        'player-two': {
+          ...updated.players['player-two'],
+          hand: updated.players['player-two'].hand.slice(0, 5),
+        },
+      },
+    }
+  }
+  if (baseCardNumber === 'BS7-091') {
+    // 牌庫為空時「最多 3 張」自然結算為 0 張，仍保留攻擊後流程可走完。
+    return updateDemoPlayer(state, 'player-one', {
+      deck: [],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-074') {
+    // On Play 正向路徑剛好 3 張手牌；反向增加 1 張，讓「3 張或以下」
+    // 條件明確不成立。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [...player.hand, testSupportCard('BS7-074-negative-extra-hand', 'blue')],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-075') {
+    // 保留昏厥待處理與牌庫，只移除 Arena 手牌代價，避免錯誤抽牌。
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.filter((card) => !card.keywords?.includes('arena')),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-076') {
+    // 保留來源放回牌庫底的代價與技能流程，只移除另一張藍色 Arena Cookie。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-079') {
+    // Keep the real opponent-attack response window open, but remove the
+    // single discard candidate.  Browser B therefore proves the response
+    // cannot be declared without its printed hand cost.
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-020') {
+    // 保留紅色支付與 LV.1 對手目標，只把己方休息區降回一般等級，
+    // 讓 Browser B 證明「高出對手至少 2 級」條件被阻擋。
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      breakArea: player.breakArea.map((breakCard) => ({
+        ...breakCard,
+        level: 2,
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS7-022') {
+    // 保留場景放置與紅色 Activate 付款，只清除本回合 Arena 效果傷害旗標，
+    // 讓 Browser B 證明追加傷害條件未成立而非付款不可用。
+    return updateDemoPlayer(
+      {
+        ...state,
+        arenaCookieDealtEffectDamageThisTurn: {
+          'player-one': false,
+          'player-two': false,
+        },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
+  if (baseCardNumber === 'BS7-015') {
+    // 保留攻擊後的實際目標與支付流程，只移除另一張餅乾的 Arena 關鍵字；
+    // Browser B 因條件不成立而不再追加 2 傷害。
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.instanceId === 'self-extra-1'
+          ? { ...entry, card: { ...entry.card, keywords: [] } }
+          : entry,
+      ),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
       discardPile: negativeDiscardPile,
     })
   }

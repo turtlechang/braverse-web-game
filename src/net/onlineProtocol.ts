@@ -390,7 +390,12 @@ const isCustomDeck = (value: unknown): value is CustomDeck =>
 const commandShapes = {
   'resolve-faint-effect': {
     requiredStringArrays: ['targetIds'],
-    optionalStringArrays: ['paymentIds'],
+    optionalStringArrays: [
+      'paymentIds',
+      'discardHandIds',
+      'supportToTrashIds',
+      'supportToHandIds',
+    ],
   },
   'resolve-opponent-hand-discard': { requiredStringArrays: ['cardIds'] },
   'resolve-opponent-rest-support': { requiredStringArrays: ['cardIds'] },
@@ -404,6 +409,7 @@ const commandShapes = {
       'paymentIds',
       'supportToHandIds',
       'hpToTrashIds',
+      'hpToHandIds',
       'trashToDeckIds',
     ],
     enumFields: { action: ['skip', 'pay'] },

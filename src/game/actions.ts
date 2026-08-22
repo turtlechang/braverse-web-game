@@ -14,6 +14,7 @@ import {
 } from './replacement'
 import {
   canPayTrashBattleCookieCost,
+  hasCookieOnPlayEffects,
   payTrashBattleCookieCost,
 } from './skills'
 
@@ -221,7 +222,7 @@ export const deployCookie = (
       ...updatedState,
       nextBattleEntrySequence: deploymentState.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        deploymentCard.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(deploymentCard)
           ? {
               playerId: player.id,
               sourceInstanceId: deploymentCard.instanceId,
@@ -298,7 +299,7 @@ export const replaceDefeatedCookie = (
   const replacementState = consumeReplacementTask({
     ...updatedState,
     pendingOnPlay:
-      card.skill?.trigger === 'on-play'
+      hasCookieOnPlayEffects(card)
         ? {
             playerId,
             sourceInstanceId: card.instanceId,

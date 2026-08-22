@@ -784,6 +784,7 @@ export function OnlineBattleView({
                   supportToHandIds,
                   hpToTrashIds,
                   trashToDeckIds,
+                  hpToHandIds,
                 ) => {
                   match.dispatch(
                     {
@@ -796,6 +797,7 @@ export function OnlineBattleView({
                       supportToHandIds,
                       hpToTrashIds,
                       trashToDeckIds,
+                      hpToHandIds,
                     },
                     '已支付攻擊後續效果費用。',
                   )

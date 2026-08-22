@@ -293,6 +293,40 @@ export const normalizeOfficialCardRecord = (
     }
   }
 
+  // BS7-017 的官方候選英文資料缺少攻擊費用的右括號與 `{da}` 標記；
+  // 卡面名稱與數字已明確給出，韓文／卡圖格式可對齊為一般 BS7 攻擊欄位。
+  // 在轉接邊界補正，不修改候選原始 JSON。
+  if (
+    sourceCard.baseCardNumber === 'BS7-017' &&
+    sourceCard.type === 'cookie' &&
+    sourceCard.attackText === '<{R}{N} Dragon Hunter 1'
+  ) {
+    return {
+      ...sourceCard,
+      attackText: '<{R}{N}> Dragon Hunter {da} 1',
+    }
+  }
+
+  // BS7 英文候選資料的 Cookie／FLIP 攻擊全面改用「費用 + 攻擊名稱 + 傷害數字」
+  // 表示傷害，未附既有 parser 所需的 `{da}` 標記。只接受完整費用區段、且數字
+  // 位於 Then 前或文末的格式；欄位明確錯置的個別卡則由上方專用 fallback 處理。
+  if (
+    sourceCard.baseCardNumber.startsWith('BS7-') &&
+    (sourceCard.type === 'cookie' || sourceCard.type === 'flip') &&
+    !/\{da\}/i.test(sourceCard.attackText ?? '')
+  ) {
+    const attackTextWithDamage = sourceCard.attackText?.replace(
+      /^(<[^>]+>\s*.*?\s)(\d+)(\s*(?:Then,|$))/is,
+      '$1{da} $2$3',
+    )
+    if (attackTextWithDamage && attackTextWithDamage !== sourceCard.attackText) {
+      return {
+        ...sourceCard,
+        attackText: attackTextWithDamage,
+      }
+    }
+  }
+
   return sourceCard
 }
 

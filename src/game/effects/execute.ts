@@ -11,7 +11,11 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from '../replacement'
-import { getFaintTriggeredCost, markSupportAreaDecreased } from '../skills'
+import {
+  getFaintTriggeredCost,
+  hasCookieOnPlayEffects,
+  markSupportAreaDecreased,
+} from '../skills'
 import { getRefreshCandidates } from '../refresh'
 import type {
   CardEffect,
@@ -59,6 +63,7 @@ import {
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './targeting'
+import { getEffectDamageAmount } from './combat'
 
 const checkWindsweptValleyTrigger = (
   state: GameState,
@@ -215,6 +220,9 @@ const resolveDamageOutcome = (
                     : {}),
                   effect,
                   context,
+                  ...(faintSkill.sourceEnergy
+                    ? { sourceEnergy: faintSkill.sourceEnergy }
+                    : {}),
                   ...(faintCost && !faintCostAttached
                     ? { cost: faintCost }
                     : {}),
@@ -250,6 +258,9 @@ const resolveDamageOutcome = (
                   : {}),
                 effect,
                 context,
+                ...(faintSkill.sourceEnergy
+                  ? { sourceEnergy: faintSkill.sourceEnergy }
+                  : {}),
                 ...(faintCost && !faintCostAttached
                   ? { cost: faintCost }
                   : {}),
@@ -456,11 +467,19 @@ export const executeCardEffect = (
     const sourceCardName =
       context.sourceCardName ??
       battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.card.name ?? 'Unknown'
+    const effectiveMax =
+      effect.untilHandSize === undefined
+        ? effect.max
+        : Math.min(
+            effect.max,
+            Math.max(0, effect.untilHandSize - sourcePlayer.hand.length),
+          )
+    if (effectiveMax <= 0) return state
     return {
       ...state,
       pendingDrawUpTo: {
         playerId: context.sourcePlayerId,
-        max: effect.max,
+        max: effectiveMax,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
@@ -607,6 +626,7 @@ export const executeCardEffect = (
         : getOpponentId(context.sourcePlayerId)
     const targetPlayer = state.players[targetPlayerId]
     const previousBattleAreaCount = targetPlayer.battleArea.length
+    const damageAmount = getEffectDamageAmount(state, context, effect.amount)
     // 官方裁定：即使不「選擇」目標的全場效果，仍屬對手效果，不能影響 BS3-115 保護餅乾。
     // BS3-082：prevent-effect-damage 保護的餅乾也不受效果傷害。
     const targets = targetPlayer.battleArea.filter(
@@ -624,10 +644,6 @@ export const executeCardEffect = (
       if (!effect.target) {
         throw new GameRuleError('Sequential damage requires a target selector.')
       }
-      if (state.pendingBattle) {
-        throw new GameRuleError('Cannot begin sequential damage during a battle.')
-      }
-
       const candidateIds = targets.map((target) => target.card.instanceId)
       const selectedIds = [...new Set(selectedTargetIds)]
       const selectedAllCandidates =
@@ -643,44 +659,81 @@ export const executeCardEffect = (
       const [targetInstanceId, ...remainingTargetInstanceIds] = selectedIds
       if (!targetInstanceId) return state
 
-      const pendingBattle: PendingBattle = {
-        attackerPlayerId: context.sourcePlayerId,
-        defenderPlayerId: targetPlayerId,
-        // 代價可能正好讓來源昏厥離場；已成功啟動的技能仍要完整結算。
-        attackerInstanceId: context.sourceInstanceId,
-        targetInstanceId,
-        declaredDamage: effect.amount,
-        remainingDamage: effect.amount,
-        stage: 'damage',
-        trapUsed: true,
-        revealedHpCard: null,
-        preventKnockoutTargetIds: [],
-        faintedColors: [],
-        attackEffects: [],
-        attackEffectIndex: 0,
-        damagePlayerId: targetPlayerId,
-        damageTargetInstanceId: targetInstanceId,
-        effectDamageSequence: {
-          remainingTargetInstanceIds,
-          damage: effect.amount,
-          remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
-            playerId: targetPlayerId,
-            instanceId,
-            damage: effect.amount,
-          })),
-          continuation: state.pendingAbilityEffect
-            ? 'ability-effect'
-            : 'finish-battle',
-          resumeBattleAfterAbility: Boolean(state.pendingBattle),
-        },
-      }
+      // Sequential damage may itself be an attack-after effect (for example
+      // BS7-039 / BS7-082). Preserve the active battle metadata so the
+      // existing damage／FLIP／faint state machine can resume the remaining
+      // attack effects after every selected opponent Cookie is resolved.
+      const existingBattle = state.pendingBattle
+      const continuation = existingBattle
+        ? state.pendingAbilityEffect
+          ? 'ability-effect'
+          : existingBattle.stage === 'attack-effect'
+            ? 'attack-effect'
+            : existingBattle.stage === 'trap'
+              ? 'after-trap'
+              : 'finish-battle'
+        : state.pendingAbilityEffect
+          ? 'ability-effect'
+          : 'finish-battle'
+      const pendingBattle: PendingBattle = existingBattle
+        ? {
+            ...existingBattle,
+            targetInstanceId,
+            declaredDamage: damageAmount,
+            remainingDamage: damageAmount,
+            stage: 'damage',
+            revealedHpCard: null,
+            damagePlayerId: targetPlayerId,
+            damageTargetInstanceId: targetInstanceId,
+            damagedInstanceIds: [],
+            effectDamageSequence: {
+              remainingTargetInstanceIds,
+              damage: damageAmount,
+              remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
+                playerId: targetPlayerId,
+                instanceId,
+                damage: damageAmount,
+              })),
+              continuation,
+              resumeBattleAfterAbility: continuation === 'ability-effect',
+            },
+          }
+        : {
+            attackerPlayerId: context.sourcePlayerId,
+            defenderPlayerId: targetPlayerId,
+            // 代價可能正好讓來源昏厥離場；已成功啟動的技能仍要完整結算。
+            attackerInstanceId: context.sourceInstanceId,
+            targetInstanceId,
+            declaredDamage: damageAmount,
+            remainingDamage: damageAmount,
+            stage: 'damage',
+            trapUsed: true,
+            revealedHpCard: null,
+            preventKnockoutTargetIds: [],
+            faintedColors: [],
+            attackEffects: [],
+            attackEffectIndex: 0,
+            damagePlayerId: targetPlayerId,
+            damageTargetInstanceId: targetInstanceId,
+            effectDamageSequence: {
+              remainingTargetInstanceIds,
+              damage: damageAmount,
+              remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
+                playerId: targetPlayerId,
+                instanceId,
+                damage: damageAmount,
+              })),
+              continuation,
+              resumeBattleAfterAbility: false,
+            },
+          }
       return { ...state, pendingBattle }
     }
 
     const effectDamageTargets: EffectDamageTarget[] = targets.map((target) => ({
       playerId: targetPlayerId,
       instanceId: target.card.instanceId,
-      damage: effect.amount,
+      damage: damageAmount,
     }))
     const pendingEffectDamage = beginEffectDamageSequence(
       state,
@@ -691,7 +744,7 @@ export const executeCardEffect = (
 
     const damagedPlayer = targets.reduce(
       (player, target) =>
-        damagePlayerCookie(player, target.card.instanceId, effect.amount),
+        damagePlayerCookie(player, target.card.instanceId, damageAmount),
       targetPlayer,
     )
     const departedCount =
@@ -715,7 +768,7 @@ export const executeCardEffect = (
       },
       targetPlayerId,
       targets
-        .filter(() => effect.amount > 0)
+        .filter(() => damageAmount > 0)
         .map((target) => target.card.instanceId),
     )
     const sourceCookie = state.players[context.sourcePlayerId].battleArea.find(
@@ -723,7 +776,7 @@ export const executeCardEffect = (
     )
     if (
       sourceCookie?.card.keywords?.includes('arena') &&
-      effect.amount > 0
+      damageAmount > 0
     ) {
       damageState = {
         ...damageState,
@@ -1090,7 +1143,7 @@ export const executeCardEffect = (
       ...updated,
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        cookie.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(cookie)
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: cookie.instanceId,
@@ -1166,11 +1219,14 @@ export const executeCardEffect = (
     if (uniqueIds.length < minimum || uniqueIds.length > effect.amount) {
       throw new GameRuleError('Invalid break target.')
     }
-    const selected = player.breakArea.filter((card) =>
-      uniqueIds.includes(card.instanceId) &&
-      (effect.energyColor === undefined || card.energyColor === effect.energyColor) &&
-      (effect.minLevel === undefined || card.level >= effect.minLevel) &&
-      (effect.maxLevel === undefined || card.level <= effect.maxLevel),
+    const candidateIds = new Set(
+      getEffectSelectionCandidates(state, context, effect).map(
+        (card) => card.instanceId,
+      ),
+    )
+    const selected = player.breakArea.filter(
+      (card) =>
+        uniqueIds.includes(card.instanceId) && candidateIds.has(card.instanceId),
     )
     if (selected.length !== uniqueIds.length) {
       throw new GameRuleError('Invalid break target.')
@@ -1575,7 +1631,11 @@ export const executeCardEffect = (
       return nextState
     }
 
-    const amount = selectedSupports.length
+    const amount = getEffectDamageAmount(
+      nextState,
+      context,
+      selectedSupports.length,
+    )
     const currentTarget = nextState.players[targetPlayerId].battleArea.find(
       (cookie) => cookie.card.instanceId === selectedTargets[0].card.instanceId,
     )
@@ -1722,6 +1782,7 @@ export const executeCardEffect = (
       getSupportEffectCandidates(state, context, {
         side: effect.side,
         activeOnly: effect.activeOnly,
+        keyword: effect.keyword,
       }).map((support) => support.card.instanceId),
     )
     if (uniqueIds.some((id) => !candidateIds.has(id))) {
@@ -1813,7 +1874,9 @@ export const executeCardEffect = (
         card.instanceId !== context.sourceInstanceId &&
         uniqueIds.includes(card.instanceId) &&
         (effect.energyColor === undefined ||
-          card.energyColor === effect.energyColor),
+          card.energyColor === effect.energyColor) &&
+        (effect.keyword === undefined ||
+          card.keywords?.includes(effect.keyword)),
     )
     if (selected.length !== uniqueIds.length) {
       throw new GameRuleError('選擇的卡片不在手牌中。')
@@ -1916,7 +1979,7 @@ export const executeCardEffect = (
         [context.sourcePlayerId]: true,
       },
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
-      pendingOnPlay: cookie.skill?.trigger === 'on-play'
+      pendingOnPlay: hasCookieOnPlayEffects(cookie)
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: cookie.instanceId,
@@ -2049,6 +2112,7 @@ export const executeCardEffect = (
       pendingOpponentHandDiscard: {
         playerId: context.sourcePlayerId,
         count: effect.count,
+        ...(effect.atLeast ? { atLeast: true } : {}),
         destination: effect.destination,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
@@ -2579,7 +2643,7 @@ export const executeCardEffect = (
       ...updated,
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        cookie.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(cookie)
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: cookie.instanceId,
@@ -2635,7 +2699,7 @@ export const executeCardEffect = (
       ...updated,
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        cookie.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(cookie)
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: cookie.instanceId,
@@ -2688,7 +2752,7 @@ export const executeCardEffect = (
       ...updated,
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        sourceInBreak.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(sourceInBreak)
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: sourceInBreak.instanceId,
@@ -3221,6 +3285,7 @@ export const executeCardEffect = (
           pickDestination: effect.pickDestination,
           filterColor: effect.filterColor,
           filterType: effect.filterType,
+          filterKeyword: effect.filterKeyword,
           optionalPick: effect.optionalPick,
           extraHp: effect.extraHp,
         },
@@ -3240,6 +3305,7 @@ export const executeCardEffect = (
         pickDestination: effect.pickDestination,
         filterColor: effect.filterColor,
         filterType: effect.filterType,
+        filterKeyword: effect.filterKeyword,
         optionalPick: effect.optionalPick,
         extraHp: effect.extraHp,
       },
@@ -3394,6 +3460,12 @@ export const executeCardEffect = (
     return state
   }
 
+  // Persistent effect-damage auras are evaluated at the moment a damage
+  // effect resolves; they must not be materialized as one-time modifiers.
+  if (effect.kind === 'modify-all-effect-damage') {
+    return state
+  }
+
   if (!('target' in effect)) {
     throw new GameRuleError('此效果需要目標。')
   }
@@ -3411,14 +3483,19 @@ export const executeCardEffect = (
     effect.target,
     selectedTargetIds,
   )
-  const targetPlayerId = getTargetPlayerId(context, effect.target)
+  // `either` selectors can contain Cookies owned by both players.  Keep the
+  // owner on each selected target for damage sequencing; all other effects
+  // still resolve against one target player as before.
+  const targetPlayerId = effect.target.side === 'either'
+    ? undefined
+    : getTargetPlayerId(context, effect.target)
 
   if (
     effect.kind === 'damage' ||
     effect.kind === 'damage-by-break-count' ||
     effect.kind === 'damage-by-break-level-difference'
   ) {
-    const amount =
+    const baseAmount =
       effect.kind === 'damage'
         ? effect.amount
         : effect.kind === 'damage-by-break-count'
@@ -3427,8 +3504,107 @@ export const executeCardEffect = (
           : Math.max(
               0,
               getBreakAreaLevel(state, context.sourcePlayerId) -
-                getBreakAreaLevel(state, getOpponentId(context.sourcePlayerId)),
+              getBreakAreaLevel(state, getOpponentId(context.sourcePlayerId)),
             )
+    const amount = getEffectDamageAmount(state, context, baseAmount)
+
+    if (effect.target.side === 'either') {
+      if (effect.kind !== 'damage') {
+        throw new GameRuleError('此傷害效果目前不支援跨雙方計算。')
+      }
+      const protectedTargets = targets.filter((target) => {
+        const ownerId = getCookieOwnerId(state, target.card.instanceId)
+        return ownerId !== null && !isEffectDamagePrevented(state, target, ownerId)
+      })
+      const effectDamageTargets: EffectDamageTarget[] = protectedTargets.flatMap(
+        (target) => {
+          const ownerId = getCookieOwnerId(state, target.card.instanceId)
+          return ownerId
+            ? [{ playerId: ownerId, instanceId: target.card.instanceId, damage: amount }]
+            : []
+        },
+      )
+      const pendingEffectDamage = beginEffectDamageSequence(
+        state,
+        context,
+        effectDamageTargets,
+      )
+      if (pendingEffectDamage) return pendingEffectDamage
+
+      let damageState = state
+      const damagedInstanceIds: string[] = []
+      for (const [ownerId, ownedTargets] of groupTargetsByOwner(
+        state,
+        protectedTargets,
+      )) {
+        const previousBattleAreaCount =
+          damageState.players[ownerId].battleArea.length
+        const damagedPlayer = ownedTargets.reduce(
+          (player, target) =>
+            damagePlayerCookie(player, target.card.instanceId, amount),
+          damageState.players[ownerId],
+        )
+        const departedCount =
+          previousBattleAreaCount - damagedPlayer.battleArea.length
+        const departedCookieCards = ownedTargets
+          .filter(
+            (target) =>
+              !damagedPlayer.battleArea.some(
+                (cookie) => cookie.card.instanceId === target.card.instanceId,
+              ),
+          )
+          .map((target) => target.card)
+        damageState = resolveDamageOutcome(
+          markCookieHpReduced(
+            {
+              ...damageState,
+              players: {
+                ...damageState.players,
+                [ownerId]: damagedPlayer,
+              },
+            },
+            ownerId,
+            ownedTargets.map((target) => target.card.instanceId),
+          ),
+          ownerId,
+          departedCount,
+          departedCookieCards,
+        )
+        damagedInstanceIds.push(
+          ...ownedTargets.map((target) => target.card.instanceId),
+        )
+        if (damageState.status !== 'playing') break
+      }
+      if (
+        context.sourcePlayerId in damageState.players &&
+        damageState.players[context.sourcePlayerId].battleArea.some(
+          (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+        ) &&
+        amount > 0
+      ) {
+        const sourceCookie = damageState.players[context.sourcePlayerId].battleArea.find(
+          (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+        )
+        if (sourceCookie?.card.keywords?.includes('arena')) {
+          damageState = {
+            ...damageState,
+            arenaCookieDealtEffectDamageThisTurn: {
+              ...(damageState.arenaCookieDealtEffectDamageThisTurn ?? {}),
+              [context.sourcePlayerId]: true,
+            },
+          }
+        }
+      }
+      return collectAfterDamageEffectsFromIds(
+        damageState,
+        damagedInstanceIds,
+        'effect',
+      )
+    }
+
+    if (!targetPlayerId) {
+      throw new GameRuleError('傷害效果缺少目標玩家。')
+    }
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
     const protectedTargets = targets.filter(
@@ -3481,6 +3657,10 @@ export const executeCardEffect = (
     return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
+  if (!targetPlayerId) {
+    throw new GameRuleError('效果缺少單一目標玩家。')
+  }
+
   if (effect.kind === 'split-damage') {
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
@@ -3497,7 +3677,10 @@ export const executeCardEffect = (
         ? targets[1]
         : undefined,
     ] as const
-    const amounts = [effect.primaryAmount, effect.secondaryAmount] as const
+    const amounts = [
+      getEffectDamageAmount(state, context, effect.primaryAmount),
+      getEffectDamageAmount(state, context, effect.secondaryAmount),
+    ] as const
     const appliedList = appliedTargets.flatMap((target, index) =>
       target ? [{ target, amount: amounts[index] }] : [],
     )
@@ -3681,6 +3864,68 @@ export const executeCardEffect = (
           sourceCardName: context.sourceCardName ?? 'Unknown',
         },
       }
+    }
+    if (effect.kind === 'modify-attack' && effect.thenEffects?.length) {
+      let chainedState = updatedState
+      for (const thenEffect of effect.thenEffects) {
+        // 攻擊／陷阱中的「that Cookie」必須沿用前一段已選目標，並把後續
+        // 傷害交回同一場戰鬥的 damage state machine；若直接走一般效果傷害
+        // 路徑，會立即改 HP，卻遺失 pendingBattle 的 damageTargetInstanceId。
+        if (thenEffect.kind === 'damage' && chainedState.pendingBattle) {
+          const chainedTargets = selectEffectTargets(
+            chainedState,
+            context,
+            thenEffect.target,
+            selectedTargetIds,
+          )
+          if (chainedTargets.length === 0) continue
+          const chainedTarget = chainedTargets[0]
+          const chainedTargetPlayerId = getTargetPlayerId(
+            context,
+            thenEffect.target,
+          )
+          const chainedAmount = getEffectDamageAmount(
+            chainedState,
+            context,
+            thenEffect.amount,
+          )
+          const queuedFlipDamage = beginEffectDamageSequence(
+            chainedState,
+            context,
+            [{
+              playerId: chainedTargetPlayerId,
+              instanceId: chainedTarget.card.instanceId,
+              damage: chainedAmount,
+            }],
+          )
+          if (queuedFlipDamage) {
+            chainedState = queuedFlipDamage
+          } else {
+            chainedState = {
+              ...chainedState,
+              pendingBattle: {
+                ...chainedState.pendingBattle,
+                stage: 'damage',
+                remainingDamage: chainedAmount,
+                damagePlayerId: chainedTargetPlayerId,
+                damageTargetInstanceId: chainedTarget.card.instanceId,
+                suspendedAttackDamage:
+                  chainedState.pendingBattle.declaredDamage,
+              },
+            }
+          }
+          continue
+        }
+        chainedState = executeCardEffect(
+          chainedState,
+          context,
+          thenEffect,
+          selectedTargetIds,
+          shuffle,
+        )
+        if (chainedState.status !== 'playing') break
+      }
+      return chainedState
     }
     return updatedState
   }

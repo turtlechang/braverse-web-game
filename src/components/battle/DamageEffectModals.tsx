@@ -65,11 +65,18 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           costSupportCandidates={match.faintCostSupportCandidates}
           selectedCostSupportIds={match.selectedFaintCostSupportIds}
           onSelectCostSupport={match.toggleFaintCostSupport}
+          costSupportToHandAmount={match.faintCostSupportToHandAmount}
+          costSupportToHandCandidates={match.faintCostSupportToHandCandidates}
+          selectedCostSupportToHandIds={
+            match.selectedFaintCostSupportToHandIds
+          }
+          onSelectCostSupportToHand={match.toggleFaintCostSupportToHand}
           allowSkip={
             match.faintOptional ||
             match.faintEnergyCostTotal > 0 ||
             match.faintCostHandAmount > 0 ||
             match.faintCostSupportAmount > 0 ||
+            match.faintCostSupportToHandAmount > 0 ||
             (match.faintMin > 0 &&
               match.faintCandidates.length < match.faintMin &&
               match.faintCardCandidates.length < match.faintMin)
@@ -79,6 +86,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             match.setSelectedFaintPaymentIds([])
             match.setSelectedFaintCostHandIds([])
             match.setSelectedFaintCostSupportIds([])
+            match.setSelectedFaintCostSupportToHandIds([])
             match.dispatch(
               {
                 kind: 'resolve-faint-effect',
@@ -95,6 +103,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             const paymentIds = match.selectedFaintPaymentIds
             const discardHandIds = match.selectedFaintCostHandIds
             const supportToTrashIds = match.selectedFaintCostSupportIds
+            const supportToHandIds = match.selectedFaintCostSupportToHandIds
             const targetName =
               match.faintCandidates.find(
                 (candidate) => candidate.card.instanceId === targets[0],
@@ -106,6 +115,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             match.setSelectedFaintPaymentIds([])
             match.setSelectedFaintCostHandIds([])
             match.setSelectedFaintCostSupportIds([])
+            match.setSelectedFaintCostSupportToHandIds([])
             match.dispatch(
               {
                 kind: 'resolve-faint-effect',
@@ -114,6 +124,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                 paymentIds,
                 discardHandIds,
                 supportToTrashIds,
+                supportToHandIds,
               },
               targets.length === 0
                 ? `${match.faintSourceCard!.name}已結算昏厥效果。`

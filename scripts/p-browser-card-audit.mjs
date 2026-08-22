@@ -80,6 +80,13 @@ const cardAuditConfigs = {
     reportPath: 'docs/bs6-browser-card-audit-2026-08-13.json',
     expectedRecordCount: 138,
   },
+  BS7: {
+    label: 'BS7',
+    candidate: true,
+    formalPaths: ['data/candidates/official-arena-of-glory-bs7.en.json'],
+    reportPath: 'docs/bs7-browser-card-audit-2026-08-21.json',
+    expectedRecordCount: 143,
+  },
 }
 const auditConfig = cardAuditConfigs[requestedSeries]
 if (!auditConfig) {
@@ -267,7 +274,7 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== ${auditConfig.label} Browser formal-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} Browser ${auditConfig.candidate ? 'candidate' : 'formal'}-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
     try {
@@ -309,7 +316,7 @@ try {
     viewport: '1440x960',
     sources: auditConfig.formalPaths,
     scope:
-      `Formal-pool card-check entry audit for every promoted ${auditConfig.label} record. This report separates route/card rendering from interactive effect proof.`,
+      `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} card-check entry audit for every ${auditConfig.candidate ? 'inventory candidate' : `promoted ${auditConfig.label}`} record. This report separates route/card rendering from interactive effect proof.`,
     summary: {
       total: results.length,
       passed,

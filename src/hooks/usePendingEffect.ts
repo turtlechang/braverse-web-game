@@ -23,6 +23,8 @@ import {
   getNestedSequentialDamageSelectionEffect,
   getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
+  getCookieSkillCost,
+  getCookieSkillEffects,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getPendingDecision,
@@ -145,7 +147,8 @@ export function usePendingEffect(params: {
       : selectionEffect?.kind === 'damage-all' && selectionEffect.sequential
       ? selectionEffect.target ?? null
       : selectionEffect?.kind === 'gain-hp'
-      ? selectionEffect.target?.sourceOnly
+      ? selectionEffect.target?.sourceOnly ||
+        selectionEffect.target?.previousEffectTargetOnly
         ? null
         : selectionEffect.target ?? null
       : selectionEffect && !isEffectUntargeted(selectionEffect)
@@ -565,6 +568,10 @@ export function usePendingEffect(params: {
             ) &&
             (pendingEffect.skill.cost.supportToHandType === undefined ||
               support.card.type === pendingEffect.skill.cost.supportToHandType) &&
+            (pendingEffect.skill.cost.supportToTrashKeyword === undefined ||
+              support.card.keywords?.includes(
+                pendingEffect.skill.cost.supportToTrashKeyword,
+              )) &&
             (pendingEffect.selectedCostSupportToTrashIds.length <
               supportAreaCost ||
               pendingEffect.selectedCostSupportToTrashIds.includes(
@@ -882,7 +889,8 @@ export function usePendingEffect(params: {
     ) => {
     if (
       !card?.skill ||
-      card.skill.trigger !== trigger ||
+      (card.skill.trigger !== trigger &&
+        !(trigger === 'on-play' && Boolean(card.skill.onPlayEffects?.length))) ||
       nextGame.status !== 'playing'
     ) {
       return
@@ -892,7 +900,8 @@ export function usePendingEffect(params: {
       sourcePlayerId: playerId,
       sourceInstanceId: card.instanceId,
     }
-    const availableEffects = card.skill.effects.filter((effect) =>
+    const skillEffects = getCookieSkillEffects(card.skill, trigger)
+    const availableEffects = skillEffects.filter((effect) =>
       isEffectConditionMet(nextGame, context, effect) ||
       isSkillEffectConditionDeferredUntilCost(card.skill!, effect),
     )
@@ -938,6 +947,12 @@ export function usePendingEffect(params: {
         )
       }
       if ((effect.target.min ?? 0) === 0) return true
+      // `costSelected` targets are chosen during the HP-cost payment step.
+      // Before that payment there is no costRecord to resolve against, while
+      // canActivateCookieSkill already verifies that a legal HP-cost Cookie
+      // exists.  Let the payment modal open instead of rejecting the skill as
+      // if it had no effect target.
+      if (effect.target.costSelected) return true
       const candidates = getEffectTargetCandidates(nextGame, context, effect.target)
       const opponentId: PlayerId =
         playerId === 'player-one' ? 'player-two' : 'player-one'
@@ -1000,7 +1015,19 @@ export function usePendingEffect(params: {
     setPendingEffect({
       sourceCard: card,
       context,
-      skill: card.skill,
+      skill:
+        trigger === 'on-play' && card.skill.onPlayEffects
+          ? {
+              ...card.skill,
+              cost: getCookieSkillCost(card.skill, trigger),
+              // Mixed OnPlay + Activate cards reuse one CardSkill record, but
+              // the Activate clause's "Rest this card" is not an OnPlay
+              // payment. Keep the timing-specific pending skill truthful so
+              // deployment never rests the newly played Cookie.
+              restSource: false,
+              effects: skillEffects,
+            }
+          : card.skill,
       trigger,
       effects: availableEffects,
       effectIndex: 0,
