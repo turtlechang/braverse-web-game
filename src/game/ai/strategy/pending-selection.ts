@@ -111,7 +111,7 @@ const EFFECT_VALUE: Partial<Record<CardEffect['kind'], number>> = {
 }
 
 const isUniversalLevel = (level: AiLevel | undefined): boolean =>
-  level === 3 || level === 4
+  level === 3 || level === 4 || level === 5
 
 const visibleCards = (view: PlayerView): readonly GameCard[] => [
   ...view.hand,

@@ -8,6 +8,7 @@ export interface Lv4PlanTelemetry {
   setupSteps: number
   payoffSteps: number
   completedPayoffs: number
+  abandonedCombos: number
 }
 
 export interface Lv4SearchTelemetry {
@@ -62,6 +63,7 @@ export const createLv4SearchTelemetry = (): Lv4SearchTelemetry => ({
     setupSteps: 0,
     payoffSteps: 0,
     completedPayoffs: 0,
+    abandonedCombos: 0,
   },
 })
 
@@ -89,7 +91,7 @@ export const aggregateLv4SearchTelemetry = (
     setupSteps,
     payoffSteps: sum((entry) => entry.plan.payoffSteps),
     completedPayoffs,
-    comboAbandonments: Math.max(0, setupSteps - completedPayoffs),
+    comboAbandonments: sum((entry) => entry.plan.abandonedCombos),
     averageDecisionMs: count === 0
       ? 0
       : sum((entry) => entry.elapsedMs) / count,

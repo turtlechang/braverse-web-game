@@ -140,6 +140,29 @@ export type AiPresetDeckChoice =
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
+/**
+ * Lv.5 離線校準使用的正式代表牌組全集。能力素材仍由完整 runtime
+ * card pool 提供；這份清單負責讓對局矩陣橫跨 Starter 與 BS2–BS7。
+ */
+export const ALL_AI_TRAINING_DECK_CHOICES = [
+  'red',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'bs2-red',
+  'bs2-yellow',
+  'bs2-bean',
+  'bs2-blue',
+  'bs2-purple',
+  ...BS3_AI_PRESET_DECK_CHOICES,
+  ...BS4_AI_PRESET_DECK_CHOICES,
+  ...BS5_AI_PRESET_DECK_CHOICES,
+  ...BS6_AI_PRESET_DECK_CHOICES,
+  ...BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES,
+  ...BS7_ARENA_AI_PRESET_DECK_CHOICES,
+] as const satisfies readonly BuiltInDeckChoice[]
+
 export interface StarterDeckEntry {
   cardNumber: string
   name?: string

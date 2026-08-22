@@ -81,4 +81,30 @@ describe('R16 resource reservation', () => {
       'place-support',
     )).toMatchObject({ reserved: true, amount: 0 })
   })
+
+  it('依顏色保留同回合 Combo payoff 的能量，而不只比較張數', () => {
+    const state = createBattleState()
+    const view = createPlayerView(state, 'player-two')
+    const reservation = deriveResourceReservation(view, [])
+    const wrongColorView = {
+      ...view,
+      self: {
+        ...view.self,
+        supportArea: view.self.supportArea.map((support) => ({
+          ...support,
+          card: { ...support.card, energyColor: 'red' as const },
+        })),
+      },
+    }
+
+    const assessment = assessResourceReservation(
+      reservation,
+      wrongColorView,
+      'activate-skill',
+      { planId: 'blue-payoff', energyCost: { blue: 1 } },
+    )
+
+    expect(assessment.reserved).toBe(false)
+    expect(assessment.detail).toContain('顏色')
+  })
 })

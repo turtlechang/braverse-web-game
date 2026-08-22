@@ -1,6 +1,6 @@
 # AI 能力分類法（Phase G0 規格）
 
-> 狀態：G1 shadow mode 已完成。`src/game/ai/strategy/capability-model.ts`、`capability-extractor.ts`、`deck-profile.ts` 與 `synergy-graph.ts` 均不重新解析卡面顯示文字，也尚未接入 AI 行動。
+> 狀態：G1～G5 已接入 Lv.3／Lv.4／Lv.5 策略行動；所有模組均不重新解析卡面顯示文字。`npm run ai:audit:capabilities` 會對正式 runtime 卡池執行 strict capability gate。
 
 ## 唯一資料來源
 
@@ -24,9 +24,11 @@ type CapabilityKind =
   | 'discard'
   | 'gain-hp'
   | 'attack-modification'
+  | 'effect-damage-modification'
   | 'deploy'
   | 'move-zone'
   | 'inspect-deck'
+  | 'inspect-hand'
   | 'rest'
   | 'set-active'
   | 'block'
@@ -86,17 +88,27 @@ interface CapabilityEvidence {
 
 每項權重必須附 `evidence[]`、confidence 與 unsupported count；無法辨識時採中性值，而不是預設成某個舊牌組策略。profile 只改變相對偏好，不能覆寫規則合法性或可見性。
 
-## Synergy graph 規格
+## Synergy graph 與 ComboPlan 規格
 
 圖的節點是 `CapabilityEvidence` 與可觀察的局面條件；邊表示「某能力能建立／消耗某條件」。每條邊必須可解釋：來源卡實體、結構化效果、所需資源、有效時機、可觀察性與不確定性。
 
 範例：將已知卡放到牌庫底的效果只能產生「已知 deck-bottom」setup 邊；若 payoff 只從牌庫底拿牌且洗牌前仍可合法發動，才可形成 confirmed payoff 邊。未知牌庫底只可形成 potential 邊，不能給必定成功分數。
 
+`buildComboPlans` 會把可解釋的 edge 轉成穩定 plan ID，保存 setup／payoff
+來源、共用條件、payoff 能量顏色與張數、預期能力價值及有效期。同一卡片
+同一 effect path 同時產生的 setup/payoff evidence 會視為自我循環而排除；
+搜尋與跨步記憶只有在 plan ID 相同時才可記為完成。把一張有 Combo 能力的
+卡放到支援區，不等於發動該能力，也不得取得 setup/payoff 分數。
+
 ## G1 shadow mode 實作與測試
 
 G1 以 `extractCardCapabilities`、`extractDeckCapabilities`、`createStrategyShadowReport` 與 `buildSynergyGraph` 輸出 `CapabilityModel`、`DeckStrategyProfile`、synergy evidence 及 unsupported telemetry，不得改變 `takeAiStep` 的選擇。具 timing／cost 的 skill、item、trap、FLIP、stage 來源優先於展示用 `card.effects`，避免同一效果雙重計數。
 
-2026-08-16 的正式卡池唯讀 scan：1,101 張卡、2,909 筆能力證據；未支援 `reveal-hand` 1 筆，已保守寫入 shadow telemetry，未被當作 payoff 或策略加分。
+2026-08-23 的正式卡池 strict scan：1,244 筆 inventory 印刷記錄，依
+`poolId` 合併為 967 種唯一 runtime 機制、2,371 筆能力證據；unsupported、
+conversion failure 均為 0，狀態為 `ready`。異圖仍包含於訓練 inventory，
+但不重複放大同一機制的策略權重。全池 synergy graph 產生 42,463 條候選
+ComboPlan 邊；它們只是供局面篩選的候選，不代表 42,463 條連段已被證明可完成。
 
 最低測試集：
 

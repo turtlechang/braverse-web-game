@@ -252,6 +252,18 @@ describe('MainMenu AI opponent options', () => {
 
     await act(() => root.unmount())
   })
+
+  it('提供不讀隱藏資訊的 Lv.5 高手對抗選項', async () => {
+    const { container, root } = await renderMenu([validDeck], {}, {
+      aiLevel: 5,
+    })
+    const levelSelect = container.querySelectorAll<HTMLSelectElement>(
+      '.main-menu-ai-options select',
+    )[1]
+    expect(levelSelect.value).toBe('5')
+    expect(container.textContent).toContain('不讀隱藏卡面')
+    await act(() => root.unmount())
+  })
 })
 
 describe('MainMenu empty deck state', () => {

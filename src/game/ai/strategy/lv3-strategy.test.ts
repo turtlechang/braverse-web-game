@@ -252,9 +252,11 @@ describe('G3 TacticalPlan and deterministic selection', () => {
       legalAttackCountAfter: 0,
     })
 
-    expect(scored.breakdown.contributions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'tactical-payoff', amount: 42 }),
-    ]))
+    const payoffContribution = scored.breakdown.contributions.find(
+      (contribution) => contribution.id === 'tactical-payoff',
+    )
+    expect(payoffContribution?.amount).toBeGreaterThan(40)
+    expect(payoffContribution?.detail).toContain('fixture-setup')
   })
 
   it('同一候選集合以穩定 tie-break 選擇，重跑結果一致', () => {

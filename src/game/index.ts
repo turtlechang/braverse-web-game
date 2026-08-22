@@ -92,6 +92,7 @@ export {
   AI_PRESET_BS2_PURPLE_DECK,
   AI_PRESET_BS2_RED_DECK,
   AI_PRESET_BS2_YELLOW_DECK,
+  ALL_AI_TRAINING_DECK_CHOICES,
   AI_PRESET_BS3_BLUE_SORBET_DECK,
   AI_PRESET_BS3_GREEN_LILY_DECK,
   AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK,
@@ -218,6 +219,7 @@ export {
   simulateAiMatch,
   takeAiStep,
 } from './ai'
+export type { AiStrategyMemory, AiTacticalIntent } from './ai'
 export {
   beginAttack,
   hasActivatableFlipEffect,

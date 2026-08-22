@@ -171,6 +171,18 @@ const extractEffect = (
         tags: ['battle'],
       })
       break
+    case 'modify-all-effect-damage':
+      addEvidence(
+        result,
+        card,
+        cardIndex,
+        effectSource,
+        effect,
+        effectPath,
+        'effect-damage-modification',
+        { tags: ['battle'] },
+      )
+      break
     case 'hand-to-battle':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'deploy', {
         sourceZone: 'hand',
@@ -237,6 +249,12 @@ const extractEffect = (
           extractEffect(result, card, cardIndex, effectSource, child, [...effectPath, childIndex]),
         )
       }
+      break
+    case 'reveal-hand':
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'inspect-hand', {
+        target: { side: 'opponent', min: 0, max: effect.amount },
+        tags: ['opponent-hand'],
+      })
       break
     case 'rest-cookie':
     case 'rest-support':

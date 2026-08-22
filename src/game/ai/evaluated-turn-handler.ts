@@ -25,12 +25,28 @@ import {
 } from './strategy/knowledge-state'
 import {
   DEFAULT_LV4_SEARCH_OPTIONS,
+  DEFAULT_LV5_SEARCH_OPTIONS,
   searchLv4Commands,
   selectLv4StrategicContribution,
+  type Lv4SearchHooks,
 } from './strategy/lv4-search'
 import { createLv4SearchTelemetry } from './strategy/search-telemetry'
 import { handleAiTurnState, type AiTurnStrategy } from './turn-handler'
 import { isAllowedAiDeploymentCommand } from './deployment-policy'
+import {
+  estimateOpponentResponse,
+  type OpponentResponseEstimate,
+} from './strategy/opponent-response'
+import { scoreIntentContinuity } from './strategy/session'
+import {
+  forecastOpponentEndgame,
+  type OpponentEndgameForecast,
+} from './strategy/endgame-forecast'
+import {
+  deriveTacticalPlan,
+  findVisibleSelfCard,
+  type TacticalPlan,
+} from './strategy/tactical-plans'
 
 const sumBreakLevel = (cards: CookieCard[]): number =>
   cards.reduce((sum, card) => sum + card.level, 0)
@@ -786,6 +802,9 @@ interface Lv4RootCandidate {
   tieBreakKey: string
   actionScore: NonNullable<AiDecision['reason']>['actionScore']
   telemetry: ReturnType<typeof createLv4SearchTelemetry>
+  opponentResponse: OpponentResponseEstimate
+  opponentEndgame: OpponentEndgameForecast
+  tacticalPlan?: TacticalPlan
 }
 
 const chooseBestLv4Candidate = (
@@ -813,6 +832,7 @@ export const handleAiTwoPlyTurnState = (
   playerId: PlayerId,
   strategy: AiTurnStrategy,
 ): AiDecision => {
+  const decisionLevel = strategy.currentLevel === 5 ? 5 : 4
   const isFreeChoiceState =
     state.status === 'playing' &&
     !state.pendingRefresh &&
@@ -824,24 +844,31 @@ export const handleAiTwoPlyTurnState = (
 
   if (!isFreeChoiceState) {
     const delegated = handleAiTurnState(state, playerId, strategy)
-    if (delegated.reason) return delegated
+    if (delegated.reason) {
+      return {
+        ...delegated,
+        reason: { ...delegated.reason, level: decisionLevel },
+      }
+    }
     return {
       ...delegated,
       reason: {
-        level: 4 as const,
+        level: decisionLevel,
         consideredCommands: 0,
         chosenCommandKind: delegated.action,
       },
     }
   }
 
-  // G3 是任何預算中斷時的 deterministic fallback；reason 保持 level 4，
-  // 讓 benchmark 能辨識安全降階，而不是把它誤當成 Lv.3 對局。
+  // Lv.4 預算中斷回退 G3；Lv.5 回退 Lv.4。reason 保持呼叫層級，讓
+  // benchmark 能辨識安全降階，而不是把 fallback 誤當成低階對局。
   const previousLevel = strategy.currentLevel
-  strategy.currentLevel = 3
+  strategy.currentLevel = decisionLevel === 5 ? 4 : 3
   let baseline: AiDecision
   try {
-    baseline = handleAiEvaluatedTurnState(state, playerId, strategy)
+    baseline = decisionLevel === 5
+      ? handleAiTwoPlyTurnState(state, playerId, strategy)
+      : handleAiEvaluatedTurnState(state, playerId, strategy)
   } finally {
     strategy.currentLevel = previousLevel
   }
@@ -852,8 +879,11 @@ export const handleAiTwoPlyTurnState = (
     : createKnowledgeStateFromPlayerView(beforeView)
   strategy.knowledgeState = knowledgeState
   const rootContext = createLv3ContextForView(beforeView, knowledgeState)
-  const deadlineMs = Date.now() + DEFAULT_LV4_SEARCH_OPTIONS.timeBudgetMs
-  const searchHooks = {
+  const searchOptions = decisionLevel === 5
+    ? DEFAULT_LV5_SEARCH_OPTIONS
+    : DEFAULT_LV4_SEARCH_OPTIONS
+  const deadlineMs = Date.now() + searchOptions.timeBudgetMs
+  const searchHooks: Lv4SearchHooks = {
     getLegalCommands: (nextState: GameState, nextPlayerId: PlayerId) =>
       getLegalTurnCommands(nextState, nextPlayerId).filter((command) =>
         isAllowedAiDeploymentCommand(nextState, nextPlayerId, command),
@@ -862,7 +892,30 @@ export const handleAiTwoPlyTurnState = (
     createPlayerView,
     scorePublicView: (view: PlayerView) =>
       evaluatePlayerView(view) + lv4RiskBonus(view, playerId),
-    legacyStepBonus: beamStepBonus,
+    legacyStepBonus: (
+      beforeState: GameState,
+      afterState: GameState,
+      nextPlayerId: PlayerId,
+      command: PlayerActionCommand,
+    ) => {
+      if (decisionLevel !== 5) {
+        return beamStepBonus(beforeState, afterState, nextPlayerId, command)
+      }
+      const before = createPlayerView(beforeState, nextPlayerId)
+      const identity = actionIdentityFromCommand(command)
+      const effectiveDamage = command.kind === 'attack'
+        ? getEffectiveAttack(beforeState, command.attackerInstanceId)
+        : 0
+      return beamStepBonus(beforeState, afterState, nextPlayerId, command) +
+        estimateOpponentResponse(before, identity).expectedPenalty +
+        forecastOpponentEndgame(before, identity, effectiveDamage).score
+    },
+    persistentIntentBonus: decisionLevel === 5
+      ? (plan, _identity, depth) =>
+          depth === 0
+            ? scoreIntentContinuity(strategy.strategyMemory, plan)
+            : 0
+      : undefined,
     isTerminal: isLv4SearchTerminal,
   }
   const searchResult = searchLv4Commands(
@@ -870,13 +923,13 @@ export const handleAiTwoPlyTurnState = (
     playerId,
     knowledgeState,
     searchHooks,
-    { deadlineMs },
+    { ...searchOptions, deadlineMs },
   )
 
-  const fallbackToLv3 = (telemetry = searchResult.telemetry): AiDecision => ({
+  const fallbackToBaseline = (telemetry = searchResult.telemetry): AiDecision => ({
     ...baseline,
     reason: {
-      level: 4,
+      level: decisionLevel,
       consideredCommands: telemetry.nodesGenerated,
       chosenCommandKind: baseline.reason?.chosenCommandKind ?? baseline.action,
       actionScore: baseline.reason?.actionScore,
@@ -885,7 +938,7 @@ export const handleAiTwoPlyTurnState = (
   })
 
   if (searchResult.telemetry.stopReason === 'time-budget') {
-    return fallbackToLv3()
+    return fallbackToBaseline()
   }
 
   const candidates: Lv4RootCandidate[] = []
@@ -902,6 +955,17 @@ export const handleAiTwoPlyTurnState = (
         tieBreakKey: searchResult.firstStep.actionScore.tieBreakKey,
         actionScore: searchResult.firstStep.actionScore,
         telemetry: searchResult.telemetry,
+        opponentResponse: decisionLevel === 5
+          ? estimateOpponentResponse(beforeView, actionIdentityFromCommand(command))
+          : { responseLikelihood: 0, publicResponseEvidence: 0, expectedPenalty: 0, detail: 'Lv.4 未啟用。' },
+        opponentEndgame: forecastOpponentEndgame(
+          beforeView,
+          actionIdentityFromCommand(command),
+          command.kind === 'attack'
+            ? getEffectiveAttack(state, command.attackerInstanceId)
+            : 0,
+        ),
+        tacticalPlan: searchResult.firstStep.tacticalPlan,
       })
     } catch {
       // 搜尋後再次由規則層驗證；若狀態已不適用就保守回退 G3。
@@ -935,6 +999,15 @@ export const handleAiTwoPlyTurnState = (
       selectLv4StrategicContribution(scored.breakdown) +
       skillEffectBonus(state, decision.state, playerId)
     let telemetry = createLv4SearchTelemetry()
+    const identity = { kind, sourceInstanceId }
+    const sourceCard = findVisibleSelfCard(beforeView, sourceInstanceId)
+    const tacticalPlan = deriveTacticalPlan(
+      rootContext,
+      beforeView,
+      sourceCard?.id,
+      afterView,
+      identity.kind,
+    )
 
     if (canContinue) {
       const continuation = searchLv4Commands(
@@ -942,7 +1015,7 @@ export const handleAiTwoPlyTurnState = (
         playerId,
         knowledgeState,
         searchHooks,
-        { deadlineMs },
+        { ...searchOptions, deadlineMs },
       )
       telemetry = continuation.telemetry
       if (telemetry.stopReason === 'time-budget') return false
@@ -955,6 +1028,9 @@ export const handleAiTwoPlyTurnState = (
       tieBreakKey: scored.breakdown.tieBreakKey,
       actionScore: scored.breakdown,
       telemetry,
+      opponentResponse: { responseLikelihood: 0, publicResponseEvidence: 0, expectedPenalty: 0, detail: '非攻擊能力。' },
+      opponentEndgame: forecastOpponentEndgame(beforeView, identity, 0),
+      tacticalPlan,
     })
     return true
   }
@@ -968,7 +1044,7 @@ export const handleAiTwoPlyTurnState = (
           'activate-skill',
           source.card.instanceId,
         )) {
-          return fallbackToLv3()
+          return fallbackToBaseline()
         }
       } catch {
         // skip invalid skill resolution
@@ -982,7 +1058,7 @@ export const handleAiTwoPlyTurnState = (
           `activate-${card.type}`,
           card.instanceId,
         )) {
-          return fallbackToLv3()
+          return fallbackToBaseline()
         }
       } catch {
         // skip invalid card ability resolution
@@ -1000,12 +1076,12 @@ export const handleAiTwoPlyTurnState = (
         state.players[playerId].stage.card.instanceId,
       )
     ) {
-      return fallbackToLv3()
+      return fallbackToBaseline()
     }
   }
 
   if (candidates.length === 0) {
-    return fallbackToLv3({
+    return fallbackToBaseline({
       ...searchResult.telemetry,
       stopReason: 'no-candidate',
       fallbackUsed: true,
@@ -1013,16 +1089,19 @@ export const handleAiTwoPlyTurnState = (
   }
 
   const best = chooseBestLv4Candidate(candidates, playerId)
-  if (!best) return fallbackToLv3()
+  if (!best) return fallbackToBaseline()
 
   return {
     ...best.decision,
     reason: {
-      level: 4,
+      level: decisionLevel,
       consideredCommands: searchResult.telemetry.nodesGenerated + candidates.length,
       chosenCommandKind: best.decision.action,
       actionScore: best.actionScore,
       lv4Search: best.telemetry,
+      opponentResponse: decisionLevel === 5 ? best.opponentResponse : undefined,
+      opponentEndgame: decisionLevel === 5 ? best.opponentEndgame : undefined,
+      tacticalPlan: decisionLevel === 5 ? best.tacticalPlan : undefined,
     },
   }
 }

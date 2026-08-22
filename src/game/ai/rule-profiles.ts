@@ -23,6 +23,7 @@ export type RuleId =
   | 'R14'
   | 'R15'
   | 'R16'
+  | 'R17'
 
 // ============================================================================
 // 規則描述
@@ -163,6 +164,13 @@ export const RULE_DEFINITIONS: Record<RuleId, RuleDefinition> = {
     priority: 'HIGH',
     module: 'strategy/lv4-search.ts',
   },
+  R17: {
+    id: 'R17',
+    name: '公開資訊對手回應期望',
+    description: '依公開手牌張數與已公開卡牌能力，保守估計攻擊回應曝險；不讀隱藏卡面。',
+    priority: 'HIGH',
+    module: 'strategy/opponent-response.ts',
+  },
 }
 
 // ============================================================================
@@ -204,11 +212,24 @@ export const LV4_PROFILE: RuleProfile = {
   rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16'],
 }
 
+export const LV5_PROFILE: RuleProfile = {
+  level: 5,
+  name: '高手對抗',
+  description: '延續 Lv.4 多步規劃，加入跨步公開資訊記憶與對手回應期望。',
+  rules: [...LV4_PROFILE.rules, 'R17'],
+}
+
 // ============================================================================
 // 工具函式
 // ============================================================================
 
-const ALL_PROFILES: RuleProfile[] = [LV1_PROFILE, LV2_PROFILE, LV3_PROFILE, LV4_PROFILE]
+const ALL_PROFILES: RuleProfile[] = [
+  LV1_PROFILE,
+  LV2_PROFILE,
+  LV3_PROFILE,
+  LV4_PROFILE,
+  LV5_PROFILE,
+]
 
 /** 根據等級取得對應的規則設定 */
 export const getRuleProfile = (level: AiLevel): RuleProfile =>

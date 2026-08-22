@@ -27,6 +27,7 @@ import type {
   AbilityCost,
 } from '../types'
 import type { KnowledgeState } from './strategy/knowledge-state'
+import type { AiStrategyMemory } from './strategy/session'
 import type { PendingSelectionStrategy } from './strategy/pending-selection'
 import type { AiDecision, AiLevel } from './types'
 import {
@@ -41,6 +42,7 @@ export interface AiTurnStrategy {
   /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
   shuffleSeed?: number
   knowledgeState?: KnowledgeState
+  strategyMemory?: AiStrategyMemory
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,

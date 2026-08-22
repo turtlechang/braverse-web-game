@@ -1,4 +1,12 @@
-import type { CardCapabilityModel, CapabilityEvidence, StrategyTag } from './capability-model'
+import type { AbilityCost } from '../../types'
+import type {
+  CapabilityCertainty,
+  CapabilityTiming,
+  CardCapabilityModel,
+  CapabilityEvidence,
+  StrategyTag,
+  StrategyZone,
+} from './capability-model'
 
 export interface SynergyNode {
   cardId: string
@@ -7,6 +15,12 @@ export interface SynergyNode {
   kind: CapabilityEvidence['kind']
   strategyTags: StrategyTag[]
   conditionKinds: string[]
+  timing: CapabilityTiming
+  cost: AbilityCost | null
+  certainty: CapabilityCertainty
+  sourceZone?: StrategyZone
+  destinationZone?: StrategyZone
+  effectPath: number[]
 }
 
 export interface SynergyEdge {
@@ -32,6 +46,12 @@ const toNode = (
   kind: capability.kind,
   strategyTags: capability.strategyTags,
   conditionKinds: capability.conditionKinds,
+  timing: capability.timing,
+  cost: capability.cost,
+  certainty: capability.certainty,
+  sourceZone: capability.sourceZone,
+  destinationZone: capability.destinationZone,
+  effectPath: capability.effectPath,
 })
 
 const isSetup = (node: SynergyNode): boolean =>
@@ -56,6 +76,12 @@ export const buildSynergyGraph = (
     for (const setup of setups) {
       const sharedTags = setup.strategyTags.filter((tag) => payoff.strategyTags.includes(tag))
       if (sharedTags.length === 0) continue
+      // 同一卡片同一效果同時產生 setup/payoff evidence 時，不代表它能在
+      // 條件檢查前先完成自己的前置。排除這種自我循環，避免假 Combo。
+      if (
+        setup.cardIndex === payoff.cardIndex &&
+        setup.effectPath.join('.') === payoff.effectPath.join('.')
+      ) continue
       edges.push({ setup, payoff, sharedTags })
       resolvedPayoffs.add(nodes.indexOf(payoff))
     }
