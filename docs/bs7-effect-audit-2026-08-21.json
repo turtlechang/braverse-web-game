@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-08-21T17:16:24.273Z",
+  "generatedAt": "2026-08-22T09:53:15.801Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
   "sources": [
-    "data/candidates/official-arena-of-glory-bs7.en.json"
+    "data/cards/official-arena-of-glory-bs7.en.json"
   ],
-  "scope": "Candidate test-state interaction audit for BS7 effect-bearing records plus dedicated A/B paths for 0 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "scope": "Formal-pool test-state interaction audit for BS7 effect-bearing records plus dedicated A/B paths for 0 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
   "summary": {
     "total": 98,
     "effectFlowPassed": 98,
@@ -1211,6 +1211,15 @@
         "action:next-phase"
       ],
       "contractTraceCard": "BS7-039",
+      "orderedAllTargetProof": {
+        "discardSelections": 0,
+        "targetSelections": 2,
+        "selectedTargetOrder": [
+          "opp-lv3",
+          "opp-lv1"
+        ],
+        "targetStep": "攻擊後效果目標：opp-lv3、opp-lv1"
+      },
       "traceEntries": 3,
       "commandKinds": [
         "resolve-attack-effect",
@@ -1219,7 +1228,7 @@
       ],
       "steps": [
         "攻擊後效果來源：「Financier Cookie」；效果：during this turn, if an 【Arena】 Cookie has been placed in your break area, all of your opponent's Cookies receive 1 damage.",
-        "攻擊後效果目標：opp-lv1、opp-lv3",
+        "攻擊後效果目標：opp-lv3、opp-lv1",
         "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算"
       ],
       "substantiveEffectEvidence": true
@@ -2565,11 +2574,25 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
+        "select:hand-discard",
         "confirm:hand-discard",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase"
       ],
       "contractTraceCard": "BS7-082",
+      "orderedAllTargetProof": {
+        "discardSelections": 2,
+        "targetSelections": 2,
+        "selectedTargetOrder": [
+          "opp-lv3",
+          "opp-lv1"
+        ],
+        "targetStep": "攻擊後效果目標：opp-lv3、opp-lv1"
+      },
       "traceEntries": 2,
       "commandKinds": [
         "resolve-attack-effect"
@@ -2578,7 +2601,8 @@
         "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
         "攻擊後效果結果：執行 discard-hand",
         "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
-        "攻擊後效果結果：條件不成立，效果未執行"
+        "攻擊後效果目標：opp-lv3、opp-lv1",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算"
       ],
       "substantiveEffectEvidence": true
     },
@@ -3055,7 +3079,7 @@
       "steps": [
         "攻擊後效果來源：「Eclair Cookie」；效果：if there are 7 【Arena】 cards or more in your trash, this Cookie receives -1 attack damage until the end of your opponent's turn.",
         "攻擊後效果目標：Eclair Cookie",
-        "攻擊後效果結果：使目標攻擊力 -1"
+        "攻擊後效果結果：使目標受到的攻擊傷害 -1"
       ],
       "substantiveEffectEvidence": true
     },

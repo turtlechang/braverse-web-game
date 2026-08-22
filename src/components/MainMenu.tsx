@@ -9,6 +9,11 @@ import { getDeckFormatLabel } from '../game/deck-rules'
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
 
 const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
+  { value: 'bs7-red-arena', label: 'BS7 紅｜Arena' },
+  { value: 'bs7-yellow-arena', label: 'BS7 黃｜Arena' },
+  { value: 'bs7-green-arena', label: 'BS7 綠｜Arena' },
+  { value: 'bs7-blue-arena', label: 'BS7 藍｜Arena' },
+  { value: 'bs7-purple-arena', label: 'BS7 紫｜Arena' },
   { value: 'bs6-red-standard', label: 'BS6 紅｜標準' },
   { value: 'bs6-yellow-standard', label: 'BS6 黃｜標準' },
   { value: 'bs6-green-standard', label: 'BS6 綠｜標準' },

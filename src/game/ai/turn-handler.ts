@@ -122,9 +122,13 @@ export const chooseAiStageCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupports.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupports
+    .filter(
+      (support) =>
+        cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const supportToTrashIds = universal?.enabled
     ? universal.orderCostIds(
         supportToTrashCandidateIds,
@@ -135,7 +139,12 @@ export const chooseAiStageCostIds = (
 
   const supportToTrashSet = new Set(supportToTrashIds)
   const supportToHandCandidateIds = remainingSupports
-    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !supportToTrashSet.has(support.card.instanceId) &&
+        (cost.supportToHandType === undefined ||
+          support.card.type === cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
     ? universal.orderCostIds(

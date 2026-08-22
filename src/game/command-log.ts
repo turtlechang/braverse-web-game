@@ -667,6 +667,8 @@ const describeAttackEffectAction = (effect: CardEffect): string => {
       return `橫置 ${effect.supportAmount} 張支援卡並造成傷害`
     case 'modify-attack':
       return `使目標攻擊力 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
+    case 'modify-damage-received':
+      return `使目標受到的攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-attack-by-break-count':
       return '依休息區張數修改目標攻擊力'
     case 'break-to-battle':

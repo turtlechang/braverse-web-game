@@ -306,6 +306,7 @@ describe('pending battle and FLIP', () => {
     state.players['player-one'].discardPile = [
       cookie('refresh-cookie'),
       item('refresh-item'),
+      item('refresh-spare'),
     ]
     state.players['player-one'].battleArea[0].hpCards = [
       item('hp-bottom'),

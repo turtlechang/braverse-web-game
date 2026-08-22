@@ -52,6 +52,30 @@ const replenishPlayerHpCards = (
   return updatePlayer(state, updatedPlayer)
 }
 
+const continuePendingHpGain = (
+  state: GameState,
+  playerId: PlayerId,
+  pendingHpGain: NonNullable<GameState['pendingRefresh']>['remainingHpGain'],
+): GameState => {
+  if (!pendingHpGain || pendingHpGain.amount <= 0) return state
+  const player = state.players[playerId]
+  const targetIndex = player.battleArea.findIndex(
+    (cookie) => cookie.card.instanceId === pendingHpGain.targetInstanceId,
+  )
+  if (targetIndex < 0) return state
+
+  const gainedCards = player.deck.slice(0, pendingHpGain.amount)
+  return updatePlayer(state, {
+    ...player,
+    deck: player.deck.slice(gainedCards.length),
+    battleArea: player.battleArea.map((cookie, index) =>
+      index === targetIndex
+        ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
+        : cookie,
+    ),
+  })
+}
+
 export const refreshDeck = (
   state: GameState,
   playerId: PlayerId,
@@ -120,6 +144,10 @@ export const refreshDeck = (
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingDraws
       : 0
+  const pendingHpGain =
+    state.pendingRefresh?.playerId === playerId
+      ? state.pendingRefresh.remainingHpGain
+      : undefined
 
   if (remainingDraws > 0) {
     const drawAmount = Math.min(updatedPlayer.deck.length, remainingDraws)
@@ -154,12 +182,47 @@ export const refreshDeck = (
       pendingRefresh: {
         playerId,
         remainingDraws: 0,
+        ...(pendingHpGain ? { remainingHpGain: pendingHpGain } : {}),
+      },
+    }
+  }
+
+  const hpGainState = continuePendingHpGain(
+    replenishedState,
+    playerId,
+    pendingHpGain,
+  )
+  const remainingHpGain = pendingHpGain
+    ? pendingHpGain.amount -
+      Math.max(
+        0,
+        replenishedState.players[playerId].deck.length -
+          hpGainState.players[playerId].deck.length,
+      )
+    : 0
+  if (hpGainState.players[playerId].deck.length === 0) {
+    if (getRefreshCandidates(hpGainState, playerId).length === 0) {
+      return finishWithDefeat(hpGainState, playerId, 'refresh-unavailable')
+    }
+    return {
+      ...hpGainState,
+      pendingRefresh: {
+        playerId,
+        remainingDraws: 0,
+        ...(pendingHpGain && remainingHpGain > 0
+          ? {
+              remainingHpGain: {
+                ...pendingHpGain,
+                amount: remainingHpGain,
+              },
+            }
+          : {}),
       },
     }
   }
 
   const refreshedState = continueInspectDeckAfterRefresh({
-    ...replenishedState,
+    ...hpGainState,
     pendingRefresh: null,
   })
   return continuePendingReplacements(refreshedState)

@@ -9,6 +9,7 @@ import { applyGameCommand } from '../commands'
 import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
+  getEffectSelectionLimits,
   getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectiveAttack,
@@ -46,6 +47,25 @@ const chooseAttackEffectTargets = (
   const context: EffectContext = {
     sourcePlayerId: playerId,
     sourceInstanceId: battle.attackerInstanceId,
+  }
+
+  // These attack follow-ups select cards outside the battle area (Stage,
+  // hand, or break area). Reuse the rules-layer candidate source instead of
+  // treating every effect with a `target` selector as a Cookie target.
+  if (
+    effect.kind === 'field-to-trash' ||
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'break-to-hand'
+  ) {
+    const limits = getEffectSelectionLimits(effect)
+    const candidateIds = getEffectSelectionCandidates(state, context, effect)
+      .map((card) => card.instanceId)
+    if (!limits) return []
+    const count = Math.min(limits.max, candidateIds.length)
+    if (count < limits.min) return []
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, count)
+      : candidateIds.slice(0, count)
   }
 
   if (effect.kind === 'break-to-trash') {

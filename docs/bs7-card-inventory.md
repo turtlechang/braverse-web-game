@@ -1,14 +1,16 @@
-# BS7 Arena of Glory 卡牌資料盤點（資料準備期）
+# BS7 Arena of Glory 卡牌資料盤點（promote 前歷史快照）
 
-> 本文件由 `npm run cards:import:bs7-candidate` 產生。BS7 僅隔離在候選資料區，尚未進入 runtime 或正式卡池。
+> 本文件由 `npm run cards:import:bs7-candidate` 產生，記錄 2026-08-21 promote 前的資料準備期盤點。當時 BS7 僅隔離在候選資料區且 `candidateStatus: inventory`；目前已於 2026-08-22 promote 至正式卡池。
 
-## 來源與候選狀態
+## 來源與 promote 前狀態
 
 - 官方卡表：[CookieRun: Braverse Card List](https://cookierunbraverse.com/en/cardList)
 - 官方 JSON：`https://cookierunbraverse.com/data/json/cardList_en.json`
 - 抓取時間：`2026-08-21T08:05:09.792Z`
 - 篩選規則：完整卡號以 `BS7-` 開頭，保留異圖／促銷變體。
-- 候選狀態：`inventory`
+- promote 前候選狀態：`inventory`（歷史快照）
+- 目前正式卡池：`data/cards/official-arena-of-glory-bs7.en.json`
+- 目前 promote 狀態：2026-08-22 已完成；正式來源 `candidateStatus: promotion-ready`
 - 圖片下載：否
 
 ## 數量摘要
@@ -66,9 +68,16 @@
 | `Soul Jam` 名稱 | 0 | 無 |
 | `Equip` 文字 | 0 | 無 |
 
-## BS7 門檻
+## BS7 門檻（promote 前歷史流程）
 
 1. 執行 `npm run validate:candidate`，確認 schema、卡號唯一性與官方欄位結構。
 2. 執行 `npm run cards:analyze:bs7-candidate`，依顏色列出主效果、能力及攻擊 `Then` 的轉接缺口。
 3. 逐批完成 runtime adapter、規則引擎、UI、回歸測試與 Chrome 合法／不合法路徑驗證。
-4. 所有未支援與待裁決項目清零前，保持 `inventory`，不執行 `npm run promote:candidate`。
+4. 當時所有未支援與待裁決項目清零前，保持 `inventory`，不執行 `npm run promote:candidate`。
+
+## Promote 後現況
+
+- 正式卡池已收錄 143 筆記錄／108 個基礎卡號；candidate 檔案已移出。
+- formal strict contract：143/143 `verified`；整體 formal validate：1,244/1,244；registry consistent。
+- Browser 證據：143/143 卡面載入、98/98 正向效果、143/143 負向 A/B；BS7-039／BS7-082 保持 `sequential: true` 的逐目標結算契約。
+- 未來官方更新仍依 `inventory` → strict／Browser gate → `promotion-ready` → promote 流程進行。

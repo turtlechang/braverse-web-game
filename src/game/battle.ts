@@ -2085,13 +2085,26 @@ const hasApplicableOptionalAttackEffect = (
   context: EffectContext,
   effects: CardEffect[],
   cost?: AbilityCost,
-): boolean =>
-  effects.some(
+): boolean => {
+  // 「將此餅乾放到棄牌區／休息區」只能在攻擊來源仍位於自己的戰鬥區時
+  // 支付。攻擊途中來源可能先被 FLIP 效果擊倒（BS7-026 對 BS3-006）；
+  // 此時不能再建立一個必定支付失敗的可選代價提示。
+  if (
+    (cost?.selfToTrash === true || cost?.selfToBreakArea === true) &&
+    !state.players[context.sourcePlayerId].battleArea.some(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+  ) {
+    return false
+  }
+
+  return effects.some(
     (effect) =>
       isEffectConditionMet(state, context, effect) &&
       (hasRequiredEffectTargets(state, context, effect) ||
         (cost?.selfToTrash === true && effect.kind === 'trash-to-battle')),
   )
+}
 
 export const advanceAttackEffect = (
   state: GameState,

@@ -531,9 +531,13 @@ const chooseAbilityCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupports.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupports
+    .filter(
+      (support) =>
+        cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const supportToTrashIds = universal?.enabled
     ? universal.orderCostIds(
         supportToTrashCandidateIds,
@@ -544,7 +548,12 @@ const chooseAbilityCostIds = (
 
   const supportToTrashSet = new Set(supportToTrashIds)
   const supportToHandCandidateIds = remainingSupports
-    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !supportToTrashSet.has(support.card.instanceId) &&
+        (cost.supportToHandType === undefined ||
+          support.card.type === cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
     ? universal.orderCostIds(
@@ -910,9 +919,13 @@ const resolveAiSkill = (
   const remainingSupportsAfterPayment = player.supportArea.filter(
     (support) => !paymentIds.includes(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupportsAfterPayment.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupportsAfterPayment
+    .filter(
+      (support) =>
+        skill.cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(skill.cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const costSupportToTrashIds = skill.cost.supportToTrash
     ? universal?.enabled
       ? universal.orderCostIds(
@@ -931,7 +944,12 @@ const resolveAiSkill = (
 
   const costSupportToTrashSet = new Set(costSupportToTrashIds)
   const supportToHandCandidateIds = remainingSupportsAfterPayment
-    .filter((support) => !costSupportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !costSupportToTrashSet.has(support.card.instanceId) &&
+        (skill.cost.supportToHandType === undefined ||
+          support.card.type === skill.cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const costSupportToHandIds = skill.cost.supportToHand
     ? universal?.enabled

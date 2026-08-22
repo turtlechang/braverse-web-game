@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-08-21T17:07:28.466Z",
+  "generatedAt": "2026-08-22T09:45:20.413Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
   "sources": [
-    "data/candidates/official-arena-of-glory-bs7.en.json"
+    "data/cards/official-arena-of-glory-bs7.en.json"
   ],
-  "scope": "Candidate card-check entry audit for every inventory candidate record. This report separates route/card rendering from interactive effect proof.",
+  "scope": "Formal-pool card-check entry audit for every promoted BS7 record. This report separates route/card rendering from interactive effect proof.",
   "summary": {
     "total": 143,
     "passed": 143,
@@ -53,7 +53,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 46
@@ -70,7 +70,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -87,7 +87,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -104,7 +104,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -121,7 +121,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -138,7 +138,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -155,7 +155,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -172,7 +172,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -189,7 +189,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -206,7 +206,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -223,7 +223,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "效果目標",
       "modalVisible": false,
       "actionableControls": 41
@@ -240,7 +240,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -257,7 +257,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 49
@@ -274,7 +274,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Arena LV.2 效果傷害測試餅乾",
       "modalVisible": false,
       "actionableControls": 37
@@ -291,7 +291,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Arena LV.2 效果傷害測試餅乾",
       "modalVisible": false,
       "actionableControls": 37
@@ -308,7 +308,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -325,7 +325,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -342,7 +342,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -359,7 +359,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -376,7 +376,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -393,7 +393,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Crushed Pepper Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -410,7 +410,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Crushed Pepper Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -427,7 +427,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -444,7 +444,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 42
@@ -461,7 +461,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Jalapeño Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 51
@@ -478,7 +478,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Jalapeño Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 51
@@ -495,7 +495,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Rye Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 47
@@ -512,7 +512,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Rye Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 47
@@ -529,7 +529,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 43
@@ -547,7 +547,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 46
@@ -564,7 +564,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 41
@@ -581,7 +581,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -598,7 +598,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Ice Juggler Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 47
@@ -615,7 +615,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -632,7 +632,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Twisted Donut Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 45
@@ -649,7 +649,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -666,7 +666,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -683,7 +683,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -700,7 +700,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -717,7 +717,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -734,7 +734,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -751,7 +751,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -768,7 +768,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -785,7 +785,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -802,7 +802,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -819,7 +819,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -836,7 +836,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -853,7 +853,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -870,7 +870,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -887,7 +887,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -904,7 +904,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -921,7 +921,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Clotted Cream Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 46
@@ -938,7 +938,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Clotted Cream Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 46
@@ -956,7 +956,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Financier Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -974,7 +974,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Financier Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -991,7 +991,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 51
@@ -1009,7 +1009,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 39
@@ -1027,7 +1027,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 49
@@ -1044,7 +1044,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 40
@@ -1061,7 +1061,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Licorice Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 51
@@ -1078,7 +1078,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Licorice Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 51
@@ -1095,7 +1095,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Licorice Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 51
@@ -1112,7 +1112,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 40
@@ -1130,7 +1130,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Green Tea Mousse Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -1148,7 +1148,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Green Tea Mousse Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -1165,7 +1165,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -1182,7 +1182,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 56
@@ -1199,7 +1199,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 56
@@ -1216,7 +1216,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 46
@@ -1233,7 +1233,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "效果目標",
       "modalVisible": false,
       "actionableControls": 53
@@ -1250,7 +1250,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 46
@@ -1267,7 +1267,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -1284,7 +1284,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 50
@@ -1301,7 +1301,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -1318,7 +1318,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 41
@@ -1335,7 +1335,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -1352,7 +1352,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 46
@@ -1369,7 +1369,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 46
@@ -1386,7 +1386,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 49
@@ -1403,7 +1403,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 49
@@ -1421,7 +1421,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Choco Drizzle Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -1439,7 +1439,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Choco Drizzle Cookie的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 50
@@ -1456,7 +1456,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Custard Cookie III的技能等待支付技能代價並選擇目標。",
       "modalVisible": false,
       "actionableControls": 44
@@ -1473,7 +1473,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -1490,7 +1490,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -1508,7 +1508,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 39
@@ -1526,7 +1526,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 46
@@ -1543,7 +1543,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 42
@@ -1560,7 +1560,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Princess Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 49
@@ -1578,7 +1578,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Dark Choco Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 53
@@ -1596,7 +1596,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Dark Choco Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 53
@@ -1613,7 +1613,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 42
@@ -1630,7 +1630,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -1647,7 +1647,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Raspberry Mousse Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -1664,7 +1664,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Raspberry Mousse Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -1681,7 +1681,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -1698,7 +1698,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -1715,7 +1715,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Knight Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 47
@@ -1732,7 +1732,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 42
@@ -1749,7 +1749,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 44
@@ -1766,7 +1766,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 44
@@ -1783,7 +1783,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -1800,7 +1800,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -1817,7 +1817,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Arena LV.2 效果傷害測試餅乾",
       "modalVisible": false,
       "actionableControls": 38
@@ -1834,7 +1834,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -1851,7 +1851,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 45
@@ -1868,7 +1868,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 45
@@ -1885,7 +1885,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -1902,7 +1902,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 41
@@ -1919,7 +1919,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Red Pepper Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 45
@@ -1936,7 +1936,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -1953,7 +1953,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 39
@@ -1971,7 +1971,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 43
@@ -1988,7 +1988,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 42
@@ -2005,7 +2005,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -2022,7 +2022,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Camellia Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 50
@@ -2039,7 +2039,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Camellia Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 50
@@ -2056,7 +2056,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Latte Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -2073,7 +2073,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Latte Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -2090,7 +2090,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 46
@@ -2107,7 +2107,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 46
@@ -2124,7 +2124,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "昏厥效果",
       "modalVisible": false,
       "actionableControls": 46
@@ -2141,7 +2141,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Gelato Trio Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 45
@@ -2158,7 +2158,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "效果目標",
       "modalVisible": false,
       "actionableControls": 41
@@ -2175,7 +2175,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -2192,7 +2192,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -2209,7 +2209,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 44
@@ -2226,7 +2226,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Almond Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 47
@@ -2243,7 +2243,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -2260,7 +2260,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Eclair Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 48
@@ -2277,7 +2277,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Milk Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 47
@@ -2294,7 +2294,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 38
@@ -2311,7 +2311,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "flip-attacker",
       "modalVisible": false,
       "actionableControls": 34
@@ -2328,7 +2328,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Purple Yam Cookie等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 49
@@ -2345,7 +2345,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Kohlrabi Cookie等待決定是否支付攻擊後續效果代價。",
       "modalVisible": false,
       "actionableControls": 46
@@ -2362,7 +2362,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "Parfaedia Principal等待選擇攻擊後續效果目標。",
       "modalVisible": false,
       "actionableControls": 53
@@ -2379,7 +2379,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -2396,7 +2396,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 45
@@ -2414,7 +2414,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 39
@@ -2432,7 +2432,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 46
@@ -2449,7 +2449,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": null,
       "modalVisible": false,
       "actionableControls": 41
@@ -2467,7 +2467,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 51
@@ -2485,7 +2485,7 @@
       ],
       "status": "PASS",
       "auditStatus": "載入通過",
-      "flow": "candidate-card-check-entry",
+      "flow": "formal-card-check-entry",
       "promptVisible": "攻擊宣告",
       "modalVisible": false,
       "actionableControls": 51

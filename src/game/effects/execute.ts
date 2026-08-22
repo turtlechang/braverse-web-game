@@ -1027,14 +1027,15 @@ export const executeCardEffect = (
       (cookie) => cookie.card.instanceId === targetInstanceId,
     )
     const target = player.battleArea[targetIndex]
-    if (!target || player.deck.length < gainedAmount) {
+    if (!target) {
       if (isOptionalTarget) return { ...state }
-      throw new GameRuleError('牌庫張數不足，無法增加 HP。')
+      throw new GameRuleError('增加 HP 的目標餅乾不在戰鬥區。')
     }
     const gainedCards = player.deck.slice(0, gainedAmount)
+    const remainingHpGain = gainedAmount - gainedCards.length
     const updatedState = updatePlayer(state, {
       ...player,
-      deck: player.deck.slice(gainedAmount),
+      deck: player.deck.slice(gainedCards.length),
       battleArea: player.battleArea.map((cookie, index) =>
         index === targetIndex
           ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
@@ -1043,6 +1044,21 @@ export const executeCardEffect = (
     })
     return {
       ...updatedState,
+      pendingRefresh:
+        updatedState.players[targetPlayerId].deck.length === 0
+          ? {
+              playerId: targetPlayerId,
+              remainingDraws: 0,
+              ...(remainingHpGain > 0
+                ? {
+                    remainingHpGain: {
+                      targetInstanceId,
+                      amount: remainingHpGain,
+                    },
+                  }
+                : {}),
+            }
+          : updatedState.pendingRefresh,
       cookiesGainedHpThisTurn: {
         ...(updatedState.cookiesGainedHpThisTurn ?? {}),
         [context.sourcePlayerId]: true,

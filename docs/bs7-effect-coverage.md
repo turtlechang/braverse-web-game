@@ -1,6 +1,6 @@
-# BS7 Arena of Glory 效果轉接覆蓋盤點（候選資料）
+# BS7 Arena of Glory 效果轉接覆蓋盤點（正式卡池）
 
-> 由 `npm run cards:analyze:bs7-candidate` 產生。資料來源是 `data/candidates/official-arena-of-glory-bs7.en.json`；本報告是候選資料的 runtime 轉接盤點，不代表卡牌可 promote 或已完成 Browser 驗收。
+> 由 `npm run cards:analyze:bs7` 產生。資料來源是 `data/cards/official-arena-of-glory-bs7.en.json`；本報告只標示 runtime 轉接現況，Browser 證據另見 BS7 Browser 稽核報告。
 
 ## 摘要
 
@@ -48,8 +48,12 @@
 
 BS7-039 與 BS7-082 的「對手全體餅乾受傷」均必須使用 `damage-all` 的 `sequential: true` 與完整對手目標 selector。Browser 結算依玩家點選順序逐張處理 HP、FLIP 與昏厥；這項順序要求不是一般無目標全體傷害的同義替代。
 
+## 官方卡文校正
+
+- BS7-097 依官方英文勘誤公告，攻擊後效果應為來源餅乾在對手下個回合「受到的攻擊傷害 -1」，runtime 使用 `modify-damage-received`，不可誤轉成降低來源餅乾的攻擊傷害。官方韓文卡表目前只列出攻擊名稱與傷害，未提供英文資料中的攻擊後條款，因此不以韓文缺漏覆蓋英文勘誤。（查閱日期：2026-08-22；英文勘誤：https://cookierunbraverse.com/asia/notice/detail?id=1199；韓文卡表：https://cookierunbraverse.com/ko/cardList/?type=COOKIE）
+
 ## 後續維護門檻
 
-1. 依本報告從每色第一張待轉接卡開始，先完成 parser／contract shadow compile，再進入單卡 runtime 轉接。
+1. 官方更新時先匯入 candidate，完成逐卡 strict contract 與 Browser gate 後，才再次 promote 到正式卡池。
 2. 每張卡完成 adapter、規則、UI 與回歸測試後，才建立 test-state 正反案例與 Chrome Browser A/B 證據。
-3. 所有基礎卡的 strict contract、逐色 Browser gate、正式 smoke 與人工覆核通過前，候選狀態必須維持 `inventory`。
+3. 所有基礎卡的 strict contract、逐色 Browser gate、正式 smoke 與人工覆核通過後，才可再次 promote。

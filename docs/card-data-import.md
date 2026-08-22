@@ -114,23 +114,23 @@ npm run validate:candidate
 
 匯入指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json` 與 `docs/bs6-card-inventory.md`，供官方更新重新進入候選流程；`cards:analyze:bs6-candidate` 會相容地轉呼叫正式卡池分析。已 promote 的 BS6 覆蓋盤點應以 `npm run cards:analyze:bs6` 從 `data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json` 重新產生。BS6 本批已完成逐色 runtime 轉接、回歸測試與 Browser 效果稽核；完整證據見 [BS6 Browser 稽核報告](bs6-browser-audit-2026-08-12.md)，後續更新仍須先維持 `inventory`，完成稽核後才可改為 `promotion-ready` 並 promote。
 
-BS7「Arena of Glory」已建立相同的候選資料準備入口。完整卡號前綴篩選會保留 `BS7-*` 的異圖／促銷變體，且只能寫入候選區：
+BS7「Arena of Glory」已完成本批正式 promotion。143 筆資料／108 個基礎卡號已完成逐卡 strict contract 與 Browser gate，正式來源為 `data/cards/official-arena-of-glory-bs7.en.json`。未來官方更新仍使用 `cards:import:bs7-candidate` 先寫入 candidate，完成 gate 後再 promote：
 
 ```bash
 npm run cards:import:bs7-candidate
-npm run cards:analyze:bs7-candidate
 npm run validate:candidate
+npm run cards:analyze:bs7
 ```
 
-匯入會建立 `data/candidates/official-arena-of-glory-bs7.en.json`、`docs/bs7-card-inventory.md` 與 `docs/bs7-effect-coverage.md`。效果覆蓋報告僅盤點目前 adapter 的轉換結果；它不是正式卡池驗證，也不構成 Browser 驗收或 promote 授權。所有 BS7 卡牌的 strict contract、逐色正反 Browser gate、正式 smoke 與人工覆核完成前，`candidateStatus` 一律維持 `inventory`。
+匯入指令會建立 `data/candidates/official-arena-of-glory-bs7.en.json` 與 `docs/bs7-card-inventory.md`，供官方更新重新進入候選流程；目前正式效果覆蓋報告由 `npm run cards:analyze:bs7` 從 `data/cards/official-arena-of-glory-bs7.en.json` 產生。未來候選仍須完成 strict contract、逐色正反 Browser gate、正式 smoke 與人工覆核，才可將 `candidateStatus` 改為 `promotion-ready` 並 promote。
 
-BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
+以下 serial gate 段落保留各卡在逐卡稽核當時的候選資料與 `inventory` 狀態；其中「候選仍為 `inventory`／不可 promote」是當時的歷史狀態，不代表目前。BS7 已於 2026-08-22 完成 promotion，現在以正式卡池為準。BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
 
 ```bash
 npm run cards:audit:contracts -- --dir data/candidates --file official-arena-of-glory-bs7.en.json --card BS7-002 --strict
 ```
 
-BS7 全批次目前已完成逐卡 runtime 與 Browser gate：`test:bs7:cards:browser` 為 143/143 卡面載入，`test:bs7:effects:browser` 為 98/98 正向效果流程，`test:bs7:effects:negative:browser` 為 143/143 負向 A/B；候選檔案的 strict contract 為 143/143 verified。正向與負向 trace 分別保存在 `docs/bs7-effect-audit-2026-08-21.json` 與 `docs/bs7-effect-audit-2026-08-21-negative.json`。BS7-039／BS7-082 的對手全體傷害均使用 `sequential: true`，Browser 會依玩家點選順序逐張完成 HP、FLIP 與昏厥結算。這些證據不改變候選的 `inventory` 狀態；未經正式 promotion gate 前仍不可 promote。
+BS7 全批次已完成逐卡 runtime 與 Browser gate：`test:bs7:cards:browser` 為 143/143 卡面載入，`test:bs7:effects:browser` 為 98/98 正向效果流程，`test:bs7:effects:negative:browser` 為 143/143 負向 A/B；formal strict contract 為 143/143 verified。正向與負向 trace 分別保存在 `docs/bs7-effect-audit-2026-08-21.json` 與 `docs/bs7-effect-audit-2026-08-21-negative.json`。BS7-039／BS7-082 的對手全體傷害均使用 `sequential: true`，Browser 會依玩家點選順序逐張完成 HP、FLIP 與昏厥結算；這項 sequential 契約在 promote 後仍須維持。
 
 第一張 BS7-001「Nutmeg Tiger Cookie」已完成候選 runtime 轉接與 localhost Browser A/B：`/?test-state=card:BS7-001` 提供自身 HP 支付與 LV.3 正向目標；`/?test-state=card-negative:BS7-001` 保留同一支付，但只提供 LV.2，確認該卡不會成為可選目標。這兩條 preview 直接由候選 JSON 經正式 adapter 建立狀態，沒有寫入 `generated-card-pool.ts` 或正式牌組。官方韓文卡表已用於交叉確認 BS7-001 的 `{da}` 傷害、時機、代價與目標文字；官方更新時仍須依同一 gate 重新稽核。
 
@@ -202,9 +202,9 @@ BS7-001～BS7-108 已完成逐卡 runtime 轉接與 strict contract。BS7-033～
 
 本批另完成非餅乾 Then 的正式 runtime 路徑：BS7-041／063／105 的物品／場景多段效果，以及 BS7-021／042／064／085／106／108 的 Trap Then；其中 BS7-064 的支援區棄牌→回收、BS7-085 的條件抽牌、BS7-106 的 Arena 棄牌→回手與 BS7-108 的兩段攻擊修正均已建立正反 Browser fixture。`trash-to-hand` 已接入共用目標候選，避免 Trap 後半段靜默略過。
 
-完整候選快照仍為 143 筆記錄／108 個基礎卡號／35 個異圖或變體；候選 `cards:audit:contracts --strict` 為 143／143 `verified`，正式卡池 strict audit 為 1,101／1,101 `verified`，BS7 效果覆蓋為主效果待轉接 0、額外能力待轉接 0、攻擊 Then 23／23。所有卡牌仍只存在 `data/candidates/`，`candidateStatus` 維持 `inventory`；正式 smoke、人工覆核與 promote 前不得寫入 `data/cards/`。
+目前正式卡池為 143 筆記錄／108 個基礎卡號／35 個異圖或變體，來源為 `data/cards/official-arena-of-glory-bs7.en.json`；candidate 檔案已移出，正式來源的 `candidateStatus` 為 `promotion-ready`。BS7 formal strict contract 為 143／143 `verified`，整體 formal validate 為 1,244／1,244，registry consistent；效果覆蓋為主效果待轉接 0、額外能力待轉接 0、攻擊 Then 23／23。既有 Browser 證據為 143/143 卡面載入、98/98 正向效果、143/143 負向 A/B；BS7-039／BS7-082 的 sequential 契約保持不變。
 
-完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
+未來官方更新仍須先以 `inventory` candidate 隔離，完成每張卡的 runtime 轉接、測試與人工覆核，確認效果覆蓋盤點沒有待裁決或未支援的規則文字後，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 
 ### 流程說明
 

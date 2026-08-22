@@ -105,7 +105,9 @@ const attackBonus = (
   const bonus = lethal
     ? 350 + target.card.level * 30
     : Math.min(damage, target.hpCards.length) * 30
-  return bonus - command.supportPaymentIds.length * 6
+  const priorDamage = Math.max(0, target.card.hp - target.hpCards.length)
+  const focusFireBonus = lethal ? 0 : Math.min(priorDamage, 3)
+  return bonus + focusFireBonus - command.supportPaymentIds.length * 6
 }
 
 /**

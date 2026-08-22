@@ -7007,10 +7007,11 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // BS7-097 Eclair Cookie：自己的棄牌區有至少 7 張 Arena 卡時，
-    // 本餅乾直到對手回合結束攻擊傷害 -1。
+    // 本餅乾直到對手回合結束「受到的」攻擊傷害 -1。英文官方勘誤已將
+    // 舊版 deals -1 修正為 receives -1，不能誤接成降低自身攻擊力。
     'BS7-097': [
       {
-        kind: 'modify-attack',
+        kind: 'modify-damage-received',
         amount: -1,
         duration: 'opponent-next-turn',
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },

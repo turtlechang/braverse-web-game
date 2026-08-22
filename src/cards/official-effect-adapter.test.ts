@@ -8,7 +8,7 @@ import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.j
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
 import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
-import officialBS7Candidates from '../../data/candidates/official-arena-of-glory-bs7.en.json'
+import officialBS7Candidates from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import { convertOfficialCardToGameCard } from './official-card-adapter'
 import {
   convertOfficialCardEffects,
@@ -5116,7 +5116,7 @@ describe('BS7 candidate effect adapter', () => {
     ])
     expect(convertOfficialAttackEffects(findBs7Candidate('BS7-097'))).toMatchObject([
       {
-        kind: 'modify-attack',
+        kind: 'modify-damage-received',
         amount: -1,
         duration: 'opponent-next-turn',
         target: { sourceOnly: true },

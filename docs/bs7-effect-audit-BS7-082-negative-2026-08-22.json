@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-08-22T09:41:39.096Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-arena-of-glory-bs7.en.json"
+  ],
+  "scope": "Formal-pool negative A/B UI audit for every BS7 record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.",
+  "summary": {
+    "total": 1,
+    "effectFlowPassed": 1,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Negative no-payment effect path settled": 1
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS7-082",
+      "baseCardNumber": "BS7-082",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-082",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "select:hand-discard",
+        "confirm:hand-discard",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-082",
+      "orderedAllTargetProof": {
+        "discardSelections": 1,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：執行 discard-hand",
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    }
+  ]
+}

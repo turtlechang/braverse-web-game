@@ -3,7 +3,7 @@ import officialGreenSample from '../../data/cards/official-starter-deck-green.en
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialBS5Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import officialBS6Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
-import officialBS7Candidates from '../../data/candidates/official-arena-of-glory-bs7.en.json'
+import officialBS7Candidates from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {

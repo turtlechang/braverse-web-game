@@ -189,6 +189,64 @@ describe('Beam Search 回合層序列規劃', () => {
     }
   })
 
+  it('Lv.4 在都無法立即擊倒時優先集中攻擊已受傷目標', () => {
+    const base = createBattleState()
+    const attacker = { ...cookie('focus-attacker', 1, 3), level: 2 }
+    const fullTarget = { ...cookie('a-full-target', 1, 4), level: 2 }
+    const damagedTarget = { ...cookie('z-damaged-target', 1, 4), level: 2 }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            card: attacker,
+            hpCards: [item('focus-hp-1'), item('focus-hp-2'), item('focus-hp-3')],
+            rested: false,
+            battleEntryId: 'focus-attacker:battle:test',
+          }],
+          supportArea: [{ card: item('focus-support'), rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              card: fullTarget,
+              hpCards: [
+                item('full-hp-1'),
+                item('full-hp-2'),
+                item('full-hp-3'),
+                item('full-hp-4'),
+              ],
+              rested: false,
+              battleEntryId: 'a-full-target:battle:test',
+            },
+            {
+              card: damagedTarget,
+              hpCards: [item('damaged-hp-1'), item('damaged-hp-2')],
+              rested: false,
+              battleEntryId: 'z-damaged-target:battle:test',
+            },
+          ],
+        },
+      },
+    }
+
+    const decision = handleAiTwoPlyTurnState(
+      state,
+      'player-one',
+      minimalStrategy,
+    )
+
+    expect(decision.action).toBe('attack')
+    expect(decision.state.pendingBattle?.targetInstanceId).toBe(
+      damagedTarget.instanceId,
+    )
+  })
+
   it('Lv.4 會把道具後的致命攻擊納入同回合規劃', () => {
     const base = createBattleState()
     const setupItem = item('setup-item')

@@ -2137,6 +2137,14 @@ export interface GameState {
   pendingRefresh: {
     playerId: PlayerId
     remainingDraws: number
+    /**
+     * 「增加 HP」途中牌庫耗盡時，Refresh 後要繼續補入的 HP 卡。
+     * target player 與 pendingRefresh.playerId 相同。
+     */
+    remainingHpGain?: {
+      targetInstanceId: string
+      amount: number
+    }
   } | null
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-21T17:00:54.112Z",
+  "generatedAt": "2026-08-22T10:03:56.674Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
   "sources": [
-    "data/candidates/official-arena-of-glory-bs7.en.json"
+    "data/cards/official-arena-of-glory-bs7.en.json"
   ],
   "scope": "Formal-pool negative A/B UI audit for every BS7 record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.",
   "summary": {
@@ -1624,6 +1624,11 @@
         "action:next-phase"
       ],
       "contractTraceCard": "BS7-039",
+      "orderedAllTargetProof": {
+        "discardSelections": 0,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
       "traceEntries": 3,
       "commandKinds": [
         "resolve-attack-effect",
@@ -1658,6 +1663,11 @@
         "action:next-phase"
       ],
       "contractTraceCard": "BS7-039",
+      "orderedAllTargetProof": {
+        "discardSelections": 0,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
       "traceEntries": 3,
       "commandKinds": [
         "resolve-attack-effect",
@@ -3322,11 +3332,17 @@
       "auditStatus": "Negative no-payment effect path settled",
       "operations": [
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
         "confirm:hand-discard",
         "action:next-phase",
         "action:next-phase"
       ],
       "contractTraceCard": "BS7-082",
+      "orderedAllTargetProof": {
+        "discardSelections": 1,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
       "traceEntries": 2,
       "commandKinds": [
         "resolve-attack-effect"

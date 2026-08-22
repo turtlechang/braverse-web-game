@@ -500,7 +500,8 @@ export const handleAiPendingDecision = (
     const revealed = state.pendingInspectDeck?.revealedCards ?? []
     const hasFilter =
       pendingDecision.filterColor !== undefined ||
-      pendingDecision.filterType !== undefined
+      pendingDecision.filterType !== undefined ||
+      pendingDecision.filterKeyword !== undefined
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
     const candidateCards = hasFilter
       ? revealed.filter(

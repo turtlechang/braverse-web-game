@@ -1642,4 +1642,55 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingOptionalCostAttack).toBeFalsy()
     expect(state.pendingBattle).toBeNull()
   })
+
+  it('skips a self-movement optional cost when the attacker already left battle', () => {
+    let state = createBattleState()
+    const attacker = state.players['player-two'].battleArea[0]
+    const ally = {
+      ...attacker,
+      card: cookie('remaining-ally', 2, 2),
+      hpCards: [item('remaining-ally-hp', 'blue')],
+      battleEntryId: 'remaining-ally:battle:1',
+    }
+    attacker.card.attackEffects = [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToBreakArea: true },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, excludeSource: true },
+          },
+        ],
+        effectText: 'Place this Cookie in your break area. Select up to 1 other Cookie; it gains +1 HP.',
+      },
+    ]
+    state.players['player-two'].battleArea = [attacker, ally]
+
+    state = declareAttack(state)
+    state = advanceToAttackEffect(state)
+    expect(state.pendingBattle?.stage).toBe('attack-effect')
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [ally],
+          discardPile: [
+            ...state.players['player-two'].discardPile,
+            attacker.card,
+          ],
+        },
+      },
+    }
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].breakArea).not.toContainEqual(attacker.card)
+  })
 })

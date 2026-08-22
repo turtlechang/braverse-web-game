@@ -184,7 +184,7 @@ describe('MainMenu AI opponent options', () => {
     expect(selects[0].value).toBe('bs6-red-competitive')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // 主選單只保留 BS6 牌組；BS3／BS4／BS5 選項不應再出現。
+    // 主選單只保留目前的 BS7／BS6 牌組；舊 BS3／BS4／BS5 選項不再出現。
     const optionValues = [...selects[0].options].map((option) => option.value)
     expect(optionValues).not.toContain('random')
     expect(optionValues).not.toContain('bs2-purple')
@@ -192,6 +192,11 @@ describe('MainMenu AI opponent options', () => {
     expect(optionValues).toContain('bs6-red-standard')
     expect(optionValues).toEqual(
       expect.arrayContaining([
+        'bs7-red-arena',
+        'bs7-yellow-arena',
+        'bs7-green-arena',
+        'bs7-blue-arena',
+        'bs7-purple-arena',
         'bs6-red-competitive',
         'bs6-yellow-competitive',
         'bs6-green-competitive',
@@ -199,6 +204,7 @@ describe('MainMenu AI opponent options', () => {
         'bs6-purple-competitive',
       ]),
     )
+    expect(container.textContent).toContain('BS7 紅｜Arena')
     expect(container.textContent).toContain('BS6 紅｜競技環境')
     expect(container.textContent).not.toContain('第三彈')
     expect(container.textContent).not.toContain('BS4')

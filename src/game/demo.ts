@@ -20,7 +20,7 @@ import {
 import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
-import bs7CandidateDocument from '../../data/candidates/official-arena-of-glory-bs7.en.json'
+import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {

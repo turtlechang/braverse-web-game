@@ -82,8 +82,7 @@ const cardAuditConfigs = {
   },
   BS7: {
     label: 'BS7',
-    candidate: true,
-    formalPaths: ['data/candidates/official-arena-of-glory-bs7.en.json'],
+    formalPaths: ['data/cards/official-arena-of-glory-bs7.en.json'],
     reportPath: 'docs/bs7-browser-card-audit-2026-08-21.json',
     expectedRecordCount: 143,
   },
@@ -245,7 +244,9 @@ const runCardCheck = async (page, card) => {
       effectSurfaces: surfaces,
       status: 'PASS',
       auditStatus: '載入通過',
-      flow: 'candidate-card-check-entry',
+      flow: auditConfig.candidate
+        ? 'candidate-card-check-entry'
+        : 'formal-card-check-entry',
       promptVisible: firstPrompt(bodyText),
       modalVisible: modalCount > 0,
       actionableControls: actionCount,
@@ -292,7 +293,9 @@ try {
         effectSurfaces: getEffectSurfaces(card),
         status: 'FAIL',
         auditStatus: '阻塞',
-        flow: 'candidate-card-check-entry',
+        flow: auditConfig.candidate
+          ? 'candidate-card-check-entry'
+          : 'formal-card-check-entry',
         error: error instanceof Error ? error.message : String(error),
       }
       results.push(failure)

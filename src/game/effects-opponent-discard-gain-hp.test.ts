@@ -3,6 +3,7 @@ import {
   createDemoGame,
   executeCardEffect,
   isEffectUntargeted,
+  refreshDeck,
   resolveOpponentHandDiscard,
   type CardEffect,
   type GameState,
@@ -249,15 +250,23 @@ describe('gain-hp effect', () => {
     )
   })
 
-  it('throws when deck is empty', () => {
+  it('opens Refresh and continues the HP gain after the deck is rebuilt', () => {
     const state = createDemoGame()
+    const refreshCookie = state.players['player-one'].hand.find(
+      (card) => card.type === 'cookie' && card.level >= 1,
+    )!
+    const refreshCards = state.players['player-one'].deck.slice(0, 3)
     const emptyState: GameState = {
       ...state,
       players: {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
+          hand: state.players['player-one'].hand.filter(
+            (card) => card.instanceId !== refreshCookie.instanceId,
+          ),
           deck: [],
+          discardPile: [refreshCookie, ...refreshCards],
         },
       },
     }
@@ -266,16 +275,137 @@ describe('gain-hp effect', () => {
       amount: 1,
       target: { side: 'self', min: 1, max: 1, sourceOnly: true },
     }
-    expect(() =>
-      executeCardEffect(
-        emptyState,
-        {
-          sourcePlayerId: 'player-one',
-          sourceInstanceId: emptyState.players['player-one'].battleArea[0].card.instanceId,
+    const pending = executeCardEffect(
+      emptyState,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: emptyState.players['player-one'].battleArea[0].card.instanceId,
+      },
+      effect,
+      [],
+    )
+    expect(pending.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+      remainingHpGain: {
+        targetInstanceId: emptyState.players['player-one'].battleArea[0].card.instanceId,
+        amount: 1,
+      },
+    })
+
+    const refreshed = refreshDeck(
+      pending,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      emptyState.players['player-one'].battleArea[0].hpCards.length + 1,
+    )
+  })
+
+  it('uses available cards, Refreshes, then finishes the remaining HP gain', () => {
+    const state = createDemoGame()
+    const player = state.players['player-one']
+    const refreshCookie = player.hand.find(
+      (card) => card.type === 'cookie' && card.level >= 1,
+    )!
+    const [lastDeckCard, ...refreshCards] = player.deck.slice(0, 4)
+    const partialState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          hand: player.hand.filter(
+            (card) => card.instanceId !== refreshCookie.instanceId,
+          ),
+          deck: [lastDeckCard],
+          discardPile: [refreshCookie, ...refreshCards],
         },
-        effect,
-        [],
-      ),
-    ).toThrow('牌庫張數不足')
+      },
+    }
+    const source = partialState.players['player-one'].battleArea[0]
+    const pending = executeCardEffect(
+      partialState,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      {
+        kind: 'gain-hp',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      [],
+    )
+    expect(pending.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      source.hpCards.length + 1,
+    )
+    expect(pending.pendingRefresh?.remainingHpGain?.amount).toBe(1)
+
+    const refreshed = refreshDeck(
+      pending,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      source.hpCards.length + 2,
+    )
+  })
+
+  it('opens Refresh when the final deck card exactly completes the HP gain', () => {
+    const state = createDemoGame()
+    const player = state.players['player-one']
+    const refreshCookie = player.hand.find(
+      (card) => card.type === 'cookie' && card.level >= 1,
+    )!
+    const [lastDeckCard, ...refreshCards] = player.deck.slice(0, 4)
+    const exactState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          hand: player.hand.filter(
+            (card) => card.instanceId !== refreshCookie.instanceId,
+          ),
+          deck: [lastDeckCard],
+          discardPile: [refreshCookie, ...refreshCards],
+        },
+      },
+    }
+    const source = exactState.players['player-one'].battleArea[0]
+    const pending = executeCardEffect(
+      exactState,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      [],
+    )
+    expect(pending.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+    })
+
+    const refreshed = refreshDeck(
+      pending,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      source.hpCards.length + 1,
+    )
   })
 })

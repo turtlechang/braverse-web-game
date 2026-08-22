@@ -217,10 +217,9 @@ const AUDIT_CONFIGS = {
   },
   BS7: {
     label: 'BS7',
-    candidate: true,
-    sources: ['data/candidates/official-arena-of-glory-bs7.en.json'],
+    sources: ['data/cards/official-arena-of-glory-bs7.en.json'],
     report: 'docs/bs7-effect-audit-2026-08-21.json',
-    // The candidate snapshot has 108 base card numbers; 98 representative
+    // The formal snapshot has 108 base card numbers; 98 representative
     // records expose an effect surface (skill, FLIP, item/trap/stage, or
     // attack Then). Some illustration variants carry the only non-empty
     // normalized surface, so representatives are selected after conversion
@@ -496,6 +495,10 @@ const waitForPreview = async () => {
 
 const activePanel = (page) => page.locator('.effect-panel[role="alertdialog"]')
 
+const activeContractCard = (page) =>
+  new URL(page.url()).searchParams.get('contract-card')
+const orderedAllTargetCards = new Set(['BS7-039', 'BS7-082'])
+
 const clickFirstUnselected = async (panel, selectors, operations) => {
   const panelText = await panel.innerText().catch(() => '')
   const typedProgressPattern = (selector) => {
@@ -552,7 +555,28 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
     if (maxSelections !== undefined && selectedCount >= maxSelections) continue
     if (!progress && !panelProgress && selector.includes('target') && selectedCount > 0) continue
 
-    const candidate = group.locator('button:not(.is-selected):not(:disabled)').first()
+    const availableCandidates = group.locator(
+      'button:not(.is-selected):not(:disabled)',
+    )
+    // BS7-039/082 are the dedicated ordered-all-target Browser proofs. Choose the
+    // second rendered target first, then the remaining first target, so a
+    // passing trace cannot be mistaken for automatic DOM-order damage.
+    const route = await panel.evaluate(() => {
+      const params = new URL(window.location.href).searchParams
+      return {
+        contractCard: params.get('contract-card'),
+        testState: params.get('test-state') ?? '',
+      }
+    })
+    const chooseSecondTargetFirst =
+      orderedAllTargetCards.has(route.contractCard) &&
+      !route.testState.startsWith('card-negative:') &&
+      selector.includes('target') &&
+      selectedCount === 0 &&
+      (await availableCandidates.count()) > 1
+    const candidate = chooseSecondTargetFirst
+      ? availableCandidates.nth(1)
+      : availableCandidates.first()
     if (!(await enabled(candidate))) continue
     await candidate.click({ force: true })
     operations.push(`select:${selector}`)
@@ -1078,8 +1102,20 @@ const driveOtherModal = async (
 
   const discard = page.locator('.hand-discard-modal[role="alertdialog"]')
   if (await visible(discard)) {
-    const option = discard.locator('.hand-discard-options button:not(.is-selected)').first()
-    if (await enabled(option)) await option.click({ force: true })
+    // BS7-082 needs two discarded cards in this fixture so the hand reaches
+    // one card and its conditional all-target damage actually opens. Other
+    // cards retain the generic minimum-one selection behavior.
+    const discardCount =
+      activeContractCard(page) === 'BS7-082' && !negative ? 2 : 1
+    for (let index = 0; index < discardCount; index += 1) {
+      const option = discard
+        .locator('.hand-discard-options button:not(.is-selected):not(:disabled)')
+        .first()
+      if (!(await enabled(option))) break
+      await option.click({ force: true })
+      operations.push('select:hand-discard')
+      await wait(120)
+    }
     const confirm = discard.locator('.hand-discard-actions button:not(:disabled)').first()
     if (!(await enabled(confirm))) return false
     await confirm.click({ force: true })
@@ -1715,6 +1751,55 @@ const runCard = async (
 
     const contractTrace = await readContractTrace(page)
     const traceSummary = summarizeContractTrace(contractTrace)
+    let orderedAllTargetProof
+    if (orderedAllTargetCards.has(card.baseCardNumber)) {
+      const discardSelections = operations.filter(
+        (operation) => operation === 'select:hand-discard',
+      ).length
+      const targetSelections = operations.filter(
+        (operation) => operation === 'select:.effect-candidates-target',
+      ).length
+      const targetStep = traceSummary.steps.find((step) =>
+        step.startsWith('攻擊後效果目標：'),
+      )
+      if (negative) {
+        assert.equal(
+          targetSelections,
+          0,
+          `${card.baseCardNumber} negative path must not open all-target selection`,
+        )
+        assert.equal(
+          targetStep,
+          undefined,
+          `${card.baseCardNumber} negative path must not record damage targets`,
+        )
+        orderedAllTargetProof = {
+          discardSelections,
+          targetSelections,
+          conditionBlocked: true,
+        }
+      } else if (card.baseCardNumber === 'BS7-082') {
+        assert.equal(discardSelections, 2, 'BS7-082 must discard two fixture cards')
+      }
+      if (!negative) {
+        assert.equal(
+          targetSelections,
+          2,
+          `${card.baseCardNumber} must select both opponent Cookies`,
+        )
+        assert.match(
+          targetStep ?? '',
+          /攻擊後效果目標：opp-lv3、opp-lv1/,
+          `${card.baseCardNumber} must preserve the user-selected second-then-first target order`,
+        )
+        orderedAllTargetProof = {
+          discardSelections,
+          targetSelections,
+          selectedTargetOrder: ['opp-lv3', 'opp-lv1'],
+          targetStep,
+        }
+      }
+    }
 
     const hasInteractiveOperation = operations.some((operation) =>
       /^(action:|start:|select:|declare:|confirm:|skip:)/.test(
@@ -1775,6 +1860,7 @@ const runCard = async (
           : 'No-op or timing path settled',
         operations,
         contractTraceCard: traceCardNumberFor(card),
+        orderedAllTargetProof,
         ...traceSummary,
       }
     }
