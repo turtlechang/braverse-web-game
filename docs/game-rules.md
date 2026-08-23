@@ -58,7 +58,7 @@
 - **[已確認]** 牌組至少需要 1 張餅乾卡。
 - **[已確認]** 牌組可以混用所有顏色。
 - **[已確認]** 正式賽事另有禁卡與限卡表；禁卡不可放入牌組，限卡最多 1 張。
-- **[暫定]** 核心原型只驗證 60 張、同卡號上限、FLIP 上限與至少 1 張餅乾，不先綁定特定地區或賽季的禁限卡表。
+- **[專案資料快照]** `standard` 使用 ASIA 亞洲版 2026-02-13 版本化禁限卡表，資料保存在 [`data/rules/asia-banlist-2026-02-13.json`](../data/rules/asia-banlist-2026-02-13.json)。中文交叉索引為 [BraverseFan 禁限卡表](https://braversefan.com/cookierun/banlist/)，實際裁決仍以[官方亞洲區公告](https://cookierunbraverse.com/asia/notice/detail?id=1380)為準；`open` 不套用此表。
 - **[待確認]** EXTRA 卡、特殊賽制及 2026 年後新增卡種對牌組構築的完整影響。
 
 ## 3. 卡牌種類

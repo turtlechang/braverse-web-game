@@ -1018,12 +1018,11 @@ const resolveAiSkill = (
   }
 
   const trashBattleCookieCandidateIds = skill.cost.trashBattleCookie
-    ? player.battleArea
-        .filter((cookie) => {
-          if (skill.cost.trashBattleCookie!.level !== undefined && cookie.card.level !== skill.cost.trashBattleCookie!.level) return false
-          if (skill.cost.trashBattleCookie!.energyColor !== undefined && cookie.card.energyColor !== skill.cost.trashBattleCookie!.energyColor) return false
-          return true
-        })
+    ? getTrashBattleCookieCostCandidates(
+        skill.cost,
+        player.battleArea,
+        source.card.instanceId,
+      )
         .sort((left, right) => left.hpCards.length - right.hpCards.length)
         .map((cookie) => cookie.card.instanceId)
     : []

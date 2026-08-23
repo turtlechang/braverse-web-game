@@ -205,6 +205,9 @@ export {
 export type { CustomDeck, CustomDeckEntry } from './custom-deck'
 export {
   DEFAULT_DECK_FORMAT,
+  ACTIVE_BANLIST_POLICY,
+  ASIA_BANNED_CARD_NUMBERS,
+  ASIA_LIMITED_CARD_NUMBERS,
   getCardRestriction,
   getDeckCopyLimit,
   getDeckFormatLabel,
@@ -213,6 +216,7 @@ export {
   TAIWAN_LIMITED_CARD_NUMBERS,
 } from './deck-rules'
 export type { CardRestriction, DeckEntryLike, DeckFormat } from './deck-rules'
+export type { BanlistPolicy } from './deck-rules'
 export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,
@@ -235,6 +239,7 @@ export {
   explainUnavailableTraps,
   getTrapCandidates,
   getTrapCostOptions,
+  getPlayableTrapCostOption,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   isBlockDisabled,

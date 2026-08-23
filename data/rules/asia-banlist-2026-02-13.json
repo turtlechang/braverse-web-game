@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "braverse-asia-2026-02-13",
+  "region": "ASIA",
+  "updatedAt": "2026-02-13",
+  "effectiveAt": "2026-02-13",
+  "sourceUrl": "https://braversefan.com/cookierun/banlist/",
+  "officialSourceUrl": "https://cookierunbraverse.com/asia/notice/detail?id=1380",
+  "copyLimit": 4,
+  "banned": [
+    "BS6-064",
+    "BS3-042",
+    "P-030",
+    "BS4-040",
+    "BS1-049"
+  ],
+  "limited": [
+    "BS2-003",
+    "BS8-069",
+    "BS8-072",
+    "BS4-026",
+    "BS3-013",
+    "BS3-111",
+    "BS1-007",
+    "BS1-032",
+    "BS1-057",
+    "BS2-035",
+    "BS2-053"
+  ]
+}

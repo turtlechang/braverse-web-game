@@ -1,6 +1,7 @@
 import {
   getAttackResponseSkillCandidates,
   getTrapCandidates,
+  getPlayableTrapCostOption,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   getBlockerCandidates,
@@ -18,7 +19,11 @@ import {
 } from '../effects'
 import { expandChooseOne } from '../effects/choose-one'
 import { selectEnergyPayment } from '../energy'
-import { getTrashBattleCookieCostCandidates, getTrashToDeckCostCandidates } from '../skills'
+import {
+  getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
+  getTrashToDeckCostCandidates,
+} from '../skills'
 import { createPlayerView } from '../player-view'
 import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -633,6 +638,20 @@ export const handleAiPendingBattle = (
     const r7Skipped = useR7 && trapCandidates.length > 0 && !trapCard
 
     if (trapCard?.trap) {
+      const playableCost = getPlayableTrapCostOption(
+        state,
+        playerId,
+        trapCard.trap,
+        trapCard.instanceId,
+      )
+      if (!playableCost) {
+        return withBattlePendingReason({
+          state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}無法支付陷阱代價。`,
+        }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
+      }
+      const paidCost = playableCost.cost
       const supports = state.players[playerId].supportArea
       const orderedSupports = universal.enabled
         ? universal.orderPaymentIds(supports.map((support) => support.card.instanceId))
@@ -641,7 +660,7 @@ export const handleAiPendingBattle = (
             )!)
         : supports
       const paymentIds = selectEnergyPayment(
-        trapCard.trap.cost.energy ?? trapCard.trap.cost,
+        paidCost.energy ?? paidCost,
         orderedSupports,
       ) ?? []
       // 優先以當前攻擊者作為陷阱目標（減攻擊／防昏厥類陷阱才會作用在實際攻擊者身上）。
@@ -753,7 +772,7 @@ export const handleAiPendingBattle = (
             )
           : handToSupportCandidateIds.slice(0, handToSupportEffect.amount)
         : []
-      const discardHandColor = trapCard.trap.cost.discardHandColor
+      const discardHandColor = paidCost.discardHandColor
       const discardHandCandidateIds = state.players[playerId].hand
         .filter(
           (card) =>
@@ -764,10 +783,10 @@ export const handleAiPendingBattle = (
       const discardHandIds = universal.enabled
         ? universal.orderCostIds(
             discardHandCandidateIds,
-            trapCard.trap.cost.discardHand ?? 0,
+            paidCost.discardHand ?? 0,
           )
-        : discardHandCandidateIds.slice(0, trapCard.trap.cost.discardHand ?? 0)
-      const handToBreakCost = trapCard.trap.cost.handToBreakArea
+        : discardHandCandidateIds.slice(0, paidCost.discardHand ?? 0)
+      const handToBreakCost = paidCost.handToBreakArea
       const handToBreakCandidateIds = state.players[playerId].hand
         .filter(
           (card) =>
@@ -796,19 +815,47 @@ export const handleAiPendingBattle = (
       }
 
       const trashBattleCandidateIds = getTrashBattleCookieCostCandidates(
-        trapCard.trap.cost,
+        paidCost,
         state.players[playerId].battleArea,
+        trapCard.instanceId,
       )
         .map((cookie) => cookie.card.instanceId)
       const trashBattleCookieIds = universal.enabled
         ? universal.orderCostIds(
             trashBattleCandidateIds,
-            trapCard.trap.cost.trashBattleCookie?.count ?? 0,
+            paidCost.trashBattleCookie?.count ?? 0,
           )
         : trashBattleCandidateIds.slice(
             0,
-            trapCard.trap.cost.trashBattleCookie?.count ?? 0,
+            paidCost.trashBattleCookie?.count ?? 0,
           )
+      const trashCookieToBreakAreaCandidateIds = paidCost.trashCookieToBreakArea
+        ? getTrashCookieToBreakAreaCostCandidates(
+            paidCost,
+            state.players[playerId].discardPile,
+          ).map((card) => card.instanceId)
+        : []
+      const trashCookieToBreakAreaIds = paidCost.trashCookieToBreakArea
+        ? universal.enabled
+          ? universal.orderCostIds(
+              trashCookieToBreakAreaCandidateIds,
+              paidCost.trashCookieToBreakArea.count,
+            )
+          : trashCookieToBreakAreaCandidateIds.slice(
+              0,
+              paidCost.trashCookieToBreakArea.count,
+            )
+        : []
+      if (
+        paidCost.trashCookieToBreakArea &&
+        trashCookieToBreakAreaIds.length < paidCost.trashCookieToBreakArea.count
+      ) {
+        return withBattlePendingReason({
+          state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}無法支付陷阱替代代價。`,
+        }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
+      }
       const trashToDeckEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'trash-to-deck',
       )
@@ -854,6 +901,7 @@ export const handleAiPendingBattle = (
           kind: 'play-trap',
           playerId,
           trapInstanceId: trapCard.instanceId,
+          costOptionIndex: playableCost.index,
           paymentIds,
           targetIds,
           selfTargetIds,
@@ -863,6 +911,7 @@ export const handleAiPendingBattle = (
           discardHandIds,
           handToBreakIds,
           trashBattleCookieIds,
+          trashCookieToBreakAreaIds,
           trashToDeckIds,
         }),
         action: 'play-trap',

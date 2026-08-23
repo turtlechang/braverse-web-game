@@ -1,36 +1,49 @@
 import { normalizeCardNumber } from './card-pool'
+import asiaBanlist from '../../data/rules/asia-banlist-2026-02-13.json'
 
 /**
  * 牌組賽制：兩種賽制都遵守基本牌組規則，差異只在禁限卡表。
  *
  * - open：開放賽制，正式卡池內所有卡號均可使用。
- * - standard：標準賽制，套用台灣目前公告的禁卡／限卡名單。
+ * - standard：標準賽制，套用 ASIA 亞洲版目前採用的版本化禁卡／限卡名單。
  */
 export type DeckFormat = 'open' | 'standard'
 
 export const DEFAULT_DECK_FORMAT: DeckFormat = 'standard'
 
-/** 台灣官方公告（2025-06-20 更新、2025-06-30 起實施）的卡號。 */
-export const TAIWAN_BANNED_CARD_NUMBERS = [
-  'BS1-049',
-  'BS4-040',
-  'BS2-003',
-  'P-030',
-] as const
+export interface BanlistPolicy {
+  readonly id: string
+  readonly region: string
+  readonly updatedAt: string
+  readonly effectiveAt: string
+  readonly sourceUrl: string
+  readonly officialSourceUrl: string
+}
 
-export const TAIWAN_LIMITED_CARD_NUMBERS = [
-  'BS1-007',
-  'BS1-032',
-  'BS1-057',
-  'BS2-035',
-  'BS2-053',
-  'BS4-026',
-  'BS3-013',
-  'BS3-111',
-] as const
+/**
+ * 目前標準賽制使用的 ASIA 亞洲版快照（2026-02-13）。
+ *
+ * 資料以 JSON 版本化保存，避免將社群頁面的即時內容直接耦合進 runtime；
+ * 官方公告仍是裁決來源，社群頁面只作為可讀的中文交叉索引。
+ */
+export const ACTIVE_BANLIST_POLICY: BanlistPolicy = {
+  id: asiaBanlist.id,
+  region: asiaBanlist.region,
+  updatedAt: asiaBanlist.updatedAt,
+  effectiveAt: asiaBanlist.effectiveAt,
+  sourceUrl: asiaBanlist.sourceUrl,
+  officialSourceUrl: asiaBanlist.officialSourceUrl,
+}
 
-const BANNED_CARD_NUMBERS = new Set<string>(TAIWAN_BANNED_CARD_NUMBERS)
-const LIMITED_CARD_NUMBERS = new Set<string>(TAIWAN_LIMITED_CARD_NUMBERS)
+export const ASIA_BANNED_CARD_NUMBERS = asiaBanlist.banned
+export const ASIA_LIMITED_CARD_NUMBERS = asiaBanlist.limited
+
+/** 舊 API 名稱保留作為相容別名；內容已跟隨目前 ASIA 快照。 */
+export const TAIWAN_BANNED_CARD_NUMBERS = ASIA_BANNED_CARD_NUMBERS
+export const TAIWAN_LIMITED_CARD_NUMBERS = ASIA_LIMITED_CARD_NUMBERS
+
+const BANNED_CARD_NUMBERS = new Set<string>(ASIA_BANNED_CARD_NUMBERS)
+const LIMITED_CARD_NUMBERS = new Set<string>(ASIA_LIMITED_CARD_NUMBERS)
 
 export type CardRestriction = 'none' | 'banned' | 'limited'
 

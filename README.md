@@ -18,7 +18,7 @@ BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將�
 
 卡牌效果文字的官方標記與遊戲規則顯示共用 `CardEffectText`；圖片標籤資產集中於 `public/card-tags/`，保留文字回退與無障礙替代文字。
 
-牌組賽制分為標準賽制與開放賽制：標準賽制套用台灣公告的禁卡／限卡表；開放賽制則允許正式卡池內所有卡牌使用。兩種賽制都仍遵守 60 張牌、同名卡最多 4 張、FLIP 最多 16 張，以及至少 1 張餅乾等基本牌組規則。
+牌組賽制分為標準賽制與開放賽制：標準賽制套用版本化的 ASIA 亞洲版 2026-02-13 禁卡／限卡快照（詳見 [禁限卡表文件](docs/banlist-asia-2026-02-13.md)）；開放賽制則允許正式卡池內所有卡牌使用。兩種賽制都仍遵守 60 張牌、同名卡最多 4 張、FLIP 最多 16 張，以及至少 1 張餅乾等基本牌組規則。
 
 牌組編輯器的卡池可依卡牌類型、顏色、系列、稀有度，以及餅乾的 LV、HP、攻擊力篩選；攻擊力條件以官方卡文解析出的普通攻擊傷害為準。
 
@@ -95,6 +95,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 ## 目前進度
 
 Lv.5「高手對抗」維持實驗 challenger：在 Lv.4 合法 command search 上加入只認同一 plan ID 的通用 `ComboPlan`、跨步生命週期、精確公開條件門檻、規則層合法收益時機、payoff 能量張數／顏色預留、公開資訊對手回應，以及依對手牌庫／手牌張數、棄牌區最低 LV、Break 與最後一隻餅乾 HP 推估的 Refresh 洗傷／空場敗北。相同 `PlayerView`、只替換對手隱藏手牌卡面時決策保持一致。全卡池訓練母體包含 1,244 筆正式 inventory，合併異圖後為 967 種唯一 runtime 機制、2,371 筆 capability evidence 與 42,463 條候選 Combo 邊，strict audit 為 `ready`。看過的 calibration seeds 503–504（368 場）為 Combo 3 啟動／3 完成／0 放棄；全 corpus untouched holdout 使用 46 副 Starter／BS2–BS7 牌組、mirror＋輪替跨牌組、seeds 601–602 與先後攻換位，共 368 場；Lv.5 186 勝（50.54%，Wilson 95% CI 45.46%–55.62%），完成率 100% 且安全指標全 0，但未達升格門檻，因此 Lv.4 仍是 champion。Refresh 洗傷與空場邊界由 deterministic corpus 另行覆蓋。方法與門檻見 [Lv.5 champion–challenger 契約](docs/ai/lv5-champion-challenger.md)。
+本輪新增版本化 ASIA 2026-02-13 禁限卡快照，並產生 256 副五色、每副合法且構築簽名不同的 Lv.5 Swiss roster；8 輪共 1,024 場 Swiss 與 7 場 Top cut 全部完成，Lv.4 以相同 pairing 重播亦為 1,024／1,024 完成。Lv.5 冠軍為 YELLOW #057、亞軍為 YELLOW #002；安全／完成／Top cut 通過，但 paired advantage 的 Wilson 95% CI 為 44.62%–59.34%，尚不足以證明顯著超過 Lv.4。完整排名與牌表見 [256 副 Lv.5 Swiss 報告](docs/lv5-swiss-256-report.md)。
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
@@ -104,7 +105,7 @@ BS7「Arena of Glory」的正式來源為 `data/cards/official-arena-of-glory-bs
 
 2026-08-20 已完成 BS1～BS6 與 P 卡的正式卡池全面收尾：1,101／1,101 筆正式 Browser 卡牌路由均可載入；效果互動矩陣為 BS1 81／81、BS2 86／86、BS3 166／166、BS4 158／158、BS5 143／143、BS6 基礎卡代表 97／97、P 卡 138／138，blocked 與 failed 均為 0。全記錄負向矩陣依序為 99／99、104／104、176／176、170／170、153／153、138／138、153／153；無效果普通攻擊矩陣為 18／18、18／18、10／10、12／12、10／10、10／10、15／15。BS4-038 的基礎卡與兩個異圖變體均以「攻擊後進入目標選擇並完成效果」通過；BS6-036／042／043 與 BS5-109 另有專用正反路徑驗收。這些 test-state 路徑與正式對戰共用 adapter、規則引擎及 `GameCommand`，並再由正式 AI／牌組編輯器／本機雙瀏覽器好友房 smoke 覆核整合層；fixture 仍只負責快速建立局面，不取代真實隨機牌序的長局統計。完整矩陣與產物邊界見 [BS1～BS6 與 P 卡全面稽核收尾](docs/bs1-bs6-p-full-audit-2026-08-20.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 218 個測試檔、3,531 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-023／BS6-024／BS6-031／BS6-036／BS6-042／BS6-043／BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、休息區／支援區門檻、合法候選、OnPlay 登場與 Then 續接；BS6-023 登場全體傷害現在依序選擇對手餅乾，逐張完成傷害、FLIP 與昏厥後才處理下一張。並讓 BS4-005／BS2-015 代價昏厥後先完成原效果、再建立補位，完整記錄於 Browser／AI／規則回歸流程。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 224 個測試檔、3,559 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-023／BS6-024／BS6-031／BS6-036／BS6-042／BS6-043／BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、休息區／支援區門檻、合法候選、OnPlay 登場與 Then 續接；BS6-023 登場全體傷害現在依序選擇對手餅乾，逐張完成傷害、FLIP 與昏厥後才處理下一張。並讓 BS4-005／BS2-015 代價昏厥後先完成原效果、再建立補位，完整記錄於 Browser／AI／規則回歸流程。
 
 BS3-010「Pitaya Dragon Cookie」攻擊 BS4-024「Kumiho Cookie」的正式卡池 AI 回歸已補上：攻擊宣告停在防守方回應時不再誤寫自動結算，AI 會依序完成陷阱略過、傷害、攻擊後效果與支付；戰場雙方狀態也依實際待處理決策者顯示，避免畫面看起來像 AI 卡死。正式對戰中沒有任何回應時，回應窗改以不可取消的 microtask 略過，避免 render 清理掉零延遲計時器後留下無法操作的待處理攻擊。
 
@@ -208,7 +209,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-Lv.5 下一輪只使用新的 training seeds 改善 Combo completed／started 比率與弱勢 matchup 的通用評分，不重用已看過的 seeds 201–210、301、401–402、503–504、601–602；再以新的 46 副全 corpus、先後攻換位 300 場以上 holdout 執行 `benchmark:ai:challenger`。只有安全指標全為 0、勝率至少 52% 且 Wilson 95% CI 下界高於 50%，才由實驗 challenger 升格。任何新卡池先通過 `ai:audit:capabilities --strict`，再進逐卡規則／Browser 與 promote gate，禁止用卡號、系列名稱或本輪弱勢牌組寫 AI 特判。
+Lv.5 下一輪以本輪 256 副 Swiss 的 Combo 18／20 完成、Refresh forecast 0 與 Lv.5／Lv.4 不一致場 90／83 為診斷基線，新增未見過的 training seeds 改善 Combo、Refresh／空場預判與 matchup 評分，不重用已看過的 seeds 201–210、301、401–402、503–504、601–602。再以新的 46 副全 corpus、先後攻換位 300 場以上 holdout 執行 `benchmark:ai:challenger`；只有安全指標全為 0、勝率至少 52% 且 Wilson 95% CI 下界高於 50%，才由實驗 challenger 升格。任何新卡池先通過 `ai:audit:capabilities --strict`，再進逐卡規則／Browser 與 promote gate，禁止用卡號、系列名稱或本輪弱勢牌組寫 AI 特判。
 
 BS7-001～BS7-108 已完成 runtime 轉接、strict contract、正式 promote、五色牌組的跨 seed optimizer／holdout 與 Lv.4 AI 強度校準。後續官方卡文或卡表更新仍須重新從 `inventory` candidate 開始，通過 strict contract、逐卡正反 Browser、BS7-039／082 順序結算、正式 smoke 與人工覆核後，才可再次 promote；五色牌組則以真人對局、較大獨立樣本與 Green／Purple 對 Yellow 的弱勢對局作為下一輪校準重點。
 
@@ -216,7 +217,7 @@ BS7-001～BS7-108 已完成 runtime 轉接、strict contract、正式 promote、
 
 卡牌行為契約維持 shadow mode 盤點正式卡池；BS7 formal strict contract 為 143／143 `verified`，整體 strict audit 與正式資料驗證皆為 1,244／1,244。payment、runtime energy、cost、target、Then、timing 與 resolution order 缺口皆已補上可追溯的來源與 runtime 證據，新卡或官方卡文更新仍必須重新通過 strict gate。
 
-本輪亦修正 P-015 攻擊後可選代價的多段效果續接、P-016 從棄牌區移至 break 的候選與 descriptor 接線、BS4-014／BS4-080 特殊效果正規化，以及稽核驅動對 P-053／P-130 條件、P-099／P-100 FLIP 與無效果異圖的分類。最新完整 Vitest（218 檔、3,531 項）、lint、build 與 AI Browser 20／20 均通過；牌組編輯器與本機雙瀏覽器好友房 smoke 保留為前一輪整合證據，本輪未重跑後兩項。
+本輪亦修正 P-015 攻擊後可選代價的多段效果續接、P-016 從棄牌區移至 break 的候選與 descriptor 接線、BS4-014／BS4-080 特殊效果正規化，以及稽核驅動對 P-053／P-130 條件、P-099／P-100 FLIP 與無效果異圖的分類。最新完整 Vitest（224 檔、3,559 項）、lint、build 與 AI Browser 20／20 均通過；牌組編輯器與本機雙瀏覽器好友房 smoke 保留為前一輪整合證據，本輪未重跑後兩項。
 
 契約遷移目前已完成 P1～P5 的可回退 shadow gate：各 25 張 deterministic 批次均在不寫入卡池的前提下確認 verified 契約可編譯，並以 `cardNumber` 保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser` 或指定 batch report 檢查 card-check route 與公開 command trace；shadow migration 是契約驗證工具，不是另一批等待 promote 的卡牌資料。
 
@@ -327,7 +328,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-23 | 完善實驗 Lv.5：以公開精確條件、規則層合法動作時機與同一 plan ID 對齊泛化 Combo，新增 Refresh／空場 deterministic corpus；全卡池 strict audit ready。calibration 503–504 為 Combo 3 啟動／3 完成／0 放棄；untouched holdout 601–602 共 368 場為 186 勝，完成率 100%、安全指標全 0，但 Wilson 95% CI 未過門檻，Lv.4 維持 champion。完整 Vitest 223 檔／3,557 項、AI Browser 20／20 通過。 |
+| 2026-08-23 | 新增 ASIA 2026-02-13 版本化禁限卡表與標準牌組 gate；產生 256 副五色多樣化 roster，完成 Lv.5 8 輪／1,024 場 Swiss、7 場 Top cut 與同 pairing Lv.4 控制組 1,024 場。修正 AI 陷阱多代價選項、棄牌區餅乾替代代價與 `excludeSource` 合法性；Lv.5／Lv.4 均 100% 完成且安全指標全 0，冠軍 YELLOW #057、亞軍 YELLOW #002，但 paired advantage Wilson 95% CI 44.62%–59.34%，尚未升格。完整排名、牌表與 telemetry 見 [256 副 Lv.5 Swiss 報告](docs/lv5-swiss-256-report.md)。 |
 | 2026-08-22 | 完成 BS7「Arena of Glory」正式 promote，正式卡池增至 15 檔／1,244 筆，strict contract 1,244／1,244、卡牌轉換 1,244／1,244、registry consistent；新增五色 BS7 Arena 牌組與 deterministic batch optimizer，採用的 untouched final 為 Red 51／100、Yellow 62／100、Green 102／200、Blue 63／100、Purple 55／100，所有對局均無 invalid、stuck、deadlock、unfinished、error 或 turn cap；Lv.4 對 Lv.3 兩批 30 場為 21／30、18／30，並補齊合法代價／目標選擇與受傷目標聚焦。新增實驗 Lv.5 challenger 的每場公開資訊記憶、對手回應期望、跨步意圖與 champion–challenger gate；正式 967 張基礎 runtime 卡及 BS7 108 張 capability strict audit 均為 ready，五色雙邊換位 100 場 holdout 為 49／100，安全指標全為 0、尚未升格。`gain-hp` 現可跨 Refresh 接續剩餘 HP。BS7-097 依官方英文勘誤改為降低受到的攻擊傷害；正式 Browser 卡面 143／143、正向效果 98／98、負向 A/B 143／143，BS7-039／082 均以第二目標→第一目標的反向點選順序通過，BS7-082 正向棄 2 張、負向只棄 1 張。完整 Vitest 218 檔／3,531 項、lint、build、AI Browser 20／20 通過。 |
 | 2026-08-21 | 修正 AI 攻擊無可用回應時可能卡住的戰鬥轉移；新增 BS7「Arena of Glory」候選匯入／效果盤點入口，143 筆資料維持 inventory，尚未 promote；完成 BS7-001～BS7-108 runtime／strict contract，補齊非餅乾 Trap Then 與 `trash-to-hand` 目標管線，並將 BS7-039／082 對手全體傷害改為依序選取、逐張處理 HP／FLIP／昏厥；BS7-039／082、BS7-064／085／106／108 已補 Browser A/B。候選 strict 143／143、正式 strict 1,101／1,101 verified；卡面載入 143／143、正向效果 98／98、負向 A/B 143／143。完整 Vitest 212 檔／3,497 項、lint、build。 |
 | 2026-08-20 | 補強 BS4-026 被 BS6-010 阻擋與 BS6-031 攻擊後效果的可支付原因：對戰紀錄／效果提示同步顯示阻擋來源與黃色能量不足，新增正式卡池 test-state A/B；完整 Vitest 211 檔／3,408 項、lint、build 與瀏覽器正反向驗證通過。 |
