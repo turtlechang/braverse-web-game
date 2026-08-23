@@ -19,8 +19,8 @@
 
 Lv.5 的「對手回應／終局預測」只使用公開手牌與牌庫張數、公開卡牌能力、
 棄牌區、Break 與戰鬥區 HP，不是讀取實際隱藏手牌，也不是完整 opponent
-tree。2026-08-23 全 corpus untouched holdout（46 副牌組、mirror＋輪替跨
-牌組、seeds 401–402、先後攻換位）為 186／368（50.54%，Wilson 95% CI
+tree。2026-08-23 本輪全 corpus untouched holdout（46 副牌組、mirror＋輪替跨
+牌組、seeds 601–602、先後攻換位）為 186／368（50.54%，Wilson 95% CI
 45.46%–55.62%），`stuck`、invalid action、deadlock、turn cap 均為 0；
 因此目前證明安全與架構落地，**仍未證明勝率優於 Lv.4**。
 
@@ -103,16 +103,17 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 | `AiStrategyMemory` | `ai/strategy/session.ts` | 每場持久保存合法 `KnowledgeState`、上一個 command 與 setup/payoff/tempo 意圖；forced pending 不覆蓋意圖 |
 | `estimateOpponentResponse` | `ai/strategy/opponent-response.ts` | 只從 `PlayerView` 的公開手牌張數與公開卡牌 capability 估計攻擊回應曝險 |
 | `ComboPlan` | `ai/strategy/combo-plan.ts` | 由 capability synergy edge 自動建立穩定 plan ID、前置／收益、付款與有效期；不使用系列或卡號特判 |
-| Combo lifecycle | `ai/strategy/session.ts` | 只讓相同 plan 的 confirmed setup 完成 payoff，跨步記錄 started／completed／abandoned |
+| Combo lifecycle | `ai/strategy/tactical-plans.ts`、`session.ts` | Lv.5 以公開條件門檻、規則層下一步合法動作時機與同一 plan ID 確認 setup → payoff；跨步記錄 started／completed／abandoned |
 | `forecastOpponentEndgame` | `ai/strategy/endgame-forecast.ts` | 由公開牌庫／手牌張數、棄牌區最低 LV、Break 與最後一隻餅乾 HP 預判補位、Refresh 洗傷及無餅乾敗北 |
 | Lv.5 search budget | `ai/strategy/lv4-search.ts` | 重用隱藏資訊安全搜尋器，擴為 width 6、depth 6、360 nodes、180ms；未知抽牌仍停止展開 |
 | capability audit | `scripts/audit-ai-capabilities.ts` | 對 1,244 筆正式 inventory／967 種唯一 runtime 機制輸出 ready/conservative/blocked；`--strict` 阻擋不支援效果 |
 | challenger gate | `scripts/benchmark-ai-challenger.ts` | 支援 BS7 快速矩陣及 `--corpus=full --matchups=both` 的 46 副全代表牌組 mirror／輪替跨牌組、先後攻換位 |
 
-全 corpus holdout 實際記錄 36 次 Combo 啟動、6 次完成、19 次放棄，以及
-5 次打空戰鬥區的無補位風險預測；該樣本未自然遇到 Refresh 終局，洗傷
-路徑另以專門 fixture 驗證。這些 telemetry 是後續改善完成率的依據，不能
-單獨當成勝率提升證據。
+本輪已看過的 calibration seeds 503–504 為 368 場：Combo 啟動 3、完成 3、
+放棄 0；它驗證相同 payoff 卡多條泛化邊時可回到已啟動的 plan。untouched
+holdout 601–602 沒有自然觸發 Combo 或 Refresh，只有 7 次打空戰鬥區的無補位
+風險預測；Refresh 洗傷與空場邊界另由 `endgame-corpus.test.ts` 的 deterministic
+fixture 覆蓋。這些 telemetry 不能單獨當成勝率提升證據。
 
 ## 已知問題
 

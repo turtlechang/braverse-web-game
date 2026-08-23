@@ -45,6 +45,7 @@ import {
 import {
   deriveTacticalPlan,
   findVisibleSelfCard,
+  type ActionablePayoffSource,
   type TacticalPlan,
 } from './strategy/tactical-plans'
 
@@ -916,6 +917,10 @@ export const handleAiTwoPlyTurnState = (
             ? scoreIntentContinuity(strategy.strategyMemory, plan)
             : 0
       : undefined,
+    preferredComboPlanId: decisionLevel === 5
+      ? strategy.strategyMemory?.activeCombo?.planId
+      : undefined,
+    strictComboActionability: decisionLevel === 5,
     isTerminal: isLv4SearchTerminal,
   }
   const searchResult = searchLv4Commands(
@@ -980,6 +985,17 @@ export const handleAiTwoPlyTurnState = (
     const afterView = createPlayerView(decision.state, playerId)
     const canContinue = canContinueFromKnownHand(beforeView, afterView) &&
       !isLv4SearchTerminal(decision.state, playerId)
+    const afterCommands = canContinue
+      ? getLegalTurnCommands(decision.state, playerId)
+      : []
+    const afterActionablePayoffs: ActionablePayoffSource[] = afterCommands
+      .flatMap((command) => {
+        const commandIdentity = actionIdentityFromCommand(command)
+        const source = findVisibleSelfCard(afterView, commandIdentity.sourceInstanceId)
+        return source
+          ? [{ cardId: source.id, actionKind: commandIdentity.kind }]
+          : []
+      })
     const scored = scoreLv3ActionCandidate(rootContext, beforeView, {
       value: decision,
       identity: { kind, sourceInstanceId },
@@ -988,10 +1004,14 @@ export const handleAiTwoPlyTurnState = (
         evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId),
       legalAttackCountBefore: getLegalTurnCommands(state, playerId)
         .filter((command) => command.kind === 'attack').length,
-      legalAttackCountAfter: canContinue
-        ? getLegalTurnCommands(decision.state, playerId)
-          .filter((command) => command.kind === 'attack').length
-        : 0,
+      legalAttackCountAfter: afterCommands
+        .filter((command) => command.kind === 'attack').length,
+      tacticalPlanOptions: decisionLevel === 5
+        ? {
+            actionablePayoffSources: afterActionablePayoffs,
+            preferredComboPlanId: strategy.strategyMemory?.activeCombo?.planId,
+          }
+        : undefined,
     })
     let relativeScore =
       (evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId)) -
@@ -1007,7 +1027,17 @@ export const handleAiTwoPlyTurnState = (
       sourceCard?.id,
       afterView,
       identity.kind,
+      decisionLevel === 5
+        ? {
+            actionablePayoffSources: afterActionablePayoffs,
+            preferredComboPlanId: strategy.strategyMemory?.activeCombo?.planId,
+          }
+        : undefined,
     )
+    const intentContinuity = decisionLevel === 5
+      ? scoreIntentContinuity(strategy.strategyMemory, tacticalPlan)
+      : 0
+    relativeScore += intentContinuity
 
     if (canContinue) {
       const continuation = searchLv4Commands(

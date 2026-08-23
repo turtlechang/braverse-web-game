@@ -43,6 +43,11 @@ const comboPlan = (kind: 'setup' | 'payoff'): TacticalPlan => ({
   validity: 'same-turn',
 })
 
+const persistentComboPlan = (kind: 'setup' | 'payoff'): TacticalPlan => ({
+  ...comboPlan(kind),
+  validity: 'persistent',
+})
+
 describe('AiStrategyMemory', () => {
   it('跨步保存公開知識與戰術意圖，但不改寫舊 snapshot', () => {
     const view = createPlayerView(createDemoGame(1), 'player-one')
@@ -104,6 +109,18 @@ describe('AiStrategyMemory', () => {
     })
     expect(abandoned.activeCombo).toBeUndefined()
     expect(abandoned.comboTelemetry.abandoned).toBe(1)
+  })
+
+  it('持續型 payoff 不佔用同回合 Combo 完成生命週期', () => {
+    const view = createPlayerView(createDemoGame(6), 'player-one')
+    const memory = advanceAiStrategyMemory(createAiStrategyMemory('player-one'), view, {
+      chosenCommandKind: 'activate-skill',
+      actionScore: actionScore('tactical-setup'),
+      tacticalPlan: persistentComboPlan('setup'),
+    })
+
+    expect(memory.activeCombo).toBeUndefined()
+    expect(memory.comboTelemetry).toEqual({ started: 0, completed: 0, abandoned: 0 })
   })
 
   it('拒絕由不同 observer 的 PlayerView 污染記憶', () => {

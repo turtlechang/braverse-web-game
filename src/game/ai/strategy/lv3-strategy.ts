@@ -12,6 +12,7 @@ import {
   createLv3StrategyContext,
   deriveTacticalPlan,
   findVisibleSelfCard,
+  type TacticalPlanDerivationOptions,
   type Lv3StrategyContext,
 } from './tactical-plans'
 
@@ -22,6 +23,7 @@ export interface Lv3ActionCandidate<T> {
   postActionBoardScore: number
   legalAttackCountBefore: number
   legalAttackCountAfter: number
+  tacticalPlanOptions?: TacticalPlanDerivationOptions
 }
 
 export interface ScoredLv3ActionCandidate<T> {
@@ -71,6 +73,7 @@ export const scoreLv3ActionCandidate = <T>(
     sourceCard?.id,
     candidate.afterView,
     candidate.identity.kind,
+    candidate.tacticalPlanOptions,
   )
   const breakdown = scoreAction({
     identity: candidate.identity,

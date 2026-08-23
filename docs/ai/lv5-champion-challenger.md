@@ -11,7 +11,7 @@ Lv.5 是 challenger，只有安全與強度證據同時成立才升格。
 1. 規則層列出合法 `GameCommand`，AI 不自行發明合法性。
 2. `PlayerView` 遮蔽對手手牌、牌庫順序與未翻 HP。
 3. `AiStrategyMemory` 跨步保存合法 `KnowledgeState` 與上一個戰術意圖。
-4. Lv.5 在 Lv.4 command search 上加入同一 `ComboPlan` 的根節點意圖延續、payoff 付款預留與公開回應風險。
+4. Lv.5 在 Lv.4 command search 上加入同一 `ComboPlan` 的根節點意圖延續、公開條件門檻、規則層下一步合法動作時機、payoff 付款預留與公開回應風險。
 5. `forecastOpponentEndgame` 只以公開牌庫／手牌張數、公開棄牌與 Break 推估補位、Refresh 洗傷及空場敗北；不讀手牌種類或牌庫順序。
 5. 決策仍由規則層套用；timeout 回退 Lv.4，不使用半截搜尋 frontier。
 
@@ -62,14 +62,15 @@ npm.cmd run benchmark:ai:challenger -- --corpus=full --matchups=both --seeds=2 -
 
 ## 目前證據與下一輪
 
-2026-08-23 先以 BS7 training seeds 201–210 比較：本輪行為由修改前
-45／100 到修改後 53／100；這是看過的 calibration 資料，不是正式證據。
-全 corpus training seed 301 的 184 場為 99／184（53.80%），安全指標全 0。
+本輪以看過的 calibration seeds 503–504 跑 46 副牌組、mirror＋輪替跨牌組、
+先後攻換位共 368 場：179 勝（48.64%），安全指標全為 0；Combo started 3、
+completed 3、abandoned 0。這證明嚴格公開門檻、合法時機與同一 plan 回填能
+修正連段生命週期，但 calibration 不可作為升格證據。
 
-隨後以 untouched seeds 401–402 跑 46 副牌組、mirror＋輪替跨牌組、先後攻
-換位共 368 場：Lv.5 186 勝（50.54%），Wilson 95% CI 45.46%–55.62%；
-完成率 100%，stuck、invalid action、deadlock、turn cap 全為 0。實際記錄
-Combo started 36、completed 6、abandoned 19，終局預測 5 次。結論是通用
-Combo、付款預留與終局預測已安全落地，但沒有升格證據；Lv.4 仍是 champion。
-後續需用新的 training seeds 改善 Combo 完成率，再換一組未見 holdout；不得
-回頭用 seeds 401–402 調權後仍稱為 untouched，也不得針對弱勢牌組或卡號寫例外。
+隨後以新的 untouched seeds 601–602 跑相同全 corpus 共 368 場：Lv.5 186 勝
+（50.54%），Wilson 95% CI 45.46%–55.62%；完成率 100%，stuck、invalid action、
+deadlock、turn cap 全為 0。holdout 沒有自然發生 Combo 或 Refresh，記錄 7 次
+空場無補位風險預測；Refresh 洗傷與 Combo 對齊改由 deterministic corpus 覆蓋。
+結論是通用 Combo、付款預留與終局預測仍安全，但沒有升格證據；Lv.4 仍是
+champion。後續只能使用新的 training seeds 與新的 holdout，不得針對弱勢牌組
+或卡號寫例外。

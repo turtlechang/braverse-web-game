@@ -18,7 +18,12 @@ import {
   type Lv4PlanTelemetry,
   type Lv4SearchTelemetry,
 } from './search-telemetry'
-import { deriveTacticalPlan, type TacticalPlan } from './tactical-plans'
+import {
+  deriveTacticalPlan,
+  findVisibleSelfCard,
+  type ActionablePayoffSource,
+  type TacticalPlan,
+} from './tactical-plans'
 
 export interface Lv4SearchOptions {
   beamWidth: number
@@ -71,6 +76,13 @@ export interface Lv4SearchHooks {
     identity: ActionIdentity,
     depth: number,
   ) => number
+  /** Lv.5 上一步已確認的同回合 Combo；只能來自合法 PlayerView 記憶。 */
+  preferredComboPlanId?: string
+  /**
+   * 只有 Lv.5 使用「收益卡真實可動作」與同一 plan ID 的嚴格生命週期；
+   * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
+   */
+  strictComboActionability?: boolean
   /** pending、換人、結束階段等不應在本回合搜尋繼續展開的狀態。 */
   isTerminal: (state: GameState, playerId: PlayerId) => boolean
 }
@@ -171,11 +183,13 @@ export const advanceLv4Plan = (
   previous: Lv4PlanProgress,
   tacticalPlan: TacticalPlan,
   actionKind?: string,
+  options: { onlyTrackSameTurn?: boolean } = {},
 ): { plan: Lv4PlanProgress; completionBonus: number } => {
   if (
     tacticalPlan.kind === 'setup' &&
     tacticalPlan.status === 'confirmed' &&
-    tacticalPlan.comboPlanId
+    tacticalPlan.comboPlanId &&
+    (!options.onlyTrackSameTurn || (tacticalPlan.validity ?? 'same-turn') === 'same-turn')
   ) {
     return {
       plan: {
@@ -192,7 +206,8 @@ export const advanceLv4Plan = (
   if (
     tacticalPlan.kind === 'payoff' &&
     tacticalPlan.status === 'confirmed' &&
-    tacticalPlan.comboPlanId
+    tacticalPlan.comboPlanId &&
+    (!options.onlyTrackSameTurn || (tacticalPlan.validity ?? 'same-turn') === 'same-turn')
   ) {
     const completesKnownSetup = previous.activeComboPlanIds.includes(
       tacticalPlan.comboPlanId,
@@ -222,6 +237,15 @@ export const advanceLv4Plan = (
   }
   return { plan: previous, completionBonus: 0 }
 }
+
+const actionablePayoffSources = (
+  view: PlayerView,
+  commands: readonly PlayerActionCommand[],
+): ActionablePayoffSource[] => commands.flatMap((command) => {
+  const identity = actionIdentityFromCommand(command)
+  const source = findVisibleSelfCard(view, identity.sourceInstanceId)
+  return source ? [{ cardId: source.id, actionKind: identity.kind }] : []
+})
 
 const updateTelemetryForStep = (
   telemetry: Lv4SearchTelemetry,
@@ -339,6 +363,22 @@ export const searchLv4Commands = (
           const afterState = hooks.applyCommand(node.state, command)
           const afterView = hooks.createPlayerView(afterState, playerId)
           const afterIsSafeToExpand = canSafelyExpand(node.view, afterView)
+          // 抽到原先未知的己方手牌後，不在搜尋中列舉下一步；這同時避免把
+          // 尚未得知的卡誤標成已可兌現的 payoff。
+          const afterCommands = afterIsSafeToExpand
+            ? hooks.getLegalCommands(afterState, playerId)
+            : []
+          const afterActionablePayoffs = hooks.strictComboActionability
+            ? actionablePayoffSources(afterView, afterCommands)
+            : undefined
+          const preferredComboPlanId = node.plan.activeComboPlanIds[0] ??
+            (node.depth === 0 ? hooks.preferredComboPlanId : undefined)
+          const tacticalPlanOptions = hooks.strictComboActionability
+            ? {
+                actionablePayoffSources: afterActionablePayoffs,
+                preferredComboPlanId,
+              }
+            : undefined
           const identity = actionIdentityFromCommand(command)
           const context = createLv3ContextForView(node.view, knowledgeState)
           const scored = scoreLv3ActionCandidate(context, node.view, {
@@ -347,10 +387,9 @@ export const searchLv4Commands = (
             afterView,
             postActionBoardScore: hooks.scorePublicView(afterView),
             legalAttackCountBefore: reservation.legalAttackCount,
-            legalAttackCountAfter: afterIsSafeToExpand
-              ? hooks.getLegalCommands(afterState, playerId)
-                .filter((candidate) => candidate.kind === 'attack').length
-              : 0,
+            legalAttackCountAfter: afterCommands
+              .filter((candidate) => candidate.kind === 'attack').length,
+            tacticalPlanOptions,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
           const tacticalPlan = deriveTacticalPlan(
@@ -359,6 +398,7 @@ export const searchLv4Commands = (
             sourceId,
             afterView,
             identity.kind,
+            tacticalPlanOptions,
           )
           const intentContinuity = hooks.persistentIntentBonus?.(
             tacticalPlan,
@@ -394,7 +434,9 @@ export const searchLv4Commands = (
                 }
               : undefined,
           )
-          const progressed = advanceLv4Plan(node.plan, tacticalPlan, identity.kind)
+          const progressed = advanceLv4Plan(node.plan, tacticalPlan, identity.kind, {
+            onlyTrackSameTurn: hooks.strictComboActionability,
+          })
           const strategicScore = selectLv4StrategicContribution(actionScore)
           const relativeScore =
             hooks.scorePublicView(afterView) - hooks.scorePublicView(node.view) +

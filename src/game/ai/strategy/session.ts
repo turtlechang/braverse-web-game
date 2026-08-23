@@ -95,7 +95,8 @@ export const advanceAiStrategyMemory = (
   if (
     plan?.kind === 'setup' &&
     plan.status === 'confirmed' &&
-    plan.comboPlanId
+    plan.comboPlanId &&
+    (plan.validity ?? 'same-turn') === 'same-turn'
   ) {
     const replacesExisting = activeCombo && activeCombo.planId !== plan.comboPlanId
     comboTelemetry = {
@@ -117,6 +118,7 @@ export const advanceAiStrategyMemory = (
     plan?.kind === 'payoff' &&
     plan.status === 'confirmed' &&
     plan.comboPlanId &&
+    (plan.validity ?? 'same-turn') === 'same-turn' &&
     activeCombo?.planId === plan.comboPlanId
   ) {
     comboTelemetry = {

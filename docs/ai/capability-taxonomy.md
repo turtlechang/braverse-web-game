@@ -100,6 +100,12 @@ interface CapabilityEvidence {
 搜尋與跨步記憶只有在 plan ID 相同時才可記為完成。把一張有 Combo 能力的
 卡放到支援區，不等於發動該能力，也不得取得 setup/payoff 分數。
 
+Lv.5 另外保留原始結構化 `EffectCondition`：只以 `PlayerView` 可證明的精確
+門檻確認 payoff，並要求下一步由規則層列出的合法動作符合卡面的 attack／on-play
+／activate 時機。若同一張 payoff 卡同時落在多條邊，只有已啟動且 confirmed 的
+同一 plan ID 可優先完成；Lv.3/Lv.4 維持既有 tag-based 基線，作為 challenger
+的穩定對照組。
+
 ## G1 shadow mode 實作與測試
 
 G1 以 `extractCardCapabilities`、`extractDeckCapabilities`、`createStrategyShadowReport` 與 `buildSynergyGraph` 輸出 `CapabilityModel`、`DeckStrategyProfile`、synergy evidence 及 unsupported telemetry，不得改變 `takeAiStep` 的選擇。具 timing／cost 的 skill、item、trap、FLIP、stage 來源優先於展示用 `card.effects`，避免同一效果雙重計數。

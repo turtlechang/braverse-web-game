@@ -1,5 +1,5 @@
 import { getEnergyCostTotal } from '../../energy'
-import type { EnergyCost } from '../../types'
+import type { EffectCondition, EnergyCost } from '../../types'
 import type { CapabilityKind, StrategyTag } from './capability-model'
 import type { SynergyGraph, SynergyNode } from './synergy-graph'
 
@@ -11,6 +11,7 @@ export interface ComboPlan {
   payoff: SynergyNode
   sharedTags: readonly StrategyTag[]
   payoffEnergyCost: Readonly<EnergyCost>
+  payoffCondition?: EffectCondition
   requiredActiveSupport: number
   expectedValue: number
   validity: ComboPlanValidity
@@ -117,6 +118,7 @@ export const buildComboPlans = (graph: SynergyGraph): ComboPlan[] => {
       payoff: edge.payoff,
       sharedTags,
       payoffEnergyCost,
+      payoffCondition: edge.payoff.condition,
       requiredActiveSupport: getEnergyCostTotal(payoffEnergyCost),
       expectedValue: payoffValue(graph, edge.payoff),
       validity: planValidity(edge.payoff),

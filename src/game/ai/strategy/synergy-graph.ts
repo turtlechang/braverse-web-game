@@ -1,4 +1,4 @@
-import type { AbilityCost } from '../../types'
+import type { AbilityCost, EffectCondition } from '../../types'
 import type {
   CapabilityCertainty,
   CapabilityTiming,
@@ -17,6 +17,7 @@ export interface SynergyNode {
   conditionKinds: string[]
   timing: CapabilityTiming
   cost: AbilityCost | null
+  condition?: EffectCondition
   certainty: CapabilityCertainty
   sourceZone?: StrategyZone
   destinationZone?: StrategyZone
@@ -48,6 +49,7 @@ const toNode = (
   conditionKinds: capability.conditionKinds,
   timing: capability.timing,
   cost: capability.cost,
+  condition: capability.condition,
   certainty: capability.certainty,
   sourceZone: capability.sourceZone,
   destinationZone: capability.destinationZone,
