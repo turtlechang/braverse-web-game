@@ -88,7 +88,7 @@ export interface SwissTournamentReport {
     rounds: number
     totalMatches: number
     format: 'standard'
-    aiLevel: 1 | 2 | 3 | 4
+    aiLevel: 1 | 2 | 3 | 4 | 5
     maxActions: number
     seed: number
     browserRuntime: boolean
@@ -123,7 +123,7 @@ export interface SwissTournamentOptions {
   rounds?: number
   seed?: number
   maxActions?: number
-  aiLevel?: 1 | 2 | 3 | 4
+  aiLevel?: 1 | 2 | 3 | 4 | 5
   progressEvery?: number
   onProgress?: (
     progress: SwissTournamentProgress,

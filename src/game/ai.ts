@@ -64,6 +64,11 @@ import {
 } from './ai/strategy/knowledge-state'
 import type { KnowledgeState } from './ai/strategy/knowledge-state'
 import {
+  advanceAiStrategyMemory,
+  createAiStrategyMemory,
+  type AiStrategyMemory,
+} from './ai/strategy/session'
+import {
   createPendingSelectionStrategy,
   type PendingSelectionStrategy,
   type PendingSelectionKind,
@@ -96,6 +101,7 @@ export type {
   AiStepOptions,
   SimulateAiMatchOptions,
 } from './ai/types'
+export type { AiStrategyMemory, AiTacticalIntent } from './ai/strategy/session'
 
 export const selectAiEnergyPayment = (
   skill: CardSkill,
@@ -531,9 +537,13 @@ const chooseAbilityCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupports.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupports
+    .filter(
+      (support) =>
+        cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const supportToTrashIds = universal?.enabled
     ? universal.orderCostIds(
         supportToTrashCandidateIds,
@@ -544,7 +554,12 @@ const chooseAbilityCostIds = (
 
   const supportToTrashSet = new Set(supportToTrashIds)
   const supportToHandCandidateIds = remainingSupports
-    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !supportToTrashSet.has(support.card.instanceId) &&
+        (cost.supportToHandType === undefined ||
+          support.card.type === cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
     ? universal.orderCostIds(
@@ -910,9 +925,13 @@ const resolveAiSkill = (
   const remainingSupportsAfterPayment = player.supportArea.filter(
     (support) => !paymentIds.includes(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupportsAfterPayment.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupportsAfterPayment
+    .filter(
+      (support) =>
+        skill.cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(skill.cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const costSupportToTrashIds = skill.cost.supportToTrash
     ? universal?.enabled
       ? universal.orderCostIds(
@@ -931,7 +950,12 @@ const resolveAiSkill = (
 
   const costSupportToTrashSet = new Set(costSupportToTrashIds)
   const supportToHandCandidateIds = remainingSupportsAfterPayment
-    .filter((support) => !costSupportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !costSupportToTrashSet.has(support.card.instanceId) &&
+        (skill.cost.supportToHandType === undefined ||
+          support.card.type === skill.cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const costSupportToHandIds = skill.cost.supportToHand
     ? universal?.enabled
@@ -1260,7 +1284,7 @@ const createUniversalPendingStrategy = (
   level: AiLevel | undefined,
   knowledgeState: KnowledgeState | undefined,
 ) => {
-  if (level !== 3 && level !== 4) return null
+  if (level !== 3 && level !== 4 && level !== 5) return null
 
   const view = createPlayerView(state, playerId)
   const synchronizedKnowledge = knowledgeState?.observerId === playerId
@@ -1363,7 +1387,7 @@ const chooseReplacement = (state: GameState, playerId: PlayerId, level?: AiLevel
     state.players[playerId].breakArea,
   )
 
-  const useR6b = level !== undefined && isRuleEnabled(level as 1 | 2 | 3 | 4, 'R6b')
+  const useR6b = level !== undefined && isRuleEnabled(level, 'R6b')
 
   if (useR6b) {
     const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
@@ -1581,9 +1605,14 @@ export const takeAiStep = (
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
     aiTurnStrategy.currentLevel = level
-    // G3：外部只能提供以 PlayerView／合法事件建立的 KnowledgeState。
-    // 每次決策明確覆寫，避免不同對局或玩家共用上一局的短期記憶。
-    aiTurnStrategy.knowledgeState = options.knowledgeState
+    // 外部只能提供以 PlayerView／合法事件建立的 KnowledgeState；同局可
+    // 明確傳回上一個 memory，不同對局則由 caller 重置，避免全域串局。
+    aiTurnStrategy.knowledgeState = options.memory?.observerId === playerId
+      ? options.memory.knowledgeState
+      : options.knowledgeState
+    aiTurnStrategy.strategyMemory = options.memory?.observerId === playerId
+      ? options.memory
+      : undefined
 
     const turnHandler =
       level === 1
@@ -1599,7 +1628,7 @@ export const takeAiStep = (
               aiTurnStrategy.currentLevel = level
               return handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
             }
-          : level === 4
+          : level === 4 || level === 5
             ? (current: GameState, currentPlayerId: PlayerId) => {
                 aiTurnStrategy.currentLevel = level
                 return handleAiTwoPlyTurnState(current, currentPlayerId, aiTurnStrategy)
@@ -1636,13 +1665,41 @@ export const takeAiStep = (
         level: decision.reason?.level ?? level,
       },
     }
+    const attachStrategyMemory = (nextDecision: AiDecision): AiDecision => {
+      const initialMemory = options.memory?.observerId === playerId
+        ? options.memory
+        : createAiStrategyMemory(
+            playerId,
+            aiTurnStrategy.knowledgeState?.observerId === playerId
+              ? aiTurnStrategy.knowledgeState
+              : createKnowledgeStateFromPlayerView(createPlayerView(state, playerId)),
+          )
+      const strategyMemory = advanceAiStrategyMemory(
+        initialMemory,
+        createPlayerView(nextDecision.state, playerId),
+        {
+          chosenCommandKind:
+            nextDecision.reason?.chosenCommandKind ?? nextDecision.action,
+          actionScore: nextDecision.reason?.actionScore,
+          tacticalPlan: nextDecision.reason?.tacticalPlan,
+        },
+      )
+      return {
+        ...nextDecision,
+        reason: {
+          ...(nextDecision.reason ?? { level }),
+          level: nextDecision.reason?.level ?? level,
+          strategyMemory,
+        },
+      }
+    }
     // pending／battle handler 已為實際選擇記錄更精確的種類（例如 FLIP、
     // blocker 或多階段）。只有既有 handler 尚未附帶 telemetry 時，才以
     // 入口狀態補上通用分類，避免覆寫真實決策原因。
     const pendingSelection = level >= 3 && !levelledDecision.reason?.pendingStrategy
       ? pendingSelectionForState(state, playerId, levelledDecision)
       : null
-    if (!pendingSelection) return levelledDecision
+    if (!pendingSelection) return attachStrategyMemory(levelledDecision)
 
     const view = createPlayerView(state, playerId)
     const knowledgeState = aiTurnStrategy.knowledgeState?.observerId === playerId
@@ -1653,7 +1710,7 @@ export const takeAiStep = (
       knowledgeState,
       level,
     )
-    return {
+    return attachStrategyMemory({
       ...levelledDecision,
       reason: {
         ...levelledDecision.reason,
@@ -1663,7 +1720,7 @@ export const takeAiStep = (
           pendingSelection.sourceInstanceId,
         ),
       },
-    }
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI 執行失敗。'
@@ -1689,6 +1746,7 @@ export const simulateAiMatch = (
     replacements: 0,
   }
   let error: string | null = null
+  const strategyMemories: Partial<Record<PlayerId, AiStrategyMemory>> = {}
 
   for (let actionCount = 0; actionCount < maxActions; actionCount += 1) {
     if (state.status === 'finished') {
@@ -1706,7 +1764,11 @@ export const simulateAiMatch = (
     const decision = takeAiStep(state, controller, {
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
+      memory: strategyMemories[controller],
     })
+    if (decision.reason?.strategyMemory) {
+      strategyMemories[controller] = decision.reason.strategyMemory
+    }
     logs.push(
       `#${actionCount + 1} T${state.turnNumber} ${decision.description}`,
     )

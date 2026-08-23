@@ -544,6 +544,10 @@ export function useMatchController(params: {
   const [selectedFaintCostSupportIds, setSelectedFaintCostSupportIds] = useState<
     string[]
   >([])
+  const [
+    selectedFaintCostSupportToHandIds,
+    setSelectedFaintCostSupportToHandIds,
+  ] = useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
   const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
@@ -650,6 +654,7 @@ export function useMatchController(params: {
     setSelectedFaintPaymentIds([])
     setSelectedFaintCostHandIds([])
     setSelectedFaintCostSupportIds([])
+    setSelectedFaintCostSupportToHandIds([])
   }
 
   // Derived state
@@ -690,13 +695,15 @@ export function useMatchController(params: {
     ? getFaintEffectMinMax(game, pendingFaint.effect)
     : { min: 0, max: 0 }
   const faintEnergyCost =
-    (pendingFaint?.effect.kind === 'hand-to-battle' ||
+    pendingFaint?.sourceEnergy ??
+    ((pendingFaint?.effect.kind === 'hand-to-battle' ||
       pendingFaint?.effect.kind === 'trash-to-battle')
       ? pendingFaint.effect.energyCost ?? {}
-      : {}
+      : {})
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
   const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
   const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
+  const faintCostSupportToHandAmount = pendingFaint?.cost?.supportToHand ?? 0
   const faintOptional = pendingFaint?.optional === true
   const faintCostHandCandidates =
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
@@ -709,9 +716,29 @@ export function useMatchController(params: {
   const faintCostSupportCandidates =
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId &&
     faintCostSupportAmount > 0
-      ? getSupportEffectCandidates(game, pendingFaint.context).map(
-          (support) => support.card,
-        )
+      ? getSupportEffectCandidates(game, pendingFaint.context)
+          .filter(
+            (support) =>
+              !selectedFaintPaymentIds.includes(support.card.instanceId) &&
+              !selectedFaintCostSupportToHandIds.includes(
+                support.card.instanceId,
+              ),
+          )
+          .map((support) => support.card)
+      : []
+  const faintCostSupportToHandCandidates =
+    pendingFaint &&
+    pendingFaint.sourcePlayerId === viewerPlayerId &&
+    faintCostSupportToHandAmount > 0
+      ? getSupportEffectCandidates(game, pendingFaint.context)
+          .filter(
+            (support) =>
+              !selectedFaintPaymentIds.includes(support.card.instanceId) &&
+              !selectedFaintCostSupportIds.includes(support.card.instanceId) &&
+              (pendingFaint.cost?.supportToHandType === undefined ||
+                support.card.type === pendingFaint.cost.supportToHandType),
+          )
+          .map((support) => support.card)
       : []
   const faintPaymentCandidates =
     pendingFaint &&
@@ -940,6 +967,23 @@ export function useMatchController(params: {
     setSelectedTrapCostOptionIndex(index)
     setSelectedTrapPaymentIds([])
     setSelectedTrapTrashCookieToBreakAreaIds([])
+  }
+  const toggleFaintCostSupportToHand = (instanceId: string) => {
+    if (faintCostSupportToHandAmount === 0) return
+    setSelectedFaintCostSupportToHandIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= faintCostSupportToHandAmount) return current
+      if (
+        !faintCostSupportToHandCandidates.some(
+          (card) => card.instanceId === instanceId,
+        )
+      ) {
+        return current
+      }
+      return [...current, instanceId]
+    })
   }
   const trapAllowEmptyTarget =
     selectedTrap?.trap?.effects.some(
@@ -1627,6 +1671,8 @@ export function useMatchController(params: {
     setSelectedFaintCostHandIds,
     selectedFaintCostSupportIds,
     setSelectedFaintCostSupportIds,
+    selectedFaintCostSupportToHandIds,
+    setSelectedFaintCostSupportToHandIds,
     faintEnergyCost,
     faintEnergyCostTotal,
     faintPaymentCandidates,
@@ -1638,6 +1684,9 @@ export function useMatchController(params: {
     faintCostSupportAmount,
     faintCostSupportCandidates,
     toggleFaintCostSupport,
+    faintCostSupportToHandAmount,
+    faintCostSupportToHandCandidates,
+    toggleFaintCostSupportToHand,
     faintOptional,
     pendingFaint,
     faintSourceCard,

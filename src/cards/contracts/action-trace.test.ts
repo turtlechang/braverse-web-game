@@ -83,4 +83,21 @@ describe('card contract action trace', () => {
       ]),
     ).toBe(true)
   })
+
+  it('accepts completed resolve commands when an effect has no step text', () => {
+    expect(
+      traceHasSubstantiveEffectEvidence([
+        {
+          id: 1,
+          commandKind: 'begin-activate-skill',
+          steps: ['發動技能：「fixture」', '支付紫色能量'],
+        },
+        {
+          id: 2,
+          commandKind: 'resolve-ability-effect',
+          steps: [],
+        },
+      ]),
+    ).toBe(true)
+  })
 })

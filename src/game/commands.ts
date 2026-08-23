@@ -50,6 +50,7 @@ import { advancePhase } from './turn'
 import {
   activateCookieSkill,
   findSkillSource,
+  getCookieSkillEffects,
   getSkillUseKey,
   skipCookieOnPlay,
 } from './skills'
@@ -77,6 +78,7 @@ import type {
   BattleContinuation,
   CardEffect,
   CommandLogEntry,
+  CardKeyword,
   EffectCondition,
   EffectContext,
   EnergyCost,
@@ -106,6 +108,7 @@ export interface OpponentHandDiscardDecision {
   sourceCardName: string
   effectText: string
   count: number
+  atLeast?: boolean
 }
 
 /** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
@@ -130,9 +133,10 @@ export interface InspectDeckDecision {
   pickCount: number
   revealedCardIds: string[]
   restDestination?: InspectDeckRestDestination
-  pickDestination?: 'hand' | 'battle'
+  pickDestination?: 'hand' | 'battle' | 'support'
   filterColor?: EnergyColor
   filterType?: GameCard['type']
+  filterKeyword?: CardKeyword
   optionalPick?: boolean
   extraHp?: number
 }
@@ -238,6 +242,7 @@ export interface ResolveFaintEffectCommand {
   paymentIds?: string[]
   discardHandIds?: string[]
   supportToTrashIds?: string[]
+  supportToHandIds?: string[]
 }
 
 export interface ResolveOpponentHandDiscardCommand {
@@ -276,6 +281,8 @@ export interface ResolveOptionalCostAttackCommand {
   supportToHandIds?: string[]
   /** 支付 HP 代價時選擇的戰鬥區餅乾（例如 BS6-003）。 */
   hpToTrashIds?: string[]
+  /** 將 HP 頂牌返回手牌作為攻擊後代價時選擇的戰鬥區餅乾（例如 BS7-024）。 */
+  hpToHandIds?: string[]
   /** 支付洗回牌庫代價時選擇的棄牌區卡牌（例如 BS5-094）。 */
   trashToDeckIds?: string[]
 }
@@ -853,6 +860,7 @@ export const getPendingDecision = (
       sourceCardName: pending.sourceCardName,
       effectText: pending.effectText,
       count: pending.count,
+      ...(pending.atLeast ? { atLeast: true } : {}),
     }
   }
 
@@ -893,6 +901,7 @@ export const getPendingDecision = (
       pickDestination: pending.pickDestination,
       filterColor: pending.filterColor,
       filterType: pending.filterType,
+      filterKeyword: pending.filterKeyword,
       optionalPick: pending.optionalPick,
       extraHp: pending.extraHp,
     }
@@ -1116,6 +1125,7 @@ const applyPendingDecisionCommand = (
       return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [], {
         discardHandIds: command.discardHandIds ?? [],
         supportToTrashIds: command.supportToTrashIds ?? [],
+        supportToHandIds: command.supportToHandIds ?? [],
       })
     case 'resolve-opponent-hand-discard': {
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
@@ -1231,6 +1241,7 @@ const applyPendingDecisionCommand = (
         command.discardCardIds ?? [], command.targetIds ?? [],
         command.paymentIds ?? [], command.supportToHandIds ?? [],
         command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
+        command.hpToHandIds ?? [],
       )
     case 'resolve-draw-up-to':
       return resolveDrawUpTo(state, command.playerId, command.drawCount)
@@ -1698,6 +1709,10 @@ const resolvePendingAbilityEffect = (
   const continueBattle = (candidate: GameState): GameState =>
     continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
+  const resolvedTargetIds =
+    effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
+      ? pending.previousEffectTargetIds ?? targetIds
+      : targetIds
   if (!isEffectConditionMet(state, context, effect)) {
     const nextIndex = pending.effectIndex + 1
     return nextIndex >= pending.effects.length
@@ -1890,7 +1905,7 @@ const resolvePendingAbilityEffect = (
     state,
     context,
     effect,
-    targetIds,
+    resolvedTargetIds,
     options.shuffle,
   )
   if (resolved.pendingBattle?.effectDamageSequence) {
@@ -1908,24 +1923,57 @@ const resolvePendingAbilityEffect = (
   }
 
   // 「If you did」後續效果不是獨立的同層步驟：只有前一段實際選到
-  // break-to-hand 目標時才加入效果佇列。這也讓玩家略過可選的第一段
-  // 時，不會錯誤看到或執行後續的 hand-to-break 選擇。
+  // break-to-hand／hand-to-break 目標時才加入效果佇列。這也讓玩家略過
+  // 可選的第一段時，不會錯誤看到或執行後續的選擇。
+  const conditionalThenEffects =
+    effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'support-to-battle' ||
+    effect.kind === 'trash-to-battle'
+      ? effect.thenEffects
+      : undefined
+  const hasConditionalThen =
+    Boolean(conditionalThenEffects) && new Set(targetIds).size > 0
   const pendingWithConditionalThen =
-    effect.kind === 'break-to-hand' &&
-    effect.thenEffects &&
-    new Set(targetIds).size > 0
+    hasConditionalThen
       ? {
           ...pending,
+          previousEffectTargetIds: [...new Set(targetIds)],
           effects: [
             ...pending.effects.slice(0, pending.effectIndex + 1),
-            ...effect.thenEffects,
+            ...(conditionalThenEffects ?? []),
             ...pending.effects.slice(pending.effectIndex + 1),
           ],
         }
       : pending
+  const pendingWithAttackHandToBreak =
+    hasConditionalThen &&
+    effect.kind === 'hand-to-break' &&
+    state.pendingBattle?.stage === 'attack-effect'
+      ? {
+          ...pendingWithConditionalThen,
+          // 僅保留這一次選到的手牌，供下一段 break-to-hand 排除。
+          // 其他技能效果不會設定這個欄位。
+        }
+      : pendingWithConditionalThen
+  const pendingWithResolvedPreviousTarget =
+    effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
+      ? { ...pendingWithAttackHandToBreak, previousEffectTargetIds: undefined }
+      : pendingWithAttackHandToBreak
+  const resolvedWithAttackHandToBreak =
+    pendingWithAttackHandToBreak !== pendingWithConditionalThen &&
+    state.pendingBattle
+      ? {
+          ...resolved,
+          pendingBattle: {
+            ...resolved.pendingBattle!,
+            lastHandToBreakIds: [...new Set(targetIds)],
+          },
+        }
+      : resolved
   return continueAbilityQueue(
-    resolved,
-    pendingWithConditionalThen,
+    resolvedWithAttackHandToBreak,
+    pendingWithResolvedPreviousTarget,
     context,
     1,
     continueBattle,
@@ -2041,7 +2089,7 @@ const applyPlayerActionCommand = (
       return executeAbilityEffects(
         activated,
         context,
-        skill?.effects ?? [],
+        skill ? getCookieSkillEffects(skill, command.trigger) : [],
         command.effectTargets,
         options.shuffle,
         command.chooseOneModes,
@@ -2076,7 +2124,11 @@ const applyPlayerActionCommand = (
         sourceCardName: source?.card.name,
       }
       const effects = expandChooseOneSequence(
-        filterActiveEffects(activated, context, skill?.effects ?? []),
+        filterActiveEffects(
+          activated,
+          context,
+          skill ? getCookieSkillEffects(skill, command.trigger) : [],
+        ),
         command.chooseOneModes,
       )
       if (activated.status !== 'playing' || effects.length === 0) {

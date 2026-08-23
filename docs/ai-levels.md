@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
-> **狀態：Lv.1–Lv.4 已實作完成；Lv.4 採有限預算的合法 command beam 搜尋。Lv.5 為設計稿，未實作。**
-> **最後更新：2026-08-16（通用策略 G4）。**
+> **狀態：Lv.1–Lv.4 已實作完成；Lv.5 challenger 已進入實驗驗證，尚未通過對 Lv.4 的升格勝率門檻。**
+> **最後更新：2026-08-23（Lv.5 Combo／終局預測迭代）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -15,7 +15,14 @@
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
 | Lv.3 | 評估式 | 對每個合法候選輸出 `ActionScoreBreakdown`，以結構化能力、牌組 profile、已知資訊與公開局面一步評分 | +R5, R6b, R7, R8, R12–R15 | ✅ 完成 |
 | Lv.4 | 多步規劃 | 有限 beam command search（w=5, d=5, 240 nodes, 150ms）、R16 資源預留；timeout 回退 Lv.3 | +R9, R10, R11, R12–R16, lv4RiskBonus | ✅ 完成 |
-| Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值 | 未實作 | ⬜ 設計稿 |
+| Lv.5 | 高手對抗（實驗） | Lv.4 搜尋（w=6, d=6, 360 nodes, 180ms）＋公開記憶／回應期望＋通用 ComboPlan＋終局洗傷與空場預測；timeout 回退 Lv.4 | +R17–R20 | 🧪 challenger；尚未升格 |
+
+Lv.5 的「對手回應／終局預測」只使用公開手牌與牌庫張數、公開卡牌能力、
+棄牌區、Break 與戰鬥區 HP，不是讀取實際隱藏手牌，也不是完整 opponent
+tree。2026-08-23 全 corpus untouched holdout（46 副牌組、mirror＋輪替跨
+牌組、seeds 401–402、先後攻換位）為 186／368（50.54%，Wilson 95% CI
+45.46%–55.62%），`stuck`、invalid action、deadlock、turn cap 均為 0；
+因此目前證明安全與架構落地，**仍未證明勝率優於 Lv.4**。
 
 ## 勝率驗收（seeds 1–30）
 
@@ -32,7 +39,7 @@
 - Lv.4 vs Lv.3 > 75%：需審核是否過強
 - Lv.4 vs Lv.3 > 80%：暫停，必須降權或回滾
 
-## 規則系統（R1–R16）
+## 規則系統（R1–R20）
 
 | 規則 | 名稱 | 適用等級 | 狀態 |
 |---|---|---|---|
@@ -54,6 +61,10 @@
 | R14 | 已知資訊安全記憶 | Lv.3+ | ✅ Done |
 | R15 | Setup／Payoff 計畫評分 | Lv.3+ | ✅ Done |
 | R16 | 指令順序與資源預留 | Lv.4 | ✅ Done |
+| R17 | 公開資訊對手回應期望 | Lv.5 | 🧪 已接入；待 champion–challenger 校準 |
+| R18 | 同一 ComboPlan 前置／收益配對與生命週期 | Lv.5 | 🧪 已接入；不同 plan 不得誤完成 |
+| R19 | Combo payoff 能量張數與顏色預留 | Lv.5 | 🧪 已接入；只採規則層與公開支援資訊 |
+| R20 | 對手牌庫耗盡、Refresh 洗傷與空場敗北預測 | Lv.5 | 🧪 已接入；隱藏手牌只做公開機率估計 |
 
 ### R6c Deferred 理由
 
@@ -84,6 +95,24 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 | `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
 | `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
 | `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露 |
+
+### Lv.5 challenger 組件
+
+| 組件 | 位置 | 說明 |
+|---|---|---|
+| `AiStrategyMemory` | `ai/strategy/session.ts` | 每場持久保存合法 `KnowledgeState`、上一個 command 與 setup/payoff/tempo 意圖；forced pending 不覆蓋意圖 |
+| `estimateOpponentResponse` | `ai/strategy/opponent-response.ts` | 只從 `PlayerView` 的公開手牌張數與公開卡牌 capability 估計攻擊回應曝險 |
+| `ComboPlan` | `ai/strategy/combo-plan.ts` | 由 capability synergy edge 自動建立穩定 plan ID、前置／收益、付款與有效期；不使用系列或卡號特判 |
+| Combo lifecycle | `ai/strategy/session.ts` | 只讓相同 plan 的 confirmed setup 完成 payoff，跨步記錄 started／completed／abandoned |
+| `forecastOpponentEndgame` | `ai/strategy/endgame-forecast.ts` | 由公開牌庫／手牌張數、棄牌區最低 LV、Break 與最後一隻餅乾 HP 預判補位、Refresh 洗傷及無餅乾敗北 |
+| Lv.5 search budget | `ai/strategy/lv4-search.ts` | 重用隱藏資訊安全搜尋器，擴為 width 6、depth 6、360 nodes、180ms；未知抽牌仍停止展開 |
+| capability audit | `scripts/audit-ai-capabilities.ts` | 對 1,244 筆正式 inventory／967 種唯一 runtime 機制輸出 ready/conservative/blocked；`--strict` 阻擋不支援效果 |
+| challenger gate | `scripts/benchmark-ai-challenger.ts` | 支援 BS7 快速矩陣及 `--corpus=full --matchups=both` 的 46 副全代表牌組 mirror／輪替跨牌組、先後攻換位 |
+
+全 corpus holdout 實際記錄 36 次 Combo 啟動、6 次完成、19 次放棄，以及
+5 次打空戰鬥區的無補位風險預測；該樣本未自然遇到 Refresh 終局，洗傷
+路徑另以專門 fixture 驗證。這些 telemetry 是後續改善完成率的依據，不能
+單獨當成勝率提升證據。
 
 ## 已知問題
 
@@ -116,12 +145,11 @@ fallback 路徑。由於 `getLegalTurnCommands` 一律含 `advance-phase`
 56.7%——R10 開始真的抑制某些會暴露反擊風險的攻擊，屬預期內的保守化，
 未觸發任何上限或下限警戒。
 
-## 測試狀態
+## Lv.5 升格條件
 
-```text
-1435 passed, 1 suite failed
-pre-existing issue: opencode-go-benchmark.test.js has no test suite
-Invalid Actions: 0
-Deadlocks: 0
-Hidden Info Access: 0
-```
+1. 全部配對對局完成，`stuck`、invalid action、deadlock、turn cap 必須為 0。
+2. training／validation／holdout seed 不可混用；調權後必須換一組 untouched holdout。
+3. 五色與先後攻都要雙邊換位，不以單一有利牌組或單一 seed 宣稱提升。
+4. 初篩勝率至少 52%；正式取代 Lv.4 champion 前，Wilson 95% CI 下界需大於 50%。
+5. 新卡池先通過 `npm run ai:audit:capabilities`，不支援能力不得靜默當作已理解。
+6. 「全卡池訓練」包含全部正式 inventory 印刷記錄；異圖以同 `poolId` 合併為唯一機制學習，對局 gate 則使用 46 副 Starter／BS2–BS7 正式代表牌組。

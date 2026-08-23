@@ -51,11 +51,16 @@ const evidenceMatchesAxis = (
 ): boolean => {
   switch (axis) {
     case 'aggression':
-      return evidence.kind === 'damage' || evidence.kind === 'attack-modification'
+      return evidence.kind === 'damage' ||
+        evidence.kind === 'attack-modification' ||
+        evidence.kind === 'effect-damage-modification'
     case 'control':
-      return evidence.kind === 'control' || evidence.kind === 'discard' || evidence.kind === 'rest' || evidence.kind === 'trap' || evidence.kind === 'block'
+      return evidence.kind === 'control' || evidence.kind === 'discard' ||
+        evidence.kind === 'inspect-hand' || evidence.kind === 'rest' ||
+        evidence.kind === 'trap' || evidence.kind === 'block'
     case 'effect-damage':
-      return evidence.kind === 'damage' && evidence.source !== 'attack'
+      return (evidence.kind === 'damage' && evidence.source !== 'attack') ||
+        evidence.kind === 'effect-damage-modification'
     case 'support-engine':
       return evidence.strategyTags.includes('support')
     case 'deck-order-engine':

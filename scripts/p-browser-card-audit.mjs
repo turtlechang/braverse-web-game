@@ -80,6 +80,12 @@ const cardAuditConfigs = {
     reportPath: 'docs/bs6-browser-card-audit-2026-08-13.json',
     expectedRecordCount: 138,
   },
+  BS7: {
+    label: 'BS7',
+    formalPaths: ['data/cards/official-arena-of-glory-bs7.en.json'],
+    reportPath: 'docs/bs7-browser-card-audit-2026-08-21.json',
+    expectedRecordCount: 143,
+  },
 }
 const auditConfig = cardAuditConfigs[requestedSeries]
 if (!auditConfig) {
@@ -238,7 +244,9 @@ const runCardCheck = async (page, card) => {
       effectSurfaces: surfaces,
       status: 'PASS',
       auditStatus: '載入通過',
-      flow: 'candidate-card-check-entry',
+      flow: auditConfig.candidate
+        ? 'candidate-card-check-entry'
+        : 'formal-card-check-entry',
       promptVisible: firstPrompt(bodyText),
       modalVisible: modalCount > 0,
       actionableControls: actionCount,
@@ -267,7 +275,7 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== ${auditConfig.label} Browser formal-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} Browser ${auditConfig.candidate ? 'candidate' : 'formal'}-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
     try {
@@ -285,7 +293,9 @@ try {
         effectSurfaces: getEffectSurfaces(card),
         status: 'FAIL',
         auditStatus: '阻塞',
-        flow: 'candidate-card-check-entry',
+        flow: auditConfig.candidate
+          ? 'candidate-card-check-entry'
+          : 'formal-card-check-entry',
         error: error instanceof Error ? error.message : String(error),
       }
       results.push(failure)
@@ -309,7 +319,7 @@ try {
     viewport: '1440x960',
     sources: auditConfig.formalPaths,
     scope:
-      `Formal-pool card-check entry audit for every promoted ${auditConfig.label} record. This report separates route/card rendering from interactive effect proof.`,
+      `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} card-check entry audit for every ${auditConfig.candidate ? 'inventory candidate' : `promoted ${auditConfig.label}`} record. This report separates route/card rendering from interactive effect proof.`,
     summary: {
       total: results.length,
       passed,

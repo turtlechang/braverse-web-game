@@ -790,6 +790,7 @@ function App() {
                   supportToHandIds,
                   hpToTrashIds,
                   trashToDeckIds,
+                  hpToHandIds,
                 ) => {
                   match.dispatch(
                     {
@@ -802,6 +803,7 @@ function App() {
                       supportToHandIds,
                       hpToTrashIds,
                       trashToDeckIds,
+                      hpToHandIds,
                     },
                     '已支付攻擊後續效果費用。',
                   )

@@ -1,7 +1,7 @@
 import type { PlayerActionCommand } from '../../commands'
 import type { PlayerView } from '../../player-view'
 import type { GameState, PlayerId } from '../../types'
-import type { ActionScoreBreakdown } from './action-score'
+import type { ActionIdentity, ActionScoreBreakdown } from './action-score'
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
@@ -38,6 +38,14 @@ export const DEFAULT_LV4_SEARCH_OPTIONS: Readonly<Lv4SearchOptions> = {
   timeBudgetMs: 150,
 }
 
+/** Lv.5 維持同一個隱藏資訊安全搜尋器，只擴大選擇性 command 預算。 */
+export const DEFAULT_LV5_SEARCH_OPTIONS: Readonly<Lv4SearchOptions> = {
+  beamWidth: 6,
+  maxDepth: 6,
+  maxNodes: 360,
+  timeBudgetMs: 180,
+}
+
 export interface Lv4SearchHooks {
   getLegalCommands: (
     state: GameState,
@@ -57,12 +65,19 @@ export interface Lv4SearchHooks {
     playerId: PlayerId,
     command: PlayerActionCommand,
   ) => number
+  /** Lv.5 可在根節點延續上一個公開策略意圖；Lv.4 不提供此 hook。 */
+  persistentIntentBonus?: (
+    plan: TacticalPlan,
+    identity: ActionIdentity,
+    depth: number,
+  ) => number
   /** pending、換人、結束階段等不應在本回合搜尋繼續展開的狀態。 */
   isTerminal: (state: GameState, playerId: PlayerId) => boolean
 }
 
 export interface Lv4PlanProgress extends Lv4PlanTelemetry {
   sharedTags: readonly string[]
+  activeComboPlanIds: readonly string[]
 }
 
 export interface Lv4SearchStep {
@@ -102,7 +117,9 @@ const initialPlan = (): Lv4PlanProgress => ({
   setupSteps: 0,
   payoffSteps: 0,
   completedPayoffs: 0,
+  abandonedCombos: 0,
   sharedTags: [],
+  activeComboPlanIds: [],
 })
 
 const compareNodes = (left: SearchNode, right: SearchNode): number => {
@@ -144,6 +161,7 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'tactical-payoff' ||
     contribution.id === 'tactical-setup' ||
     contribution.id === 'strategy-profile' ||
+    contribution.id === 'intent-continuity' ||
     contribution.id === 'unsupported-effect' ||
     contribution.id === 'unknown-information',
   )
@@ -152,27 +170,54 @@ export const selectLv4StrategicContribution = (
 export const advanceLv4Plan = (
   previous: Lv4PlanProgress,
   tacticalPlan: TacticalPlan,
+  actionKind?: string,
 ): { plan: Lv4PlanProgress; completionBonus: number } => {
-  if (tacticalPlan.kind === 'setup') {
+  if (
+    tacticalPlan.kind === 'setup' &&
+    tacticalPlan.status === 'confirmed' &&
+    tacticalPlan.comboPlanId
+  ) {
     return {
       plan: {
         ...previous,
         setupSteps: previous.setupSteps + 1,
         sharedTags: tacticalPlan.sharedTags,
+        activeComboPlanIds: [
+          ...new Set([...previous.activeComboPlanIds, tacticalPlan.comboPlanId]),
+        ],
       },
       completionBonus: 0,
     }
   }
-  if (tacticalPlan.kind === 'payoff') {
-    const completesKnownSetup = previous.setupSteps > previous.payoffSteps
+  if (
+    tacticalPlan.kind === 'payoff' &&
+    tacticalPlan.status === 'confirmed' &&
+    tacticalPlan.comboPlanId
+  ) {
+    const completesKnownSetup = previous.activeComboPlanIds.includes(
+      tacticalPlan.comboPlanId,
+    )
     return {
       plan: {
         ...previous,
         payoffSteps: previous.payoffSteps + 1,
         completedPayoffs: previous.completedPayoffs + Number(completesKnownSetup),
         sharedTags: tacticalPlan.sharedTags,
+        activeComboPlanIds: completesKnownSetup
+          ? previous.activeComboPlanIds.filter((id) => id !== tacticalPlan.comboPlanId)
+          : previous.activeComboPlanIds,
       },
-      completionBonus: completesKnownSetup ? 18 : 0,
+      completionBonus: completesKnownSetup ? 24 : 0,
+    }
+  }
+  if (actionKind === 'advance-phase' && previous.activeComboPlanIds.length > 0) {
+    return {
+      plan: {
+        ...previous,
+        abandonedCombos: previous.abandonedCombos + previous.activeComboPlanIds.length,
+        activeComboPlanIds: [],
+      },
+      completionBonus: -previous.activeComboPlanIds.length * 12,
     }
   }
   return { plan: previous, completionBonus: 0 }
@@ -190,6 +235,7 @@ const updateTelemetryForStep = (
     setupSteps: Math.max(telemetry.plan.setupSteps, plan.setupSteps),
     payoffSteps: Math.max(telemetry.plan.payoffSteps, plan.payoffSteps),
     completedPayoffs: Math.max(telemetry.plan.completedPayoffs, plan.completedPayoffs),
+    abandonedCombos: Math.max(telemetry.plan.abandonedCombos, plan.abandonedCombos),
   }
 }
 
@@ -307,14 +353,49 @@ export const searchLv4Commands = (
               : 0,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
-          const tacticalPlan = deriveTacticalPlan(context, node.view, sourceId)
+          const tacticalPlan = deriveTacticalPlan(
+            context,
+            node.view,
+            sourceId,
+            afterView,
+            identity.kind,
+          )
+          const intentContinuity = hooks.persistentIntentBonus?.(
+            tacticalPlan,
+            identity,
+            node.depth,
+          ) ?? 0
+          const actionScore: ActionScoreBreakdown = intentContinuity === 0
+            ? scored.breakdown
+            : {
+                ...scored.breakdown,
+                total: scored.breakdown.total + intentContinuity,
+                contributions: [
+                  ...scored.breakdown.contributions,
+                  {
+                    id: 'intent-continuity',
+                    amount: intentContinuity,
+                    detail: `延續上一個公開策略意圖：${tacticalPlan.kind}。`,
+                  },
+                ],
+              }
           const reservationAssessment = assessResourceReservation(
             reservation,
             afterView,
             identity.kind,
+            tacticalPlan.kind === 'setup' &&
+              tacticalPlan.status === 'confirmed' &&
+              tacticalPlan.validity === 'same-turn' &&
+              tacticalPlan.comboPlanId &&
+              tacticalPlan.requiredEnergyCost
+              ? {
+                  planId: tacticalPlan.comboPlanId,
+                  energyCost: tacticalPlan.requiredEnergyCost,
+                }
+              : undefined,
           )
-          const progressed = advanceLv4Plan(node.plan, tacticalPlan)
-          const strategicScore = selectLv4StrategicContribution(scored.breakdown)
+          const progressed = advanceLv4Plan(node.plan, tacticalPlan, identity.kind)
+          const strategicScore = selectLv4StrategicContribution(actionScore)
           const relativeScore =
             hooks.scorePublicView(afterView) - hooks.scorePublicView(node.view) +
             hooks.legacyStepBonus(node.state, afterState, playerId, command) +
@@ -324,10 +405,10 @@ export const searchLv4Commands = (
           const step: Lv4SearchStep = {
             command,
             tacticalPlan,
-            actionScore: scored.breakdown,
-            actionScoreTotal: scored.breakdown.total,
-            unsupportedEffectCount: scored.breakdown.unsupportedEffectKinds.length,
-            unknownInformationPenalty: scored.breakdown.unknownInformationPenalty,
+            actionScore,
+            actionScoreTotal: actionScore.total,
+            unsupportedEffectCount: actionScore.unsupportedEffectKinds.length,
+            unknownInformationPenalty: actionScore.unknownInformationPenalty,
             strategicScore,
             reservation: reservationAssessment,
             relativeScore,

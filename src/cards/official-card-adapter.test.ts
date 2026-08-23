@@ -3,6 +3,7 @@ import officialGreenSample from '../../data/cards/official-starter-deck-green.en
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialBS5Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import officialBS6Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import officialBS7Candidates from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
@@ -11,6 +12,7 @@ import {
   parseOfficialCardText,
   type OfficialCardRecord,
 } from '.'
+import { normalizeOfficialCardRecord } from './official-card-adapter'
 
 const createOfficialCard = (
   overrides: Partial<OfficialCardRecord> = {},
@@ -101,6 +103,44 @@ describe('official text parser', () => {
 })
 
 describe('official card adapter', () => {
+  it('normalizes the valid BS7 attack-damage syntax without accepting malformed source data', () => {
+    const cards = officialBS7Candidates.cards as OfficialCardRecord[]
+    const nutmegTiger = cards.find((card) => card.cardNumber === 'BS7-001')
+    const malformed = cards.find((card) => card.cardNumber === 'BS7-017')
+
+    expect(nutmegTiger).toBeDefined()
+    expect(malformed).toBeDefined()
+    expect(normalizeOfficialCardRecord(nutmegTiger!).attackText).toBe(
+      '<{R}{N}> Claws out! {da} 1',
+    )
+    expect(convertOfficialCardToGameCard(nutmegTiger!)).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 1,
+        attackCost: 2,
+        attackEnergyCost: { red: 1, neutral: 1 },
+      },
+    })
+
+    const remainingWithoutDamage = cards
+      .filter((card) => card.type === 'cookie' || card.type === 'flip')
+      .filter((card) => !String(card.attackText ?? '').includes('{da}'))
+      .filter((card) => !String(normalizeOfficialCardRecord(card).attackText).includes('{da}'))
+      .map((card) => card.cardNumber)
+    expect(remainingWithoutDamage).toEqual([])
+    expect(normalizeOfficialCardRecord(malformed!).attackText).toBe(
+      '<{R}{N}> Dragon Hunter {da} 1',
+    )
+    expect(convertOfficialCardToGameCard(malformed!)).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 1,
+        attackCost: 2,
+        attackEnergyCost: { red: 1, neutral: 1 },
+      },
+    })
+  })
+
   it('preserves BS3 PURE, Ancient, Soul Jam, and special-victory runtime data', () => {
     const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
     const findBs3Card = (cardNumber: string) => {

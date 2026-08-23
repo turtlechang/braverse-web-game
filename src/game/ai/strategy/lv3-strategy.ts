@@ -69,6 +69,8 @@ export const scoreLv3ActionCandidate = <T>(
     context,
     beforeView,
     sourceCard?.id,
+    candidate.afterView,
+    candidate.identity.kind,
   )
   const breakdown = scoreAction({
     identity: candidate.identity,

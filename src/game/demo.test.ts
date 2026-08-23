@@ -9,6 +9,7 @@ import {
   getForcedAttackTargetId,
   resolveNextDamage,
   resolveAttackEffect,
+  resolveFaintEffect,
   advancePhase,
   type CardEffect,
   type GameCard,
@@ -2191,6 +2192,1460 @@ describe('BS4 condition fixtures', () => {
     )
   })
 
+  it('keeps BS7-001 in the candidate Browser fixture, with the LV.3 target boundary enforced', () => {
+    const state = createCardCheckDemoState('BS7-001')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-001',
+    )
+    const target = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+
+    expect(source?.hpCards).toHaveLength(2)
+    expect(target?.card.level).toBe(3)
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        source!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+
+    const paid = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+    expect(
+      paid.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === source!.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(1)
+    const pending = paid.pendingAbilityEffect
+    expect(pending).toBeDefined()
+    expect(
+      getEffectSelectionCandidates(
+        paid,
+        {
+          sourcePlayerId: pending!.sourcePlayerId,
+          sourceInstanceId: pending!.sourceInstanceId,
+        },
+        pending!.effects[pending!.effectIndex]!,
+      ).map((entry) => entry.instanceId),
+    ).toEqual([target!.card.instanceId])
+
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target!.card.instanceId],
+    })
+    expect(getEffectiveAttack(resolved, target!.card.instanceId)).toBe(
+      target!.card.attack + 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-001')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-001',
+    )
+    const invalidLv2Target = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativeSource?.hpCards).toHaveLength(2)
+    expect(invalidLv2Target?.card.level).toBe(2)
+
+    const negativePaid = applyGameCommand(negative, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [negativeSource!.card.instanceId],
+    })
+    const negativePending = negativePaid.pendingAbilityEffect
+    expect(negativePending).toBeDefined()
+    expect(
+      getEffectSelectionCandidates(
+        negativePaid,
+        {
+          sourcePlayerId: negativePending!.sourcePlayerId,
+          sourceInstanceId: negativePending!.sourceInstanceId,
+        },
+        negativePending!.effects[negativePending!.effectIndex]!,
+      ),
+    ).toEqual([])
+    expect(() =>
+      applyGameCommand(negativePaid, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: [invalidLv2Target!.card.instanceId],
+      }),
+    ).toThrow('選擇的卡牌不是此效果的合法目標。')
+  })
+
+  it('keeps BS7-002 in the candidate FLIP fixture with a real red Arena A/B boundary', () => {
+    const positive = createCardCheckDemoState('BS7-002')
+    const positiveArena = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    const positiveTarget = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === positive.pendingBattle?.targetInstanceId,
+    )
+
+    expect(positive.pendingBattle).toMatchObject({
+      stage: 'flip',
+      revealedHpCard: expect.objectContaining({ id: 'BS7-002' }),
+    })
+    expect(positiveTarget?.card.level).toBe(2)
+    expect(positiveArena?.card).toMatchObject({
+      energyColor: 'red',
+      keywords: ['arena'],
+    })
+
+    const resolved = resolveFlip(positive, 'player-one', { activate: true })
+    expect(
+      resolved.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === positiveTarget?.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(2)
+
+    const negative = createCardNegativeDemoState('BS7-002')
+    const negativeArena = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativeArena?.card).toMatchObject({ energyColor: 'red', keywords: [] })
+
+    const blocked = resolveFlip(negative, 'player-one', { activate: true })
+    expect(blocked.players['player-one'].battleArea[0]?.hpCards).toHaveLength(1)
+    expect(blocked.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS7-002' }),
+    )
+  })
+
+  it('keeps BS7-003 On Play condition truthful across the runtime A/B boundary', () => {
+    const positive = createCardCheckDemoState('BS7-003')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-003',
+    )
+    const positivePartner = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+
+    expect(positiveSource?.skill?.trigger).toBe('on-play')
+    expect(positivePartner?.card.keywords).toEqual(['arena'])
+
+    const deployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    expect(deployed.pendingOnPlay).toMatchObject({
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      origin: 'hand',
+    })
+
+    const queued = applyGameCommand(deployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    expect(queued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'disable-block',
+          condition: {
+            kind: 'battle-area-has-keyword',
+            keyword: 'arena',
+            excludeSource: true,
+          },
+        },
+      ],
+    })
+
+    const resolved = applyGameCommand(queued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.blockDisabledUntilTurn?.['player-two']).toBe(
+      resolved.turnNumber,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-003')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-003',
+    )
+    const negativePartner = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativePartner?.card.keywords).toEqual([])
+
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    expect(canActivateCookieSkill(
+      negativeDeployed,
+      'player-one',
+      negativeSource!.instanceId,
+      'on-play',
+    )).toBe(false)
+    const negativeResolved = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(negativeResolved.pendingOnPlay).toBeNull()
+    expect(negativeResolved.pendingAbilityEffect).toBeUndefined()
+    expect(negativeResolved.blockDisabledUntilTurn?.['player-two']).toBeUndefined()
+  })
+
+  it('keeps BS7-004 effect-damage condition and red payment on the real skill queue', () => {
+    const positive = createCardCheckDemoState('BS7-004')
+    const source = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-004',
+    )
+    const target = positive.players['player-two'].battleArea[0]
+    const payment = positive.players['player-one'].supportArea[0]
+
+    expect(positive.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(true)
+    expect(source?.card.keywords).toEqual(['arena'])
+    expect(
+      canActivateCookieSkill(
+        positive,
+        'player-one',
+        source!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+
+    const queued = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [payment!.card.instanceId],
+    })
+    expect(queued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+
+    const resolved = applyGameCommand(queued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+    expect(
+      resolved.players['player-two'].battleArea.find(
+        (entry) => entry.card.instanceId === target.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(target.hpCards.length - 1)
+
+    const negative = createCardNegativeDemoState('BS7-004')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-004',
+    )
+    expect(negative.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(false)
+    expect(
+      canActivateCookieSkill(
+        negative,
+        'player-one',
+        negativeSource!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(false)
+    expect(() =>
+      applyGameCommand(negative, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: negativeSource!.card.instanceId,
+        trigger: 'activate',
+        paymentIds: [negative.players['player-one'].supportArea[0]!.card.instanceId],
+      }),
+    ).toThrow('目前無法發動這個餅乾技能。')
+  })
+
+  it('keeps BS7-006 On Play HP cost and optional draw in order', () => {
+    const positive = createCardCheckDemoState('BS7-006')
+    const source = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-006',
+    )
+    expect(source?.skill?.trigger).toBe('on-play')
+
+    const deployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source!.instanceId,
+    })
+    const activated = applyGameCommand(deployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.instanceId],
+    })
+    expect(
+      activated.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === source!.instanceId,
+      )?.hpCards,
+    ).toHaveLength(1)
+    expect(activated.pendingAbilityEffect).toMatchObject({
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+
+    const drawPending = applyGameCommand(activated, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(drawPending.pendingDrawUpTo).toMatchObject({
+      playerId: 'player-one',
+      max: 1,
+    })
+    const drawn = applyGameCommand(drawPending, {
+      kind: 'resolve-draw-up-to',
+      playerId: 'player-one',
+      drawCount: 1,
+    })
+    expect(drawn.pendingDrawUpTo).toBeNull()
+    expect(drawn.players['player-one'].deck).toHaveLength(17)
+
+    const negative = createCardNegativeDemoState('BS7-006')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-006',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const skipped = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(skipped.pendingOnPlay).toBeNull()
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(
+      skipped.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === negativeSource!.instanceId,
+      )?.hpCards,
+    ).toHaveLength(2)
+  })
+
+  it('keeps BS7-007 On Play damage scoped to either-side Arena Cookies', () => {
+    const positive = createCardCheckDemoState('BS7-007')
+    const source = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-007',
+    )
+    const opponentArena = positive.players['player-two'].battleArea[0]
+    expect(source?.skill?.trigger).toBe('on-play')
+    expect(opponentArena?.card.keywords).toEqual(['arena'])
+
+    const deployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source!.instanceId,
+    })
+    const queued = applyGameCommand(deployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    expect(queued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'damage',
+          target: { side: 'either', keyword: 'arena' },
+        },
+      ],
+    })
+    const resolved = applyGameCommand(queued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [opponentArena!.card.instanceId],
+    })
+    expect(
+      resolved.players['player-two'].battleArea[0]?.hpCards,
+    ).toHaveLength(opponentArena!.hpCards.length - 1)
+
+    const negative = createCardNegativeDemoState('BS7-007')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-007',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const skipped = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(skipped.pendingOnPlay).toBeNull()
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(skipped.players['player-two'].battleArea[0]?.hpCards).toHaveLength(6)
+  })
+
+  it('keeps BS7-008 Arena HP payment before the self-side HP gain', () => {
+    const positive = createCardCheckDemoState('BS7-008')
+    const source = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-008',
+    )
+    const arenaCost = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(arenaCost?.card.keywords).toEqual(['arena'])
+
+    const deployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source!.instanceId,
+    })
+    const paid = applyGameCommand(deployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+      hpToTrashTargetIds: [arenaCost!.card.instanceId],
+    })
+    expect(
+      paid.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === arenaCost!.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(arenaCost!.hpCards.length - 1)
+    expect(paid.pendingAbilityEffect).toMatchObject({
+      effects: [{ kind: 'gain-hp', amount: 1 }],
+    })
+    const gained = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [source!.instanceId],
+    })
+    expect(
+      gained.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === source!.instanceId,
+      )?.hpCards,
+    ).toHaveLength(4)
+
+    const negative = createCardNegativeDemoState('BS7-008')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-008',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const skipped = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(skipped.pendingOnPlay).toBeNull()
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(
+      skipped.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === negativeSource!.instanceId,
+      )?.hpCards,
+    ).toHaveLength(3)
+  })
+
+  it('keeps BS7-010 faint damage behind the remaining Arena condition', () => {
+    const positive = createCardCheckDemoState('BS7-010')
+    const faint = positive.pendingFaintEffects?.[0]
+    const positiveArena = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+
+    expect(faint?.effect).toMatchObject({
+      kind: 'damage',
+      amount: 1,
+      condition: {
+        kind: 'battle-area-has-keyword',
+        side: 'self',
+        keyword: 'arena',
+      },
+    })
+    expect(positiveArena?.card.keywords).toEqual(['arena'])
+    expect(isEffectConditionMet(positive, faint!.context, faint!.effect)).toBe(true)
+
+    const resolved = resolveFaintEffect(positive, [positiveTarget!.card.instanceId])
+    expect(resolved.pendingFaintEffects).toBeUndefined()
+    expect(resolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      positiveTarget!.hpCards.length - 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-010')
+    const negativeFaint = negative.pendingFaintEffects?.[0]
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    expect(
+      negative.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      )?.card.keywords,
+    ).toEqual([])
+    expect(isEffectConditionMet(negative, negativeFaint!.context, negativeFaint!.effect)).toBe(false)
+
+    const blocked = resolveFaintEffect(negative, [negativeTarget!.card.instanceId])
+    expect(blocked.pendingFaintEffects).toBeUndefined()
+    expect(blocked.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget!.hpCards.length,
+    )
+  })
+
+  it('keeps BS7-011 FLIP draw behind both hand-size and red Arena conditions', () => {
+    const positive = createCardCheckDemoState('BS7-011')
+    const positiveArena = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(positive.pendingBattle).toMatchObject({
+      stage: 'flip',
+      revealedHpCard: expect.objectContaining({ id: 'BS7-011' }),
+    })
+    expect(positive.players['player-one'].hand).toHaveLength(4)
+    expect(positiveArena?.card).toMatchObject({
+      energyColor: 'red',
+      keywords: ['arena'],
+    })
+
+    const resolved = resolveFlip(positive, 'player-one', { activate: true })
+    expect(resolved.players['player-one'].hand).toHaveLength(6)
+    expect(resolved.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS7-011' }),
+    )
+
+    const negative = createCardNegativeDemoState('BS7-011')
+    const negativeArena = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativeArena?.card).toMatchObject({
+      energyColor: 'red',
+      keywords: [],
+    })
+    const blocked = resolveFlip(negative, 'player-one', { activate: true })
+    expect(blocked.players['player-one'].hand).toHaveLength(4)
+    expect(blocked.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS7-011' }),
+    )
+  })
+
+  it('keeps BS7-012 attack bonus locked to the Arena HP cost Cookie', () => {
+    const positive = createCardCheckDemoState('BS7-012')
+    const source = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-012',
+    )
+    const arenaCost = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(source?.card.skill).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { hpToTrash: { amount: 1, keyword: 'arena' } },
+    })
+    expect(arenaCost?.card.keywords).toEqual(['arena'])
+
+    const queued = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [arenaCost!.card.instanceId],
+    })
+    expect(queued.costRecord).toMatchObject({
+      hpTrashCookieInstanceId: arenaCost!.card.instanceId,
+    })
+    expect(queued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'modify-attack',
+          target: { side: 'self', costSelected: true },
+        },
+      ],
+    })
+
+    const resolved = applyGameCommand(queued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [arenaCost!.card.instanceId],
+    })
+    expect(
+      resolved.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === arenaCost!.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(arenaCost!.hpCards.length - 1)
+    expect(getEffectiveAttack(resolved, arenaCost!.card.instanceId)).toBe(
+      arenaCost!.card.attack + 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-012')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-012',
+    )
+    expect(
+      canActivateCookieSkill(
+        negative,
+        'player-one',
+        negativeSource!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(false)
+  })
+
+  it('applies BS7-013 only to red LV.2+ Arena effect-damage sources', () => {
+    const positive = createCardCheckDemoState('BS7-013')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-013-effect-source',
+    )
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+    expect(positiveSource?.skill?.effects[0]).toMatchObject({
+      kind: 'damage',
+      amount: 1,
+    })
+
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const positiveResolved = applyGameCommand(positiveQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [positiveTarget!.card.instanceId],
+    })
+    expect(
+      positiveResolved.players['player-two'].battleArea[0]?.hpCards,
+    ).toHaveLength(positiveTarget!.hpCards.length - 2)
+
+    const negative = createCardNegativeDemoState('BS7-013')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-013-effect-source',
+    )
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const negativeQueued = applyGameCommand(negativeDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const negativeResolved = applyGameCommand(negativeQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [negativeTarget!.card.instanceId],
+    })
+    expect(
+      negativeResolved.players['player-two'].battleArea[0]?.hpCards,
+    ).toHaveLength(negativeTarget!.hpCards.length - 1)
+  })
+
+  it('keeps BS7-014 named-cookie attack aura separate from its Activate damage', () => {
+    const positive = createCardCheckDemoState('BS7-014')
+    const positiveSource = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-014',
+    )
+    const positivePartner = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(positivePartner?.card.name).toBe('Kouign-Amann Cookie')
+    expect(getEffectiveAttack(positive, positiveSource!.card.instanceId)).toBe(
+      positiveSource!.card.attack + 1,
+    )
+
+    const positiveDiscard = positive.players['player-one'].hand[0]
+    const positiveTarget = positive.players['player-two'].battleArea[1]
+    const positiveQueued = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      discardHandIds: [positiveDiscard.instanceId],
+    })
+    const positiveResolved = applyGameCommand(positiveQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [positiveTarget!.card.instanceId],
+    })
+    expect(positiveResolved.players['player-two'].battleArea[1]?.hpCards)
+      .toHaveLength(positiveTarget!.hpCards.length - 1)
+
+    const negative = createCardNegativeDemoState('BS7-014')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-014',
+    )
+    const negativePartner = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativePartner?.card.name).toBe('self-extra-1')
+    expect(getEffectiveAttack(negative, negativeSource!.card.instanceId)).toBe(
+      negativeSource!.card.attack,
+    )
+  })
+
+  it('prepares BS7-015 Arena attack Then damage with positive and negative conditions', () => {
+    const positive = createCardCheckDemoState('BS7-015')
+    const positiveSource = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-015',
+    )
+    const positiveEffect = positive.pendingBattle?.attackEffects[0]
+    if (!positiveSource || !positiveEffect) throw new Error('BS7-015 positive fixture is incomplete')
+    expect(positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.card.keywords).toContain('arena')
+    expect(isEffectConditionMet(
+      positive,
+      { sourcePlayerId: 'player-one', sourceInstanceId: positiveSource.card.instanceId },
+      positiveEffect,
+    )).toBe(true)
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+    const positiveResolved = resolveAttackEffect(positive, 'player-one', [positiveTarget.card.instanceId])
+    expect(positiveResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      positiveTarget.hpCards.length - 2,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-015')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-015',
+    )
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    if (!negativeSource || !negativeEffect) throw new Error('BS7-015 negative fixture is incomplete')
+    expect(negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.card.keywords).not.toContain('arena')
+    expect(isEffectConditionMet(
+      negative,
+      { sourcePlayerId: 'player-one', sourceInstanceId: negativeSource.card.instanceId },
+      negativeEffect,
+    )).toBe(false)
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativeResolved = resolveAttackEffect(negative, 'player-one', [negativeTarget.card.instanceId])
+    expect(negativeResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget.hpCards.length,
+    )
+  })
+
+  it('keeps BS7-016 On Play draw gated by the effect-damage flag', () => {
+    const positive = createCardCheckDemoState('BS7-016')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-016',
+    )
+    expect(positive.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(true)
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    expect(positiveQueued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+        },
+      ],
+    })
+    const positiveDrawPending = applyGameCommand(positiveQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(positiveDrawPending.pendingDrawUpTo).toMatchObject({ max: 1 })
+    const positiveDrawn = applyGameCommand(positiveDrawPending, {
+      kind: 'resolve-draw-up-to',
+      playerId: 'player-one',
+      drawCount: 1,
+    })
+    expect(positiveDrawn.players['player-one'].deck).toHaveLength(14)
+
+    const negative = createCardNegativeDemoState('BS7-016')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-016',
+    )
+    expect(negative.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(false)
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const negativeSkipped = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(negativeSkipped.pendingOnPlay).toBeNull()
+    expect(negativeSkipped.pendingAbilityEffect).toBeUndefined()
+    expect(negativeSkipped.players['player-one'].deck).toHaveLength(15)
+  })
+
+  it('keeps BS7-017 draw-then-discard gated by a low-HP Arena Cookie', () => {
+    const positive = createCardCheckDemoState('BS7-017')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-017',
+    )
+    const positivePartner = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(positivePartner?.card.keywords).toContain('arena')
+    expect(positivePartner?.hpCards).toHaveLength(2)
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    expect(positiveQueued.pendingAbilityEffect).toMatchObject({
+      effects: [
+        {
+          kind: 'draw-up-to-then-discard',
+          max: 2,
+          discardCount: 1,
+          condition: { maxRemainingHp: 2 },
+        },
+      ],
+    })
+    const positiveDrawPending = applyGameCommand(positiveQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(positiveDrawPending.pendingDrawUpTo).toMatchObject({
+      max: 2,
+      afterEffectsRequireDraw: true,
+    })
+    const positiveDrawn = applyGameCommand(positiveDrawPending, {
+      kind: 'resolve-draw-up-to',
+      playerId: 'player-one',
+      drawCount: 2,
+    })
+    expect(positiveDrawn.pendingOpponentHandDiscard).toMatchObject({ count: 1 })
+    const positiveDiscarded = applyGameCommand(positiveDrawn, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-one',
+      cardIds: [positiveDrawn.players['player-one'].hand[0]!.instanceId],
+    })
+    expect(positiveDiscarded.pendingOpponentHandDiscard).toBeNull()
+
+    const negative = createCardNegativeDemoState('BS7-017')
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-017',
+    )
+    expect(negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.card.keywords).not.toContain('arena')
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const negativeSkipped = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(negativeSkipped.pendingOnPlay).toBeNull()
+    expect(negativeSkipped.pendingAbilityEffect).toBeUndefined()
+    expect(negativeSkipped.pendingDrawUpTo).toBeUndefined()
+  })
+
+  it('keeps BS7-018 attack Then target damage gated by another Arena Cookie', () => {
+    const positive = createCardCheckDemoState('BS7-018')
+    const positiveSource = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-018',
+    )
+    const positiveEffect = positive.pendingBattle?.attackEffects[0]
+    if (!positiveSource || !positiveEffect) throw new Error('BS7-018 positive fixture is incomplete')
+    expect(isEffectConditionMet(
+      positive,
+      { sourcePlayerId: 'player-one', sourceInstanceId: positiveSource.card.instanceId },
+      positiveEffect,
+    )).toBe(true)
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+    const positiveResolved = resolveAttackEffect(positive, 'player-one', [positiveTarget.card.instanceId])
+    expect(positiveResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      positiveTarget.hpCards.length - 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-018')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-018',
+    )
+    const negativeEffect = negative.pendingBattle?.attackEffects[0]
+    if (!negativeSource || !negativeEffect) throw new Error('BS7-018 negative fixture is incomplete')
+    expect(isEffectConditionMet(
+      negative,
+      { sourcePlayerId: 'player-one', sourceInstanceId: negativeSource.card.instanceId },
+      negativeEffect,
+    )).toBe(false)
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativeResolved = resolveAttackEffect(negative, 'player-one', [negativeTarget.card.instanceId])
+    expect(negativeResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget.hpCards.length,
+    )
+  })
+
+  it('keeps BS7-019 optional red-energy attack Then damage gated by Arena', () => {
+    const positive = createCardCheckDemoState('BS7-019')
+    const positiveSource = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-019',
+    )
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+    const positivePending = resolveAttackEffect(positive, 'player-one', [])
+    expect(positivePending.pendingOptionalCostAttack).toMatchObject({
+      cost: { energy: { red: 1 } },
+    })
+    const positivePayment = positive.players['player-one'].supportArea[0]!.card.instanceId
+    const positiveResolved = resolveOptionalCostAttack(
+      positivePending,
+      'player-one',
+      'pay',
+      [],
+      [positiveTarget.card.instanceId],
+      [positivePayment],
+    )
+    expect(positiveResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      positiveTarget.hpCards.length - 1,
+    )
+    expect(positiveSource).toBeDefined()
+
+    const negative = createCardNegativeDemoState('BS7-019')
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativePending = resolveAttackEffect(negative, 'player-one', [])
+    expect(negativePending.pendingOptionalCostAttack).toBeUndefined()
+    expect(negativePending.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget.hpCards.length,
+    )
+  })
+
+  it('keeps BS7-020 item damage gated by a two-level break lead', () => {
+    const positive = createCardCheckDemoState('BS7-020')
+    expect(positive.players['player-one'].breakArea.map((card) => card.level)).toEqual([3, 3])
+    const positiveItem = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-020',
+    )
+    if (!positiveItem) throw new Error('BS7-020 positive fixture is incomplete')
+    const positivePending = applyGameCommand(positive, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: positiveItem.instanceId,
+      paymentIds: ['support-pay-0'],
+    })
+    const positiveResolved = applyGameCommand(positivePending, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['opp-lv1'],
+    })
+    expect(positiveResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(3)
+
+    const negative = createCardNegativeDemoState('BS7-020')
+    expect(negative.players['player-one'].breakArea.map((card) => card.level)).toEqual([2, 2])
+    const negativeItem = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-020',
+    )
+    if (!negativeItem) throw new Error('BS7-020 negative fixture is incomplete')
+    const negativePending = applyGameCommand(negative, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: negativeItem.instanceId,
+      paymentIds: ['support-pay-0'],
+    })
+    expect(negativePending.pendingAbilityEffect).toBeUndefined()
+    expect(negativePending.players['player-two'].battleArea[0]?.hpCards).toHaveLength(6)
+  })
+
+  it('keeps BS7-021 Arena trap response gated by the defender board', () => {
+    const positive = createCardCheckDemoState('BS7-021')
+    const positiveTrap = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-021',
+    )
+    expect(positiveTrap).toBeDefined()
+    expect(getTrapCandidates(positive, 'player-one')).toContainEqual(
+      expect.objectContaining({ id: 'BS7-021' }),
+    )
+    const positivePlayed = playTrap(positive, 'player-one', {
+      trapInstanceId: positiveTrap!.instanceId,
+      paymentIds: ['support-pay-0', 'support-pay-1'],
+      targetIds: ['trap-attacker'],
+    })
+    expect(positivePlayed.pendingBattle?.stage).toBe('damage')
+    expect(positivePlayed.pendingBattle?.damageTargetInstanceId).toBe('trap-attacker')
+
+    const negative = createCardNegativeDemoState('BS7-021')
+    expect(getTrapCandidates(negative, 'player-one')).toEqual([])
+  })
+
+  it('keeps BS7-022 stage damage gated by the Arena effect-damage flag', () => {
+    const positive = createCardCheckDemoState('BS7-022')
+    expect(positive.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(true)
+    const stage = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-022',
+    )
+    expect(stage?.stageAbility?.effects).toMatchObject([
+      {
+        kind: 'damage',
+        amount: 1,
+        condition: { kind: 'arena-cookie-dealt-effect-damage-this-turn' },
+      },
+    ])
+
+    const negative = createCardNegativeDemoState('BS7-022')
+    expect(negative.arenaCookieDealtEffectDamageThisTurn?.['player-one']).toBe(false)
+  })
+
+  it('keeps BS7-023 as an attack-only Arena Cookie in the candidate Browser fixture', () => {
+    const positive = createCardCheckDemoState('BS7-023')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (entry) => entry.id === 'BS7-023',
+    )
+
+    expect(positiveSource).toMatchObject({
+      name: 'Honorable Paladin Trainee',
+      type: 'cookie',
+      level: 2,
+      hp: 3,
+      attack: 2,
+      attackCost: 2,
+      attackEnergyCost: { yellow: 1, neutral: 1 },
+      keywords: ['arena'],
+    })
+    expect(positiveSource?.skill).toBeUndefined()
+
+    const negative = createCardNegativeDemoState('BS7-023')
+    expect(negative.players['player-one'].hand.some((card) => card.id === 'BS7-023')).toBe(true)
+    expect(
+      negative.players['player-one'].supportArea.every((support) => support.rested),
+    ).toBe(true)
+    expect(negative.players['player-two'].battleArea[0]?.hpCards).toHaveLength(6)
+  })
+
+  it('keeps BS7-024 HP-return payment and attacked-Cookie damage on the same optional path', () => {
+    const positive = createCardCheckDemoState('BS7-024')
+    const positiveTarget = positive.players['player-two'].battleArea[0]
+    const positivePartner = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    if (!positiveTarget || !positivePartner) {
+      throw new Error('BS7-024 positive fixture is incomplete')
+    }
+    const positivePending = resolveAttackEffect(positive, 'player-one', [])
+    expect(positivePending.pendingOptionalCostAttack).toMatchObject({
+      cost: { hpToHand: { amount: 1, keyword: 'arena' } },
+    })
+    const returnedHpId = positivePartner.hpCards.at(-1)?.instanceId
+    if (!returnedHpId) throw new Error('BS7-024 positive HP fixture is incomplete')
+    const positiveResolved = resolveOptionalCostAttack(
+      positivePending,
+      'player-one',
+      'pay',
+      [],
+      [positiveTarget.card.instanceId],
+      [],
+      [],
+      [],
+      [],
+      ['self-extra-1'],
+    )
+    expect(
+      positiveResolved.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      )?.hpCards,
+    ).toHaveLength(positivePartner.hpCards.length - 1)
+    expect(positiveResolved.players['player-one'].hand).toContainEqual(
+      expect.objectContaining({ instanceId: returnedHpId }),
+    )
+    expect(positiveResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      positiveTarget.hpCards.length - 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS7-024')
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativePending = resolveAttackEffect(negative, 'player-one', [])
+    expect(negativePending.pendingOptionalCostAttack).toMatchObject({
+      cost: { hpToHand: { amount: 1, keyword: 'arena' } },
+    })
+    expect(
+      negative.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      )?.card.keywords,
+    ).not.toContain('arena')
+    const negativeSkipped = resolveOptionalCostAttack(
+      negativePending,
+      'player-one',
+      'skip',
+    )
+    expect(negativeSkipped.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget!.hpCards.length,
+    )
+    expect(
+      negativeSkipped.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      )?.hpCards,
+    ).toHaveLength(4)
+  })
+
+  it('BS7-024 queues a replacement when its HP-return cost defeats an Arena Cookie', () => {
+    const state = createCardCheckDemoState('BS7-024')
+    const target = state.players['player-two'].battleArea[0]
+    const partner = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    if (!target || !partner) {
+      throw new Error('BS7-024 replacement fixture is incomplete')
+    }
+    partner.hpCards = [partner.hpCards.at(-1)!]
+
+    const pending = resolveAttackEffect(state, 'player-one', [])
+    const result = resolveOptionalCostAttack(
+      pending,
+      'player-one',
+      'pay',
+      [],
+      [target.card.instanceId],
+      [],
+      [],
+      [],
+      [],
+      ['self-extra-1'],
+    )
+
+    expect(
+      result.players['player-one'].battleArea.some(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      ),
+    ).toBe(false)
+    expect(result.players['player-one'].breakArea).toContainEqual(partner.card)
+    expect(result.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+  })
+
+  it('keeps BS7-025 yellow Arena FLIP HP gain gated by the real colour condition', () => {
+    const positive = createCardCheckDemoState('BS7-025')
+    const positiveArena = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    const positiveTarget = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === positive.pendingBattle?.targetInstanceId,
+    )
+
+    expect(positive.pendingBattle).toMatchObject({
+      stage: 'flip',
+      revealedHpCard: expect.objectContaining({ id: 'BS7-025' }),
+    })
+    expect(positiveTarget?.card.level).toBe(2)
+    expect(positiveArena?.card).toMatchObject({
+      energyColor: 'yellow',
+      keywords: ['arena'],
+    })
+    const resolved = resolveFlip(positive, 'player-one', { activate: true })
+    expect(
+      resolved.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === positiveTarget?.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(2)
+
+    const negative = createCardNegativeDemoState('BS7-025')
+    const negativeArena = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    expect(negativeArena?.card).toMatchObject({ energyColor: 'yellow', keywords: [] })
+    const blocked = resolveFlip(negative, 'player-one', { activate: true })
+    expect(blocked.players['player-one'].battleArea[0]?.hpCards).toHaveLength(1)
+    expect(blocked.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS7-025' }),
+    )
+  })
+
+  it('keeps BS7-026 self-break payment before the optional Arena HP target', () => {
+    const positive = createCardCheckDemoState('BS7-026')
+    const positiveSource = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-026',
+    )
+    const positiveTarget = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    if (!positiveSource || !positiveTarget) throw new Error('BS7-026 positive fixture is incomplete')
+    const positivePending = resolveAttackEffect(positive, 'player-one', [])
+    expect(positivePending.pendingOptionalCostAttack).toMatchObject({
+      cost: { energy: {}, selfToBreakArea: true },
+    })
+    const positiveResolved = resolveOptionalCostAttack(
+      positivePending,
+      'player-one',
+      'pay',
+      [],
+      [positiveTarget.card.instanceId],
+    )
+    expect(positiveResolved.players['player-one'].battleArea).not.toContainEqual(
+      expect.objectContaining({ card: expect.objectContaining({ id: 'BS7-026' }) }),
+    )
+    expect(positiveResolved.players['player-one'].breakArea).toContainEqual(
+      expect.objectContaining({ id: 'BS7-026' }),
+    )
+    expect(
+      positiveResolved.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      )?.hpCards,
+    ).toHaveLength(3)
+
+    const negative = createCardNegativeDemoState('BS7-026')
+    const negativePending = resolveAttackEffect(negative, 'player-one', [])
+    expect(negativePending.pendingOptionalCostAttack).toBeUndefined()
+    expect(negative.players['player-one'].battleArea).toContainEqual(
+      expect.objectContaining({ card: expect.objectContaining({ id: 'BS7-026' }) }),
+    )
+    expect(negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.hpCards).toHaveLength(2)
+  })
+
+  it('keeps BS7-027 yellow Activate gated by the Arena break-area event', () => {
+    const positive = createCardCheckDemoState('BS7-027')
+    const source = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-027',
+    )
+    const target = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    const paymentId = positive.players['player-one'].supportArea[0]?.card.instanceId
+    if (!source || !target || !paymentId) throw new Error('BS7-027 positive fixture is incomplete')
+
+    expect(positive.arenaCookiesPlacedInBreakThisTurn?.['player-one']).toBe(1)
+    expect(positive.players['player-one'].breakArea).toContainEqual(
+      expect.objectContaining({ keywords: ['arena'] }),
+    )
+    expect(canActivateCookieSkill(
+      positive,
+      'player-one',
+      source.card.instanceId,
+      'activate',
+    )).toBe(true)
+
+    const paid = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [paymentId],
+    })
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+    expect(resolved.attackModifiers).toContainEqual(
+      expect.objectContaining({
+        targetInstanceId: target.card.instanceId,
+        amount: 2,
+      }),
+    )
+
+    const negative = createCardNegativeDemoState('BS7-027')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-027',
+    )
+    expect(negative.arenaCookiesPlacedInBreakThisTurn?.['player-one']).toBe(0)
+    expect(negative.players['player-one'].breakArea).not.toContainEqual(
+      expect.objectContaining({ keywords: ['arena'] }),
+    )
+    expect(canActivateCookieSkill(
+      negative,
+      'player-one',
+      negativeSource!.card.instanceId,
+      'activate',
+    )).toBe(false)
+  })
+
+  it('keeps BS7-028 through BS7-032 behind their Arena break-event conditions', () => {
+    const drawPositive = createCardCheckDemoState('BS7-028')
+    const drawSource = drawPositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-028',
+    )
+    const drawPaid = applyGameCommand(drawPositive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: drawSource!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    const drawWindow = applyGameCommand(drawPaid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(drawWindow.pendingDrawUpTo).toBeDefined()
+    const drawResolved = applyGameCommand(drawWindow, {
+      kind: 'resolve-draw-up-to',
+      playerId: 'player-one',
+      drawCount: 1,
+    })
+    expect(drawResolved.players['player-one'].deck).toHaveLength(
+      drawPositive.players['player-one'].deck.length - 1,
+    )
+
+    const drawNegative = createCardNegativeDemoState('BS7-028')
+    const drawNegativeSource = drawNegative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-028',
+    )
+    expect(canActivateCookieSkill(
+      drawNegative,
+      'player-one',
+      drawNegativeSource!.card.instanceId,
+      'activate',
+    )).toBe(false)
+
+    const damagePositive = createCardCheckDemoState('BS7-029')
+    const damageSource = damagePositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-029',
+    )
+    const damagePayment = damagePositive.players['player-one'].supportArea[0]!.card.instanceId
+    const damagePaid = applyGameCommand(damagePositive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: damageSource!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [damagePayment],
+    })
+    const damageTarget = damagePositive.players['player-two'].battleArea[0]
+    const damageResolved = applyGameCommand(damagePaid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [damageTarget.card.instanceId],
+    })
+    expect(damageResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      damageTarget.hpCards.length - 2,
+    )
+
+    const flipPositive = createCardCheckDemoState('BS7-030')
+    const flipTarget = flipPositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === flipPositive.pendingBattle?.targetInstanceId,
+    )
+    expect(flipPositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.card.energyColor).toBe('yellow')
+    const flipResolved = resolveFlip(flipPositive, 'player-one', { activate: true })
+    expect(flipResolved.players['player-one'].deck).toHaveLength(
+      flipPositive.players['player-one'].deck.length - 2,
+    )
+    expect(flipTarget).toBeDefined()
+
+    const flipNegative = createCardNegativeDemoState('BS7-030')
+    expect(flipNegative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )?.card.keywords).toEqual([])
+    const flipBlocked = resolveFlip(flipNegative, 'player-one', { activate: true })
+    expect(flipBlocked.players['player-one'].deck).toHaveLength(
+      flipNegative.players['player-one'].deck.length,
+    )
+
+    const onPlayPositive = createCardCheckDemoState('BS7-031')
+    const onPlaySource = onPlayPositive.players['player-one'].hand.find(
+      (card) => card.id === 'BS7-031',
+    )
+    const onPlayTarget = onPlayPositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    const onPlayDeployed = applyGameCommand(onPlayPositive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: onPlaySource!.instanceId,
+    })
+    const onPlayPaid = applyGameCommand(onPlayDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: onPlaySource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [onPlayPositive.players['player-one'].supportArea[0]!.card.instanceId],
+      discardHandIds: [onPlayPositive.players['player-one'].hand.find(
+        (card) => card.instanceId !== onPlaySource!.instanceId,
+      )!.instanceId],
+    })
+    const onPlayResolved = applyGameCommand(onPlayPaid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [onPlayTarget!.card.instanceId],
+    })
+    expect(onPlayResolved.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === onPlayTarget!.card.instanceId,
+    )?.hpCards).toHaveLength(onPlayTarget!.hpCards.length + 1)
+
+    const restPositive = createCardCheckDemoState('BS7-032')
+    const restSource = restPositive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-032',
+    )
+    expect(restSource?.rested).toBe(true)
+    const restPaid = applyGameCommand(restPositive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: restSource!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    const restResolved = applyGameCommand(restPaid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [restSource!.card.instanceId],
+    })
+    expect(restResolved.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === restSource!.card.instanceId,
+    )?.rested).toBe(false)
+    const restNegative = createCardNegativeDemoState('BS7-032')
+    const restNegativeSource = restNegative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS7-032',
+    )
+    expect(canActivateCookieSkill(
+      restNegative,
+      'player-one',
+      restNegativeSource!.card.instanceId,
+      'activate',
+    )).toBe(false)
+  })
+
   it('BS6-036 card-check fixture exposes an LV.3 break Cookie for its HP-gain Then', () => {
     const state = createCardCheckDemoState('BS6-036')
     const source = state.players['player-one'].battleArea.find(
@@ -2229,6 +3684,157 @@ describe('BS4 condition fixtures', () => {
         (entry) => entry.card.id === 'BS6-036',
       )?.hpCards,
     ).toHaveLength(5)
+  })
+
+  it('resolves BS7-038 attack movement in order and excludes the placed Cookie', () => {
+    const state = createCardCheckDemoState('BS7-038')
+    const handCookie = state.players['player-one'].hand.find(
+      (card) => card.type === 'cookie',
+    )
+    expect(handCookie).toBeDefined()
+
+    const first = resolveAttackEffect(
+      state,
+      'player-one',
+      [handCookie!.instanceId],
+    )
+    expect(first.pendingAbilityEffect?.effects[0]).toMatchObject({
+      kind: 'break-to-hand',
+      keyword: 'arena',
+      excludePreviousHandToBreak: true,
+    })
+    expect(first.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: handCookie!.instanceId }),
+      ]),
+    )
+    const followUp = getEffectSelectionCandidates(
+      first,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: first.pendingAbilityEffect!.sourceInstanceId,
+      },
+      first.pendingAbilityEffect!.effects[0],
+    )
+    expect(followUp.map((card) => card.instanceId)).toEqual([
+      'BS7-038-arena-break',
+    ])
+
+    const completed = applyGameCommand(first, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: followUp.map((card) => card.instanceId),
+    })
+    expect(completed.pendingAbilityEffect).toBeUndefined()
+    expect(completed.players['player-one'].hand).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: 'BS7-038-arena-break' }),
+      ]),
+    )
+    expect(completed.players['player-one'].breakArea).toEqual([
+      expect.objectContaining({ instanceId: handCookie!.instanceId }),
+    ])
+
+    const negative = createCardNegativeDemoState('BS7-038')
+    const negativeHandCookie = negative.players['player-one'].hand.find(
+      (card) => card.type === 'cookie',
+    )
+    const negativeFirst = resolveAttackEffect(
+      negative,
+      'player-one',
+      [negativeHandCookie!.instanceId],
+    )
+    const negativeCompleted = applyGameCommand(negativeFirst, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(negativeCompleted.players['player-one'].hand).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: 'BS7-038-arena-break' }),
+      ]),
+    )
+  })
+
+  it('resolves BS7-039 attack damage only when the Arena break event is present', () => {
+    const positive = createCardCheckDemoState('BS7-039')
+    const targets = positive.players['player-two'].battleArea
+    const targetIds = targets.map((target) => target.card.instanceId)
+    const selected = resolveAttackEffect(positive, 'player-one', targetIds)
+    expect(selected.pendingBattle?.effectDamageSequence).toMatchObject({
+      remainingTargetInstanceIds: targetIds.slice(1),
+      continuation: 'attack-effect',
+    })
+
+    const afterFirst = resolveNextDamage(selected)
+    expect(afterFirst.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      targets[0].hpCards.length - 1,
+    )
+    if (targets.length > 1) {
+      const afterSecond = resolveNextDamage(afterFirst)
+      expect(afterSecond.players['player-two'].battleArea[1]?.hpCards).toHaveLength(
+        targets[1].hpCards.length - 1,
+      )
+    }
+
+    const negative = createCardNegativeDemoState('BS7-039')
+    const negativeTarget = negative.players['player-two'].battleArea[0]
+    const negativeResolved = resolveAttackEffect(negative, 'player-one', [])
+    expect(negativeResolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      negativeTarget.hpCards.length,
+    )
+  })
+
+  it('requires BS7-082 to discard enough cards before ordered all-target damage', () => {
+    const positive = createCardCheckDemoState('BS7-082')
+    const discarded = resolveAttackEffect(positive, 'player-one', [])
+    expect(discarded.pendingOpponentHandDiscard).toMatchObject({
+      count: 1,
+      atLeast: true,
+    })
+
+    const handIds = discarded.players['player-one'].hand
+      .slice(0, 2)
+      .map((card) => card.instanceId)
+    const afterDiscard = applyGameCommand(discarded, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-one',
+      cardIds: handIds,
+    })
+    const targets = afterDiscard.players['player-two'].battleArea
+    const targetIds = targets.map((target) => target.card.instanceId)
+    const selected = resolveAttackEffect(afterDiscard, 'player-one', targetIds)
+    expect(selected.pendingBattle?.effectDamageSequence).toMatchObject({
+      remainingTargetInstanceIds: targetIds.slice(1),
+      continuation: 'attack-effect',
+    })
+
+    const afterFirst = resolveNextDamage(selected)
+    expect(afterFirst.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      targets[0].hpCards.length - 1,
+    )
+  })
+
+  it('requires BS7-040 faint target and pays its yellow source energy', () => {
+    const positive = createCardCheckDemoState('BS7-040')
+    const target = positive.players['player-one'].battleArea[0]
+    const payment = positive.players['player-one'].supportArea[0].card.instanceId
+    const resolved = resolveFaintEffect(
+      positive,
+      [target.card.instanceId],
+      [payment],
+    )
+    expect(resolved.players['player-one'].battleArea[0]?.hpCards).toHaveLength(
+      target.hpCards.length + 1,
+    )
+    expect(resolved.players['player-one'].supportArea[0].rested).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS7-040')
+    const negativeResolved = resolveFaintEffect(negative, [], [])
+    expect(negativeResolved.players['player-one'].battleArea[0]?.hpCards).toHaveLength(
+      4,
+    )
+    expect(negativeResolved.players['player-one'].supportArea[0].rested).toBe(false)
   })
 
   it('BS5-016 can be activated before its post-payment HP-card condition is known', () => {

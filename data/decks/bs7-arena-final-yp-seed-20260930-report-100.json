@@ -1,0 +1,1781 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-22T13:15:51.752Z",
+  "format": "standard",
+  "methodology": {
+    "description": "BS7 Arena 五色候選牌組對 frozen BS6 competitive reference；不加入 BS7 mirror。每個候選色對每副 reference 以配對 seed 各跑一次 BS7 先手與一次 BS7 後手。",
+    "candidateChoices": {
+      "yellow": "bs7-yellow-arena",
+      "purple": "bs7-purple-arena"
+    },
+    "candidateColors": [
+      "yellow",
+      "purple"
+    ],
+    "referenceChoices": {
+      "red": "bs6-red-competitive",
+      "yellow": "bs6-yellow-competitive",
+      "green": "bs6-green-competitive",
+      "blue": "bs6-blue-competitive",
+      "purple": "bs6-purple-competitive"
+    },
+    "candidateDeckRecipes": {
+      "yellow": [
+        {
+          "cardNumber": "BS1-027",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS2-012",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-024",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-026",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-038",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS4-042",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS5-023",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS6-031",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-025",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS7-026",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-027",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-028",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-029",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS7-030",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-031",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-032",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-033",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS7-037",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-038",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS7-039",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-040",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-041",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS7-042",
+          "count": 4
+        },
+        {
+          "cardNumber": "P-097",
+          "count": 1
+        },
+        {
+          "cardNumber": "ST2-007",
+          "count": 1
+        },
+        {
+          "cardNumber": "ST2-020",
+          "count": 1
+        }
+      ],
+      "purple": [
+        {
+          "cardNumber": "BS2-077",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS3-105",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-092",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-093",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-101",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-105",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-107",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-088",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-090",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-091",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-092",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-093",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-095",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-096",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS7-101",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS7-103",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS7-104",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS7-105",
+          "count": 3
+        },
+        {
+          "cardNumber": "ST5-020",
+          "count": 4
+        }
+      ]
+    },
+    "referenceDeckRecipes": {
+      "red": [
+        {
+          "cardNumber": "BS3-013",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS1-014",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS1-009",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-016",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS3-006",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS3-009",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-010",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS3-010",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-008@1",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS3-017",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS1-012",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-019",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS2-006",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS1-022",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-022",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS2-007",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST1-020",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST1-013",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-006",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS2-001",
+          "count": 1
+        },
+        {
+          "cardNumber": "ST1-004",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS5-004",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS1-002",
+          "count": 2
+        }
+      ],
+      "yellow": [
+        {
+          "cardNumber": "BS1-037",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-038",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-031",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS3-028",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS4-026",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS5-023",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-039",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS4-027",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-024",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST2-007",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS1-041",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST2-005",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-041",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS3-042",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS4-042",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS1-051",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-042",
+          "count": 3
+        },
+        {
+          "cardNumber": "ST2-020",
+          "count": 2
+        }
+      ],
+      "green": [
+        {
+          "cardNumber": "BS6-051",
+          "count": 4
+        },
+        {
+          "cardNumber": "P-059",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-058",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-049",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-061",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-044",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-061",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-056",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS3-056",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-050",
+          "count": 1
+        },
+        {
+          "cardNumber": "ST3-014",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST3-008",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS1-069",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST3-017",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-062",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS2-021",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS3-069",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST3-019",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-070",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS1-078",
+          "count": 4
+        }
+      ],
+      "blue": [
+        {
+          "cardNumber": "BS2-045",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-077",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-065",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS5-080",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-081",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-081",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS6-073",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-074",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-079",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-084",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST4-016",
+          "count": 3
+        },
+        {
+          "cardNumber": "ST4-020",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-085@1",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS3-093",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-086",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-068",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS3-085",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST4-009",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS5-073",
+          "count": 4
+        }
+      ],
+      "purple": [
+        {
+          "cardNumber": "BS6-093",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-098",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS3-113",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-096",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-105",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-101",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-092",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS2-061",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-091@2",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS5-090",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-107",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST5-003",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST5-008",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS2-077",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS4-107",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-105",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS2-080",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST5-020",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS6-107",
+          "count": 3
+        }
+      ]
+    },
+    "gamesPerReference": 10,
+    "seedPairsPerReference": 5,
+    "gamesPerColor": 50,
+    "totalGames": 100,
+    "sameDeckMirrorsIncluded": false,
+    "candidateVsSameColorReferenceIncluded": true,
+    "pairedSeedPolicy": "每個 candidate/reference 配對使用同一 seed 跑兩局；第一局 BS7 為 player-one，第二局 BS7 為 player-two。",
+    "candidateFirstPlayerGamesPerColor": 25,
+    "candidateSecondPlayerGamesPerColor": 25,
+    "aiLevel": 4,
+    "maxActions": 2500,
+    "seed": 20260930
+  },
+  "validation": [
+    {
+      "choice": "bs7-yellow-arena",
+      "color": "yellow",
+      "role": "candidate",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60,
+      "bs7Slots": 40,
+      "distinctBs7Base": 15
+    },
+    {
+      "choice": "bs7-purple-arena",
+      "color": "purple",
+      "role": "candidate",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60,
+      "bs7Slots": 36,
+      "distinctBs7Base": 11
+    },
+    {
+      "choice": "bs6-red-competitive",
+      "color": "red",
+      "role": "reference",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60
+    },
+    {
+      "choice": "bs6-yellow-competitive",
+      "color": "yellow",
+      "role": "reference",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60
+    },
+    {
+      "choice": "bs6-green-competitive",
+      "color": "green",
+      "role": "reference",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60
+    },
+    {
+      "choice": "bs6-blue-competitive",
+      "color": "blue",
+      "role": "reference",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60
+    },
+    {
+      "choice": "bs6-purple-competitive",
+      "color": "purple",
+      "role": "reference",
+      "valid": true,
+      "validationErrors": [],
+      "totalCards": 60,
+      "runtimeCards": 60
+    }
+  ],
+  "result": {
+    "candidates": {
+      "yellow": {
+        "games": 50,
+        "wins": 30,
+        "losses": 20,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.6,
+        "wilson95Ci": {
+          "lower": 0.46181437747589366,
+          "upper": 0.7239161026974346,
+          "confidence": 0.95
+        },
+        "avgTurns": 13.42,
+        "avgActions": 183.16,
+        "avgSkillActivations": 4.3,
+        "avgRefreshes": 0.04,
+        "reasons": {
+          "break-level-limit": 48,
+          "no-cookie-available": 2
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 606,
+          "lethalConversionCount": 479,
+          "lowQualityReplacementCount": 74,
+          "noDamageTurns": 98,
+          "noBoardChangeTurns": 671,
+          "consecutiveNoProgressMax": 17,
+          "lv4Search": {
+            "decisions": 3260,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 11443,
+            "nodesGenerated": 33863,
+            "nodesPruned": 13455,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 10,
+            "setupSteps": 516,
+            "payoffSteps": 2206,
+            "completedPayoffs": 99,
+            "comboAbandonments": 417,
+            "averageDecisionMs": 1.1113496932515337,
+            "p95DecisionMs": 5,
+            "maxDecisionMs": 12
+          }
+        },
+        "candidatePositionSplits": {
+          "first": {
+            "games": 25,
+            "wins": 19,
+            "losses": 6,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.76,
+            "wilson95Ci": {
+              "lower": 0.5657031664457093,
+              "upper": 0.8850368630659855,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 25,
+            "wins": 11,
+            "losses": 14,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.44,
+            "wilson95Ci": {
+              "lower": 0.2666563888106735,
+              "upper": 0.6293266813020122,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple": {
+        "games": 50,
+        "wins": 23,
+        "losses": 27,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.46,
+        "wilson95Ci": {
+          "lower": 0.3296965219222435,
+          "upper": 0.5960112860084253,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.82,
+        "avgActions": 173.98,
+        "avgSkillActivations": 2.12,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 46,
+          "no-cookie-available": 4
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 578,
+          "lethalConversionCount": 513,
+          "lowQualityReplacementCount": 84,
+          "noDamageTurns": 123,
+          "noBoardChangeTurns": 641,
+          "consecutiveNoProgressMax": 17,
+          "lv4Search": {
+            "decisions": 3018,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 11116,
+            "nodesGenerated": 32440,
+            "nodesPruned": 13037,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 63,
+            "setupSteps": 821,
+            "payoffSteps": 1432,
+            "completedPayoffs": 137,
+            "comboAbandonments": 684,
+            "averageDecisionMs": 0.8976143141153081,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 11
+          }
+        },
+        "candidatePositionSplits": {
+          "first": {
+            "games": 25,
+            "wins": 14,
+            "losses": 11,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.56,
+            "wilson95Ci": {
+              "lower": 0.37067331869798775,
+              "upper": 0.7333436111893264,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 25,
+            "wins": 9,
+            "losses": 16,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.36,
+            "wilson95Ci": {
+              "lower": 0.2024788077445822,
+              "upper": 0.5548150225183514,
+              "confidence": 0.95
+            }
+          }
+        }
+      }
+    },
+    "matchups": {
+      "yellow-vs-red": {
+        "games": 10,
+        "wins": 5,
+        "losses": 5,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.5,
+        "wilson95Ci": {
+          "lower": 0.236593090512564,
+          "upper": 0.763406909487436,
+          "confidence": 0.95
+        },
+        "avgTurns": 13.5,
+        "avgActions": 178.1,
+        "avgSkillActivations": 4.3,
+        "avgRefreshes": 0.1,
+        "reasons": {
+          "break-level-limit": 10
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 98,
+          "lethalConversionCount": 78,
+          "lowQualityReplacementCount": 5,
+          "noDamageTurns": 19,
+          "noBoardChangeTurns": 135,
+          "consecutiveNoProgressMax": 16,
+          "lv4Search": {
+            "decisions": 636,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2300,
+            "nodesGenerated": 6690,
+            "nodesPruned": 2672,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 0,
+            "setupSteps": 25,
+            "payoffSteps": 365,
+            "completedPayoffs": 13,
+            "comboAbandonments": 12,
+            "averageDecisionMs": 1.2279874213836477,
+            "p95DecisionMs": 6,
+            "maxDecisionMs": 11
+          }
+        },
+        "candidateChoice": "bs7-yellow-arena",
+        "referenceChoice": "bs6-red-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 2,
+            "losses": 3,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.4,
+            "wilson95Ci": {
+              "lower": 0.11762077423264786,
+              "upper": 0.769275718723987,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "yellow-vs-yellow": {
+        "games": 10,
+        "wins": 4,
+        "losses": 6,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.4,
+        "wilson95Ci": {
+          "lower": 0.16818032970623617,
+          "upper": 0.6873262302663417,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.9,
+        "avgActions": 170.7,
+        "avgSkillActivations": 2.5,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 10
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 102,
+          "lethalConversionCount": 90,
+          "lowQualityReplacementCount": 16,
+          "noDamageTurns": 22,
+          "noBoardChangeTurns": 129,
+          "consecutiveNoProgressMax": 14,
+          "lv4Search": {
+            "decisions": 611,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2212,
+            "nodesGenerated": 6413,
+            "nodesPruned": 2567,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 0,
+            "setupSteps": 71,
+            "payoffSteps": 472,
+            "completedPayoffs": 32,
+            "comboAbandonments": 39,
+            "averageDecisionMs": 1.0834697217675942,
+            "p95DecisionMs": 5,
+            "maxDecisionMs": 10
+          }
+        },
+        "candidateChoice": "bs7-yellow-arena",
+        "referenceChoice": "bs6-yellow-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 4,
+            "losses": 1,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.8,
+            "wilson95Ci": {
+              "lower": 0.37553462976252533,
+              "upper": 0.9637758913675698,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 0,
+            "losses": 5,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0,
+            "wilson95Ci": {
+              "lower": 0,
+              "upper": 0.43448246478317476,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "yellow-vs-green": {
+        "games": 10,
+        "wins": 7,
+        "losses": 3,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.7,
+        "wilson95Ci": {
+          "lower": 0.3967781474611453,
+          "upper": 0.8922087325936988,
+          "confidence": 0.95
+        },
+        "avgTurns": 13,
+        "avgActions": 179.1,
+        "avgSkillActivations": 2.9,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 9,
+          "no-cookie-available": 1
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 121,
+          "lethalConversionCount": 101,
+          "lowQualityReplacementCount": 29,
+          "noDamageTurns": 21,
+          "noBoardChangeTurns": 130,
+          "consecutiveNoProgressMax": 15,
+          "lv4Search": {
+            "decisions": 643,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2234,
+            "nodesGenerated": 6649,
+            "nodesPruned": 2648,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 10,
+            "setupSteps": 57,
+            "payoffSteps": 506,
+            "completedPayoffs": 25,
+            "comboAbandonments": 32,
+            "averageDecisionMs": 1.1119751166407466,
+            "p95DecisionMs": 5,
+            "maxDecisionMs": 10
+          }
+        },
+        "candidateChoice": "bs7-yellow-arena",
+        "referenceChoice": "bs6-green-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 4,
+            "losses": 1,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.8,
+            "wilson95Ci": {
+              "lower": 0.37553462976252533,
+              "upper": 0.9637758913675698,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "yellow-vs-blue": {
+        "games": 10,
+        "wins": 6,
+        "losses": 4,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.6,
+        "wilson95Ci": {
+          "lower": 0.3126737697336583,
+          "upper": 0.8318196702937638,
+          "confidence": 0.95
+        },
+        "avgTurns": 13.5,
+        "avgActions": 191.4,
+        "avgSkillActivations": 5.7,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 10
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 129,
+          "lethalConversionCount": 96,
+          "lowQualityReplacementCount": 5,
+          "noDamageTurns": 16,
+          "noBoardChangeTurns": 135,
+          "consecutiveNoProgressMax": 15,
+          "lv4Search": {
+            "decisions": 668,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2304,
+            "nodesGenerated": 6874,
+            "nodesPruned": 2697,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 0,
+            "setupSteps": 160,
+            "payoffSteps": 455,
+            "completedPayoffs": 10,
+            "comboAbandonments": 150,
+            "averageDecisionMs": 1.1407185628742516,
+            "p95DecisionMs": 5,
+            "maxDecisionMs": 12
+          }
+        },
+        "candidateChoice": "bs7-yellow-arena",
+        "referenceChoice": "bs6-blue-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "yellow-vs-purple": {
+        "games": 10,
+        "wins": 8,
+        "losses": 2,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.8,
+        "wilson95Ci": {
+          "lower": 0.4901624715366418,
+          "upper": 0.9433178485456247,
+          "confidence": 0.95
+        },
+        "avgTurns": 14.2,
+        "avgActions": 196.5,
+        "avgSkillActivations": 6.1,
+        "avgRefreshes": 0.1,
+        "reasons": {
+          "break-level-limit": 9,
+          "no-cookie-available": 1
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 156,
+          "lethalConversionCount": 114,
+          "lowQualityReplacementCount": 19,
+          "noDamageTurns": 20,
+          "noBoardChangeTurns": 142,
+          "consecutiveNoProgressMax": 17,
+          "lv4Search": {
+            "decisions": 702,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2393,
+            "nodesGenerated": 7237,
+            "nodesPruned": 2871,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 0,
+            "setupSteps": 203,
+            "payoffSteps": 408,
+            "completedPayoffs": 19,
+            "comboAbandonments": 184,
+            "averageDecisionMs": 1.0014245014245013,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 12
+          }
+        },
+        "candidateChoice": "bs7-yellow-arena",
+        "referenceChoice": "bs6-purple-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 5,
+            "losses": 0,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 1,
+            "wilson95Ci": {
+              "lower": 0.5655175352168252,
+              "upper": 1,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple-vs-red": {
+        "games": 10,
+        "wins": 6,
+        "losses": 4,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.6,
+        "wilson95Ci": {
+          "lower": 0.3126737697336583,
+          "upper": 0.8318196702937638,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.6,
+        "avgActions": 163.5,
+        "avgSkillActivations": 1.7,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 9,
+          "no-cookie-available": 1
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 94,
+          "lethalConversionCount": 87,
+          "lowQualityReplacementCount": 16,
+          "noDamageTurns": 23,
+          "noBoardChangeTurns": 126,
+          "consecutiveNoProgressMax": 15,
+          "lv4Search": {
+            "decisions": 569,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2190,
+            "nodesGenerated": 6260,
+            "nodesPruned": 2507,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 0,
+            "setupSteps": 109,
+            "payoffSteps": 190,
+            "completedPayoffs": 23,
+            "comboAbandonments": 86,
+            "averageDecisionMs": 0.8506151142355008,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 8
+          }
+        },
+        "candidateChoice": "bs7-purple-arena",
+        "referenceChoice": "bs6-red-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple-vs-yellow": {
+        "games": 10,
+        "wins": 1,
+        "losses": 9,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.1,
+        "wilson95Ci": {
+          "lower": 0.01787621309507289,
+          "upper": 0.4041500267952385,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.8,
+        "avgActions": 174.5,
+        "avgSkillActivations": 2.5,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 10
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 121,
+          "lethalConversionCount": 109,
+          "lowQualityReplacementCount": 11,
+          "noDamageTurns": 22,
+          "noBoardChangeTurns": 128,
+          "consecutiveNoProgressMax": 14,
+          "lv4Search": {
+            "decisions": 614,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2225,
+            "nodesGenerated": 6568,
+            "nodesPruned": 2657,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 12,
+            "setupSteps": 119,
+            "payoffSteps": 327,
+            "completedPayoffs": 25,
+            "comboAbandonments": 94,
+            "averageDecisionMs": 0.9136807817589576,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 9
+          }
+        },
+        "candidateChoice": "bs7-purple-arena",
+        "referenceChoice": "bs6-yellow-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 1,
+            "losses": 4,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.2,
+            "wilson95Ci": {
+              "lower": 0.03622410863243013,
+              "upper": 0.6244653702374747,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 0,
+            "losses": 5,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0,
+            "wilson95Ci": {
+              "lower": 0,
+              "upper": 0.43448246478317476,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple-vs-green": {
+        "games": 10,
+        "wins": 5,
+        "losses": 5,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.5,
+        "wilson95Ci": {
+          "lower": 0.236593090512564,
+          "upper": 0.763406909487436,
+          "confidence": 0.95
+        },
+        "avgTurns": 13.2,
+        "avgActions": 184.1,
+        "avgSkillActivations": 1.4,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 9,
+          "no-cookie-available": 1
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 136,
+          "lethalConversionCount": 122,
+          "lowQualityReplacementCount": 32,
+          "noDamageTurns": 24,
+          "noBoardChangeTurns": 132,
+          "consecutiveNoProgressMax": 17,
+          "lv4Search": {
+            "decisions": 637,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2273,
+            "nodesGenerated": 6654,
+            "nodesPruned": 2646,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 15,
+            "setupSteps": 134,
+            "payoffSteps": 352,
+            "completedPayoffs": 28,
+            "comboAbandonments": 106,
+            "averageDecisionMs": 0.9073783359497645,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 10
+          }
+        },
+        "candidateChoice": "bs7-purple-arena",
+        "referenceChoice": "bs6-green-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 2,
+            "losses": 3,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.4,
+            "wilson95Ci": {
+              "lower": 0.11762077423264786,
+              "upper": 0.769275718723987,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple-vs-blue": {
+        "games": 10,
+        "wins": 3,
+        "losses": 7,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.3,
+        "wilson95Ci": {
+          "lower": 0.10779126740630099,
+          "upper": 0.6032218525388546,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.6,
+        "avgActions": 172.2,
+        "avgSkillActivations": 2.3,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 8,
+          "no-cookie-available": 2
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 106,
+          "lethalConversionCount": 91,
+          "lowQualityReplacementCount": 6,
+          "noDamageTurns": 21,
+          "noBoardChangeTurns": 126,
+          "consecutiveNoProgressMax": 17,
+          "lv4Search": {
+            "decisions": 596,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2219,
+            "nodesGenerated": 6387,
+            "nodesPruned": 2542,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 16,
+            "setupSteps": 178,
+            "payoffSteps": 351,
+            "completedPayoffs": 29,
+            "comboAbandonments": 149,
+            "averageDecisionMs": 0.924496644295302,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 11
+          }
+        },
+        "candidateChoice": "bs7-purple-arena",
+        "referenceChoice": "bs6-blue-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 2,
+            "losses": 3,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.4,
+            "wilson95Ci": {
+              "lower": 0.11762077423264786,
+              "upper": 0.769275718723987,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 1,
+            "losses": 4,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.2,
+            "wilson95Ci": {
+              "lower": 0.03622410863243013,
+              "upper": 0.6244653702374747,
+              "confidence": 0.95
+            }
+          }
+        }
+      },
+      "purple-vs-purple": {
+        "games": 10,
+        "wins": 8,
+        "losses": 2,
+        "stuck": 0,
+        "unfinished": 0,
+        "errorCount": 0,
+        "completionRate": 1,
+        "winRate": 0.8,
+        "wilson95Ci": {
+          "lower": 0.4901624715366418,
+          "upper": 0.9433178485456247,
+          "confidence": 0.95
+        },
+        "avgTurns": 12.9,
+        "avgActions": 175.6,
+        "avgSkillActivations": 2.7,
+        "avgRefreshes": 0,
+        "reasons": {
+          "break-level-limit": 10
+        },
+        "errors": [],
+        "behavior": {
+          "invalidActionCount": 0,
+          "deadlockCount": 0,
+          "turnCapReached": 0,
+          "legalAttackSkippedCount": 0,
+          "lethalOpportunityCount": 121,
+          "lethalConversionCount": 104,
+          "lowQualityReplacementCount": 19,
+          "noDamageTurns": 33,
+          "noBoardChangeTurns": 129,
+          "consecutiveNoProgressMax": 16,
+          "lv4Search": {
+            "decisions": 602,
+            "timeouts": 0,
+            "nodeLimits": 0,
+            "fallbacks": 0,
+            "nodesExpanded": 2209,
+            "nodesGenerated": 6571,
+            "nodesPruned": 2685,
+            "hiddenInformationStops": 0,
+            "unsupportedEffectCount": 0,
+            "unknownInformationPenalty": 0,
+            "resourceReservationMisses": 20,
+            "setupSteps": 281,
+            "payoffSteps": 212,
+            "completedPayoffs": 32,
+            "comboAbandonments": 249,
+            "averageDecisionMs": 0.8887043189368771,
+            "p95DecisionMs": 4,
+            "maxDecisionMs": 8
+          }
+        },
+        "candidateChoice": "bs7-purple-arena",
+        "referenceChoice": "bs6-purple-competitive",
+        "candidatePositionSplits": {
+          "first": {
+            "games": 5,
+            "wins": 5,
+            "losses": 0,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 1,
+            "wilson95Ci": {
+              "lower": 0.5655175352168252,
+              "upper": 1,
+              "confidence": 0.95
+            }
+          },
+          "second": {
+            "games": 5,
+            "wins": 3,
+            "losses": 2,
+            "stuck": 0,
+            "unfinished": 0,
+            "errorCount": 0,
+            "completionRate": 1,
+            "winRate": 0.6,
+            "wilson95Ci": {
+              "lower": 0.23072428127601285,
+              "upper": 0.8823792257673521,
+              "confidence": 0.95
+            }
+          }
+        }
+      }
+    }
+  },
+  "failures": [],
+  "healthGate": {
+    "passed": true,
+    "failureCount": 0,
+    "rule": "任一場 stuck、unfinished、error、invalid action、deadlock 或 turn cap 即失敗；先寫 report 再以 exit code 1 結束。"
+  }
+}

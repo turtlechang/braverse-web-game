@@ -21,8 +21,10 @@ import type {
   TurnProgression,
   EndInfo,
   BehaviorMetrics,
+  AiLevel,
 } from './ai/types'
 import type { GameState, PendingBattle, PlayerId } from './types'
+import type { AiStrategyMemory } from './ai/strategy/session'
 
 const countBreakLevel = (state: GameState, playerId: PlayerId): number =>
   state.players[playerId].breakArea.reduce((sum, c) => sum + c.level, 0)
@@ -204,6 +206,10 @@ const computeBehaviorMetrics = (
   legalAttackSkippedCount: number,
   lv4SearchTelemetry: readonly Lv4SearchTelemetry[],
   pendingStrategyTelemetry: readonly PendingStrategyTelemetry[],
+  strategyMemories: Partial<Record<PlayerId, AiStrategyMemory>>,
+  endgameForecastCount: number,
+  refreshForecastCount: number,
+  emptyBattleForecastCount: number,
 ): BehaviorMetrics => {
   const lowQualityCount = replacementEvents.filter((e) => e.level <= 1 && e.hp <= 1).length
 
@@ -232,6 +238,14 @@ const computeBehaviorMetrics = (
   const avgOverkill = overkillEvents.length > 0
     ? overkillEvents.reduce((sum, e) => sum + e.overkillAmount, 0) / overkillEvents.length
     : 0
+  const comboTelemetry = Object.values(strategyMemories).reduce(
+    (total, memory) => ({
+      started: total.started + (memory?.comboTelemetry.started ?? 0),
+      completed: total.completed + (memory?.comboTelemetry.completed ?? 0),
+      abandoned: total.abandoned + (memory?.comboTelemetry.abandoned ?? 0),
+    }),
+    { started: 0, completed: 0, abandoned: 0 },
+  )
 
   return {
     lowQualityReplacementCount: lowQualityCount,
@@ -264,6 +278,12 @@ const computeBehaviorMetrics = (
     r6cForcedCount,
     r6cBreakWorsenedCount,
     legalAttackSkippedCount,
+    comboIntentsStarted: comboTelemetry.started,
+    comboIntentsCompleted: comboTelemetry.completed,
+    comboIntentsAbandoned: comboTelemetry.abandoned,
+    endgameForecastCount,
+    refreshForecastCount,
+    emptyBattleForecastCount,
     lv4Search: aggregateLv4SearchTelemetry(lv4SearchTelemetry),
     pendingStrategy: aggregatePendingStrategyTelemetry(pendingStrategyTelemetry),
   }
@@ -272,7 +292,7 @@ const computeBehaviorMetrics = (
 export const simulateAiMatchDetailed = (
   initialState: GameState,
   maxActions = 500,
-  options: { levels?: Partial<Record<PlayerId, number>>; seed?: number } = {},
+  options: { levels?: Partial<Record<PlayerId, AiLevel>>; seed?: number } = {},
 ): AiDetailedResult => {
   let state = initialState
   const logs: string[] = []
@@ -304,8 +324,12 @@ export const simulateAiMatchDetailed = (
   let legalAttackSkippedCount = 0
   let lethalOpportunityCount = 0
   let lethalConversionCount = 0
+  let endgameForecastCount = 0
+  let refreshForecastCount = 0
+  let emptyBattleForecastCount = 0
   const lv4SearchTelemetry: Lv4SearchTelemetry[] = []
   const pendingStrategyTelemetry: PendingStrategyTelemetry[] = []
+  const strategyMemories: Partial<Record<PlayerId, AiStrategyMemory>> = {}
 
   resetR10Counters()
 
@@ -323,14 +347,27 @@ export const simulateAiMatchDetailed = (
     const legalAttacks = legalCommands.filter((command) => command.kind === 'attack')
     const publicLethals = publicLethalAttackCommands(state, controller)
     const decision = takeAiStep(state, controller, {
-      level: (options.levels?.[controller] ?? 2) as 1 | 2 | 3 | 4,
+      level: options.levels?.[controller] ?? 2,
       seed: options.seed,
+      memory: strategyMemories[controller],
     })
+    if (decision.reason?.strategyMemory) {
+      strategyMemories[controller] = decision.reason.strategyMemory
+    }
     if (decision.reason?.lv4Search) {
       lv4SearchTelemetry.push(decision.reason.lv4Search)
     }
     if (decision.reason?.pendingStrategy) {
       pendingStrategyTelemetry.push(decision.reason.pendingStrategy)
+    }
+    if ((decision.reason?.opponentEndgame?.score ?? 0) > 0) {
+      endgameForecastCount += 1
+      refreshForecastCount += Number(
+        (decision.reason?.opponentEndgame?.refreshProbability ?? 0) > 0,
+      )
+      emptyBattleForecastCount += Number(
+        (decision.reason?.opponentEndgame?.noReplacementProbability ?? 0) > 0,
+      )
     }
     if (legalAttacks.length > 0 && decision.action === 'advance-phase') {
       legalAttackSkippedCount += 1
@@ -475,6 +512,10 @@ export const simulateAiMatchDetailed = (
     legalAttackSkippedCount,
     lv4SearchTelemetry,
     pendingStrategyTelemetry,
+    strategyMemories,
+    endgameForecastCount,
+    refreshForecastCount,
+    emptyBattleForecastCount,
   )
 
   return {

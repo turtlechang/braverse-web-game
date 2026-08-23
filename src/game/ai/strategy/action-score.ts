@@ -36,6 +36,7 @@ export interface ActionScoreContribution {
     | 'tactical-setup'
     | 'resource-reservation'
     | 'attack-tempo'
+    | 'intent-continuity'
     | 'unsupported-effect'
     | 'unknown-information'
     | 'strategy-profile'

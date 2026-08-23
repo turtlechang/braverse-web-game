@@ -14,7 +14,7 @@
 - `opponent-random-discard`：隨機選擇對手手牌棄置，但保留其餘手牌原順序
 - `deck-to-support`：從效果來源玩家牌庫頂取牌，直立即 rested=false 放入支援區，不需選擇目標；牌庫耗盡時進入 pending Refresh（remainingDraws=0）
 - `deck-to-trash`：將指定玩家牌庫頂的可用卡牌直接放入棄牌區；不是抽牌，因此不建立 Refresh
-- `gain-hp`：FLIP 結算時從牌庫頂增加實體 HP 卡
+- `gain-hp`：從牌庫頂增加實體 HP 卡；途中或完成時牌庫耗盡會先進入 Refresh，再繼續尚未補完的 HP
 - `prevent-knockout`：本次戰鬥中使指定餅乾 HP 不會降至 0
 - `support-to-trash`：將指定數量的支援區卡牌移至棄牌區
 - `optional-cost-attack`：攻擊傷害後可略過的追加效果；來源餅乾可先提供 `sourceEnergy`，其餘費用才由支援區支付
@@ -64,7 +64,7 @@
 | 牌庫頂→支援區 | `deck-to-support` | 從牌庫頂取 N 張直立放入支援區（例：ST3-010 Aloe Cookie）；牌庫耗盡觸發 pending Refresh（remainingDraws=0）。僅接受等價於「Take N card(s) from the top your deck and place it/them in your support area as active」的文字 |
 | 牌庫頂→棄牌區 | `deck-to-trash` | 將己方或對手牌庫頂最多 N 張可用卡牌直接放入其棄牌區；此移動不是抽牌，不觸發 Refresh |
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
-| 增加 HP | `gain-hp` | 目前供起始牌組 FLIP 使用，從牌庫頂補入 HP 卡 |
+| 增加 HP | `gain-hp` | 從牌庫頂補入 HP 卡；牌庫耗盡時建立 pending Refresh，Refresh 後繼續剩餘數量 |
 | HP 下限保護 | `prevent-knockout` | 目前供 TRAP 使用，本次戰鬥保留至少 1 張 HP 卡。官方裁定（BS3-100 vs ST3-020）：這個保護擋的是「這次戰鬥中 HP 不會變 0」，不是只擋一般傷害——只要 `state.pendingBattle` 還在（戰鬥尚未結束）且目標在 `preventKnockoutTargetIds` 內，任何會讓 HP 卡歸零的移除都要擋下，包括攻擊後續效果的 `hp-to-trash`。`hp-to-trash` 執行器已對此加上檢查：保護生效且剩餘 HP 卡數 ≤ 欲移除數時直接不執行，回傳原狀態；不能算出 `removeCount=0` 後照舊呼叫 `slice(-removeCount)`——JS 的 `slice(-0)` 等同 `slice(0)`，會把整疊 HP 卡誤判成「被移除」，導致同一張卡同時留在 `hpCards` 又被複製進棄牌區 |
 | 效果傷害免疫 | `prevent-effect-damage` | 被影響餅乾在持續期間內不受任何效果傷害（技能、攻擊附加效果等），基本攻擊傷害仍正常結算。`damage`、`damage-all`、`split-damage` 執行器會檢查 `effectDamagePreventedUntilTurn`，受保護餅乾直接跳過（BS3-082） |
 | 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |

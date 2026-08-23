@@ -27,6 +27,7 @@ import type {
   AbilityCost,
 } from '../types'
 import type { KnowledgeState } from './strategy/knowledge-state'
+import type { AiStrategyMemory } from './strategy/session'
 import type { PendingSelectionStrategy } from './strategy/pending-selection'
 import type { AiDecision, AiLevel } from './types'
 import {
@@ -41,6 +42,7 @@ export interface AiTurnStrategy {
   /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
   shuffleSeed?: number
   knowledgeState?: KnowledgeState
+  strategyMemory?: AiStrategyMemory
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,
@@ -122,9 +124,13 @@ export const chooseAiStageCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashCandidateIds = remainingSupports.map(
-    (support) => support.card.instanceId,
-  )
+  const supportToTrashCandidateIds = remainingSupports
+    .filter(
+      (support) =>
+        cost.supportToTrashKeyword === undefined ||
+        support.card.keywords?.includes(cost.supportToTrashKeyword),
+    )
+    .map((support) => support.card.instanceId)
   const supportToTrashIds = universal?.enabled
     ? universal.orderCostIds(
         supportToTrashCandidateIds,
@@ -135,7 +141,12 @@ export const chooseAiStageCostIds = (
 
   const supportToTrashSet = new Set(supportToTrashIds)
   const supportToHandCandidateIds = remainingSupports
-    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .filter(
+      (support) =>
+        !supportToTrashSet.has(support.card.instanceId) &&
+        (cost.supportToHandType === undefined ||
+          support.card.type === cost.supportToHandType),
+    )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
     ? universal.orderCostIds(

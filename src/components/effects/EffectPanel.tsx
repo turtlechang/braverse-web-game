@@ -293,7 +293,8 @@ function EffectPanelContent({
             }
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&
-            !currentEffect.target.sourceOnly
+            !currentEffect.target.sourceOnly &&
+            !currentEffect.target.previousEffectTargetOnly
           ? currentEffect.target
         : currentEffect && !isEffectUntargeted(currentEffect) &&
         currentEffect.kind !== 'inspect-deck' &&

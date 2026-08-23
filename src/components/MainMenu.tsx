@@ -9,6 +9,11 @@ import { getDeckFormatLabel } from '../game/deck-rules'
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
 
 const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
+  { value: 'bs7-red-arena', label: 'BS7 紅｜Arena' },
+  { value: 'bs7-yellow-arena', label: 'BS7 黃｜Arena' },
+  { value: 'bs7-green-arena', label: 'BS7 綠｜Arena' },
+  { value: 'bs7-blue-arena', label: 'BS7 藍｜Arena' },
+  { value: 'bs7-purple-arena', label: 'BS7 紫｜Arena' },
   { value: 'bs6-red-standard', label: 'BS6 紅｜標準' },
   { value: 'bs6-yellow-standard', label: 'BS6 黃｜標準' },
   { value: 'bs6-green-standard', label: 'BS6 綠｜標準' },
@@ -25,7 +30,8 @@ const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
   { value: 1, label: 'Lv.1 隨機出招', hint: '從合法動作中隨機挑選，不主動使用技能。' },
   { value: 2, label: 'Lv.2 基礎戰術', hint: '會出牌、用技能並攻擊較脆弱的目標。' },
   { value: 3, label: 'Lv.3 評估戰局', hint: '對每個可行動作評分後選擇最佳選項，會優先斬殺。' },
-  { value: 4, label: 'Lv.4 兩層前瞻', hint: '模擬對手回應後再評分，並考量破壞區風險與高威脅目標。' },
+  { value: 4, label: 'Lv.4 多步前瞻', hint: '規劃同回合多步行動，並考量破壞區風險與高威脅目標。' },
+  { value: 5, label: 'Lv.5 高手對抗（實驗）', hint: '延續多步規劃，以公開資訊估計對手回應並維持跨步策略；不讀隱藏卡面。' },
 ]
 
 interface MainMenuProps {

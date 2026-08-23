@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-08-22T09:40:02.916Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-arena-of-glory-bs7.en.json"
+  ],
+  "scope": "Formal-pool test-state interaction audit for BS7 effect-bearing records plus dedicated A/B paths for 0 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 1,
+    "effectFlowPassed": 1,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 1
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS7-082",
+      "baseCardNumber": "BS7-082",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS7-082",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "select:hand-discard",
+        "select:hand-discard",
+        "confirm:hand-discard",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-082",
+      "orderedAllTargetProof": {
+        "discardSelections": 2,
+        "targetSelections": 2,
+        "selectedTargetOrder": [
+          "opp-lv3",
+          "opp-lv1"
+        ],
+        "targetStep": "攻擊後效果目標：opp-lv3、opp-lv1"
+      },
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：執行 discard-hand",
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果目標：opp-lv3、opp-lv1",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算"
+      ],
+      "substantiveEffectEvidence": true
+    }
+  ]
+}

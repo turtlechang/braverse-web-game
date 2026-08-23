@@ -28,6 +28,11 @@ import bs6YellowCompetitiveDeck from '../../data/decks/bs6-yellow-competitive.js
 import bs6GreenCompetitiveDeck from '../../data/decks/bs6-green-competitive.json'
 import bs6BlueCompetitiveDeck from '../../data/decks/bs6-blue-competitive.json'
 import bs6PurpleCompetitiveDeck from '../../data/decks/bs6-purple-competitive.json'
+import bs7RedArenaDeck from '../../data/decks/bs7-red-arena.json'
+import bs7YellowArenaDeck from '../../data/decks/bs7-yellow-arena.json'
+import bs7GreenArenaDeck from '../../data/decks/bs7-green-arena.json'
+import bs7BlueArenaDeck from '../../data/decks/bs7-blue-arena.json'
+import bs7PurpleArenaDeck from '../../data/decks/bs7-purple-arena.json'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -94,6 +99,14 @@ export const BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES = [
   'bs6-purple-competitive',
 ] as const
 
+export const BS7_ARENA_AI_PRESET_DECK_CHOICES = [
+  'bs7-red-arena',
+  'bs7-yellow-arena',
+  'bs7-green-arena',
+  'bs7-blue-arena',
+  'bs7-purple-arena',
+] as const
+
 export type Bs3AiPresetDeckChoice =
   (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
 
@@ -109,6 +122,9 @@ export type Bs6AiPresetDeckChoice =
 export type Bs6CompetitiveAiPresetDeckChoice =
   (typeof BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES)[number]
 
+export type Bs7ArenaAiPresetDeckChoice =
+  (typeof BS7_ARENA_AI_PRESET_DECK_CHOICES)[number]
+
 export type AiPresetDeckChoice =
   | 'bs2-red'
   | 'bs2-yellow'
@@ -120,8 +136,32 @@ export type AiPresetDeckChoice =
   | Bs5AiPresetDeckChoice
   | Bs6AiPresetDeckChoice
   | Bs6CompetitiveAiPresetDeckChoice
+  | Bs7ArenaAiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
+
+/**
+ * Lv.5 離線校準使用的正式代表牌組全集。能力素材仍由完整 runtime
+ * card pool 提供；這份清單負責讓對局矩陣橫跨 Starter 與 BS2–BS7。
+ */
+export const ALL_AI_TRAINING_DECK_CHOICES = [
+  'red',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'bs2-red',
+  'bs2-yellow',
+  'bs2-bean',
+  'bs2-blue',
+  'bs2-purple',
+  ...BS3_AI_PRESET_DECK_CHOICES,
+  ...BS4_AI_PRESET_DECK_CHOICES,
+  ...BS5_AI_PRESET_DECK_CHOICES,
+  ...BS6_AI_PRESET_DECK_CHOICES,
+  ...BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES,
+  ...BS7_ARENA_AI_PRESET_DECK_CHOICES,
+] as const satisfies readonly BuiltInDeckChoice[]
 
 export interface StarterDeckEntry {
   cardNumber: string
@@ -599,6 +639,17 @@ export const AI_PRESET_BS6_BLUE_COMPETITIVE_DECK: StarterDeckEntry[] =
 export const AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK: StarterDeckEntry[] =
   bs6PurpleCompetitiveDeck.entries
 
+export const AI_PRESET_BS7_RED_ARENA_DECK: StarterDeckEntry[] =
+  bs7RedArenaDeck.entries
+export const AI_PRESET_BS7_YELLOW_ARENA_DECK: StarterDeckEntry[] =
+  bs7YellowArenaDeck.entries
+export const AI_PRESET_BS7_GREEN_ARENA_DECK: StarterDeckEntry[] =
+  bs7GreenArenaDeck.entries
+export const AI_PRESET_BS7_BLUE_ARENA_DECK: StarterDeckEntry[] =
+  bs7BlueArenaDeck.entries
+export const AI_PRESET_BS7_PURPLE_ARENA_DECK: StarterDeckEntry[] =
+  bs7PurpleArenaDeck.entries
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -643,6 +694,11 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs6-green-competitive': AI_PRESET_BS6_GREEN_COMPETITIVE_DECK,
   'bs6-blue-competitive': AI_PRESET_BS6_BLUE_COMPETITIVE_DECK,
   'bs6-purple-competitive': AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK,
+  'bs7-red-arena': AI_PRESET_BS7_RED_ARENA_DECK,
+  'bs7-yellow-arena': AI_PRESET_BS7_YELLOW_ARENA_DECK,
+  'bs7-green-arena': AI_PRESET_BS7_GREEN_ARENA_DECK,
+  'bs7-blue-arena': AI_PRESET_BS7_BLUE_ARENA_DECK,
+  'bs7-purple-arena': AI_PRESET_BS7_PURPLE_ARENA_DECK,
 }
 
 const getEnergyColor = (
@@ -961,6 +1017,17 @@ export const createAiPresetBs6BlueCompetitiveDeck = (playerId: PlayerId): GameCa
 export const createAiPresetBs6PurpleCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
   createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK, [])
 
+export const createAiPresetBs7RedArenaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_RED_ARENA_DECK, [])
+export const createAiPresetBs7YellowArenaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_YELLOW_ARENA_DECK, [])
+export const createAiPresetBs7GreenArenaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_GREEN_ARENA_DECK, [])
+export const createAiPresetBs7BlueArenaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_BLUE_ARENA_DECK, [])
+export const createAiPresetBs7PurpleArenaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_PURPLE_ARENA_DECK, [])
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -1008,6 +1075,11 @@ export const DECK_CREATORS: Record<
   'bs6-green-competitive': createAiPresetBs6GreenCompetitiveDeck,
   'bs6-blue-competitive': createAiPresetBs6BlueCompetitiveDeck,
   'bs6-purple-competitive': createAiPresetBs6PurpleCompetitiveDeck,
+  'bs7-red-arena': createAiPresetBs7RedArenaDeck,
+  'bs7-yellow-arena': createAiPresetBs7YellowArenaDeck,
+  'bs7-green-arena': createAiPresetBs7GreenArenaDeck,
+  'bs7-blue-arena': createAiPresetBs7BlueArenaDeck,
+  'bs7-purple-arena': createAiPresetBs7PurpleArenaDeck,
 }
 
 export const createDeckForChoice = (

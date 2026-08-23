@@ -1,6 +1,10 @@
 import type { CardEffect, GameCard, GameState, PlayerId } from '../types'
 import type { ActionScoreBreakdown } from './strategy/action-score'
 import type { KnowledgeState } from './strategy/knowledge-state'
+import type { AiStrategyMemory } from './strategy/session'
+import type { OpponentResponseEstimate } from './strategy/opponent-response'
+import type { OpponentEndgameForecast } from './strategy/endgame-forecast'
+import type { TacticalPlan } from './strategy/tactical-plans'
 import type {
   PendingStrategyTelemetry,
   PendingStrategyTelemetryAggregate,
@@ -10,7 +14,7 @@ import type {
   Lv4SearchTelemetryAggregate,
 } from './strategy/search-telemetry'
 
-export type AiLevel = 1 | 2 | 3 | 4
+export type AiLevel = 1 | 2 | 3 | 4 | 5
 
 export interface AiStepOptions {
   /** AI 等級；預設 2（現行啟發式）。1 為隨機合法操作，3 為評估式打分。 */
@@ -22,6 +26,8 @@ export interface AiStepOptions {
    * 當前 PlayerView 的公開資訊，不會從完整 GameState 補看牌庫。
    */
   knowledgeState?: KnowledgeState
+  /** 同一場對局由上一個 AiDecisionReason 回傳的公開資訊策略記憶。 */
+  memory?: AiStrategyMemory
 }
 
 export interface AiDecisionReason {
@@ -31,6 +37,14 @@ export interface AiDecisionReason {
   actionScore?: ActionScoreBreakdown
   lv4Search?: Lv4SearchTelemetry
   pendingStrategy?: PendingStrategyTelemetry
+  /** 下一步應傳回 takeAiStep；不含對手隱藏卡面或未翻 HP。 */
+  strategyMemory?: AiStrategyMemory
+  /** Lv.5 僅以公開資訊估計的對手攻擊回應風險。 */
+  opponentResponse?: OpponentResponseEstimate
+  /** Lv.5 以公開牌庫／手牌／棄牌與最後一隻餅乾估算的終局壓力。 */
+  opponentEndgame?: OpponentEndgameForecast
+  /** 實際被選中的通用 Combo plan；供同局記憶延續，不影響合法性。 */
+  tacticalPlan?: TacticalPlan
 }
 
 export interface SimulateAiMatchOptions {
@@ -186,6 +200,12 @@ export interface BehaviorMetrics {
   r6cForcedCount: number
   r6cBreakWorsenedCount: number
   legalAttackSkippedCount: number
+  comboIntentsStarted: number
+  comboIntentsCompleted: number
+  comboIntentsAbandoned: number
+  endgameForecastCount: number
+  refreshForecastCount: number
+  emptyBattleForecastCount: number
   lv4Search: Lv4SearchTelemetryAggregate
   pendingStrategy: PendingStrategyTelemetryAggregate
 }

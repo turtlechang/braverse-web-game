@@ -3,7 +3,9 @@ import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEnergyCostTotal,
+  getDiscardHandCostCandidates,
   getRemainingEnergyCost,
+  getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   isEffectConditionMet,
@@ -23,9 +25,12 @@ export interface OptionalCostAttackPromptData {
   sourceCardName: string
   effectText: string
   discardHandCost: number
+  discardHandCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCost: number
   hpToTrashCost: number
   hpToTrashCandidates: { card: GameCard; instanceId: string }[]
+  hpToHandCost: number
+  hpToHandCandidates: { card: GameCard; instanceId: string }[]
   trashToDeckCost: number
   trashToDeckCandidates: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
@@ -91,6 +96,8 @@ const describeCost = (
   discardHandCost: number,
   supportToHandCost: number,
   hpToTrashCost: number,
+  hpToHandCost: number,
+  selfToBreakAreaCost: boolean,
   trashToDeckCost: number,
 ): string => {
   const parts: string[] = []
@@ -109,6 +116,8 @@ const describeCost = (
     parts.push(`將 ${supportToHandCost} 張支援區卡返回手牌`)
   }
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
+  if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
+  if (selfToBreakAreaCost) parts.push('將此餅乾放入休息區')
   if (trashToDeckCost > 0) {
     parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
   }
@@ -249,10 +258,23 @@ export function getOptionalCostAttackPrompt(
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
   const energyCostTotal = getEnergyCostTotal(energyCost)
   const discardHandCost = pending.cost.discardHand ?? 0
+  const discardHandCandidates = getDiscardHandCostCandidates(
+    pending.cost,
+    game.players[viewerPlayerId].hand,
+    pending.sourceInstanceId,
+  ).map((card) => ({ card, instanceId: card.instanceId }))
   const supportToHandCost = pending.cost.supportToHand ?? 0
   const hpToTrashCost = pending.cost.hpToTrash ? 1 : 0
   const hpToTrashCandidates = hpToTrashCost
     ? getHpToTrashCostCandidates(
+        pending.cost,
+        game.players[viewerPlayerId].battleArea,
+        pending.sourceInstanceId,
+      ).map((cookie) => ({ card: cookie.card, instanceId: cookie.card.instanceId }))
+    : []
+  const hpToHandCost = pending.cost.hpToHand ? 1 : 0
+  const hpToHandCandidates = hpToHandCost
+    ? getHpToHandCostCandidates(
         pending.cost,
         game.players[viewerPlayerId].battleArea,
         pending.sourceInstanceId,
@@ -305,9 +327,12 @@ export function getOptionalCostAttackPrompt(
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
     discardHandCost,
+    discardHandCandidates,
     supportToHandCost,
     hpToTrashCost,
     hpToTrashCandidates,
+    hpToHandCost,
+    hpToHandCandidates,
     trashToDeckCost,
     trashToDeckCandidates,
     energyCostTotal,
@@ -316,6 +341,8 @@ export function getOptionalCostAttackPrompt(
       discardHandCost,
       supportToHandCost,
       hpToTrashCost,
+      hpToHandCost,
+      pending.cost.selfToBreakArea === true,
       trashToDeckCost,
     ),
     playerHand: game.players[viewerPlayerId].hand,

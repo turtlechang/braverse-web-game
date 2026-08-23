@@ -1,0 +1,26 @@
+{
+  "name": "BS7 Arena 藍色控制競技版",
+  "entries": [
+    { "cardNumber": "BS5-076", "count": 2 },
+    { "cardNumber": "BS6-080", "count": 4 },
+    { "cardNumber": "BS6-081", "count": 2 },
+    { "cardNumber": "BS7-066", "count": 4 },
+    { "cardNumber": "BS7-067", "count": 4 },
+    { "cardNumber": "BS7-069", "count": 4 },
+    { "cardNumber": "BS7-072", "count": 2 },
+    { "cardNumber": "BS7-073", "count": 3 },
+    { "cardNumber": "BS7-074", "count": 3 },
+    { "cardNumber": "BS7-075", "count": 4 },
+    { "cardNumber": "BS7-076", "count": 4 },
+    { "cardNumber": "BS7-078", "count": 1 },
+    { "cardNumber": "BS7-079", "count": 4 },
+    { "cardNumber": "BS7-081", "count": 3 },
+    { "cardNumber": "BS7-082", "count": 4 },
+    { "cardNumber": "BS7-083", "count": 4 },
+    { "cardNumber": "BS7-084", "count": 2 },
+    { "cardNumber": "BS7-085", "count": 2 },
+    { "cardNumber": "BS7-086", "count": 2 },
+    { "cardNumber": "P-085", "count": 2 }
+  ],
+  "format": "standard"
+}

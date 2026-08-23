@@ -1,0 +1,27 @@
+{
+  "name": "BS7 Arena 紫色競技版",
+  "entries": [
+    { "cardNumber": "BS2-077", "count": 2 },
+    { "cardNumber": "BS3-105", "count": 2 },
+    { "cardNumber": "BS5-091", "count": 1 },
+    { "cardNumber": "BS5-109", "count": 2 },
+    { "cardNumber": "BS6-087", "count": 1 },
+    { "cardNumber": "BS6-093", "count": 4 },
+    { "cardNumber": "BS6-098", "count": 1 },
+    { "cardNumber": "BS6-101", "count": 4 },
+    { "cardNumber": "BS6-105", "count": 1 },
+    { "cardNumber": "BS6-107", "count": 3 },
+    { "cardNumber": "BS7-088", "count": 4 },
+    { "cardNumber": "BS7-090", "count": 4 },
+    { "cardNumber": "BS7-091", "count": 4 },
+    { "cardNumber": "BS7-092", "count": 3 },
+    { "cardNumber": "BS7-093", "count": 4 },
+    { "cardNumber": "BS7-095", "count": 4 },
+    { "cardNumber": "BS7-096", "count": 1 },
+    { "cardNumber": "BS7-103", "count": 3 },
+    { "cardNumber": "BS7-104", "count": 4 },
+    { "cardNumber": "BS7-105", "count": 4 },
+    { "cardNumber": "ST5-020", "count": 4 }
+  ],
+  "format": "standard"
+}

@@ -1,0 +1,4358 @@
+{
+  "generatedAt": "2026-08-22T10:03:56.674Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "sources": [
+    "data/cards/official-arena-of-glory-bs7.en.json"
+  ],
+  "scope": "Formal-pool negative A/B UI audit for every BS7 record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.",
+  "summary": {
+    "total": 143,
+    "effectFlowPassed": 143,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Negative no-payment effect path settled": 127,
+      "Negative no-payment attack path settled": 10,
+      "Negative condition path settled": 6
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS7-001",
+      "baseCardNumber": "BS7-001",
+      "variant": null,
+      "name": "Nutmeg Tiger Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-001",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-hp-cost",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-001",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "HP 費用：從「Nutmeg Tiger Cookie」丟棄「BS7-001-source-hp-2」（物品）",
+        "效果結算：未選擇攻擊力效果目標，未套用攻擊力修改"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-002",
+      "baseCardNumber": "BS7-002",
+      "variant": null,
+      "name": "Red Osmanthus Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-002",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-002",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-003",
+      "baseCardNumber": "BS7-003",
+      "variant": null,
+      "name": "Raspberry Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-003",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-003",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-004",
+      "baseCardNumber": "BS7-004",
+      "variant": null,
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-004",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-004",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-004@1",
+      "baseCardNumber": "BS7-004",
+      "variant": "1",
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-004@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-004",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-005",
+      "baseCardNumber": "BS7-005",
+      "variant": null,
+      "name": "Marble Danish Cookie",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-005",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-005",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-006",
+      "baseCardNumber": "BS7-006",
+      "variant": null,
+      "name": "Basil Pesto Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-006",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-hp-cost",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-006",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "HP 費用：從「Basil Pesto Cookie」丟棄「p1-deck-1」（物品）",
+        "抽牌原因：「BS7-006 Basil Pesto Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-007",
+      "baseCardNumber": "BS7-007",
+      "variant": null,
+      "name": "Street Urchin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-007",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-007",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：Street Urchin Cookie"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-008",
+      "baseCardNumber": "BS7-008",
+      "variant": null,
+      "name": "Earl Grey Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-008",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-hp-cost",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-008",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "HP 費用：從「self-extra-1」丟棄「self-extra-1-hp-3」（物品）",
+        "效果目標：self-extra-1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-009",
+      "baseCardNumber": "BS7-009",
+      "variant": null,
+      "name": "Spicy Scovillia Student",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-009",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-009",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-010",
+      "baseCardNumber": "BS7-010",
+      "variant": null,
+      "name": "Olive Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-010",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-010",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Olive Cookie」；效果：When this Cookie faints, if there is an 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "昏厥效果目標：faint-target",
+        "昏厥效果結果：未造成傷害"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-011",
+      "baseCardNumber": "BS7-011",
+      "variant": null,
+      "name": "Yoga Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-011",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-011",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-012",
+      "baseCardNumber": "BS7-012",
+      "variant": null,
+      "name": "Sachertorte Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-012",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-012",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-013",
+      "baseCardNumber": "BS7-013",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-013",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-013-effect-source",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-013@1",
+      "baseCardNumber": "BS7-013",
+      "variant": "1",
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-013@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-013-effect-source",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-014",
+      "baseCardNumber": "BS7-014",
+      "variant": null,
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-014",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-014",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-014@1",
+      "baseCardNumber": "BS7-014",
+      "variant": "1",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-014@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-014",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-014@2",
+      "baseCardNumber": "BS7-014",
+      "variant": "2",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-014@2",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-014",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-014@3",
+      "baseCardNumber": "BS7-014",
+      "variant": "3",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-014@3",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-014",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-014@4",
+      "baseCardNumber": "BS7-014",
+      "variant": "4",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-014@4",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-014",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-015",
+      "baseCardNumber": "BS7-015",
+      "variant": null,
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-015",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-015",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Crushed Pepper Cookie」；效果：if there is another 【Arena】 Cookie in your battle area, deals 2 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-015@1",
+      "baseCardNumber": "BS7-015",
+      "variant": "1",
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-015@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-015",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Crushed Pepper Cookie」；效果：if there is another 【Arena】 Cookie in your battle area, deals 2 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-016",
+      "baseCardNumber": "BS7-016",
+      "variant": null,
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-016",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-016",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-017",
+      "baseCardNumber": "BS7-017",
+      "variant": null,
+      "name": "Tarte Tatin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-017",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-017",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-018",
+      "baseCardNumber": "BS7-018",
+      "variant": null,
+      "name": "Jalapeño Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-018",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-018",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Jalapeño Cookie」；效果：if there is another 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-018@1",
+      "baseCardNumber": "BS7-018",
+      "variant": "1",
+      "name": "Jalapeño Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-018@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-018",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Jalapeño Cookie」；效果：if there is another 【Arena】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-019",
+      "baseCardNumber": "BS7-019",
+      "variant": null,
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-019",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-019",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Rye Cookie」；效果：Use this Cookie as {R}. If there is another Arena Cookie in your battle area, deal 1 damage to the attacked Cookie.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-019@1",
+      "baseCardNumber": "BS7-019",
+      "variant": "1",
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-019@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-019",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Rye Cookie」；效果：Use this Cookie as {R}. If there is another Arena Cookie in your battle area, deal 1 damage to the attacked Cookie.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-020",
+      "baseCardNumber": "BS7-020",
+      "variant": null,
+      "name": "Scovilsky Manuscript",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-020",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-020",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-021",
+      "baseCardNumber": "BS7-021",
+      "variant": null,
+      "name": "Labyrinth Golem Attack",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-021",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-021",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-022",
+      "baseCardNumber": "BS7-022",
+      "variant": null,
+      "name": "Scovillia Quarters",
+      "type": "stage",
+      "color": "RED",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-022",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement"
+      ],
+      "contractTraceCard": "BS7-022",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-023",
+      "baseCardNumber": "BS7-023",
+      "variant": null,
+      "name": "Honorable Paladin Trainee",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-023",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-023",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-024",
+      "baseCardNumber": "BS7-024",
+      "variant": null,
+      "name": "Ice Juggler Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-024",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:optional-cost",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-024",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Ice Juggler Cookie」；效果：Return 1 card from the top of your Arena Cookie's HP to your hand to deal 1 damage to the attacked Cookie.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Ice Juggler Cookie」；效果：Return 1 card from the top of your Arena Cookie's HP to your hand to deal 1 damage to the attacked Cookie.",
+        "玩家選擇略過攻擊後效果，未支付代價，後續動作未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-025",
+      "baseCardNumber": "BS7-025",
+      "variant": null,
+      "name": "Golden Osmanthus Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-025",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-025",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-026",
+      "baseCardNumber": "BS7-026",
+      "variant": null,
+      "name": "Twisted Donut Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-026",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-026",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Twisted Donut Cookie」；效果：Place this Cookie in your break area to give up to 1 other Arena Cookie +1 HP.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-027",
+      "baseCardNumber": "BS7-027",
+      "variant": null,
+      "name": "Lemon Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-027",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-027",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-028",
+      "baseCardNumber": "BS7-028",
+      "variant": null,
+      "name": "Lemon Zest Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-028",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-028",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-029",
+      "baseCardNumber": "BS7-029",
+      "variant": null,
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-029",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-029",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-029@1",
+      "baseCardNumber": "BS7-029",
+      "variant": "1",
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-029@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-029",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-030",
+      "baseCardNumber": "BS7-030",
+      "variant": null,
+      "name": "Rainbow Sherbet Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-030",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-030",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-031",
+      "baseCardNumber": "BS7-031",
+      "variant": null,
+      "name": "Vanilla Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-031",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-031",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-032",
+      "baseCardNumber": "BS7-032",
+      "variant": null,
+      "name": "Onyx Cream Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-032",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-032",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-033",
+      "baseCardNumber": "BS7-033",
+      "variant": null,
+      "name": "Candy Drop Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-033",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-033",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-034",
+      "baseCardNumber": "BS7-034",
+      "variant": null,
+      "name": "Serious Paladin Trainee",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-034",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-034",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-035",
+      "baseCardNumber": "BS7-035",
+      "variant": null,
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-035",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:hand",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-035",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-035@1",
+      "baseCardNumber": "BS7-035",
+      "variant": "1",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-035@1",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:hand",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-035",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-035@2",
+      "baseCardNumber": "BS7-035",
+      "variant": "2",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-035@2",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:hand",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-035",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-035@3",
+      "baseCardNumber": "BS7-035",
+      "variant": "3",
+      "name": "Kouign-Amann Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-035@3",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:hand",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:下一步",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-035",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-036",
+      "baseCardNumber": "BS7-036",
+      "variant": null,
+      "name": "Crème Knights Preceptor",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-036",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-036",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-037",
+      "baseCardNumber": "BS7-037",
+      "variant": null,
+      "name": "Crème Brûlée Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-037",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-037",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-037@1",
+      "baseCardNumber": "BS7-037",
+      "variant": "1",
+      "name": "Crème Brûlée Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-037@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-037",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-038",
+      "baseCardNumber": "BS7-038",
+      "variant": null,
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-038",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-038",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Clotted Cream Cookie」；效果：<place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+        "攻擊後效果目標：hand-cookie-filler",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算",
+        "攻擊後效果來源：「Clotted Cream Cookie」；效果：<place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-038@1",
+      "baseCardNumber": "BS7-038",
+      "variant": "1",
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-038@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-038",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Clotted Cream Cookie」；效果：<place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+        "攻擊後效果目標：hand-cookie-filler",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算",
+        "攻擊後效果來源：「Clotted Cream Cookie」；效果：<place 1 Cookie from your hand into your break area.> Select up to 1 LV.1 【Arena】 Cookie in your break area other than the placed Cookie. Return that Cookie to your hand.",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-039",
+      "baseCardNumber": "BS7-039",
+      "variant": null,
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-039",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-039",
+      "orderedAllTargetProof": {
+        "discardSelections": 0,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Financier Cookie」；效果：during this turn, if an 【Arena】 Cookie has been placed in your break area, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-039@1",
+      "baseCardNumber": "BS7-039",
+      "variant": "1",
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-039@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-039",
+      "orderedAllTargetProof": {
+        "discardSelections": 0,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Financier Cookie」；效果：during this turn, if an 【Arena】 Cookie has been placed in your break area, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-040",
+      "baseCardNumber": "BS7-040",
+      "variant": null,
+      "name": "Whipped Cream Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-040",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-payment",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-040",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Whipped Cream Cookie」；效果：When this Cookie faints, <can be used as {Y}.> Select up to 1 of your 【Arena】 Cookies. That Cookie gains +1 HP.",
+        "昏厥效果代價：支付能量（橫置）：support-pay-0",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-041",
+      "baseCardNumber": "BS7-041",
+      "variant": null,
+      "name": "The Key to Unbreakable Faith",
+      "type": "item",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-041",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-041",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "抽牌原因：「BS7-041 The Key to Unbreakable Faith」效果觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-042",
+      "baseCardNumber": "BS7-042",
+      "variant": null,
+      "name": "Valiant Victor's Salvation",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-042",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-042",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「Valiant Victor's Salvation」",
+        "支付能量（橫置）：support-pay-0",
+        "選擇目標：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-043",
+      "baseCardNumber": "BS7-043",
+      "variant": null,
+      "name": "Crème Knights' Quarters",
+      "type": "stage",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-043",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement"
+      ],
+      "contractTraceCard": "BS7-043",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-044",
+      "baseCardNumber": "BS7-044",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-044",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-044",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：BS7-044-opponent-support-1、BS7-044-opponent-support-2"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-044@1",
+      "baseCardNumber": "BS7-044",
+      "variant": "1",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-044@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-044",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：BS7-044-opponent-support-1、BS7-044-opponent-support-2"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-044@2",
+      "baseCardNumber": "BS7-044",
+      "variant": "2",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-044@2",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-044",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：BS7-044-opponent-support-1、BS7-044-opponent-support-2"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-045",
+      "baseCardNumber": "BS7-045",
+      "variant": null,
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-045",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-045",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-046",
+      "baseCardNumber": "BS7-046",
+      "variant": null,
+      "name": "Green Tea Mousse Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-046",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-046",
+      "traceEntries": 1,
+      "commandKinds": [
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-046@1",
+      "baseCardNumber": "BS7-046",
+      "variant": "1",
+      "name": "Green Tea Mousse Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-046@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-046",
+      "traceEntries": 1,
+      "commandKinds": [
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-047",
+      "baseCardNumber": "BS7-047",
+      "variant": null,
+      "name": "Moon Rabbit Cookie",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-047",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-047",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-048",
+      "baseCardNumber": "BS7-048",
+      "variant": null,
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-048",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-payment",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-048",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Poison Mushroom Cookie」；效果：When this Cookie faints, <can be used as {G}.> Place up to 1 【Arena】 card from your hand into your support area as active.",
+        "昏厥效果代價：支付能量（橫置）：support-pay-0",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-048@1",
+      "baseCardNumber": "BS7-048",
+      "variant": "1",
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-048@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-payment",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-048",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Poison Mushroom Cookie」；效果：When this Cookie faints, <can be used as {G}.> Place up to 1 【Arena】 card from your hand into your support area as active.",
+        "昏厥效果代價：支付能量（橫置）：support-pay-0",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-049",
+      "baseCardNumber": "BS7-049",
+      "variant": null,
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-049",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-049",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-050",
+      "baseCardNumber": "BS7-050",
+      "variant": null,
+      "name": "Rockstar Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-050",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-050",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Rockstar Cookie」；效果：When this Cookie faints, <return 1 card from your support area to your hand.> Select up to 1 of your opponent's rested Cookies. That Cookie receives 1 damage.",
+        "昏厥效果結果：未造成傷害"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-051",
+      "baseCardNumber": "BS7-051",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-051",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-051",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-052",
+      "baseCardNumber": "BS7-052",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-052",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-052",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-053",
+      "baseCardNumber": "BS7-053",
+      "variant": null,
+      "name": "Red Velvet Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-053",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-053",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-054",
+      "baseCardNumber": "BS7-054",
+      "variant": null,
+      "name": "Black Lemonade Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-054",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-054",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-055",
+      "baseCardNumber": "BS7-055",
+      "variant": null,
+      "name": "Shining Glitter Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-055",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-055",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-056",
+      "baseCardNumber": "BS7-056",
+      "variant": null,
+      "name": "Sting Durian Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-056",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-056",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-057",
+      "baseCardNumber": "BS7-057",
+      "variant": null,
+      "name": "Pudding à la Mode Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-057",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:確認發動",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-057",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-057@1",
+      "baseCardNumber": "BS7-057",
+      "variant": "1",
+      "name": "Pudding à la Mode Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-condition",
+      "testState": "card-negative:BS7-057@1",
+      "status": "PASS",
+      "auditStatus": "Negative condition path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:negative-effect:確認發動",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-057",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-058",
+      "baseCardNumber": "BS7-058",
+      "variant": null,
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-058",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:negative-existing-attacker",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "declare:negative-existing-attack"
+      ],
+      "contractTraceCard": "BS7-058",
+      "traceEntries": 2,
+      "commandKinds": [
+        "declare-attack",
+        "resolve-battle"
+      ],
+      "steps": [
+        "宣告攻擊：「Schwarzwälder」→「opp-lv1」",
+        "戰鬥進行中：等待防守方回應"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-058@1",
+      "baseCardNumber": "BS7-058",
+      "variant": "1",
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-058@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:negative-existing-attacker",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "declare:negative-existing-attack"
+      ],
+      "contractTraceCard": "BS7-058",
+      "traceEntries": 2,
+      "commandKinds": [
+        "declare-attack",
+        "resolve-battle"
+      ],
+      "steps": [
+        "宣告攻擊：「Schwarzwälder」→「opp-lv1」",
+        "戰鬥進行中：等待防守方回應"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-059",
+      "baseCardNumber": "BS7-059",
+      "variant": null,
+      "name": "Choco Drizzle Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-059",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-059",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-059@1",
+      "baseCardNumber": "BS7-059",
+      "variant": "1",
+      "name": "Choco Drizzle Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-059@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-059",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-060",
+      "baseCardNumber": "BS7-060",
+      "variant": null,
+      "name": "Custard Cookie III",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-060",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-060",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-061",
+      "baseCardNumber": "BS7-061",
+      "variant": null,
+      "name": "Pancake Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-061",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-061",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-062",
+      "baseCardNumber": "BS7-062",
+      "variant": null,
+      "name": "Plantain Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-062",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-062",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-063",
+      "baseCardNumber": "BS7-063",
+      "variant": null,
+      "name": "Grand Cookie Games Trophy",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-063",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-063",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect",
+        "resolve-inspect-deck"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-064",
+      "baseCardNumber": "BS7-064",
+      "variant": null,
+      "name": "Cookie Windmill",
+      "type": "trap",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-064",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-064",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「Cookie Windmill」",
+        "支付能量（橫置）：support-pay-0",
+        "額外代價：支援區送入棄牌區：support-pay-0",
+        "選擇目標：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-065",
+      "baseCardNumber": "BS7-065",
+      "variant": null,
+      "name": "Cookie Games Stadium",
+      "type": "stage",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-065",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement"
+      ],
+      "contractTraceCard": "BS7-065",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-066",
+      "baseCardNumber": "BS7-066",
+      "variant": null,
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-066",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:optional-cost",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-066",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Princess Cookie」；效果：Discard 2 Arena cards to deal 1 damage to the attacked Cookie.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Princess Cookie」；效果：Discard 2 Arena cards to deal 1 damage to the attacked Cookie.",
+        "玩家選擇略過攻擊後效果，未支付代價，後續動作未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-067",
+      "baseCardNumber": "BS7-067",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-067",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:optional-cost",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-067",
+      "traceEntries": 4,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Dark Choco Cookie」；效果：Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Dark Choco Cookie」；效果：Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie.",
+        "玩家選擇略過攻擊後效果，未支付代價，後續動作未執行",
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：Dark Choco Cookie"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-067@1",
+      "baseCardNumber": "BS7-067",
+      "variant": "1",
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-067@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:optional-cost",
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-067",
+      "traceEntries": 4,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Dark Choco Cookie」；效果：Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Dark Choco Cookie」；效果：Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie.",
+        "玩家選擇略過攻擊後效果，未支付代價，後續動作未執行",
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：Dark Choco Cookie"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-068",
+      "baseCardNumber": "BS7-068",
+      "variant": null,
+      "name": "General Jujube Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-068",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-068",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-069",
+      "baseCardNumber": "BS7-069",
+      "variant": null,
+      "name": "Leek Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-069",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:下一步",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-069",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0、hand-filler-1",
+        "效果結算：未選擇攻擊力效果目標，未套用攻擊力修改"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-070",
+      "baseCardNumber": "BS7-070",
+      "variant": null,
+      "name": "Raspberry Mousse Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-070",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-070",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Raspberry Mousse Cookie」；效果：<place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "攻擊後效果未生效：沒有符合條件的目標",
+        "攻擊後效果來源：「Raspberry Mousse Cookie」；效果：<place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "攻擊後效果結果：抽至多 1 張牌",
+        "抽牌原因：「BS7-070 Raspberry Mousse Cookie」效果觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-070@1",
+      "baseCardNumber": "BS7-070",
+      "variant": "1",
+      "name": "Raspberry Mousse Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-070@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-070",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Raspberry Mousse Cookie」；效果：<place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "攻擊後效果未生效：沒有符合條件的目標",
+        "攻擊後效果來源：「Raspberry Mousse Cookie」；效果：<place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "攻擊後效果結果：抽至多 1 張牌",
+        "抽牌原因：「BS7-070 Raspberry Mousse Cookie」效果觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-071",
+      "baseCardNumber": "BS7-071",
+      "variant": null,
+      "name": "Marbleberry Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-071",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-071",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-072",
+      "baseCardNumber": "BS7-072",
+      "variant": null,
+      "name": "Ice Mint Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-072",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-072",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-073",
+      "baseCardNumber": "BS7-073",
+      "variant": null,
+      "name": "Knight Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-073",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-073",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Knight Cookie」；效果：if there are 3 cards or less in your hand and the attacked Cookie is LV.1, deals 3 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-074",
+      "baseCardNumber": "BS7-074",
+      "variant": null,
+      "name": "Laurel Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-074",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-074",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-075",
+      "baseCardNumber": "BS7-075",
+      "variant": null,
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-075",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-075",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Rose Cookie」；效果：When this Cookie faints, <discard 1 【Arena】 Cookie from your hand.> Draw up to 2 cards from your deck.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-075@1",
+      "baseCardNumber": "BS7-075",
+      "variant": "1",
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-075@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-075",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Rose Cookie」；效果：When this Cookie faints, <discard 1 【Arena】 Cookie from your hand.> Draw up to 2 cards from your deck.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-076",
+      "baseCardNumber": "BS7-076",
+      "variant": null,
+      "name": "Cherry Cola Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-076",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-076",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-076@1",
+      "baseCardNumber": "BS7-076",
+      "variant": "1",
+      "name": "Cherry Cola Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-076@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-076",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-077",
+      "baseCardNumber": "BS7-077",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-077",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-077-effect-source",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-078",
+      "baseCardNumber": "BS7-078",
+      "variant": null,
+      "name": "Frostrock Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-078",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-078",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-079",
+      "baseCardNumber": "BS7-079",
+      "variant": null,
+      "name": "Cream Soda Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-079",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [],
+      "contractTraceCard": "BS7-079",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-079@1",
+      "baseCardNumber": "BS7-079",
+      "variant": "1",
+      "name": "Cream Soda Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-079@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [],
+      "contractTraceCard": "BS7-079",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-080",
+      "baseCardNumber": "BS7-080",
+      "variant": null,
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-080",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-080",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-081",
+      "baseCardNumber": "BS7-081",
+      "variant": null,
+      "name": "Habanero Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-081",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-081",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-082",
+      "baseCardNumber": "BS7-082",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-082",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "select:hand-discard",
+        "confirm:hand-discard",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-082",
+      "orderedAllTargetProof": {
+        "discardSelections": 1,
+        "targetSelections": 0,
+        "conditionBlocked": true
+      },
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：執行 discard-hand",
+        "攻擊後效果來源：「Red Pepper Cookie」；效果：<discard 1 card or more.> If there is 1 card or less in your hand, all of your opponent's Cookies receive 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-083",
+      "baseCardNumber": "BS7-083",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-083",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-083",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-084",
+      "baseCardNumber": "BS7-084",
+      "variant": null,
+      "name": "The Sunblade",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-084",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-084",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-085",
+      "baseCardNumber": "BS7-085",
+      "variant": null,
+      "name": "A Victory For You",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-085",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-085",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「A Victory For You」",
+        "支付能量（橫置）：support-pay-0",
+        "選擇目標：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-086",
+      "baseCardNumber": "BS7-086",
+      "variant": null,
+      "name": "Temple of the Sun Central Arena",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-086",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement"
+      ],
+      "contractTraceCard": "BS7-086",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-087",
+      "baseCardNumber": "BS7-087",
+      "variant": null,
+      "name": "Berry Parfaedia Student",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-087",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-087",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-088",
+      "baseCardNumber": "BS7-088",
+      "variant": null,
+      "name": "Camellia Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-088",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-088",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Camellia Cookie」；效果：Use this Cookie as {P}. If there are 7 Arena cards or more in your trash, deal 2 damage to up to 1 opponent Cookie.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-088@1",
+      "baseCardNumber": "BS7-088",
+      "variant": "1",
+      "name": "Camellia Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-088@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-088",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Camellia Cookie」；效果：Use this Cookie as {P}. If there are 7 Arena cards or more in your trash, deal 2 damage to up to 1 opponent Cookie.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-089",
+      "baseCardNumber": "BS7-089",
+      "variant": null,
+      "name": "Latte Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-089",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-089",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Latte Cookie」；效果：if there are 6 cards or more in your opponent's hand, place 2 random cards from your opponent's hand into the trash.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-089@1",
+      "baseCardNumber": "BS7-089",
+      "variant": "1",
+      "name": "Latte Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-089@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-089",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Latte Cookie」；效果：if there are 6 cards or more in your opponent's hand, place 2 random cards from your opponent's hand into the trash.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-090",
+      "baseCardNumber": "BS7-090",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-090",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-cost-hand",
+        "select:faint-cost-hand",
+        "confirm:faint-response",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-090",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-faint-effect",
+        "resolve-inspect-deck"
+      ],
+      "steps": [
+        "昏厥效果來源：「Black Sapphire Cookie」；效果：When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash.",
+        "昏厥效果代價：棄置手牌：hand-filler-0、hand-filler-1",
+        "昏厥效果結果：等待後續效果選擇"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-090@1",
+      "baseCardNumber": "BS7-090",
+      "variant": "1",
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-090@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-cost-hand",
+        "select:faint-cost-hand",
+        "confirm:faint-response",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-090",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-faint-effect",
+        "resolve-inspect-deck"
+      ],
+      "steps": [
+        "昏厥效果來源：「Black Sapphire Cookie」；效果：When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash.",
+        "昏厥效果代價：棄置手牌：hand-filler-0、hand-filler-1",
+        "昏厥效果結果：等待後續效果選擇"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-090@2",
+      "baseCardNumber": "BS7-090",
+      "variant": "2",
+      "name": "Black Sapphire Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-090@2",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-cost-hand",
+        "select:faint-cost-hand",
+        "confirm:faint-response",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-090",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-faint-effect",
+        "resolve-inspect-deck"
+      ],
+      "steps": [
+        "昏厥效果來源：「Black Sapphire Cookie」；效果：When this Cookie faints, <discard 2 cards.> View 5 cards from the top of your deck, reveal up to 2 【Arena】 cards from the viewed cards, and add those to your hand. Then, place the remaining cards in the trash.",
+        "昏厥效果代價：棄置手牌：hand-filler-0、hand-filler-1",
+        "昏厥效果結果：等待後續效果選擇"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-091",
+      "baseCardNumber": "BS7-091",
+      "variant": null,
+      "name": "Gelato Trio Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-091",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-091",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Gelato Trio Cookie」；效果：place up to 3 cards from the top of your deck into the trash.",
+        "攻擊後效果結果：將牌庫頂 3 張牌放入棄牌區"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-092",
+      "baseCardNumber": "BS7-092",
+      "variant": null,
+      "name": "Citrus Parfaedia Student",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-092",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-092",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Citrus Parfaedia Student」；效果：When this Cookie faints, if there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "昏厥效果目標：faint-target",
+        "昏厥效果結果：「faint-target」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-093",
+      "baseCardNumber": "BS7-093",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-093",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-093",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-093@1",
+      "baseCardNumber": "BS7-093",
+      "variant": "1",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-093@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-093",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-094",
+      "baseCardNumber": "BS7-094",
+      "variant": null,
+      "name": "Tea Knight Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-094",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:negative-existing-attacker",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "select:existing-attack-payment",
+        "declare:negative-existing-attack"
+      ],
+      "contractTraceCard": "BS7-094",
+      "traceEntries": 2,
+      "commandKinds": [
+        "declare-attack",
+        "resolve-battle"
+      ],
+      "steps": [
+        "宣告攻擊：「Tea Knight Cookie」→「opp-lv1」",
+        "戰鬥進行中：等待防守方回應"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-095",
+      "baseCardNumber": "BS7-095",
+      "variant": null,
+      "name": "Almond Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-095",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-095",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Almond Cookie」；效果：if there are 7 or more 【Arena】 cards in your trash, draw up to 1 card from your deck.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-096",
+      "baseCardNumber": "BS7-096",
+      "variant": null,
+      "name": "Espresso Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-096",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-096",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-097",
+      "baseCardNumber": "BS7-097",
+      "variant": null,
+      "name": "Eclair Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-097",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-097",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Eclair Cookie」；效果：if there are 7 【Arena】 cards or more in your trash, this Cookie receives -1 attack damage until the end of your opponent's turn.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-098",
+      "baseCardNumber": "BS7-098",
+      "variant": null,
+      "name": "Milk Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-098",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-098",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Milk Cookie」；效果：if there are 7 【Arena】 cards or more in your trash, this Cookie gains +1 HP.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-099",
+      "baseCardNumber": "BS7-099",
+      "variant": null,
+      "name": "Werewolf Cookie",
+      "type": "cookie",
+      "color": null,
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-099",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ],
+      "contractTraceCard": "BS7-099",
+      "traceEntries": 1,
+      "commandKinds": [
+        "deploy-cookie"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-100",
+      "baseCardNumber": "BS7-100",
+      "variant": null,
+      "name": "Witchberry Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-100",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip"
+      ],
+      "contractTraceCard": "BS7-100",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：選擇不發動，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-101",
+      "baseCardNumber": "BS7-101",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-101",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-101",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Purple Yam Cookie」；效果：if there are 7 【Arena】 cards or more in your trash, place up to 1 of your opponent's stages in the trash.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-102",
+      "baseCardNumber": "BS7-102",
+      "variant": null,
+      "name": "Kohlrabi Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-102",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:optional-cost",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-102",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Kohlrabi Cookie」；效果：Use this Cookie as {P}. Return 5 Arena cards without FLIP from your trash to your deck to deal 1 damage to up to 1 opponent Cookie.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Kohlrabi Cookie」；效果：Use this Cookie as {P}. Return 5 Arena cards without FLIP from your trash to your deck to deal 1 damage to up to 1 opponent Cookie.",
+        "玩家選擇略過攻擊後效果，未支付代價，後續動作未執行"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-103",
+      "baseCardNumber": "BS7-103",
+      "variant": null,
+      "name": "Parfaedia Principal",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-103",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-103",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Parfaedia Principal」；效果：return up to 1 LV.1 【Arena】 Cookie from your trash to your hand.",
+        "攻擊後效果結果：執行 trash-to-hand"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-104",
+      "baseCardNumber": "BS7-104",
+      "variant": null,
+      "name": "Prune Juice Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-104",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-104",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-104@1",
+      "baseCardNumber": "BS7-104",
+      "variant": "1",
+      "name": "Prune Juice Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-104@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-104",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-105",
+      "baseCardNumber": "BS7-105",
+      "variant": null,
+      "name": "Golem Core",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-105",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "BS7-105",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-106",
+      "baseCardNumber": "BS7-106",
+      "variant": null,
+      "name": "Securing the First Victory",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-106",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-106",
+      "traceEntries": 2,
+      "commandKinds": [
+        "play-trap",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "發動陷阱卡：「Securing the First Victory」",
+        "支付能量（橫置）：support-pay-0",
+        "額外代價：棄置手牌：hand-filler-0",
+        "選擇目標：trap-attacker",
+        "效果目標：Securing the First Victory"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-107",
+      "baseCardNumber": "BS7-107",
+      "variant": null,
+      "name": "Parfaedia Quarters",
+      "type": "stage",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-107",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement",
+        "action:hand",
+        "select:stage-placement-payment",
+        "skip:negative-stage-placement"
+      ],
+      "contractTraceCard": "BS7-107",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
+    },
+    {
+      "cardNumber": "BS7-108",
+      "baseCardNumber": "BS7-108",
+      "variant": null,
+      "name": "Arena of Glory",
+      "type": "trap",
+      "color": "PURE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-108",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-108",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「Arena of Glory」",
+        "支付能量（橫置）：support-pay-0",
+        "選擇目標：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
+    },
+    {
+      "cardNumber": "BS7-108@1",
+      "baseCardNumber": "BS7-108",
+      "variant": "1",
+      "name": "Arena of Glory",
+      "type": "trap",
+      "color": "PURE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS7-108@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-step",
+        "confirm:trap",
+        "skip:replacement",
+        "status:已選擇不補餅乾。"
+      ],
+      "contractTraceCard": "BS7-108",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「Arena of Glory」",
+        "支付能量（橫置）：support-pay-0",
+        "選擇目標：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
+    }
+  ]
+}

@@ -69,6 +69,24 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.errors).toContain('payment evidence missing')
   })
 
+  it('rejects a FLIP card whose official flip text has no runtime FlipAbility', () => {
+    const source = makeRecord({
+      cardNumber: 'BS7-002',
+      baseCardNumber: 'BS7-002',
+      type: 'flip',
+      officialType: 'FLIP',
+      attackText: '<{R}{R}> Test {da} 2',
+      flipText:
+        'If there is a {R} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.',
+    })
+    const runtime = makeCard({ attack: 2, attackCost: 2, attackEnergyCost: { red: 2 } })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.status).toBe('needs-review')
+    expect(audit.errors).toContain('FLIP text has no runtime flip ability')
+  })
+
   it('accepts source-energy when runtime carries the same energy on the effect', () => {
     const source = makeRecord({
       skill: {
@@ -165,6 +183,127 @@ describe('card behavior contract shadow ledger', () => {
       selector: { side: 'opponent', min: 0, max: 1, minLevel: 1, maxLevel: 1 },
     })
     expect(audit.contract.targets[0].unresolved).toBeUndefined()
+  })
+
+  it('keeps the Arena keyword when either-side battle targets are audited', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Arena damage',
+        text: "Select up to 1 【Arena】 Cookie in either player's battle area. That Cookie receives 1 damage.",
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'either', min: 0, max: 1, keyword: 'arena' },
+        }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
+  it('keeps the no-Skill restriction on Arena battle targets', () => {
+    const source = makeRecord({
+      cardNumber: 'BS7-036',
+      baseCardNumber: 'BS7-036',
+      skill: {
+        name: 'Unfaltering Stance',
+        text: '【On Play】 Select up to 1 【Arena】 Cookie that does not have 【Skill】 in your battle area. That Cookie gains +1 HP.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1, keyword: 'arena', noSkillOnly: true },
+        }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.targets[0]).toMatchObject({
+      selector: { side: 'self', min: 0, max: 1, keyword: 'arena', noSkillOnly: true },
+    })
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
+  it('audits a required support-area Cookie selection as a target, not an unknown cost', () => {
+    const source = makeRecord({
+      cardNumber: 'BS7-057',
+      baseCardNumber: 'BS7-057',
+      skill: {
+        name: 'Elimination mode on!',
+        text: '【Activate】 <{G}{G}> <Select 1 LV.2 or higher 【Arena】 Cookie from your support area.> Place this card in your support area as rested. Then, play that Cookie.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { green: 2 } },
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'place-source-to-support', rested: true },
+          {
+            kind: 'support-to-battle',
+            amount: 1,
+            optional: false,
+            minLevel: 2,
+            keyword: 'arena',
+          },
+        ],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.costs).toHaveLength(0)
+    expect(audit.contract.targets[0]).toMatchObject({
+      selector: { side: 'self', min: 1, max: 1, minLevel: 2, keyword: 'arena' },
+      zone: 'support',
+    })
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.contract.status).toBe('verified')
+  })
+
+  it('classifies an Arena Cookie HP payment as hp-to-trash, not battle movement', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Arena HP cost',
+        text: '【On Play】 <Place 1 card from the top of your 【Arena】 Cookie\'s HP in your battle area into the trash.> Draw up to 1 card from your deck.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { hpToTrash: { amount: 1, keyword: 'arena' } },
+        text: source.skill.text ?? '',
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.costs).toContainEqual(expect.objectContaining({ kind: 'hp-to-trash' }))
+    expect(audit.checks.costCovered).toBe(true)
   })
 
   it('reads direct colour keys in an AbilityCost as payment evidence', () => {

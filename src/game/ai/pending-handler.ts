@@ -18,6 +18,7 @@ import {
 import { getRefreshCandidates } from '../refresh'
 import {
   getDiscardHandCostCandidates,
+  getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
 } from '../skills'
@@ -236,12 +237,13 @@ export const handleAiPendingDecision = (
       left.name.localeCompare(right.name),
     )
     const faintEffect = state.pendingFaintEffects?.[0]?.effect
+    const pendingFaint = state.pendingFaintEffects?.[0]
     const faintEnergyCost =
-      (faintEffect?.kind === 'hand-to-battle' ||
+      pendingFaint?.sourceEnergy ??
+      ((faintEffect?.kind === 'hand-to-battle' ||
         faintEffect?.kind === 'trash-to-battle')
         ? faintEffect.energyCost
-        : undefined
-    const pendingFaint = state.pendingFaintEffects?.[0]
+        : undefined)
     const faintTriggeredCost = pendingFaint?.cost
     const faintCostHandCandidates = faintTriggeredCost
       ? getDiscardHandCostCandidates(
@@ -268,11 +270,18 @@ export const handleAiPendingDecision = (
     const faintSupportToTrashCandidates = faintCostSupportCandidates.filter(
       (support) => !selectedPaymentIds?.includes(support.card.instanceId),
     )
+    const faintSupportToHandCandidates = faintSupportToTrashCandidates.filter(
+      (support) =>
+        faintTriggeredCost?.supportToHandType === undefined ||
+        support.card.type === faintTriggeredCost.supportToHandType,
+    )
     const canPayTriggeredCost =
       !faintTriggeredCost ||
       (faintCostHandCandidates.length >= (faintTriggeredCost.discardHand ?? 0) &&
         faintSupportToTrashCandidates.length >=
-          (faintTriggeredCost.supportToTrash ?? 0))
+          (faintTriggeredCost.supportToTrash ?? 0) &&
+        faintSupportToHandCandidates.length >=
+          (faintTriggeredCost.supportToHand ?? 0))
     const canPayFaintCost = selectedPaymentIds !== null
     const shouldPayFaintCost =
       Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
@@ -292,6 +301,17 @@ export const handleAiPendingDecision = (
         )
       : faintSupportToTrashCandidates
           .slice(0, faintTriggeredCost?.supportToTrash ?? 0)
+          .map((support) => support.card.instanceId)
+    const faintSupportToHandIds = universal.enabled
+      ? universal.orderCostIds(
+          faintSupportToHandCandidates
+            .filter((support) => !faintSupportToTrashIds.includes(support.card.instanceId))
+            .map((support) => support.card.instanceId),
+          faintTriggeredCost?.supportToHand ?? 0,
+        )
+      : faintSupportToHandCandidates
+          .filter((support) => !faintSupportToTrashIds.includes(support.card.instanceId))
+          .slice(0, faintTriggeredCost?.supportToHand ?? 0)
           .map((support) => support.card.instanceId)
     const legalTargetIds =
       canPayTriggeredCost &&
@@ -322,6 +342,7 @@ export const handleAiPendingDecision = (
           ? {
               discardHandIds: faintDiscardHandIds,
               supportToTrashIds: faintSupportToTrashIds,
+              supportToHandIds: faintSupportToHandIds,
             }
           : {}),
       }),
@@ -479,7 +500,8 @@ export const handleAiPendingDecision = (
     const revealed = state.pendingInspectDeck?.revealedCards ?? []
     const hasFilter =
       pendingDecision.filterColor !== undefined ||
-      pendingDecision.filterType !== undefined
+      pendingDecision.filterType !== undefined ||
+      pendingDecision.filterKeyword !== undefined
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
     const candidateCards = hasFilter
       ? revealed.filter(
@@ -487,7 +509,9 @@ export const handleAiPendingDecision = (
             (pendingDecision.filterColor === undefined ||
               card.energyColor === pendingDecision.filterColor) &&
             (pendingDecision.filterType === undefined ||
-              card.type === pendingDecision.filterType),
+              card.type === pendingDecision.filterType) &&
+            (pendingDecision.filterKeyword === undefined ||
+              card.keywords?.includes(pendingDecision.filterKeyword)),
         )
       : revealed
     const candidateIds = candidateCards.map((card) => card.instanceId)
@@ -587,6 +611,19 @@ export const handleAiPendingDecision = (
     const canPayHpToTrash = pendingDecision.cost.hpToTrash
       ? hpToTrashIds.length === 1
       : true
+    const hpToHandCandidateIds = pendingDecision.cost.hpToHand
+      ? getHpToHandCostCandidates(
+          pendingDecision.cost,
+          state.players[playerId].battleArea,
+          pendingDecision.sourceInstanceId,
+        ).map((cookie) => cookie.card.instanceId)
+      : []
+    const hpToHandIds = universal.enabled
+      ? universal.orderCostIds(hpToHandCandidateIds, 1)
+      : hpToHandCandidateIds.slice(0, 1)
+    const canPayHpToHand = pendingDecision.cost.hpToHand
+      ? hpToHandIds.length === 1
+      : true
     const trashToDeckCandidateIds = pendingDecision.cost.trashToDeck
       ? getTrashToDeckCostCandidates(
           pendingDecision.cost,
@@ -620,7 +657,7 @@ export const handleAiPendingDecision = (
     const targetedEffect = pendingDecision.effects.find((effect) =>
       requiresEffectCardSelection(effect),
     )
-    if (canPay && canPayHpToTrash && canPayTrashToDeck && hasTarget) {
+    if (canPay && canPayHpToTrash && canPayHpToHand && canPayTrashToDeck && hasTarget) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
             hand.map((card) => card.instanceId),
@@ -640,6 +677,7 @@ export const handleAiPendingDecision = (
           supportToHandIds,
           hpToTrashIds,
           trashToDeckIds,
+          hpToHandIds,
         }),
         action: 'resolve-optional-cost-attack',
         description: `${state.players[playerId].name}支付攻擊後續效果代價。`,

@@ -12,7 +12,12 @@ describe('Lv4 search telemetry', () => {
       nodesExpanded: 2,
       nodesGenerated: 4,
       nodesPruned: 1,
-      plan: { setupSteps: 1, payoffSteps: 1, completedPayoffs: 1 },
+      plan: {
+        setupSteps: 1,
+        payoffSteps: 1,
+        completedPayoffs: 1,
+        abandonedCombos: 0,
+      },
     }
     const timeout = {
       ...createLv4SearchTelemetry(),

@@ -32,7 +32,11 @@ const targetText = (
 
 export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'draw') return `抽 ${effect.amount} 張牌。`
-  if (effect.kind === 'draw-up-to') return `最多抽 ${effect.max} 張牌。`
+  if (effect.kind === 'draw-up-to') {
+    return effect.untilHandSize !== undefined
+      ? `抽牌直到手牌有 ${effect.untilHandSize} 張（最多 ${effect.max} 張）。`
+      : `最多抽 ${effect.max} 張牌。`
+  }
   if (effect.kind === 'draw-until-hand-equals-opponent') {
     return '抽牌直到手牌數與對手相同。'
   }
@@ -307,7 +311,11 @@ export const describeEffectResult = (
   const names = targetNames.length > 0 ? targetNames.join('、') : '效果'
 
   if (effect.kind === 'draw') return `抽了 ${effect.amount} 張牌。`
-  if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
+  if (effect.kind === 'draw-up-to') {
+    return effect.untilHandSize !== undefined
+      ? `最多可抽 ${effect.max} 張牌，直到手牌有 ${effect.untilHandSize} 張。`
+      : `最多可抽 ${effect.max} 張牌。`
+  }
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
   if (effect.kind === 'deck-to-trash') {
@@ -344,7 +352,11 @@ export const describeEffectResult = (
   if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'
   if (effect.kind === 'optional-cost-attack') return '攻擊後續效果已處理。'
-  if (effect.kind === 'damage') return `${names} 受到 ${effect.amount} 傷害。`
+  if (effect.kind === 'damage') {
+    return targetNames.length > 0
+      ? `${targetNames.join('、')} 受到 ${effect.amount} 傷害。`
+      : '未選擇傷害目標，效果未造成傷害。'
+  }
   if (effect.kind === 'damage-by-break-count') return `${names} 受到 break 計算傷害。`
   if (effect.kind === 'modify-attack-by-break-count') {
     return `${names} 依 break 區條件調整攻擊傷害。`
@@ -383,7 +395,11 @@ export const describeEffectResult = (
       : '已完成休息區連鎖效果。'
   }
   if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
-  if (effect.kind === 'support-to-battle') return '支援區餅乾已登場。'
+  if (effect.kind === 'support-to-battle') {
+    return targetNames.length > 0
+      ? '支援區餅乾已登場。'
+      : '未選擇支援區餅乾，已略過登場。'
+  }
   if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
   if (effect.kind === 'hand-to-break-by-level-sum') return '手牌餅乾已放入休息區。'
   if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`
@@ -398,6 +414,11 @@ export const describeEffectResult = (
 
   if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
     const amount = effect.amount
+    if (targetNames.length === 0) {
+      return effect.kind === 'modify-attack'
+        ? '未選擇攻擊力效果目標，未套用攻擊力修改。'
+        : '未選擇受到攻擊傷害效果目標，未套用傷害修改。'
+    }
     return effect.kind === 'modify-attack'
       ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
       : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`

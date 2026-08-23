@@ -542,6 +542,7 @@ describe('OptionalCostAttackModal', () => {
       [],
       [],
       [],
+      [],
     )
     expect(onSkip).not.toHaveBeenCalled()
 
@@ -596,7 +597,7 @@ describe('OptionalCostAttackModal', () => {
       confirmButton!.click()
     })
 
-    expect(onPay).toHaveBeenCalledWith([], [], [], [], [], [])
+    expect(onPay).toHaveBeenCalledWith([], [], [], [], [], [], [])
 
     await act(() => root.unmount())
     container.remove()
@@ -716,6 +717,7 @@ describe('OptionalCostAttackModal', () => {
     expect(onPay).toHaveBeenCalledWith(
       ['test-hand-1'],
       ['opp-support-1', 'opp-support-2', 'opp-support-3'],
+      [],
       [],
       [],
       [],

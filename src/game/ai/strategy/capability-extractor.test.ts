@@ -37,6 +37,40 @@ const opponentTarget = { side: 'opponent' as const, min: 1, max: 1 }
 const selfTarget = { side: 'self' as const, min: 1, max: 1 }
 
 describe('extractCardCapabilities', () => {
+  it('將全體效果傷害光環辨識為通用策略能力', () => {
+    const model = extractCardCapabilities(cookie('fixture-effect-damage-aura', [
+      {
+        kind: 'modify-all-effect-damage',
+        amount: 1,
+        duration: 'persistent',
+        side: 'self',
+        energyColor: 'red',
+        minLevel: 2,
+      },
+    ]))
+    expect(model.unsupportedEffectKinds).toEqual([])
+    expect(model.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'effect-damage-modification',
+        effectKind: 'modify-all-effect-damage',
+      }),
+    ]))
+  })
+
+  it('將公開對手手牌辨識為 inspect-hand，而非未知效果', () => {
+    const model = extractCardCapabilities(cookie('fixture-reveal-hand', [
+      { kind: 'reveal-hand', amount: 2, keyword: 'arena' },
+    ]))
+    expect(model.unsupportedEffectKinds).toEqual([])
+    expect(model.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'inspect-hand',
+        target: { side: 'opponent', min: 0, max: 2 },
+        strategyTags: ['opponent-hand'],
+      }),
+    ]))
+  })
+
   it('只從結構化 effect、cost、timing 與 target 擷取必要能力', () => {
     const card = cookie('fixture-structured', [
       {

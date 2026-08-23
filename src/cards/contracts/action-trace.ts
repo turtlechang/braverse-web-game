@@ -49,6 +49,28 @@ export const traceContainsCommandKinds = (
   return kinds.every((kind) => actual.has(kind))
 }
 
+// A completed resolve command is public settlement evidence even when the
+// effect has no selectable target and therefore produces no step text (for
+// example a passive state change, deck inspection, or an empty all-target
+// result).  Keep this list in the shared contract helper so strict attestation
+// and Browser audits apply the same acceptance boundary.
+const substantiveResolveCommandKinds = new Set([
+  'resolve-ability-effect',
+  'resolve-battle',
+  'resolve-faint-effect',
+  'resolve-inspect-deck',
+  'resolve-draw-up-to',
+  'resolve-flip',
+  'resolve-choose-one',
+  'resolve-opponent-hand-discard',
+  'resolve-opponent-rest-support',
+  'resolve-place-hand-hp',
+  'resolve-reorder-hp',
+  'resolve-stage-trigger',
+  'resolve-after-damage-effect',
+  'resolve-optional-cost-attack',
+])
+
 /**
  * A trace containing only a card source, attack declaration, or payment is
  * not proof that the printed effect settled.  Browser serial gates use this
@@ -59,15 +81,21 @@ export const traceHasSubstantiveEffectEvidence = (
 ): boolean =>
   trace
     .filter((entry) => entry.commandKind !== 'declare-attack')
-    .flatMap((entry) => entry.steps)
-    .filter(
-      (step) =>
-        !/^(?:發動|支付|額外代價|代價|宣告攻擊|攻擊後效果來源)/.test(step),
-    )
-    .some((step) =>
-      /目標|結果|Then|抽牌|傷害|HP|攻擊力|洗回|放置|移動|回到|送入|橫置|活躍|略過|未生效/.test(
-        step,
-      ),
+    .some(
+      (entry) =>
+        substantiveResolveCommandKinds.has(entry.commandKind) ||
+        entry.steps
+          .filter(
+            (step) =>
+              !/^(?:發動|支付|額外代價|代價|宣告攻擊|攻擊後效果來源)/.test(
+                step,
+              ),
+          )
+          .some((step) =>
+            /目標|結果|Then|抽牌|傷害|HP|攻擊力|洗回|放置|移動|回到|送入|橫置|活躍|略過|未生效/.test(
+              step,
+            ),
+          ),
     )
 
 /**

@@ -165,6 +165,10 @@ export interface BattleUiMatchLike {
   setSelectedFaintCostSupportIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  selectedFaintCostSupportToHandIds: string[]
+  setSelectedFaintCostSupportToHandIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
   faintSourceCard: CookieCard | null
   faintCandidates: CookieInBattle[]
   faintCardCandidates: GameCard[]
@@ -180,6 +184,9 @@ export interface BattleUiMatchLike {
   faintCostSupportAmount: number
   faintCostSupportCandidates: GameCard[]
   toggleFaintCostSupport: (instanceId: string) => void
+  faintCostSupportToHandAmount: number
+  faintCostSupportToHandCandidates: GameCard[]
+  toggleFaintCostSupportToHand: (instanceId: string) => void
   faintOptional: boolean
   faintMin: number
   faintMax: number

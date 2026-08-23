@@ -7,6 +7,7 @@ import {
 } from '../game'
 import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
+import type { AiStrategyMemory } from '../game'
 import type { BuiltInDeckChoice, DeckChoice } from '../game'
 import type { CustomDeck } from '../game/custom-deck'
 
@@ -50,6 +51,7 @@ export function useAiTurn(params: {
   const aiThinkingTimerRef = useRef<number | null>(null)
   const aiActionTimerRef = useRef<number | null>(null)
   const consecutiveAiActionCountRef = useRef(0)
+  const aiStrategyMemoryRef = useRef<AiStrategyMemory | null>(null)
 
   useEffect(() => {
     if (!aiControlsCurrentState) {
@@ -81,7 +83,13 @@ export function useAiTurn(params: {
     ) as unknown) as number
     aiThinkingTimerRef.current = thinkingTimer
     const timer = (window.setTimeout(() => {
-      const decision = takeAiStep(game, 'player-two', { level: aiLevel })
+      const decision = takeAiStep(game, 'player-two', {
+        level: aiLevel,
+        memory: aiStrategyMemoryRef.current ?? undefined,
+      })
+      if (decision.reason?.strategyMemory) {
+        aiStrategyMemoryRef.current = decision.reason.strategyMemory
+      }
       setAiThinking(false)
 
       if (decision.action === 'error' || decision.state === game) {
@@ -155,6 +163,7 @@ export function useAiTurn(params: {
     setSimulationResults(null)
     setPendingAiDecision(null)
     consecutiveAiActionCountRef.current = 0
+    aiStrategyMemoryRef.current = null
   }, [])
 
   const confirmAiDecision = useCallback(() => {

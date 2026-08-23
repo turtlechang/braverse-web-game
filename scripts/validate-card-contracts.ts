@@ -19,6 +19,7 @@ interface AuditOptions {
   output?: string
   strict: boolean
   file?: string
+  card?: string
 }
 
 const parseArgs = (argv: string[]): AuditOptions => {
@@ -26,14 +27,16 @@ const parseArgs = (argv: string[]): AuditOptions => {
   let directory = cardsDir
   let strict = false
   let file: string | undefined
+  let card: string | undefined
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (arg === '--strict') strict = true
     else if (arg === '--dir' && argv[index + 1]) directory = argv[++index]
     else if (arg === '--output' && argv[index + 1]) output = argv[++index]
     else if (arg === '--file' && argv[index + 1]) file = argv[++index]
+    else if (arg === '--card' && argv[index + 1]) card = argv[++index]
   }
-  return { directory, output, strict, file }
+  return { directory, output, strict, file, card }
 }
 
 const readCards = (directory: string, file?: string): OfficialCardRecord[] => {
@@ -58,10 +61,17 @@ export const auditCardContracts = (
     output: options.output,
     strict: options.strict ?? false,
     file: options.file,
+    card: options.card,
   }
   const cards = readCards(resolved.directory, resolved.file)
   const audits = cards
-    .filter((card) => card.flags?.enabled !== false && card.flags?.hidden !== true)
+    .filter((card) =>
+      card.flags?.enabled !== false &&
+      card.flags?.hidden !== true &&
+      (!resolved.card ||
+        card.cardNumber === resolved.card ||
+        card.baseCardNumber === resolved.card),
+    )
     .map((card) => analyzeOfficialCardBehavior(card))
   const counts = audits.reduce(
     (result, audit) => {
@@ -78,6 +88,7 @@ export const auditCardContracts = (
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     sourceDirectory: resolved.directory,
+    sourceCardId: resolved.card,
     totalCards: audits.length,
     counts,
     reasonCounts,

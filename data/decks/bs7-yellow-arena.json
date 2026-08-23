@@ -1,0 +1,32 @@
+{
+  "name": "BS7 Arena 黃色傷害競技版",
+  "entries": [
+    { "cardNumber": "BS1-027", "count": 1 },
+    { "cardNumber": "BS2-012", "count": 1 },
+    { "cardNumber": "BS4-024", "count": 1 },
+    { "cardNumber": "BS4-026", "count": 1 },
+    { "cardNumber": "BS4-038", "count": 3 },
+    { "cardNumber": "BS4-042", "count": 4 },
+    { "cardNumber": "BS5-023", "count": 2 },
+    { "cardNumber": "BS6-031", "count": 4 },
+    { "cardNumber": "BS7-025", "count": 2 },
+    { "cardNumber": "BS7-026", "count": 3 },
+    { "cardNumber": "BS7-027", "count": 4 },
+    { "cardNumber": "BS7-028", "count": 3 },
+    { "cardNumber": "BS7-029", "count": 2 },
+    { "cardNumber": "BS7-030", "count": 3 },
+    { "cardNumber": "BS7-031", "count": 3 },
+    { "cardNumber": "BS7-032", "count": 3 },
+    { "cardNumber": "BS7-033", "count": 1 },
+    { "cardNumber": "BS7-037", "count": 3 },
+    { "cardNumber": "BS7-038", "count": 1 },
+    { "cardNumber": "BS7-039", "count": 3 },
+    { "cardNumber": "BS7-040", "count": 3 },
+    { "cardNumber": "BS7-041", "count": 2 },
+    { "cardNumber": "BS7-042", "count": 4 },
+    { "cardNumber": "P-097", "count": 1 },
+    { "cardNumber": "ST2-007", "count": 1 },
+    { "cardNumber": "ST2-020", "count": 1 }
+  ],
+  "format": "standard"
+}

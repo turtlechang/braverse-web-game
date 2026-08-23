@@ -14,6 +14,7 @@ import {
 } from './replacement'
 import {
   canPayTrashBattleCookieCost,
+  hasCookieOnPlayEffects,
   payTrashBattleCookieCost,
 } from './skills'
 
@@ -60,6 +61,7 @@ const assertActiveGame = (state: GameState) => {
 const resolveDeckExhaustion = (
   state: GameState,
   playerId: GameState['activePlayerId'],
+  remainingHpSetup?: { targetInstanceId: string; amount: number },
 ): GameState => {
   if (state.players[playerId].deck.length > 0) {
     return state
@@ -74,6 +76,9 @@ const resolveDeckExhaustion = (
     pendingRefresh: {
       playerId,
       remainingDraws: 0,
+      ...(remainingHpSetup && remainingHpSetup.amount > 0
+        ? { remainingHpSetup: [remainingHpSetup] }
+        : {}),
     },
   }
 }
@@ -221,7 +226,7 @@ export const deployCookie = (
       ...updatedState,
       nextBattleEntrySequence: deploymentState.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        deploymentCard.skill?.trigger === 'on-play'
+        hasCookieOnPlayEffects(deploymentCard)
           ? {
               playerId: player.id,
               sourceInstanceId: deploymentCard.instanceId,
@@ -230,6 +235,10 @@ export const deployCookie = (
           : null,
     },
     player.id,
+    {
+      targetInstanceId: deploymentCard.instanceId,
+      amount: deploymentCard.hp - availableHpCards.length,
+    },
   )
 }
 
@@ -298,7 +307,7 @@ export const replaceDefeatedCookie = (
   const replacementState = consumeReplacementTask({
     ...updatedState,
     pendingOnPlay:
-      card.skill?.trigger === 'on-play'
+      hasCookieOnPlayEffects(card)
         ? {
             playerId,
             sourceInstanceId: card.instanceId,
@@ -311,6 +320,10 @@ export const replaceDefeatedCookie = (
   const exhaustedState = resolveDeckExhaustion(
     replacementState,
     player.id,
+    {
+      targetInstanceId: card.instanceId,
+      amount: card.hp - availableHpCards.length,
+    },
   )
 
   return continuePendingReplacements(exhaustedState)

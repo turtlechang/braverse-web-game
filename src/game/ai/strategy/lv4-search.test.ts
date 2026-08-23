@@ -18,7 +18,9 @@ const emptyPlan: Lv4PlanProgress = {
   setupSteps: 0,
   payoffSteps: 0,
   completedPayoffs: 0,
+  abandonedCombos: 0,
   sharedTags: [],
+  activeComboPlanIds: [],
 }
 
 const setupPlan: TacticalPlan = {
@@ -29,6 +31,7 @@ const setupPlan: TacticalPlan = {
   relativeValue: 12,
   requiresKnownDeckFact: false,
   detail: 'fixture setup',
+  comboPlanId: 'fixture-combo',
 }
 
 const payoffPlan: TacticalPlan = {
@@ -39,6 +42,7 @@ const payoffPlan: TacticalPlan = {
   relativeValue: 42,
   requiresKnownDeckFact: false,
   detail: 'fixture payoff',
+  comboPlanId: 'fixture-combo',
 }
 
 const makeThreeStepHooks = (): Lv4SearchHooks => {
@@ -68,6 +72,10 @@ describe('G4 Lv4 command search', () => {
     const afterSetup = advanceLv4Plan(emptyPlan, setupPlan)
     const afterPayoff = advanceLv4Plan(afterSetup.plan, payoffPlan)
     const standalonePayoff = advanceLv4Plan(emptyPlan, payoffPlan)
+    const mismatchedPayoff = advanceLv4Plan(afterSetup.plan, {
+      ...payoffPlan,
+      comboPlanId: 'different-combo',
+    })
 
     expect(afterSetup.plan.setupSteps).toBe(1)
     expect(afterPayoff.plan).toMatchObject({
@@ -78,6 +86,8 @@ describe('G4 Lv4 command search', () => {
     expect(afterPayoff.completionBonus).toBeGreaterThan(0)
     expect(standalonePayoff.plan.completedPayoffs).toBe(0)
     expect(standalonePayoff.completionBonus).toBe(0)
+    expect(mismatchedPayoff.plan.completedPayoffs).toBe(0)
+    expect(mismatchedPayoff.completionBonus).toBe(0)
   })
 
   it('可在有限 beam 內穩定探索三步合法 GameCommand 路徑', () => {

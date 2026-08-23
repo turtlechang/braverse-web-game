@@ -531,6 +531,7 @@ describe('end phase effects', () => {
     state.players['player-one'].discardPile = [
       refreshCookie,
       item('recycled'),
+      item('recycled-spare'),
     ]
     state.players['player-two'].battleArea = [
       {
