@@ -401,14 +401,22 @@ describe('玩家動作', () => {
       (card) => card.type === 'cookie',
     )
     const refreshCookie = createCookie('deploy-refresh', 1)
+    const initialHpCards = Array.from(
+      { length: Math.max(0, cookie!.type === 'cookie' ? cookie!.hp - 1 : 0) },
+      (_, index) => createItem(`hp-${index}`),
+    )
     state = {
       ...state,
       players: {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          deck: [createItem('hp-a'), createItem('hp-b')],
-          discardPile: [refreshCookie, createItem('recycled')],
+          deck: initialHpCards,
+          discardPile: [
+            refreshCookie,
+            createItem('recycled-a'),
+            createItem('recycled-b'),
+          ],
         },
       },
     }
@@ -418,8 +426,25 @@ describe('玩家動作', () => {
     expect(state.pendingRefresh).toEqual({
       playerId: 'player-one',
       remainingDraws: 0,
+      remainingHpSetup: [{
+        targetInstanceId: cookie!.instanceId,
+        amount: 1,
+      }],
     })
     expect(() => advancePhase(state)).toThrow('必須先完成牌庫 Refresh。')
+
+    state = refreshDeck(
+      state,
+      'player-one',
+      refreshCookie.instanceId,
+      identityShuffle,
+    )
+    expect(state.pendingRefresh).toBeNull()
+    expect(
+      state.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === cookie!.instanceId,
+      )?.hpCards,
+    ).toHaveLength(cookie!.type === 'cookie' ? cookie!.hp : 0)
   })
 
   it('攻擊使攻擊者休息，並將目標 HP 卡移入棄牌區', () => {

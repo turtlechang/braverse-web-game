@@ -61,6 +61,7 @@ const assertActiveGame = (state: GameState) => {
 const resolveDeckExhaustion = (
   state: GameState,
   playerId: GameState['activePlayerId'],
+  remainingHpSetup?: { targetInstanceId: string; amount: number },
 ): GameState => {
   if (state.players[playerId].deck.length > 0) {
     return state
@@ -75,6 +76,9 @@ const resolveDeckExhaustion = (
     pendingRefresh: {
       playerId,
       remainingDraws: 0,
+      ...(remainingHpSetup && remainingHpSetup.amount > 0
+        ? { remainingHpSetup: [remainingHpSetup] }
+        : {}),
     },
   }
 }
@@ -231,6 +235,10 @@ export const deployCookie = (
           : null,
     },
     player.id,
+    {
+      targetInstanceId: deploymentCard.instanceId,
+      amount: deploymentCard.hp - availableHpCards.length,
+    },
   )
 }
 
@@ -312,6 +320,10 @@ export const replaceDefeatedCookie = (
   const exhaustedState = resolveDeckExhaustion(
     replacementState,
     player.id,
+    {
+      targetInstanceId: card.instanceId,
+      amount: card.hp - availableHpCards.length,
+    },
   )
 
   return continuePendingReplacements(exhaustedState)

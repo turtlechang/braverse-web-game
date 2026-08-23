@@ -1042,26 +1042,30 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
-    return {
+    const nextState: GameState = {
       ...updatedState,
-      pendingRefresh:
-        updatedState.players[targetPlayerId].deck.length === 0
-          ? {
-              playerId: targetPlayerId,
-              remainingDraws: 0,
-              ...(remainingHpGain > 0
-                ? {
-                    remainingHpGain: {
-                      targetInstanceId,
-                      amount: remainingHpGain,
-                    },
-                  }
-                : {}),
-            }
-          : updatedState.pendingRefresh,
       cookiesGainedHpThisTurn: {
         ...(updatedState.cookiesGainedHpThisTurn ?? {}),
         [context.sourcePlayerId]: true,
+      },
+    }
+    if (nextState.players[targetPlayerId].deck.length > 0) return nextState
+    if (getRefreshCandidates(nextState, targetPlayerId).length === 0) {
+      return finishWithDefeat(nextState, targetPlayerId, 'refresh-unavailable')
+    }
+    return {
+      ...nextState,
+      pendingRefresh: {
+        playerId: targetPlayerId,
+        remainingDraws: 0,
+        ...(remainingHpGain > 0
+          ? {
+              remainingHpGain: {
+                targetInstanceId,
+                amount: remainingHpGain,
+              },
+            }
+          : {}),
       },
     }
   }
@@ -1167,7 +1171,18 @@ export const executeCardEffect = (
             }
           : null,
       pendingRefresh: exhausted
-        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        ? {
+            playerId: context.sourcePlayerId,
+            remainingDraws: 0,
+            ...(hpCount > hpCards.length
+              ? {
+                  remainingHpSetup: [{
+                    targetInstanceId: cookie.instanceId,
+                    amount: hpCount - hpCards.length,
+                  }],
+                }
+              : {}),
+          }
         : updated.pendingRefresh,
     }
   }
@@ -2007,6 +2022,14 @@ export const executeCardEffect = (
           ? {
               playerId: context.sourcePlayerId,
               remainingDraws: 0,
+              ...(cookie.hp > availableHpCards.length
+                ? {
+                    remainingHpSetup: [{
+                      targetInstanceId: cookie.instanceId,
+                      amount: cookie.hp - availableHpCards.length,
+                    }],
+                  }
+                : {}),
             }
           : updated.pendingRefresh,
     }
@@ -2667,7 +2690,18 @@ export const executeCardEffect = (
             }
           : null,
       pendingRefresh: exhausted
-        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        ? {
+            playerId: context.sourcePlayerId,
+            remainingDraws: 0,
+            ...(cookie.hp > availableHpCards.length
+              ? {
+                  remainingHpSetup: [{
+                    targetInstanceId: cookie.instanceId,
+                    amount: cookie.hp - availableHpCards.length,
+                  }],
+                }
+              : {}),
+          }
         : updated.pendingRefresh,
     }
   }
@@ -2723,7 +2757,18 @@ export const executeCardEffect = (
             }
           : null,
       pendingRefresh: exhausted
-        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        ? {
+            playerId: context.sourcePlayerId,
+            remainingDraws: 0,
+            ...(cookie.hp > availableHpCards.length
+              ? {
+                  remainingHpSetup: [{
+                    targetInstanceId: cookie.instanceId,
+                    amount: cookie.hp - availableHpCards.length,
+                  }],
+                }
+              : {}),
+          }
         : updated.pendingRefresh,
     }
   }
@@ -2776,7 +2821,18 @@ export const executeCardEffect = (
             }
           : null,
       pendingRefresh: exhausted
-        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        ? {
+            playerId: context.sourcePlayerId,
+            remainingDraws: 0,
+            ...(effect.hpCount > availableHpCards.length
+              ? {
+                  remainingHpSetup: [{
+                    targetInstanceId: sourceInBreak.instanceId,
+                    amount: effect.hpCount - availableHpCards.length,
+                  }],
+                }
+              : {}),
+          }
         : updated.pendingRefresh,
     }
   }

@@ -3328,6 +3328,42 @@ describe('BS4 condition fixtures', () => {
     ).toHaveLength(4)
   })
 
+  it('BS7-024 queues a replacement when its HP-return cost defeats an Arena Cookie', () => {
+    const state = createCardCheckDemoState('BS7-024')
+    const target = state.players['player-two'].battleArea[0]
+    const partner = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+    if (!target || !partner) {
+      throw new Error('BS7-024 replacement fixture is incomplete')
+    }
+    partner.hpCards = [partner.hpCards.at(-1)!]
+
+    const pending = resolveAttackEffect(state, 'player-one', [])
+    const result = resolveOptionalCostAttack(
+      pending,
+      'player-one',
+      'pay',
+      [],
+      [target.card.instanceId],
+      [],
+      [],
+      [],
+      [],
+      ['self-extra-1'],
+    )
+
+    expect(
+      result.players['player-one'].battleArea.some(
+        (entry) => entry.card.instanceId === 'self-extra-1',
+      ),
+    ).toBe(false)
+    expect(result.players['player-one'].breakArea).toContainEqual(partner.card)
+    expect(result.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+  })
+
   it('keeps BS7-025 yellow Arena FLIP HP gain gated by the real colour condition', () => {
     const positive = createCardCheckDemoState('BS7-025')
     const positiveArena = positive.players['player-one'].battleArea.find(

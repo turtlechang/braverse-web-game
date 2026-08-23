@@ -16,6 +16,10 @@ import type {
 } from './types'
 import { finishWithDefeat, resolveBasicVictory } from './victory'
 
+type PendingHpSetups = NonNullable<
+  NonNullable<GameState['pendingRefresh']>['remainingHpSetup']
+>
+
 export const getRefreshCandidates = (
   state: GameState,
   playerId: PlayerId,
@@ -24,33 +28,6 @@ export const getRefreshCandidates = (
     (card): card is CookieCard =>
       card.type === 'cookie' && card.level >= 1,
   )
-
-const replenishPlayerHpCards = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => {
-  const player = state.players[playerId]
-  let updatedPlayer = player
-  for (const cookie of player.battleArea) {
-    const needed = cookie.card.hp - cookie.hpCards.length
-    if (needed > 0) {
-      const available = updatedPlayer.deck.slice(0, needed)
-      updatedPlayer = {
-        ...updatedPlayer,
-        deck: updatedPlayer.deck.slice(needed),
-        battleArea: updatedPlayer.battleArea.map((c) =>
-          c.card.instanceId === cookie.card.instanceId
-            ? {
-                ...c,
-                hpCards: [...c.hpCards, ...available],
-              }
-            : c,
-        ),
-      }
-    }
-  }
-  return updatePlayer(state, updatedPlayer)
-}
 
 const continuePendingHpGain = (
   state: GameState,
@@ -74,6 +51,49 @@ const continuePendingHpGain = (
         : cookie,
     ),
   })
+}
+
+const continuePendingHpSetups = (
+  state: GameState,
+  playerId: PlayerId,
+  pendingHpSetups?: PendingHpSetups,
+): {
+  state: GameState
+  remainingHpSetups: PendingHpSetups
+} => {
+  let nextState = state
+  const remainingHpSetups: PendingHpSetups = []
+
+  for (let index = 0; index < (pendingHpSetups?.length ?? 0); index += 1) {
+    const pendingHpSetup = pendingHpSetups![index]
+    const player = nextState.players[playerId]
+    const targetIndex = player.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === pendingHpSetup.targetInstanceId,
+    )
+    if (targetIndex < 0) continue
+
+    const gainedCards = player.deck.slice(0, pendingHpSetup.amount)
+    nextState = updatePlayer(nextState, {
+      ...player,
+      deck: player.deck.slice(gainedCards.length),
+      battleArea: player.battleArea.map((cookie, cookieIndex) =>
+        cookieIndex === targetIndex
+          ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
+          : cookie,
+      ),
+    })
+
+    const remainingAmount = pendingHpSetup.amount - gainedCards.length
+    if (remainingAmount > 0) {
+      remainingHpSetups.push(
+        { ...pendingHpSetup, amount: remainingAmount },
+        ...pendingHpSetups!.slice(index + 1),
+      )
+      break
+    }
+  }
+
+  return { state: nextState, remainingHpSetups }
 }
 
 export const refreshDeck = (
@@ -148,6 +168,10 @@ export const refreshDeck = (
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingHpGain
       : undefined
+  const pendingHpSetups =
+    state.pendingRefresh?.playerId === playerId
+      ? state.pendingRefresh.remainingHpSetup
+      : undefined
 
   if (remainingDraws > 0) {
     const drawAmount = Math.min(updatedPlayer.deck.length, remainingDraws)
@@ -166,29 +190,28 @@ export const refreshDeck = (
     }
   }
 
-  // 補足因登場或效果設置 HP 途中耗盡牌庫的餅乾
-  const replenishedState = replenishPlayerHpCards(updatedState, playerId)
-
-  const replenishedPlayer = replenishedState.players[playerId]
-  const stillNeedsHp = replenishedPlayer.battleArea.some(
-    (cookie) => cookie.hpCards.length < cookie.card.hp,
+  const hpSetupResult = continuePendingHpSetups(
+    updatedState,
+    playerId,
+    pendingHpSetups,
   )
-  if (stillNeedsHp && replenishedPlayer.deck.length === 0) {
-    if (getRefreshCandidates(replenishedState, playerId).length === 0) {
-      return finishWithDefeat(replenishedState, playerId, 'refresh-unavailable')
+  const hpSetupState = hpSetupResult.state
+  if (hpSetupResult.remainingHpSetups.length > 0) {
+    if (getRefreshCandidates(hpSetupState, playerId).length === 0) {
+      return finishWithDefeat(hpSetupState, playerId, 'refresh-unavailable')
     }
     return {
-      ...replenishedState,
+      ...hpSetupState,
       pendingRefresh: {
         playerId,
         remainingDraws: 0,
-        ...(pendingHpGain ? { remainingHpGain: pendingHpGain } : {}),
+        remainingHpSetup: hpSetupResult.remainingHpSetups,
       },
     }
   }
 
   const hpGainState = continuePendingHpGain(
-    replenishedState,
+    hpSetupState,
     playerId,
     pendingHpGain,
   )
@@ -196,7 +219,7 @@ export const refreshDeck = (
     ? pendingHpGain.amount -
       Math.max(
         0,
-        replenishedState.players[playerId].deck.length -
+        hpSetupState.players[playerId].deck.length -
           hpGainState.players[playerId].deck.length,
       )
     : 0

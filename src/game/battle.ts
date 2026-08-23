@@ -2849,7 +2849,11 @@ export const resolveOptionalCostAttack = (
       ],
     }
   }
-  const stateAfterSourceCost: GameState = {
+  const sourceCostDepartedCount =
+    hpToTrashPayment.departedCount +
+    hpToHandPayment.departedCount +
+    (sourceToLeaveBattle ? 1 : 0)
+  let stateAfterSourceCost: GameState = {
     ...state,
     ...(hpToTrashPayment.costRecord
       ? { costRecord: hpToTrashPayment.costRecord }
@@ -2858,6 +2862,13 @@ export const resolveOptionalCostAttack = (
       ...state.players,
       [playerId]: playerAfterSourceCosts,
     },
+  }
+  if (sourceCostDepartedCount > 0) {
+    stateAfterSourceCost = recordCookieDepartures(
+      clearDepartedCookieModifiers(stateAfterSourceCost),
+      playerId,
+      sourceCostDepartedCount,
+    )
   }
   const isAutomaticSourceTarget = (effect: CardEffect) =>
     (effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&

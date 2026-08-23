@@ -408,4 +408,80 @@ describe('gain-hp effect', () => {
       source.hpCards.length + 1,
     )
   })
+
+  it('ends the game when the final HP card leaves no Refresh candidate', () => {
+    const state = createDemoGame()
+    const player = state.players['player-one']
+    const [lastDeckCard] = player.deck
+    const source = player.battleArea[0]
+    const exactState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          deck: [lastDeckCard],
+          discardPile: [],
+        },
+      },
+    }
+
+    const result = executeCardEffect(
+      exactState,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      [],
+    )
+
+    expect(result.status).toBe('finished')
+    expect(result.result).toMatchObject({
+      loserId: 'player-one',
+      reason: 'refresh-unavailable',
+    })
+  })
+
+  it('does not restore unrelated damaged HP after a draw Refresh', () => {
+    const state = createDemoGame()
+    const player = state.players['player-one']
+    const refreshCookie = player.hand.find(
+      (card) => card.type === 'cookie' && card.level >= 1,
+    )!
+    const [recycledA, recycledB] = player.deck.slice(0, 2)
+    const wounded = player.battleArea[0]
+    const refreshState: GameState = {
+      ...state,
+      pendingRefresh: { playerId: 'player-one', remainingDraws: 1 },
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          hand: player.hand.filter(
+            (card) => card.instanceId !== refreshCookie.instanceId,
+          ),
+          deck: [],
+          discardPile: [refreshCookie, recycledA, recycledB],
+          battleArea: [{ ...wounded, hpCards: wounded.hpCards.slice(0, -1) }],
+        },
+      },
+    }
+
+    const result = refreshDeck(
+      refreshState,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+
+    expect(result.pendingRefresh).toBeNull()
+    expect(result.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      wounded.hpCards.length - 1,
+    )
+  })
 })

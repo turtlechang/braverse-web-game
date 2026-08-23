@@ -2221,6 +2221,12 @@ describe('explainUnavailableTraps', () => {
       item('p2-p-082-deck-a'),
       item('p2-p-082-deck-b'),
     ]
+    // P-082 grants the opponent two HP.  Keep this payment-path fixture focused
+    // on its alternative cost by providing the LV.1 Cookie needed to Refresh
+    // after that exact deck exhaustion.
+    state.players['player-two'].discardPile = [
+      cookie('p2-p-082-refresh-cookie', 1, 1),
+    ]
     state.players['player-one'].discardPile = [alternativeCookie]
     state = declareAttack(state)
 
