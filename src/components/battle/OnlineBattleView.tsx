@@ -23,6 +23,7 @@ import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
 import { RemoteActionBanner } from '../panels/RemoteActionBanner'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
+import { BattleLogReviewModal } from '../panels/BattleLogSidebar'
 import { deriveActionStatus } from '../panels/actionStatus'
 import { buildActionProgress } from '../panels/actionProgress'
 import { EffectPanel } from '../effects/EffectPanel'
@@ -117,6 +118,7 @@ export function OnlineBattleView({
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
   const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [battleLogReviewReason, setBattleLogReviewReason] = useState<string | null>(null)
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
     paymentIds: string[]
@@ -839,13 +841,28 @@ export function OnlineBattleView({
         />
       )}
 
-      {game.result && (
+      {game.result && battleLogReviewReason === null && (
         <ResultModal
           winnerName={game.players[game.result.winnerId].name}
           loserId={game.result.loserId}
           viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
+          onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
           onRestart={onLeave}
+        />
+      )}
+
+      {game.result && battleLogReviewReason !== null && (
+        <BattleLogReviewModal
+          entries={game.commandLog ?? []}
+          playerNames={{
+            'player-one': game.players['player-one'].name,
+            'player-two': game.players['player-two'].name,
+          }}
+          winnerName={game.players[game.result.winnerId].name}
+          resultSummary={battleLogReviewReason}
+          turnNumber={game.turnNumber}
+          onClose={() => setBattleLogReviewReason(null)}
         />
       )}
 

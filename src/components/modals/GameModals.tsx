@@ -6,6 +6,7 @@ import {
   Maximize2,
   Minimize2,
   Pause,
+  ScrollText,
   X,
 } from 'lucide-react'
 import type {
@@ -2554,6 +2555,7 @@ export interface ResultModalProps {
   viewerPlayerId: PlayerId
   reason: GameEndReason
   onRestart: () => void
+  onReviewLog?: (reasonText: string) => void
 }
 
 export interface SpecialPlayModalProps {
@@ -2776,6 +2778,7 @@ export function ResultModal({
   viewerPlayerId,
   reason,
   onRestart,
+  onReviewLog,
 }: ResultModalProps) {
   const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
@@ -2793,9 +2796,25 @@ export function ResultModal({
         <span>對局結束</span>
         <h2>{winnerName}勝利</h2>
         <p>{reasonText}</p>
-        <button type="button" onClick={onRestart}>
-          再來一局
-        </button>
+        <div className="result-modal-actions">
+          {onReviewLog && (
+            <button
+              type="button"
+              className="result-review-button"
+              onClick={() => onReviewLog(reasonText)}
+            >
+              <ScrollText size={16} aria-hidden="true" />
+              查看對戰紀錄
+            </button>
+          )}
+          <button
+            type="button"
+            className="result-restart-button"
+            onClick={onRestart}
+          >
+            再來一局
+          </button>
+        </div>
       </section>
     </div>
   )

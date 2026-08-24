@@ -1479,6 +1479,30 @@ describe('ResultModal', () => {
     expect(markup).toContain('玩家達成了特殊勝利條件。')
     expect(markup).not.toContain('休息區')
   })
+
+  it('offers a review entry point and passes the resolved reason text', async () => {
+    const onReviewLog = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <ResultModal
+          winnerName="玩家"
+          loserId="player-two"
+          viewerPlayerId="player-one"
+          reason="refresh-unavailable"
+          onRestart={() => undefined}
+          onReviewLog={onReviewLog}
+        />,
+      ),
+    )
+
+    expect(container.textContent).toContain('查看對戰紀錄')
+    await click(findButton(container, '查看對戰紀錄'))
+
+    expect(onReviewLog).toHaveBeenCalledWith('對方無法完成牌庫 Refresh。')
+    await act(() => root.unmount())
+  })
 })
 
 describe('PauseModal', () => {

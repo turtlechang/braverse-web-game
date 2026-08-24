@@ -1204,6 +1204,37 @@
   color: #47220b;
 }
 
+.result-modal-actions {
+  display: grid;
+  gap: 8px;
+  width: min(260px, 100%);
+  margin: 12px auto 0;
+}
+
+.result-modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 0;
+}
+
+.result-modal-actions .result-review-button {
+  border: 1px solid rgba(255, 218, 118, 0.68);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffe7a1;
+}
+
+.result-modal-actions .result-review-button:hover {
+  background: rgba(255, 218, 118, 0.14);
+}
+
+.result-modal-actions .result-restart-button {
+  background: #f3b937;
+  color: #47220b;
+}
+
 .deck-inspect-toggle {
   display: flex;
   gap: 6px;
