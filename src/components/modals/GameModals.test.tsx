@@ -997,6 +997,43 @@ describe('CardDetailModal', () => {
     expect(markup).toContain('Deals 1 damage.')
   })
 
+  it('renders BS7-104 passive and Activate skill segments on separate lines', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'BS7-104',
+          instanceId: 'test-BS7-104',
+          name: 'Prune Juice Cookie',
+          type: 'cookie',
+          level: 2,
+          hp: 4,
+          attack: 3,
+          attackCost: 3,
+          attackEnergyCost: { purple: 2, neutral: 1 },
+          attackText: '<{P}{P}{N}> The Strongest Potion {da} 3',
+          effectText:
+            "If your break area is LV.3 or higher, or if there is a [Capsaicin Cookie] or [Kouign-Amann Cookie] in your battle area, each cost required for this Cookie's attack becomes {N}.\r\n【Activate】 【Once Per Turn】 <{N}> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+          skill: {
+            trigger: 'activate',
+            oncePerTurn: true,
+            yourTurn: false,
+            restSource: false,
+            cost: { energy: { neutral: 1 }, discardHand: 0 },
+            text:
+              "If your break area is LV.3 or higher, or if there is a [Capsaicin Cookie] or [Kouign-Amann Cookie] in your battle area, each cost required for this Cookie's attack becomes {N}.\r\n【Activate】 【Once Per Turn】 <{N}> If there are 7 【Arena】 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+            effects: [],
+          },
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('each cost required for this Cookie&#x27;s attack becomes')
+    expect(markup).toContain('<br/>')
+    expect(markup).toContain('Activate 啟動')
+    expect(markup).toContain('That Cookie receives 1 damage.')
+  })
+
   it('keeps ordinary attack power beside the attack name before Then text', () => {
     const markup = renderToStaticMarkup(
       <CardDetailModal

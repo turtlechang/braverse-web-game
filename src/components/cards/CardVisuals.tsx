@@ -186,7 +186,15 @@ export function CardEffectText({ text }: { text: string }) {
           )
         }
 
-        return part
+        const lines = part.split(/\r\n|\n|\r/)
+        if (lines.length === 1) return part
+
+        return lines.flatMap((line, lineIndex) => [
+          lineIndex > 0 ? (
+            <br key={`${part}-${index}-line-break-${lineIndex}`} />
+          ) : null,
+          line,
+        ])
       })}
     </>
   )

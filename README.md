@@ -16,7 +16,7 @@ BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將�
 
 卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
 
-卡牌效果文字的官方標記與遊戲規則顯示共用 `CardEffectText`；圖片標籤資產集中於 `public/card-tags/`，保留文字回退與無障礙替代文字。
+卡牌效果文字的官方標記與遊戲規則顯示共用 `CardEffectText`；元件會保留官方 CRLF 段落換行（例如 BS7-104 的被動段與 Activate 段），圖片標籤資產集中於 `public/card-tags/`，並保留文字回退與無障礙替代文字。
 
 牌組賽制分為標準賽制與開放賽制：標準賽制套用版本化的 ASIA 亞洲版 2026-02-13 禁卡／限卡快照（詳見 [禁限卡表文件](docs/banlist-asia-2026-02-13.md)）；開放賽制則允許正式卡池內所有卡牌使用。兩種賽制都仍遵守 60 張牌、同名卡最多 4 張、FLIP 最多 16 張，以及至少 1 張餅乾等基本牌組規則。
 
@@ -98,6 +98,7 @@ Lv.5「高手對抗」維持實驗 challenger：在 Lv.4 合法 command search �
 主選單「AI 對手」的等級預設現為 Lv.5；玩家仍可在下拉選單切換 Lv.1～Lv.5，benchmark 與測試對局的明確等級設定不受影響。
 本輪新增版本化 ASIA 2026-02-13 禁限卡快照，並產生 256 副五色、每副合法且構築簽名不同的 Lv.5 Swiss roster；8 輪共 1,024 場 Swiss 與 7 場 Top cut 全部完成，Lv.4 以相同 pairing 重播亦為 1,024／1,024 完成。Lv.5 冠軍為 YELLOW #057、亞軍為 YELLOW #002；安全／完成／Top cut 通過，但 paired advantage 的 Wilson 95% CI 為 44.62%–59.34%，尚不足以證明顯著超過 Lv.4。完整排名與牌表見 [256 副 Lv.5 Swiss 報告](docs/lv5-swiss-256-report.md)。
 結算畫面現在提供「查看對戰紀錄」入口；回顧視窗沿用 commandLog 的回合／玩家／卡牌／分類篩選與行動組逐步展開，並顯示紀錄筆數、行動組、回合統計，支援全部展開／收合及返回結算畫面。本機與線上對戰共用同一份公開紀錄資料，不另外重算或改寫遊戲狀態。
+卡牌詳情與快速預覽沿用同一套 `CardEffectText` 段落渲染；BS7-104「Prune Juice Cookie」的官方第二段 Activate／Once per turn 技能會在 UI 另起一行，與卡面段落一致。
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
@@ -212,7 +213,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 ## 下一步計畫
 
 Lv.5 下一輪以本輪 256 副 Swiss 的 Combo 18／20 完成、Refresh forecast 0 與 Lv.5／Lv.4 不一致場 90／83 為診斷基線，新增未見過的 training seeds 改善 Combo、Refresh／空場預判與 matchup 評分，不重用已看過的 seeds 201–210、301、401–402、503–504、601–602。再以新的 46 副全 corpus、先後攻換位 300 場以上 holdout 執行 `benchmark:ai:challenger`；只有安全指標全為 0、勝率至少 52% 且 Wilson 95% CI 下界高於 50%，才由實驗 challenger 升格。任何新卡池先通過 `ai:audit:capabilities --strict`，再進逐卡規則／Browser 與 promote gate，禁止用卡號、系列名稱或本輪弱勢牌組寫 AI 特判。
-對戰紀錄回顧目前以公開 commandLog 提供可讀覆盤；後續可在不揭露隱藏資訊的前提下，加入逐回合狀態差異與「從此步重播」入口，並以 replay API 作為唯一狀態來源。
+對戰紀錄回顧目前以公開 commandLog 提供可讀覆盤；後續可在不揭露隱藏資訊的前提下，加入逐回合狀態差異與「從此步重播」入口，並以 replay API 作為唯一狀態來源。卡牌文字 UI 則維持官方段落換行與無障礙文字回退，新增卡池時沿用同一渲染契約。
 
 BS7-001～BS7-108 已完成 runtime 轉接、strict contract、正式 promote、五色牌組的跨 seed optimizer／holdout 與 Lv.4 AI 強度校準。後續官方卡文或卡表更新仍須重新從 `inventory` candidate 開始，通過 strict contract、逐卡正反 Browser、BS7-039／082 順序結算、正式 smoke 與人工覆核後，才可再次 promote；五色牌組則以真人對局、較大獨立樣本與 Green／Purple 對 Yellow 的弱勢對局作為下一輪校準重點。
 
@@ -331,6 +332,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-24 | 修正官方卡牌文字的段落渲染：`CardEffectText` 保留 CRLF 換行，BS7-104 的被動與 Activate／Once per turn 技能在卡牌詳情及快速預覽中分成兩段；新增 CardVisuals／CardDetailModal 回歸測試與本機 Browser 驗證。 |
 | 2026-08-24 | 主選單「AI 對手」預設等級由 Lv.4 調整為 Lv.5；保留 Lv.1～Lv.5 手動切換，benchmark／測試對局的明確等級設定不變。 |
 | 2026-08-24 | 新增結算後對戰紀錄回顧：提供勝負摘要、紀錄／行動組／回合統計，沿用既有回合／玩家／卡牌／分類篩選與逐步展開，支援全部展開／收合及返回結算；本機與線上結果畫面共用公開 commandLog，並完成元件回歸、lint、build 與 localhost Browser flow。 |
 | 2026-08-23 | 新增 ASIA 2026-02-13 版本化禁限卡表與標準牌組 gate；產生 256 副五色多樣化 roster，完成 Lv.5 8 輪／1,024 場 Swiss、7 場 Top cut 與同 pairing Lv.4 控制組 1,024 場。修正 AI 陷阱多代價選項、棄牌區餅乾替代代價與 `excludeSource` 合法性；Lv.5／Lv.4 均 100% 完成且安全指標全 0，冠軍 YELLOW #057、亞軍 YELLOW #002，但 paired advantage Wilson 95% CI 44.62%–59.34%，尚未升格。完整排名、牌表與 telemetry 見 [256 副 Lv.5 Swiss 報告](docs/lv5-swiss-256-report.md)。 |
