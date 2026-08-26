@@ -99,6 +99,8 @@ export interface CapabilityEvidence {
   destinationZone?: StrategyZone
   target: CapabilityTarget
   cost: AbilityCost | null
+  /** 原始結構化條件；策略層只可用 PlayerView 的公開部分判讀。 */
+  condition?: EffectCondition
   conditionKinds: string[]
   strategyTags: StrategyTag[]
   certainty: CapabilityCertainty

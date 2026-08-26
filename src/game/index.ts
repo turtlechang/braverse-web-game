@@ -205,6 +205,9 @@ export {
 export type { CustomDeck, CustomDeckEntry } from './custom-deck'
 export {
   DEFAULT_DECK_FORMAT,
+  ACTIVE_BANLIST_POLICY,
+  ASIA_BANNED_CARD_NUMBERS,
+  ASIA_LIMITED_CARD_NUMBERS,
   getCardRestriction,
   getDeckCopyLimit,
   getDeckFormatLabel,
@@ -213,6 +216,7 @@ export {
   TAIWAN_LIMITED_CARD_NUMBERS,
 } from './deck-rules'
 export type { CardRestriction, DeckEntryLike, DeckFormat } from './deck-rules'
+export type { BanlistPolicy } from './deck-rules'
 export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,
@@ -235,6 +239,7 @@ export {
   explainUnavailableTraps,
   getTrapCandidates,
   getTrapCostOptions,
+  getPlayableTrapCostOption,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   isBlockDisabled,
@@ -271,6 +276,7 @@ export {
   getEffectiveCardAbilityCost,
   getItemAbility,
   getStageAbility,
+  isCardAbilityEffectConditionDeferredUntilCost,
   playItem,
   playStage,
 } from './card-abilities'
@@ -491,6 +497,22 @@ export type {
   BuildReplayIssueBundleOptions,
   ReplayIssueBundleV1,
 } from './replay-issue-bundle'
+export {
+  BATTLE_REPLAY_FORMAT,
+  BATTLE_REPLAY_VERSION,
+  buildBattleReplayExport,
+  parseBattleReplayExport,
+  BattleReplayParseError,
+  replayBattleExport,
+  serializeBattleReplayExport,
+} from './battle-replay'
+export type {
+  BattleReplayExportV1,
+  BattleReplayLimitation,
+  BattleReplayMode,
+  BattleReplayVisibility,
+  BuildBattleReplayExportOptions,
+} from './battle-replay'
 export type {
   AiActionType,
   AiDecision,
@@ -510,7 +532,25 @@ export type {
   EndInfo,
   BehaviorMetrics,
 } from './ai/types'
-export { evaluatePlayerView } from './ai/evaluated-turn-handler'
+export {
+  evaluatePlayerView,
+  evaluatePlayerViewBreakdown,
+} from './ai/evaluated-turn-handler'
+export type { PublicStateEvaluationBreakdown } from './ai/strategy/state-evaluation'
+export {
+  estimateOpponentResponse,
+  evaluatePublicResponseMinimax,
+} from './ai/strategy/opponent-response'
+export type {
+  OpponentResponseEstimate,
+  PublicResponseBranch,
+  PublicResponseBranchKind,
+} from './ai/strategy/opponent-response'
+export { assessLv5DefensiveReserve } from './ai/strategy/defensive-reserve'
+export type {
+  DefensiveReserveAssessment,
+  DefensiveReserveReason,
+} from './ai/strategy/defensive-reserve'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
   createCustomDeckMatch,

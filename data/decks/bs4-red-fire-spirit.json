@@ -11,17 +11,17 @@
     { "cardNumber": "BS4-009", "count": 2 },
     { "cardNumber": "BS4-018", "count": 2 },
     { "cardNumber": "BS4-019", "count": 2 },
-    { "cardNumber": "BS3-010", "count": 3 },
+    { "cardNumber": "BS3-010", "count": 4 },
     { "cardNumber": "BS3-017", "count": 4 },
     { "cardNumber": "BS3-006", "count": 4 },
-    { "cardNumber": "BS3-013", "count": 4 },
-    { "cardNumber": "BS3-019", "count": 3 },
-    { "cardNumber": "BS3-022", "count": 1 },
+    { "cardNumber": "BS3-013", "count": 1 },
+    { "cardNumber": "BS3-019", "count": 4 },
+    { "cardNumber": "BS3-022", "count": 2 },
     { "cardNumber": "ST1-013", "count": 4 },
-    { "cardNumber": "BS1-003", "count": 3 },
-    { "cardNumber": "BS2-003", "count": 4 },
-    { "cardNumber": "BS4-011", "count": 3 },
+    { "cardNumber": "BS1-003", "count": 4 },
+    { "cardNumber": "BS2-003", "count": 1 },
+    { "cardNumber": "BS4-011", "count": 4 },
     { "cardNumber": "BS1-022", "count": 4 },
-    { "cardNumber": "ST1-020", "count": 3 }
+    { "cardNumber": "ST1-020", "count": 4 }
   ]
 }

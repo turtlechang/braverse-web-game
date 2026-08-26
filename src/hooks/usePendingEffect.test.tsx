@@ -19,6 +19,7 @@ import {
   resolveNextDamage,
   resolveOptionalCostAttack,
   skipTrap,
+  canPlayItem,
   type CookieCard,
   type GameCard,
   type GameState,
@@ -495,6 +496,101 @@ describe('usePendingEffect cancelPendingSkill', () => {
     })
 
     expect(captured!.pendingEffect).toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('opens and resolves BS6-084 after paying its discard-hand condition', async () => {
+    const baseGame = createCardCheckDemoState('BS6-084')
+    const itemCard = baseGame.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-084',
+    )
+    if (!itemCard?.item) {
+      throw new Error('BS6-084 card-check fixture requires Time Manipulator')
+    }
+
+    // The card-check fixture deliberately starts above the threshold, so the
+    // item must be opened first and the hand reduced during payment.
+    const extraHandCard = baseGame.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-084-hand-filler-extra',
+    )
+    if (!extraHandCard) {
+      throw new Error('BS6-084 fixture requires an extra hand card')
+    }
+    let currentGame: GameState = baseGame
+    const messages: string[] = []
+    const initialTarget = currentGame.players['player-two'].battleArea[0]
+    if (!initialTarget) {
+      throw new Error('BS6-084 card-check fixture requires an opponent Cookie')
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    const setGame = (value: GameState | ((prev: GameState) => GameState)) => {
+      currentGame = typeof value === 'function' ? value(currentGame) : value
+    }
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: currentGame,
+        setGame,
+        dispatch: createDispatch(currentGame, setGame),
+        viewerPlayerId: 'player-one',
+        setMessage: (message) => messages.push(message),
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    expect(currentGame.players['player-one'].hand).toHaveLength(6)
+    expect(
+      canPlayItem(currentGame, 'player-one', itemCard.instanceId),
+    ).toBe(true)
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCardAbility(
+        itemCard,
+        itemCard.item!,
+        'item',
+        '使用物品',
+      ),
+    )
+
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.currentEffect?.kind).toBe('damage')
+    expect(captured!.currentEffectConditionMet).toBe(true)
+
+    const paymentId = currentGame.players['player-one'].supportArea[0]
+      ?.card.instanceId
+    if (!paymentId) throw new Error('BS6-084 fixture requires blue energy')
+    await act(() => captured!.toggleSkillPayment(paymentId))
+    await act(() =>
+      captured!.toggleSkillDiscardHand(extraHandCard.instanceId),
+    )
+
+    const targetId = captured!.effectTargetCandidates[0]?.card.instanceId
+    if (!targetId) throw new Error('BS6-084 fixture requires a damage target')
+    await act(() => captured!.toggleEffectTarget(targetId))
+    await act(() => captured!.confirmEffect())
+
+    expect(currentGame.players['player-one'].hand).toHaveLength(4)
+    expect(
+      currentGame.players['player-two'].battleArea[0]?.hpCards,
+    ).toHaveLength(initialTarget.hpCards.length - 1)
+    expect(messages.at(-1)).toBe('opp-lv1 受到 1 傷害。')
 
     await act(() => root.unmount())
   })

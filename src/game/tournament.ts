@@ -128,6 +128,10 @@ export interface SwissTournamentOptions {
   onProgress?: (
     progress: SwissTournamentProgress,
   ) => void | Promise<void>
+  onMatch?: (context: {
+    record: SwissMatchRecord
+    result: AiDetailedResult | null
+  }) => void | Promise<void>
 }
 
 const COLORS: TournamentColor[] = [
@@ -458,6 +462,12 @@ export const runSwissTournament = async (
         reason: result?.endInfo.reason ?? null,
         error: error ?? result?.error ?? null,
       })
+      if (options.onMatch) {
+        await options.onMatch({
+          record: matches[matches.length - 1]!,
+          result,
+        })
+      }
 
       if (
         options.onProgress &&

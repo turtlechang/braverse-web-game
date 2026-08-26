@@ -10,11 +10,18 @@ export interface OpponentEndgameForecast {
   targetsLastBattleCookie: boolean
   noReplacementProbability: number
   expectedReplacementHp: number
+  /** 只由 PlayerView 已公開餅乾的 HP 與平滑先驗推導的補位 HP 分布。 */
+  replacementHpDistribution: readonly ReplacementHpEstimate[]
   refreshProbability: number
   refreshDefeatProbability: number
   expectedRefreshBreakLevel: number
   score: number
   detail: string
+}
+
+export interface ReplacementHpEstimate {
+  hp: number
+  probability: number
 }
 
 const breakLevel = (view: PlayerView): number =>
@@ -37,22 +44,38 @@ const estimatedCookieRate = (view: PlayerView): number => {
   return Math.min(0.7, Math.max(0.15, estimate))
 }
 
-const estimatedCookieHp = (view: PlayerView): number => {
+const estimatedCookieHpDistribution = (
+  view: PlayerView,
+): ReplacementHpEstimate[] => {
   const cookies = publicOpponentCards(view).filter(
     (card) => card.type === 'cookie',
   )
-  if (cookies.length === 0) return 3
-  return Math.max(
-    1,
-    Math.round(cookies.reduce((total, card) => total + card.hp, 0) / cookies.length),
-  )
+  const counts = new Map<number, number>([[3, PRIOR_WEIGHT]])
+  for (const cookie of cookies) {
+    const hp = Math.max(1, cookie.hp)
+    counts.set(hp, (counts.get(hp) ?? 0) + 1)
+  }
+  const total = cookies.length + PRIOR_WEIGHT
+  return [...counts.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([hp, count]) => ({ hp, probability: count / total }))
 }
+
+const expectedHp = (distribution: readonly ReplacementHpEstimate[]): number =>
+  Math.max(
+    1,
+    Math.round(distribution.reduce(
+      (total, estimate) => total + estimate.hp * estimate.probability,
+      0,
+    )),
+  )
 
 const emptyForecast = (): OpponentEndgameForecast => ({
   publicLethal: false,
   targetsLastBattleCookie: false,
   noReplacementProbability: 0,
   expectedReplacementHp: 0,
+  replacementHpDistribution: [],
   refreshProbability: 0,
   refreshDefeatProbability: 0,
   expectedRefreshBreakLevel: 0,
@@ -89,9 +112,18 @@ export const forecastOpponentEndgame = (
     ? 1
     : Math.pow(1 - cookieRate, handCount)
   const replacementProbability = 1 - noReplacementProbability
-  const expectedReplacementHp = estimatedCookieHp(view)
-  const refreshTriggered = view.opponent.deckCount <= expectedReplacementHp
-  const refreshProbability = refreshTriggered ? replacementProbability : 0
+  const replacementHpDistribution = estimatedCookieHpDistribution(view)
+  const expectedReplacementHp = expectedHp(replacementHpDistribution)
+  // 不再把平均 HP 四捨五入成單一門檻：高／低 HP 混合的公開牌池可能同時
+  // 包含會觸發 Refresh 與不會觸發 Refresh 的補位路徑，需保留各自機率。
+  const refreshTriggerProbability = replacementHpDistribution.reduce(
+    (total, estimate) => total + estimate.probability * Number(
+      view.opponent.deckCount <= estimate.hp,
+    ),
+    0,
+  )
+  const refreshTriggered = refreshTriggerProbability > 0
+  const refreshProbability = replacementProbability * refreshTriggerProbability
 
   const discardCookies = view.opponent.discardPile.filter(
     (card) => card.type === 'cookie',
@@ -115,8 +147,15 @@ export const forecastOpponentEndgame = (
   const expectedRefreshBreakLevel = refreshProbability * (
     minimumPublicRefreshLevel ?? Math.max(1, Math.round(cookieRate * 3))
   )
+  const expectedDeckShortfall = replacementHpDistribution.reduce(
+    (total, estimate) => total + estimate.probability * Math.max(
+      0,
+      estimate.hp + 1 - view.opponent.deckCount,
+    ),
+    0,
+  )
   const deckPressure = refreshTriggered
-    ? Math.max(0, expectedReplacementHp + 1 - view.opponent.deckCount) * 5
+    ? expectedDeckShortfall * replacementProbability * 5
     : 0
   const score = Math.round(
     noReplacementProbability * 180 +
@@ -130,6 +169,7 @@ export const forecastOpponentEndgame = (
     targetsLastBattleCookie,
     noReplacementProbability,
     expectedReplacementHp,
+    replacementHpDistribution,
     refreshProbability,
     refreshDefeatProbability,
     expectedRefreshBreakLevel,
@@ -137,7 +177,7 @@ export const forecastOpponentEndgame = (
     detail: [
       `打空戰鬥區後無可登場餅乾機率 ${Math.round(noReplacementProbability * 100)}%。`,
       refreshTriggered
-        ? `預估補位需 ${expectedReplacementHp} HP，對手牌庫僅 ${view.opponent.deckCount} 張，會進入 Refresh 風險。`
+        ? `公開補位 HP 分布 ${replacementHpDistribution.map((estimate) => `${estimate.hp} HP ${Math.round(estimate.probability * 100)}%`).join('、')}；對手牌庫 ${view.opponent.deckCount} 張，會進入 Refresh 風險。`
         : `預估補位需 ${expectedReplacementHp} HP，對手牌庫尚有 ${view.opponent.deckCount} 張。`,
       refreshProbability > 0
         ? `Refresh 敗北機率 ${Math.round(refreshDefeatProbability * 100)}%。`

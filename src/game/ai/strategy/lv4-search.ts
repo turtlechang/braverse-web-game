@@ -2,6 +2,8 @@ import type { PlayerActionCommand } from '../../commands'
 import type { PlayerView } from '../../player-view'
 import type { GameState, PlayerId } from '../../types'
 import type { ActionIdentity, ActionScoreBreakdown } from './action-score'
+import type { OpponentResponseEstimate } from './opponent-response'
+import type { DefensiveReserveAssessment } from './defensive-reserve'
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
@@ -18,7 +20,12 @@ import {
   type Lv4PlanTelemetry,
   type Lv4SearchTelemetry,
 } from './search-telemetry'
-import { deriveTacticalPlan, type TacticalPlan } from './tactical-plans'
+import {
+  deriveTacticalPlan,
+  findVisibleSelfCard,
+  type ActionablePayoffSource,
+  type TacticalPlan,
+} from './tactical-plans'
 
 export interface Lv4SearchOptions {
   beamWidth: number
@@ -71,6 +78,32 @@ export interface Lv4SearchHooks {
     identity: ActionIdentity,
     depth: number,
   ) => number
+  /** Lv.5 上一步已確認的同回合 Combo；只能來自合法 PlayerView 記憶。 */
+  preferredComboPlanId?: string
+  /** Lv.5 的單張部署節奏修正；Lv.4 對照組不提供此 hook。 */
+  deploymentTempoBonus?: (
+    beforeState: GameState,
+    afterState: GameState,
+    playerId: PlayerId,
+    command: PlayerActionCommand,
+    tacticalPlan: TacticalPlan,
+  ) => number
+  /** Lv.5 的公開回應 Min 節點；Lv.4 對照組不提供此 hook。 */
+  opponentResponseMinimax?: (
+    view: PlayerView,
+    identity: ActionIdentity,
+  ) => OpponentResponseEstimate
+  /** Lv.5 的活躍支援保留評估；Lv.4 對照組不提供此 hook。 */
+  defensiveReserveAssessment?: (
+    beforeView: PlayerView,
+    afterView: PlayerView,
+    command: PlayerActionCommand,
+  ) => DefensiveReserveAssessment
+  /**
+   * 只有 Lv.5 使用「收益卡真實可動作」與同一 plan ID 的嚴格生命週期；
+   * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
+   */
+  strictComboActionability?: boolean
   /** pending、換人、結束階段等不應在本回合搜尋繼續展開的狀態。 */
   isTerminal: (state: GameState, playerId: PlayerId) => boolean
 }
@@ -90,6 +123,8 @@ export interface Lv4SearchStep {
   strategicScore: number
   reservation: ResourceReservationAssessment
   relativeScore: number
+  opponentResponse?: OpponentResponseEstimate
+  defensiveReserve?: DefensiveReserveAssessment
 }
 
 interface SearchNode {
@@ -160,6 +195,9 @@ export const selectLv4StrategicContribution = (
   .filter((contribution) =>
     contribution.id === 'tactical-payoff' ||
     contribution.id === 'tactical-setup' ||
+    contribution.id === 'deployment-tempo' ||
+    contribution.id === 'opponent-response-minimax' ||
+    contribution.id === 'defensive-reserve' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'intent-continuity' ||
     contribution.id === 'unsupported-effect' ||
@@ -171,11 +209,17 @@ export const advanceLv4Plan = (
   previous: Lv4PlanProgress,
   tacticalPlan: TacticalPlan,
   actionKind?: string,
+  options: {
+    onlyTrackSameTurn?: boolean
+    /** Lv.5 only: reward a confirmed setup whose legal payoff is already visible. */
+    rewardConfirmedSetup?: boolean
+  } = {},
 ): { plan: Lv4PlanProgress; completionBonus: number } => {
   if (
     tacticalPlan.kind === 'setup' &&
     tacticalPlan.status === 'confirmed' &&
-    tacticalPlan.comboPlanId
+    tacticalPlan.comboPlanId &&
+    (!options.onlyTrackSameTurn || (tacticalPlan.validity ?? 'same-turn') === 'same-turn')
   ) {
     return {
       plan: {
@@ -186,13 +230,21 @@ export const advanceLv4Plan = (
           ...new Set([...previous.activeComboPlanIds, tacticalPlan.comboPlanId]),
         ],
       },
-      completionBonus: 0,
+      // A confirmed same-turn setup is not itself a payoff, but it is a
+      // concrete opportunity only when the rules layer has already exposed a
+      // legal payoff source. Give Lv.5 a bounded opportunity bonus so a
+      // generic setup can compete with an ordinary tempo action without
+      // overriding a public lethal attack. Lv.4 keeps the historical zero.
+      completionBonus: options.rewardConfirmedSetup
+        ? Math.min(18, Math.max(6, tacticalPlan.relativeValue))
+        : 0,
     }
   }
   if (
     tacticalPlan.kind === 'payoff' &&
     tacticalPlan.status === 'confirmed' &&
-    tacticalPlan.comboPlanId
+    tacticalPlan.comboPlanId &&
+    (!options.onlyTrackSameTurn || (tacticalPlan.validity ?? 'same-turn') === 'same-turn')
   ) {
     const completesKnownSetup = previous.activeComboPlanIds.includes(
       tacticalPlan.comboPlanId,
@@ -223,6 +275,15 @@ export const advanceLv4Plan = (
   return { plan: previous, completionBonus: 0 }
 }
 
+const actionablePayoffSources = (
+  view: PlayerView,
+  commands: readonly PlayerActionCommand[],
+): ActionablePayoffSource[] => commands.flatMap((command) => {
+  const identity = actionIdentityFromCommand(command)
+  const source = findVisibleSelfCard(view, identity.sourceInstanceId)
+  return source ? [{ cardId: source.id, actionKind: identity.kind }] : []
+})
+
 const updateTelemetryForStep = (
   telemetry: Lv4SearchTelemetry,
   step: Lv4SearchStep,
@@ -231,6 +292,15 @@ const updateTelemetryForStep = (
   telemetry.unsupportedEffectCount += step.unsupportedEffectCount
   telemetry.unknownInformationPenalty += step.unknownInformationPenalty
   if (!step.reservation.reserved) telemetry.resourceReservationMisses += 1
+  if (step.opponentResponse) {
+    telemetry.publicResponseEvaluations += 1
+    telemetry.publicResponseBranches += step.opponentResponse.responseBranches.length
+    telemetry.publicResponseMinPenalty += step.opponentResponse.worstCasePenalty
+  }
+  if (step.defensiveReserve) {
+    telemetry.defensiveReserveEvaluations += 1
+    telemetry.defensiveReserveAdjustment += step.defensiveReserve.adjustment
+  }
   telemetry.plan = {
     setupSteps: Math.max(telemetry.plan.setupSteps, plan.setupSteps),
     payoffSteps: Math.max(telemetry.plan.payoffSteps, plan.payoffSteps),
@@ -339,7 +409,34 @@ export const searchLv4Commands = (
           const afterState = hooks.applyCommand(node.state, command)
           const afterView = hooks.createPlayerView(afterState, playerId)
           const afterIsSafeToExpand = canSafelyExpand(node.view, afterView)
+          // 抽到原先未知的己方手牌後，不在搜尋中列舉下一步；這同時避免把
+          // 尚未得知的卡誤標成已可兌現的 payoff。
+          const afterCommands = afterIsSafeToExpand
+            ? hooks.getLegalCommands(afterState, playerId)
+            : []
+          const afterActionablePayoffs = hooks.strictComboActionability
+            ? actionablePayoffSources(afterView, afterCommands)
+            : undefined
+          const preferredComboPlanId = node.plan.activeComboPlanIds[0] ??
+            (node.depth === 0 ? hooks.preferredComboPlanId : undefined)
+          const tacticalPlanOptions = hooks.strictComboActionability
+            ? {
+                actionablePayoffSources: afterActionablePayoffs,
+                preferredComboPlanId,
+              }
+            : undefined
           const identity = actionIdentityFromCommand(command)
+          const opponentResponse = hooks.opponentResponseMinimax?.(
+            node.view,
+            identity,
+          )
+          const opponentResponsePenalty = opponentResponse?.worstCasePenalty ?? 0
+          const defensiveReserve = hooks.defensiveReserveAssessment?.(
+            node.view,
+            afterView,
+            command,
+          )
+          const defensiveReserveAdjustment = defensiveReserve?.adjustment ?? 0
           const context = createLv3ContextForView(node.view, knowledgeState)
           const scored = scoreLv3ActionCandidate(context, node.view, {
             value: command,
@@ -347,10 +444,9 @@ export const searchLv4Commands = (
             afterView,
             postActionBoardScore: hooks.scorePublicView(afterView),
             legalAttackCountBefore: reservation.legalAttackCount,
-            legalAttackCountAfter: afterIsSafeToExpand
-              ? hooks.getLegalCommands(afterState, playerId)
-                .filter((candidate) => candidate.kind === 'attack').length
-              : 0,
+            legalAttackCountAfter: afterCommands
+              .filter((candidate) => candidate.kind === 'attack').length,
+            tacticalPlanOptions,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
           const tacticalPlan = deriveTacticalPlan(
@@ -359,24 +455,62 @@ export const searchLv4Commands = (
             sourceId,
             afterView,
             identity.kind,
+            tacticalPlanOptions,
           )
+          const deploymentTempoBonus = hooks.deploymentTempoBonus?.(
+            node.state,
+            afterState,
+            playerId,
+            command,
+            tacticalPlan,
+          ) ?? 0
           const intentContinuity = hooks.persistentIntentBonus?.(
             tacticalPlan,
             identity,
             node.depth,
           ) ?? 0
-          const actionScore: ActionScoreBreakdown = intentContinuity === 0
+          const extraContributions: ActionScoreBreakdown['contributions'][number][] = [
+            ...(deploymentTempoBonus === 0
+              ? []
+              : [{
+                  id: 'deployment-tempo' as const,
+                  amount: deploymentTempoBonus,
+                  detail: 'Lv.5 優先保留單張餅乾；僅在公開 Combo／斬殺／防守因素成立時放寬。',
+                }]),
+            ...(opponentResponsePenalty === 0
+              ? []
+              : [{
+                  id: 'opponent-response-minimax' as const,
+                  amount: opponentResponsePenalty,
+                  detail: opponentResponse?.detail ?? '公開回應 Min 節點。',
+                }]),
+            ...(defensiveReserveAdjustment === 0
+              ? []
+              : [{
+                  id: 'defensive-reserve' as const,
+                  amount: defensiveReserveAdjustment,
+                  detail: defensiveReserve?.detail ?? '保留活躍支援供公開防守／下一步使用。',
+                }]),
+            ...(intentContinuity === 0
+              ? []
+              : [{
+                  id: 'intent-continuity' as const,
+                  amount: intentContinuity,
+                  detail: `延續上一個公開策略意圖：${tacticalPlan.kind}。`,
+                }]),
+          ]
+          const extraTotal = extraContributions.reduce(
+            (total, contribution) => total + contribution.amount,
+            0,
+          )
+          const actionScore: ActionScoreBreakdown = extraTotal === 0
             ? scored.breakdown
             : {
                 ...scored.breakdown,
-                total: scored.breakdown.total + intentContinuity,
+                total: scored.breakdown.total + extraTotal,
                 contributions: [
                   ...scored.breakdown.contributions,
-                  {
-                    id: 'intent-continuity',
-                    amount: intentContinuity,
-                    detail: `延續上一個公開策略意圖：${tacticalPlan.kind}。`,
-                  },
+                  ...extraContributions,
                 ],
               }
           const reservationAssessment = assessResourceReservation(
@@ -394,7 +528,10 @@ export const searchLv4Commands = (
                 }
               : undefined,
           )
-          const progressed = advanceLv4Plan(node.plan, tacticalPlan, identity.kind)
+          const progressed = advanceLv4Plan(node.plan, tacticalPlan, identity.kind, {
+            onlyTrackSameTurn: hooks.strictComboActionability,
+            rewardConfirmedSetup: hooks.strictComboActionability,
+          })
           const strategicScore = selectLv4StrategicContribution(actionScore)
           const relativeScore =
             hooks.scorePublicView(afterView) - hooks.scorePublicView(node.view) +
@@ -412,6 +549,8 @@ export const searchLv4Commands = (
             strategicScore,
             reservation: reservationAssessment,
             relativeScore,
+            opponentResponse,
+            defensiveReserve,
           }
           const canExpand = afterIsSafeToExpand
           if (!canExpand) telemetry.hiddenInformationStops += 1

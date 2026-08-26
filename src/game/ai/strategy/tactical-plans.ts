@@ -1,11 +1,13 @@
 import type { PlayerView } from '../../player-view'
 import type { EnergyCost, GameCard } from '../../types'
+import { getEnergyCostTotal, selectEnergyPayment } from '../../energy'
 import { extractDeckCapabilities } from './capability-extractor'
 import type { CapabilityEvidence, CardCapabilityModel } from './capability-model'
 import { buildComboPlans, type ComboPlan, type ComboPlanValidity } from './combo-plan'
 import { deriveDeckStrategyProfile, type DeckStrategyProfile } from './deck-profile'
 import { getKnownDeckFacts, type KnowledgeState } from './knowledge-state'
 import { buildSynergyGraph, type SynergyGraph } from './synergy-graph'
+import { assessPublicCondition } from './public-condition'
 
 export type TacticalPlanKind = 'payoff' | 'setup' | 'tempo'
 export type TacticalPlanStatus = 'confirmed' | 'potential' | 'none'
@@ -24,6 +26,29 @@ export interface TacticalPlan {
   requiredEnergyCost?: Readonly<EnergyCost>
   requiredActiveSupport?: number
   validity?: ComboPlanValidity
+}
+
+/**
+ * 由規則層已列出的下一步指令所形成的收益來源。這只描述 AI 此刻確實可採取
+ * 的行動，不把手牌、棄牌或牌庫中的同名卡當成可直接兌現的 payoff。
+ */
+export interface ActionablePayoffSource {
+  cardId: string
+  actionKind: string
+}
+
+export interface TacticalPlanDerivationOptions {
+  /**
+   * 省略時保留 G3/Lv.4 的既有公開區域推估；只有 Lv.5 搜尋傳入規則層
+   * 列舉的合法指令，才能建立嚴格的同回合 Combo intent。
+   */
+  actionablePayoffSources?: readonly ActionablePayoffSource[]
+  /**
+   * 只由本局已記錄的公開 setup 產生。當同一張 payoff 卡可對應多條泛化
+   * ComboPlan 時，若這一條也已 confirmed，優先回填同一 plan，避免把完成
+   * 動作錯記到另一條共用收益卡的邊。
+   */
+  preferredComboPlanId?: string
 }
 
 export interface Lv3StrategyContext {
@@ -114,12 +139,60 @@ export const capabilitiesForVisibleCard = (
   cardId: string | undefined,
 ): CapabilityEvidence[] => capabilitiesForCard(context, cardId)
 
+/**
+ * 同回合 Combo 只在 payoff 本體已位於 AI 能合法發動／登場的公開區域時才
+ * 建立意圖。棄牌、Break 或只有牌庫中的同名卡不能當作下一步可兌現，否則會
+ * 造成虛假的 started/abandoned telemetry。
+ */
+const matchesPayoffTiming = (
+  plan: ComboPlan,
+  actionKind: string | undefined,
+): boolean => {
+  switch (plan.payoff.timing) {
+    case 'attack':
+      return actionKind === 'attack'
+    case 'on-play':
+      return actionKind === 'deploy-cookie'
+    case 'activate':
+      return actionKind === 'activate-skill' ||
+        actionKind === 'activate-item' ||
+        actionKind === 'activate-stage'
+    default:
+      // 反應／被動時機不是 AI 在本回合可主動兌現的同回合 payoff。
+      return false
+  }
+}
+
+const hasActionablePayoffSource = (
+  plan: ComboPlan,
+  view: PlayerView,
+  options: TacticalPlanDerivationOptions,
+): boolean => {
+  if (plan.validity !== 'same-turn') return true
+  if (options.actionablePayoffSources) {
+    return options.actionablePayoffSources.some((source) =>
+      source.cardId === plan.payoff.cardId && matchesPayoffTiming(plan, source.actionKind),
+    )
+  }
+  const visibleActionSources = [
+    ...view.hand,
+    ...view.self.battleArea.map((cookie) => cookie.card),
+    ...(view.self.stage ? [view.self.stage.card] : []),
+  ]
+  if (!visibleActionSources.some((card) => card.id === plan.payoff.cardId)) {
+    return false
+  }
+  return getEnergyCostTotal(plan.payoffEnergyCost) === 0 ||
+    selectEnergyPayment(plan.payoffEnergyCost, view.self.supportArea) !== null
+}
+
 export const deriveTacticalPlan = (
   context: Lv3StrategyContext,
   view: PlayerView,
   sourceCardId: string | undefined,
   afterView: PlayerView = view,
   actionKind?: string,
+  options: TacticalPlanDerivationOptions = {},
 ): TacticalPlan => {
   if (!sourceCardId) {
     return {
@@ -173,13 +246,37 @@ export const deriveTacticalPlan = (
     const afterSignals = plan.sharedTags.map((tag) =>
       publicTagSignal(afterView, tag, knownDeckFactCount),
     )
+    const strictPublicContract = options.actionablePayoffSources !== undefined
+    const conditionBefore = strictPublicContract
+      ? assessPublicCondition(view, plan.payoffCondition)
+      : undefined
+    const conditionAfter = strictPublicContract
+      ? assessPublicCondition(afterView, plan.payoffCondition)
+      : undefined
+    const payoffActionable = strictPublicContract &&
+      hasActionablePayoffSource(plan, afterView, options)
+    // G3/Lv.4 的單步保留／排序呼叫不會提供未來合法 command；保留原本的
+    // 公開證據評估。只有 Lv.5 傳入選項，才要求當前動作與卡面時機相符。
+    const payoffTriggered = strictPublicContract
+      ? matchesPayoffTiming(plan, actionKind)
+      : true
     const allPublicSignalsAvailable = beforeSignals.every((signal) => signal > 0)
     const advancesPublicPrerequisite = afterSignals.some(
       (signal, index) => signal > (beforeSignals[index] ?? 0),
     )
-    const status: TacticalPlanStatus = isPayoff
-      ? allPublicSignalsAvailable ? 'confirmed' : 'potential'
-      : advancesPublicPrerequisite ? 'confirmed' : 'potential'
+    // 嚴格條件契約只由 Lv.5 搜尋開啟；Lv.3/Lv.4 必須維持既有的 tag-based
+    // 基線，才能作為 challenger 的穩定對照組。Lv.5 以數值門檻取代「只要
+    // 有 1 張 support」的粗略判斷，未能由 PlayerView 證明時只給 potential。
+    const status: TacticalPlanStatus = strictPublicContract && plan.payoffCondition
+      ? isPayoff
+        ? conditionBefore?.state === 'met' && payoffTriggered ? 'confirmed' : 'potential'
+        : conditionBefore?.state !== 'met' && conditionAfter?.state === 'met'
+          && payoffActionable
+          ? 'confirmed'
+          : 'potential'
+      : isPayoff
+        ? allPublicSignalsAvailable && payoffTriggered ? 'confirmed' : 'potential'
+        : advancesPublicPrerequisite ? 'confirmed' : 'potential'
     const relativeValue = isPayoff
       ? status === 'confirmed'
         ? 24 + Math.min(24, plan.expectedValue)
@@ -193,6 +290,13 @@ export const deriveTacticalPlan = (
     ...payoffPlans.map((plan) => scorePlan(plan, true)),
     ...setupPlans.map((plan) => scorePlan(plan, false)),
   ].sort((left, right) =>
+    Number(
+      right.status === 'confirmed' &&
+      right.plan.id === options.preferredComboPlanId,
+    ) - Number(
+      left.status === 'confirmed' &&
+      left.plan.id === options.preferredComboPlanId,
+    ) ||
     Number(right.status === 'confirmed') - Number(left.status === 'confirmed') ||
     right.relativeValue - left.relativeValue ||
     left.plan.id.localeCompare(right.plan.id),

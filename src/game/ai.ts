@@ -1018,12 +1018,11 @@ const resolveAiSkill = (
   }
 
   const trashBattleCookieCandidateIds = skill.cost.trashBattleCookie
-    ? player.battleArea
-        .filter((cookie) => {
-          if (skill.cost.trashBattleCookie!.level !== undefined && cookie.card.level !== skill.cost.trashBattleCookie!.level) return false
-          if (skill.cost.trashBattleCookie!.energyColor !== undefined && cookie.card.energyColor !== skill.cost.trashBattleCookie!.energyColor) return false
-          return true
-        })
+    ? getTrashBattleCookieCostCandidates(
+        skill.cost,
+        player.battleArea,
+        source.card.instanceId,
+      )
         .sort((left, right) => left.hpCards.length - right.hpCards.length)
         .map((cookie) => cookie.card.instanceId)
     : []
@@ -1605,6 +1604,7 @@ export const takeAiStep = (
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
     aiTurnStrategy.currentLevel = level
+    aiTurnStrategy.conservativeDeployment = level === 5
     // 外部只能提供以 PlayerView／合法事件建立的 KnowledgeState；同局可
     // 明確傳回上一個 memory，不同對局則由 caller 重置，避免全域串局。
     aiTurnStrategy.knowledgeState = options.memory?.observerId === playerId

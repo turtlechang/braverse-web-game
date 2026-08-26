@@ -1,0 +1,66 @@
+# 對戰紀錄 AI 覆盤匯出
+
+最後更新：2026-08-26。
+
+本專案提供版本化的 `braverse-battle-replay` JSON，讓後續 AI 訓練、失敗案例分類與策略迭代可以使用同一份對戰證據。匯出資料不是另一套規則狀態；所有重播仍由 `src/game/commands.ts` 的 `applyGameCommand` 與 `src/game/replay.ts` 驅動。
+
+## 使用方式
+
+對戰中可從本機「對戰紀錄」側欄下載；結算畫面開啟「對戰紀錄回顧」後也可下載。線上對戰則從「完整紀錄」或回顧視窗下載。檔名格式為：
+
+```text
+braverse-replay-<offline|online>-<UTC timestamp>.json
+```
+
+規則層也可直接建立或解析匯出檔：
+
+```ts
+import {
+  buildBattleReplayExport,
+  parseBattleReplayExport,
+  replayBattleExport,
+} from './src/game'
+
+const artifact = buildBattleReplayExport({
+  state: finalState,
+  mode: 'offline',
+  viewerId: 'player-one',
+  decks: { playerOne: 'starter-red', playerTwo: 'starter-blue' },
+  initialState,
+})
+
+const restored = parseBattleReplayExport(json)
+const replayed = replayBattleExport(restored)
+```
+
+當 `artifact.replay.exact` 為 `true` 時，可將 `replayed` 與 `artifact.finalState` 做 JSON／結構比對。若只需要規則引擎產生的完整新 `commandLog`，可直接使用既有的 `replayCommands`；`replayBattleExport` 會移除重播過程重新產生的重複 log，方便與匯出的終局快照比對。
+
+## V1 欄位
+
+| 欄位 | 用途 |
+| --- | --- |
+| `format` / `version` | 固定為 `braverse-battle-replay` / `1`，供未來 schema 演進與拒絕未知版本。 |
+| `mode` / `visibility` | `offline` + `full`，或 `online` + `public`。 |
+| `viewerId` / `decks` / `seed` | 對局視角、牌組識別與可用的開局 seed metadata。線上牌組目前為 `unknown`。 |
+| `commands` | 離線為從 `commandLog.payload` 還原的扁平 `GameCommand[]`，供 AI 或 replay runner 使用；線上保留 action shape，但卡牌／目標 ID 會替換成 placeholder。 |
+| `commandLog` | 包含摘要、分類、步驟與公開卡面 metadata 的人類可讀紀錄。 |
+| `initialState` | 離線覆盤根狀態；線上固定為 `null`，避免輸出雙方完整隱藏資訊。 |
+| `finalState` | 不含重複 `commandLog` 的終局快照。線上為 viewer 的遮罩狀態。 |
+| `outcome` | `status`、`result`、回合與階段摘要。 |
+| `replay` | `available`、`exact` 與限制原因，讓訓練流程不會把 best-effort 當成精確標籤。 |
+
+## 精確度與隱私邊界
+
+離線匯出若有 `initialState`，通常可用 `initialState + commands` 重播。開局調度、強制調度或 Refresh 指令若沒有可序列化的 `shuffleSeed`，會標示 `replay.exact: false` 與 `limitation: "unseeded-shuffle"`；這類檔案仍可供行動序列與策略決策分析，但不得直接當作完全相同牌序的 ground truth。
+
+線上匯出一律是 `visibility: "public"`、`initialState: null`、`limitation: "online-public-view"`。對手手牌、牌庫順序與隱藏 HP 卡經 `maskGameStateForViewer` 遮罩；`commands` 與 `commandLog.payload` 的卡牌／目標 ID 會被替換成 placeholder，log 內卡牌物件也不輸出，只保留可公開的摘要與步驟文字。因此線上檔案可做公開行動覆盤，不能用來推導對手私有手牌，也不能宣稱完整重播。
+
+## AI 使用建議
+
+1. 先檢查 `format`、`version` 與 `replay` metadata。
+2. 離線檔將 `commands` 作為模型決策／合法性分析的輸入，不要從中文 `summary` 反解析指令；線上檔則視為已遮罩的 action trace。
+3. 離線且 `exact: true` 的檔案可比較 `replayed` 與 `finalState`，找出第一個狀態差異。
+4. `exact: false` 或線上 public-only 檔案只能標記為行動序列、公開資訊與錯誤分類資料。
+5. 任何訓練報告仍須保留 seed、牌組識別與安全指標；匯出檔不能取代 benchmark 的固定 seed／holdout 邊界。
+
+匯出內容不包含 API key、token 或其他本機認證資料。

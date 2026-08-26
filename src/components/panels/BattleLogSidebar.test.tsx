@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommandLogEntry } from '../../game'
 import { item } from '../../game/test-helpers/battle-helpers'
-import { BattleLogSidebar } from './BattleLogSidebar'
+import { BattleLogReviewModal, BattleLogSidebar } from './BattleLogSidebar'
 
 const containers: HTMLDivElement[] = []
 
@@ -317,5 +317,69 @@ describe('BattleLogSidebar', () => {
     expect(dividers[0].textContent).toContain('玩家 LV.2/10')
     expect(dividers[0].textContent).toContain('AI 對手 LV.1/10')
     expect(dividers[1].textContent).toContain('第 3 回合')
+  })
+
+  it('provides a full review modal with stats and expand-all controls', async () => {
+    const onClose = vi.fn()
+    const { container, root } = render()
+    await act(() =>
+      root.render(
+        <BattleLogReviewModal
+          entries={attackGroup}
+          playerNames={{ 'player-one': '玩家', 'player-two': 'AI 對手' }}
+          winnerName="玩家"
+          resultSummary="對方休息區的等級達到 10。"
+          turnNumber={3}
+          onClose={onClose}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('[data-testid="battle-log-review-modal"]')).not.toBeNull()
+    expect(container.textContent).toContain('對戰紀錄回顧')
+    expect(container.textContent).toContain('3 回合')
+    expect(container.textContent).toContain('玩家勝利')
+
+    await click(container.querySelector('[data-testid="battle-log-review-expand-all"]'))
+    expect(container.querySelectorAll('.battle-log-steps li')).toHaveLength(2)
+
+    await click(container.querySelector('[data-testid="battle-log-review-collapse-all"]'))
+    expect(container.querySelectorAll('.battle-log-steps li')).toHaveLength(0)
+
+    await click(container.querySelector('[aria-label="關閉對戰紀錄回顧"]'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    await act(() => root.unmount())
+  })
+
+  it('exposes replay downloads from the sidebar and review modal', async () => {
+    const onExportReplay = vi.fn()
+    const onClose = vi.fn()
+    const { container, root } = render()
+    await act(() =>
+      root.render(
+        <BattleLogSidebar
+          entries={attackGroup}
+          onExportReplay={onExportReplay}
+        />,
+      ),
+    )
+    await click(container.querySelector('[data-testid="battle-log-toggle"]'))
+    await click(container.querySelector('[data-testid="battle-log-export-replay"]'))
+    expect(onExportReplay).toHaveBeenCalledTimes(1)
+
+    await act(() =>
+      root.render(
+        <BattleLogReviewModal
+          entries={attackGroup}
+          onExportReplay={onExportReplay}
+          onClose={onClose}
+        />,
+      ),
+    )
+    await click(
+      container.querySelector('[data-testid="battle-log-review-export-replay"]'),
+    )
+    expect(onExportReplay).toHaveBeenCalledTimes(2)
+    await act(() => root.unmount())
   })
 })

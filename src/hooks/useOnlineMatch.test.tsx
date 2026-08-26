@@ -258,6 +258,7 @@ describe('useOnlineMatch', () => {
     )
     expect(current().status).toBe('in-progress')
     expect(current().viewerPlayerId).toBe('player-two')
+    expect(current().seed).toBe(7)
     expect(current().maskedGame).toEqual(initialState)
 
     await act(() =>
@@ -388,6 +389,7 @@ describe('useOnlineMatch', () => {
     expect(current().errorMessage).toContain('連線已中斷')
 
     await act(() => current().leave())
+    expect(current().seed).toBeNull()
     await act(() => current().joinRoom('PLAY', deck))
     const playingSocket = MockWebSocket.instances[1]
     await act(() => playingSocket.emitOpen())

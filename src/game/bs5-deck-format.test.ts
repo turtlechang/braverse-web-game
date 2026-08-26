@@ -49,7 +49,11 @@ describe('BS5 五色賽制牌組', () => {
     expect(getDeckFormatLabel('open')).toBe('開放賽制（所有卡牌都能用）')
     expect(getDeckFormatLabel('standard')).toBe('標準賽制（套用禁限卡）')
     expect(getCardRestriction('BS2-003', 'open')).toBe('none')
-    expect(getCardRestriction('BS2-003', 'standard')).toBe('banned')
+    expect(getCardRestriction('BS2-003', 'standard')).toBe('limited')
+    expect(getCardRestriction('BS6-064', 'standard')).toBe('banned')
+    expect(getCardRestriction('BS3-042', 'standard')).toBe('banned')
+    expect(getCardRestriction('BS8-069', 'standard')).toBe('limited')
+    expect(getCardRestriction('BS8-072', 'standard')).toBe('limited')
     expect(getCardRestriction('BS1-057', 'open')).toBe('none')
     expect(getCardRestriction('BS1-057', 'standard')).toBe('limited')
 

@@ -4,6 +4,7 @@ import type { KnowledgeState } from './strategy/knowledge-state'
 import type { AiStrategyMemory } from './strategy/session'
 import type { OpponentResponseEstimate } from './strategy/opponent-response'
 import type { OpponentEndgameForecast } from './strategy/endgame-forecast'
+import type { PublicStateEvaluationBreakdown } from './strategy/state-evaluation'
 import type { TacticalPlan } from './strategy/tactical-plans'
 import type {
   PendingStrategyTelemetry,
@@ -45,6 +46,8 @@ export interface AiDecisionReason {
   opponentEndgame?: OpponentEndgameForecast
   /** 實際被選中的通用 Combo plan；供同局記憶延續，不影響合法性。 */
   tacticalPlan?: TacticalPlan
+  /** Lv.5 最後採用的公開狀態評估分項；不含隱藏資訊。 */
+  publicEvaluation?: PublicStateEvaluationBreakdown
 }
 
 export interface SimulateAiMatchOptions {

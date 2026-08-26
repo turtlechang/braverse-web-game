@@ -3,6 +3,7 @@ import {
   BookOpen,
   ChevronRight,
   Copy,
+  Download,
   Heart,
   Layers3,
   Plus,
@@ -20,10 +21,14 @@ import type {
   LogStepDetail,
   PlayerId,
 } from '../../game'
-import { serializeReplayIssueBundle } from '../../game'
+import {
+  buildBattleReplayExport,
+  serializeReplayIssueBundle,
+} from '../../game'
 import { buildIssueBundleFromProvider } from '../../hooks/issueBundleSource'
 import { CardFace } from '../cards/CardVisuals'
 import { copyTextToClipboard } from '../copyTextToClipboard'
+import { downloadBattleReplay } from '../downloadBattleReplay'
 import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
   CommandLogFilterBar,
@@ -115,6 +120,8 @@ const battleStatus = (game: GameState, viewerPlayerId: PlayerId): string | null 
 export interface OnlineActivityFeedProps {
   game: GameState
   viewerPlayerId: PlayerId
+  seed?: number | null
+  onExportReplay?: () => boolean
 }
 
 /**
@@ -124,6 +131,8 @@ export interface OnlineActivityFeedProps {
 export function OnlineActivityFeed({
   game,
   viewerPlayerId,
+  seed = null,
+  onExportReplay,
 }: OnlineActivityFeedProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [filters, setFilters] = useState<CommandLogFilterState>(
@@ -132,6 +141,9 @@ export function OnlineActivityFeed({
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
+  const [exportResult, setExportResult] = useState<
+    'idle' | 'downloaded' | 'failed'
+  >('idle')
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(
     () => new Set(),
   )
@@ -152,6 +164,20 @@ export function OnlineActivityFeed({
     void copyTextToClipboard(serializeReplayIssueBundle(bundle)).then((ok) => {
       setCopyResult(ok ? 'copied' : 'failed')
     })
+  }
+  const handleExportReplay = () => {
+    const downloaded =
+      onExportReplay?.() ??
+      downloadBattleReplay(
+        buildBattleReplayExport({
+          state: game,
+          mode: 'online',
+          viewerId: viewerPlayerId,
+          decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+          seed,
+        }),
+      )
+    setExportResult(downloaded ? 'downloaded' : 'failed')
   }
   const [events, setEvents] = useState<ActivityEvent[]>(() =>
     (game.commandLog ?? []).slice(-4).map((entry) => actionEvent(entry, game)),
@@ -317,18 +343,33 @@ export function OnlineActivityFeed({
               <strong>
                 完整紀錄（{filteredEntries.length}/{game.commandLog?.length ?? 0}）
               </strong>
-              <button
-                type="button"
-                className="online-activity-copy"
-                onClick={handleCopyLog}
-              >
-                <Copy size={12} aria-hidden="true" />
-                {copyResult === 'copied'
-                  ? '已複製'
-                  : copyResult === 'failed'
-                    ? '複製失敗'
-                    : '複製紀錄'}
-              </button>
+              <div className="online-activity-history-actions">
+                <button
+                  type="button"
+                  className="online-activity-export"
+                  onClick={handleExportReplay}
+                  data-testid="online-activity-export-replay"
+                >
+                  <Download size={12} aria-hidden="true" />
+                  {exportResult === 'downloaded'
+                    ? '已下載'
+                    : exportResult === 'failed'
+                      ? '下載失敗'
+                      : '下載 AI 覆盤'}
+                </button>
+                <button
+                  type="button"
+                  className="online-activity-copy"
+                  onClick={handleCopyLog}
+                >
+                  <Copy size={12} aria-hidden="true" />
+                  {copyResult === 'copied'
+                    ? '已複製'
+                    : copyResult === 'failed'
+                      ? '複製失敗'
+                      : '複製紀錄'}
+                </button>
+              </div>
             </div>
             <ol>
               {renderedHistoryGroups.length ? (

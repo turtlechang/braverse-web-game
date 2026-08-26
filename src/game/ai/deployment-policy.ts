@@ -35,6 +35,107 @@ export const canDeployCookieForLethal = (
   )
 }
 
+export type Lv5DeploymentReason =
+  | 'not-second-cookie'
+  | 'confirmed-combo'
+  | 'public-lethal'
+  | 'meaningful-on-play'
+  | 'defensive-parity'
+  | 'single-cookie-discipline'
+
+export interface Lv5DeploymentAssessment {
+  /** Relative score adjustment. Negative values make a generic second Cookie unattractive. */
+  penalty: number
+  reason: Lv5DeploymentReason
+}
+
+export interface Lv5DeploymentOptions {
+  /** A strict PlayerView ComboPlan is already confirmed and actionable. */
+  confirmedCombo?: boolean
+}
+
+const hasMeaningfulOnPlay = (card: GameCard): boolean =>
+  card.type === 'cookie' && Boolean(
+    (card.skill?.trigger === 'on-play' && card.skill.effects.length > 0) ||
+    (card.skill?.onPlayEffects && card.skill.onPlayEffects.length > 0),
+  )
+
+const hasDefensiveParityNeed = (
+  state: GameState,
+  playerId: PlayerId,
+  card: GameCard,
+): boolean => {
+  if (card.type !== 'cookie') return false
+  const player = state.players[playerId]
+  const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+  const opponent = state.players[opponentId]
+  if (opponent.battleArea.length < 2) return false
+
+  const ownAttack = player.battleArea.reduce(
+    (total, cookie) => total + cookie.card.attack,
+    0,
+  )
+  const opponentAttack = opponent.battleArea.reduce(
+    (total, cookie) => total + cookie.card.attack,
+    0,
+  )
+  const ownHp = player.battleArea.reduce(
+    (total, cookie) => total + cookie.hpCards.length,
+    0,
+  )
+  const pressureGap = opponentAttack - ownAttack
+  const isBlocker = card.skill?.trigger === 'block'
+  return (pressureGap >= 2 || ownHp <= 2) && (isBlocker || card.hp >= 4)
+}
+
+/**
+ * Lv.5 的「先下一張」部署節奏。這不是合法性 gate，而是只在同一局面內
+ * 排序用的公開資訊分數：第二張餅乾仍可在 Combo、斬殺、有效 OnPlay 或
+ * 明確落後需要補防時勝出；其餘情況保留手牌與後續回合資源。
+ */
+export const assessLv5Deployment = (
+  state: GameState,
+  playerId: PlayerId,
+  card: GameCard,
+  options: Lv5DeploymentOptions = {},
+): Lv5DeploymentAssessment => {
+  const player = state.players[playerId]
+  if (card.type !== 'cookie' || player.battleArea.length !== 1) {
+    return { penalty: 0, reason: 'not-second-cookie' }
+  }
+  if (options.confirmedCombo) {
+    return { penalty: 0, reason: 'confirmed-combo' }
+  }
+  if (canDeployCookieForLethal(state, playerId, card)) {
+    return { penalty: 0, reason: 'public-lethal' }
+  }
+  if (hasMeaningfulOnPlay(card)) {
+    return { penalty: -36, reason: 'meaningful-on-play' }
+  }
+  if (hasDefensiveParityNeed(state, playerId, card)) {
+    return { penalty: -48, reason: 'defensive-parity' }
+  }
+
+  // Consuming the last Cookie in hand is especially costly: it removes the
+  // replacement option after a faint and makes a future empty board likely.
+  const cookieCountInHand = player.hand.filter((candidate) =>
+    candidate.type === 'cookie',
+  ).length
+  return {
+    penalty: cookieCountInHand <= 1 ? -160 : -140,
+    reason: 'single-cookie-discipline',
+  }
+}
+
+export const shouldAvoidLv5SecondDeployment = (
+  state: GameState,
+  playerId: PlayerId,
+  card: GameCard,
+  options: Lv5DeploymentOptions = {},
+): boolean =>
+  assessLv5Deployment(state, playerId, card, options).reason ===
+  'single-cookie-discipline'
+
 /**
  * AI 部署政策：戰鬥區已有餅乾時，避免把 FLIP 餅乾當成一般第二張餅乾。
  * 若沒有非 FLIP 替代品，或這張 FLIP 餅乾能直接補刀，才允許登場。

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
   evaluatePlayerView,
+  evaluatePlayerViewBreakdown,
   createPlayerView,
   applyGameCommand,
   simulateAiMatch,
@@ -115,6 +116,25 @@ describe('Lv.3 評估式 AI', () => {
       },
     }
     expect(evaluatePlayerView(disadvantaged)).toBeLessThan(baseline)
+  })
+
+  it('公開狀態評估提供可稽核分項，且總分維持既有尺度', () => {
+    const view = baseView()
+    const breakdown = evaluatePlayerViewBreakdown(view)
+
+    expect(breakdown).toMatchObject({
+      terminal: 0,
+      board: 0,
+      attack: 0,
+      hp: 0,
+      hand: 9,
+      resources: 0,
+      breakPressure: 0,
+      deck: 40,
+      stage: 0,
+      total: 49,
+    })
+    expect(breakdown.total).toBe(evaluatePlayerView(view))
   })
 
   it('evaluatePlayerView 對已結束對局回傳勝負分數', () => {

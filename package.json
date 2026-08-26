@@ -53,6 +53,8 @@
     "benchmark:ai:challenger": "tsx scripts/benchmark-ai-challenger.ts",
     "benchmark:bs1-bs6:generate": "tsx scripts/generate-bs1-bs6-512-roster.ts",
     "benchmark:bs1-bs6:iterate": "tsx scripts/generate-bs1-bs6-512-roster.ts --iteration",
+    "benchmark:lv5:256:generate": "tsx scripts/generate-lv5-256-roster.ts --size=256",
+    "benchmark:lv5:256:swiss": "tsx scripts/benchmark-lv5-256-swiss.ts",
     "test:bs1-bs6:512:browser": "node scripts/bs1-bs6-512-swiss-browser.mjs",
     "benchmark:bs6-competitive": "set BS6_BENCHMARK_MODE=competitive&& set BS6_BENCHMARK_OUTPUT=data/decks/bs6-competitive-benchmark-report-100-standard.json&& npm run benchmark:bs6-decks",
     "lint": "eslint . --max-warnings=0",

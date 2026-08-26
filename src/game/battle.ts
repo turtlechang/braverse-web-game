@@ -2106,6 +2106,21 @@ const hasApplicableOptionalAttackEffect = (
   )
 }
 
+/** 回傳目前狀態下第一個可支付的陷阱代價，供 AI／UI 與 playTrap 共用。 */
+export const getPlayableTrapCostOption = (
+  state: GameState,
+  playerId: PlayerId,
+  trap: TrapAbility,
+  trapInstanceId?: string,
+): { index: number; cost: AbilityCost } | null => {
+  const index = getTrapCostOptions(trap).findIndex((cost) =>
+    canPayTrapCost(state, playerId, cost, trapInstanceId),
+  )
+  return index < 0
+    ? null
+    : { index, cost: getTrapCostOptions(trap)[index]! }
+}
+
 export const advanceAttackEffect = (
   state: GameState,
   battle: PendingBattle,

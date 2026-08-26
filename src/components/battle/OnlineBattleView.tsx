@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GameState, PlayerId } from '../../game'
 import {
+  buildBattleReplayExport,
   canSpecialPlayCookie,
   canPlayStage,
   getEnergyCostTotal,
@@ -15,6 +16,7 @@ import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
 import { useAttentionIndicator } from '../../hooks/useAttentionIndicator'
+import { downloadBattleReplay } from '../downloadBattleReplay'
 import { deriveAttentionState } from '../panels/attentionState'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
@@ -23,6 +25,7 @@ import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
 import { RemoteActionBanner } from '../panels/RemoteActionBanner'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
+import { BattleLogReviewModal } from '../panels/BattleLogSidebar'
 import { deriveActionStatus } from '../panels/actionStatus'
 import { buildActionProgress } from '../panels/actionProgress'
 import { EffectPanel } from '../effects/EffectPanel'
@@ -68,6 +71,7 @@ const publicTargetScopeFor = (kind: string | undefined): PublicTargetScope => {
 export interface OnlineBattleViewProps {
   game: GameState
   viewerPlayerId: PlayerId
+  seed?: number | null
   roomCode: string | null
   sendCommand: (command: import('../../game').GameCommand) => void
   sendAttackSelection: (selection: AttackSelectionPreview) => void
@@ -99,6 +103,7 @@ export interface OnlineBattleViewProps {
 export function OnlineBattleView({
   game,
   viewerPlayerId,
+  seed = null,
   roomCode,
   sendCommand,
   sendAttackSelection,
@@ -117,6 +122,7 @@ export function OnlineBattleView({
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
   const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [battleLogReviewReason, setBattleLogReviewReason] = useState<string | null>(null)
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
     paymentIds: string[]
@@ -126,7 +132,27 @@ export function OnlineBattleView({
 
   const isPlayerTurn = game.activePlayerId === viewerPlayerId
 
-  const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
+  const match = useOnlineMatchController({
+    game,
+    viewerPlayerId,
+    sendCommand,
+    seed,
+  })
+  const handleExportReplay = (): boolean => {
+    const downloaded = downloadBattleReplay(
+      buildBattleReplayExport({
+        state: game,
+        mode: 'online',
+        viewerId: viewerPlayerId,
+        decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+        seed,
+      }),
+    )
+    match.setMessage(
+      downloaded ? '公開 AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
+    )
+    return downloaded
+  }
   const inspectedEquippedCards = (() => {
     const card = dialogs.inspectedCard
     if (!card || card.type !== 'cookie') return undefined
@@ -616,7 +642,12 @@ export function OnlineBattleView({
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
-      <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
+      <OnlineActivityFeed
+        game={game}
+        viewerPlayerId={viewerPlayerId}
+        seed={seed}
+        onExportReplay={handleExportReplay}
+      />
 
       {!centerPreviewCard && actionStatus.mode !== 'awaiting-local-decision' && (
         <RemoteActionBanner
@@ -839,13 +870,29 @@ export function OnlineBattleView({
         />
       )}
 
-      {game.result && (
+      {game.result && battleLogReviewReason === null && (
         <ResultModal
           winnerName={game.players[game.result.winnerId].name}
           loserId={game.result.loserId}
           viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
+          onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
           onRestart={onLeave}
+        />
+      )}
+
+      {game.result && battleLogReviewReason !== null && (
+        <BattleLogReviewModal
+          entries={game.commandLog ?? []}
+          playerNames={{
+            'player-one': game.players['player-one'].name,
+            'player-two': game.players['player-two'].name,
+          }}
+          winnerName={game.players[game.result.winnerId].name}
+          resultSummary={battleLogReviewReason}
+          turnNumber={game.turnNumber}
+          onExportReplay={handleExportReplay}
+          onClose={() => setBattleLogReviewReason(null)}
         />
       )}
 

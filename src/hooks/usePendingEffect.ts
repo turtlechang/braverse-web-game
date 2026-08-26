@@ -40,6 +40,7 @@ import {
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
   isSkillEffectConditionDeferredUntilCost,
+  isCardAbilityEffectConditionDeferredUntilCost,
   isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -128,7 +129,14 @@ export function usePendingEffect(params: {
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
   const currentEffectConditionMet =
     pendingEffect && currentEffect
-      ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
+      ? isEffectConditionMet(game, pendingEffect.context, currentEffect) ||
+        (!pendingEffect.skillActivated &&
+          (pendingEffect.sourceKind === 'item' ||
+            pendingEffect.sourceKind === 'stage') &&
+          isCardAbilityEffectConditionDeferredUntilCost(
+            pendingEffect.skill,
+            currentEffect,
+          ))
       : true
   // Keep the composite setup effect as the command payload. For a nested
   // sequential all-target damage, the panel must instead expose its targets
@@ -1084,8 +1092,10 @@ export function usePendingEffect(params: {
       sourceKind === 'item'
         ? getEffectiveCardAbilityCost(game, viewerPlayerId, ability)
         : ability.cost
-    const effects = ability.effects.filter((effect) =>
-      isEffectConditionMet(game, context, effect),
+    const effects = ability.effects.filter(
+      (effect) =>
+        isEffectConditionMet(game, context, effect) ||
+        isCardAbilityEffectConditionDeferredUntilCost(ability, effect),
     )
     if (effects.length === 0) {
       setMessage(`${card.name}目前未滿足使用條件。`)
@@ -1961,7 +1971,12 @@ export function usePendingEffect(params: {
         playerId: pendingEffect.context.sourcePlayerId,
         targetIds: pendingEffect.selectedTargetIds,
       })
-      const result = currentConditionMet
+      const conditionMetAfterCost = isEffectConditionMet(
+        activatedGame,
+        pendingEffect.context,
+        currentEffect,
+      )
+      const result = conditionMetAfterCost
         ? describeEffectResult(currentEffect, targetNames)
         : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
 

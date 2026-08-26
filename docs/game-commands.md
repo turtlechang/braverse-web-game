@@ -108,6 +108,9 @@ interface ApplyGameCommandOptions {
   - `commandFromLogEntry(entry)`：由紀錄還原 `GameCommand`。
 - 黃金重播測試位於 `src/game/replay.test.ts`：固定種子＋指令序列
   必須重播出 JSON 完全相同的終局狀態。
+- 版本化 AI 覆盤匯出使用 `buildBattleReplayExport`、`parseBattleReplayExport` 與
+  `replayBattleExport`；欄位、精確度旗標及線上隱私邊界見
+  [對戰紀錄 AI 覆盤匯出](battle-replay-export.md)。
 
 ## 驗證順序
 

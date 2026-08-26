@@ -23,7 +23,10 @@ import { deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
 import { getOptionalCostAttackPrompt } from './components/modals/optionalCostAttackPrompt'
 import { StatusToast } from './components/panels/InteractionOverlays'
-import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
+import {
+  BattleLogReviewModal,
+  BattleLogSidebar,
+} from './components/panels/BattleLogSidebar'
 import { deriveActionStatus } from './components/panels/actionStatus'
 import { MenuScreen } from './components/battle/MenuScreen'
 import { findCardInGame } from './components/battle/publicCardLookup'
@@ -38,6 +41,7 @@ import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from './hooks/useFlipCardPreview'
 import { useAttentionIndicator } from './hooks/useAttentionIndicator'
 import { deriveAttentionState } from './components/panels/attentionState'
+import { downloadBattleReplay } from './components/downloadBattleReplay'
 // Import the browser-safe trace module directly.  The contracts barrel also
 // exports the Node-only shadow ledger (node:crypto), which must not enter the
 // client bundle just because the optional Browser attestation hook is enabled.
@@ -109,7 +113,7 @@ function App() {
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
     testStateConfig ? 'battle' : 'menu',
   )
-  const [aiLevel, setAiLevel] = useState<AiLevel>(4)
+  const [aiLevel, setAiLevel] = useState<AiLevel>(5)
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
@@ -118,6 +122,9 @@ function App() {
     instanceId: string
     paymentIds: string[]
   } | null>(null)
+  const [battleLogReviewReason, setBattleLogReviewReason] = useState<string | null>(
+    null,
+  )
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -184,6 +191,7 @@ function App() {
     nextConfig: { player: DeckChoice; ai: BuiltInDeckChoice },
     nextMessage: string,
   ) => {
+    setBattleLogReviewReason(null)
     setSelectedHandCardId(null)
     setSpecialPlaySourceId(null)
     setSpecialPlayCandidateId(null)
@@ -196,6 +204,14 @@ function App() {
     if (!testStateConfig) {
       setScreen('menu')
     }
+  }
+
+  const exportBattleReplay = (): boolean => {
+    const downloaded = downloadBattleReplay(match.buildBattleReplay())
+    match.setMessage(
+      downloaded ? 'AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
+    )
+    return downloaded
   }
 
   const interactionLocked = deriveInteractionLocked(
@@ -369,6 +385,11 @@ function App() {
     isPlayerTurn,
   })
   useAttentionIndicator(isPlayerTurn, screen === 'battle')
+
+  const gameResult = match.game.result
+  const resultWinnerName = gameResult
+    ? match.game.players[gameResult.winnerId].name
+    : undefined
 
   if (screen === 'menu') {
     return (
@@ -601,6 +622,7 @@ function App() {
           'player-one': match.game.players['player-one'].name,
           'player-two': match.game.players['player-two'].name,
         }}
+        onExportReplay={exportBattleReplay}
       />
 
       <BattleTable
@@ -871,15 +893,14 @@ function App() {
         )}
       </Suspense>
 
-      {match.game.result && (
+      {gameResult && battleLogReviewReason === null && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <ResultModal
-            winnerName={
-              match.game.players[match.game.result.winnerId].name
-            }
-            loserId={match.game.result.loserId}
+            winnerName={resultWinnerName ?? ''}
+            loserId={gameResult.loserId}
             viewerPlayerId={match.viewerPlayerId}
-            reason={match.game.result.reason}
+            reason={gameResult.reason}
+            onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
             onRestart={() => {
               resetGame(
                 match.deckConfig,
@@ -888,6 +909,21 @@ function App() {
             }}
           />
         </Suspense>
+      )}
+
+      {gameResult && battleLogReviewReason !== null && (
+        <BattleLogReviewModal
+          entries={match.game.commandLog ?? []}
+          playerNames={{
+            'player-one': match.game.players['player-one'].name,
+            'player-two': match.game.players['player-two'].name,
+          }}
+          winnerName={resultWinnerName}
+          resultSummary={battleLogReviewReason}
+          turnNumber={match.game.turnNumber}
+          onExportReplay={exportBattleReplay}
+          onClose={() => setBattleLogReviewReason(null)}
+        />
       )}
     </main>
   )

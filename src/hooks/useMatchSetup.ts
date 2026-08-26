@@ -40,6 +40,7 @@ interface UseMatchSetupParams {
   setMessage: Dispatch<SetStateAction<string>>
   enabled: boolean
   chooseDeck?: () => Exclude<DeckChoice, 'custom'>
+  onReplayRoot?: (state: GameState) => void
 }
 
 export function useMatchSetup({
@@ -48,6 +49,7 @@ export function useMatchSetup({
   setMessage,
   enabled,
   chooseDeck = chooseRandomDeck,
+  onReplayRoot,
 }: UseMatchSetupParams) {
   const [setupStep, setSetupStep] = useState<MatchSetupStep>(
     enabled ? 'deck-selection' : null,
@@ -128,12 +130,14 @@ export function useMatchSetup({
 
   const beginOrderedSetup = useCallback(
     (firstPlayerId: PlayerId) => {
-      let nextGame = createDemoSetupGame(
+      const replayRoot = createDemoSetupGame(
         firstPlayerId,
         deckConfig,
         undefined,
         deckConfig.player === 'custom' ? selectedCustomDeck ?? undefined : undefined,
       )
+      onReplayRoot?.(replayRoot)
+      let nextGame = replayRoot
       if (firstPlayerId === 'player-two') {
         nextGame = processAiOpeningHand(nextGame)
       }
@@ -145,7 +149,13 @@ export function useMatchSetup({
           : 'AI 已完成調度，現在輪到你決定是否更換全部手牌。',
       )
     },
-    [deckConfig, processAiOpeningHand, selectedCustomDeck, setGame],
+    [
+      deckConfig,
+      onReplayRoot,
+      processAiOpeningHand,
+      selectedCustomDeck,
+      setGame,
+    ],
   )
 
   const handleRps = useCallback(

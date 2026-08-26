@@ -9,6 +9,70 @@ import { OnlineBattleView } from './OnlineBattleView'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('OnlineBattleView resource inspection', () => {
+  it('lets an online player review the command log after the match ends', async () => {
+    const game = createBattleState()
+    game.status = 'finished'
+    game.result = {
+      winnerId: 'player-two',
+      loserId: 'player-one',
+      reason: 'special-victory',
+    }
+    game.commandLog = [
+      {
+        id: 1,
+        turnNumber: 2,
+        phase: 'main',
+        playerId: 'player-two',
+        commandKind: 'attack',
+        payload: {},
+        summary: '攻擊已完成。',
+      },
+    ]
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OnlineBattleView
+          game={game}
+          viewerPlayerId="player-two"
+          roomCode="TEST"
+          sendCommand={vi.fn()}
+          sendAttackSelection={vi.fn()}
+          opponentAttackSelection={{
+            attackerInstanceId: null,
+            supportPaymentIds: [],
+          }}
+          openingSnapshot={null}
+          commandRejectedReason={null}
+          sendOpeningAction={vi.fn()}
+          onLeave={vi.fn()}
+        />,
+      ),
+    )
+
+    const reviewButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('查看對戰紀錄'),
+    )
+    expect(reviewButton).not.toBeUndefined()
+
+    await act(() => reviewButton!.click())
+    expect(container.querySelector('[data-testid="battle-log-review-modal"]')).not.toBeNull()
+    expect(container.textContent).toContain('攻擊已完成。')
+
+    const closeButton = container.querySelector<HTMLButtonElement>(
+      '[aria-label="關閉對戰紀錄回顧"]',
+    )
+    expect(closeButton).not.toBeNull()
+    await act(() => closeButton!.click())
+    expect(container.querySelector('[data-testid="battle-log-review-modal"]')).toBeNull()
+    expect(container.querySelector('.result-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('shows deck, stage, break, and discard information in online matches', async () => {
     const baseGame = createBattleState()
     const discardedCard = baseGame.players['player-two'].hand[0]

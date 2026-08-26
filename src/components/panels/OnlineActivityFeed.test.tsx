@@ -361,4 +361,38 @@ describe('OnlineActivityFeed', () => {
     expect(writeText).not.toHaveBeenCalled()
     await act(() => root.unmount())
   })
+
+  it('delegates the public replay download to the online battle view', async () => {
+    const onExportReplay = vi.fn(() => true)
+    const base = createBattleState()
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <OnlineActivityFeed
+          game={base}
+          viewerPlayerId="player-one"
+          seed={20260826}
+          onExportReplay={onExportReplay}
+        />,
+      ),
+    )
+
+    await act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="online-activity-toggle"]')!
+        .click(),
+    )
+    await act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="online-activity-export-replay"]')!
+        .click(),
+    )
+
+    expect(onExportReplay).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('已下載')
+    await act(() => root.unmount())
+  })
 })
