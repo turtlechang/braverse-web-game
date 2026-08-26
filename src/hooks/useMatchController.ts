@@ -30,6 +30,7 @@ import {
   getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckCandidates,
   buildReplayIssueBundle,
+  buildBattleReplayExport,
   getEnergyCostTotal,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
@@ -477,11 +478,20 @@ export function useMatchController(params: {
     }
     return '推進階段，開始這場對戰。'
   })
+  // Replay root is captured before the opening helper applies any AI/player
+  // mulligan commands, so those commands are not replayed twice.
+  const initialGameRef = useRef<GameState | null>(
+    testStateConfig ? game : null,
+  )
+  const captureReplayRoot = useCallback((state: GameState) => {
+    initialGameRef.current = state
+  }, [])
   const setup = useMatchSetup({
     game,
     setGame,
     setMessage,
     enabled: testStateConfig === null,
+    onReplayRoot: captureReplayRoot,
   })
   const {
     setupStep,
@@ -562,10 +572,14 @@ export function useMatchController(params: {
 
   // 問題包（ReplayIssueBundleV1）素材：對局起點快照 + 最後一個失敗指令。
   // 首次 render 時 game 尚未套用任何 dispatch，直接當作重播起點。
-  const initialGameRef = useRef<GameState | null>(null)
-  if (initialGameRef.current === null) {
-    initialGameRef.current = game
-  }
+  useEffect(() => {
+    // Normal matches replace the pre-menu setup state when the player confirms
+    // the deck/RPS flow. Capture that first mulligan state as the replay root;
+    // scenario matches already set their authoritative root above.
+    if (initialGameRef.current === null && setupStep === 'mulligan') {
+      initialGameRef.current = game
+    }
+  }, [game, setupStep])
   const lastFailedCommandRef = useRef<{
     command: GameCommand
     message: string
@@ -632,6 +646,21 @@ export function useMatchController(params: {
         initialState: initialGameRef.current,
       })
     },
+    [game, deckConfig, viewerPlayerId],
+  )
+
+  const buildBattleReplay = useCallback(
+    () =>
+      buildBattleReplayExport({
+        state: game,
+        mode: 'offline',
+        viewerId: viewerPlayerId,
+        decks: {
+          playerOne: deckConfig.player,
+          playerTwo: deckConfig.ai,
+        },
+        initialState: initialGameRef.current,
+      }),
     [game, deckConfig, viewerPlayerId],
   )
 
@@ -1553,6 +1582,7 @@ export function useMatchController(params: {
     setSelectedAttackPaymentIds: battleActions.setSelectedAttackPaymentIds,
     message,
     setMessage,
+    buildBattleReplay,
     handleDeckSelection,
     handleRps,
     beginOrderedSetup,

@@ -276,6 +276,7 @@ export {
   getEffectiveCardAbilityCost,
   getItemAbility,
   getStageAbility,
+  isCardAbilityEffectConditionDeferredUntilCost,
   playItem,
   playStage,
 } from './card-abilities'
@@ -496,6 +497,22 @@ export type {
   BuildReplayIssueBundleOptions,
   ReplayIssueBundleV1,
 } from './replay-issue-bundle'
+export {
+  BATTLE_REPLAY_FORMAT,
+  BATTLE_REPLAY_VERSION,
+  buildBattleReplayExport,
+  parseBattleReplayExport,
+  BattleReplayParseError,
+  replayBattleExport,
+  serializeBattleReplayExport,
+} from './battle-replay'
+export type {
+  BattleReplayExportV1,
+  BattleReplayLimitation,
+  BattleReplayMode,
+  BattleReplayVisibility,
+  BuildBattleReplayExportOptions,
+} from './battle-replay'
 export type {
   AiActionType,
   AiDecision,

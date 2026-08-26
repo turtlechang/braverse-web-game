@@ -3,6 +3,7 @@ import {
   Activity,
   BookOpen,
   ChevronRight,
+  Download,
   Heart,
   Layers3,
   Plus,
@@ -30,6 +31,7 @@ import './BattleLogSidebar.css'
 export interface BattleLogSidebarProps {
   entries: CommandLogEntry[]
   playerNames?: Partial<Record<PlayerId, string>>
+  onExportReplay?: () => boolean
 }
 
 const CATEGORY_ICONS: Record<LogCategory, typeof Swords> = {
@@ -239,8 +241,19 @@ function BattleLogViewer({
   )
 }
 
-export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps) {
+export function BattleLogSidebar({
+  entries,
+  playerNames,
+  onExportReplay,
+}: BattleLogSidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [exportResult, setExportResult] = useState<'idle' | 'downloaded' | 'failed'>(
+    'idle',
+  )
+  const handleExportReplay = () => {
+    const downloaded = onExportReplay?.() ?? false
+    setExportResult(downloaded ? 'downloaded' : 'failed')
+  }
 
   return (
     <>
@@ -267,13 +280,32 @@ export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps
         >
           <header>
             <strong>對戰紀錄</strong>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              aria-label="關閉對戰紀錄"
-            >
-              <X size={14} />
-            </button>
+            <div className="battle-log-sidebar-header-actions">
+              {onExportReplay && (
+                <button
+                  type="button"
+                  className="battle-log-sidebar-export"
+                  onClick={handleExportReplay}
+                  data-testid="battle-log-export-replay"
+                >
+                  <Download size={13} aria-hidden="true" />
+                  <span>
+                    {exportResult === 'downloaded'
+                      ? '已下載'
+                      : exportResult === 'failed'
+                        ? '下載失敗'
+                        : '下載 AI 覆盤'}
+                  </span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="關閉對戰紀錄"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </header>
           <BattleLogViewer entries={entries} playerNames={playerNames} />
         </aside>
@@ -288,6 +320,7 @@ export interface BattleLogReviewModalProps {
   winnerName?: string
   resultSummary?: string
   turnNumber?: number
+  onExportReplay?: () => boolean
   onClose: () => void
 }
 
@@ -297,8 +330,16 @@ export function BattleLogReviewModal({
   winnerName,
   resultSummary,
   turnNumber,
+  onExportReplay,
   onClose,
 }: BattleLogReviewModalProps) {
+  const [exportResult, setExportResult] = useState<'idle' | 'downloaded' | 'failed'>(
+    'idle',
+  )
+  const handleExportReplay = () => {
+    const downloaded = onExportReplay?.() ?? false
+    setExportResult(downloaded ? 'downloaded' : 'failed')
+  }
   const groups = useMemo(() => groupCommandLogEntries(entries), [entries])
   const lastTurn = turnNumber ?? entries.reduce(
     (latest, entry) => Math.max(latest, entry.turnNumber),
@@ -340,6 +381,21 @@ export function BattleLogReviewModal({
           />
         </div>
         <footer className="battle-log-review-footer">
+          {onExportReplay && (
+            <button
+              type="button"
+              className="battle-log-review-export"
+              onClick={handleExportReplay}
+              data-testid="battle-log-review-export-replay"
+            >
+              <Download size={14} aria-hidden="true" />
+              {exportResult === 'downloaded'
+                ? '已下載 AI 覆盤 JSON'
+                : exportResult === 'failed'
+                  ? '下載失敗'
+                  : '下載 AI 覆盤 JSON'}
+            </button>
+          )}
           <button type="button" onClick={onClose}>返回結算畫面</button>
         </footer>
       </section>

@@ -1,6 +1,6 @@
 # 系統架構（Architecture）
 
-最後更新：2026-07-16。本文件描述現行架構；硬性開發規範見根目錄 [AGENTS.md](../AGENTS.md)。
+最後更新：2026-08-26。本文件描述現行架構；硬性開發規範見根目錄 [AGENTS.md](../AGENTS.md)。
 
 ## 1. 分層總覽
 
@@ -40,6 +40,7 @@
 | `commands.ts` | typed `GameCommand`（8 決策 + 24 玩家動作）；`applyGameCommand` 驗證並寫入 `commandLog` |
 | `command-log.ts` | `describeCommand` 產生正體中文對戰紀錄摘要 |
 | `replay.ts` | `replayCommands` / `replayCommandLog` 重播 |
+| `battle-replay.ts` | 版本化 `BattleReplayExportV1` 匯出、解析與可比對重播；線上輸出沿用 `masked-state` |
 | `legal-actions.ts` | `getLegalTurnCommands` 列舉合法動作（AI 與驗證共用） |
 | `custom-deck.ts` | 牌組合法性（60 張 / 同卡 4 張 / ≥1 餅乾 / FLIP ≤16）、localStorage 版本化儲存與遷移 |
 | `player-view.ts` / `masked-state.ts` | 視角過濾：對手手牌、牌庫、HP 卡只留張數（AI 公平性與線上同步共用） |

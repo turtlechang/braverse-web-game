@@ -70,6 +70,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
       <OnlineBattleView
         game={online.maskedGame}
         viewerPlayerId={online.viewerPlayerId}
+        seed={online.seed}
         roomCode={online.roomCode}
         sendCommand={online.sendCommand}
         sendAttackSelection={online.sendAttackSelection}

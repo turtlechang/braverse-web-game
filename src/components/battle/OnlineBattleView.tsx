@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GameState, PlayerId } from '../../game'
 import {
+  buildBattleReplayExport,
   canSpecialPlayCookie,
   canPlayStage,
   getEnergyCostTotal,
@@ -15,6 +16,7 @@ import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
 import { useAttentionIndicator } from '../../hooks/useAttentionIndicator'
+import { downloadBattleReplay } from '../downloadBattleReplay'
 import { deriveAttentionState } from '../panels/attentionState'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
@@ -69,6 +71,7 @@ const publicTargetScopeFor = (kind: string | undefined): PublicTargetScope => {
 export interface OnlineBattleViewProps {
   game: GameState
   viewerPlayerId: PlayerId
+  seed?: number | null
   roomCode: string | null
   sendCommand: (command: import('../../game').GameCommand) => void
   sendAttackSelection: (selection: AttackSelectionPreview) => void
@@ -100,6 +103,7 @@ export interface OnlineBattleViewProps {
 export function OnlineBattleView({
   game,
   viewerPlayerId,
+  seed = null,
   roomCode,
   sendCommand,
   sendAttackSelection,
@@ -128,7 +132,27 @@ export function OnlineBattleView({
 
   const isPlayerTurn = game.activePlayerId === viewerPlayerId
 
-  const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
+  const match = useOnlineMatchController({
+    game,
+    viewerPlayerId,
+    sendCommand,
+    seed,
+  })
+  const handleExportReplay = (): boolean => {
+    const downloaded = downloadBattleReplay(
+      buildBattleReplayExport({
+        state: game,
+        mode: 'online',
+        viewerId: viewerPlayerId,
+        decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+        seed,
+      }),
+    )
+    match.setMessage(
+      downloaded ? '公開 AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
+    )
+    return downloaded
+  }
   const inspectedEquippedCards = (() => {
     const card = dialogs.inspectedCard
     if (!card || card.type !== 'cookie') return undefined
@@ -618,7 +642,12 @@ export function OnlineBattleView({
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
-      <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
+      <OnlineActivityFeed
+        game={game}
+        viewerPlayerId={viewerPlayerId}
+        seed={seed}
+        onExportReplay={handleExportReplay}
+      />
 
       {!centerPreviewCard && actionStatus.mode !== 'awaiting-local-decision' && (
         <RemoteActionBanner
@@ -862,6 +891,7 @@ export function OnlineBattleView({
           winnerName={game.players[game.result.winnerId].name}
           resultSummary={battleLogReviewReason}
           turnNumber={game.turnNumber}
+          onExportReplay={handleExportReplay}
           onClose={() => setBattleLogReviewReason(null)}
         />
       )}

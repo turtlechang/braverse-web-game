@@ -41,6 +41,7 @@ import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from './hooks/useFlipCardPreview'
 import { useAttentionIndicator } from './hooks/useAttentionIndicator'
 import { deriveAttentionState } from './components/panels/attentionState'
+import { downloadBattleReplay } from './components/downloadBattleReplay'
 // Import the browser-safe trace module directly.  The contracts barrel also
 // exports the Node-only shadow ledger (node:crypto), which must not enter the
 // client bundle just because the optional Browser attestation hook is enabled.
@@ -203,6 +204,14 @@ function App() {
     if (!testStateConfig) {
       setScreen('menu')
     }
+  }
+
+  const exportBattleReplay = (): boolean => {
+    const downloaded = downloadBattleReplay(match.buildBattleReplay())
+    match.setMessage(
+      downloaded ? 'AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
+    )
+    return downloaded
   }
 
   const interactionLocked = deriveInteractionLocked(
@@ -613,6 +622,7 @@ function App() {
           'player-one': match.game.players['player-one'].name,
           'player-two': match.game.players['player-two'].name,
         }}
+        onExportReplay={exportBattleReplay}
       />
 
       <BattleTable
@@ -911,6 +921,7 @@ function App() {
           winnerName={resultWinnerName}
           resultSummary={battleLogReviewReason}
           turnNumber={match.game.turnNumber}
+          onExportReplay={exportBattleReplay}
           onClose={() => setBattleLogReviewReason(null)}
         />
       )}

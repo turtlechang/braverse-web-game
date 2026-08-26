@@ -350,4 +350,36 @@ describe('BattleLogSidebar', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
     await act(() => root.unmount())
   })
+
+  it('exposes replay downloads from the sidebar and review modal', async () => {
+    const onExportReplay = vi.fn()
+    const onClose = vi.fn()
+    const { container, root } = render()
+    await act(() =>
+      root.render(
+        <BattleLogSidebar
+          entries={attackGroup}
+          onExportReplay={onExportReplay}
+        />,
+      ),
+    )
+    await click(container.querySelector('[data-testid="battle-log-toggle"]'))
+    await click(container.querySelector('[data-testid="battle-log-export-replay"]'))
+    expect(onExportReplay).toHaveBeenCalledTimes(1)
+
+    await act(() =>
+      root.render(
+        <BattleLogReviewModal
+          entries={attackGroup}
+          onExportReplay={onExportReplay}
+          onClose={onClose}
+        />,
+      ),
+    )
+    await click(
+      container.querySelector('[data-testid="battle-log-review-export-replay"]'),
+    )
+    expect(onExportReplay).toHaveBeenCalledTimes(2)
+    await act(() => root.unmount())
+  })
 })

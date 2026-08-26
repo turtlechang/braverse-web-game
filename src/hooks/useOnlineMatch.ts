@@ -267,6 +267,7 @@ export function useOnlineMatch() {
   const [status, setStatus] = useState<OnlineMatchStatus>('idle')
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [viewerPlayerId, setViewerPlayerId] = useState<PlayerId | null>(null)
+  const [seed, setSeed] = useState<number | null>(null)
   const [maskedGame, setMaskedGame] = useState<GameState | null>(null)
   const [openingSnapshot, setOpeningSnapshot] =
     useState<OnlineOpeningSnapshot | null>(null)
@@ -303,6 +304,7 @@ export function useOnlineMatch() {
       setStatus('connecting')
       setRoomCode(initialMessage.type === 'join-room' ? initialMessage.code : null)
       setViewerPlayerId(null)
+      setSeed(null)
       setMaskedGame(null)
       setOpeningSnapshot(null)
       setErrorMessage(null)
@@ -419,6 +421,7 @@ export function useOnlineMatch() {
             connection.phase = 'in-progress'
             viewerPlayerIdRef.current = message.viewerId
             setViewerPlayerId(message.viewerId)
+            setSeed(message.seed)
             setMaskedGame(message.state)
             setPublicIntents(EMPTY_PUBLIC_INTENTS)
             setOpeningSnapshot(null)
@@ -590,6 +593,7 @@ export function useOnlineMatch() {
     setStatus('idle')
     setRoomCode(null)
     setViewerPlayerId(null)
+    setSeed(null)
     setMaskedGame(null)
     setOpeningSnapshot(null)
     setErrorMessage(null)
@@ -605,6 +609,7 @@ export function useOnlineMatch() {
     status,
     roomCode,
     viewerPlayerId,
+    seed,
     maskedGame,
     openingSnapshot,
     errorMessage,

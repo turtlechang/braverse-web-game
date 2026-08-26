@@ -165,6 +165,13 @@
   font-size: 0.65rem;
 }
 
+.online-activity-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .online-activity-copy {
   display: flex;
   align-items: center;
@@ -179,6 +186,26 @@
   font-size: 0.58rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.online-activity-export {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 215, 107, 0.42);
+  border-radius: 999px;
+  color: #ffe28a;
+  background: rgba(255, 215, 107, 0.08);
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.online-activity-export:hover {
+  background: rgba(255, 215, 107, 0.18);
 }
 
 .online-activity-copy:hover {

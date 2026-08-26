@@ -91,4 +91,35 @@ describe('useMatchSetup', () => {
 
     await act(() => root.unmount())
   })
+
+  it('reports the replay root before automatic AI opening commands are applied', async () => {
+    const setMessage = vi.fn()
+    const onReplayRoot = vi.fn()
+    let captured: ReturnType<typeof useMatchSetup> | null = null
+
+    function TestHarness() {
+      const [game, setGame] = useState<GameState>(() =>
+        createDemoSetupGame('player-one'),
+      )
+      captured = useMatchSetup({
+        game,
+        setGame,
+        setMessage,
+        enabled: true,
+        onReplayRoot,
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    await act(() => captured!.beginOrderedSetup('player-two'))
+
+    expect(onReplayRoot).toHaveBeenCalledTimes(1)
+    expect(onReplayRoot.mock.calls[0][0].commandLog).toBeUndefined()
+    expect(captured!.setupStep).toBe('mulligan')
+    await act(() => root.unmount())
+  })
 })

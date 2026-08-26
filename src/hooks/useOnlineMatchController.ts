@@ -67,8 +67,9 @@ export function useOnlineMatchController(params: {
   game: GameState
   viewerPlayerId: PlayerId
   sendCommand: (command: GameCommand) => void
+  seed?: number | null
 }) {
-  const { game, viewerPlayerId, sendCommand } = params
+  const { game, viewerPlayerId, sendCommand, seed = null } = params
   const opponentId = opponentOfId(viewerPlayerId)
   const activePlayer = game.players[game.activePlayerId]
 
@@ -147,10 +148,11 @@ export function useOnlineMatchController(params: {
         mode: 'online',
         viewerId: viewerPlayerId,
         decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+        seed,
         errorSummary,
       }),
     )
-  }, [game, viewerPlayerId])
+  }, [game, viewerPlayerId, seed])
 
   const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
     const commands = Array.isArray(command) ? command : [command]

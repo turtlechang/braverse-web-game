@@ -61,6 +61,30 @@
   font-size: 0.7rem;
 }
 
+.battle-log-sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.battle-log-sidebar-export {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px !important;
+  border: 1px solid rgba(129, 224, 255, 0.35) !important;
+  border-radius: 999px !important;
+  color: #bdeeff !important;
+  background: rgba(129, 224, 255, 0.08) !important;
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.battle-log-sidebar-export:hover {
+  background: rgba(129, 224, 255, 0.18) !important;
+}
+
 .battle-log-sidebar header button {
   display: grid;
   place-items: center;
@@ -422,6 +446,7 @@
 .battle-log-review-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   padding: 12px 26px 18px;
   border-top: 1px solid rgba(129, 224, 255, 0.2);
 }
@@ -438,6 +463,12 @@
 
 .battle-log-review-footer button:hover {
   background: rgba(113, 233, 255, 0.24);
+}
+
+.battle-log-review-footer button:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 @media (max-width: 720px) {
