@@ -4,8 +4,8 @@ import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
 import { hasBlockingPending } from '../pending'
-import type { CookieInBattleView, PlayerView } from '../player-view'
-import type { CookieCard, GameState, PlayerId } from '../types'
+import type { PlayerView } from '../player-view'
+import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 import {
   applyChosenTurnCommand,
@@ -32,11 +32,15 @@ import {
 } from './strategy/lv4-search'
 import { createLv4SearchTelemetry } from './strategy/search-telemetry'
 import { handleAiTurnState, type AiTurnStrategy } from './turn-handler'
-import { isAllowedAiDeploymentCommand } from './deployment-policy'
 import {
-  estimateOpponentResponse,
+  assessLv5Deployment,
+  isAllowedAiDeploymentCommand,
+} from './deployment-policy'
+import {
+  evaluatePublicResponseMinimax,
   type OpponentResponseEstimate,
 } from './strategy/opponent-response'
+import { assessLv5DefensiveReserve } from './strategy/defensive-reserve'
 import { scoreIntentContinuity } from './strategy/session'
 import {
   forecastOpponentEndgame,
@@ -48,58 +52,15 @@ import {
   type ActionablePayoffSource,
   type TacticalPlan,
 } from './strategy/tactical-plans'
+import {
+  evaluatePlayerView,
+  evaluatePlayerViewBreakdown,
+  type PublicStateEvaluationBreakdown,
+} from './strategy/state-evaluation'
 
-const sumBreakLevel = (cards: CookieCard[]): number =>
-  cards.reduce((sum, card) => sum + card.level, 0)
-
-/**
- * 場上單張餅乾的存在價值：舊版是不分等級一律 60 分，等於 Lv.1 雜牌
- * 跟 Lv.4 王牌一樣重要，AI 因此不會特別想保留高等級餅乾。改成
- * 40 + level*10——Level 2（最常見的中段餅乾）維持原本的 60 分不變，
- * 只有 Level 1（50）與 Level 3/4（70/80）往兩側拉開，盡量不動到
- * 已經調校過的既有數值尺度。
- */
-const boardPresenceValue = (cookies: CookieInBattleView[]): number =>
-  cookies.reduce((sum, cookie) => sum + 40 + cookie.card.level * 10, 0)
-
-/**
- * 場上總攻擊力：卡面攻擊力皆為公開資訊。舊版評分只看戰鬥區張數與
- * HP，兩個攻守分佈不同但張數/HP 相同的場面會拿到同分，AI 分不出
- * 「這場面比較能打」。加成幅度刻意壓低（每點攻擊力 3 分），只用來
- * 在既有分數打平時提供額外解析度，不喧賓奪主。
- */
-const attackPotentialValue = (cookies: CookieInBattleView[]): number =>
-  cookies.reduce((sum, cookie) => sum + (cookie.card.attack ?? 0), 0)
-
-/**
- * 場面評分：只讀 PlayerView，型別上保證不使用隱藏資訊。
- * 分數對 viewer 而言越高越好。
- */
-export const evaluatePlayerView = (view: PlayerView): number => {
-  if (view.status === 'finished') {
-    if (!view.result) return 0
-    return view.result.winnerId === view.viewerId ? 100000 : -100000
-  }
-
-  const { self, opponent } = view
-  let score = 0
-  score += boardPresenceValue(self.battleArea)
-  score -= boardPresenceValue(opponent.battleArea)
-  score += attackPotentialValue(self.battleArea) * 3
-  score -= attackPotentialValue(opponent.battleArea) * 3
-  score += self.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
-  score -=
-    opponent.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
-  score += self.handCount * 6
-  score -= opponent.handCount * 3
-  score += self.supportArea.filter((support) => !support.rested).length * 10
-  score += self.supportArea.length * 4
-  score -= sumBreakLevel(self.breakArea) * 20
-  score += sumBreakLevel(opponent.breakArea) * 20
-  score += self.deckCount
-  if (self.stage) score += 8
-  return score
-}
+// 保留既有公開匯出，讓 Lv.3 測試與其他呼叫端不必改變 import 路徑。
+export { evaluatePlayerView, evaluatePlayerViewBreakdown }
+export type { PublicStateEvaluationBreakdown }
 
 /**
  * 攻擊指令採期望值啟發式：套用後戰局停在待回應階段，直接評分
@@ -394,8 +355,24 @@ const commandCandidate = (
   beforeView: PlayerView,
   context: ReturnType<typeof createLv3ContextForView>,
   legalAttackCountBefore: number,
+  strategy: AiTurnStrategy,
 ): ScoredLv3ActionCandidate<AiDecision> | null => {
   if (!isAllowedAiDeploymentCommand(state, playerId, command)) return null
+  if (
+    strategy.conservativeDeployment &&
+    command.kind === 'deploy-cookie' &&
+    command.instanceId
+  ) {
+    const card = state.players[playerId].hand.find(
+      (candidate) => candidate.instanceId === command.instanceId,
+    )
+    if (card && assessLv5Deployment(state, playerId, card, {
+      confirmedCombo:
+        strategy.strategyMemory?.activeCombo?.payoffCardId === card.id,
+    }).reason === 'single-cookie-discipline') {
+      return null
+    }
+  }
 
   try {
     const nextState = applyChosenTurnCommand(state, command)
@@ -472,6 +449,7 @@ export const handleAiEvaluatedTurnState = (
       beforeView,
       context,
       legalAttackCountBefore,
+      strategy,
     )
     if (candidate) candidates.push(candidate)
   }
@@ -908,7 +886,6 @@ export const handleAiTwoPlyTurnState = (
         ? getEffectiveAttack(beforeState, command.attackerInstanceId)
         : 0
       return beamStepBonus(beforeState, afterState, nextPlayerId, command) +
-        estimateOpponentResponse(before, identity).expectedPenalty +
         forecastOpponentEndgame(before, identity, effectiveDamage).score
     },
     persistentIntentBonus: decisionLevel === 5
@@ -921,6 +898,29 @@ export const handleAiTwoPlyTurnState = (
       ? strategy.strategyMemory?.activeCombo?.planId
       : undefined,
     strictComboActionability: decisionLevel === 5,
+    opponentResponseMinimax: decisionLevel === 5
+      ? (view, identity) => evaluatePublicResponseMinimax(view, identity)
+      : undefined,
+    defensiveReserveAssessment: decisionLevel === 5
+      ? (before, after, command) =>
+          assessLv5DefensiveReserve(before, after, command)
+      : undefined,
+    deploymentTempoBonus: decisionLevel === 5
+      ? (beforeState, _afterState, nextPlayerId, command, tacticalPlan) => {
+          if (command.kind !== 'deploy-cookie' || !command.instanceId) return 0
+          const card = beforeState.players[nextPlayerId].hand.find(
+            (candidate) => candidate.instanceId === command.instanceId,
+          )
+          if (!card) return 0
+          const confirmedCombo =
+            tacticalPlan.status === 'confirmed' &&
+            (tacticalPlan.kind === 'setup' || tacticalPlan.kind === 'payoff') &&
+            tacticalPlan.validity === 'same-turn'
+          return assessLv5Deployment(beforeState, nextPlayerId, card, {
+            confirmedCombo,
+          }).penalty
+        }
+      : undefined,
     isTerminal: isLv4SearchTerminal,
   }
   const searchResult = searchLv4Commands(
@@ -939,6 +939,7 @@ export const handleAiTwoPlyTurnState = (
       chosenCommandKind: baseline.reason?.chosenCommandKind ?? baseline.action,
       actionScore: baseline.reason?.actionScore,
       lv4Search: { ...telemetry, fallbackUsed: true },
+      publicEvaluation: evaluatePlayerViewBreakdown(beforeView),
     },
   })
 
@@ -960,9 +961,11 @@ export const handleAiTwoPlyTurnState = (
         tieBreakKey: searchResult.firstStep.actionScore.tieBreakKey,
         actionScore: searchResult.firstStep.actionScore,
         telemetry: searchResult.telemetry,
-        opponentResponse: decisionLevel === 5
-          ? estimateOpponentResponse(beforeView, actionIdentityFromCommand(command))
-          : { responseLikelihood: 0, publicResponseEvidence: 0, expectedPenalty: 0, detail: 'Lv.4 未啟用。' },
+        opponentResponse: searchResult.firstStep.opponentResponse ??
+          evaluatePublicResponseMinimax(
+            beforeView,
+            actionIdentityFromCommand(command),
+          ),
         opponentEndgame: forecastOpponentEndgame(
           beforeView,
           actionIdentityFromCommand(command),
@@ -1058,7 +1061,7 @@ export const handleAiTwoPlyTurnState = (
       tieBreakKey: scored.breakdown.tieBreakKey,
       actionScore: scored.breakdown,
       telemetry,
-      opponentResponse: { responseLikelihood: 0, publicResponseEvidence: 0, expectedPenalty: 0, detail: '非攻擊能力。' },
+      opponentResponse: evaluatePublicResponseMinimax(beforeView, { kind }),
       opponentEndgame: forecastOpponentEndgame(beforeView, identity, 0),
       tacticalPlan,
     })
@@ -1132,6 +1135,7 @@ export const handleAiTwoPlyTurnState = (
       opponentResponse: decisionLevel === 5 ? best.opponentResponse : undefined,
       opponentEndgame: decisionLevel === 5 ? best.opponentEndgame : undefined,
       tacticalPlan: decisionLevel === 5 ? best.tacticalPlan : undefined,
+      publicEvaluation: evaluatePlayerViewBreakdown(beforeView),
     },
   }
 }

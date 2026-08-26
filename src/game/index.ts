@@ -515,7 +515,25 @@ export type {
   EndInfo,
   BehaviorMetrics,
 } from './ai/types'
-export { evaluatePlayerView } from './ai/evaluated-turn-handler'
+export {
+  evaluatePlayerView,
+  evaluatePlayerViewBreakdown,
+} from './ai/evaluated-turn-handler'
+export type { PublicStateEvaluationBreakdown } from './ai/strategy/state-evaluation'
+export {
+  estimateOpponentResponse,
+  evaluatePublicResponseMinimax,
+} from './ai/strategy/opponent-response'
+export type {
+  OpponentResponseEstimate,
+  PublicResponseBranch,
+  PublicResponseBranchKind,
+} from './ai/strategy/opponent-response'
+export { assessLv5DefensiveReserve } from './ai/strategy/defensive-reserve'
+export type {
+  DefensiveReserveAssessment,
+  DefensiveReserveReason,
+} from './ai/strategy/defensive-reserve'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
   createCustomDeckMatch,

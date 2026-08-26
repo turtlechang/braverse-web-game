@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createDemoGame } from '../../demo'
 import { createPlayerView, type PlayerView } from '../../player-view'
 import type { GameCard } from '../../types'
+import { item } from '../../test-helpers/battle-helpers'
 import { estimateOpponentResponse } from './opponent-response'
 
 const responseCard = (id: string): GameCard => ({
@@ -76,5 +77,39 @@ describe('Lv.5 公開資訊對手回應模型', () => {
     }
     expect(estimateOpponentResponse(noHand, attackIdentity(noHand)))
       .toMatchObject({ responseLikelihood: 0, expectedPenalty: 0 })
+  })
+
+  it('會把對手保留的活躍支援視為未知陷阱／防禦的公開容量訊號', () => {
+    const base = createPlayerView(createDemoGame(5), 'player-one')
+    const view: PlayerView = {
+      ...base,
+      opponent: {
+        ...base.opponent,
+        handCount: 4,
+        battleArea: [],
+        supportArea: [
+          { card: item('opponent-active-red'), rested: false },
+          { card: item('opponent-active-yellow'), rested: false },
+          { card: item('opponent-rested'), rested: true },
+        ],
+        breakArea: [],
+        discardPile: [],
+        stage: null,
+      },
+    }
+    const estimate = estimateOpponentResponse(view, {
+      kind: 'attack',
+      sourceInstanceId: view.self.battleArea[0]?.card.instanceId,
+      targetInstanceId: 'missing-target',
+    })
+
+    expect(estimate.activeSupportCount).toBe(2)
+    expect(estimate.hiddenHandEnergyCapacity).toBe(2)
+    expect(estimate.responseBranches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'reserved-energy-threat', evidence: 2 }),
+      ]),
+    )
+    expect(estimate.worstCaseKind).toBe('reserved-energy-threat')
   })
 })

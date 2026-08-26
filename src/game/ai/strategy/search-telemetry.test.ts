@@ -30,6 +30,11 @@ describe('Lv4 search telemetry', () => {
       unsupportedEffectCount: 2,
       unknownInformationPenalty: -12,
       resourceReservationMisses: 1,
+      publicResponseEvaluations: 3,
+      publicResponseBranches: 5,
+      publicResponseMinPenalty: -17,
+      defensiveReserveEvaluations: 2,
+      defensiveReserveAdjustment: -10,
     }
     const nodeLimit = {
       ...createLv4SearchTelemetry(),
@@ -48,6 +53,11 @@ describe('Lv4 search telemetry', () => {
       unsupportedEffectCount: 2,
       unknownInformationPenalty: -12,
       resourceReservationMisses: 1,
+      publicResponseEvaluations: 3,
+      publicResponseBranches: 5,
+      publicResponseMinPenalty: -17,
+      defensiveReserveEvaluations: 2,
+      defensiveReserveAdjustment: -10,
       setupSteps: 1,
       payoffSteps: 1,
       completedPayoffs: 1,

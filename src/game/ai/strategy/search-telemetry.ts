@@ -23,6 +23,12 @@ export interface Lv4SearchTelemetry {
   unsupportedEffectCount: number
   unknownInformationPenalty: number
   resourceReservationMisses: number
+  /** Lv.5 public-response Min 節點評估次數與分支數。 */
+  publicResponseEvaluations: number
+  publicResponseBranches: number
+  publicResponseMinPenalty: number
+  defensiveReserveEvaluations: number
+  defensiveReserveAdjustment: number
   plan: Lv4PlanTelemetry
 }
 
@@ -38,6 +44,11 @@ export interface Lv4SearchTelemetryAggregate {
   unsupportedEffectCount: number
   unknownInformationPenalty: number
   resourceReservationMisses: number
+  publicResponseEvaluations: number
+  publicResponseBranches: number
+  publicResponseMinPenalty: number
+  defensiveReserveEvaluations: number
+  defensiveReserveAdjustment: number
   setupSteps: number
   payoffSteps: number
   completedPayoffs: number
@@ -59,6 +70,11 @@ export const createLv4SearchTelemetry = (): Lv4SearchTelemetry => ({
   unsupportedEffectCount: 0,
   unknownInformationPenalty: 0,
   resourceReservationMisses: 0,
+  publicResponseEvaluations: 0,
+  publicResponseBranches: 0,
+  publicResponseMinPenalty: 0,
+  defensiveReserveEvaluations: 0,
+  defensiveReserveAdjustment: 0,
   plan: {
     setupSteps: 0,
     payoffSteps: 0,
@@ -88,6 +104,11 @@ export const aggregateLv4SearchTelemetry = (
     unsupportedEffectCount: sum((entry) => entry.unsupportedEffectCount),
     unknownInformationPenalty: sum((entry) => entry.unknownInformationPenalty),
     resourceReservationMisses: sum((entry) => entry.resourceReservationMisses),
+    publicResponseEvaluations: sum((entry) => entry.publicResponseEvaluations),
+    publicResponseBranches: sum((entry) => entry.publicResponseBranches),
+    publicResponseMinPenalty: sum((entry) => entry.publicResponseMinPenalty),
+    defensiveReserveEvaluations: sum((entry) => entry.defensiveReserveEvaluations),
+    defensiveReserveAdjustment: sum((entry) => entry.defensiveReserveAdjustment),
     setupSteps,
     payoffSteps: sum((entry) => entry.plan.payoffSteps),
     completedPayoffs,

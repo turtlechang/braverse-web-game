@@ -35,10 +35,15 @@ import {
   chooseBestCookieToDeploy,
   getMatchupProfile,
 } from './bs2MatchupProfiles'
-import { shouldAvoidFlipDeployment } from './deployment-policy'
+import {
+  shouldAvoidFlipDeployment,
+  shouldAvoidLv5SecondDeployment,
+} from './deployment-policy'
 
 export interface AiTurnStrategy {
   currentLevel?: AiLevel
+  /** Lv.5 fallback 仍保留「先下一張」節奏；Lv.4 對照組維持原策略。 */
+  conservativeDeployment?: boolean
   /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
   shuffleSeed?: number
   knowledgeState?: KnowledgeState
@@ -503,7 +508,15 @@ export const handleAiTurnState = (
       if (handQuality >= 30) {
         const deployable = chooseBestCookieToDeploy(
           player.hand.filter(
-            (card) => !shouldAvoidFlipDeployment(state, playerId, card),
+            (card) =>
+              !shouldAvoidFlipDeployment(state, playerId, card) &&
+              !(
+                strategy.conservativeDeployment &&
+                shouldAvoidLv5SecondDeployment(state, playerId, card, {
+                  confirmedCombo:
+                    strategy.strategyMemory?.activeCombo?.payoffCardId === card.id,
+                })
+              ),
           ),
           profile,
         )

@@ -70,6 +70,12 @@ const makeThreeStepHooks = (): Lv4SearchHooks => {
 describe('G4 Lv4 command search', () => {
   it('保留跨步 setup → payoff 計畫，且只有已先完成 setup 才給完成 bonus', () => {
     const afterSetup = advanceLv4Plan(emptyPlan, setupPlan)
+    const lv5Setup = advanceLv4Plan(
+      emptyPlan,
+      setupPlan,
+      'activate-skill',
+      { onlyTrackSameTurn: true, rewardConfirmedSetup: true },
+    )
     const afterPayoff = advanceLv4Plan(afterSetup.plan, payoffPlan)
     const standalonePayoff = advanceLv4Plan(emptyPlan, payoffPlan)
     const mismatchedPayoff = advanceLv4Plan(afterSetup.plan, {
@@ -78,6 +84,8 @@ describe('G4 Lv4 command search', () => {
     })
 
     expect(afterSetup.plan.setupSteps).toBe(1)
+    expect(afterSetup.completionBonus).toBe(0)
+    expect(lv5Setup.completionBonus).toBeGreaterThan(0)
     expect(afterPayoff.plan).toMatchObject({
       setupSteps: 1,
       payoffSteps: 1,
@@ -108,6 +116,72 @@ describe('G4 Lv4 command search', () => {
     expect(first.firstCommand).toEqual({ kind: 'advance-phase', playerId })
     expect(first.firstCommand).toEqual(second.firstCommand)
     expect(first.relativeScore).toBe(second.relativeScore)
+  })
+
+  it('將公開回應 Min 分支與防守保留修正納入第一步評分及 telemetry', () => {
+    const state = createBattleState()
+    const baseHooks = makeThreeStepHooks()
+    const attackCommand: PlayerActionCommand = {
+      kind: 'attack',
+      playerId,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    }
+    const hooks: Lv4SearchHooks = {
+      ...baseHooks,
+      getLegalCommands: (current) =>
+        (baseHooks.getLegalCommands(current, playerId).length > 0
+          ? [attackCommand]
+          : []),
+      opponentResponseMinimax: () => ({
+        responseLikelihood: 0.8,
+        publicResponseEvidence: 1,
+        expectedPenalty: -12,
+        worstCasePenalty: -17,
+        worstCaseKind: 'visible-block',
+        responseBranches: [{
+          kind: 'visible-block',
+          penalty: -17,
+          evidence: 1,
+          detail: 'fixture visible block',
+        }],
+        activeSupportCount: 2,
+        hiddenHandEnergyCapacity: 1,
+        detail: 'fixture response minimax',
+      }),
+      defensiveReserveAssessment: () => ({
+        reason: 'trap-in-hand',
+        reserveRequired: 1,
+        activeSupportBefore: 2,
+        activeSupportAfter: 0,
+        shortage: 1,
+        adjustment: -10,
+        detail: 'fixture defensive reserve',
+      }),
+    }
+
+    const result = searchLv4Commands(
+      state,
+      playerId,
+      createKnowledgeState(playerId),
+      hooks,
+      { beamWidth: 2, maxDepth: 1, maxNodes: 4, timeBudgetMs: 1000 },
+    )
+
+    expect(result.firstStep?.actionScore.contributions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'opponent-response-minimax', amount: -17 }),
+        expect.objectContaining({ id: 'defensive-reserve', amount: -10 }),
+      ]),
+    )
+    expect(result.telemetry).toMatchObject({
+      publicResponseEvaluations: 1,
+      publicResponseBranches: 1,
+      publicResponseMinPenalty: -17,
+      defensiveReserveEvaluations: 1,
+      defensiveReserveAdjustment: -10,
+    })
   })
 
   it('遇到假想抽牌時停止列舉後續命令，不讀未知手牌內容', () => {

@@ -1604,6 +1604,7 @@ export const takeAiStep = (
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
     aiTurnStrategy.currentLevel = level
+    aiTurnStrategy.conservativeDeployment = level === 5
     // 外部只能提供以 PlayerView／合法事件建立的 KnowledgeState；同局可
     // 明確傳回上一個 memory，不同對局則由 caller 重置，避免全域串局。
     aiTurnStrategy.knowledgeState = options.memory?.observerId === playerId

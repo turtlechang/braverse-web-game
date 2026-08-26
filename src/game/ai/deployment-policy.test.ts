@@ -7,6 +7,7 @@ import {
   type GameState,
 } from '..'
 import {
+  assessLv5Deployment,
   canDeployCookieForLethal,
   isFlipCookie,
   shouldAvoidFlipDeployment,
@@ -81,6 +82,33 @@ const aiMainState = (
 }
 
 describe('AI Cookie deployment policy', () => {
+  it('Lv.5 prefers one battle Cookie unless a public exception is confirmed', () => {
+    const first = cookie('first', { level: 2, hp: 3, attack: 2 })
+    const second = cookie('second', { level: 2, hp: 3, attack: 2 })
+    const state = aiMainState([first, second])
+
+    expect(assessLv5Deployment(state, 'player-two', second)).toMatchObject({
+      penalty: -140,
+      reason: 'single-cookie-discipline',
+    })
+    expect(assessLv5Deployment(state, 'player-two', second, {
+      confirmedCombo: true,
+    })).toMatchObject({
+      penalty: 0,
+      reason: 'confirmed-combo',
+    })
+  })
+
+  it('Lv.5 permits a second Cookie for a public lethal', () => {
+    const finisher = cookie('finisher', { level: 2, hp: 3, attack: 3 })
+    const state = aiMainState([finisher], 1)
+
+    expect(assessLv5Deployment(state, 'player-two', finisher)).toMatchObject({
+      penalty: 0,
+      reason: 'public-lethal',
+    })
+  })
+
   it('identifies both official FLIP cards and runtime FLIP abilities', () => {
     expect(isFlipCookie(cookie('official-flip', { flip: true }))).toBe(true)
     expect(
@@ -136,4 +164,23 @@ describe('AI Cookie deployment policy', () => {
       )
     },
   )
+
+  it('Lv.5 does not fill the second battle slot for generic tempo', () => {
+    const first = cookie('first', { level: 2, hp: 3, attack: 2 })
+    const second = cookie('second', { level: 2, hp: 3, attack: 2 })
+    const base = aiMainState([first, second])
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          stage: null,
+        },
+      },
+    }
+    const decision = takeAiStep(state, 'player-two', { level: 5, seed: 19 })
+
+    expect(decision.action).not.toBe('deploy-cookie')
+  })
 })

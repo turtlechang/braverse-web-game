@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
 > **狀態：Lv.1–Lv.4 已實作完成；Lv.5 challenger 已進入實驗驗證，尚未通過對 Lv.4 的升格勝率門檻。**
-> **最後更新：2026-08-23（Lv.5 Combo／終局預測迭代）。**
+> **最後更新：2026-08-26（Lv.5 公開回應 Min 與防守資源保留）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -15,11 +15,13 @@
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
 | Lv.3 | 評估式 | 對每個合法候選輸出 `ActionScoreBreakdown`，以結構化能力、牌組 profile、已知資訊與公開局面一步評分 | +R5, R6b, R7, R8, R12–R15 | ✅ 完成 |
 | Lv.4 | 多步規劃 | 有限 beam command search（w=5, d=5, 240 nodes, 150ms）、R16 資源預留；timeout 回退 Lv.3 | +R9, R10, R11, R12–R16, lv4RiskBonus | ✅ 完成 |
-| Lv.5 | 高手對抗（實驗） | Lv.4 搜尋（w=6, d=6, 360 nodes, 180ms）＋公開記憶／回應期望＋通用 ComboPlan＋終局洗傷與空場預測；timeout 回退 Lv.4 | +R17–R20 | 🧪 challenger；尚未升格 |
+| Lv.5 | 高手對抗（實驗） | Lv.4 搜尋（w=6, d=6, 360 nodes, 180ms）＋公開記憶／回應 Min＋通用 ComboPlan＋終局洗傷與空場預測＋防守資源保留；timeout 回退 Lv.4 | +R17–R21 | 🧪 challenger；尚未升格 |
 
 Lv.5 的「對手回應／終局預測」只使用公開手牌與牌庫張數、公開卡牌能力、
 棄牌區、Break 與戰鬥區 HP，不是讀取實際隱藏手牌，也不是完整 opponent
-tree。2026-08-23 本輪全 corpus untouched holdout（46 副牌組、mirror＋輪替跨
+tree。公開回應 Min 會把「不回應、未知手牌 envelope、保留活躍支援的未知支付容量、
+公開可見 Block／Trap／攻擊回應能力」列成有限分支，選取最壞分支扣分；活躍支援只代表
+可支付張數上限，不代表 AI 看見了對手卡面。2026-08-23 本輪全 corpus untouched holdout（46 副牌組、mirror＋輪替跨
 牌組、seeds 601–602、先後攻換位）為 186／368（50.54%，Wilson 95% CI
 45.46%–55.62%），`stuck`、invalid action、deadlock、turn cap 均為 0；
 因此目前證明安全與架構落地，**仍未證明勝率優於 Lv.4**。
@@ -65,6 +67,7 @@ tree。2026-08-23 本輪全 corpus untouched holdout（46 副牌組、mirror＋�
 | R18 | 同一 ComboPlan 前置／收益配對與生命週期 | Lv.5 | 🧪 已接入；不同 plan 不得誤完成 |
 | R19 | Combo payoff 能量張數與顏色預留 | Lv.5 | 🧪 已接入；只採規則層與公開支援資訊 |
 | R20 | 對手牌庫耗盡、Refresh 洗傷與空場敗北預測 | Lv.5 | 🧪 已接入；隱藏手牌只做公開機率估計 |
+| R21 | 公開回應 Min 與防守資源保留 | Lv.5 | 🧪 已接入；依活躍支援、Trap／Blocker／OnPlay 公開需求調整 |
 
 ### R6c Deferred 理由
 
@@ -102,6 +105,8 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 |---|---|---|
 | `AiStrategyMemory` | `ai/strategy/session.ts` | 每場持久保存合法 `KnowledgeState`、上一個 command 與 setup/payoff/tempo 意圖；forced pending 不覆蓋意圖 |
 | `estimateOpponentResponse` | `ai/strategy/opponent-response.ts` | 只從 `PlayerView` 的公開手牌張數與公開卡牌 capability 估計攻擊回應曝險 |
+| `evaluatePublicResponseMinimax` | `ai/strategy/opponent-response.ts` | 建立有限公開 Min 分支；對手活躍支援 × 公開手牌張數形成未知支付容量 envelope，不猜測隱藏卡面 |
+| `assessLv5DefensiveReserve` | `ai/strategy/defensive-reserve.ts` | 依己方可支付 Trap、Blocker、OnPlay／Stage／Item 能量與對手公開攻擊威脅，對耗盡支援的攻擊扣分、對保留資源的結束階段加分 |
 | `ComboPlan` | `ai/strategy/combo-plan.ts` | 由 capability synergy edge 自動建立穩定 plan ID、前置／收益、付款與有效期；不使用系列或卡號特判 |
 | Combo lifecycle | `ai/strategy/tactical-plans.ts`、`session.ts` | Lv.5 以公開條件門檻、規則層下一步合法動作時機與同一 plan ID 確認 setup → payoff；跨步記錄 started／completed／abandoned |
 | `forecastOpponentEndgame` | `ai/strategy/endgame-forecast.ts` | 由公開牌庫／手牌張數、棄牌區最低 LV、Break 與最後一隻餅乾 HP 預判補位、Refresh 洗傷及無餅乾敗北 |

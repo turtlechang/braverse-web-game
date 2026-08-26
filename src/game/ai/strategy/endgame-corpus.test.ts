@@ -122,6 +122,37 @@ describe('終局預測 deterministic corpus', () => {
     expect(forecast.detail).toContain('會進入 Refresh 風險')
   })
 
+  it('混合公開 HP 時，以分布保留部分補位路徑的 Refresh 風險', () => {
+    const forecast = makeForecast((state) => {
+      const defender = opponent(state)
+      // 牌庫 4 張：公開低 HP 補位可安全完成，高 HP 補位仍會耗盡牌庫。
+      defender.deck = [
+        item('deck-a'),
+        item('deck-b'),
+        item('deck-c'),
+        item('deck-d'),
+      ]
+      defender.hand = [cookie('replacement-visible', 1, 3)]
+      defender.discardPile = [
+        { ...cookie('public-low', 1, 2), level: 1 },
+        { ...cookie('public-high', 3, 6), level: 3 },
+      ]
+    })
+
+    expect(forecast.replacementHpDistribution).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ hp: 2 }),
+        expect.objectContaining({ hp: 3 }),
+        expect.objectContaining({ hp: 6 }),
+      ]),
+    )
+    expect(forecast.refreshProbability).toBeGreaterThan(0)
+    expect(forecast.refreshProbability).toBeLessThan(
+      1 - forecast.noReplacementProbability,
+    )
+    expect(forecast.detail).toContain('HP 分布')
+  })
+
   it('公開棄牌有餅乾時，Refresh 敗北機率依最低 LV 候選判定', () => {
     const forecast = makeForecast((state) => {
       const defender = opponent(state)
