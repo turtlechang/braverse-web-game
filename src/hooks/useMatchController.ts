@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
+import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -650,7 +650,7 @@ export function useMatchController(params: {
   )
 
   const buildBattleReplay = useCallback(
-    () =>
+    (ai?: BattleReplayAiMetadata) =>
       buildBattleReplayExport({
         state: game,
         mode: 'offline',
@@ -661,6 +661,7 @@ export function useMatchController(params: {
           playerTwo: deckConfig.ai,
         },
         initialState: initialGameRef.current,
+        ai,
       }),
     [game, deckConfig, testStateConfig, viewerPlayerId],
   )

@@ -517,6 +517,9 @@ export type {
   BattleReplayTrainingAssessment,
   BattleReplayTrainingExclusion,
   BattleReplayVisibility,
+  BattleReplayAiAgent,
+  BattleReplayAiDecision,
+  BattleReplayAiMetadata,
   BuildBattleReplayExportOptions,
 } from './battle-replay'
 export type {
@@ -556,7 +559,12 @@ export { assessLv5DefensiveReserve } from './ai/strategy/defensive-reserve'
 export type {
   DefensiveReserveAssessment,
   DefensiveReserveReason,
+  OptionalCostDefenseAssessment,
 } from './ai/strategy/defensive-reserve'
+export { AI_STRATEGY_VERSION } from './ai/strategy/version'
+export type {
+  EndgameSurvivalAssessment,
+} from './ai/strategy/endgame-survival'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
   createCustomDeckMatch,

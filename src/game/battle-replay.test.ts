@@ -32,6 +32,22 @@ describe('BattleReplayExportV1', () => {
       decks: { playerOne: 'fixture-one', playerTwo: 'fixture-two' },
       initialState,
       source: 'production',
+      ai: {
+        agents: {
+          'player-two': {
+            aiLevel: 5,
+            strategyVersion: 'lv5-defense-retention-endgame-v1',
+            strategyCommit: 'abc123',
+          },
+        },
+        decisions: [{
+          commandLogId: 1,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'AI attack',
+          reason: { level: 5, chosenCommandKind: 'attack' },
+        }],
+      },
       now: fixedNow,
     })
 
@@ -52,6 +68,11 @@ describe('BattleReplayExportV1', () => {
       available: true,
       exact: true,
       limitation: 'none',
+    })
+    expect(artifact.ai?.agents['player-two']).toEqual({
+      aiLevel: 5,
+      strategyVersion: 'lv5-defense-retention-endgame-v1',
+      strategyCommit: 'abc123',
     })
 
     const replayed = replayBattleExport(artifact)
@@ -111,6 +132,21 @@ describe('BattleReplayExportV1', () => {
       decks: { playerOne: 'unknown', playerTwo: 'unknown' },
       seed: 20260826,
       initialState: state,
+      ai: {
+        agents: {
+          'player-two': {
+            aiLevel: 5,
+            strategyVersion: 'should-not-leak',
+            strategyCommit: 'private-commit',
+          },
+        },
+        decisions: [{
+          commandLogId: null,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'should not leak',
+        }],
+      },
       now: fixedNow,
     })
 
@@ -127,6 +163,7 @@ describe('BattleReplayExportV1', () => {
       ],
     })
     expect(artifact.initialState).toBeNull()
+    expect(artifact.ai).toBeUndefined()
     expect(artifact.replay).toEqual({
       available: false,
       exact: false,
@@ -215,6 +252,33 @@ describe('BattleReplayExportV1', () => {
         }),
       ),
     ).toThrow('無法辨識的 command')
+
+    const invalidAi = {
+      format: 'braverse-battle-replay',
+      version: 1,
+      mode: 'offline',
+      visibility: 'full',
+      viewerId: 'player-one',
+      commands: [],
+      commandLog: [],
+      initialState: null,
+      finalState: {},
+      outcome: {},
+      replay: {},
+      ai: {
+        agents: {},
+        decisions: [{
+          commandLogId: null,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'invalid hidden memory',
+          reason: { level: 5, strategyMemory: {} },
+        }],
+      },
+    }
+    expect(() => parseBattleReplayExport(JSON.stringify(invalidAi))).toThrow(
+      'ai metadata 格式無效',
+    )
   })
 
   it('recomputes quality metadata for legacy and tampered envelopes', () => {

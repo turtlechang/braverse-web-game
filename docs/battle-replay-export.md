@@ -52,12 +52,44 @@ const replayed = replayBattleExport(restored)
 | `finalState` | 不含重複 `commandLog` 的終局快照。線上為 viewer 的遮罩狀態。 |
 | `outcome` | `status`、`result`、回合與階段摘要。 |
 | `replay` | `available`、`exact` 與限制原因，讓訓練流程不會把 best-effort 當成精確標籤。 |
+| `ai` | 離線完整匯出的 AI agent／決策 trace；包含 `aiLevel`、`strategyVersion`、`strategyCommit`、對應 `commandLogId`、動作、描述與公開決策理由。線上匯出永遠省略。 |
 
 ## 精確度與隱私邊界
 
 離線匯出若有 `initialState`，通常可用 `initialState + commands` 重播。開局調度、強制調度或 Refresh 指令若沒有可序列化的 `shuffleSeed`，會標示 `replay.exact: false` 與 `limitation: "unseeded-shuffle"`；這類檔案仍可供行動序列與策略決策分析，但不得直接當作完全相同牌序的 ground truth。`replay.exact: true` 只代表狀態可精確重播，不代表資料一定包含行為；零指令 snapshot 也可能是 exact。
 
 線上匯出一律是 `visibility: "public"`、`initialState: null`、`limitation: "online-public-view"`。對手手牌、牌庫順序與隱藏 HP 卡經 `maskGameStateForViewer` 遮罩；`commands` 與 `commandLog.payload` 的卡牌／目標 ID 會被替換成 placeholder，log 內卡牌物件也不輸出，只保留可公開的摘要與步驟文字。因此線上檔案可做公開行動覆盤，不能用來推導對手私有手牌，也不能宣稱完整重播。
+
+## AI 決策追蹤
+
+離線正式對戰可在匯出頂層帶入 `ai`：
+
+```json
+{
+  "ai": {
+    "agents": {
+      "player-two": {
+        "aiLevel": 5,
+        "strategyVersion": "lv5-defense-retention-endgame-v1",
+        "strategyCommit": "<git commit or null>"
+      }
+    },
+    "decisions": [
+      {
+        "commandLogId": 123,
+        "playerId": "player-two",
+        "action": "attack",
+        "description": "...",
+        "reason": { "level": 5, "chosenCommandKind": "attack" }
+      }
+    ]
+  }
+}
+```
+
+`decisions[].reason` 只保存可由公開 `PlayerView` 解釋的分數、原因與評估摘要，不保存 `strategyMemory`、對手隱藏手牌或其他私有推測。`commandLogId` 讓決策與實際 command 對齊；尚未產生對應 log 的決策會是 `null`。正式建置若未注入 `VITE_GIT_COMMIT`，`strategyCommit` 會是 `null`，但仍會記錄固定的 `AI_STRATEGY_VERSION`。這些欄位是 V1 的向後相容附加欄位；舊檔沒有 `ai` 時仍可正常解析。
+
+`buildBattleReplayExport` 即使收到線上呼叫端傳入的 `ai`，也不會寫入 `artifact.ai`；線上資料只允許公開 action trace，避免把 AI 內部資訊或完整決策上下文帶出。
 
 ## AI 使用建議
 

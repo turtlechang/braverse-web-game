@@ -12,6 +12,7 @@ import type {
   PlayerId,
   TurnPhase,
 } from './types'
+import type { AiActionType, AiDecisionReason, AiLevel } from './ai/types'
 
 export const BATTLE_REPLAY_FORMAT = 'braverse-battle-replay' as const
 export const BATTLE_REPLAY_VERSION = 1 as const
@@ -44,6 +45,26 @@ export type BattleReplayTrainingExclusion =
 export interface BattleReplayTrainingAssessment {
   eligible: boolean
   exclusionReasons: BattleReplayTrainingExclusion[]
+}
+
+export interface BattleReplayAiAgent {
+  aiLevel: AiLevel
+  strategyVersion: string
+  strategyCommit: string | null
+}
+
+export interface BattleReplayAiDecision {
+  commandLogId: number | null
+  playerId: PlayerId
+  action: AiActionType
+  description: string
+  /** AI 公開決策理由；strategyMemory 永不寫入 replay。 */
+  reason?: Omit<AiDecisionReason, 'strategyMemory'>
+}
+
+export interface BattleReplayAiMetadata {
+  agents: Partial<Record<PlayerId, BattleReplayAiAgent>>
+  decisions: BattleReplayAiDecision[]
 }
 
 export interface BattleReplayQualityAssessment {
@@ -85,6 +106,8 @@ export interface BattleReplayExportV1 {
     exact: boolean
     limitation: BattleReplayLimitation
   }
+  /** Offline-only AI decision trace; omitted from online public exports. */
+  ai?: BattleReplayAiMetadata
 }
 
 export interface BuildBattleReplayExportOptions {
@@ -98,6 +121,8 @@ export interface BuildBattleReplayExportOptions {
   source?: Exclude<BattleReplaySource, 'unknown'>
   /** Supply a fixed clock in tests; production uses the current time. */
   now?: () => Date
+  /** Offline-only AI level/version/reason trace. */
+  ai?: BattleReplayAiMetadata
 }
 
 const stripCommandLog = (state: GameState): GameState => {
@@ -306,6 +331,7 @@ export const buildBattleReplayExport = (
     finalState: stripCommandLog(publicState),
     outcome,
     replay,
+    ...(mode === 'offline' && options.ai ? { ai: options.ai } : {}),
   }
 }
 
@@ -337,6 +363,71 @@ const isBattleReplaySource = (value: unknown): value is BattleReplaySource =>
   value === 'test-state' ||
   value === 'benchmark' ||
   value === 'unknown'
+
+const AI_ACTION_TYPES: readonly AiActionType[] = [
+  'idle',
+  'refresh',
+  'replace-cookie',
+  'skip-replacement',
+  'advance-phase',
+  'place-support',
+  'deploy-cookie',
+  'activate-skill',
+  'play-item',
+  'play-stage',
+  'activate-stage',
+  'attack',
+  'play-trap',
+  'play-blocker',
+  'play-attack-response',
+  'resolve-damage',
+  'resolve-attack-effect',
+  'resolve-flip',
+  'resolve-faint',
+  'resolve-after-damage',
+  'resolve-effect-order',
+  'resolve-inspect-deck',
+  'resolve-reveal-top-deck',
+  'resolve-optional-cost-attack',
+  'resolve-stage-trigger',
+  'error',
+]
+
+const isAiActionType = (value: unknown): value is AiActionType =>
+  typeof value === 'string' && AI_ACTION_TYPES.includes(value as AiActionType)
+
+const isAiMetadata = (value: unknown): value is BattleReplayAiMetadata => {
+  if (!isRecord(value) || !isRecord(value.agents) || !Array.isArray(value.decisions)) {
+    return false
+  }
+  for (const [playerId, agent] of Object.entries(value.agents)) {
+    if (!isPlayerId(playerId) || !isRecord(agent)) return false
+    if (
+      typeof agent.aiLevel !== 'number' ||
+      !Number.isInteger(agent.aiLevel) ||
+      agent.aiLevel < 1 ||
+      agent.aiLevel > 5 ||
+      typeof agent.strategyVersion !== 'string' ||
+      agent.strategyVersion.length === 0 ||
+      (agent.strategyCommit !== null && typeof agent.strategyCommit !== 'string')
+    ) {
+      return false
+    }
+  }
+  return value.decisions.every((decision) => {
+    if (!isRecord(decision)) return false
+    if (
+      !isPlayerId(decision.playerId) ||
+      !isAiActionType(decision.action) ||
+      typeof decision.description !== 'string' ||
+      (decision.commandLogId !== null && !Number.isInteger(decision.commandLogId))
+    ) {
+      return false
+    }
+    if (decision.reason === undefined) return true
+    return isRecord(decision.reason) && !('strategyMemory' in decision.reason)
+  })
+}
 
 export class BattleReplayParseError extends Error {}
 
@@ -393,6 +484,11 @@ export const parseBattleReplayExport = (json: string): BattleReplayExportV1 => {
   }
   if (!isRecord(parsed.outcome) || !isRecord(parsed.replay)) {
     throw new BattleReplayParseError('AI 覆盤檔缺少 outcome 或 replay 摘要。')
+  }
+  if (parsed.ai !== undefined) {
+    if (parsed.mode === 'online' || !isAiMetadata(parsed.ai)) {
+      throw new BattleReplayParseError('AI 覆盤檔的 ai metadata 格式無效。')
+    }
   }
 
   const artifact = parsed as unknown as BattleReplayExportV1

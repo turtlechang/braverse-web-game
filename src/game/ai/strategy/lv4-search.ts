@@ -4,6 +4,7 @@ import type { GameState, PlayerId } from '../../types'
 import type { ActionIdentity, ActionScoreBreakdown } from './action-score'
 import type { OpponentResponseEstimate } from './opponent-response'
 import type { DefensiveReserveAssessment } from './defensive-reserve'
+import type { EndgameSurvivalAssessment } from './endgame-survival'
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
@@ -98,7 +99,14 @@ export interface Lv4SearchHooks {
     beforeView: PlayerView,
     afterView: PlayerView,
     command: PlayerActionCommand,
+    beforeState: GameState,
   ) => DefensiveReserveAssessment
+  /** Lv.5 的 Break 6–9 公開終局生存評估；Lv.4 對照組不提供此 hook。 */
+  endgameSurvivalAssessment?: (
+    beforeView: PlayerView,
+    afterView: PlayerView,
+    actionKind: string,
+  ) => EndgameSurvivalAssessment
   /**
    * 只有 Lv.5 使用「收益卡真實可動作」與同一 plan ID 的嚴格生命週期；
    * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
@@ -125,6 +133,7 @@ export interface Lv4SearchStep {
   relativeScore: number
   opponentResponse?: OpponentResponseEstimate
   defensiveReserve?: DefensiveReserveAssessment
+  endgameSurvival?: EndgameSurvivalAssessment
 }
 
 interface SearchNode {
@@ -198,6 +207,7 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'deployment-tempo' ||
     contribution.id === 'opponent-response-minimax' ||
     contribution.id === 'defensive-reserve' ||
+    contribution.id === 'endgame-survival' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'intent-continuity' ||
     contribution.id === 'unsupported-effect' ||
@@ -300,6 +310,10 @@ const updateTelemetryForStep = (
   if (step.defensiveReserve) {
     telemetry.defensiveReserveEvaluations += 1
     telemetry.defensiveReserveAdjustment += step.defensiveReserve.adjustment
+  }
+  if (step.endgameSurvival) {
+    telemetry.endgameSurvivalEvaluations += 1
+    telemetry.endgameSurvivalAdjustment += step.endgameSurvival.adjustment
   }
   telemetry.plan = {
     setupSteps: Math.max(telemetry.plan.setupSteps, plan.setupSteps),
@@ -435,8 +449,15 @@ export const searchLv4Commands = (
             node.view,
             afterView,
             command,
+            node.state,
           )
           const defensiveReserveAdjustment = defensiveReserve?.adjustment ?? 0
+          const endgameSurvival = hooks.endgameSurvivalAssessment?.(
+            node.view,
+            afterView,
+            identity.kind,
+          )
+          const endgameSurvivalAdjustment = endgameSurvival?.adjustment ?? 0
           const context = createLv3ContextForView(node.view, knowledgeState)
           const scored = scoreLv3ActionCandidate(context, node.view, {
             value: command,
@@ -490,6 +511,13 @@ export const searchLv4Commands = (
                   id: 'defensive-reserve' as const,
                   amount: defensiveReserveAdjustment,
                   detail: defensiveReserve?.detail ?? '保留活躍支援供公開防守／下一步使用。',
+                }]),
+            ...(endgameSurvivalAdjustment === 0
+              ? []
+              : [{
+                  id: 'endgame-survival' as const,
+                  amount: endgameSurvivalAdjustment,
+                  detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
                 }]),
             ...(intentContinuity === 0
               ? []
@@ -551,6 +579,7 @@ export const searchLv4Commands = (
             relativeScore,
             opponentResponse,
             defensiveReserve,
+            endgameSurvival,
           }
           const canExpand = afterIsSafeToExpand
           if (!canExpand) telemetry.hiddenInformationStops += 1

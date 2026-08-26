@@ -125,6 +125,41 @@ describe('G5 pending selection strategy', () => {
     expect(selection.orderPaymentIds(['high', 'low'])).toEqual(['low', 'high'])
   })
 
+  it('Lv.5 面對公開攻擊威脅時，支付順序把支援陷阱留到最後', () => {
+    const supportTrap: GameCard = {
+      id: 'support-trap',
+      instanceId: 'support-trap',
+      name: 'support trap',
+      type: 'trap',
+      trap: {
+        text: 'Trap',
+        cost: { energy: { red: 1 } },
+        effects: [],
+      },
+    }
+    const threatenedView: PlayerView = {
+      ...view(),
+      self: {
+        ...view().self,
+        supportArea: [
+          { card: supportTrap, rested: false },
+          { card: item('ordinary-payment'), rested: false },
+        ],
+      },
+    }
+
+    const selection = createPendingSelectionStrategy(
+      threatenedView,
+      createKnowledgeState('player-one'),
+      5,
+    )
+
+    expect(selection.orderPaymentIds([
+      'support-trap',
+      'ordinary-payment',
+    ])).toEqual(['ordinary-payment', 'support-trap'])
+  })
+
   it('將可行的 choose-one 模式依結構化收益排序，並對同時效果提供穩定順序', () => {
     const selection = createPendingSelectionStrategy(
       view(),

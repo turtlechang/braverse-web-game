@@ -38,6 +38,7 @@ export interface ActionScoreContribution {
     | 'deployment-tempo'
     | 'opponent-response-minimax'
     | 'defensive-reserve'
+    | 'endgame-survival'
     | 'attack-tempo'
     | 'intent-continuity'
     | 'unsupported-effect'

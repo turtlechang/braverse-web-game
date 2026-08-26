@@ -43,9 +43,18 @@ const cookie = (
     : {}),
 })
 
+const energyItem = (id: string): GameCard => ({
+  id,
+  instanceId: id,
+  name: id,
+  type: 'item',
+  energyColor: 'red',
+})
+
 const aiMainState = (
   hand: GameCard[],
   opponentHp = 3,
+  opponentActiveSupport = false,
 ): GameState => {
   const base = createDemoGame(5, { player: 'red', ai: 'red' })
   const playerCookie = base.players['player-two'].battleArea[0]
@@ -67,6 +76,9 @@ const aiMainState = (
           ...opponentCookie,
           hpCards: opponentCookie.hpCards.slice(0, opponentHp),
         }],
+        supportArea: opponentActiveSupport
+          ? [{ card: energyItem('opponent-active-support'), rested: false }]
+          : base.players['player-one'].supportArea,
       },
       'player-two': {
         ...base.players['player-two'],
@@ -165,10 +177,10 @@ describe('AI Cookie deployment policy', () => {
     },
   )
 
-  it('Lv.5 does not fill the second battle slot for generic tempo', () => {
+  it('Lv.5 holds a generic second Cookie while the opponent can pay a response', () => {
     const first = cookie('first', { level: 2, hp: 3, attack: 2 })
     const second = cookie('second', { level: 2, hp: 3, attack: 2 })
-    const base = aiMainState([first, second])
+    const base = aiMainState([first, second], 3, true)
     const state = {
       ...base,
       players: {
@@ -182,5 +194,24 @@ describe('AI Cookie deployment policy', () => {
     const decision = takeAiStep(state, 'player-two', { level: 5, seed: 19 })
 
     expect(decision.action).not.toBe('deploy-cookie')
+  })
+
+  it('Lv.5 deploys a generic second Cookie when the opponent has no active support to answer', () => {
+    const first = cookie('first', { level: 2, hp: 3, attack: 2 })
+    const second = cookie('second', { level: 2, hp: 3, attack: 2 })
+    const base = aiMainState([first, second], 3, false)
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          stage: null,
+        },
+      },
+    }
+    const decision = takeAiStep(state, 'player-two', { level: 5, seed: 19 })
+
+    expect(decision.action).toBe('deploy-cookie')
   })
 })

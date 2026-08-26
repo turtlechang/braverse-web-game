@@ -83,6 +83,12 @@ describe('useAiTurn', () => {
     ))
     await act(() => vi.advanceTimersByTime(450))
     expect(captured!.aiActionCount).toBe(1)
+    expect(captured!.replayMetadata.agents['player-two']).toMatchObject({
+      aiLevel: 4,
+      strategyVersion: 'lv5-defense-retention-endgame-v1',
+      strategyCommit: null,
+    })
+    expect(captured!.replayMetadata.decisions).toHaveLength(1)
 
     await act(() => root.render(
       <TestHarness aiControls game={{ ...baseGame }} />,
@@ -159,6 +165,7 @@ describe('useAiTurn', () => {
     expect(setGame).toHaveBeenCalledWith(
       expect.objectContaining({ pendingOpponentHandDiscard: null }),
     )
+    expect(captured!.replayMetadata.decisions).toHaveLength(1)
 
     await act(() => root.unmount())
     vi.useRealTimers()

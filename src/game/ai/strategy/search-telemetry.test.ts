@@ -35,6 +35,8 @@ describe('Lv4 search telemetry', () => {
       publicResponseMinPenalty: -17,
       defensiveReserveEvaluations: 2,
       defensiveReserveAdjustment: -10,
+      endgameSurvivalEvaluations: 4,
+      endgameSurvivalAdjustment: -18,
     }
     const nodeLimit = {
       ...createLv4SearchTelemetry(),
@@ -58,6 +60,8 @@ describe('Lv4 search telemetry', () => {
       publicResponseMinPenalty: -17,
       defensiveReserveEvaluations: 2,
       defensiveReserveAdjustment: -10,
+      endgameSurvivalEvaluations: 4,
+      endgameSurvivalAdjustment: -18,
       setupSteps: 1,
       payoffSteps: 1,
       completedPayoffs: 1,

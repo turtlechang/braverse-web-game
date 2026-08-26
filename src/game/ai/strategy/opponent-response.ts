@@ -123,12 +123,6 @@ export const evaluatePublicResponseMinimax = (
   )
   const visibleCardCount = Math.max(1, models.length)
   const evidenceDensity = publicResponseEvidence / visibleCardCount
-  const handSignal = Math.min(0.42, view.opponent.handCount * 0.055)
-  const evidenceSignal = Math.min(0.38, evidenceDensity * 0.7)
-  const responseLikelihood = Math.min(
-    0.82,
-    0.04 + handSignal + evidenceSignal,
-  )
   const activeSupportCount = view.opponent.supportArea.filter(
     (support) => !support.rested,
   ).length
@@ -136,8 +130,20 @@ export const evaluatePublicResponseMinimax = (
     view.opponent.handCount,
     activeSupportCount,
   )
+  // 沒有活躍支援時，對手無法支付未知回應卡的代價；未知手牌 envelope
+  // 不成立，只保留公開區能力證據的 visible branch。
+  const handSignal = hiddenHandEnergyCapacity > 0
+    ? Math.min(0.42, view.opponent.handCount * 0.055)
+    : 0
+  const evidenceSignal = Math.min(0.38, evidenceDensity * 0.7)
+  const responseLikelihood = Math.min(
+    0.82,
+    0.04 + handSignal + evidenceSignal,
+  )
   const exposedValue = exposedValueForAttack(view, identity)
-  const expectedPenalty = -Math.round(responseLikelihood * exposedValue)
+  const expectedPenalty = hiddenHandEnergyCapacity > 0
+    ? -Math.round(responseLikelihood * exposedValue)
+    : 0
 
   const branches: PublicResponseBranch[] = [{
     kind: 'no-response',
@@ -146,13 +152,16 @@ export const evaluatePublicResponseMinimax = (
     detail: '對手不使用公開可證明的回應。',
   }]
 
-  // 這是公開手牌張數的保守 envelope，不代表 AI 看到了任何隱藏卡面。
-  branches.push({
-    kind: 'unknown-hand-envelope',
-    penalty: expectedPenalty,
-    evidence: 0,
-    detail: `對手仍有 ${view.opponent.handCount} 張公開未知手牌，採 bounded response envelope。`,
-  })
+  // 這是公開手牌張數的保守 envelope，不代表 AI 看到了任何隱藏卡面；
+  // 只有對手仍有活躍支援可支付未知回應代價時才成立。
+  if (hiddenHandEnergyCapacity > 0) {
+    branches.push({
+      kind: 'unknown-hand-envelope',
+      penalty: expectedPenalty,
+      evidence: 0,
+      detail: `對手仍有 ${view.opponent.handCount} 張公開未知手牌，採 bounded response envelope。`,
+    })
+  }
 
   if (hiddenHandEnergyCapacity > 0) {
     const reservedEnergyLikelihood = Math.min(

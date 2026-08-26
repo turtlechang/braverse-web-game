@@ -9,6 +9,7 @@ import {
   simulateAiMatchDetailed,
   validateCustomDeck,
   type BuiltInDeckChoice,
+  type AiLevel,
 } from '../src/game/index'
 import type { Lv4SearchTelemetryAggregate } from '../src/game/ai/strategy/search-telemetry'
 
@@ -17,7 +18,11 @@ const GAMES_PER_REFERENCE = Number(
   process.env.BS7_GAMES_PER_REFERENCE ?? 10,
 )
 const MAX_ACTIONS = 2500
-const AI_LEVEL = 4
+const requestedAiLevel = Number(process.env.BS7_AI_LEVEL ?? 4)
+if (!Number.isInteger(requestedAiLevel) || requestedAiLevel < 1 || requestedAiLevel > 5) {
+  throw new Error('BS7_AI_LEVEL 必須介於 1..5。')
+}
+const AI_LEVEL = requestedAiLevel as AiLevel
 const OUTPUT_PATH = resolve(
   process.env.BS7_BENCHMARK_OUTPUT ??
     'data/decks/bs7-arena-vs-bs6-reference-report-250.json',
@@ -198,6 +203,13 @@ const createLv4Aggregate = (): Lv4Aggregate => ({
   unsupportedEffectCount: 0,
   unknownInformationPenalty: 0,
   resourceReservationMisses: 0,
+  publicResponseEvaluations: 0,
+  publicResponseBranches: 0,
+  publicResponseMinPenalty: 0,
+  defensiveReserveEvaluations: 0,
+  defensiveReserveAdjustment: 0,
+  endgameSurvivalEvaluations: 0,
+  endgameSurvivalAdjustment: 0,
   setupSteps: 0,
   payoffSteps: 0,
   completedPayoffs: 0,
@@ -264,6 +276,13 @@ const addLv4Telemetry = (
     'unsupportedEffectCount',
     'unknownInformationPenalty',
     'resourceReservationMisses',
+    'publicResponseEvaluations',
+    'publicResponseBranches',
+    'publicResponseMinPenalty',
+    'defensiveReserveEvaluations',
+    'defensiveReserveAdjustment',
+    'endgameSurvivalEvaluations',
+    'endgameSurvivalAdjustment',
     'setupSteps',
     'payoffSteps',
     'completedPayoffs',
@@ -399,6 +418,13 @@ const summarizeLv4 = (
   unsupportedEffectCount: aggregate.unsupportedEffectCount,
   unknownInformationPenalty: aggregate.unknownInformationPenalty,
   resourceReservationMisses: aggregate.resourceReservationMisses,
+  publicResponseEvaluations: aggregate.publicResponseEvaluations,
+  publicResponseBranches: aggregate.publicResponseBranches,
+  publicResponseMinPenalty: aggregate.publicResponseMinPenalty,
+  defensiveReserveEvaluations: aggregate.defensiveReserveEvaluations,
+  defensiveReserveAdjustment: aggregate.defensiveReserveAdjustment,
+  endgameSurvivalEvaluations: aggregate.endgameSurvivalEvaluations,
+  endgameSurvivalAdjustment: aggregate.endgameSurvivalAdjustment,
   setupSteps: aggregate.setupSteps,
   payoffSteps: aggregate.payoffSteps,
   completedPayoffs: aggregate.completedPayoffs,
@@ -721,7 +747,7 @@ const report = {
       (REFERENCES.length * GAMES_PER_REFERENCE) / 2,
     candidateSecondPlayerGamesPerColor:
       (REFERENCES.length * GAMES_PER_REFERENCE) / 2,
-    aiLevel: AI_LEVEL,
+      aiLevel: AI_LEVEL,
     maxActions: MAX_ACTIONS,
     seed: BENCHMARK_SEED,
   },

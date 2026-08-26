@@ -172,6 +172,7 @@ function App() {
     deckConfig: match.deckConfig,
     playerCustomDeck: match.selectedCustomDeck,
     aiLevel,
+    strategyCommit: import.meta.env.VITE_GIT_COMMIT ?? null,
   })
 
   const actionStatus = deriveActionStatus({
@@ -207,7 +208,7 @@ function App() {
   }
 
   const exportBattleReplay = (): boolean => {
-    const downloaded = downloadBattleReplay(match.buildBattleReplay())
+    const downloaded = downloadBattleReplay(match.buildBattleReplay(ai.replayMetadata))
     match.setMessage(
       downloaded ? 'AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
     )

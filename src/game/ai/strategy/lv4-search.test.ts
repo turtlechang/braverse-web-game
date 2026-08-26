@@ -159,6 +159,16 @@ describe('G4 Lv4 command search', () => {
         adjustment: -10,
         detail: 'fixture defensive reserve',
       }),
+      endgameSurvivalAssessment: () => ({
+        breakLevel: 6,
+        breakDistance: 4,
+        opponentThreatCount: 1,
+        defenseOptionsBefore: 1,
+        defenseOptionsAfter: 0,
+        defenseOptionsLost: 1,
+        adjustment: -18,
+        detail: 'fixture endgame survival',
+      }),
     }
 
     const result = searchLv4Commands(
@@ -173,6 +183,7 @@ describe('G4 Lv4 command search', () => {
       expect.arrayContaining([
         expect.objectContaining({ id: 'opponent-response-minimax', amount: -17 }),
         expect.objectContaining({ id: 'defensive-reserve', amount: -10 }),
+        expect.objectContaining({ id: 'endgame-survival', amount: -18 }),
       ]),
     )
     expect(result.telemetry).toMatchObject({
@@ -181,6 +192,8 @@ describe('G4 Lv4 command search', () => {
       publicResponseMinPenalty: -17,
       defensiveReserveEvaluations: 1,
       defensiveReserveAdjustment: -10,
+      endgameSurvivalEvaluations: 1,
+      endgameSurvivalAdjustment: -18,
     })
   })
 

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- ✅ Lv.5 防守保留與 AI provenance（2026-08-26）：根據離線 replay 修正公開攻擊威脅下唯一 Trap 過早放入支援區、非致命可選效果消耗唯一防守 Trap，以及 Break 6–9 終局生存評估；新增固定回歸夾具、search telemetry 與 250 場 matched BS7 Arena 診斷基準（112／250，相較 frozen baseline 109／250；健康異常全為 0，尚非升格證據）。離線 `braverse-battle-replay` 另記錄 AI 等級、策略版本／commit、command 對應與公開決策理由，線上維持省略。
 - ✅ 對戰紀錄 AI 資料品質門檻（2026-08-26）：`braverse-battle-replay` v1 新增 `source`、`sampleQuality` 與 `training` metadata；正式離線已完成對局才可標記為訓練樣本，`test-state`、零動作快照、未完成／非精確 replay 與線上公開遮罩資料會保留明確排除原因。舊 v1 檔案仍可解析，缺少來源時保守標記為 `unknown` 並重新計算資格。
 
 - ✅ BS1～BS6 與 P 卡全面稽核收尾（2026-08-20）：正式卡池 1,101／1,101 筆 Browser 路由載入；效果互動矩陣 BS1 81／81、BS2 86／86、BS3 166／166、BS4 158／158、BS5 143／143、BS6 基礎卡代表 97／97、P 卡 138／138，全記錄負向與無效果攻擊矩陣亦全數通過。修正 P-015 攻擊後可選代價多段續接、P-016 trash-to-break 候選、BS4-014／080 正規化、BS4-038 攻擊後效果及 Browser fixture／分類；BS6-036／042／043 與 BS5-109 專用正反驗收全綠。契約 strict gate 為 1,101 verified／0 needs-review／0 blocked；完整 Vitest 211 檔／3,401 項、typecheck、lint、build、bundle gate、AI 20／20、牌組編輯器 4 viewport 與本機雙瀏覽器好友房 smoke 通過。

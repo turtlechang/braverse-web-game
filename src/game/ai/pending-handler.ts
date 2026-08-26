@@ -30,6 +30,7 @@ import {
   type KnowledgeState,
 } from './strategy/knowledge-state'
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
+import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
@@ -657,7 +658,23 @@ export const handleAiPendingDecision = (
     const targetedEffect = pendingDecision.effects.find((effect) =>
       requiresEffectCardSelection(effect),
     )
-    if (canPay && canPayHpToTrash && canPayHpToHand && canPayTrashToDeck && hasTarget) {
+    const optionalDefense = options.level === 5
+      ? assessLv5OptionalCostDefense(
+          state,
+          playerId,
+          pendingDecision,
+          paymentIds ?? [],
+          targetIds,
+        )
+      : undefined
+    const canResolveOptionalEffect =
+      canPay &&
+      canPayHpToTrash &&
+      canPayHpToHand &&
+      canPayTrashToDeck &&
+      hasTarget &&
+      !optionalDefense?.preserve
+    if (canResolveOptionalEffect) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
             hand.map((card) => card.instanceId),
@@ -666,7 +683,7 @@ export const handleAiPendingDecision = (
         : hand
             .slice(0, pendingDecision.cost.discardHand ?? 0)
             .map((card) => card.instanceId)
-      return withPendingReason({
+      const decision = withPendingReason({
         state: applyGameCommand(state, {
           kind: 'resolve-optional-cost-attack',
           playerId,
@@ -682,16 +699,36 @@ export const handleAiPendingDecision = (
         action: 'resolve-optional-cost-attack',
         description: `${state.players[playerId].name}支付攻擊後續效果代價。`,
       }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
+      return optionalDefense
+        ? {
+            ...decision,
+            reason: {
+              ...(decision.reason ?? { level: options.level ?? 2 }),
+              optionalCostDefense: optionalDefense,
+            },
+          }
+        : decision
     }
-    return withPendingReason({
+    const decision = withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-optional-cost-attack',
         playerId,
         action: 'skip',
       }),
       action: 'resolve-optional-cost-attack',
-      description: `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
+      description: optionalDefense?.preserve
+        ? `${state.players[playerId].name}略過攻擊後續可選代價，保留唯一防守陷阱。`
+        : `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
     }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
+    return optionalDefense
+      ? {
+          ...decision,
+          reason: {
+            ...(decision.reason ?? { level: options.level ?? 2 }),
+            optionalCostDefense: optionalDefense,
+          },
+        }
+      : decision
   }
 
   if (

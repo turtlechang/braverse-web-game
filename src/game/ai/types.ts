@@ -4,6 +4,8 @@ import type { KnowledgeState } from './strategy/knowledge-state'
 import type { AiStrategyMemory } from './strategy/session'
 import type { OpponentResponseEstimate } from './strategy/opponent-response'
 import type { OpponentEndgameForecast } from './strategy/endgame-forecast'
+import type { EndgameSurvivalAssessment } from './strategy/endgame-survival'
+import type { OptionalCostDefenseAssessment } from './strategy/defensive-reserve'
 import type { PublicStateEvaluationBreakdown } from './strategy/state-evaluation'
 import type { TacticalPlan } from './strategy/tactical-plans'
 import type {
@@ -48,6 +50,10 @@ export interface AiDecisionReason {
   tacticalPlan?: TacticalPlan
   /** Lv.5 最後採用的公開狀態評估分項；不含隱藏資訊。 */
   publicEvaluation?: PublicStateEvaluationBreakdown
+  /** Lv.5 Break 6–9 的公開終局生存資源評估。 */
+  endgameSurvival?: EndgameSurvivalAssessment
+  /** Lv.5 可選攻擊後效果是否保留唯一公開防守陷阱。 */
+  optionalCostDefense?: OptionalCostDefenseAssessment
 }
 
 export interface SimulateAiMatchOptions {

@@ -15,6 +15,7 @@ import {
   type Lv3StrategyContext,
   type TacticalPlan,
 } from './tactical-plans'
+import { hasLv5OpponentAttackThreat } from './defensive-reserve'
 
 /**
  * G5 的選擇種類。這些字串只描述規則層已開啟的決策窗口，不能作為卡牌／牌組
@@ -348,7 +349,13 @@ export const createPendingSelectionStrategy = (
       )
       const restedDelta = Number(Boolean(rightSupport?.rested)) -
         Number(Boolean(leftSupport?.rested))
-      return restedDelta || retention(left) - retention(right) || left.localeCompare(right)
+      if (restedDelta !== 0) return restedDelta
+      if (level === 5 && hasLv5OpponentAttackThreat(view)) {
+        const leftTrap = Number(leftSupport?.card.type === 'trap')
+        const rightTrap = Number(rightSupport?.card.type === 'trap')
+        if (leftTrap !== rightTrap) return leftTrap - rightTrap
+      }
+      return retention(left) - retention(right) || left.localeCompare(right)
     }),
     selectEffectTargetIds: (effect, candidateIds, max) =>
       [...candidateIds]
