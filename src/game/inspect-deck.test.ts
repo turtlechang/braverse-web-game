@@ -645,6 +645,91 @@ describe('inspect-deck with filterColor', () => {
     expect(result.players['player-one'].deck.map((c) => c.instanceId)).toEqual(allIds)
   })
 
+  it('Refreshes after sending the final inspected cards to support and trash', () => {
+    const supportCard = coloredCookie('support-card', 'blue')
+    const trashCard = coloredCookie('trash-card', 'red')
+    const refreshCandidate = coloredCookie('refresh-candidate', 'green')
+    const base = createDeckState([supportCard, trashCard])
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [refreshCandidate],
+        },
+      },
+    }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'test-source',
+    }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 2,
+      pickCount: 1,
+      pickDestination: 'support',
+      restDestination: 'trash',
+    }, [])
+    const result = resolveInspectDeck(
+      withPending,
+      'player-one',
+      [supportCard.instanceId],
+      [trashCard.instanceId],
+    )
+
+    expect(result.players['player-one'].supportArea).toContainEqual(
+      expect.objectContaining({ card: supportCard, rested: true }),
+    )
+    expect(result.players['player-one'].deck).toHaveLength(0)
+    expect(result.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+    })
+  })
+
+  it('retains interrupted HP setup after the final inspected Cookie enters battle', () => {
+    const battleCard = { ...coloredCookie('battle-card', 'blue'), hp: 2 }
+    const refreshCandidate = coloredCookie('battle-refresh-candidate', 'green')
+    const base = createDeckState([battleCard])
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [refreshCandidate],
+        },
+      },
+    }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'test-source',
+    }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 1,
+      pickCount: 1,
+      pickDestination: 'battle',
+      restDestination: 'bottom',
+    }, [])
+    const result = resolveInspectDeck(
+      withPending,
+      'player-one',
+      [battleCard.instanceId],
+      [],
+    )
+
+    expect(result.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+      remainingHpSetup: [{
+        targetInstanceId: battleCard.instanceId,
+        amount: 2,
+      }],
+    })
+  })
+
   it('plays a picked Cookie with the converted extra HP amount', () => {
     const pickedCookie = { ...coloredCookie('blue-cookie', 'blue'), hp: 2 }
     const restCards = [

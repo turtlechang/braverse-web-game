@@ -260,6 +260,12 @@ export const resolveInspectDeck = (
         : { ...player, deck: [...player.deck, ...restCards] }
 
   const lastPlayedCookie = playedCookies.length > 0 ? playedCookies[playedCookies.length - 1] : null
+  const playedCookieIds = new Set(playedCookies.map((card) => card.instanceId))
+  const remainingHpSetup = player.battleArea.flatMap((entry) => {
+    if (!playedCookieIds.has(entry.card.instanceId)) return []
+    const amount = entry.card.hp + (pending.extraHp ?? 0) - entry.hpCards.length
+    return amount > 0 ? [{ targetInstanceId: entry.card.instanceId, amount }] : []
+  })
   const nextState: GameState = {
     ...state,
     pendingInspectDeck: null,
@@ -275,12 +281,20 @@ export const resolveInspectDeck = (
       : {}),
   }
 
-  // 只有登場會從牌庫抽走 HP 卡；其餘去向都不消耗牌庫，維持既有行為不另外觸發 Refresh。
-  if (playedCookies.length === 0 || player.deck.length > 0 || nextState.pendingRefresh) {
+  // 檢視牌庫後無論選到哪個區域，只要牌庫已成為 0 張就必須立即 Refresh。
+  // 支援區路徑同樣可能移走最後一張牌，不能只依賴登場設置 HP 來判斷。
+  if (player.deck.length > 0 || nextState.pendingRefresh) {
     return nextState
   }
 
   return getRefreshCandidates(nextState, playerId).length === 0
     ? finishWithDefeat(nextState, playerId, 'refresh-unavailable')
-    : { ...nextState, pendingRefresh: { playerId, remainingDraws: 0 } }
+    : {
+        ...nextState,
+        pendingRefresh: {
+          playerId,
+          remainingDraws: 0,
+          ...(remainingHpSetup.length > 0 ? { remainingHpSetup } : {}),
+        },
+      }
 }

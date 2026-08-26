@@ -2145,6 +2145,14 @@ export interface GameState {
       targetInstanceId: string
       amount: number
     }
+    /**
+     * 餅乾登場設置 HP 途中牌庫耗盡時，Refresh 後要繼續補入的 HP 卡。
+     * 只記錄實際被中斷的登場，不能用場上所有餅乾的缺額推測。
+     */
+    remainingHpSetup?: Array<{
+      targetInstanceId: string
+      amount: number
+    }>
   } | null
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
