@@ -64,6 +64,8 @@ Browser 實戰稽核與 `test-state` 分層：`test-state` 僅驗證局部成立
 
 本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
 
+對戰紀錄匯出除了提供 `initialState`、`commands`、`commandLog` 與終局快照，也會標記資料來源與樣本品質；測試局面、零動作快照、未完成對局、非精確 replay 與線上遮罩資料會由 `training.exclusionReasons` 明確排除，避免誤送入 AI 訓練集。
+
 BS4 沿用 BS3 的候選資料流程：先將官方英文資料匯入 `data/candidates/` 的 `inventory` 快照，再依卡面文字與官方規則逐色稽核 runtime adapter；候選完成驗證與效果覆蓋前不直接併入 `data/cards/`。
 
 測試對局設定以正式卡池為來源，可逐方指定戰鬥區餅乾、精確 HP 卡、起始手牌、牌庫頂端順序、支援區實際卡片與能量顏色、場景卡及棄牌區卡片；未指定的牌庫尾端與支援區張數才以測試填充補足。設定視窗提供 BS3-018 的 Blocker／傷害分支與 BS3-020 的 HP 卡回手快速案例，方便在正式規則流程中重現問題並回報。
@@ -99,7 +101,7 @@ Lv.5「高手對抗」維持實驗 challenger：在 Lv.4 合法 command search �
 主選單「AI 對手」的等級預設現為 Lv.5；玩家仍可在下拉選單切換 Lv.1～Lv.5，benchmark 與測試對局的明確等級設定不受影響。
 本輪新增版本化 ASIA 2026-02-13 禁限卡快照，並產生 256 副五色、每副合法且構築簽名不同的 Lv.5 Swiss roster；8 輪共 1,024 場 Swiss 與 7 場 Top cut 全部完成，Lv.4 以相同 pairing 重播亦為 1,024／1,024 完成。Lv.5 冠軍為 YELLOW #057、亞軍為 YELLOW #002；安全／完成／Top cut 通過，但 paired advantage 的 Wilson 95% CI 為 44.62%–59.34%，尚不足以證明顯著超過 Lv.4。完整排名與牌表見 [256 副 Lv.5 Swiss 報告](docs/lv5-swiss-256-report.md)。
 結算畫面現在提供「查看對戰紀錄」入口；回顧視窗沿用 commandLog 的回合／玩家／卡牌／分類篩選與行動組逐步展開，並顯示紀錄筆數、行動組、回合統計，支援全部展開／收合及返回結算畫面。本機與線上對戰共用同一份公開紀錄資料，不另外重算或改寫遊戲狀態。
-對戰紀錄現在可從本機側欄／結算覆盤與線上完整紀錄下載版本化 `braverse-battle-replay` JSON；離線檔含 `initialState`、扁平 `commands`、`commandLog`、終局快照與 replay 可用性，未植入種子時明示 best-effort；線上只匯出遮罩後公開資料，不洩漏對手隱藏資訊。AI 可用 `replayBattleExport`／`replayCommandLog` 驗證決策重播，完整欄位與限制見 [對戰紀錄 AI 覆盤匯出](docs/battle-replay-export.md)。
+對戰紀錄現在可從本機側欄／結算覆盤與線上完整紀錄下載版本化 `braverse-battle-replay` JSON；離線檔含 `initialState`、扁平 `commands`、`commandLog`、終局快照與 replay 可用性，並新增 `source`、`sampleQuality`、`training.eligible`／`exclusionReasons` 資料品質門檻；未植入種子時明示 best-effort，線上只匯出遮罩後公開資料，不洩漏對手隱藏資訊。AI 可用 `replayBattleExport`／`assessBattleReplay` 驗證決策重播與資料集資格，完整欄位與限制見 [對戰紀錄 AI 覆盤匯出](docs/battle-replay-export.md)。
 卡牌詳情與快速預覽沿用同一套 `CardEffectText` 段落渲染；BS7-104「Prune Juice Cookie」的官方第二段 Activate／Once per turn 技能會在 UI 另起一行，與卡面段落一致。
 
 Refresh 邊界現在以來源與剩餘張數明確續接：登場 HP 補充只恢復真正被牌庫耗盡中斷的該張餅乾，`gain-hp` 無法 Refresh 時立即判負；將檢視牌庫的牌移到支援區而使牌庫歸零也會進入 Refresh。BS7-024 以 HP 作為回手代價而離場時，會清除來源 modifier 並依既有順序建立補位，避免留下空戰鬥區。
@@ -218,7 +220,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 ## 下一步計畫
 
 Lv.5 下一輪以本輪 256 副 Swiss 的 Combo 18／20 完成、Refresh forecast 0 與 Lv.5／Lv.4 不一致場 90／83 為診斷基線；本輪已加入公開 HP 分布、合法同回合 setup 機會加分與「先下一張」部署節奏，接著用未見過的 training seeds 檢查 Combo 完成率、Refresh 預判校準、第二張餅乾例外率與 matchup 評分，不重用已看過的 seeds 201–210、301、401–402、503–504、601–602、701–702、801–806。再以新的 46 副全 corpus、先後攻換位 300 場以上 holdout 執行 `benchmark:ai:challenger`；只有安全指標全為 0、勝率至少 52% 且 Wilson 95% CI 下界高於 50%，才由實驗 challenger 升格。任何新卡池先通過 `ai:audit:capabilities --strict`，再進逐卡規則／Browser 與 promote gate，禁止用卡號、系列名稱或本輪弱勢牌組寫 AI 特判。
-對戰紀錄回顧已提供版本化 `braverse-battle-replay` JSON 下載；後續可在不揭露隱藏資訊的前提下，加入逐回合狀態差異與「從此步重播」入口，並以 replay API 作為唯一狀態來源。卡牌文字 UI 則維持官方段落換行與無障礙文字回退，新增卡池時沿用同一渲染契約。
+對戰紀錄回顧已提供版本化 `braverse-battle-replay` JSON 下載；目前匯出會以 `source`、`sampleQuality` 與 `training` 明確分離可重播資料和可進 AI corpus 的行為樣本，舊 v1 檔案解析時會保守補成 `unknown` 並重新計算資格。後續可在不揭露隱藏資訊的前提下，加入逐回合狀態差異與「從此步重播」入口，並以 replay API 作為唯一狀態來源。卡牌文字 UI 則維持官方段落換行與無障礙文字回退，新增卡池時沿用同一渲染契約。
 
 BS7-001～BS7-108 已完成 runtime 轉接、strict contract、正式 promote、五色牌組的跨 seed optimizer／holdout 與 Lv.4 AI 強度校準。後續官方卡文或卡表更新仍須重新從 `inventory` candidate 開始，通過 strict contract、逐卡正反 Browser、BS7-039／082 順序結算、正式 smoke 與人工覆核後，才可再次 promote；五色牌組則以真人對局、較大獨立樣本與 Green／Purple 對 Yellow 的弱勢對局作為下一輪校準重點。後續 Refresh 變更須維持「無候選立即判負、只續接明確中斷的登場 HP、效果 HP 後置」三項不變量，並以正反 Browser 路徑覆核實際 pending／補位順序。
 
@@ -337,7 +339,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-26 | 新增本機／線上對戰紀錄的版本化 `braverse-battle-replay` JSON 下載與 AI replay API，線上匯出維持公開遮罩；另修正 BS6-084 付款後手牌條件與完成 Lv.5 公開回應／防守資源保留回歸。 |
+| 2026-08-26 | 新增本機／線上對戰紀錄的版本化 `braverse-battle-replay` JSON 下載、AI replay API 與資料集品質門檻；線上匯出維持公開遮罩，並完成 BS6-084／Lv.5 回歸。 |
 | 2026-08-25 | Lv.5 部署節奏迭代：戰鬥區已有一張餅乾時預設保留第二張手牌，公開 Combo／斬殺／有效 OnPlay／補防才放寬；matched seeds 801–802 由 174／368 提升至 181／368，holdout 803–804 為 180／368、805–806 為 178／368，安全指標全 0，仍未達正式升格門檻。 |
 | 2026-08-25 | Lv.5 challenger 迭代：終局預判改用公開補位 HP 分布估算 Refresh 風險；strict same-turn Combo 僅在規則層已列出合法 payoff 時給 setup 機會加分。新 seeds 701–702 的 368 場 diagnostic 為 186 勝、Combo 8／8 完成、安全指標全 0，但勝率尚未達升格門檻。 |
 | 2026-08-24 | 修正官方卡牌文字的段落渲染：`CardEffectText` 保留 CRLF 換行，BS7-104 的被動與 Activate／Once per turn 技能在卡牌詳情及快速預覽中分成兩段；新增 CardVisuals／CardDetailModal 回歸測試與本機 Browser 驗證。 |

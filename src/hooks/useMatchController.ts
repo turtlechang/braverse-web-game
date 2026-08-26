@@ -655,13 +655,14 @@ export function useMatchController(params: {
         state: game,
         mode: 'offline',
         viewerId: viewerPlayerId,
+        source: testStateConfig ? 'test-state' : 'production',
         decks: {
           playerOne: deckConfig.player,
           playerTwo: deckConfig.ai,
         },
         initialState: initialGameRef.current,
       }),
-    [game, deckConfig, viewerPlayerId],
+    [game, deckConfig, testStateConfig, viewerPlayerId],
   )
 
   useEffect(() => {

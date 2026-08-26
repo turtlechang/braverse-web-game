@@ -498,6 +498,7 @@ export type {
   ReplayIssueBundleV1,
 } from './replay-issue-bundle'
 export {
+  assessBattleReplay,
   BATTLE_REPLAY_FORMAT,
   BATTLE_REPLAY_VERSION,
   buildBattleReplayExport,
@@ -507,9 +508,14 @@ export {
   serializeBattleReplayExport,
 } from './battle-replay'
 export type {
+  BattleReplayQualityAssessment,
   BattleReplayExportV1,
   BattleReplayLimitation,
   BattleReplayMode,
+  BattleReplaySampleQuality,
+  BattleReplaySource,
+  BattleReplayTrainingAssessment,
+  BattleReplayTrainingExclusion,
   BattleReplayVisibility,
   BuildBattleReplayExportOptions,
 } from './battle-replay'

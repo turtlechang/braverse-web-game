@@ -25,6 +25,7 @@ const artifact = buildBattleReplayExport({
   state: finalState,
   mode: 'offline',
   viewerId: 'player-one',
+  source: 'production',
   decks: { playerOne: 'starter-red', playerTwo: 'starter-blue' },
   initialState,
 })
@@ -42,6 +43,9 @@ const replayed = replayBattleExport(restored)
 | `format` / `version` | 固定為 `braverse-battle-replay` / `1`，供未來 schema 演進與拒絕未知版本。 |
 | `mode` / `visibility` | `offline` + `full`，或 `online` + `public`。 |
 | `viewerId` / `decks` / `seed` | 對局視角、牌組識別與可用的開局 seed metadata。線上牌組目前為 `unknown`。 |
+| `source` | 資料來源：`production`（正式對局）、`test-state`（測試局面）、`benchmark`（基準對戰）或 `unknown`（舊檔／未標記）。 |
+| `sampleQuality` | `snapshot` 代表沒有任何 action；`behavioral` 代表 `commands` 與 `commandLog` 都有且數量一致；`invalid` 代表兩條 action stream 不一致。 |
+| `training` | AI 資料集門檻結果。只有 `eligible: true` 才能直接加入訓練／benchmark corpus；`exclusionReasons` 會列出拒絕原因。 |
 | `commands` | 離線為從 `commandLog.payload` 還原的扁平 `GameCommand[]`，供 AI 或 replay runner 使用；線上保留 action shape，但卡牌／目標 ID 會替換成 placeholder。 |
 | `commandLog` | 包含摘要、分類、步驟與公開卡面 metadata 的人類可讀紀錄。 |
 | `initialState` | 離線覆盤根狀態；線上固定為 `null`，避免輸出雙方完整隱藏資訊。 |
@@ -51,16 +55,18 @@ const replayed = replayBattleExport(restored)
 
 ## 精確度與隱私邊界
 
-離線匯出若有 `initialState`，通常可用 `initialState + commands` 重播。開局調度、強制調度或 Refresh 指令若沒有可序列化的 `shuffleSeed`，會標示 `replay.exact: false` 與 `limitation: "unseeded-shuffle"`；這類檔案仍可供行動序列與策略決策分析，但不得直接當作完全相同牌序的 ground truth。
+離線匯出若有 `initialState`，通常可用 `initialState + commands` 重播。開局調度、強制調度或 Refresh 指令若沒有可序列化的 `shuffleSeed`，會標示 `replay.exact: false` 與 `limitation: "unseeded-shuffle"`；這類檔案仍可供行動序列與策略決策分析，但不得直接當作完全相同牌序的 ground truth。`replay.exact: true` 只代表狀態可精確重播，不代表資料一定包含行為；零指令 snapshot 也可能是 exact。
 
 線上匯出一律是 `visibility: "public"`、`initialState: null`、`limitation: "online-public-view"`。對手手牌、牌庫順序與隱藏 HP 卡經 `maskGameStateForViewer` 遮罩；`commands` 與 `commandLog.payload` 的卡牌／目標 ID 會被替換成 placeholder，log 內卡牌物件也不輸出，只保留可公開的摘要與步驟文字。因此線上檔案可做公開行動覆盤，不能用來推導對手私有手牌，也不能宣稱完整重播。
 
 ## AI 使用建議
 
-1. 先檢查 `format`、`version` 與 `replay` metadata。
-2. 離線檔將 `commands` 作為模型決策／合法性分析的輸入，不要從中文 `summary` 反解析指令；線上檔則視為已遮罩的 action trace。
-3. 離線且 `exact: true` 的檔案可比較 `replayed` 與 `finalState`，找出第一個狀態差異。
-4. `exact: false` 或線上 public-only 檔案只能標記為行動序列、公開資訊與錯誤分類資料。
-5. 任何訓練報告仍須保留 seed、牌組識別與安全指標；匯出檔不能取代 benchmark 的固定 seed／holdout 邊界。
+1. 先檢查 `format`、`version`、`replay` 與 `training` metadata。
+2. 只有 `training.eligible === true` 的檔案才直接加入 AI 行為訓練／benchmark corpus；其他檔案保留作診斷或規則回歸資料。
+3. 可訓練樣本必須是 `source: "production"` 或 `"benchmark"`、離線完整視角、`sampleQuality: "behavioral"`、精確 replay，且 `outcome.status: "finished"` 且有 `result`。
+4. 離線檔將 `commands` 作為模型決策／合法性分析的輸入，不要從中文 `summary` 反解析指令；線上檔則視為已遮罩的 action trace。
+5. 離線且 `exact: true` 的檔案可比較 `replayed` 與 `finalState`，找出第一個狀態差異。
+6. 舊版 v1 若沒有 `source`、`sampleQuality` 或 `training`，`parseBattleReplayExport` 會以 `source: "unknown"` 保守補值並重新計算品質，不信任檔案自行填入的訓練資格。
+7. 任何訓練報告仍須保留 seed、牌組識別與安全指標；匯出檔不能取代 benchmark 的固定 seed／holdout 邊界。
 
 匯出內容不包含 API key、token 或其他本機認證資料。
