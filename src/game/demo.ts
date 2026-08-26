@@ -2895,6 +2895,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // --- Non-cookie cards (item / trap / stage) --------------------------
   if (card.type === 'item') {
     const state = baseState()
+    // Keep the real BS6-084 card-check path above its hand-count threshold so
+    // Browser verification exercises the order "discard cost, then condition"
+    // instead of only the already-satisfied branch.
+    const itemHand =
+      card.id === 'BS6-084'
+        ? [
+            card,
+            ...handFillers,
+            testSupportCard('BS6-084-hand-filler-extra', 'wild'),
+          ]
+        : [card, ...handFillers]
     const itemBreakArea =
       card.id === 'BS7-020'
         ? ownBreakArea
@@ -2927,7 +2938,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: [card, ...handFillers],
+          hand: itemHand,
           battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
           deck: itemDeck,
           supportArea: [...energySupports, ...supportCostCandidates].map((c) => ({

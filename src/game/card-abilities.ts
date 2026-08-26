@@ -27,6 +27,7 @@ import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
   AbilityCost,
   CardAbility,
+  CardEffect,
   EnergyCost,
   GameCard,
   GameState,
@@ -422,6 +423,22 @@ export const getStageAbility = (
 ): StageAbility | null =>
   card.type === 'stage' ? card.stageAbility ?? null : null
 
+/**
+ * Some ability conditions are evaluated only after paying the ability cost.
+ * In particular, BS6-084 discards one-or-more hand cards before checking
+ * whether the remaining hand has five cards or less.
+ */
+export const isCardAbilityEffectConditionDeferredUntilCost = (
+  ability: Pick<CardAbility, 'cost'>,
+  effect: CardEffect,
+): boolean => {
+  const condition = 'condition' in effect ? effect.condition : undefined
+  return (
+    ability.cost.discardHandAtLeast === true &&
+    condition?.kind === 'hand-count-at-most'
+  )
+}
+
 const hasUsableEffect = (
   state: GameState,
   playerId: PlayerId,
@@ -436,12 +453,10 @@ const hasUsableEffect = (
 
   return ability.effects.some((effect) => {
     const conditionMet = isEffectConditionMet(state, context, effect)
-    const effectCondition =
-      'condition' in effect ? effect.condition : undefined
     const conditionDeferred =
       !conditionMet &&
       options.deferHandCountConditionUntilAfterDiscard === true &&
-      effectCondition?.kind === 'hand-count-at-most'
+      isCardAbilityEffectConditionDeferredUntilCost(ability, effect)
     // Some item costs can reduce the hand before the effect condition is
     // checked.  BS6-084 must therefore be allowed to open its discard-cost
     // flow even while the pre-payment hand is still above the threshold.
