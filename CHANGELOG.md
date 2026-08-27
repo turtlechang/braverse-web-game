@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- ✅ Lv.5 公開宣告傷害與擊倒 telemetry 校正（2026-08-27）：已合法 attack command 的 ActionScore／replay reason 改採規則層公開宣告傷害，涵蓋公開攻防修正、目標減傷與條件效果；同回合先處理技能／物品、後續確實宣告同一公開擊倒時不再誤算為 missed lethal。策略版本更新為 `lv5-defense-retention-endgame-v2`；Arena 報表另分開候選與 reference 的決策 telemetry。以未見 seed `20260827` 的 250 場 BS7 Arena matched 回歸，勝場維持 113／250、所有健康異常為 0，屬資料品質與評分正確性改善，非升格證據。
 - ✅ Lv.5 防守保留與 AI provenance（2026-08-26）：根據離線 replay 修正公開攻擊威脅下唯一 Trap 過早放入支援區、非致命可選效果消耗唯一防守 Trap，以及 Break 6–9 終局生存評估；新增固定回歸夾具、search telemetry 與 250 場 matched BS7 Arena 診斷基準（112／250，相較 frozen baseline 109／250；健康異常全為 0，尚非升格證據）。離線 `braverse-battle-replay` 另記錄 AI 等級、策略版本／commit、command 對應與公開決策理由，線上維持省略。
 - ✅ 對戰紀錄 AI 資料品質門檻（2026-08-26）：`braverse-battle-replay` v1 新增 `source`、`sampleQuality` 與 `training` metadata；正式離線已完成對局才可標記為訓練樣本，`test-state`、零動作快照、未完成／非精確 replay 與線上公開遮罩資料會保留明確排除原因。舊 v1 檔案仍可解析，缺少來源時保守標記為 `unknown` 並重新計算資格。
 

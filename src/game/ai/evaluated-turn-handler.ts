@@ -1,5 +1,5 @@
 import type { AttackCommand, PlayerActionCommand } from '../commands'
-import { getEffectiveAttack } from '../effects'
+import { getAttackDamageAgainst, getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
@@ -401,6 +401,13 @@ const commandCandidate = (
         : getLegalTurnCommands(nextState, playerId).filter(
           (candidate) => candidate.kind === 'attack',
         ).length,
+      publicAttackDamage: command.kind === 'attack'
+        ? getAttackDamageAgainst(
+          state,
+          command.attackerInstanceId,
+          command.targetInstanceId,
+        )
+        : undefined,
     })
   } catch {
     return null
@@ -893,6 +900,14 @@ export const handleAiTwoPlyTurnState = (
       return beamStepBonus(beforeState, afterState, nextPlayerId, command) +
         forecastOpponentEndgame(before, identity, effectiveDamage).score
     },
+    getPublicAttackDamage: (nextState, command) =>
+      command.kind === 'attack'
+        ? getAttackDamageAgainst(
+          nextState,
+          command.attackerInstanceId,
+          command.targetInstanceId,
+        )
+        : undefined,
     persistentIntentBonus: decisionLevel === 5
       ? (plan, _identity, depth) =>
           depth === 0

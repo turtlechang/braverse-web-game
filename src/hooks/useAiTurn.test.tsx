@@ -85,7 +85,7 @@ describe('useAiTurn', () => {
     expect(captured!.aiActionCount).toBe(1)
     expect(captured!.replayMetadata.agents['player-two']).toMatchObject({
       aiLevel: 4,
-      strategyVersion: 'lv5-defense-retention-endgame-v1',
+      strategyVersion: 'lv5-defense-retention-endgame-v2',
       strategyCommit: null,
     })
     expect(captured!.replayMetadata.decisions).toHaveLength(1)

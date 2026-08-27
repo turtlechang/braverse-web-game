@@ -68,6 +68,41 @@ const makeThreeStepHooks = (): Lv4SearchHooks => {
 }
 
 describe('G4 Lv4 command search', () => {
+  it('採用規則層提供的公開宣告傷害，保留攻防修正後的擊倒訊號', () => {
+    const state = createBattleState()
+    state.players['player-two'].battleArea[0].card = {
+      ...state.players['player-two'].battleArea[0].card,
+      attack: 1,
+    }
+    const attack: PlayerActionCommand = {
+      kind: 'attack',
+      playerId,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    }
+    const result = searchLv4Commands(
+      state,
+      playerId,
+      createKnowledgeState(playerId),
+      {
+        getLegalCommands: () => [attack],
+        applyCommand: (current) => current,
+        createPlayerView,
+        scorePublicView: () => 0,
+        legacyStepBonus: () => 0,
+        getPublicAttackDamage: () => 3,
+        isTerminal: () => false,
+      },
+      { maxDepth: 1 },
+    )
+
+    expect(result.firstStep?.actionScore.calibrated.publicLethal).toBe(true)
+    expect(result.firstStep?.actionScore.contributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'public-attack', amount: 180 }),
+    ]))
+  })
+
   it('保留跨步 setup → payoff 計畫，且只有已先完成 setup 才給完成 bonus', () => {
     const afterSetup = advanceLv4Plan(emptyPlan, setupPlan)
     const lv5Setup = advanceLv4Plan(

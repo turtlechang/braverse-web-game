@@ -36,7 +36,7 @@ describe('BattleReplayExportV1', () => {
         agents: {
           'player-two': {
             aiLevel: 5,
-            strategyVersion: 'lv5-defense-retention-endgame-v1',
+            strategyVersion: 'lv5-defense-retention-endgame-v2',
             strategyCommit: 'abc123',
           },
         },
@@ -71,7 +71,7 @@ describe('BattleReplayExportV1', () => {
     })
     expect(artifact.ai?.agents['player-two']).toEqual({
       aiLevel: 5,
-      strategyVersion: 'lv5-defense-retention-endgame-v1',
+      strategyVersion: 'lv5-defense-retention-endgame-v2',
       strategyCommit: 'abc123',
     })
 

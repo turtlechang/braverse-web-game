@@ -70,6 +70,11 @@ export interface ScoreActionInput {
   knownDeckFactCount: number
   legalAttackCountBefore: number
   legalAttackCountAfter: number
+  /**
+   * 僅由規則層對已合法 attack command 計算的公開宣告傷害；包含公開
+   * 攻防修正與目標相關條件。未提供時維持以卡面基礎攻擊力估算。
+   */
+  publicAttackDamage?: number
 }
 
 const activeSupportCount = (view: PlayerView): number =>
@@ -78,6 +83,7 @@ const activeSupportCount = (view: PlayerView): number =>
 const publicAttackSignal = (
   view: PlayerView,
   identity: ActionIdentity,
+  publicAttackDamage?: number,
 ): { damage: number; targetHp: number; targetLevel: number } | null => {
   if (identity.kind !== 'attack' || !identity.sourceInstanceId || !identity.targetInstanceId) {
     return null
@@ -90,7 +96,7 @@ const publicAttackSignal = (
   )
   if (!attacker || !target) return null
   return {
-    damage: attacker.card.attack,
+    damage: Math.max(0, publicAttackDamage ?? attacker.card.attack),
     targetHp: target.hpCount,
     targetLevel: target.card.level,
   }
@@ -134,7 +140,11 @@ export const scoreAction = (input: ScoreActionInput): ActionScoreBreakdown => {
       ? 'win'
       : 'loss'
     : 'none'
-  const attack = publicAttackSignal(input.beforeView, input.identity)
+  const attack = publicAttackSignal(
+    input.beforeView,
+    input.identity,
+    input.publicAttackDamage,
+  )
   const publicLethal = Boolean(attack && attack.damage >= attack.targetHp)
 
   if (attack) {

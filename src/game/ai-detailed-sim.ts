@@ -1,6 +1,6 @@
 import { getActingPlayerId } from './controller'
 import { getLegalTurnCommands } from './legal-actions'
-import { getEffectiveAttack } from './effects'
+import { getAttackDamageAgainst } from './effects'
 import type { AttackCommand } from './commands'
 import { calculateReplacementBaseScore } from './ai/bs2MatchupProfiles'
 import { takeAiStep } from './ai'
@@ -21,6 +21,7 @@ import type {
   TurnProgression,
   EndInfo,
   BehaviorMetrics,
+  PlayerBehaviorMetrics,
   AiLevel,
 } from './ai/types'
 import type { GameState, PendingBattle, PlayerId } from './types'
@@ -35,7 +36,7 @@ const countBattleAreaHp = (state: GameState, playerId: PlayerId): number =>
     0,
   )
 
-/** 只以目前公開攻擊／HP 找出可立即擊倒的合法 attack command。 */
+/** 只以目前公開宣告傷害／HP 找出可立即擊倒的合法 attack command。 */
 const publicLethalAttackCommands = (
   state: GameState,
   playerId: PlayerId,
@@ -48,7 +49,69 @@ const publicLethalAttackCommands = (
     (cookie) => cookie.card.instanceId === command.targetInstanceId,
   )
   return target !== undefined &&
-    getEffectiveAttack(state, command.attackerInstanceId) >= target.hpCards.length
+    getAttackDamageAgainst(
+      state,
+      command.attackerInstanceId,
+      command.targetInstanceId,
+    ) >= target.hpCards.length
+})
+
+interface PendingPublicLethalOpportunity {
+  playerId: PlayerId
+  turnNumber: number
+  targetInstanceIds: readonly string[]
+}
+
+interface PlayerBehaviorAccumulator {
+  invalidActionCount: number
+  deadlockCount: number
+  skillUsageCount: number
+  r7TrapSkippedCount: number
+  legalAttackSkippedCount: number
+  lethalOpportunityCount: number
+  lethalConversionCount: number
+  directWinCount: number
+  endgameForecastCount: number
+  refreshForecastCount: number
+  emptyBattleForecastCount: number
+  lv4SearchTelemetry: Lv4SearchTelemetry[]
+  pendingStrategyTelemetry: PendingStrategyTelemetry[]
+}
+
+const createPlayerBehaviorAccumulator = (): PlayerBehaviorAccumulator => ({
+  invalidActionCount: 0,
+  deadlockCount: 0,
+  skillUsageCount: 0,
+  r7TrapSkippedCount: 0,
+  legalAttackSkippedCount: 0,
+  lethalOpportunityCount: 0,
+  lethalConversionCount: 0,
+  directWinCount: 0,
+  endgameForecastCount: 0,
+  refreshForecastCount: 0,
+  emptyBattleForecastCount: 0,
+  lv4SearchTelemetry: [],
+  pendingStrategyTelemetry: [],
+})
+
+const summarizePlayerBehavior = (
+  counters: PlayerBehaviorAccumulator,
+  lowQualityReplacementCount: number,
+): PlayerBehaviorMetrics => ({
+  invalidActionCount: counters.invalidActionCount,
+  deadlockCount: counters.deadlockCount,
+  skillUsageCount: counters.skillUsageCount,
+  r7TrapSkippedCount: counters.r7TrapSkippedCount,
+  legalAttackSkippedCount: counters.legalAttackSkippedCount,
+  lethalOpportunityCount: counters.lethalOpportunityCount,
+  lethalConversionCount: counters.lethalConversionCount,
+  directWinCount: counters.directWinCount,
+  endgameForecastCount: counters.endgameForecastCount,
+  refreshForecastCount: counters.refreshForecastCount,
+  emptyBattleForecastCount: counters.emptyBattleForecastCount,
+  lowQualityReplacementCount,
+  lv4Search: aggregateLv4SearchTelemetry(counters.lv4SearchTelemetry),
+  pendingStrategy: aggregatePendingStrategyTelemetry(counters.pendingStrategyTelemetry),
 })
 
 const detectReplacement = (
@@ -210,6 +273,7 @@ const computeBehaviorMetrics = (
   endgameForecastCount: number,
   refreshForecastCount: number,
   emptyBattleForecastCount: number,
+  playerBehavior: Record<PlayerId, PlayerBehaviorAccumulator>,
 ): BehaviorMetrics => {
   const lowQualityCount = replacementEvents.filter((e) => e.level <= 1 && e.hp <= 1).length
 
@@ -286,6 +350,10 @@ const computeBehaviorMetrics = (
     emptyBattleForecastCount,
     lv4Search: aggregateLv4SearchTelemetry(lv4SearchTelemetry),
     pendingStrategy: aggregatePendingStrategyTelemetry(pendingStrategyTelemetry),
+    byPlayer: {
+      'player-one': summarizePlayerBehavior(playerBehavior['player-one'], p1LowQuality),
+      'player-two': summarizePlayerBehavior(playerBehavior['player-two'], p2LowQuality),
+    },
   }
 }
 
@@ -324,11 +392,16 @@ export const simulateAiMatchDetailed = (
   let legalAttackSkippedCount = 0
   let lethalOpportunityCount = 0
   let lethalConversionCount = 0
+  const pendingPublicLethalOpportunities: PendingPublicLethalOpportunity[] = []
   let endgameForecastCount = 0
   let refreshForecastCount = 0
   let emptyBattleForecastCount = 0
   const lv4SearchTelemetry: Lv4SearchTelemetry[] = []
   const pendingStrategyTelemetry: PendingStrategyTelemetry[] = []
+  const playerBehavior: Record<PlayerId, PlayerBehaviorAccumulator> = {
+    'player-one': createPlayerBehaviorAccumulator(),
+    'player-two': createPlayerBehaviorAccumulator(),
+  }
   const strategyMemories: Partial<Record<PlayerId, AiStrategyMemory>> = {}
 
   resetR10Counters()
@@ -356,33 +429,71 @@ export const simulateAiMatchDetailed = (
     }
     if (decision.reason?.lv4Search) {
       lv4SearchTelemetry.push(decision.reason.lv4Search)
+      playerBehavior[controller].lv4SearchTelemetry.push(decision.reason.lv4Search)
     }
     if (decision.reason?.pendingStrategy) {
       pendingStrategyTelemetry.push(decision.reason.pendingStrategy)
+      playerBehavior[controller].pendingStrategyTelemetry.push(decision.reason.pendingStrategy)
     }
     if ((decision.reason?.opponentEndgame?.score ?? 0) > 0) {
       endgameForecastCount += 1
+      playerBehavior[controller].endgameForecastCount += 1
       refreshForecastCount += Number(
+        (decision.reason?.opponentEndgame?.refreshProbability ?? 0) > 0,
+      )
+      playerBehavior[controller].refreshForecastCount += Number(
         (decision.reason?.opponentEndgame?.refreshProbability ?? 0) > 0,
       )
       emptyBattleForecastCount += Number(
         (decision.reason?.opponentEndgame?.noReplacementProbability ?? 0) > 0,
       )
+      playerBehavior[controller].emptyBattleForecastCount += Number(
+        (decision.reason?.opponentEndgame?.noReplacementProbability ?? 0) > 0,
+      )
     }
     if (legalAttacks.length > 0 && decision.action === 'advance-phase') {
       legalAttackSkippedCount += 1
+      playerBehavior[controller].legalAttackSkippedCount += 1
+    }
+    const declaredLethalTargetId =
+      decision.action === 'attack'
+        ? decision.state.pendingBattle?.targetInstanceId
+        : undefined
+    if (declaredLethalTargetId) {
+      for (let index = pendingPublicLethalOpportunities.length - 1; index >= 0; index -= 1) {
+        const opportunity = pendingPublicLethalOpportunities[index]
+        if (
+          opportunity.playerId === controller &&
+          opportunity.turnNumber === state.turnNumber &&
+          opportunity.targetInstanceIds.includes(declaredLethalTargetId)
+        ) {
+          lethalConversionCount += 1
+          playerBehavior[opportunity.playerId].lethalConversionCount += 1
+          pendingPublicLethalOpportunities.splice(index, 1)
+        }
+      }
     }
     if (publicLethals.length > 0) {
       lethalOpportunityCount += 1
-      if (
-        decision.action === 'attack' &&
-        decision.state.pendingBattle &&
-        publicLethals.some((command) =>
-          command.attackerInstanceId === decision.state.pendingBattle?.attackerInstanceId &&
-          command.targetInstanceId === decision.state.pendingBattle?.targetInstanceId,
-        )
-      ) {
+      playerBehavior[controller].lethalOpportunityCount += 1
+      const targetInstanceIds = [
+        ...new Set(publicLethals.map((command) => command.targetInstanceId)),
+      ]
+      if (declaredLethalTargetId && targetInstanceIds.includes(declaredLethalTargetId)) {
         lethalConversionCount += 1
+        playerBehavior[controller].lethalConversionCount += 1
+      } else {
+        pendingPublicLethalOpportunities.push({
+          playerId: controller,
+          turnNumber: state.turnNumber,
+          targetInstanceIds,
+        })
+      }
+    }
+    for (let index = pendingPublicLethalOpportunities.length - 1; index >= 0; index -= 1) {
+      const opportunity = pendingPublicLethalOpportunities[index]
+      if (decision.state.turnNumber !== opportunity.turnNumber) {
+        pendingPublicLethalOpportunities.splice(index, 1)
       }
     }
     logs.push(
@@ -391,6 +502,7 @@ export const simulateAiMatchDetailed = (
 
     if (decision.action === 'activate-skill') {
       metrics.skillActivations += 1
+      playerBehavior[controller].skillUsageCount += 1
     } else if (decision.action === 'refresh') {
       metrics.refreshes += 1
     } else     if (decision.action === 'replace-cookie') {
@@ -422,11 +534,15 @@ export const simulateAiMatchDetailed = (
 
     if (decision.r7TrapSkip) {
       r7TrapSkipCount++
+      playerBehavior[controller].r7TrapSkippedCount += 1
     }
 
     // Direct win tracking
     if (decision.state.status === 'finished' && decision.state.result?.winnerId === 'player-one') {
       directWinCount++
+    }
+    if (decision.state.status === 'finished' && decision.state.result?.winnerId === controller) {
+      playerBehavior[controller].directWinCount += 1
     }
 
     if (decision.action === 'attack' && decision.state.pendingBattle) {
@@ -463,6 +579,7 @@ export const simulateAiMatchDetailed = (
 
     if (decision.action === 'error') {
       invalidActionCount += 1
+      playerBehavior[controller].invalidActionCount += 1
       error =
         decision.error ??
         `AI 未推進狀態：${decision.description}`
@@ -470,6 +587,7 @@ export const simulateAiMatchDetailed = (
     }
     if (decision.state === state) {
       deadlockCount += 1
+      playerBehavior[controller].deadlockCount += 1
       error = `AI 未推進狀態：${decision.description}`
       break
     }
@@ -516,6 +634,7 @@ export const simulateAiMatchDetailed = (
     endgameForecastCount,
     refreshForecastCount,
     emptyBattleForecastCount,
+    playerBehavior,
   )
 
   return {
@@ -531,6 +650,14 @@ export const simulateAiMatchDetailed = (
     endInfo,
     behavior,
     lv4SearchTelemetry,
+    lv4SearchTelemetryByPlayer: {
+      'player-one': playerBehavior['player-one'].lv4SearchTelemetry,
+      'player-two': playerBehavior['player-two'].lv4SearchTelemetry,
+    },
     pendingStrategyTelemetry,
+    pendingStrategyTelemetryByPlayer: {
+      'player-one': playerBehavior['player-one'].pendingStrategyTelemetry,
+      'player-two': playerBehavior['player-two'].pendingStrategyTelemetry,
+    },
   }
 }

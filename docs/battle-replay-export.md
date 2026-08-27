@@ -70,7 +70,7 @@ const replayed = replayBattleExport(restored)
     "agents": {
       "player-two": {
         "aiLevel": 5,
-        "strategyVersion": "lv5-defense-retention-endgame-v1",
+        "strategyVersion": "lv5-defense-retention-endgame-v2",
         "strategyCommit": "<git commit or null>"
       }
     },
@@ -87,7 +87,7 @@ const replayed = replayBattleExport(restored)
 }
 ```
 
-`decisions[].reason` 只保存可由公開 `PlayerView` 解釋的分數、原因與評估摘要，不保存 `strategyMemory`、對手隱藏手牌或其他私有推測。`commandLogId` 讓決策與實際 command 對齊；尚未產生對應 log 的決策會是 `null`。正式建置若未注入 `VITE_GIT_COMMIT`，`strategyCommit` 會是 `null`，但仍會記錄固定的 `AI_STRATEGY_VERSION`。這些欄位是 V1 的向後相容附加欄位；舊檔沒有 `ai` 時仍可正常解析。
+`decisions[].reason` 只保存可由公開 `PlayerView` 解釋的分數、原因與評估摘要，不保存 `strategyMemory`、對手隱藏手牌或其他私有推測。已合法 attack command 的 `public-attack` 評分會採規則層算出的公開宣告傷害（含公開攻防修正與目標條件），不會只看卡面基礎攻擊力。`commandLogId` 讓決策與實際 command 對齊；尚未產生對應 log 的決策會是 `null`。正式建置若未注入 `VITE_GIT_COMMIT`，`strategyCommit` 會是 `null`，但仍會記錄固定的 `AI_STRATEGY_VERSION`。這些欄位是 V1 的向後相容附加欄位；舊檔沒有 `ai` 時仍可正常解析。
 
 `buildBattleReplayExport` 即使收到線上呼叫端傳入的 `ai`，也不會寫入 `artifact.ai`；線上資料只允許公開 action trace，避免把 AI 內部資訊或完整決策上下文帶出。
 

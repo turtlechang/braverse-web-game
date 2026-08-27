@@ -178,6 +178,24 @@ export interface EndInfo {
   turnCapReached: boolean
 }
 
+/** 只歸屬到該控制玩家的決策 telemetry；不含雙方共同的對局進度指標。 */
+export interface PlayerBehaviorMetrics {
+  invalidActionCount: number
+  deadlockCount: number
+  skillUsageCount: number
+  r7TrapSkippedCount: number
+  legalAttackSkippedCount: number
+  lethalOpportunityCount: number
+  lethalConversionCount: number
+  directWinCount: number
+  endgameForecastCount: number
+  refreshForecastCount: number
+  emptyBattleForecastCount: number
+  lowQualityReplacementCount: number
+  lv4Search: Lv4SearchTelemetryAggregate
+  pendingStrategy: PendingStrategyTelemetryAggregate
+}
+
 export interface BehaviorMetrics {
   lowQualityReplacementCount: number
   playerOneLowQualityReplacements: number
@@ -217,6 +235,8 @@ export interface BehaviorMetrics {
   emptyBattleForecastCount: number
   lv4Search: Lv4SearchTelemetryAggregate
   pendingStrategy: PendingStrategyTelemetryAggregate
+  /** 將決策 telemetry 依實際控制玩家分開，供對戰 benchmark 正確歸因。 */
+  byPlayer: Record<PlayerId, PlayerBehaviorMetrics>
 }
 
 export interface AiDetailedResult {
@@ -233,6 +253,10 @@ export interface AiDetailedResult {
   behavior: BehaviorMetrics
   /** 原始決策 telemetry，供 benchmark 正確計算跨對局 p95。 */
   lv4SearchTelemetry: readonly Lv4SearchTelemetry[]
+  /** 與 `lv4SearchTelemetry` 相同資料，依實際控制玩家分開。 */
+  lv4SearchTelemetryByPlayer: Record<PlayerId, readonly Lv4SearchTelemetry[]>
   /** G5 pending／防守選擇樣本，供 benchmark 稽核使用範圍與 fallback。 */
   pendingStrategyTelemetry: readonly PendingStrategyTelemetry[]
+  /** 與 `pendingStrategyTelemetry` 相同資料，依實際控制玩家分開。 */
+  pendingStrategyTelemetryByPlayer: Record<PlayerId, readonly PendingStrategyTelemetry[]>
 }

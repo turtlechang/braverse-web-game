@@ -73,6 +73,14 @@ export interface Lv4SearchHooks {
     playerId: PlayerId,
     command: PlayerActionCommand,
   ) => number
+  /**
+   * 已合法 attack command 的公開宣告傷害。由規則層提供，避免 action
+   * score 遺漏公開攻防修正，並保持搜尋器不直接依賴規則引擎實作。
+   */
+  getPublicAttackDamage?: (
+    state: GameState,
+    command: PlayerActionCommand,
+  ) => number | undefined
   /** Lv.5 可在根節點延續上一個公開策略意圖；Lv.4 不提供此 hook。 */
   persistentIntentBonus?: (
     plan: TacticalPlan,
@@ -467,6 +475,7 @@ export const searchLv4Commands = (
             legalAttackCountBefore: reservation.legalAttackCount,
             legalAttackCountAfter: afterCommands
               .filter((candidate) => candidate.kind === 'attack').length,
+            publicAttackDamage: hooks.getPublicAttackDamage?.(node.state, command),
             tacticalPlanOptions,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
