@@ -17,6 +17,7 @@ import {
   markSupportAreaDecreased,
 } from '../skills'
 import { getRefreshCandidates } from '../refresh'
+import { getAwakenedFaintTrashCards } from '../extra-deck'
 import type {
   CardEffect,
   CookieCard,
@@ -148,7 +149,7 @@ const damagePlayerCookie = (
       discardPile: [
         ...player.discardPile,
         ...damagedCards,
-        ...(target.equippedCards ?? []),
+        ...getAwakenedFaintTrashCards(target, false),
       ],
     }
   }
@@ -1145,6 +1146,8 @@ export const executeCardEffect = (
           hpCards,
           rested: false,
           battleEntryId: `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          enteredFrom: 'hand',
+          enteredTurn: state.turnNumber,
         },
       ],
     })
@@ -1469,6 +1472,70 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
+  }
+
+  if (effect.kind === 'prevent-cookie-active-next-phase') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) return { ...state }
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const existing = state.preventCookieActiveNextPhase?.[targetPlayerId] ?? []
+    return {
+      ...state,
+      preventCookieActiveNextPhase: {
+        ...(state.preventCookieActiveNextPhase ?? {}),
+        [targetPlayerId]: [
+          ...new Set([
+            ...existing,
+            ...targets.map((target) => target.card.instanceId),
+          ]),
+        ],
+      },
+    }
+  }
+
+  if (effect.kind === 'prevent-support-active-next-phase') {
+    const targetSide = effect.target.side === 'opponent' ? 'opponent' : 'self'
+    const targetPlayerId =
+      targetSide === 'opponent'
+        ? getOpponentId(context.sourcePlayerId)
+        : context.sourcePlayerId
+    const candidates = getSupportEffectCandidates(state, context, {
+      side: targetSide,
+      activeOnly: effect.target.activeOnly,
+      cardType: effect.target.cardType,
+      energyColor: effect.target.energyColor,
+      maxLevel: effect.target.maxLevel,
+      keyword: effect.target.keyword,
+    }).filter((support) =>
+      effect.target.cardName === undefined ||
+      support.card.name === effect.target.cardName,
+    )
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (
+      uniqueIds.length !== selectedTargetIds.length ||
+      uniqueIds.length < effect.target.min ||
+      uniqueIds.length > effect.target.max
+    ) {
+      throw new GameRuleError('選擇的支援卡目標數量不合法。')
+    }
+    const candidateIds = new Set(candidates.map((support) => support.card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡片不是合法支援卡目標。')
+    }
+    if (uniqueIds.length === 0) return { ...state }
+    const existing = state.preventSupportActiveNextPhase?.[targetPlayerId] ?? []
+    return {
+      ...state,
+      preventSupportActiveNextPhase: {
+        ...(state.preventSupportActiveNextPhase ?? {}),
+        [targetPlayerId]: [...new Set([...existing, ...uniqueIds])],
+      },
+    }
   }
 
   if (effect.kind === 'trash-to-deck-all') {
@@ -1988,6 +2055,8 @@ export const executeCardEffect = (
           rested: false,
           battleEntryId:
             `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          enteredFrom: 'trash',
+          enteredTurn: state.turnNumber,
         },
       ],
     })
@@ -2264,8 +2333,9 @@ export const executeCardEffect = (
       const player = nextState.players[ownerId]
       const movedIds = new Set(group.map((c) => c.card.instanceId))
       const departedCards = group.map((c) => c.card)
-      const hpCards = group.flatMap((c) => c.hpCards)
-      const equippedCards = group.flatMap((c) => c.equippedCards ?? [])
+      const faintTrashCards = group.flatMap((cookie) =>
+        getAwakenedFaintTrashCards(cookie, true),
+      )
       const updatedPlayer: PlayerState = {
         ...player,
         battleArea: player.battleArea.filter(
@@ -2274,8 +2344,7 @@ export const executeCardEffect = (
         breakArea: [...player.breakArea, ...departedCards],
         discardPile: [
           ...player.discardPile,
-          ...hpCards,
-          ...equippedCards,
+          ...faintTrashCards,
         ],
       }
       const updatedState = updatePlayer(nextState, updatedPlayer)
@@ -2654,10 +2723,11 @@ export const executeCardEffect = (
       throw new GameRuleError('選擇的餅乾不符合 break 區登場條件。')
     }
     const cookie = candidates.find((card) => card.instanceId === uniqueIds[0])!
-    const availableHpCards = player.deck.slice(0, cookie.hp)
+    const hpCount = effect.hpCount ?? cookie.hp
+    const availableHpCards = player.deck.slice(0, hpCount)
     const updated = updatePlayer(state, {
       ...player,
-      deck: player.deck.slice(cookie.hp),
+      deck: player.deck.slice(hpCount),
       breakArea: player.breakArea.filter(
         (card) => card.instanceId !== cookie.instanceId,
       ),
@@ -2668,6 +2738,8 @@ export const executeCardEffect = (
           hpCards: availableHpCards,
           rested: false,
           battleEntryId: `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          enteredFrom: 'break',
+          enteredTurn: state.turnNumber,
         },
       ],
     })
@@ -2693,11 +2765,11 @@ export const executeCardEffect = (
         ? {
             playerId: context.sourcePlayerId,
             remainingDraws: 0,
-            ...(cookie.hp > availableHpCards.length
+            ...(hpCount > availableHpCards.length
               ? {
                   remainingHpSetup: [{
                     targetInstanceId: cookie.instanceId,
-                    amount: cookie.hp - availableHpCards.length,
+                    amount: hpCount - availableHpCards.length,
                   }],
                 }
               : {}),
@@ -2735,6 +2807,8 @@ export const executeCardEffect = (
           hpCards: availableHpCards,
           rested: false,
           battleEntryId: `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          enteredFrom: 'support',
+          enteredTurn: state.turnNumber,
         },
       ],
     })
@@ -2781,6 +2855,9 @@ export const executeCardEffect = (
     if (!sourceInBreak) {
       throw new GameRuleError('來源餅乾不在休息區中。')
     }
+    if (sourceInBreak.extraDeckOrigin) {
+      throw new GameRuleError('EXTRA 餅乾只能從 EXTRA Deck 登場。')
+    }
     if (player.battleArea.length >= 2) {
       throw new GameRuleError('戰鬥區已滿。')
     }
@@ -2799,6 +2876,8 @@ export const executeCardEffect = (
           hpCards: availableHpCards,
           rested: false,
           battleEntryId: `${sourceInBreak.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          enteredFrom: 'break',
+          enteredTurn: state.turnNumber,
         },
       ],
     })
@@ -2912,7 +2991,8 @@ export const executeCardEffect = (
     const candidates = getBreakToHandBySumCandidates(state, context, effect)
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length === 0) {
-      return { ...state }
+      if (effect.cardCount === undefined) return { ...state }
+      throw new GameRuleError(`必須選擇 ${effect.cardCount} 張休息區餅乾。`)
     }
     const candidateIds = new Set(candidates.map((card) => card.instanceId))
     if (uniqueIds.some((id) => !candidateIds.has(id))) {
@@ -2920,9 +3000,22 @@ export const executeCardEffect = (
     }
     const selectedSet = new Set(uniqueIds)
     const selected = candidates.filter((card) => selectedSet.has(card.instanceId))
+    if (
+      effect.cardCount !== undefined &&
+      selected.length !== effect.cardCount
+    ) {
+      throw new GameRuleError(`必須選擇 ${effect.cardCount} 張休息區餅乾。`)
+    }
     const levelSum = selected.reduce((sum, card) => sum + card.level, 0)
-    if (levelSum !== effect.targetSum) {
-      throw new GameRuleError(`選擇的餅乾等級總和必須恰好為 ${effect.targetSum}。`)
+    const validSum = effect.targetSumMode === 'at-most'
+      ? levelSum <= effect.targetSum
+      : levelSum === effect.targetSum
+    if (!validSum) {
+      throw new GameRuleError(
+        effect.targetSumMode === 'at-most'
+          ? `選擇的餅乾等級總和不得超過 ${effect.targetSum}。`
+          : `選擇的餅乾等級總和必須恰好為 ${effect.targetSum}。`,
+      )
     }
     return updatePlayer(state, {
       ...player,
@@ -3025,7 +3118,7 @@ export const executeCardEffect = (
         discardPile: [
           ...player.discardPile,
           ...removedHpCards,
-          ...(target.equippedCards ?? []),
+          ...getAwakenedFaintTrashCards(target, false),
         ],
       }
     } else {
@@ -3249,7 +3342,11 @@ export const executeCardEffect = (
         throw new GameRuleError('Invalid support target.')
       }
       const selected = player.supportArea.filter(
-        (support) => support.rested && selectedIds.has(support.card.instanceId),
+        (support) =>
+          support.rested &&
+          (effect.energyColor === undefined ||
+            support.card.energyColor === effect.energyColor) &&
+          selectedIds.has(support.card.instanceId),
       )
       if (selected.length !== selectedIds.size) {
         throw new GameRuleError('Invalid support target.')
@@ -3282,7 +3379,12 @@ export const executeCardEffect = (
               : b,
           ),
           supportArea: player.supportArea.map((s) => {
-            if (s.rested && unRested < effect.supportCount) {
+            if (
+              s.rested &&
+              (effect.energyColor === undefined ||
+                s.card.energyColor === effect.energyColor) &&
+              unRested < effect.supportCount
+            ) {
               unRested++
               return { ...s, rested: false }
             }
@@ -3877,7 +3979,9 @@ export const executeCardEffect = (
     amount:
       effect.kind === 'modify-attack-by-break-count'
         ? Math.floor(
-            getBreakCount(state, context.sourcePlayerId, effect) /
+            (effect.countMode === 'break-level'
+              ? getBreakAreaLevel(state, context.sourcePlayerId)
+              : getBreakCount(state, context.sourcePlayerId, effect)) /
               (effect.groupSize ?? 1),
           ) * effect.perCount
         : effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received'

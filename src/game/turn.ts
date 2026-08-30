@@ -49,22 +49,46 @@ const assertPlaying = (state: GameState) => {
 
 const activateCurrentPlayer = (state: GameState): GameState => {
   const player = state.players[state.activePlayerId]
+  const preventedCookieIds = new Set(
+    state.preventCookieActiveNextPhase?.[state.activePlayerId] ?? [],
+  )
+  const preventedSupportIds = new Set(
+    state.preventSupportActiveNextPhase?.[state.activePlayerId] ?? [],
+  )
+  const remainingPreventions = {
+    ...(state.preventCookieActiveNextPhase ?? {}),
+  }
+  delete remainingPreventions[state.activePlayerId]
+  const remainingSupportPreventions = {
+    ...(state.preventSupportActiveNextPhase ?? {}),
+  }
+  delete remainingSupportPreventions[state.activePlayerId]
 
   const activatedState = updatePlayer(state, {
     ...player,
     battleArea: player.battleArea.map((cookie) => ({
       ...cookie,
-      rested: false,
+      rested: preventedCookieIds.has(cookie.card.instanceId)
+        ? cookie.rested
+        : false,
     })),
     supportArea: player.supportArea.map((support) => ({
       ...support,
-      rested: false,
+      rested: preventedSupportIds.has(support.card.instanceId)
+        ? support.rested
+        : false,
     })),
     stage: player.stage ? { ...player.stage, rested: false } : null,
   })
 
   return {
     ...activatedState,
+    ...(Object.keys(remainingPreventions).length > 0
+      ? { preventCookieActiveNextPhase: remainingPreventions }
+      : { preventCookieActiveNextPhase: undefined }),
+    ...(Object.keys(remainingSupportPreventions).length > 0
+      ? { preventSupportActiveNextPhase: remainingSupportPreventions }
+      : { preventSupportActiveNextPhase: undefined }),
     cookiesFaintedThisTurn: {
       ...(activatedState.cookiesFaintedThisTurn ?? {}),
       [state.activePlayerId]: 0,
@@ -76,6 +100,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     cookiesHpReducedThisTurn: {},
     arenaCookieDealtEffectDamageThisTurn: {},
     cookiesPlayedFromTrashThisTurn: {},
+    extraDeckPlayUsedThisTurn: false,
   }
 }
 

@@ -42,7 +42,7 @@ const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
     'effect',
   ],
   [
-    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|higher than|lower than|less than|more than)\b/i,
+    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|sum of\s+\d+\s+or\s+(?:lower|higher)|higher than|lower than|less than|more than)\b/i,
     'condition',
   ],
   [/\bselect\b/i, 'target'],
@@ -172,6 +172,7 @@ const selectorMatches = (
     'cardName',
     'costSelected',
     'noSkillOnly',
+    'sameLevelAsPreviousEffectTarget',
   ] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key]) {
       // LV.1 is the lower bound of the Cookie level domain.  A number of
@@ -252,6 +253,10 @@ const additionalRuntimeSelectorsForEffect = (
     ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
     ...(record.cookieOnly === true ? { cardType: 'cookie' as const } : {}),
     ...(record.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
+    ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(record.sameLevelAsPreviousEffectTarget === true
+      ? { sameLevelAsPreviousEffectTarget: true }
+      : {}),
   }
   const fixed = (count: number): Partial<EffectTargetSelector> => ({
     ...movementFields,
@@ -284,6 +289,10 @@ const additionalRuntimeSelectorsForEffect = (
     case 'draw-up-to-then-discard':
       return record.handDestination === 'deck-top'
         ? [{ side: 'self', min: 1, max: 1 }]
+        : []
+    case 'break-to-hand-by-level-sum':
+      return typeof record.cardCount === 'number'
+        ? [{ side: 'self', min: record.cardCount, max: record.cardCount }]
         : []
     case 'opponent-break-to-trash-then-battle-to-break':
       // The first step chooses a Cookie from the opponent's break area; the
@@ -370,6 +379,23 @@ const runtimeSelectorForEffect = (
     ...(typeof record.keyword === 'string'
       ? { keyword: record.keyword as EffectTargetSelector['keyword'] }
       : {}),
+    ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(record.sameLevelAsPreviousEffectTarget === true
+      ? { sameLevelAsPreviousEffectTarget: true }
+      : {}),
+  }
+  if (
+    record.kind === 'prevent-cookie-active-next-phase' &&
+    record.target &&
+    typeof record.target === 'object'
+  ) {
+    const target = record.target as Record<string, unknown>
+    return {
+      ...(target as Partial<EffectTargetSelector>),
+      ...(typeof target.exactLevel === 'number'
+        ? { minLevel: target.exactLevel, maxLevel: target.exactLevel }
+        : {}),
+    }
   }
   const movementKinds = new Set([
     'trash-to-battle',
@@ -631,6 +657,12 @@ const bracketClauses = (
     if (bracketTargetSelection.test(inner)) {
       continue
     }
+    // "Select 1 Cookie from each player" is likewise a pair of public battle
+    // targets. Its two selectors are recorded by `eachPlayerSelection`; it is
+    // never a payment merely because the official text puts it in brackets.
+    if (/^select\s+1\s+cookies?\s+from\s+each\s+player\.?$/i.test(inner)) {
+      continue
+    }
     const discard = inner.match(
       /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
     )
@@ -646,13 +678,16 @@ const bracketClauses = (
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
     const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
     const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
+    const selfAndHandBreak = /place\s+this\s+cookie\s+and\s+(?:a|\d+)\s+cookie(?:\s+that\s+is\s+LV\.\s*\d+\s+or\s+above)?\s+from\s+your\s+hand\s+into\s+your\s+break\s+area/i.test(inner)
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
     const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
     const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
     const restCookie = /rest\s+\d+\s+cookie\s+in\s+your\s+battle\s+area/i.test(inner)
     const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
     const fieldToDeckBottom = /\b(?:place|select)\b[\s\S]*\b(?:battle\s+area|stage\s+area)\b[\s\S]*\b(?:on|at|to)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
-    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
+    // 官方 BS8-078／082 省略了 "your"，但來源仍只能是自己這張 Cookie；
+    // 兩種措辭都必須綁到 AbilityCost.selfToDeckBottom 的成本證據。
+    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+(?:(?:your|the)\s+)?deck/i.test(inner)
     const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
@@ -660,7 +695,7 @@ const bracketClauses = (
     const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+your\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
-    const trashToBreak = /place\s+\d+\s+cookie.*from\s+your\s+trash\s+into\s+your\s+break\s+area/i.test(inner)
+    const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
     const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
     const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
@@ -671,6 +706,7 @@ const bracketClauses = (
       battleTrash ||
       selfTrash ||
       selfBreak ||
+      selfAndHandBreak ||
       battleFaint ||
       battleBreak ||
       handBreak ||
@@ -701,7 +737,9 @@ const bracketClauses = (
               ? 'battle-to-trash'
                 : selfTrash
                   ? 'self-to-trash'
-                : selfBreak
+                  : selfAndHandBreak
+                    ? 'battle-to-break'
+                    : selfBreak
                   ? 'self-to-break'
                   : battleFaint
                     ? 'battle-to-break'
@@ -756,6 +794,13 @@ const bracketClauses = (
         amount: amountMatch ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
+      if (selfAndHandBreak) {
+        costs.push({
+          kind: 'hand-to-break',
+          amount: 1,
+          clauseIds: [clauseId],
+        })
+      }
       continue
     }
     addClause(clauses, source, match[0], 'unsupported', start, end, 'unknown')
@@ -883,7 +928,7 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's|the)\s+battle\s+area\b/gi
   for (const match of text.matchAll(battleAreaSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -896,7 +941,7 @@ const targetClauses = (
     const sideText = (match[4] ?? '').toLowerCase()
     const side = sideText.includes('opponent')
       ? 'opponent'
-      : sideText.includes('either')
+      : sideText.includes('either') || sideText === 'the'
         ? 'either'
         : 'self'
     const amount = Number(match[2])
@@ -1071,6 +1116,46 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
+  const sameLevelBreakToTrash = /\bplace\s+(up\s+to\s+)?(\d+)\s+cookie\s+with\s+the\s+same\s+LV\.\s+as\s+that\s+cookie\s+from\s+your\s+break\s+area\s+into\s+your\s+trash\b/gi
+  for (const match of text.matchAll(sameLevelBreakToTrash)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        sameLevelAsPreviousEffectTarget: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'break',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const namedBreakPlay = /\bplay\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+from\s+your\s+break\s+area\b/gi
+  for (const match of text.matchAll(namedBreakPlay)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardName: match[3].trim(),
+      },
+      clauseIds: [clauseId],
+      zone: 'break',
+    })
+    structuredRanges.push({ start, end })
+  }
   // Any remaining Select / play-from-zone phrase is still a player choice.
   // Do not silently treat it as an untargeted effect when no safe selector
   // grammar exists; the contract must stop at needs-review instead.
@@ -1092,6 +1177,8 @@ const targetClauses = (
   const unresolvedZoneSelection = /\b(?:play|place|return|take|put)\s+(?:up\s+to\s+)?\d+\b[^.]*\b(?:from|in)\s+(?:your opponent's|opponent's|your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/gi
   for (const match of text.matchAll(unresolvedZoneSelection)) {
     const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
     // Do not treat a bracketed cost/movement as a player target.  Costs are
     // recorded by `bracketClauses`; this pass is only for effect targets.
     const before = text.slice(0, start)
@@ -1548,6 +1635,12 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   if (/draw/.test(text)) kinds.push('draw', 'draw-up-to')
   if (/discard/.test(text)) kinds.push('discard-hand', 'opponent-discard-hand')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
+  if (/\bplace\s+(?:up\s+to\s+)?\d+\s+cookie\s+with\s+the\s+same\s+LV\.\s+as\s+that\s+cookie\s+from\s+your\s+break\s+area\s+into\s+your\s+trash\b/.test(text)) {
+    kinds.push('break-to-trash')
+  }
+  if (/\bplay\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+from\s+your\s+break\s+area\b/.test(text)) {
+    kinds.push('break-to-battle')
+  }
   if (/play|place|put|return|move|take/.test(text)) kinds.push('move')
   return [...new Set(kinds)]
 }

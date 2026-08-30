@@ -3,15 +3,19 @@ import {
   applyGameCommand,
   activateCookieSkill,
   beginAttack,
+  canActivateCookieSkill,
+  advancePhase,
   createDemoGame,
   executeCardEffect,
   getForcedAttackTargetId,
   getEffectSelectionLimits,
   getEffectSelectionCandidates,
+  findBreakToHandBySumSelection,
   getLegalTurnCommands,
   isEffectConditionMet,
   placeHandCardOnHp,
   resolveOpponentHandDiscard,
+  takeAiStep,
   resolveFlip,
   type CardEffect,
   type CookieCard,
@@ -1901,5 +1905,490 @@ describe('new card-effect mechanics', () => {
     const resolved = executeCardEffect(state, context, effect, [eligible.instanceId])
     expect(resolved.players['player-one'].battleArea).toHaveLength(2)
     expect(resolved.players['player-one'].discardPile).toEqual([ineligible])
+  })
+
+  it('filters trash-to-battle candidates by the printed name and minimum level', () => {
+    const base = asMainPhase(createDemoGame())
+    const namedEligible = makeCookie({
+      instanceId: 'dark-cacao-lv2',
+      name: 'Dark Cacao Cookie',
+      level: 2,
+    })
+    const wrongName = makeCookie({
+      instanceId: 'wrong-name-lv3',
+      name: 'Other Cookie',
+      level: 3,
+    })
+    const lowLevel = makeCookie({
+      instanceId: 'dark-cacao-lv1',
+      name: 'Dark Cacao Cookie',
+      level: 1,
+    })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [namedEligible, wrongName, lowLevel],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'trash-to-battle',
+      amount: 1,
+      optional: true,
+      cardName: 'Dark Cacao Cookie',
+      minLevel: 2,
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'source',
+      }, effect).map((card) => card.instanceId),
+    ).toEqual([namedEligible.instanceId])
+  })
+
+  it('filters break-to-battle by printed name and gives a named revival its stated HP', () => {
+    const base = asMainPhase(createDemoGame())
+    const goldenCheese = makeCookie({
+      instanceId: 'golden-cheese-in-break',
+      name: 'Golden Cheese Cookie',
+      hp: 2,
+      level: 3,
+    })
+    const otherCookie = makeCookie({
+      instanceId: 'other-cookie-in-break',
+      name: 'Other Cookie',
+      hp: 6,
+      level: 3,
+    })
+    const hpCards = Array.from({ length: 6 }, (_, index) =>
+      makeEnergyCard(`golden-cheese-hp-${index}`, 'yellow'),
+    )
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: hpCards,
+          breakArea: [goldenCheese, otherCookie],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'break-to-battle',
+      amount: 1,
+      cardName: 'Golden Cheese Cookie',
+      hpCount: 6,
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'source' }
+
+    expect(getEffectSelectionCandidates(state, context, effect)).toEqual([goldenCheese])
+    const resolved = executeCardEffect(state, context, effect, [goldenCheese.instanceId])
+    expect(resolved.players['player-one'].battleArea.at(-1)).toMatchObject({
+      card: goldenCheese,
+      hpCards,
+      enteredFrom: 'break',
+    })
+    expect(resolved.players['player-one'].deck).toEqual([])
+  })
+
+  it('limits a break-to-trash choice to the level of the preceding trash-to-break choice', () => {
+    const base = asMainPhase(createDemoGame())
+    const lv2FromTrash = makeCookie({ instanceId: 'lv2-from-trash', level: 2 })
+    const sameLevel = makeCookie({ instanceId: 'same-level-break', level: 2 })
+    const otherLevel = makeCookie({ instanceId: 'other-level-break', level: 1 })
+    const effect: CardEffect = {
+      kind: 'break-to-trash',
+      max: 1,
+      sameLevelAsPreviousEffectTarget: true,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          breakArea: [lv2FromTrash, sameLevel, otherLevel],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'source',
+        sourceKind: 'skill',
+        effects: [{ kind: 'trash-to-break', amount: 1 }, effect],
+        effectIndex: 1,
+        previousEffectTargetIds: [lv2FromTrash.instanceId],
+      },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'source' }
+
+    expect(getEffectSelectionCandidates(state, context, effect)).toEqual([
+      lv2FromTrash,
+      sameLevel,
+    ])
+    expect(() => executeCardEffect(state, context, effect, [otherLevel.instanceId])).toThrow(
+      '選擇的卡牌不是此效果的合法目標。',
+    )
+    const resolved = executeCardEffect(state, context, effect, [sameLevel.instanceId])
+    expect(resolved.players['player-one'].discardPile).toContain(sameLevel)
+  })
+
+  it('excludes the named source card from trash-to-battle candidates', () => {
+    const base = asMainPhase(createDemoGame())
+    const sourceName = makeCookie({
+      instanceId: 'pomegranate-cake-shaman',
+      name: 'Pomegranate Cake Shaman',
+      level: 1,
+      energyColor: 'red',
+    })
+    const eligible = makeCookie({
+      instanceId: 'red-lv1-eligible',
+      name: 'Cake Hound',
+      level: 1,
+      energyColor: 'red',
+    })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [sourceName, eligible],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'trash-to-battle',
+      amount: 1,
+      optional: true,
+      energyColor: 'red',
+      exactLevel: 1,
+      excludeCardName: 'Pomegranate Cake Shaman',
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'source',
+      }, effect).map((card) => card.instanceId),
+    ).toEqual([eligible.instanceId])
+  })
+
+  it('keeps a chosen opponent Cookie rested through only its next Active Phase', () => {
+    const base = asMainPhase(createDemoGame())
+    const target = base.players['player-two'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ ...target, rested: true }],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'prevent-cookie-active-next-phase',
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const marked = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      effect,
+      [target.card.instanceId],
+    )
+
+    expect(marked.preventCookieActiveNextPhase).toEqual({
+      'player-two': [target.card.instanceId],
+    })
+
+    const opponentActive = advancePhase(advancePhase(marked))
+    const afterOpponentActive = advancePhase(opponentActive)
+    expect(afterOpponentActive.phase).toBe('draw')
+    expect(afterOpponentActive.players['player-two'].battleArea[0].rested).toBe(true)
+    expect(afterOpponentActive.preventCookieActiveNextPhase).toBeUndefined()
+  })
+
+  it('requires another allied Cookie and counts total break levels for BS8-009 attack damage', () => {
+    const base = asMainPhase(createDemoGame())
+    const source = makeCookie({ instanceId: 'burning-spice', level: 3 })
+    const ally = makeCookie({ instanceId: 'ally' })
+    const breakOne = makeCookie({ instanceId: 'break-one', level: 1 })
+    const breakTwo = makeCookie({ instanceId: 'break-two', level: 2 })
+    const breakThree = makeCookie({ instanceId: 'break-three', level: 3 })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            { card: source, hpCards: [], rested: false },
+            { card: ally, hpCards: [], rested: false },
+          ],
+          breakArea: [breakOne, breakTwo, breakThree],
+        },
+      },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: source.instanceId }
+    const effect: CardEffect = {
+      kind: 'modify-attack-by-break-count',
+      perCount: 1,
+      groupSize: 3,
+      countMode: 'break-level',
+      duration: 'this-turn',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
+    }
+
+    expect(isEffectConditionMet(state, context, effect)).toBe(true)
+    expect(isEffectConditionMet({
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': { ...state.players['player-one'], battleArea: [{ card: source, hpCards: [], rested: false }] },
+      },
+    }, context, effect)).toBe(false)
+
+    const resolved = executeCardEffect(state, context, effect, [source.instanceId])
+    expect(resolved.attackModifiers).toContainEqual(expect.objectContaining({
+      sourceInstanceId: source.instanceId,
+      targetInstanceId: source.instanceId,
+      amount: 2,
+    }))
+  })
+
+  it('requires the attacker to discard before attacking a rested BS8-084 source', () => {
+    const base = asMainPhase(createDemoGame())
+    const attacker = makeCookie({ instanceId: 'attacker', attackCost: 0 })
+    const sherbet = makeCookie({
+      instanceId: 'rested-sherbet',
+      name: 'Sherbet Cookie',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'If this Cookie is rested in the battle area, your opponent cannot attack without discarding 1 card from their hand.',
+        effects: [{
+          kind: 'require-opponent-attack-discard-hand',
+          count: 1,
+          whileSourceRested: true,
+        }],
+      },
+    })
+    const discard = makeEnergyCard('attack-discard', 'red')
+    const state: GameState = {
+      ...base,
+      turnNumber: 2,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [discard],
+          battleArea: [{ card: attacker, hpCards: [], rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ card: sherbet, hpCards: [], rested: true }],
+        },
+      },
+    }
+
+    const declared = applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: sherbet.instanceId,
+      supportPaymentIds: [],
+    })
+    expect(declared.pendingBattle).toBeNull()
+    expect(declared.players['player-one'].battleArea[0].rested).toBe(false)
+    expect(declared.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 1,
+      sourceInstanceId: sherbet.instanceId,
+      attackDeclaration: {
+        attackerInstanceId: attacker.instanceId,
+        targetInstanceId: sherbet.instanceId,
+      },
+    })
+
+    const aiContinued = takeAiStep(declared, 'player-one', { level: 2, seed: 84084 })
+    expect(aiContinued.state.players['player-one'].discardPile).toContainEqual(discard)
+    expect(aiContinued.state.pendingBattle).toMatchObject({
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: sherbet.instanceId,
+      stage: 'trap',
+    })
+
+    const resumed = applyGameCommand(declared, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-one',
+      cardIds: [discard.instanceId],
+    })
+    expect(resumed.players['player-one'].discardPile).toContainEqual(discard)
+    expect(resumed.players['player-one'].battleArea[0].rested).toBe(true)
+    expect(resumed.pendingBattle).toMatchObject({
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: sherbet.instanceId,
+      stage: 'trap',
+    })
+  })
+
+  it('forbids an attack against a rested BS8-084 source when the attacker has no card to discard', () => {
+    const base = asMainPhase(createDemoGame())
+    const attacker = makeCookie({ instanceId: 'attacker-without-hand', attackCost: 0 })
+    const sherbet = makeCookie({
+      instanceId: 'rested-sherbet',
+      skill: {
+        trigger: 'passive', oncePerTurn: false, yourTurn: false, restSource: false, cost: {}, text: 'tax',
+        effects: [{ kind: 'require-opponent-attack-discard-hand', count: 1, whileSourceRested: true }],
+      },
+    })
+    const state: GameState = {
+      ...base,
+      turnNumber: 2,
+      players: {
+        ...base.players,
+        'player-one': { ...base.players['player-one'], hand: [], battleArea: [{ card: attacker, hpCards: [], rested: false }] },
+        'player-two': { ...base.players['player-two'], battleArea: [{ card: sherbet, hpCards: [], rested: true }] },
+      },
+    }
+
+    expect(() => applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: sherbet.instanceId,
+      supportPaymentIds: [],
+    })).toThrow('無法宣告攻擊：必須先棄置 1 張手牌。')
+  })
+
+  it('keeps a chosen opponent support card rested through only its next Active Phase', () => {
+    const base = asMainPhase(createDemoGame())
+    const blocked = makeEnergyCard('blocked-opponent-support', 'yellow')
+    const unblocked = makeEnergyCard('unblocked-opponent-support', 'yellow')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          supportArea: [
+            { card: blocked, rested: true },
+            { card: unblocked, rested: true },
+          ],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'prevent-support-active-next-phase',
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'source' }
+
+    expect(getEffectSelectionCandidates(state, context, effect)).toEqual([blocked, unblocked])
+    const marked = executeCardEffect(state, context, effect, [blocked.instanceId])
+    expect(marked.preventSupportActiveNextPhase).toEqual({
+      'player-two': [blocked.instanceId],
+    })
+
+    const afterOpponentActive = advancePhase(advancePhase(advancePhase(marked)))
+    expect(afterOpponentActive.phase).toBe('draw')
+    expect(afterOpponentActive.players['player-two'].supportArea).toEqual([
+      { card: blocked, rested: true },
+      { card: unblocked, rested: false },
+    ])
+    expect(afterOpponentActive.preventSupportActiveNextPhase).toBeUndefined()
+  })
+
+  it('only permits a break-origin on-play skill while that origin is pending', () => {
+    const base = asMainPhase(createDemoGame())
+    const source = makeCookie({
+      instanceId: 'adventurer-cookie',
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'When this Cookie is played from the break area.',
+        onPlayFromBreakArea: true,
+        effects: [{
+          kind: 'prevent-support-active-next-phase',
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+      },
+    })
+    const fromBreak: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ card: source, hpCards: [], rested: false }],
+        },
+      },
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+        origin: 'break',
+      },
+    }
+
+    expect(canActivateCookieSkill(fromBreak, 'player-one', source.instanceId, 'on-play')).toBe(true)
+    expect(canActivateCookieSkill({
+      ...fromBreak,
+      pendingOnPlay: { ...fromBreak.pendingOnPlay!, origin: 'hand' },
+    }, 'player-one', source.instanceId, 'on-play')).toBe(false)
+  })
+
+  it('requires exactly two break Cookies whose total level is at most three', () => {
+    const base = asMainPhase(createDemoGame())
+    const one = makeCookie({ instanceId: 'break-lv1', level: 1, energyColor: 'yellow' })
+    const two = makeCookie({ instanceId: 'break-lv2', level: 2, energyColor: 'yellow' })
+    const three = makeCookie({ instanceId: 'break-lv3', level: 3, energyColor: 'yellow' })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          breakArea: [one, two, three],
+        },
+      },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'source' }
+    const effect: CardEffect = {
+      kind: 'break-to-hand-by-level-sum',
+      targetSum: 3,
+      targetSumMode: 'at-most',
+      cardCount: 2,
+    }
+
+    expect(getEffectSelectionLimits(effect)).toEqual({ min: 2, max: 2 })
+    expect(findBreakToHandBySumSelection(state, context, effect)).toEqual([
+      one.instanceId,
+      two.instanceId,
+    ])
+    expect(() => executeCardEffect(state, context, effect, [one.instanceId])).toThrow(
+      '必須選擇 2 張休息區餅乾。',
+    )
+    expect(() => executeCardEffect(state, context, effect, [two.instanceId, three.instanceId])).toThrow(
+      '選擇的餅乾等級總和不得超過 3。',
+    )
+
+    const resolved = executeCardEffect(state, context, effect, [one.instanceId, two.instanceId])
+    expect(resolved.players['player-one'].hand).toEqual(
+      expect.arrayContaining([one, two]),
+    )
+    expect(resolved.players['player-one'].breakArea).toEqual([three])
   })
 })

@@ -3,6 +3,7 @@ import {
   canActivateCookieSkill,
   canActivateStage,
   canAttack,
+  canPlayExtraDeckCookie,
   canSpecialPlayCookie,
   canPlayItem,
   canPlayStage,
@@ -21,7 +22,7 @@ import { computeOpponentFan } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
 import './BattleRow.css'
 
-export type BattleResourceKind = 'deck' | 'stage' | 'break'
+export type BattleResourceKind = 'deck' | 'stage' | 'break' | 'extra'
 export type PaymentLabel = '技能' | '物品' | '場景'
 
 export interface BattleRowProps {
@@ -64,6 +65,7 @@ export interface BattleRowProps {
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
+  onPlayExtraDeckCookie?: (instanceId: string) => void
   onSpecialPlayCookie?: (instanceId: string) => void
   onPlayItem?: (instanceId: string) => void
   onPlayStage?: (instanceId: string) => void
@@ -116,6 +118,7 @@ export function BattleRow({
   onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
+  onPlayExtraDeckCookie,
   onSpecialPlayCookie,
   onPlayItem,
   onPlayStage,
@@ -254,15 +257,61 @@ export function BattleRow({
       </div>
     </div>
   )
+  const extraDeck = player.extraDeck ?? []
   const extraZone = (
-    <div
-      className="extra-zone"
-      role="group"
-      aria-label={`${player.name}額外區（預留）`}
-    >
-      <Layers3 aria-hidden="true" />
-      <strong>0 張</strong>
-      <span>額外區</span>
+    <div className="extra-zone resource-dock">
+      <button
+        className="resource-summary"
+        type="button"
+        aria-label={`${player.name} EXTRA Deck ${extraDeck.length} 張`}
+        aria-expanded={openResourceKind === 'extra'}
+        title={`EXTRA Deck ${extraDeck.length} 張${isOpponent ? '；內容為私密資訊' : ''}`}
+        onClick={() => toggleResource('extra')}
+      >
+        <Layers3 aria-hidden="true" />
+        <strong>{extraDeck.length} 張</strong>
+        <span>EXTRA</span>
+      </button>
+      {openResourceKind === 'extra' && (
+        <div
+          className="resource-popover extra-deck-popover"
+          role="dialog"
+          aria-label={`${player.name} EXTRA Deck`}
+        >
+          <span>{player.name} EXTRA Deck</span>
+          <strong>{extraDeck.length} 張</strong>
+          {isOpponent ? (
+            <small>對手的 EXTRA Deck 內容為私密資訊。</small>
+          ) : extraDeck.length === 0 ? (
+            <small>目前沒有 EXTRA 卡。</small>
+          ) : (
+            <div className="extra-deck-card-list">
+              {extraDeck.map((card) => {
+                const canPlay =
+                  canOperate &&
+                  canPlayExtraDeckCookie(game, playerId, card.instanceId)
+                return (
+                  <div className="extra-deck-card-entry" key={card.instanceId}>
+                    <strong>{card.name}</strong>
+                    <small>{card.id}</small>
+                    {canPlay ? (
+                      <button
+                        className="skill-action"
+                        type="button"
+                        onClick={() => onPlayExtraDeckCookie?.(card.instanceId)}
+                      >
+                        從 EXTRA 登場
+                      </button>
+                    ) : (
+                      <small>目前無法登場</small>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 

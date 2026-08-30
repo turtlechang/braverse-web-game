@@ -7,6 +7,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   hasRequiredEffectTargets,
@@ -1020,6 +1021,9 @@ export const canActivateCookieSkill = (
   }
 
   const onPlayOrigin = state.pendingOnPlay?.origin
+  if (trigger === 'on-play' && skill.onPlayFromBreakArea && onPlayOrigin !== 'break') {
+    return false
+  }
   if (skill.fromTrashArea && onPlayOrigin !== 'trash') {
     return false
   }
@@ -1195,7 +1199,9 @@ export const canActivateCookieSkill = (
     }
     if (
       effect.kind === 'break-to-hand-by-level-sum' &&
-      getBreakToHandBySumCandidates(state, context, effect).length === 0
+      (effect.cardCount === undefined
+        ? getBreakToHandBySumCandidates(state, context, effect).length === 0
+        : findBreakToHandBySumSelection(state, context, effect) === null)
     ) {
       return false
     }

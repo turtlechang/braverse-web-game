@@ -64,6 +64,55 @@ describe('DeckEditorPage', () => {
     await act(() => root.unmount())
   })
 
+  it('only exposes the six-slot candidate EXTRA editor when explicitly opened in BS8 staging mode', async () => {
+    const standardContainer = document.createElement('div')
+    const standardRoot = createRoot(standardContainer)
+    await act(() => standardRoot.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+    expect(standardContainer.querySelector('[data-testid="candidate-extra-add-BS8-005"]')).toBeNull()
+    await act(() => standardRoot.unmount())
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onSave = vi.fn()
+    await act(() => root.render(
+      <DeckEditorPage
+        mode="bs8-candidate-staging"
+        onSave={onSave}
+        onClose={vi.fn()}
+      />,
+    ))
+
+    const avatar = container.querySelector<HTMLButtonElement>('[data-testid="candidate-extra-add-BS8-005"]')
+    const golden = container.querySelector<HTMLButtonElement>('[data-testid="candidate-extra-add-BS8-027"]')
+    expect(avatar).not.toBeNull()
+    expect(golden).not.toBeNull()
+
+    for (let index = 0; index < 4; index += 1) await act(() => avatar!.click())
+    for (let index = 0; index < 2; index += 1) await act(() => golden!.click())
+
+    expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toContain('6')
+    expect(avatar?.disabled).toBe(true)
+    expect(golden?.disabled).toBe(true)
+
+    const mainDeckCard = container.querySelector<HTMLButtonElement>(
+      '.deck-editor-page-pool-card-button:not(:disabled)',
+    )
+    await act(() => mainDeckCard!.click())
+    const save = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-page-save"]')
+    await act(() => save!.click())
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      candidateStaging: {
+        kind: 'bs8-candidate-staging',
+        extraDeckEntries: [
+          { cardNumber: 'BS8-005', count: 4 },
+          { cardNumber: 'BS8-027', count: 2 },
+        ],
+      },
+    }))
+
+    await act(() => root.unmount())
+  })
+
   it('opens JSON import in a modal without adding it to the deck workspace layout', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)

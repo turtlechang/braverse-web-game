@@ -7,6 +7,7 @@ import {
   getAttackDamageAgainst,
   getEffectiveAttack,
   getEffectiveAttackBreakdown,
+  getEffectSelectionCandidates,
   getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
   selectEffectTargets,
@@ -39,6 +40,50 @@ const reachEndOfTurn = (state: GameState): GameState => {
 }
 
 describe('card effect engine', () => {
+  it('only readies color-matching selectable support cards', () => {
+    const initial = createDemoGame()
+    const greenSupport = {
+      ...createSupport('green-support'),
+      energyColor: 'green' as const,
+    }
+    const redSupport = createSupport('red-support')
+    const state: GameState = {
+      ...initial,
+      players: {
+        ...initial.players,
+        'player-one': {
+          ...initial.players['player-one'],
+          supportArea: [
+            { card: greenSupport, rested: true },
+            { card: redSupport, rested: true },
+          ],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      energyColor: 'green',
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, context, effect).map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['green-support'])
+    expect(() =>
+      executeCardEffect(state, context, effect, ['red-support']),
+    ).toThrow('Invalid support target.')
+
+    const result = executeCardEffect(state, context, effect, ['green-support'])
+    expect(result.players['player-one'].supportArea).toEqual([
+      { card: greenSupport, rested: false },
+      { card: redSupport, rested: true },
+    ])
+  })
+
   it('validates target side, count, and remaining HP filters', () => {
     const state = createDemoGame()
     const opponent = state.players['player-two'].battleArea[0]

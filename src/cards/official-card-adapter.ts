@@ -1,4 +1,13 @@
-import type { CardColor, CardKeyword, GameCard } from '../game'
+import type {
+  AbilityCost,
+  CardColor,
+  CardEffect,
+  CardKeyword,
+  CardSkill,
+  EffectCondition,
+  ExtraDeckCard,
+  GameCard,
+} from '../game'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -14,6 +23,30 @@ import type {
   OfficialCardConversion,
   OfficialCardRecord,
 } from './types'
+
+export interface ConvertedOfficialExtraDeckCard {
+  status: 'converted'
+  extraDeckCard: ExtraDeckCard
+  source: {
+    cardNumber: string
+    baseCardNumber: string
+    variant: string | null
+    imageUrl: string
+    rarity: string | null
+    productTitle: string | null
+  }
+  parsedText: ReturnType<typeof parseOfficialCardTexts>
+}
+
+export interface UnsupportedOfficialExtraDeckCard {
+  status: 'unsupported'
+  cardNumber: string
+  reason: 'not-extra-card'
+}
+
+export type OfficialExtraDeckCardConversion =
+  | ConvertedOfficialExtraDeckCard
+  | UnsupportedOfficialExtraDeckCard
 
 const NON_COOKIE_TYPE_MAP = {
   item: 'item',
@@ -57,6 +90,112 @@ const getEnergyColor = (
 
   return undefined
 }
+
+type ExtraDeckPlaySpec = {
+  mode: 'enter-battle' | 'awaken'
+  requirement?: EffectCondition
+  onPlayEffects?: CardEffect[]
+  onPlayCost?: AbilityCost
+  awakenRequirement?: ExtraDeckCard['awakenRequirement']
+  awakenHpBonus?: number
+  breakAreaSkill?: {
+    effects: CardEffect[]
+    cost?: AbilityCost
+  }
+}
+
+/**
+ * BS8 的 EXTRA 登場條件不是通用 keyword：同為 `extra` 類型的卡也可能要求
+ * Awaken 疊放。因此只對已有官方文字與規則裁決的卡號建立精確映射。
+ */
+const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
+  'BS8-005': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'cookies-fainted-this-turn-at-least',
+      side: 'self',
+      count: 2,
+    },
+    onPlayEffects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+  },
+  'BS8-027': {
+    mode: 'awaken',
+    awakenRequirement: {
+      targetName: 'Golden Cheese Cookie',
+      playedFrom: 'break',
+    },
+    awakenHpBonus: 2,
+    breakAreaSkill: {
+      effects: [
+        {
+          kind: 'trash-to-break',
+          amount: 1,
+          cardName: 'Golden Cheese Cookie',
+        },
+        { kind: 'break-source-to-trash' },
+      ],
+    },
+  },
+  'BS8-069': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'support-count-less-than-opponent',
+      difference: 2,
+    },
+    onPlayEffects: [
+      {
+        kind: 'trash-to-support',
+        amount: 1,
+        rested: false,
+        optional: true,
+        energyColor: 'green',
+      },
+    ],
+  },
+  'BS8-090': {
+    mode: 'enter-battle',
+    requirement: { kind: 'hand-count-at-most', count: 2 },
+    onPlayEffects: [
+      {
+        kind: 'return-to-hand',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          energyColor: 'blue',
+          maxLevel: 2,
+        },
+      },
+    ],
+  },
+  'BS8-104': {
+    mode: 'awaken',
+    awakenRequirement: {
+      targetName: 'Dark Cacao Cookie',
+      playedFrom: 'trash',
+    },
+    awakenHpBonus: 2,
+    onPlayCost: { energy: {}, discardHand: 1 },
+    onPlayEffects: [{ kind: 'trash-to-hand', max: 1, energyColor: 'purple' }],
+  },
+}
+
+const createExtraOnPlaySkill = (
+  text: string,
+  effects: CardEffect[] | undefined,
+  cost: AbilityCost = { energy: {}, discardHand: 0 },
+): CardSkill | undefined =>
+  effects && effects.length > 0
+    ? {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost,
+        text,
+        effects,
+      }
+    : undefined
 
 export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
   const keywords = new Set<CardKeyword>()
@@ -130,6 +269,51 @@ export const normalizeOfficialCardRecord = (
       hp: 2,
       attackText: '<{Y}{Y}> Creamcraft Magic! {da} 2',
       flipText: 'Draw up to 1 card from your deck.',
+    }
+  }
+
+  // 官方 BS8-083@2 異圖把 On Play／每回合一次技能與普通攻擊全文合併在
+  // attackText，skill 欄位為空。依該張卡實際印刷文字拆回兩個 runtime 欄位；
+  // 這只修正 adapter 邊界，候選原始 JSON 仍保留官方回傳內容。
+  if (
+    sourceCard.cardNumber === 'BS8-083@2' &&
+    sourceCard.type === 'cookie' &&
+    !sourceCard.skill.text &&
+    /\{sk\}\s*Freezing Aura/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*3\s*Then,/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        ...sourceCard.skill,
+        name: '{sk} Freezing Aura',
+        text:
+          "{ap} {t1} <{B}> Select up to 1 of your opponent's Cookies. That Cookie is not set as active during your opponent's next Active Phase.",
+      },
+      attackText:
+        '<{B}{B}{B}> I will freeze your very breath! {da} 3 Then, you can draw cards from your deck until there are 3 cards in your hand.',
+    }
+  }
+
+  // 官方 BS8-032@2 異圖同樣把 Activate／每回合一次技能和普通攻擊合併在
+  // attackText。此張的完整文字可從同一筆官方來源無歧義拆回，避免異圖失去
+  // 來源與手牌進休息區成本、Golden Cheese 指名登場與 Then 順序。
+  if (
+    sourceCard.cardNumber === 'BS8-032@2' &&
+    sourceCard.type === 'cookie' &&
+    !sourceCard.skill.text &&
+    /\{sk\}\s*Constant Vigilance/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*2\s*$/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        ...sourceCard.skill,
+        name: '{sk} Constant Vigilance',
+        text:
+          '{mob} {t1} If there is a Cookie in your break area, <place this Cookie and a Cookie that is LV.2 or above from your hand into your break area.> Draw up to 2 cards from your deck. Then, play up to 1 [Golden Cheese Cookie] from your break area.',
+      },
+      attackText: '<{Y}{Y}> Wrath of the Golden Earth {da} 2',
     }
   }
 
@@ -328,6 +512,103 @@ export const normalizeOfficialCardRecord = (
   }
 
   return sourceCard
+}
+
+/**
+ * EXTRA Deck 專用轉接，不把 EXTRA 卡塞進 `GameCard`／主牌組資料模型。
+ *
+ * `extraDeckPlayMode: 'awaken'` 代表必須走 Rules §4-9 的覆蓋流程；它不能
+ * 被一般登場路徑當成空戰鬥區的新 Cookie。
+ */
+export const convertOfficialCardToExtraDeckCard = (
+  sourceCard: OfficialCardRecord,
+  instanceSuffix = '1',
+): OfficialExtraDeckCardConversion => {
+  const card = normalizeOfficialCardRecord(sourceCard)
+  if (card.type !== 'extra') {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      reason: 'not-extra-card',
+    }
+  }
+
+  const parsedText = parseOfficialCardTexts(card)
+  const cardColor = getCardColor(card)
+  const energyColor = getEnergyColor(card, cardColor)
+  const keywords = getRuntimeKeywords(card)
+  const spec = BS8_EXTRA_PLAY_SPECS[card.baseCardNumber] ?? {
+    mode: 'awaken' as const,
+  }
+  const onPlaySkill = createExtraOnPlaySkill(
+    card.skill.text ?? card.attackText ?? '',
+    spec.onPlayEffects,
+    spec.onPlayCost,
+  )
+  const breakAreaSkill = spec.breakAreaSkill
+    ? {
+        trigger: 'activate' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        fromBreakArea: true,
+        cost: spec.breakAreaSkill.cost ?? { energy: {}, discardHand: 0 },
+        text: card.skill.text ?? '',
+        effects: spec.breakAreaSkill.effects,
+      }
+    : undefined
+  const attackEffects = convertOfficialAttackEffects(card)
+
+  const extraDeckCard: ExtraDeckCard = {
+    id: card.baseCardNumber,
+    instanceId: createInstanceId(card, instanceSuffix),
+    name: card.name,
+    type: 'extra',
+    officialType: 'extra',
+    ...(card.imageUrl ? { imageUrl: card.imageUrl } : {}),
+    ...(cardColor ? { cardColor } : {}),
+    ...(energyColor ? { energyColor } : {}),
+    ...(keywords.length > 0 ? { keywords } : {}),
+    ...(card.skill.text ? { effectText: card.skill.text } : {}),
+    ...(breakAreaSkill ?? onPlaySkill
+      ? { skill: breakAreaSkill ?? onPlaySkill }
+      : {}),
+    ...(card.level !== null ? { level: card.level } : {}),
+    ...(card.hp !== null
+      ? { hp: card.hp }
+      : spec.awakenHpBonus !== undefined
+        ? { hp: spec.awakenHpBonus }
+        : {}),
+    ...(parsedText.attack?.damage !== null && parsedText.attack?.damage !== undefined
+      ? { attack: parsedText.attack.damage }
+      : {}),
+    ...(parsedText.attack ? { attackCost: parsedText.attack.totalCost } : {}),
+    ...(parsedText.attack ? { attackEnergyCost: parsedText.attack.cost } : {}),
+    ...(card.attackText ? { attackText: card.attackText } : {}),
+    ...(attackEffects ? { attackEffects } : {}),
+    ...(spec.requirement ? { playRequirement: spec.requirement } : {}),
+    ...(spec.awakenRequirement
+      ? { awakenRequirement: spec.awakenRequirement }
+      : {}),
+    ...(spec.awakenHpBonus !== undefined
+      ? { awakenHpBonus: spec.awakenHpBonus }
+      : {}),
+    extraDeckPlayMode: spec.mode,
+  }
+
+  return {
+    status: 'converted',
+    extraDeckCard,
+    source: {
+      cardNumber: card.cardNumber,
+      baseCardNumber: card.baseCardNumber,
+      variant: card.variant,
+      imageUrl: card.imageUrl,
+      rarity: card.rarity,
+      productTitle: card.product.title,
+    },
+    parsedText,
+  }
 }
 
 export const convertOfficialCardToGameCard = (

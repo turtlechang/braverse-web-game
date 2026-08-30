@@ -5,7 +5,7 @@ import {
   createStageUsageDemoState,
 } from '../../game/demo'
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
-import type { CardSkill, GameState, PendingBattle } from '../../game'
+import type { CardSkill, ExtraDeckCard, GameState, PendingBattle } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
@@ -130,7 +130,7 @@ describe('player hand fan pure functions', () => {
 })
 
 describe('BattleRow desktop interactions', () => {
-  it('places the reserved extra area below the player break area and mirrors it for the opponent', () => {
+  it('places the live EXTRA Deck count below the player break area and mirrors it for the opponent', () => {
     const bottomMarkup = renderToStaticMarkup(
       <BattleRow {...createProps({ position: 'bottom' })} />,
     )
@@ -139,14 +139,50 @@ describe('BattleRow desktop interactions', () => {
     )
 
     expect(bottomMarkup).toContain('class="side-zones"')
-    expect(bottomMarkup).toContain('class="extra-zone"')
-    expect(bottomMarkup).toContain('額外區（預留）')
+    expect(bottomMarkup).toContain('class="extra-zone resource-dock"')
+    expect(bottomMarkup).toContain('EXTRA Deck 0 張')
     expect(bottomMarkup.indexOf('class="break-zone')).toBeLessThan(
-      bottomMarkup.indexOf('class="extra-zone"'),
+      bottomMarkup.indexOf('class="extra-zone resource-dock"'),
     )
-    expect(topMarkup.indexOf('class="extra-zone"')).toBeLessThan(
+    expect(topMarkup.indexOf('class="extra-zone resource-dock"')).toBeLessThan(
       topMarkup.indexOf('class="break-zone'),
     )
+  })
+
+  it('shows only the owner their private EXTRA card names', () => {
+    const game = createItemUsageDemoState(true)
+    const extra: ExtraDeckCard = {
+      id: 'BS8-005',
+      instanceId: 'bs8-005-ui',
+      name: 'Avatar of Ruin Cookie',
+      type: 'extra',
+    }
+    game.players['player-one'].extraDeck = [extra]
+
+    const ownerMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+          openResourceKind: 'extra',
+        })}
+      />,
+    )
+    const opponentMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'top',
+          openResourceKind: 'extra',
+        })}
+      />,
+    )
+
+    expect(ownerMarkup).toContain('Avatar of Ruin Cookie')
+    expect(opponentMarkup).toContain('對手的 EXTRA Deck 內容為私密資訊。')
+    expect(opponentMarkup).not.toContain('Avatar of Ruin Cookie')
   })
 
   it('marks a single battle cookie so its zone label can avoid the card', () => {

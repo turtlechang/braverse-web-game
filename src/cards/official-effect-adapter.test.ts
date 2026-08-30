@@ -9,6 +9,7 @@ import officialPurpleSample from '../../data/cards/official-starter-deck-purple.
 import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
 import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import officialBS7Candidates from '../../data/cards/official-arena-of-glory-bs7.en.json'
+import officialBS8Candidates from '../../data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import { convertOfficialCardToGameCard } from './official-card-adapter'
 import {
   convertOfficialCardEffects,
@@ -32,6 +33,7 @@ const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRe
 const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
 const bs4DatasetCards = officialBS4Dataset.cards as OfficialCardRecord[]
 const bs7CandidateCards = officialBS7Candidates.cards as OfficialCardRecord[]
+const bs8CandidateCards = officialBS8Candidates.cards as OfficialCardRecord[]
 // 保留少量內嵌官方資料作為明確 fixture，避免測試依賴完整卡池內容；找不到
 // fixture 的 BS4 卡牌才回退到已 promote 的正式資料集。
 const bs4Cards: OfficialCardRecord[] = [
@@ -408,6 +410,17 @@ const findBs7Candidate = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing BS7 candidate card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBs8Candidate = (cardNumber: string) => {
+  const card = bs8CandidateCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+  if (!card) {
+    throw new Error(`Missing BS8 candidate card ${cardNumber}`)
   }
 
   return card
@@ -5198,6 +5211,687 @@ describe('BS7 candidate effect adapter', () => {
           condition: { kind: 'break-level-higher-than-opponent', minDifference: 3 },
         },
       ],
+    })
+  })
+})
+
+describe('BS8 candidate serial contract', () => {
+  it('maps BS8-002 as an ordered Activate skill with its self-supplied red energy', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-002'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      sourceEnergy: { red: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'source-hp-less-than', amount: 2 },
+        },
+        { kind: 'draw-up-to', max: 1 },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-086 as an On Play draw-up-to-one skill', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-086'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+  })
+
+  it('maps BS8-053 and BS8-064 as optional On Play support ready effects', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-053'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'set-active',
+          supportCount: 1,
+          energyColor: 'green',
+          selectable: true,
+          optional: true,
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-064'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'set-active',
+          supportCount: 2,
+          selectable: true,
+          optional: true,
+        },
+      ],
+    })
+  })
+
+  it('maps BS8 support-count, hand-count, and trash-count conditions without changing their triggers', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-057'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-062'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'hand-to-support',
+          amount: 1,
+          rested: true,
+          optional: true,
+          condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-088'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { blue: 1 } },
+      effects: [
+        {
+          kind: 'set-cookie-active',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'hand-count-at-most', count: 5 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-113'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'set-cookie-active',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-117'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-068 faint support-gap effect to an opponent-controlled active-support rest', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-068'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      effects: [
+        {
+          kind: 'opponent-rests-support',
+          amount: 1,
+          activeOnly: true,
+          condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-012 faint self-break removal before its optional draw', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-012'))).toMatchObject({
+      faint: true,
+      yourTurn: true,
+      effects: [
+        { kind: 'break-source-to-trash' },
+        { kind: 'draw-up-to', max: 1 },
+      ],
+    })
+  })
+
+  it('maps BS8-016 faint self-break removal before its five-or-less HP recovery target', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-016'))).toMatchObject({
+      faint: true,
+      yourTurn: true,
+      effects: [
+        { kind: 'break-source-to-trash' },
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8 RED faint clauses with source removal before their name-excluding trash selector', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-013'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      yourTurn: true,
+      effects: [
+        { kind: 'break-source-to-trash' },
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          energyColor: 'red',
+          exactLevel: 1,
+          excludeCardName: 'Pomegranate Cake Shaman',
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-019@1'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      yourTurn: true,
+      cost: { discardHand: 1 },
+      effects: [
+        { kind: 'break-source-to-trash' },
+        {
+          kind: 'trash-to-hand',
+          max: 1,
+          energyColor: 'red',
+          cookieOnly: true,
+          maxLevel: 1,
+          excludeCardName: 'Cake Hound',
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-114 trash threshold, shuffle, and Then source HP in one ordered effect', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-114'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'trash-to-deck-all',
+          condition: { kind: 'trash-count-at-least', count: 30 },
+          thenEffects: [
+            {
+              kind: 'gain-hp',
+              amount: 1,
+              target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('maps BS8 candidate self-departure costs and their precise staged follow-up effects', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-052'))).toMatchObject({
+      trigger: 'activate',
+      cost: { selfToTrash: true },
+      effects: [
+        {
+          kind: 'hand-to-support',
+          amount: 2,
+          rested: true,
+          energyColor: 'green',
+          optional: true,
+          condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-078'))).toMatchObject({
+      trigger: 'activate',
+      cost: { selfToDeckBottom: true },
+      effects: [
+        {
+          kind: 'hand-to-battle',
+          amount: 1,
+          energyColor: 'blue',
+          minLevel: 2,
+          optional: true,
+          gainHp: 1,
+          condition: { kind: 'hand-count-at-most', count: 3 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-082'))).toMatchObject({
+      trigger: 'activate',
+      cost: { discardHand: 2, selfToDeckBottom: true },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 0,
+            max: 1,
+            energyColor: 'blue',
+            maxLevel: 2,
+          },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-087'))).toMatchObject({
+      trigger: 'on-play',
+      cost: {
+        energy: { blue: 1 },
+        battleCookieToHand: {
+          count: 1,
+          energyColor: 'blue',
+          maxLevel: 1,
+          excludeSource: true,
+        },
+      },
+      effects: [
+        {
+          kind: 'return-to-deck-bottom',
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-059 support-return cost before every opponent Cookie loses up to two HP cards', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-059'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { green: 1 }, supportToHand: 2 },
+      effects: [{ kind: 'hp-to-trash-all', amount: 2, side: 'opponent' }],
+    })
+  })
+
+  it('maps BS8 yellow break-area progression with printed level bounds and ordering', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-038'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        { kind: 'hand-to-break', amount: 1, minLevel: 3, maxLevel: 3 },
+        { kind: 'break-to-trash', max: 2, exactLevel: 1 },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-039'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        { kind: 'hand-to-break', amount: 1, minLevel: 2, maxLevel: 2 },
+        { kind: 'break-to-battle', amount: 1, maxLevel: 2 },
+      ],
+    })
+  })
+
+  it('maps BS8-032 and BS8-034 source-and-hand break costs before named Golden Cheese plays', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-032'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'battle-to-break',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'break-area-has-card', side: 'self' },
+        },
+        { kind: 'hand-to-break', amount: 1, minLevel: 2 },
+        { kind: 'draw-up-to', max: 2 },
+        { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-034'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'battle-to-break',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'break-area-has-card', side: 'self' },
+        },
+        { kind: 'hand-to-break', amount: 1 },
+        {
+          kind: 'break-to-battle',
+          amount: 1,
+          cardName: 'Golden Cheese Cookie',
+          hpCount: 6,
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-035 only to a break-area Cookie with the preceding trash card\'s level', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-035'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        { kind: 'trash-to-break', amount: 1 },
+        {
+          kind: 'break-to-trash',
+          max: 1,
+          sameLevelAsPreviousEffectTarget: true,
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-042 only when it enters from break and preserves the opponent support target', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-042'))).toMatchObject({
+      trigger: 'on-play',
+      onPlayFromBreakArea: true,
+      effects: [
+        {
+          kind: 'prevent-support-active-next-phase',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-009 all-other damage, source energy, and every-three-break-level attack bonus', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-009'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      sourceEnergy: { red: 1 },
+      effects: [
+        {
+          kind: 'damage-all',
+          amount: 1,
+          side: 'opponent',
+          condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
+        },
+        {
+          kind: 'damage-all',
+          amount: 1,
+          side: 'self',
+          excludeSource: true,
+          condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
+        },
+        {
+          kind: 'modify-attack-by-break-count',
+          perCount: 1,
+          groupSize: 3,
+          countMode: 'break-level',
+          duration: 'this-turn',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-084 as a rested passive attack-declaration discard requirement', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-084'))).toMatchObject({
+      trigger: 'passive',
+      effects: [{
+        kind: 'require-opponent-attack-discard-hand',
+        count: 1,
+        whileSourceRested: true,
+      }],
+    })
+  })
+
+  it('maps BS8-031 with its required LV.3 trash move before the two-card bounded-sum return', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-031'))).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { yellow: 1 } },
+      effects: [
+        { kind: 'trash-to-break', amount: 1, exactLevel: 3 },
+        {
+          kind: 'break-to-hand-by-level-sum',
+          targetSum: 3,
+          targetSumMode: 'at-most',
+          cardCount: 2,
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-011 as one mandatory damage target for each player', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-011'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { red: 1 } },
+      effects: [
+        { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1 } },
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } },
+      ],
+    })
+  })
+
+  it('maps BS8 blue next-Active-Phase prevention with its printed target bounds', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-079'))).toMatchObject({
+      trigger: 'activate',
+      cost: {
+        discardHand: 2,
+        discardHandColor: 'blue',
+        selfToDeckBottom: true,
+      },
+      effects: [
+        {
+          kind: 'prevent-cookie-active-next-phase',
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 1, maxLevel: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-083'))).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { blue: 1 } },
+      effects: [
+        {
+          kind: 'prevent-cookie-active-next-phase',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8 purple trash plays without broadening their printed Cookie filters', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-119'))).toMatchObject({
+      trigger: 'activate',
+      cost: { energy: { purple: 1 }, selfToTrash: true },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          cardName: 'Dark Cacao Cookie',
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-120'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 1 },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          minLevel: 2,
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ],
+    })
+  })
+
+  it.each([
+    ['BS8-008', 'red'],
+    ['BS8-044', 'yellow'],
+    ['BS8-056', 'green'],
+    ['BS8-081', 'blue'],
+    ['BS8-116', 'purple'],
+  ] as const)('maps %s as a paid %s Blocker', (cardNumber, color) => {
+    expect(convertOfficialCookieSkill(findBs8Candidate(cardNumber))).toMatchObject({
+      trigger: 'block',
+      cost: { energy: { [color]: 1 } },
+      effects: [
+        {
+          kind: 'redirect-attack',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8 faint, bounce, fainting, HP-trash and mill effects through existing rules', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-051'))).toMatchObject({
+      trigger: 'passive',
+      faint: true,
+      effects: [{ kind: 'support-to-battle', amount: 1, optional: true }],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-077'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [
+        {
+          kind: 'return-to-deck-bottom',
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-085'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 2 },
+      effects: [
+        {
+          kind: 'make-faint',
+          target: { side: 'opponent', min: 0, max: 1, remainingHp: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-107'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 1, discardHandColor: 'purple', discardHandType: 'item' },
+      effects: [
+        {
+          kind: 'hp-to-trash',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-111'))).toMatchObject({
+      trigger: 'on-play',
+      cost: { discardHand: 1 },
+      effects: [{ kind: 'deck-to-trash', amount: 4, side: 'self' }],
+    })
+  })
+
+  it('maps BS8-020 and BS8-092 self-movement with their live state conditions', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-020'))).toMatchObject({
+      trigger: 'activate',
+      effects: [
+        {
+          kind: 'field-to-trash',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'source-hp-less-than', amount: 2 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-092'))).toMatchObject({
+      trigger: 'activate',
+      effects: [
+        {
+          kind: 'return-to-deck-bottom',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'hand-count-at-most', count: 1 },
+        },
+      ],
+    })
+  })
+
+  it('maps BS8-017 play-from-trash damage only after an eligible Cookie enters battle', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-017'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { energy: { red: 1 } },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          energyColor: 'red',
+          maxHp: 1,
+          thenEffects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'either', min: 0, max: 1 },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('maps the fully expressible BS8 attack Then clauses in printed order', () => {
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-010'))).toEqual([
+      { kind: 'make-faint', target: { side: 'self', min: 0, max: 1 } },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-026'))).toEqual([
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-at-most', amount: 4 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-040'))).toEqual([
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 1,
+        discardCount: 1,
+        condition: { kind: 'break-level-at-least', level: 3 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-045'))).toEqual([
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'break-level-at-most', level: 6 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-054'))).toEqual([
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-067'))).toEqual([
+      {
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: false,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-084'))).toEqual([
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-108'))).toEqual([
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-109'))).toEqual([
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+      },
+    ])
+  })
+
+  it('maps BS8-103 only when it enters from trash and supplies its printed purple energy', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-103@1'))).toMatchObject({
+      trigger: 'on-play',
+      fromTrashArea: true,
+      sourceEnergy: { purple: 1 },
+      effects: [{ kind: 'hp-to-trash-all', amount: 1, side: 'opponent' }],
     })
   })
 })

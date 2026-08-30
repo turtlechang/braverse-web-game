@@ -5,6 +5,7 @@ import {
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
@@ -519,7 +520,9 @@ const hasUsableEffect = (
       return getSupportToBattleCandidates(state, context, effect).length > 0
     }
     if (effect.kind === 'break-to-hand-by-level-sum') {
-      return getBreakToHandBySumCandidates(state, context, effect).length > 0
+      return effect.cardCount === undefined
+        ? getBreakToHandBySumCandidates(state, context, effect).length > 0
+        : findBreakToHandBySumSelection(state, context, effect) !== null
     }
     if (effect.kind === 'hand-to-break-by-level-sum') {
       return getHandToBreakBySumCandidates(state, context, effect).length > 0

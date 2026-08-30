@@ -531,6 +531,28 @@ function App() {
           )
         },
       ),
+    onPlayExtraDeckCookie: (instanceId) =>
+      match.dispatch(
+        {
+          kind: 'play-extra-deck-cookie',
+          playerId: match.activePlayer.id,
+          instanceId,
+        },
+        'EXTRA 餅乾已登場並配置 HP。',
+        (nextGame) => {
+          if (nextGame.pendingRefresh) return
+          pending.beginCookieSkill(
+            nextGame,
+            nextGame.players[match.activePlayer.id].battleArea.find(
+              (cookie) => cookie.card.instanceId === instanceId,
+            )?.card,
+            match.activePlayer.id,
+            'on-play',
+            'OnPlay 登場觸發',
+            true,
+          )
+        },
+      ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
       setSpecialPlayCandidateId(null)

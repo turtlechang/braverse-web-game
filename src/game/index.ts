@@ -24,6 +24,7 @@ export {
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
@@ -68,6 +69,24 @@ export {
 } from './demo'
 export type { DeckConfig } from './demo'
 export { createSeededRandom, createSeededShuffle } from './helpers'
+export {
+  EXTRA_DECK_MAX_CARDS,
+  EXTRA_DECK_MAX_COPIES_PER_CARD,
+  reorderExtraDeck,
+  validateExtraDeck,
+} from './extra-deck'
+export type { ExtraDeckValidationResult } from './extra-deck'
+export {
+  BS8_CANDIDATE_STAGING_KIND,
+  createBs8CandidateStagingPlayerSetup,
+  getBs8CandidateExtraDeckCardDefinitions,
+  isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
+} from './bs8-candidate-staging'
+export type {
+  Bs8CandidateStagingDeck,
+  Bs8CandidateStagingDeckValidation,
+} from './bs8-candidate-staging'
 export { getLegalTurnCommands } from './legal-actions'
 export { createPlayerView } from './player-view'
 export type {
@@ -262,8 +281,10 @@ export type {
 } from './battle'
 export {
   canSpecialPlayCookie,
+  canPlayExtraDeckCookie,
   attackCookie,
   deployCookie,
+  playExtraDeckCookie,
   placeSupportCard,
   replaceDefeatedCookie,
   skipDefeatedCookieReplacement,
@@ -366,6 +387,7 @@ export type {
   EffectTargetSelectorSide,
   EffectTargetSide,
   EnergyColor,
+  ExtraDeckCard,
   InspectDeckRestDestination,
   EnergyCost,
   BattleToBreakEffect,
@@ -462,6 +484,7 @@ export type {
   ActivateStageCommand,
   AttackCommand,
   DeployCookieCommand,
+  PlayExtraDeckCookieCommand,
   DrawMulliganCompensationCommand,
   ForceMulliganOpeningHandCommand,
   KeepOpeningHandCommand,

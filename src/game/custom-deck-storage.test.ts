@@ -106,6 +106,24 @@ describe('custom deck storage', () => {
     expect(loadCustomDecks()).toHaveLength(2)
   })
 
+  it('duplicateCustomDeck preserves the explicit candidate-staging marker and extra deck', () => {
+    const source: CustomDeck = {
+      ...createDeck('candidate-source', 'BS8 候選驗收'),
+      candidateStaging: {
+        kind: 'bs8-candidate-staging',
+        extraDeckEntries: [{ cardNumber: 'BS8-005', count: 2 }],
+      },
+    }
+    saveCustomDecks([source])
+
+    const { newDeck } = duplicateCustomDeck('candidate-source')
+
+    expect(newDeck?.candidateStaging).toEqual(source.candidateStaging)
+    expect(newDeck?.candidateStaging?.extraDeckEntries).not.toBe(
+      source.candidateStaging!.extraDeckEntries,
+    )
+  })
+
   it('duplicateCustomDeck returns null for an unknown deck id', () => {
     saveCustomDecks([createDeck('only', '唯一牌組')])
 

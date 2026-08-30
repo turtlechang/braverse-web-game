@@ -1,5 +1,9 @@
 import { GameRuleError } from './errors'
 import { findCardIndex, updatePlayer } from './helpers'
+import {
+  isExtraDeckPlayRequirementMet,
+  materializeExtraDeckCookie,
+} from './extra-deck'
 import { getRefreshCandidates } from './refresh'
 import type { GameState } from './types'
 import { finishWithDefeat } from './victory'
@@ -138,6 +142,7 @@ export const canSpecialPlayCookie = (
     return Boolean(
       card &&
         card.type === 'cookie' &&
+        !card.extraDeckOrigin &&
         cost &&
         canPayTrashBattleCookieCost(cost, state.players[playerId].battleArea),
     )
@@ -169,6 +174,10 @@ export const deployCookie = (
 
   if (!card || card.type !== 'cookie') {
     throw new GameRuleError('只能從手牌登場餅乾卡。')
+  }
+
+  if (card.extraDeckOrigin) {
+    throw new GameRuleError('EXTRA 餅乾只能從 EXTRA Deck 登場。')
   }
 
   if (specialPlayCookieInstanceId !== undefined) {
@@ -204,6 +213,10 @@ export const deployCookie = (
     throw new GameRuleError('Invalid Cookie deployment.')
   }
 
+  if (deploymentCard.extraDeckOrigin) {
+    throw new GameRuleError('EXTRA 餅乾只能從 EXTRA Deck 登場。')
+  }
+
   const availableHpCards = player.deck.slice(0, deploymentCard.hp)
   const updatedState = updatePlayer(deploymentState, {
     ...player,
@@ -217,6 +230,8 @@ export const deployCookie = (
         rested: false,
         battleEntryId:
           `${deploymentCard.instanceId}:battle:${deploymentState.nextBattleEntrySequence}`,
+        enteredFrom: 'hand',
+        enteredTurn: deploymentState.turnNumber,
       },
     ],
   })
@@ -235,6 +250,204 @@ export const deployCookie = (
           : null,
     },
     player.id,
+    {
+      targetInstanceId: deploymentCard.instanceId,
+      amount: deploymentCard.hp - availableHpCards.length,
+    },
+  )
+}
+
+const getExtraDeckCardForPlay = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  instanceId: string,
+) => {
+  assertActiveGame(state)
+
+  if (state.activePlayerId !== playerId) {
+    throw new GameRuleError('只能由目前回合的玩家使用自己的 EXTRA Deck。')
+  }
+
+  if (state.phase !== 'main') {
+    throw new GameRuleError('只能在主要階段從 EXTRA Deck 登場餅乾。')
+  }
+
+  if (state.extraDeckPlayUsedThisTurn) {
+    throw new GameRuleError('每回合只能從 EXTRA Deck 登場一張餅乾。')
+  }
+
+  const player = state.players[playerId]
+  const card = (player.extraDeck ?? []).find(
+    (candidate) => candidate.instanceId === instanceId,
+  )
+  if (!card) {
+    throw new GameRuleError('找不到要從 EXTRA Deck 登場的餅乾。')
+  }
+
+  if (!isExtraDeckPlayRequirementMet(state, playerId, card)) {
+    throw new GameRuleError('尚未符合此 EXTRA 餅乾的登場條件。')
+  }
+
+  const isAwaken =
+    card.extraDeckPlayMode === 'awaken' || card.type === 'awakened'
+  if (isAwaken) {
+    if (!getAwakenTarget(state, playerId, card)) {
+      throw new GameRuleError('尚未符合此 Awakened 餅乾的覆蓋目標條件。')
+    }
+  } else if (player.battleArea.length >= 2) {
+    throw new GameRuleError('戰鬥區最多只能有兩隻餅乾。')
+  }
+
+  return card
+}
+
+/**
+ * Rules §4-9 的「placing its Awakened Cookie card on top of it」目標裁決。
+ * 逐卡條件的名稱與出牌來源在 adapter 資料化，沒有 UI／AI 卡號分支。
+ */
+const getAwakenTarget = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  card: import('./types').ExtraDeckCard,
+) => {
+  const requirement = card.awakenRequirement
+  if (!requirement) return undefined
+
+  return state.players[playerId].battleArea.find(
+    (target) =>
+      target.card.extraDeckOrigin !== 'awakened' &&
+      target.card.name === requirement.targetName &&
+      target.enteredFrom === requirement.playedFrom &&
+      target.enteredTurn === state.turnNumber,
+  )
+}
+
+/** 綜合規則 6-5-2-2 的直接登場型 EXTRA Cookie 路徑。 */
+export const canPlayExtraDeckCookie = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  instanceId: string,
+): boolean => {
+  try {
+    const card = getExtraDeckCardForPlay(state, playerId, instanceId)
+    materializeExtraDeckCookie(card)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const playExtraDeckCookie = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  instanceId: string,
+): GameState => {
+  const extraDeckCard = getExtraDeckCardForPlay(state, playerId, instanceId)
+  const deploymentCard = materializeExtraDeckCookie(extraDeckCard)
+  const player = state.players[playerId]
+  const isAwaken = deploymentCard.extraDeckOrigin === 'awakened'
+
+  if (isAwaken) {
+    const target = getAwakenTarget(state, playerId, extraDeckCard)
+    if (!target) {
+      throw new GameRuleError('尚未符合此 Awakened 餅乾的覆蓋目標條件。')
+    }
+
+    const hpBonus = deploymentCard.awakenHpBonus
+    if (!hpBonus || hpBonus < 1) {
+      throw new GameRuleError('Awakened 餅乾缺少 HP+N 資料。')
+    }
+
+    const availableHpCards = player.deck.slice(0, hpBonus)
+    const replacedBattleArea = player.battleArea.map((cookie) =>
+      cookie.card.instanceId === target.card.instanceId
+        ? {
+            card: deploymentCard,
+            hpCards: [...cookie.hpCards, ...availableHpCards],
+            rested: false,
+            battleEntryId:
+              `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
+            enteredFrom: 'extra-deck' as const,
+            enteredTurn: state.turnNumber,
+            awakenedUnderlay: [
+              target.card,
+              ...(target.awakenedUnderlay ?? []),
+            ],
+            ...(target.equippedCards?.length
+              ? { equippedCards: target.equippedCards }
+              : {}),
+          }
+        : cookie,
+    )
+    const updatedState = clearDepartedCookieModifiers(
+      updatePlayer(state, {
+        ...player,
+        deck: player.deck.slice(hpBonus),
+        extraDeck: (player.extraDeck ?? []).filter(
+          (candidate) => candidate.instanceId !== instanceId,
+        ),
+        battleArea: replacedBattleArea,
+      }),
+    )
+
+    return resolveDeckExhaustion(
+      {
+        ...updatedState,
+        extraDeckPlayUsedThisTurn: true,
+        nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+        pendingOnPlay:
+          hasCookieOnPlayEffects(deploymentCard)
+            ? {
+                playerId,
+                sourceInstanceId: deploymentCard.instanceId,
+                origin: 'extra-deck',
+              }
+            : null,
+      },
+      playerId,
+      {
+        targetInstanceId: deploymentCard.instanceId,
+        amount: hpBonus - availableHpCards.length,
+      },
+    )
+  }
+
+  const availableHpCards = player.deck.slice(0, deploymentCard.hp)
+  const updatedState = updatePlayer(state, {
+    ...player,
+    deck: player.deck.slice(deploymentCard.hp),
+    extraDeck: (player.extraDeck ?? []).filter(
+      (candidate) => candidate.instanceId !== instanceId,
+    ),
+    battleArea: [
+      ...player.battleArea,
+      {
+        card: deploymentCard,
+        hpCards: availableHpCards,
+        rested: false,
+        battleEntryId:
+          `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
+        enteredFrom: 'extra-deck',
+        enteredTurn: state.turnNumber,
+      },
+    ],
+  })
+
+  return resolveDeckExhaustion(
+    {
+      ...updatedState,
+      extraDeckPlayUsedThisTurn: true,
+      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+      pendingOnPlay:
+        hasCookieOnPlayEffects(deploymentCard)
+          ? {
+              playerId,
+              sourceInstanceId: deploymentCard.instanceId,
+              origin: 'extra-deck',
+            }
+          : null,
+    },
+    playerId,
     {
       targetInstanceId: deploymentCard.instanceId,
       amount: deploymentCard.hp - availableHpCards.length,
@@ -287,6 +500,10 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須從手牌選擇一張餅乾補充戰鬥區。')
   }
 
+  if (card.extraDeckOrigin) {
+    throw new GameRuleError('EXTRA 餅乾只能從 EXTRA Deck 登場。')
+  }
+
   const availableHpCards = player.deck.slice(0, card.hp)
   const updatedState = updatePlayer(state, {
     ...player,
@@ -300,6 +517,8 @@ export const replaceDefeatedCookie = (
         rested: false,
         battleEntryId:
           `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
+        enteredFrom: 'hand',
+        enteredTurn: state.turnNumber,
       },
     ],
   })
@@ -386,12 +605,11 @@ export const attackCookie = (
   supportPaymentIds: string[],
 ): GameState => {
   assertActiveGame(state)
-  return resolveBattleAutomatically(
-    beginAttack(
-      state,
-      attackerInstanceId,
-      targetInstanceId,
-      supportPaymentIds,
-    ),
+  const declared = beginAttack(
+    state,
+    attackerInstanceId,
+    targetInstanceId,
+    supportPaymentIds,
   )
+  return declared.pendingBattle ? resolveBattleAutomatically(declared) : declared
 }

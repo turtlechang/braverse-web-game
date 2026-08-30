@@ -2,11 +2,15 @@ import { randomInt } from 'node:crypto'
 import {
   GameRuleError,
   applyGameCommand,
+  createBs8CandidateStagingPlayerSetup,
   createDeckFromCustomDeck,
   createGame,
   createSeededShuffle,
+  isBs8CandidateStagingDeck,
   maskGameStateForViewer,
+  validateBs8CandidateStagingDeck,
   validateCustomDeck,
+  type Bs8CandidateStagingDeck,
   type CustomDeck,
   type GameCard,
   type GameCommand,
@@ -31,10 +35,13 @@ const ROOM_CODE_LENGTH = 4
 /** 公開決策提示的伺服器權威倒數；不直接替玩家自動選擇，只提供同步期限。 */
 export const PUBLIC_INTENT_DEADLINE_MS = 45_000
 
+export type RoomEnvironment = 'standard' | 'bs8-candidate-staging'
+export type RoomDeck = CustomDeck | Bs8CandidateStagingDeck
+
 export interface RoomSlot {
   playerId: PlayerId
   playerName: string
-  deck: CustomDeck
+  deck: RoomDeck
   send: (data: string) => void
 }
 
@@ -54,6 +61,8 @@ interface RoomOpeningState {
 
 export interface Room {
   code: string
+  /** Candidate rooms are explicitly partitioned from Standard rooms. */
+  environment: RoomEnvironment
   status: RoomStatus
   playerOne: RoomSlot
   playerTwo: RoomSlot | null
@@ -81,15 +90,27 @@ export class RoomStore {
     return code
   }
 
-  createRoom(
-    deck: CustomDeck,
-    send: (data: string) => void,
-    playerName = 'Player One',
-  ): Room {
-    const validation = validateCustomDeck(deck.entries)
+  private environmentFor(deck: RoomDeck): RoomEnvironment {
+    return isBs8CandidateStagingDeck(deck)
+      ? 'bs8-candidate-staging'
+      : 'standard'
+  }
+
+  private validateDeckForEnvironment(deck: RoomDeck): void {
+    const validation = isBs8CandidateStagingDeck(deck)
+      ? validateBs8CandidateStagingDeck(deck)
+      : validateCustomDeck(deck.entries, { format: deck.format })
     if (!validation.isValid) {
       throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
     }
+  }
+
+  createRoom(
+    deck: RoomDeck,
+    send: (data: string) => void,
+    playerName = 'Player One',
+  ): Room {
+    this.validateDeckForEnvironment(deck)
     if (!isValidOnlinePlayerName(playerName)) {
       throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
     }
@@ -97,6 +118,7 @@ export class RoomStore {
     const code = this.generateCode()
     const room: Room = {
       code,
+      environment: this.environmentFor(deck),
       status: 'waiting',
       playerOne: {
         playerId: 'player-one',
@@ -120,7 +142,7 @@ export class RoomStore {
 
   joinRoom(
     code: string,
-    deck: CustomDeck,
+    deck: RoomDeck,
     send: (data: string) => void,
     seed: number = Date.now(),
     playerName = 'Player Two',
@@ -133,10 +155,14 @@ export class RoomStore {
       throw new RoomNotJoinableError('這個房間已經無法加入。')
     }
 
-    const validation = validateCustomDeck(deck.entries)
-    if (!validation.isValid) {
-      throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
+    if (this.environmentFor(deck) !== room.environment) {
+      throw new GameRuleError(
+        room.environment === 'bs8-candidate-staging'
+          ? '候選驗收房間只能加入同一種 BS8 候選驗收牌組。'
+          : 'Standard 房間不能加入 BS8 候選驗收牌組。',
+      )
     }
+    this.validateDeckForEnvironment(deck)
     if (!isValidOnlinePlayerName(playerName)) {
       throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
     }
@@ -178,17 +204,26 @@ export class RoomStore {
     }
 
     const shuffle = createSeededShuffle(room.seed)
+    const toSetup = (slot: RoomSlot) => {
+      if (room.environment === 'bs8-candidate-staging') {
+        if (!isBs8CandidateStagingDeck(slot.deck)) {
+          throw new GameRuleError('候選驗收房間的牌組標記不一致。')
+        }
+        return {
+          ...createBs8CandidateStagingPlayerSetup(slot.deck, slot.playerId),
+          name: slot.playerName,
+        }
+      }
+      return {
+        id: slot.playerId,
+        name: slot.playerName,
+        deck: createDeckFromCustomDeck(slot.deck, slot.playerId),
+      }
+    }
+
     room.state = createGame(
-      {
-        id: 'player-one',
-        name: room.playerOne.playerName,
-        deck: createDeckFromCustomDeck(room.playerOne.deck, 'player-one'),
-      },
-      {
-        id: 'player-two',
-        name: room.playerTwo.playerName,
-        deck: createDeckFromCustomDeck(room.playerTwo.deck, 'player-two'),
-      },
+      toSetup(room.playerOne),
+      toSetup(room.playerTwo),
       firstPlayerId,
       shuffle,
     )

@@ -192,7 +192,11 @@ export const describeEffect = (effect: CardEffect) => {
     return `從支援區選最多 ${effect.amount} 張餅乾登場。`
   }
   if (effect.kind === 'break-to-hand-by-level-sum') {
-    return `從 break 區選擇餅乾，等級總和需為 ${effect.targetSum}，返回手牌。`
+    const count = effect.cardCount === undefined ? '餅乾' : `${effect.cardCount} 張餅乾`
+    const sum = effect.targetSumMode === 'at-most'
+      ? `不得超過 ${effect.targetSum}`
+      : `需為 ${effect.targetSum}`
+    return `從 break 區選擇${count}，等級總和${sum}，返回手牌。`
   }
   if (effect.kind === 'hand-to-break-by-level-sum') {
     return `從手牌選擇餅乾，等級總和需恰好為 ${effect.targetSum}，放入休息區。`

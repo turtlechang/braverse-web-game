@@ -618,6 +618,15 @@ export function OnlineBattleView({
         },
         '新餅乾已登場並配置 HP。',
       ),
+    onPlayExtraDeckCookie: (instanceId) =>
+      match.dispatch(
+        {
+          kind: 'play-extra-deck-cookie',
+          playerId: match.activePlayer.id,
+          instanceId,
+        },
+        'EXTRA 餅乾已登場並配置 HP。',
+      ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
       setSpecialPlayCandidateId(null)

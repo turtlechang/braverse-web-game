@@ -14,6 +14,7 @@ import {
   type CardEffect,
   type GameCard,
   type GameState,
+  canPlayExtraDeckCookie,
 } from '.'
 import {
   P_CONDITION_CARD_NUMBERS,
@@ -23,6 +24,7 @@ import {
   createBlueOptionalCostAttackDemoState,
   createAiDiscardRevealDemoState,
   createBs2015CostDepartureDemoState,
+  createBs8ExtraDeckDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
   createBs5CroissantEndPhaseDemoState,
@@ -164,6 +166,35 @@ describe('parseTestStateConfig', () => {
   it('returns null when localhost but no test-state param', () => {
     const result = parseTestStateConfig('', 'localhost')
     expect(result).toBeNull()
+  })
+
+  it('parses BS8 EXTRA Deck positive and blocked test-state routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs8-extra-deck:met', 'localhost'),
+    ).toEqual({ kind: 'bs8-extra-deck', conditionMet: true })
+    expect(
+      parseTestStateConfig('?test-state=bs8-extra-deck:unmet', 'localhost'),
+    ).toEqual({ kind: 'bs8-extra-deck', conditionMet: false })
+    expect(
+      parseTestStateConfig('?test-state=bs8-extra-deck:met', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('creates a BS8 EXTRA Deck Browser fixture with a truthful positive or blocked entry condition', () => {
+    const met = createBs8ExtraDeckDemoState(true)
+    const unmet = createBs8ExtraDeckDemoState(false)
+    const playerOne = met.players['player-one']
+    if (!playerOne) throw new Error('BS8 fixture must provide player one')
+    const avatar = playerOne.extraDeck?.[0]
+    if (!avatar) throw new Error('BS8 fixture must provide Avatar of Ruin')
+    const instanceId = avatar.instanceId
+
+    expect(avatar).toMatchObject({
+      id: 'BS8-005',
+      name: 'Avatar of Ruin Cookie',
+    })
+    expect(canPlayExtraDeckCookie(met, 'player-one', instanceId)).toBe(true)
+    expect(canPlayExtraDeckCookie(unmet, 'player-one', instanceId)).toBe(false)
   })
 
   it('parses both BS2-015 post-cost test-state routes on localhost', () => {

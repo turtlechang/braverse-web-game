@@ -27,10 +27,15 @@ import type {
   CustomDeck,
 } from './custom-deck'
 import { createDeckFromCustomDeck } from './custom-deck'
+import {
+  createBs8CandidateStagingPlayerSetup,
+  isBs8CandidateStagingDeck,
+} from './bs8-candidate-staging'
 import type {
   CardEffect,
   CookieCard,
   EnergyColor,
+  ExtraDeckCard,
   GameCard,
   GameState,
   PendingBattle,
@@ -184,6 +189,7 @@ export const parseTestStateConfig = (
   | { kind: 'trap-pretzel'; attack: 4 | 5 }
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
+  | { kind: 'bs8-extra-deck'; conditionMet: boolean }
   | { kind: 'support-to-trash-skill' }
   | { kind: 'blue-activate-skill'; payable: boolean }
   | { kind: 'blue-optional-cost-attack'; payable: boolean }
@@ -318,6 +324,12 @@ export const parseTestStateConfig = (
   }
   if (testState === 'attack-effect') {
     return { kind: 'attack-effect' }
+  }
+  if (testState === 'bs8-extra-deck:met') {
+    return { kind: 'bs8-extra-deck', conditionMet: true }
+  }
+  if (testState === 'bs8-extra-deck:unmet') {
+    return { kind: 'bs8-extra-deck', conditionMet: false }
   }
   if (testState === 'st3-002-skill') {
     return { kind: 'support-to-trash-skill' }
@@ -634,13 +646,22 @@ export const createDemoSetupGame = (
     playerChoice === 'custom' && playerCustomDeck
       ? createDeckFromCustomDeck(playerCustomDeck, 'player-one')
       : DECK_CREATORS[builtInPlayerChoice]('player-one')
+  const playerSetup =
+    playerChoice === 'custom' &&
+    playerCustomDeck &&
+    isBs8CandidateStagingDeck(playerCustomDeck)
+      ? {
+          ...createBs8CandidateStagingPlayerSetup(playerCustomDeck, 'player-one'),
+          name: '玩家',
+        }
+      : {
+          id: 'player-one' as const,
+          name: '玩家',
+          deck: playerDeck,
+        }
 
   return createGame(
-    {
-      id: 'player-one',
-      name: '玩家',
-      deck: playerDeck,
-    },
+    playerSetup,
     {
       id: 'player-two',
       name: 'AI 對手',
@@ -846,6 +867,114 @@ export const createAttackEffectDemoState = (): GameState => {
       attackEffects: wizard.attackEffects ?? [],
       attackEffectIndex: 0,
     },
+  }
+}
+
+/**
+ * 僅供 localhost Browser A/B 使用的 BS8 EXTRA fixture。它不讀候選 JSON、
+ * 不加入 generated card pool，也不代表正式牌組可以構築；權威轉接仍在
+ * convertOfficialCardToExtraDeckCard 的單元測試中驗證。
+ */
+export const createBs8ExtraDeckDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const p1Deck = DECK_CREATORS.red('player-one')
+  const p2Deck = DECK_CREATORS.red('player-two')
+  const p1Cookie = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+  const p2Cookie = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+  const usedP1 = new Set([p1Cookie.instanceId])
+  const usedP2 = new Set([p2Cookie.instanceId])
+  const p1HpCard = p1Deck.find((card) => !usedP1.has(card.instanceId))!
+  usedP1.add(p1HpCard.instanceId)
+  const p2HpCards = p2Deck
+    .filter((card) => !usedP2.has(card.instanceId))
+    .slice(0, 2)
+  p2HpCards.forEach((card) => usedP2.add(card.instanceId))
+  const avatar: ExtraDeckCard = {
+    id: 'BS8-005',
+    instanceId: 'bs8-005-demo-avatar',
+    name: 'Avatar of Ruin Cookie',
+    type: 'extra',
+    officialType: 'extra',
+    cardColor: 'red',
+    energyColor: 'red',
+    level: 3,
+    hp: 5,
+    attack: 3,
+    attackCost: 3,
+    attackEnergyCost: { red: 3 },
+    playRequirement: {
+      kind: 'cookies-fainted-this-turn-at-least',
+      side: 'self',
+      count: 2,
+    },
+    skill: {
+      trigger: 'on-play',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'Deals 1 damage to all of your opponent\'s Cookies.',
+      effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    },
+  }
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((card) => !usedP1.has(card.instanceId)),
+        extraDeck: [avatar],
+        battleArea: [
+          {
+            card: p1Cookie,
+            hpCards: [p1HpCard],
+            rested: false,
+            battleEntryId: `${p1Cookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((card) => !usedP2.has(card.instanceId)),
+        battleArea: [
+          {
+            card: p2Cookie,
+            hpCards: p2HpCards,
+            rested: false,
+            battleEntryId: `${p2Cookie.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    extraDeckPlayUsedThisTurn: false,
+    cookiesFaintedThisTurn: {
+      'player-one': conditionMet ? 2 : 1,
+      'player-two': 0,
+    },
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingRefresh: null,
+    pendingBattle: null,
   }
 }
 

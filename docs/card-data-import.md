@@ -124,6 +124,16 @@ npm run cards:analyze:bs7
 
 匯入指令會建立 `data/candidates/official-arena-of-glory-bs7.en.json` 與 `docs/bs7-card-inventory.md`，供官方更新重新進入候選流程；目前正式效果覆蓋報告由 `npm run cards:analyze:bs7` 從 `data/cards/official-arena-of-glory-bs7.en.json` 產生。未來候選仍須完成 strict contract、逐色正反 Browser gate、正式 smoke 與人工覆核，才可將 `candidateStatus` 改為 `promotion-ready` 並 promote。
 
+BS8「Land of Fire & Ruin, Realm of Apathy」目前僅完成候選盤點，不可 promote：
+
+```bash
+npm run cards:import:bs8-candidate
+npm run cards:analyze:bs8-candidate
+npm run validate:candidate
+```
+
+匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`。目前快照有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組。專用 `convertOfficialCardToExtraDeckCard` 已轉接五個基礎 EXTRA 卡號；BS8-005／069／090 有直接登場核心 TDD，且戰場提供持有者私密卡面與 localhost-only `met`／`unmet` Browser A/B；BS8-027／104 已依官方規則與 FAQ 實作 Awakened 覆蓋、`HP+2`、裝備／暫時效果與昏厥去向的純規則 TDD。尚無自訂牌組、BS8 AI 策略、雙瀏覽器線上與逐卡 Browser gate；即使 `validate:candidate` 通過也只代表來源與結構正確，不得改寫 `candidateStatus` 或執行 `promote:candidate`。
+
 以下 serial gate 段落保留各卡在逐卡稽核當時的候選資料與 `inventory` 狀態；其中「候選仍為 `inventory`／不可 promote」是當時的歷史狀態，不代表目前。BS7 已於 2026-08-22 完成 promotion，現在以正式卡池為準。BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
 
 ```bash

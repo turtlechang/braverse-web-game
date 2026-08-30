@@ -4,6 +4,10 @@ import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import { validateCustomDeck } from '../game/custom-deck'
+import {
+  isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
+} from '../game/bs8-candidate-staging'
 import { getDeckFormatLabel } from '../game/deck-rules'
 
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
@@ -48,6 +52,7 @@ interface MainMenuProps {
   onOpenOnlineMatch: () => void
   onOpenTestScenario: () => void
   onCreateDeck: () => void
+  onCreateBs8CandidateDeck?: () => void
   onEditDeck: (deck: CustomDeck) => void
   onDuplicateDeck: (deck: CustomDeck) => void
   onDeleteDeck: (deck: CustomDeck) => void
@@ -76,6 +81,7 @@ export function MainMenu({
   onOpenOnlineMatch,
   onOpenTestScenario,
   onCreateDeck,
+  onCreateBs8CandidateDeck,
   onEditDeck,
   onDuplicateDeck,
   onDeleteDeck,
@@ -275,9 +281,11 @@ export function MainMenu({
           ) : (
             <div className="main-menu-deck-list">
               {decks.map((deck) => {
-                const validation = validateCustomDeck(deck.entries, {
-                  format: deck.format,
-                })
+                const validation = isBs8CandidateStagingDeck(deck)
+                  ? validateBs8CandidateStagingDeck(deck)
+                  : validateCustomDeck(deck.entries, {
+                      format: deck.format,
+                    })
                 return (
                   <article
                     key={deck.id}
@@ -292,7 +300,10 @@ export function MainMenu({
                       className="main-menu-deck-select"
                       onClick={() => onSelectDeck(deck.id)}
                     >
-                      <strong>{deck.name}</strong>
+                      <strong>
+                        {isBs8CandidateStagingDeck(deck) ? '[BS8 候選驗收] ' : ''}
+                        {deck.name}
+                      </strong>
                       <span
                         title={
                           validation.isValid
@@ -362,6 +373,16 @@ export function MainMenu({
               <RefreshCw aria-hidden="true" />
               重新讀取
             </button>
+            {onCreateBs8CandidateDeck && (
+              <button
+                type="button"
+                data-testid="open-bs8-candidate-deck-editor"
+                onClick={onCreateBs8CandidateDeck}
+              >
+                <FlaskConical aria-hidden="true" />
+                BS8 候選 EXTRA 驗收
+              </button>
+            )}
           </nav>
         </details>
         <p className="main-menu-disclaimer">

@@ -216,7 +216,7 @@ export const resolveInspectDeck = (
 
   if (pending.pickDestination === 'battle') {
     for (const pickedCard of pickedCards) {
-      if (pickedCard.type !== 'cookie') {
+      if (pickedCard.type !== 'cookie' || pickedCard.extraDeckOrigin) {
         throw new GameRuleError('只有 Cookie 可以直接登場。')
       }
       const hpCards = player.deck.slice(
@@ -234,6 +234,8 @@ export const resolveInspectDeck = (
             hpCards,
             rested: false,
             battleEntryId: `${pickedCard.instanceId}:battle:${state.nextBattleEntrySequence + playedCookies.length - 1}`,
+            enteredFrom: 'hand',
+            enteredTurn: state.turnNumber,
           },
         ],
       }

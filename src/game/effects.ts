@@ -3,6 +3,7 @@ export {
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getCookieOwnerId,

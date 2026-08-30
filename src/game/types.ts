@@ -68,6 +68,8 @@ export interface CardSkill {
   oncePerGame?: boolean
   /** 技能來源在休息區時才能發動（BS3-025）；一般技能只看戰鬥區。 */
   fromBreakArea?: boolean
+  /** On Play only resolves when the Cookie entered battle from its owner's break area. */
+  onPlayFromBreakArea?: boolean
   fromTrashArea?: boolean
   fromSupportArea?: boolean
 }
@@ -144,6 +146,13 @@ export interface CookieCard extends BaseCard {
   nonAttackable?: boolean
   attackText?: string
   attackEffects?: CardEffect[]
+  /** Awakened 卡面上的 HP+N；實際 HP 由底卡剩餘 HP 加上這個數量。 */
+  awakenHpBonus?: number
+  /**
+   * 此餅乾原本由 EXTRA Deck 進入戰鬥區。它離開戰鬥區後仍保留此標記，
+   * 以落實綜合規則 6-5-2-3：不得再從手牌、棄牌區、休息區或支援區登場。
+   */
+  extraDeckOrigin?: 'extra' | 'awakened'
 }
 
 export interface NonCookieCard extends BaseCard {
@@ -152,11 +161,65 @@ export interface NonCookieCard extends BaseCard {
 
 export type GameCard = CookieCard | NonCookieCard
 
+/**
+ * BS8 EXTRA Deck 的卡片模型刻意不納入 `GameCard`。
+ *
+ * 覆蓋、主動登場、離場與效果結算尚未取得完整官方裁決；在那些規則完成前，
+ * 型別隔離可避免 EXTRA 卡被錯誤移入主牌組、手牌或戰鬥區。
+ */
+export interface ExtraDeckCard {
+  /** 官方的 base card number；同卡號的構築上限以此欄位計算。 */
+  id: string
+  instanceId: string
+  name: string
+  type: 'extra' | 'awakened'
+  imageUrl?: string
+  cardColor?: CardColor
+  officialType?: 'extra' | 'awakened'
+  energyColor?: EnergyColor | 'wild'
+  keywords?: CardKeyword[]
+  effectText?: string
+  skill?: CardSkill
+  level?: number
+  hp?: number
+  attack?: number
+  attackCost?: number
+  attackEnergyCost?: EnergyCost
+  attackText?: string
+  attackEffects?: CardEffect[]
+  /** Awakened 卡面上的 HP+N；不等同於一般登場所需的完整 HP。 */
+  awakenHpBonus?: number
+  /** 卡面要求的登場前置條件；未填表示沒有額外條件。 */
+  playRequirement?: EffectCondition
+  /**
+   * `extra` 卡型未必代表直接進入戰鬥區：BS8 的部分卡會改為 Awaken 疊放。
+   * Awaken 會依 `awakenRequirement` 對本回合指定來源的同名 Cookie 覆蓋；
+   * 不得由 UI 或 AI 以卡號特判目標。
+   */
+  extraDeckPlayMode?: 'enter-battle' | 'awaken'
+  /**
+   * Awaken 的逐卡目標契約。這是卡面文字加上綜合規則 §4-9 的資料化結果，
+   * 不是 UI 或 AI 的卡號特判。
+   */
+  awakenRequirement?: {
+    targetName: string
+    playedFrom: 'break' | 'trash'
+  }
+}
+
 export interface CookieInBattle {
   card: CookieCard
   hpCards: GameCard[]
   rested: boolean
   battleEntryId?: string
+  /** 此次登場的來源與回合，供「本回合從某區登場」的 Awaken 條件精確比對。 */
+  enteredFrom?: 'hand' | 'trash' | 'support' | 'break' | 'extra-deck'
+  enteredTurn?: number
+  /**
+   * Awakened 卡覆蓋的底卡。Awakened Cookie 昏厥時依 Rules §9-4-2 進 trash；
+   * 一般出牌不會寫入此欄位。
+   */
+  awakenedUnderlay?: CookieCard[]
   /** Item cards attached by an Equip effect. They leave with this Cookie. */
   equippedCards?: GameCard[]
 }
@@ -214,6 +277,8 @@ export interface EffectTargetSelector {
   noSkillOnly?: boolean
   /** Nested `Then` effects may reuse the cards selected by the immediately preceding effect. */
   previousEffectTargetOnly?: boolean
+  /** Restricts a chained cross-zone selection to the preceding card's printed level. */
+  sameLevelAsPreviousEffectTarget?: boolean
 }
 
 export interface BreakLevelCondition {
@@ -303,6 +368,12 @@ export interface BattleAreaHasCookieWithLevelCondition {
   kind: 'battle-area-has-cookie-with-level'
   side: EffectTargetSide
   level: number
+}
+
+/** 戰鬥區中存在來源以外的任一張餅乾（BS8-009）。 */
+export interface BattleAreaHasAnotherCookieCondition {
+  kind: 'battle-area-has-another-cookie'
+  side: EffectTargetSide
 }
 
 /** 場上有指定顏色的餅乾（BS4-003 的「if there is another {R} Cookie in your battle area」）。 */
@@ -585,6 +656,7 @@ export type EffectCondition =
   | AttackerLevelAtMostCondition
   | OpponentBattleAreaCookieCountCondition
   | BattleAreaHasCookieWithLevelCondition
+  | BattleAreaHasAnotherCookieCondition
   | BattleAreaHasColorCondition
   | BattleAreaHasKeywordCondition
   | BreakAreaHasCardCondition
@@ -688,8 +760,13 @@ export interface ModifyAttackByBreakCountEffect {
   target: EffectTargetSelector
   duration: EffectDuration
   perCount: number
-  /** 每滿 N 張休息區卡才套用一次 perCount，預設 1（即「for each」）；官方文字「for every N」時設為 N */
+  /** 每滿 N 個計數單位才套用一次 perCount，預設 1（即「for each」）。 */
   groupSize?: number
+  /**
+   * 計數的是休息區卡張數（預設）或休息區已累積的總 LV.；後者用於
+   * BS8-009「For each 3 levels your break area has reached」。
+   */
+  countMode?: 'cards' | 'break-level'
   minBreakLevel?: number
   exactBreakLevel?: number
   breakEnergyColor?: EnergyColor
@@ -799,6 +876,8 @@ export interface BreakToTrashEffect {
   maxLevel?: number
   /** 指定卡牌不得作為休息區目標（例如 BS6-091 的 Schneeball Cookie）。 */
   excludeCardId?: string
+  /** BS8-035: only Cookies sharing the preceding trash-to-break card's level are legal. */
+  sameLevelAsPreviousEffectTarget?: boolean
   condition?: EffectCondition
 }
 
@@ -806,6 +885,8 @@ export interface BreakToTrashEffect {
 export interface TrashToBreakEffect {
   kind: 'trash-to-break'
   amount: number
+  /** 指名卡名的休息區搬移（BS8-027）。 */
+  cardName?: string
   energyColor?: EnergyColor
   exactLevel?: number
   maxLevel?: number
@@ -936,7 +1017,12 @@ export interface TrashToBattleEffect {
   amount: number
   /** "Play up to N" permits resolving with no selected card. */
   optional?: boolean
+  /** Restricts the returned Cookie to the printed card name. */
+  cardName?: string
+  /** Excludes a printed card name from an otherwise legal trash selector. */
+  excludeCardName?: string
   exactLevel?: number
+  minLevel?: number
   maxLevel?: number
   /** Restricts the printed HP value of the Cookie card in the trash. */
   maxHp?: number
@@ -1086,6 +1172,8 @@ export interface DisableAttackEffect {
 export interface SetActiveEffect {
   kind: 'set-active'
   supportCount: number
+  /** Restricts selectable/readied support cards to an official energy colour. */
+  energyColor?: EnergyColor
   /** When true, the controller chooses the support cards instead of using engine order. */
   selectable?: boolean
   /** When false, the declared number of rested support cards must be chosen. */
@@ -1212,6 +1300,35 @@ export interface StageSourceToTrashEffect {
 export interface SetCookieActiveEffect {
   kind: 'set-cookie-active'
   target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+/**
+ * Marks a battle Cookie so it remains rested during its controller's next
+ * Active Phase (BS8-079／083). The mark is consumed at that phase rather than
+ * using a turn number, because each player has their own next Active Phase.
+ */
+export interface PreventCookieActiveNextPhaseEffect {
+  kind: 'prevent-cookie-active-next-phase'
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+/** Marks an opponent support card so it remains rested during its next Active Phase (BS8-042). */
+export interface PreventSupportActiveNextPhaseEffect {
+  kind: 'prevent-support-active-next-phase'
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+/**
+ * 休息中的來源會要求對手在宣告攻擊前棄置手牌。這是戰鬥宣告門檻，不是
+ * 攻擊後效果；付款完成後才建立 `pendingBattle`（BS8-084）。
+ */
+export interface RequireOpponentAttackDiscardHandEffect {
+  kind: 'require-opponent-attack-discard-hand'
+  count: number
+  whileSourceRested?: boolean
   condition?: EffectCondition
 }
 
@@ -1392,6 +1509,8 @@ export interface TrashToHandEffect {
   cookieOnly?: boolean
   keyword?: CardKeyword
   maxLevel?: number
+  /** Excludes a printed card name from an otherwise legal trash selector. */
+  excludeCardName?: string
 }
 
 export interface TrashToDeckEffect {
@@ -1422,6 +1541,10 @@ export interface BreakToBattleEffect {
   maxLevel?: number
   energyColor?: EnergyColor
   keyword?: CardKeyword
+  /** Restricts a break-area revival to the printed Cookie name (BS8-032／034). */
+  cardName?: string
+  /** Uses a stated HP count instead of the revived Cookie's printed HP (BS8-034). */
+  hpCount?: number
 }
 
 /** 從自己支援區選餅乾登場戰鬥區（BS4-058），跟 break-to-battle 同一種形狀，只是來源區不同。 */
@@ -1450,6 +1573,10 @@ export interface BreakToHandBySumEffect {
   kind: 'break-to-hand-by-level-sum'
   targetSum: number
   energyColor?: EnergyColor
+  /** Defaults to an exact total; BS8-031 uses the printed "or lower" bound. */
+  targetSumMode?: 'exact' | 'at-most'
+  /** When printed, requires exactly this many Cookies instead of any valid sum. */
+  cardCount?: number
 }
 
 export interface FlipToSupportEffect {
@@ -1598,6 +1725,9 @@ export type CardEffect =
   | EquipSourceEffect
   | TransferHpEffect
   | SetCookieActiveEffect
+  | PreventCookieActiveNextPhaseEffect
+  | PreventSupportActiveNextPhaseEffect
+  | RequireOpponentAttackDiscardHandEffect
   | DrawUpToBattleCookieCountEffect
   | DrawUpToBreakCookieCountEffect
   | TrashToDeckAllEffect
@@ -1906,6 +2036,11 @@ export interface PlayerState {
   id: PlayerId
   name: string
   deck: GameCard[]
+  /**
+   * 獨立於 60 張主牌組，不會被洗入、抽入或 Refresh。
+   * Optional preserves pre-BS8 replay snapshots; `createGame` always writes `[]`.
+   */
+  extraDeck?: ExtraDeckCard[]
   hand: GameCard[]
   battleArea: CookieInBattle[]
   supportArea: SupportCard[]
@@ -2018,6 +2153,16 @@ export interface PendingOpponentHandDiscard {
    * 提示，讓玩家感覺是同一個效果的兩個步驟，而不是兩個互不相關的彈窗。
    */
   chainedFromDrawUpTo?: boolean
+  /**
+   * BS8-084 的攻擊宣告前門檻。手牌棄置完成後，commands 只能以這個已保存的
+   * 宣告重新進入 battle pipeline，不能由 UI 直接略過付款或任意改目標。
+   */
+  attackDeclaration?: {
+    attackerPlayerId: PlayerId
+    attackerInstanceId: string
+    targetInstanceId: string
+    supportPaymentIds: string[]
+  }
 }
 
 /**
@@ -2102,6 +2247,10 @@ export interface GameState {
   attackCostModifiers?: AttackCostModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
+  /** Battle Cookie instanceIds that must remain rested during each owner's next Active Phase. */
+  preventCookieActiveNextPhase?: Partial<Record<PlayerId, string[]>>
+  /** Support-card instanceIds that must remain rested during each owner's next Active Phase. */
+  preventSupportActiveNextPhase?: Partial<Record<PlayerId, string[]>>
   attackDisabledUntilTurn?: Record<string, number>
   blockDisabledUntilTurn?: Partial<Record<PlayerId, number>>
   pendingReplacement: PendingReplacement | null
@@ -2109,7 +2258,7 @@ export interface GameState {
   pendingOnPlay?: {
     playerId: PlayerId
     sourceInstanceId: string
-    origin?: 'hand' | 'trash' | 'support' | 'break'
+    origin?: 'hand' | 'trash' | 'support' | 'break' | 'extra-deck'
   } | null
   pendingDrawUpTo?: {
     playerId: PlayerId
@@ -2291,6 +2440,8 @@ export interface GameState {
   cookiesGainedHpThisTurn?: Partial<Record<PlayerId, boolean>>
   /** 各玩家本回合是否曾從棄牌區讓餅乾登場（BS6-107）。每回合開始時重置。 */
   cookiesPlayedFromTrashThisTurn?: Partial<Record<PlayerId, boolean>>
+  /** 綜合規則 6-5-2-2：目前回合是否已從 EXTRA Deck 登場一張卡。 */
+  extraDeckPlayUsedThisTurn?: boolean
 }
 
 /**
@@ -2385,6 +2536,8 @@ export interface PlayerSetup {
   id: PlayerId
   name: string
   deck: GameCard[]
+  /** Optional to preserve BS1–BS7 setup fixtures and replay snapshots. */
+  extraDeck?: ExtraDeckCard[]
 }
 
 export type Shuffle = (cards: GameCard[]) => GameCard[]

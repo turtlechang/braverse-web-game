@@ -968,6 +968,8 @@ export const describeCommand = (
     }
     case 'deploy-cookie':
       return `${actor} 部署了「${findCardName(state, command.instanceId)}」`
+    case 'play-extra-deck-cookie':
+      return `${actor} 從 EXTRA Deck 部署了「${findCardName(next, command.instanceId)}」`
     case 'place-support':
       return `${actor} 放置了支援卡「${findCardName(state, command.instanceId)}」`
     case 'play-item':
@@ -1294,6 +1296,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
 
   'place-support': 'deploy',
   'deploy-cookie': 'deploy',
+  'play-extra-deck-cookie': 'deploy',
   'play-stage': 'deploy',
   'replace-cookie': 'deploy',
   'skip-replacement': 'system',
@@ -2002,6 +2005,8 @@ export const resolveLogCard = (
     case 'select-starting-cookie':
     case 'replace-cookie':
       return findCard(previous, command.instanceId)
+    case 'play-extra-deck-cookie':
+      return findCard(next, command.instanceId)
     case 'refresh-deck':
       return findCard(previous, command.cookieInstanceId)
     case 'attack':

@@ -496,6 +496,7 @@ const commandShapes = {
     requiredStrings: ['instanceId'],
     requiredStringArrays: ['paymentIds'],
   },
+  'play-extra-deck-cookie': { requiredStrings: ['instanceId'] },
   'activate-stage': {
     requiredStringArrays: ['paymentIds'],
     optionalStringArrays: [

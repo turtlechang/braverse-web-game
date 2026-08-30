@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { GameCard, PlayerId } from '../game'
 
-export type BattleResourceKind = 'deck' | 'stage' | 'break'
+export type BattleResourceKind = 'deck' | 'stage' | 'break' | 'extra'
 
 interface HpPileInfo {
   title: string

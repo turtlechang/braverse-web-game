@@ -59,7 +59,9 @@
 - **[已確認]** 牌組可以混用所有顏色。
 - **[已確認]** 正式賽事另有禁卡與限卡表；禁卡不可放入牌組，限卡最多 1 張。
 - **[專案資料快照]** `standard` 使用 ASIA 亞洲版 2026-02-13 版本化禁限卡表，資料保存在 [`data/rules/asia-banlist-2026-02-13.json`](../data/rules/asia-banlist-2026-02-13.json)。中文交叉索引為 [BraverseFan 禁限卡表](https://braversefan.com/cookierun/banlist/)，實際裁決仍以[官方亞洲區公告](https://cookierunbraverse.com/asia/notice/detail?id=1380)為準；`open` 不套用此表。
-- **[待確認]** EXTRA 卡、特殊賽制及 2026 年後新增卡種對牌組構築的完整影響。
+- **[已確認；Comprehensive Rules v1.8 §5-1-1]** 每位玩家另備 1 組最多 6 張的 EXTRA Deck；它只可包含【EXTRA】或【Awakened】餅乾卡，可為 0 張，且不屬於 60 張主牌組、FLIP 上限或起始手牌來源。
+- **[已確認；Comprehensive Rules v1.8 §2-11、§5-1-1-4]** EXTRA Deck 與主牌組各自都不得有超過 4 張同一卡號。執行期以 `ExtraDeckCard.id`（官方 base card number）計數。
+- **[已確認；Comprehensive Rules v1.8 §2-4-2-2、§3-5-5-1、§4-9、§4-12-2、§9-4-2；官方 FAQ `q=Awaken`]** Awakened 依卡牌資料的覆蓋目標與來源條件登場；它繼承底卡剩餘 HP 後再加上 `HP +N` 的牌庫 HP 卡、覆蓋後成為活動狀態、既有裝備維持附著，且覆蓋前套用的效果不保留。Awakened 昏厥時，Awakened 本體進入 Break，其餘底卡、HP 與裝備進入 Trash。BS8-027／104 已有核心 TDD 覆蓋；官方尚未明示的非昏厥離場情境，仍須依個別卡牌來源裁決，不能自行推定。EXTRA 卡的禁限表適用與特殊賽制亦保留逐卡／賽制確認；完整範圍見 [BS8 EXTRA Deck 規則裁決矩陣](bs8-extra-deck-ruling-matrix.md)。
 
 ## 3. 卡牌種類
 
@@ -106,6 +108,7 @@
 - **[已確認] 牌庫（Deck）**：面朝下放置牌組。
 - **[已確認] 手牌（Hand）**：只有持有者可查看。
 - **[已確認] 棄牌區（Trash / Discard Pile）**：放置已使用、被棄置或從 HP 卡堆移出的卡牌。
+- **[已確認；Comprehensive Rules v1.8 §3-1、§3-9] EXTRA Deck**：以 `PlayerState.extraDeck` 保存獨立的 0–6 張 `ExtraDeckCard`。此區始終面朝下且為私密區；持有者可隨時查看並自由重排，雙方則必須可確認張數。`PlayerView`、線上遮罩與 `reorderExtraDeck` 依此資訊邊界實作；它不會洗入主牌庫。直接登場 EXTRA 與 Awakened 均只在出牌時 materialize 成帶 `extraDeckOrigin` 的 `CookieCard`，且不能由其他區域重新登場；已支援 BS8-005／069／090 的直接登場與 BS8-027／104 的 Awakened 核心流程。
 - **[已確認]** 官方 Play Guide 將戰鬥區與場景區合稱為「場上（Field）」。
 
 ## 5. 開局流程
@@ -142,6 +145,7 @@
 
 - **[已確認]** 玩家可以依任意順序執行可用動作。
 - **[已確認]** 可從手牌登場餅乾，但戰鬥區不得超過 2 張。
+- **[已確認；Comprehensive Rules v1.8 §6-5-2-2]** 回合玩家在自己的主要階段，每回合可從自己的 EXTRA Deck 出牌一次已滿足條件的 EXTRA 或 Awakened 餅乾；EXTRA／Awakened 的出牌條件與代價為規則程序，且不得從其他區域登場（§6-5-2-2-1、§6-5-2-3）。`play-extra-deck-cookie` 已支援 BS8-005／069／090 的直接登場，以及 BS8-027／104 的 Awakened 覆蓋流程；其餘 BS8 EXTRA／Awakened 卡仍須逐卡建立嚴格契約與瀏覽器驗收。
 - **[已確認]** 可使用道具、場景、餅乾技能及卡牌效果。
 - **[已確認]** 可使用符合條件且仍為活躍狀態的餅乾攻擊。
 - **[已確認]** 先攻玩家第一回合不能攻擊；後攻玩家的第一回合可以攻擊。

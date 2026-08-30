@@ -3,6 +3,7 @@ import {
   advanceBattleAfterTrap,
   advanceAttackEffect,
   beginAttack,
+  beginAttackAfterRequiredHandDiscard,
   finishBattle,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
@@ -36,6 +37,7 @@ import {
 } from './effects'
 import {
   attackCookie,
+  playExtraDeckCookie,
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
@@ -384,6 +386,13 @@ export interface DeployCookieCommand {
   specialPlayCookieInstanceId?: string
 }
 
+/** 從持有者自己的 EXTRA Deck 直接登場一張非 Awaken 型餅乾。 */
+export interface PlayExtraDeckCookieCommand {
+  kind: 'play-extra-deck-cookie'
+  playerId: PlayerId
+  instanceId: string
+}
+
 export interface AttackCommand {
   kind: 'attack'
   playerId: PlayerId
@@ -639,6 +648,7 @@ export type PlayerActionCommand =
   | AdvancePhaseCommand
   | PlaceSupportCommand
   | DeployCookieCommand
+  | PlayExtraDeckCookieCommand
   | AttackCommand
   | DeclareAttackCommand
   | ActivateSkillCommand
@@ -1129,11 +1139,18 @@ const applyPendingDecisionCommand = (
       })
     case 'resolve-opponent-hand-discard': {
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
+      const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
       const resolved = resolveOpponentHandDiscard(
         state,
         command.playerId,
         command.cardIds,
       )
+      if (attackDeclaration) {
+        if (attackDeclaration.attackerPlayerId !== command.playerId) {
+          throw new GameRuleError('不是目前可繼續宣告攻擊的玩家。')
+        }
+        return beginAttackAfterRequiredHandDiscard(resolved, attackDeclaration)
+      }
       const activeBattle = resolved.pendingBattle
       if (
         activeBattle &&
@@ -1956,10 +1973,20 @@ const resolvePendingAbilityEffect = (
           // 其他技能效果不會設定這個欄位。
         }
       : pendingWithConditionalThen
-  const pendingWithResolvedPreviousTarget =
-    effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
-      ? { ...pendingWithAttackHandToBreak, previousEffectTargetIds: undefined }
+  const nextEffect = pending.effects[pending.effectIndex + 1]
+  const pendingWithLinkedPreviousTarget =
+    nextEffect?.kind === 'break-to-trash' &&
+    nextEffect.sameLevelAsPreviousEffectTarget
+      ? {
+          ...pendingWithAttackHandToBreak,
+          previousEffectTargetIds: [...new Set(targetIds)],
+        }
       : pendingWithAttackHandToBreak
+  const pendingWithResolvedPreviousTarget =
+    (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly) ||
+    (effect.kind === 'break-to-trash' && effect.sameLevelAsPreviousEffectTarget)
+      ? { ...pendingWithLinkedPreviousTarget, previousEffectTargetIds: undefined }
+      : pendingWithLinkedPreviousTarget
   const resolvedWithAttackHandToBreak =
     pendingWithAttackHandToBreak !== pendingWithConditionalThen &&
     state.pendingBattle
@@ -2043,6 +2070,9 @@ const applyPlayerActionCommand = (
         command.instanceId,
         command.specialPlayCookieInstanceId,
       )
+    case 'play-extra-deck-cookie':
+      requireActivePlayer(state, command.playerId)
+      return playExtraDeckCookie(state, command.playerId, command.instanceId)
     case 'attack':
       requireActivePlayer(state, command.playerId)
       return attackCookie(

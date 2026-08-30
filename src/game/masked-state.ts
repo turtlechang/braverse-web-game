@@ -1,5 +1,11 @@
 import { getOpponentId } from './helpers'
-import type { GameCard, GameState, PlayerId, PlayerState } from './types'
+import type {
+  ExtraDeckCard,
+  GameCard,
+  GameState,
+  PlayerId,
+  PlayerState,
+} from './types'
 
 /**
  * 線上對戰的遮罩版 GameState:型別上仍是完整 GameState,讓既有戰場 UI/規則函式
@@ -19,10 +25,24 @@ const createHiddenCard = (label: string, index: number): GameCard => ({
 const maskCards = (cards: GameCard[], label: string): GameCard[] =>
   cards.map((_, index) => createHiddenCard(label, index))
 
+const createHiddenExtraCard = (label: string, index: number): ExtraDeckCard => ({
+  id: 'hidden-extra',
+  instanceId: `${label}-${index}`,
+  name: '???',
+  type: 'extra',
+})
+
+const maskExtraDeck = (
+  cards: ExtraDeckCard[],
+  label: string,
+): ExtraDeckCard[] =>
+  cards.map((_, index) => createHiddenExtraCard(label, index))
+
 const maskPlayerState = (player: PlayerState): PlayerState => ({
   ...player,
   hand: maskCards(player.hand, `${player.id}-hidden-hand`),
   deck: maskCards(player.deck, `${player.id}-hidden-deck`),
+  extraDeck: maskExtraDeck(player.extraDeck ?? [], `${player.id}-hidden-extra`),
   battleArea: player.battleArea.map((entry) => ({
     ...entry,
     hpCards: maskCards(

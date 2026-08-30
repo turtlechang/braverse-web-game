@@ -131,6 +131,29 @@ describe('online protocol validation', () => {
     ).toBe(false)
   })
 
+  it('accepts a well-formed EXTRA deployment command and rejects malformed ids', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-extra-deck-cookie',
+          playerId: 'player-one',
+          instanceId: 'bs8-avatar-extra',
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-extra-deck-cookie',
+          playerId: 'player-one',
+          instanceId: 42,
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts per-effect trap targets and rejects non-string matrix entries', () => {
     expect(
       isClientMessage({

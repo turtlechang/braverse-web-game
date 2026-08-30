@@ -1,7 +1,11 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
 import type { CustomDeck } from '../../game'
-import { validateCustomDeck } from '../../game'
+import {
+  isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
+  validateCustomDeck,
+} from '../../game'
 import { useOnlineMatch } from '../../hooks/useOnlineMatch'
 import { ONLINE_PLAYER_NAME_MAX_LENGTH } from '../../net/onlineProtocol'
 import { onlineMatchStatusLabels, matchEndedReasonLabels } from '../gameUiLabels'
@@ -23,9 +27,11 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
 
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
   const selectedDeckValidation = selectedDeck
-    ? validateCustomDeck(selectedDeck.entries, {
-        format: selectedDeck.format,
-      })
+    ? isBs8CandidateStagingDeck(selectedDeck)
+      ? validateBs8CandidateStagingDeck(selectedDeck)
+      : validateCustomDeck(selectedDeck.entries, {
+          format: selectedDeck.format,
+        })
     : null
 
   const handleClose = () => {
@@ -141,7 +147,9 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
                   </option>
                   {decks.map((deck) => (
                     <option key={deck.id} value={deck.id}>
-                      {deck.name}
+                      {isBs8CandidateStagingDeck(deck)
+                        ? `[BS8 候選驗收] ${deck.name}`
+                        : deck.name}
                     </option>
                   ))}
                 </select>

@@ -242,7 +242,18 @@ function EffectPanelContent({
         ? { min: 0, max: currentEffect.amount }
         : currentEffect?.kind === 'hand-to-break-by-level-sum' ||
           currentEffect?.kind === 'break-to-hand-by-level-sum'
-          ? { min: 1, max: candidateCards.length }
+          ? {
+              min:
+                currentEffect.kind === 'break-to-hand-by-level-sum' &&
+                currentEffect.cardCount !== undefined
+                  ? currentEffect.cardCount
+                  : 1,
+              max:
+                currentEffect.kind === 'break-to-hand-by-level-sum' &&
+                currentEffect.cardCount !== undefined
+                  ? currentEffect.cardCount
+                  : candidateCards.length,
+            }
         : currentEffect?.kind === 'hand-to-break' ||
             currentEffect?.kind === 'break-to-hand' ||
             currentEffect?.kind === 'rest-support'
@@ -363,6 +374,10 @@ function EffectPanelContent({
         )
     : 0
 
+  const isAtMostLevelSum =
+    currentEffect?.kind === 'break-to-hand-by-level-sum' &&
+    currentEffect.targetSumMode === 'at-most'
+
   const targetReady =
     !showTargetSelection ||
     (isRestSupportAndDamageEffect
@@ -372,7 +387,15 @@ function EffectPanelContent({
             selectedDamageTargetIds.size <= currentEffect.target.max,
         )
       : isLevelSumEffect
-      ? selectedLevelSum === currentEffect.targetSum
+      ? Boolean(
+          pendingEffect &&
+            selectionLimits &&
+            pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
+            pendingEffect.selectedTargetIds.length <= selectionLimits.max &&
+            (isAtMostLevelSum
+              ? selectedLevelSum <= currentEffect.targetSum
+              : selectedLevelSum === currentEffect.targetSum),
+        )
       : !selectionLimits ||
         Boolean(
           pendingEffect &&
@@ -941,7 +964,8 @@ function EffectPanelContent({
                 {currentEffect.kind === 'hand-to-break-by-level-sum' ||
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>
-                    已選等級總和 {selectedLevelSum}／{currentEffect.targetSum}
+                    已選等級總和 {selectedLevelSum}／
+                    {isAtMostLevelSum ? '最多 ' : ''}{currentEffect.targetSum}
                   </small>
                 ) : currentEffect.kind === 'rest-support-and-damage' ? (
                   <small>

@@ -5,6 +5,7 @@ import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   getBreakToTrashCandidates,
+  findBreakToHandBySumSelection,
   getCookieOwnerId,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
@@ -114,6 +115,10 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if (effect.kind === 'break-to-hand-by-level-sum') {
+    return findBreakToHandBySumSelection(state, context, effect) ?? []
+  }
+
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     return getEffectSelectionCandidates(state, context, effect)
       .slice(0, 1)
@@ -1322,7 +1327,8 @@ const universalChooseEffectTargets = (
     effect.kind === 'field-to-trash' ||
     effect.kind === 'field-to-deck-bottom' ||
     effect.kind === 'split-damage' ||
-    effect.kind === 'opponent-break-to-trash-then-battle-to-break'
+    effect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
+    effect.kind === 'break-to-hand-by-level-sum'
   ) {
     return legacyChooseEffectTargets(state, context, effect)
   }

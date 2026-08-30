@@ -23,11 +23,22 @@ export interface CustomDeckEntry {
   count: number
 }
 
+/**
+ * Opt-in metadata for decks that may be used only by the BS8 candidate
+ * acceptance environment.  Standard deck creation, export, and rooms do not
+ * infer this state from card numbers.
+ */
+export interface CandidateStagingDeckConfig {
+  kind: 'bs8-candidate-staging'
+  extraDeckEntries: CustomDeckEntry[]
+}
+
 export interface CustomDeck {
   id: string
   name: string
   entries: CustomDeckEntry[]
   format?: DeckFormat
+  candidateStaging?: CandidateStagingDeckConfig
   createdAt: string
   updatedAt: string
 }
@@ -64,10 +75,18 @@ interface CustomDeckStorage {
 const isCustomDeckShape = (value: unknown): value is CustomDeck => {
   if (typeof value !== 'object' || value === null) return false
   const deck = value as Partial<CustomDeck>
+  const candidateStaging = deck.candidateStaging
+  const hasValidCandidateStaging =
+    candidateStaging === undefined ||
+    (typeof candidateStaging === 'object' &&
+      candidateStaging !== null &&
+      candidateStaging.kind === 'bs8-candidate-staging' &&
+      Array.isArray(candidateStaging.extraDeckEntries))
   return (
     typeof deck.id === 'string' &&
     typeof deck.name === 'string' &&
-    Array.isArray(deck.entries)
+    Array.isArray(deck.entries) &&
+    hasValidCandidateStaging
   )
 }
 
@@ -132,6 +151,16 @@ export const duplicateCustomDeck = (
     name: `${source.name}（複製）`,
     entries: source.entries.map((entry) => ({ ...entry })),
     format: source.format ?? DEFAULT_DECK_FORMAT,
+    ...(source.candidateStaging
+      ? {
+          candidateStaging: {
+            kind: source.candidateStaging.kind,
+            extraDeckEntries: source.candidateStaging.extraDeckEntries.map(
+              (entry) => ({ ...entry }),
+            ),
+          },
+        }
+      : {}),
     createdAt: now,
     updatedAt: now,
   }

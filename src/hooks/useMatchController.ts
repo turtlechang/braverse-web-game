@@ -44,6 +44,7 @@ import {
 } from '../game'
 import {
   createAttackEffectDemoState,
+  createBs8ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
   createBlueActivateSkillDemoState,
@@ -173,6 +174,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'attack-effect') {
       return createAttackEffectDemoState()
+    }
+    if (testStateConfig?.kind === 'bs8-extra-deck') {
+      return createBs8ExtraDeckDemoState(testStateConfig.conditionMet)
     }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return createSupportToTrashSkillDemoState()
@@ -370,6 +374,11 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'attack-effect') {
       return '測試狀態：Wizard Cookie 攻擊後續效果。'
+    }
+    if (testStateConfig?.kind === 'bs8-extra-deck') {
+      return testStateConfig.conditionMet
+        ? '測試狀態：BS8-005 已滿足從 EXTRA Deck 登場條件。'
+        : '測試狀態：BS8-005 尚未滿足從 EXTRA Deck 登場條件。'
     }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return '測試狀態：ST3-002 支援卡代價技能。'

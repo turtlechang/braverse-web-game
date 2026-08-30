@@ -31,6 +31,7 @@ import {
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
+import { getAwakenedFaintTrashCards } from './extra-deck'
 import { hasPendingCardResolution } from './pending'
 import {
   canPayTrashBattleCookieCost,
@@ -211,11 +212,52 @@ export const getForcedAttackTargetId = (
   })?.card.instanceId
 }
 
-export const beginAttack = (
+const getAttackDiscardRequirement = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+): {
+  count: number
+  sourceInstanceId: string
+  sourceCardName: string
+} | null => {
+  const defenderPlayerId = getOpponentId(attackerPlayerId)
+  const requirements = state.players[defenderPlayerId].battleArea.flatMap(
+    (cookie) => {
+      const skill = cookie.card.skill
+      if (!skill) return []
+      const context: EffectContext = {
+        sourcePlayerId: defenderPlayerId,
+        sourceInstanceId: cookie.card.instanceId,
+        sourceCardName: cookie.card.name,
+      }
+      return [...skill.effects, ...(skill.passiveEffects ?? [])].flatMap(
+        (effect) =>
+          effect.kind === 'require-opponent-attack-discard-hand' &&
+          (!effect.whileSourceRested || cookie.rested) &&
+          isEffectConditionMet(state, context, effect)
+            ? [{
+                count: effect.count,
+                sourceInstanceId: cookie.card.instanceId,
+                sourceCardName: cookie.card.name,
+              }]
+            : [],
+      )
+    },
+  )
+  if (requirements.length === 0) return null
+  return {
+    count: requirements.reduce((total, requirement) => total + requirement.count, 0),
+    sourceInstanceId: requirements[0].sourceInstanceId,
+    sourceCardName: requirements[0].sourceCardName,
+  }
+}
+
+const beginAttackInternal = (
   state: GameState,
   attackerInstanceId: string,
   targetInstanceId: string,
   supportPaymentIds: string[],
+  skipRequiredHandDiscard = false,
 ): GameState => {
   assertNoBlockingDecision(state)
 
@@ -260,6 +302,34 @@ export const beginAttack = (
   )
   if (!paymentValidation.valid) {
     throw new GameRuleError(`Invalid attack payment: ${paymentValidation.reason}`)
+  }
+
+  const discardRequirement = skipRequiredHandDiscard
+    ? null
+    : getAttackDiscardRequirement(state, attackerPlayer.id)
+  if (discardRequirement) {
+    if (attackerPlayer.hand.length < discardRequirement.count) {
+      throw new GameRuleError(
+        `無法宣告攻擊：必須先棄置 ${discardRequirement.count} 張手牌。`,
+      )
+    }
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId: attackerPlayer.id,
+        count: discardRequirement.count,
+        sourcePlayerId: defenderPlayerId,
+        sourceInstanceId: discardRequirement.sourceInstanceId,
+        sourceCardName: discardRequirement.sourceCardName,
+        effectText: 'attack-required-discard',
+        attackDeclaration: {
+          attackerPlayerId: attackerPlayer.id,
+          attackerInstanceId,
+          targetInstanceId,
+          supportPaymentIds: [...supportPaymentIds],
+        },
+      },
+    }
   }
 
   const paymentSet = new Set(supportPaymentIds)
@@ -317,6 +387,30 @@ export const beginAttack = (
     },
   }
 }
+
+/** 公開攻擊入口：必要棄牌會先停在 pending decision，絕不提前橫置或付款。 */
+export const beginAttack = (
+  state: GameState,
+  attackerInstanceId: string,
+  targetInstanceId: string,
+  supportPaymentIds: string[],
+): GameState =>
+  beginAttackInternal(state, attackerInstanceId, targetInstanceId, supportPaymentIds)
+
+/** 僅供已完成 BS8-084 強制棄牌的 command continuation 使用。 */
+export const beginAttackAfterRequiredHandDiscard = (
+  state: GameState,
+  declaration: NonNullable<
+    NonNullable<GameState['pendingOpponentHandDiscard']>['attackDeclaration']
+  >,
+): GameState =>
+  beginAttackInternal(
+    state,
+    declaration.attackerInstanceId,
+    declaration.targetInstanceId,
+    declaration.supportPaymentIds,
+    true,
+  )
 
 const isTrapConditionMet = (
   state: GameState,
@@ -1810,7 +1904,10 @@ const removeFaintedCookie = (
             (cookie) => cookie.card.instanceId !== targetInstanceId,
           ),
           breakArea: [...player.breakArea, target.card],
-          discardPile: [...player.discardPile, ...(target.equippedCards ?? [])],
+          discardPile: [
+            ...player.discardPile,
+            ...getAwakenedFaintTrashCards(target, false),
+          ],
         },
       },
       pendingBattle: {
