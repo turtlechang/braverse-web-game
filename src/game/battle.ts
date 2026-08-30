@@ -41,6 +41,7 @@ import {
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
   markSupportAreaDecreased,
   payHpToHandCost,
@@ -180,13 +181,17 @@ const assertNoBlockingDecision = (state: GameState) => {
 
 const getEquipAttackEffects = (attacker: CookieInBattle): CardEffect[] =>
   (attacker.equippedCards ?? []).flatMap<CardEffect>((card) => {
+    const declaredEffects = card.item?.equippedAttackEffects ?? []
     if (card.id === 'BS3-066') {
-      return [{ kind: 'set-active', supportCount: 1, selectable: true }]
+      return [
+        ...declaredEffects,
+        { kind: 'set-active', supportCount: 1, selectable: true },
+      ]
     }
     if (card.id === 'BS3-091') {
-      return [{ kind: 'draw', amount: 1 }]
+      return [...declaredEffects, { kind: 'draw', amount: 1 }]
     }
-    return []
+    return declaredEffects
   })
 
 export const getForcedAttackTargetId = (
@@ -342,13 +347,17 @@ const beginAttackInternal = (
     sourcePlayerId: attackerPlayer.id,
     sourceInstanceId: attacker.card.instanceId,
   }
-  const trapsDisabled =
-    attacker.card.skill?.trigger === 'passive' &&
-    attacker.card.skill.effects.some(
-      (effect) =>
-        effect.kind === 'disable-traps' &&
-        isEffectConditionMet(state, attackContext, effect),
-    )
+  const equipAttackEffects = getEquipAttackEffects(attacker)
+  const trapsDisabled = [
+    ...(attacker.card.skill?.trigger === 'passive'
+      ? attacker.card.skill.effects
+      : []),
+    ...equipAttackEffects,
+  ].some(
+    (effect) =>
+      effect.kind === 'disable-traps' &&
+      isEffectConditionMet(state, attackContext, effect),
+  )
 
   return {
     ...state,
@@ -381,7 +390,7 @@ const beginAttackInternal = (
       faintedColors: [],
       attackEffects: [
         ...(attacker.card.attackEffects ?? []),
-        ...getEquipAttackEffects(attacker),
+        ...equipAttackEffects,
       ],
       attackEffectIndex: 0,
     },
@@ -445,6 +454,10 @@ const isTrapConditionMet = (
     // 自己的棄牌區，對應官方文字「if there are N cards or more in your
     // trash」的「your」。見 types.ts TrapCondition 上方註解；不要改成
     // getOpponentId(playerId)，那會破壞 BS2-080 等既有卡牌。
+    return state.players[playerId].discardPile.length >= condition.count
+  }
+
+  if (condition.kind === 'trash-count-at-least') {
     return state.players[playerId].discardPile.length >= condition.count
   }
 
@@ -2183,11 +2196,13 @@ const hasApplicableOptionalAttackEffect = (
   effects: CardEffect[],
   cost?: AbilityCost,
 ): boolean => {
-  // 「將此餅乾放到棄牌區／休息區」只能在攻擊來源仍位於自己的戰鬥區時
+  // 「將此餅乾放到棄牌區／休息區／牌庫底」只能在攻擊來源仍位於自己的戰鬥區時
   // 支付。攻擊途中來源可能先被 FLIP 效果擊倒（BS7-026 對 BS3-006）；
   // 此時不能再建立一個必定支付失敗的可選代價提示。
   if (
-    (cost?.selfToTrash === true || cost?.selfToBreakArea === true) &&
+    (cost?.selfToTrash === true ||
+      cost?.selfToBreakArea === true ||
+      cost?.selfToDeckBottom === true) &&
     !state.players[context.sourcePlayerId].battleArea.some(
       (cookie) => cookie.card.instanceId === context.sourceInstanceId,
     )
@@ -2593,8 +2608,9 @@ export const resolveAttackEffect = (
         sourceCardName: sourceCard?.name ?? 'Unknown',
         cost: effect.cost,
         effects: effect.effects,
-        effectText: effect.effectText,
-        sourceEnergy: effect.sourceEnergy,
+      effectText: effect.effectText,
+      sourceEnergy: effect.sourceEnergy,
+      mandatory: effect.mandatory,
       },
     }
   }
@@ -2754,6 +2770,9 @@ export const resolveOptionalCostAttack = (
     throw new GameRuleError('Invalid battle action.')
   }
   if (action === 'skip') {
+    if (pending.mandatory) {
+      throw new GameRuleError('此攻擊後續效果的代價必須支付。')
+    }
     const battle = requirePendingBattle(state)
     const nextIndex = battle.attackEffectIndex + 1
     const clearedState: GameState = { ...state, pendingOptionalCostAttack: null }
@@ -2783,8 +2802,7 @@ export const resolveOptionalCostAttack = (
   }
   const supportToHandCandidates = player.supportArea.filter(
     (support) =>
-      (pending.cost.supportToHandType === undefined ||
-        support.card.type === pending.cost.supportToHandType) &&
+      isSupportToHandCostCandidate(pending.cost, support) &&
       uniqueSupportToHandIds.includes(support.card.instanceId),
   )
   if (supportToHandCandidates.length !== supportToHandAmount) {
@@ -2891,6 +2909,7 @@ export const resolveOptionalCostAttack = (
   const effectContext = {
     sourcePlayerId: playerId,
     sourceInstanceId: pending.sourceInstanceId,
+    sourceCardName: pending.sourceCardName,
   }
   const applicableEffects = pending.effects.filter((effect) =>
     isEffectConditionMet(state, effectContext, effect),
@@ -2927,13 +2946,17 @@ export const resolveOptionalCostAttack = (
   )
   let playerAfterSourceCosts = hpToHandPayment.player
   const sourceToLeaveBattle =
-    pending.cost.selfToTrash || pending.cost.selfToBreakArea
+    pending.cost.selfToTrash ||
+    pending.cost.selfToBreakArea ||
+    pending.cost.selfToDeckBottom
       ? playerAfterSourceCosts.battleArea.find(
           (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
         )
       : undefined
   if (
-    (pending.cost.selfToTrash || pending.cost.selfToBreakArea) &&
+    (pending.cost.selfToTrash ||
+      pending.cost.selfToBreakArea ||
+      pending.cost.selfToDeckBottom) &&
     !sourceToLeaveBattle
   ) {
     throw new GameRuleError('Invalid battle action.')
@@ -2949,6 +2972,14 @@ export const resolveOptionalCostAttack = (
         ? {
             breakArea: [
               ...playerAfterSourceCosts.breakArea,
+              sourceToLeaveBattle.card,
+            ],
+          }
+        : {}),
+      ...(pending.cost.selfToDeckBottom
+        ? {
+            deck: [
+              ...playerAfterSourceCosts.deck,
               sourceToLeaveBattle.card,
             ],
           }
@@ -3655,8 +3686,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         .filter(
           (support) =>
             !paymentIds?.includes(support.card.instanceId) &&
-            (pending.cost.supportToHandType === undefined ||
-              support.card.type === pending.cost.supportToHandType),
+            isSupportToHandCostCandidate(pending.cost, support),
         )
         .slice(0, supportToHandAmount)
         .map((support) => support.card.instanceId)
@@ -4208,9 +4238,7 @@ export const resolveFaintEffect = (
       nextState,
       faint.context,
     ).filter(
-      (support) =>
-        faintCost.supportToHandType === undefined ||
-        support.card.type === faintCost.supportToHandType,
+      (support) => isSupportToHandCostCandidate(faintCost, support),
     )
     const supportToHandCandidateIds = new Set(
       supportToHandCandidates.map((support) => support.card.instanceId),

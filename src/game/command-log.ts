@@ -53,6 +53,54 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
 const findCardName = (state: GameState, instanceId: string): string =>
   findCard(state, instanceId)?.name ?? '未知卡牌'
 
+/** 公開 trace 需要說明來源本身離開了哪個區域；不能把自我移動吞成空白結算。 */
+const findCardZoneLabel = (
+  state: GameState,
+  instanceId: string,
+): string | undefined => {
+  for (const playerId of Object.keys(state.players) as PlayerId[]) {
+    const player = state.players[playerId]
+    if (player.hand.some((card) => card.instanceId === instanceId)) return '手牌'
+    if (player.deck.some((card) => card.instanceId === instanceId)) return '牌庫'
+    if (player.breakArea.some((card) => card.instanceId === instanceId)) return '休息區'
+    if (player.discardPile.some((card) => card.instanceId === instanceId)) return '棄牌區'
+    if (player.battleArea.some((entry) => entry.card.instanceId === instanceId)) {
+      return '戰鬥區'
+    }
+    if (player.supportArea.some((entry) => entry.card.instanceId === instanceId)) {
+      return '支援區'
+    }
+    if (player.stage?.card.instanceId === instanceId) return '場景區'
+  }
+  return undefined
+}
+
+const describeSourceMovementOutcome = (
+  previous: GameState,
+  next: GameState,
+  sourceInstanceId: string,
+  effects: CardEffect[],
+): LogStepDetail | undefined => {
+  if (
+    !effects.some(
+      (effect) =>
+        effect.kind === 'field-to-trash' ||
+        effect.kind === 'battle-to-break' ||
+        effect.kind === 'return-to-deck-bottom',
+    )
+  ) {
+    return undefined
+  }
+  const from = findCardZoneLabel(previous, sourceInstanceId)
+  const to = findCardZoneLabel(next, sourceInstanceId)
+  if (!from || !to || from === to) return undefined
+  const source = findCard(previous, sourceInstanceId) ?? findCard(next, sourceInstanceId)
+  return {
+    text: `效果結算：「${source?.name ?? '來源餅乾'}」從${from}送入${to}`,
+    cards: source ? [source] : undefined,
+  }
+}
+
 type PendingDrawUpTo = NonNullable<GameState['pendingDrawUpTo']>
 
 /** 將待處理抽牌的來源與條件寫成玩家看得懂的原因，避免只看到「抽了 N 張」。 */
@@ -1490,6 +1538,13 @@ export const describeCommandSteps = (
       if (trashToDeckStep) steps.push(trashToDeckStep)
       const selfTargetStep = describeCardListStep(state, '選擇自身目標', command.selfTargetIds)
       if (selfTargetStep) steps.push(selfTargetStep)
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        command.playerId,
+        trapCard?.type === 'trap' ? trapCard.trap?.effects ?? [] : [],
+      )
+      if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
     case 'activate-skill':
@@ -1555,6 +1610,13 @@ export const describeCommandSteps = (
         getResolvedEffects(previous, command),
       )
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
+      const sourceMovement = describeSourceMovementOutcome(
+        previous,
+        next,
+        command.sourceInstanceId,
+        getResolvedEffects(previous, command),
+      )
+      if (sourceMovement) steps.push(sourceMovement)
       return steps
     }
     case 'play-attack-response': {
@@ -1579,6 +1641,29 @@ export const describeCommandSteps = (
       )
       if (trashToDeckStep) steps.push(trashToDeckStep)
       return steps
+    }
+    case 'play-blocker': {
+      const steps: LogStepDetail[] = []
+      const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
+      if (paymentStep) steps.push(paymentStep)
+
+      const originalTargetId = previous.pendingBattle?.targetInstanceId
+      const redirectedTargetId = next.pendingBattle?.targetInstanceId
+      const originalTarget = originalTargetId ? findCard(previous, originalTargetId) : undefined
+      const redirectedTarget = redirectedTargetId
+        ? findCard(next, redirectedTargetId)
+        : undefined
+      if (originalTarget && redirectedTarget && originalTargetId !== redirectedTargetId) {
+        const sourceCard = findCard(previous, command.sourceInstanceId)
+        const cards = [sourceCard, originalTarget, redirectedTarget].filter(
+          (card): card is GameCard => card !== undefined,
+        )
+        steps.push({
+          text: `阻擋效果結果：攻擊目標從「${originalTarget.name}」改為「${redirectedTarget.name}」`,
+          cards: [...new Map(cards.map((card) => [card.instanceId, card])).values()],
+        })
+      }
+      return steps.length > 0 ? steps : undefined
     }
     case 'play-item':
     case 'begin-activate-stage':

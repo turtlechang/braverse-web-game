@@ -21,6 +21,7 @@ import {
 } from '../game/custom-deck'
 import {
   getCardPoolEntry,
+  getAllCardPoolEntries,
   normalizeCardNumber,
   type CardPoolEntry,
 } from '../game/card-pool'
@@ -33,7 +34,11 @@ import {
 import {
   BS8_CANDIDATE_STAGING_KIND,
   getBs8CandidateExtraDeckCardDefinitions,
+  getBs8CandidateMainDeckCardDefinition,
+  getBs8CandidateMainDeckCardDefinitions,
+  importBs8CandidateStagingDeck,
   isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
   type Bs8CandidateStagingDeck,
 } from '../game/bs8-candidate-staging'
 import { useDeckEditor } from '../hooks/useDeckEditor'
@@ -95,8 +100,11 @@ const SERIES_OPTIONS = [
   { value: 'BS4', label: 'BS4' },
   { value: 'BS5', label: 'BS5' },
   { value: 'BS6', label: 'BS6' },
+  { value: 'BS7', label: 'BS7' },
   { value: 'PROMOTION CARD', label: '特典卡' },
 ]
+
+const BS8_CANDIDATE_SERIES_OPTION = { value: 'BS8', label: 'BS8（候選驗收）' }
 
 const cardTypeLabel: Record<CardPoolEntry['type'], string> = {
   cookie: '餅乾',
@@ -165,7 +173,21 @@ export function DeckEditorPage({
   mode = 'standard',
 }: DeckEditorPageProps) {
   const isCandidateStaging = mode === 'bs8-candidate-staging'
-  const editor = useDeckEditor()
+  const seriesOptions = isCandidateStaging
+    ? [...SERIES_OPTIONS, BS8_CANDIDATE_SERIES_OPTION]
+    : SERIES_OPTIONS
+  const candidateMainPool = useMemo(
+    () => (isCandidateStaging ? getBs8CandidateMainDeckCardDefinitions() : []),
+    [isCandidateStaging],
+  )
+  const editorPool = useMemo(
+    () =>
+      isCandidateStaging
+        ? [...getAllCardPoolEntries(), ...candidateMainPool]
+        : undefined,
+    [candidateMainPool, isCandidateStaging],
+  )
+  const editor = useDeckEditor({ poolEntries: editorPool })
   const { loadDeck } = editor
   const [selectedCardNumber, setSelectedCardNumber] = useState<string | null>(null)
   const [candidateExtraDeckEntries, setCandidateExtraDeckEntries] = useState<CustomDeckEntry[]>(
@@ -189,6 +211,7 @@ export function DeckEditorPage({
             name: editor.deckName,
             format: editor.deckFormat,
             entries: editor.deckEntries,
+            ...(isCandidateStaging ? { candidateExtraDeckEntries: [] } : {}),
           },
     ),
   )
@@ -201,7 +224,7 @@ export function DeckEditorPage({
   const closeImportPanel = useCallback(() => {
     setShowImportPanel(false)
     setImportText('')
-  }, [])
+  }, [setImportText])
 
   const hasUnsavedChanges =
     JSON.stringify({
@@ -226,8 +249,34 @@ export function DeckEditorPage({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [closeImportPanel, showImportPanel])
 
+  const candidateDeckValidation = useMemo(
+    () =>
+      isCandidateStaging
+        ? validateBs8CandidateStagingDeck({
+            id: 'candidate-editor-preview',
+            name: editor.deckName,
+            entries: editor.deckEntries,
+            format: editor.deckFormat,
+            candidateStaging: {
+              kind: BS8_CANDIDATE_STAGING_KIND,
+              extraDeckEntries: candidateExtraDeckEntries,
+            },
+            createdAt: '',
+            updatedAt: '',
+          })
+        : editor.deckValidation,
+    [candidateExtraDeckEntries, editor.deckEntries, editor.deckFormat, editor.deckName, editor.deckValidation, isCandidateStaging],
+  )
   const filteredPool = editor.getFilteredPool()
-  const deckStats = editor.deckValidation.stats
+  const deckStats = candidateDeckValidation.stats
+  const getEditorPoolEntry = useCallback(
+    (cardNumber: string): CardPoolEntry | undefined =>
+      getCardPoolEntry(cardNumber) ??
+      (isCandidateStaging
+        ? getBs8CandidateMainDeckCardDefinition(cardNumber)
+        : undefined),
+    [isCandidateStaging],
+  )
   const activePoolFilterCount = [
     editor.filterType,
     editor.filterColor,
@@ -240,10 +289,10 @@ export function DeckEditorPage({
   const deckCards = useMemo(
     () =>
       editor.deckEntries.flatMap((entry) => {
-        const poolEntry = getCardPoolEntry(entry.cardNumber)
+        const poolEntry = getEditorPoolEntry(entry.cardNumber)
         return poolEntry ? [{ entry, poolEntry }] : []
       }),
-    [editor.deckEntries],
+    [editor.deckEntries, getEditorPoolEntry],
   )
   const mainDeckSections = useMemo(
     () =>
@@ -259,10 +308,10 @@ export function DeckEditorPage({
   )
   const selectedCard = useMemo(() => {
     if (selectedCardNumber) {
-      return getCardPoolEntry(selectedCardNumber) ?? null
+      return getEditorPoolEntry(selectedCardNumber) ?? null
     }
     return filteredPool[0] ?? null
-  }, [filteredPool, selectedCardNumber])
+  }, [filteredPool, getEditorPoolEntry, selectedCardNumber])
   const normalAttack = useMemo(
     () =>
       selectedCard?.type === 'cookie' && selectedCard.attackText
@@ -371,16 +420,12 @@ export function DeckEditorPage({
   }, [editor, hasUnsavedChanges, isCandidateStaging])
 
   const handleExport = useCallback(() => {
-    if (isCandidateStaging) {
-      showStatus('候選驗收牌組不可匯出為正式牌組 JSON')
-      return
-    }
     if (editor.deckEntries.length === 0) {
       showStatus('牌組是空的，無可匯出')
       return
     }
     const now = new Date().toISOString()
-    const deck: CustomDeck = {
+    const baseDeck: CustomDeck = {
       format: editor.deckFormat,
       id: `export-${Date.now()}`,
       name: editor.deckName || '未命名牌組',
@@ -388,14 +433,25 @@ export function DeckEditorPage({
       createdAt: now,
       updatedAt: now,
     }
+    const deck: CustomDeck | Bs8CandidateStagingDeck = isCandidateStaging
+      ? {
+          ...baseDeck,
+          candidateStaging: {
+            kind: BS8_CANDIDATE_STAGING_KIND,
+            extraDeckEntries: candidateExtraDeckEntries.map((entry) => ({ ...entry })),
+          },
+        }
+      : baseDeck
     navigator.clipboard.writeText(exportDeck(deck)).then(
-      () => showStatus('已複製牌組 JSON 到剪貼簿'),
+      () => showStatus(isCandidateStaging ? '已複製候選驗收牌組 JSON 到剪貼簿' : '已複製牌組 JSON 到剪貼簿'),
       () => showStatus('複製失敗，請改用匯入／匯出檔案功能'),
     )
-  }, [editor, isCandidateStaging])
+  }, [candidateExtraDeckEntries, editor, isCandidateStaging])
 
   const handleImport = () => {
-    const result = importDeck(importText, { format: editor.deckFormat })
+    const result = isCandidateStaging
+      ? importBs8CandidateStagingDeck(importText, { format: editor.deckFormat })
+      : importDeck(importText, { format: editor.deckFormat })
     if (result.error) {
       showStatus(result.error)
       return
@@ -408,6 +464,11 @@ export function DeckEditorPage({
       return
     }
     editor.loadDeck(result.deck)
+    if (isCandidateStaging && isBs8CandidateStagingDeck(result.deck)) {
+      setCandidateExtraDeckEntries(
+        result.deck.candidateStaging.extraDeckEntries.map((entry) => ({ ...entry })),
+      )
+    }
     closeImportPanel()
     showStatus(`已匯入牌組「${result.deck.name}」`)
   }
@@ -431,8 +492,8 @@ export function DeckEditorPage({
               <h1>牌組編輯器</h1>
             </div>
             <div className="deck-editor-page-validation deck-editor-page-header-validation" role="status">
-              <span className={editor.deckValidation.valid ? 'is-valid' : 'is-pending'}>
-                {editor.deckValidation.valid ? '牌組合法，可進入對戰' : '牌組尚未完成，仍可先儲存草稿'}
+              <span className={candidateDeckValidation.valid ? 'is-valid' : 'is-pending'}>
+                {candidateDeckValidation.valid ? '牌組合法，可進入對戰' : '牌組尚未完成，仍可先儲存草稿'}
               </span>
               <small>點選牌組卡片查看詳細內容；使用 ＋／－調整張數。</small>
             </div>
@@ -480,13 +541,13 @@ export function DeckEditorPage({
           </label>
           <button
             type="button"
-            className={`deck-editor-page-save ${editor.deckValidation.valid ? '' : 'is-draft'}`}
+            className={`deck-editor-page-save ${candidateDeckValidation.valid ? '' : 'is-draft'}`}
             disabled={editor.deckEntries.length === 0}
             onClick={handleSave}
             data-testid="deck-editor-page-save"
           >
             <Save aria-hidden="true" />
-            {editor.deckValidation.valid ? '儲存牌組' : '儲存草稿'}
+            {candidateDeckValidation.valid ? '儲存牌組' : '儲存草稿'}
           </button>
         </div>
       </header>
@@ -724,9 +785,9 @@ export function DeckEditorPage({
               <p>EXTRA 僅能在明確標記的 BS8 候選驗收流程中設定；Standard 牌組、房間與匯出格式一律維持隔離。</p>
             )}
           </section>
-          {editor.deckValidation.errors.length > 0 && (
+          {candidateDeckValidation.errors.length > 0 && (
             <div className="deck-editor-page-errors" role="alert">
-              {editor.deckValidation.errors.map((error) => (
+              {candidateDeckValidation.errors.map((error) => (
                 <span key={error}>{error}</span>
               ))}
             </div>
@@ -800,7 +861,7 @@ export function DeckEditorPage({
                   onChange={(event) => editor.setFilterSeries(event.target.value || null)}
                   aria-label="卡牌系列"
                 >
-                  {SERIES_OPTIONS.map((option) => (
+                  {seriesOptions.map((option) => (
                     <option value={option.value} key={option.value || 'all-series'}>{option.label}</option>
                   ))}
                 </select>

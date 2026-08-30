@@ -97,6 +97,7 @@ export type {
 export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
+  getAttackEnergyCostForPlayer,
   getAttackEnergyCostForState,
   getEnergyCostTotal,
   getRemainingEnergyCost,
@@ -326,6 +327,7 @@ export {
   getFaintTriggeredCost,
   getCookieSkillCost,
   getCookieSkillEffects,
+  isSupportToHandCostCandidate,
   hasCookieOnPlayEffects,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
@@ -374,6 +376,7 @@ export type {
   CookieInBattle,
   DamageEffect,
   DamageReceivedModifier,
+  DiscardHandThenDrawSameEffect,
   DeckToSupportEffect,
   DefeatReason,
   DrawEffect,
@@ -438,6 +441,7 @@ export type {
   Shuffle,
   SkillTrigger,
   SupportCard,
+  StageAttackCostModifier,
   StageAbility,
   StageCard,
   SpecialVictoryCondition,

@@ -228,6 +228,8 @@ export interface HandDiscardResponseModalProps {
   hand: GameCard[]
   requiredCount: number
   atLeast?: boolean
+  /** BS8-076：可不棄；若要棄則必須恰好支付指定張數。 */
+  optional?: boolean
   selectedIds: string[]
   onToggleCard: (instanceId: string) => void
   onConfirm: () => void
@@ -246,13 +248,16 @@ export function HandDiscardResponseModal({
   hand,
   requiredCount,
   atLeast = false,
+  optional = false,
   selectedIds,
   onToggleCard,
   onConfirm,
   continuesFromDraw = false,
 }: HandDiscardResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const canConfirm = atLeast
+  const canConfirm = optional
+    ? selectedIds.length === 0 || selectedIds.length === requiredCount
+    : atLeast
     ? selectedIds.length >= requiredCount
     : selectedIds.length === requiredCount
 
@@ -312,7 +317,9 @@ export function HandDiscardResponseModal({
           </div>
         </div>
         <p className="faint-target-hint">
-          {atLeast
+          {optional
+            ? `可以選擇不棄置；若要讓目標餅乾成為活躍，必須恰好棄置 ${requiredCount} 張手牌。`
+            : atLeast
             ? `至少選擇 ${requiredCount} 張手牌棄置。`
             : `必須選擇 ${requiredCount} 張手牌棄置。`}
         </p>
@@ -692,6 +699,8 @@ export interface OptionalCostAttackModalProps {
   targetLabel: string
   /** 需要完整描述來源區域／顏色時使用，例如 BS6-051 的綠色手牌目標。 */
   targetInstruction?: string
+  /** BS8-076：此攻擊後續代價為強制，UI 不得提供 skip。 */
+  mandatory?: boolean
   onSkip: () => void
   onPay: (
     discardIds: string[],
@@ -738,6 +747,7 @@ export function OptionalCostAttackModal({
   targetMax,
   targetLabel,
   targetInstruction,
+  mandatory = false,
   onSkip,
   onPay,
   embedded = false,
@@ -961,7 +971,7 @@ export function OptionalCostAttackModal({
         onClick={() => setMinimized(false)}
       >
         <span>
-          <strong>攻擊可選效果</strong>
+          <strong>{mandatory ? '攻擊後續代價' : '攻擊可選效果'}</strong>
           <small>{sourceCardName}</small>
         </span>
         <Maximize2 aria-hidden="true" />
@@ -1000,7 +1010,7 @@ export function OptionalCostAttackModal({
           縮小
         </button>
       )}
-        <span>攻擊可選效果</span>
+        <span>{mandatory ? '攻擊後續代價（必須支付）' : '攻擊可選效果'}</span>
         {!embedded && <h2>{sourceCardName}</h2>}
         {!embedded && (
           <p className="optional-cost-attack-text">{effectText}</p>
@@ -1021,15 +1031,17 @@ export function OptionalCostAttackModal({
 
         {step === 'decision' && (
           <div className="modal-actions modal-actions-decision">
-            <button type="button" onClick={onSkip}>
-              略過
-            </button>
+            {!mandatory && (
+              <button type="button" onClick={onSkip}>
+                略過
+              </button>
+            )}
             <button
               type="button"
               disabled={!canPay}
               onClick={startPay}
             >
-              支付
+              {mandatory ? '支付代價' : '支付'}
             </button>
           </div>
         )}
@@ -1283,6 +1295,7 @@ export interface InspectDeckModalProps {
   pickCount: number
   restDestination?: InspectDeckRestDestination
   pickDestination?: 'hand' | 'battle' | 'support'
+  pickSupportRested?: boolean
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
@@ -1294,6 +1307,7 @@ const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
   bottom: '牌庫底',
   top: '牌庫頂',
   trash: '棄牌區',
+  'support-rested': '支援區（橫置）',
 }
 
 export function InspectDeckModal({
@@ -1302,6 +1316,7 @@ export function InspectDeckModal({
   pickCount,
   restDestination = 'bottom',
   pickDestination = 'hand',
+  pickSupportRested = true,
   filterColor,
   filterType,
   filterKeyword,
@@ -1322,7 +1337,10 @@ export function InspectDeckModal({
     (filterKeyword == null || card.keywords?.includes(filterKeyword))
   const hasNoPickableCard = !revealedCards.some(isPickable)
   const restLabel = REST_DESTINATION_LABEL[restDestination]
-  const showReorder = restDestination !== 'trash' && restOrder.length > 1
+  const showReorder =
+    restDestination !== 'trash' &&
+    restDestination !== 'support-rested' &&
+    restOrder.length > 1
 
   const resetPick = () => {
     setPickedIds([])
@@ -1410,12 +1428,14 @@ export function InspectDeckModal({
                 pickDestination === 'battle'
                   ? '登場'
                   : pickDestination === 'support'
-                    ? '放入支援區'
+                    ? `放入支援區（${pickSupportRested ? '橫置' : '活躍'}）`
                     : '加入手牌'
               }`
             : ''}
           ，其餘
-          {restDestination === 'trash' ? '放入' : '以指定順序放回'}
+          {restDestination === 'trash' || restDestination === 'support-rested'
+            ? '放入'
+            : '以指定順序放回'}
           {restLabel}。
         </p>
         {canPick && hasNoPickableCard && (

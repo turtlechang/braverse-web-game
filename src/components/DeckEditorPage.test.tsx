@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { DeckEditorPage } from './DeckEditorPage'
 import { getCardPoolEntry } from '../game/card-pool'
+import { OFFICIAL_RED_STARTER_DECK } from '../game/starter-deck'
 import { getCardAttackPower } from '../hooks/useDeckEditor'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -229,7 +230,7 @@ describe('DeckEditorPage', () => {
     await act(() => root.unmount())
   })
 
-  it('shows BS6 cards when the BS6 series filter is selected', async () => {
+  it('shows BS7 cards when the BS7 series filter is selected and lets them join a Standard deck', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
@@ -245,26 +246,195 @@ describe('DeckEditorPage', () => {
     const seriesSelect = Array.from(
       container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
     ).find((select) =>
-      Array.from(select.options).some((option) => option.value === 'BS6'),
+      Array.from(select.options).some((option) => option.value === 'BS7'),
     )
     expect(seriesSelect).toBeTruthy()
+    expect(Array.from(seriesSelect!.options).some((option) => option.value === 'BS8')).toBe(false)
 
     const nativeSetter = Object.getOwnPropertyDescriptor(
       window.HTMLSelectElement.prototype,
       'value',
     )!.set!
     await act(() => {
-      nativeSetter.call(seriesSelect, 'BS6')
+      nativeSetter.call(seriesSelect, 'BS7')
       seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    const bs6CardNumbers = Array.from(
+    const bs7CardNumbers = Array.from(
       container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
     ).map((button) => button.title)
-    expect(bs6CardNumbers.length).toBeGreaterThan(0)
-    expect(bs6CardNumbers.every((cardNumber) => cardNumber.startsWith('BS6-'))).toBe(true)
+    expect(bs7CardNumbers.length).toBeGreaterThan(0)
+    expect(bs7CardNumbers.every((cardNumber) => cardNumber.startsWith('BS7-'))).toBe(true)
+
+    const firstCard = container.querySelector<HTMLButtonElement>(
+      '.deck-editor-page-pool-card-button:not(:disabled)',
+    )
+    expect(firstCard).not.toBeNull()
+    await act(() => firstCard!.click())
+    expect(container.querySelector('.deck-editor-page-deck-card')?.textContent).toContain('BS7-')
 
     await act(() => root.unmount())
+  })
+
+  it('matches BS7 by card-number text search without exposing BS8 in Standard', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+
+    const search = container.querySelector<HTMLInputElement>('[data-testid="deck-editor-search"]')
+    expect(search).not.toBeNull()
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      nativeSetter.call(search, 'BS7-001')
+      search!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(
+      Array.from(container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'))
+        .map((button) => button.title),
+    ).toEqual([expect.stringMatching(/^BS7-001\b/)])
+
+    await act(() => {
+      nativeSetter.call(search, 'BS8')
+      search!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(0)
+    expect(container.querySelector('.deck-editor-page-empty-pool')?.textContent).toContain('沒有符合條件')
+
+    await act(() => root.unmount())
+  })
+
+  it('shows the BS8 series filter only in candidate staging without adding it to the Standard pool', async () => {
+    const standardContainer = document.createElement('div')
+    const standardRoot = createRoot(standardContainer)
+    await act(() => standardRoot.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+    const standardToggle = standardContainer.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => standardToggle!.click())
+    const standardSeries = Array.from(
+      standardContainer.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+    ).find((select) => Array.from(select.options).some((option) => option.value === 'BS7'))
+    expect(standardSeries).toBeTruthy()
+    expect(Array.from(standardSeries!.options).some((option) => option.value === 'BS8')).toBe(false)
+    await act(() => standardRoot.unmount())
+
+    const candidateContainer = document.createElement('div')
+    const candidateRoot = createRoot(candidateContainer)
+    await act(() => candidateRoot.render(
+      <DeckEditorPage mode="bs8-candidate-staging" onSave={vi.fn()} onClose={vi.fn()} />,
+    ))
+    const candidateToggle = candidateContainer.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => candidateToggle!.click())
+    const candidateSeries = Array.from(
+      candidateContainer.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+    ).find((select) => Array.from(select.options).some((option) => option.value === 'BS8'))
+    expect(candidateSeries).toBeTruthy()
+    expect(
+      Array.from(candidateSeries!.options).find((option) => option.value === 'BS8')?.textContent,
+    ).toContain('候選驗收')
+
+    await act(() => candidateRoot.unmount())
+  })
+
+  it('filters and imports strict-verified BS8 cards with the isolated six-slot EXTRA payload', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const clipboardWrite = vi.fn().mockResolvedValue(undefined)
+    const previousClipboard = Object.getOwnPropertyDescriptor(window.navigator, 'clipboard')
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWrite },
+    })
+
+    try {
+      await act(() => root.render(
+        <DeckEditorPage mode="bs8-candidate-staging" onSave={vi.fn()} onClose={vi.fn()} />,
+      ))
+
+      const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+      await act(() => filterToggle!.click())
+      const seriesSelect = Array.from(
+        container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+      ).find((select) => Array.from(select.options).some((option) => option.value === 'BS8'))
+      expect(seriesSelect).toBeTruthy()
+
+      const selectSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value',
+      )!.set!
+      await act(() => {
+        selectSetter.call(seriesSelect, 'BS8')
+        seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+
+      const filteredNumbers = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+      ).map((button) => button.title)
+      expect(filteredNumbers.some((cardNumber) => cardNumber.startsWith('BS8-002'))).toBe(true)
+      expect(filteredNumbers.every((cardNumber) => cardNumber.startsWith('BS8-'))).toBe(true)
+      expect(filteredNumbers.some((cardNumber) => cardNumber.startsWith('BS8-043'))).toBe(true)
+
+      const importButton = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+        button.textContent?.includes('匯入 JSON'),
+      )
+      await act(() => importButton!.click())
+
+      const payload = {
+        id: 'candidate-import',
+        name: 'BS8 候選匯入',
+        entries: OFFICIAL_RED_STARTER_DECK.map((entry, index) =>
+          index === 0 ? { cardNumber: 'BS8-002', count: entry.count } : entry,
+        ),
+        candidateStaging: {
+          kind: 'bs8-candidate-staging',
+          extraDeckEntries: [
+            { cardNumber: 'BS8-005', count: 4 },
+            { cardNumber: 'BS8-027', count: 2 },
+          ],
+        },
+      }
+      const textarea = container.querySelector<HTMLTextAreaElement>('[aria-label="牌組 JSON"]')
+      const textareaSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        'value',
+      )!.set!
+      await act(() => {
+        textareaSetter.call(textarea, JSON.stringify(payload))
+        textarea!.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      const confirmImport = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('[data-testid="deck-editor-import-modal"] button'),
+      ).find((button) => button.textContent?.includes('確認匯入'))
+      await act(() => confirmImport!.click())
+
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toContain('6')
+      expect(container.querySelector('.deck-editor-page-deck-card')?.textContent).toContain('BS8-002')
+
+      const exportButton = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+        button.textContent?.includes('匯出 JSON'),
+      )
+      await act(async () => exportButton!.click())
+      expect(clipboardWrite).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(clipboardWrite.mock.calls[0][0])).toMatchObject({
+        name: 'BS8 候選匯入',
+        candidateStaging: {
+          kind: 'bs8-candidate-staging',
+          extraDeckEntries: [
+            { cardNumber: 'BS8-005', count: 4 },
+            { cardNumber: 'BS8-027', count: 2 },
+          ],
+        },
+      })
+    } finally {
+      if (previousClipboard) {
+        Object.defineProperty(window.navigator, 'clipboard', previousClipboard)
+      } else {
+        Reflect.deleteProperty(window.navigator, 'clipboard')
+      }
+      await act(() => root.unmount())
+    }
   })
 
   it('shows Cookie records with FLIP text in the FLIP filter', async () => {

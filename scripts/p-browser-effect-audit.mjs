@@ -38,9 +38,34 @@ const isBs7Audit = requestedSeries === 'BS7'
 const auditVanillaAttacks = process.argv.includes('--vanilla-attacks')
 const auditNegative = process.argv.includes('--negative')
 const auditFailFast = process.argv.includes('--fail-fast')
+const auditBs8StrictAbilities = process.argv.includes('--bs8-strict-abilities')
 const requestedCardNumbers = process.argv
   .filter((argument) => argument.startsWith('--card='))
   .map((argument) => argument.slice('--card='.length))
+
+// This is the promotion-gate ability inventory, deliberately distinct from
+// card records with a `Then` attack clause.  The four excluded skill sources
+// belong to separately scoped candidate/automatic-flow audits, whereas these
+// 54 sources are the user-visible main ability gate recorded in README.
+const BS8_STRICT_ABILITY_BASE_CARD_NUMBERS = [
+  'BS8-002', 'BS8-003', 'BS8-004', 'BS8-009', 'BS8-010', 'BS8-011',
+  'BS8-012', 'BS8-013', 'BS8-016', 'BS8-017', 'BS8-018', 'BS8-020',
+  'BS8-031', 'BS8-032', 'BS8-034', 'BS8-035', 'BS8-037', 'BS8-038',
+  'BS8-039', 'BS8-042', 'BS8-051', 'BS8-052', 'BS8-053', 'BS8-057',
+  'BS8-059', 'BS8-060', 'BS8-061', 'BS8-062', 'BS8-064', 'BS8-065',
+  'BS8-066', 'BS8-068', 'BS8-077', 'BS8-078', 'BS8-079', 'BS8-082',
+  'BS8-083', 'BS8-084', 'BS8-085', 'BS8-086', 'BS8-087', 'BS8-088',
+  'BS8-089', 'BS8-092', 'BS8-095', 'BS8-107', 'BS8-111', 'BS8-113',
+  'BS8-114', 'BS8-115', 'BS8-117', 'BS8-118', 'BS8-119', 'BS8-120',
+]
+const BS8_STRICT_ABILITY_CARD_SET = new Set(BS8_STRICT_ABILITY_BASE_CARD_NUMBERS)
+
+if (
+  auditBs8StrictAbilities &&
+  (requestedSeries !== 'BS8' || auditVanillaAttacks || auditNegative)
+) {
+  throw new Error('--bs8-strict-abilities runs its own positive/negative ability matrix and cannot combine with --negative')
+}
 
 const AUDIT_CONFIGS = {
   BS1: {
@@ -235,6 +260,31 @@ const AUDIT_CONFIGS = {
     // real cost before proving that the conditional branch is skipped.
     negativeConditionCardNumbers: ['BS7-035', 'BS7-057'],
   },
+  BS8: {
+    label: 'BS8 staging',
+    sources: [
+      'data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json',
+    ],
+    report: 'output/playwright/bs8-effect-audit.json',
+    negativeReport: 'output/playwright/bs8-effect-audit-negative.json',
+    // BS8 is candidate-only. The 15 EXTRA records are intentionally excluded
+    // here because their cards cannot enter the normal 60-card test-state;
+    // source records retain their ordinary card type, so this must use
+    // `flags.extra` rather than `type` alone. They remain covered by the
+    // separate EXTRA staging flows.
+    expectedEffectCardCount: 146,
+    // A candidate promotion gate may not treat an empty command trace as a
+    // settled effect.  This is deliberately stricter than the generic smoke
+    // audits: every positive BS8 route must expose public target/result/state
+    // evidence from the real rule command.
+    requireSubstantiveTrace: true,
+    excludedCardTypes: ['extra'],
+    excludeExtraDeckCards: true,
+    conditionTestStatePrefix: 'bs8-condition',
+    conditionCardNumbers: [],
+    alwaysIncludeCardNumbers: [],
+    candidate: true,
+  },
 }
 const auditConfig = AUDIT_CONFIGS[requestedSeries]
 if (!auditConfig) {
@@ -245,7 +295,9 @@ if (!auditConfig) {
 const reportPath = resolve(
   root,
   process.env.BRAVERSE_AUDIT_REPORT ??
-    (auditNegative ? auditConfig.negativeReport ?? auditConfig.report : auditConfig.report),
+    (auditBs8StrictAbilities
+      ? 'output/playwright/bs8-strict-ability-audit.json'
+      : auditNegative ? auditConfig.negativeReport ?? auditConfig.report : auditConfig.report),
 )
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
 const viteEntry = resolve(dirname(vitePackageJson), 'bin/vite.js')
@@ -280,10 +332,31 @@ const knownNonEffectFlipTextVariants = new Set([
   'BS4-097@1',
 ])
 const normalizedSkillVariants = new Set(['BS6-091@2', 'BS6-091@3'])
+// Some official BS8 FLIP records carry their complete Activate text in
+// `attackText` (prefixed with `{sk}`) instead of `skill.text`. Treat that as
+// a skill surface so the Browser audit invokes the real ability rather than
+// misclassifying the record as a vanilla Cookie attack.
+const hasSkillInAttackText = (card) =>
+  hasText(card.attackText) &&
+  /\{sk\}[\s\S]*【(?:Activate|On Play|Once Per Turn|Your Turn)】/i.test(
+    card.attackText,
+  )
+// A few official alternate-art records put their full `{sk}` skill and the
+// normal attack in one `attackText` field. A `Then` before the final `{da}`
+// marker belongs to that skill (for example BS8-032@2), not to the attack.
+// Do not drive it through the attack-only Browser path.
+const hasAttackThenText = (card) => {
+  const text = card.attackText ?? ''
+  const thenIndex = text.search(/\bThen\b/i)
+  if (thenIndex < 0) return false
+  if (!hasSkillInAttackText(card)) return true
+  const damageIndex = text.lastIndexOf('{da}')
+  return damageIndex >= 0 && thenIndex > damageIndex
+}
 const hasEffectSurface = (card) => {
-  const skill = hasText(card.skill?.text)
+  const skill = hasText(card.skill?.text) || hasSkillInAttackText(card)
   const attackThen =
-    (hasText(card.attackText) && /\bThen\b/i.test(card.attackText)) ||
+    hasAttackThenText(card) ||
     knownAttackEffectVariants.has(card.cardNumber)
   // 官方資料把帶有 FLIP 能力的餅乾記成 COOKIE（BS5-073/074）；是否為
   // FLIP 以 flipText 判斷，不能只看 card.type。
@@ -308,6 +381,33 @@ const isVanillaAttackCookie = (card) =>
   // same deploy/attack and no-payment checks as other vanilla Cookies.
   (card.type === 'cookie' || card.type === 'flip') && !hasEffectSurface(card)
 const getBaseCardNumber = (card) => card.baseCardNumber || card.cardNumber
+const selectBs8StrictAbilityCards = (records) => {
+  const representatives = new Map()
+  for (const card of records) {
+    const baseCardNumber = getBaseCardNumber(card)
+    if (
+      !BS8_STRICT_ABILITY_CARD_SET.has(baseCardNumber) ||
+      card.type !== 'cookie' ||
+      !(hasText(card.skill?.text) || hasSkillInAttackText(card))
+    ) {
+      continue
+    }
+    const previous = representatives.get(baseCardNumber)
+    if (!previous || card.cardNumber === baseCardNumber) {
+      representatives.set(baseCardNumber, card)
+    }
+  }
+  assert.equal(
+    representatives.size,
+    BS8_STRICT_ABILITY_BASE_CARD_NUMBERS.length,
+    'BS8 strict ability inventory must have one official source per base card',
+  )
+  return BS8_STRICT_ABILITY_BASE_CARD_NUMBERS.map((cardNumber) => {
+    const card = representatives.get(cardNumber)
+    assert.ok(card, `missing BS8 strict ability source ${cardNumber}`)
+    return card
+  })
+}
 const selectRepresentativeCards = (records) => {
   if (auditNegative) {
     return records
@@ -344,7 +444,9 @@ const explicitlyRequestedEffectVariants =
 const cards = [
   ...new Map(
     [
-      ...selectRepresentativeCards([...source.cards]),
+      ...(auditBs8StrictAbilities
+        ? selectBs8StrictAbilityCards([...source.cards])
+        : selectRepresentativeCards([...source.cards])),
       ...explicitlyRequestedEffectVariants,
     ].map((card) => [card.cardNumber, card]),
   ).values(),
@@ -355,13 +457,21 @@ const cards = [
       requestedCardNumbers.includes(card.cardNumber) ||
       requestedCardNumbers.includes(card.baseCardNumber),
   )
+  .filter(
+    (card) => !auditConfig.excludedCardTypes?.includes(card.type),
+  )
+  .filter(
+    (card) => !auditConfig.excludeExtraDeckCards || !card.flags?.extra,
+  )
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
 if (!auditVanillaAttacks && !auditNegative && requestedCardNumbers.length === 0) {
   assert.equal(
     cards.length,
-    auditConfig.expectedEffectCardCount,
+    auditBs8StrictAbilities
+      ? BS8_STRICT_ABILITY_BASE_CARD_NUMBERS.length
+      : auditConfig.expectedEffectCardCount,
     `${auditConfig.label} formal effect-bearing inventory must contain ${auditConfig.expectedEffectCardCount} records`,
   )
 }
@@ -377,12 +487,13 @@ const effectSurfaces = (card) => {
   const surfaces = []
   if (
     (card.type === 'cookie' && card.skill?.text?.trim()) ||
+    hasSkillInAttackText(card) ||
     normalizedSkillVariants.has(card.cardNumber)
   ) {
     surfaces.push('skill')
   }
   if (
-    /\bThen\b/i.test(card.attackText ?? '') ||
+    hasAttackThenText(card) ||
     knownAttackEffectVariants.has(card.cardNumber)
   ) {
     surfaces.push('attack-then')
@@ -412,8 +523,110 @@ const traceCardNumberFor = (card) =>
     ? `${card.baseCardNumber}-effect-source`
     : getBaseCardNumber(card)
 
-const readContractTrace = async (page) =>
-  page.evaluate(() => window.__braverseContractTrace ?? [])
+const readContractTrace = async (page) => {
+  if (page.isClosed()) return []
+  try {
+    return await page.evaluate(() => window.__braverseContractTrace ?? [])
+  } catch {
+    // A card flow may legitimately navigate after a replacement decision.
+    // Preserve the Browser failure itself without letting diagnostics abort the
+    // remaining card matrix.
+    return []
+  }
+}
+
+// A resolve-attack-effect command only proves that the engine entered the
+// follow-up pipeline.  BS8 promotion needs a card-by-card semantic witness:
+// the real Browser trace must show the printed target/result (and, where
+// applicable, the mandatory UI decision) rather than a condition-false or
+// optional no-op path.
+const BS8_ATTACK_THEN_FINGERPRINTS = {
+  'BS8-006': {
+    minTargetSteps: 2,
+    minimumPatternMatches: [{ pattern: /受到 1 點傷害/g, count: 2 }],
+  },
+  'BS8-010': {
+    minTargetSteps: 1,
+    requiredPatterns: [/執行 make-faint/],
+  },
+  'BS8-026': {
+    minTargetSteps: 1,
+    requiredPatterns: [/增加 1 點 HP/],
+  },
+  'BS8-040': {
+    requiredOperations: ['select:hand-discard', 'confirm:hand-discard'],
+    requiredPatterns: [/抽至多 1 張牌，再棄置 1 張/, /抽了 1 張牌/],
+  },
+  'BS8-045': {
+    minTargetSteps: 1,
+    requiredPatterns: [/將目標餅乾放入休息區/],
+  },
+  'BS8-054': {
+    minTargetSteps: 1,
+    requiredPatterns: [/受到 1 點傷害/],
+  },
+  'BS8-067': {
+    requiredPatterns: [/執行 deck-to-support/],
+  },
+  'BS8-076': {
+    requiredOperations: ['start:optional-cost-attack', 'confirm:optional-cost'],
+    requiredPatterns: [/攻擊後代價：已支付/, /抽 1 張牌；執行 prevent-cookie-active-next-phase/],
+  },
+  'BS8-083': {
+    requiredPatterns: [/抽至多 3 張牌/, /抽了 1 張牌/],
+  },
+  'BS8-084': {
+    requiredPatterns: [/抽至多 1 張牌/, /抽了 1 張牌/],
+  },
+  'BS8-106': {
+    minTargetSteps: 1,
+    requiredOperations: ['select:hand-discard', 'confirm:hand-discard'],
+    requiredPatterns: [/執行 discard-hand/, /執行 field-to-trash/],
+  },
+  'BS8-108': {
+    minTargetSteps: 1,
+    requiredPatterns: [/攻擊後效果目標：opp-lv1/, /從目標 HP 丟棄 1 張 HP 卡/],
+  },
+  'BS8-109': {
+    minTargetSteps: 1,
+    requiredPatterns: [/攻擊後效果目標：opp-lv3/, /從目標 HP 丟棄 1 張 HP 卡/],
+  },
+  'BS8-112': {
+    minTargetSteps: 1,
+    requiredOperations: ['select:hand-discard', 'confirm:hand-discard', 'select:.effect-candidates-target'],
+    requiredPatterns: [/執行 discard-hand/, /攻擊後效果目標：trash-cookie-2/, /從棄牌區登場至多 1 張餅乾/],
+  },
+}
+
+const verifyBs8AttackThenFingerprint = (card, traceSummary, operations) => {
+  const fingerprint = BS8_ATTACK_THEN_FINGERPRINTS[getBaseCardNumber(card)]
+  if (!fingerprint) return { passed: true, fingerprint: null, missing: [] }
+
+  const traceText = traceSummary.steps.join('\n')
+  const targetStepCount = traceSummary.steps.filter((step) =>
+    step.startsWith('攻擊後效果目標：'),
+  ).length
+  const missing = [
+    ...(fingerprint.requiredPatterns ?? [])
+      .filter((pattern) => !pattern.test(traceText))
+      .map((pattern) => `trace:${pattern}`),
+    ...(fingerprint.minimumPatternMatches ?? [])
+      .filter(({ pattern, count }) => (traceText.match(pattern) ?? []).length < count)
+      .map(({ pattern, count }) => `trace-count:${pattern}>=${count}`),
+    ...((fingerprint.minTargetSteps ?? 0) > targetStepCount
+      ? [`target-steps>=${fingerprint.minTargetSteps}`]
+      : []),
+    ...(fingerprint.requiredOperations ?? [])
+      .filter((operation) => !operations.includes(operation))
+      .map((operation) => `operation:${operation}`),
+  ]
+  return {
+    passed: missing.length === 0,
+    fingerprint: getBaseCardNumber(card),
+    missing,
+    targetStepCount,
+  }
+}
 
 const traceHasSubstantiveEffectEvidence = (trace) =>
   trace
@@ -498,6 +711,13 @@ const activePanel = (page) => page.locator('.effect-panel[role="alertdialog"]')
 const activeContractCard = (page) =>
   new URL(page.url()).searchParams.get('contract-card')
 const orderedAllTargetCards = new Set(['BS7-039', 'BS7-082'])
+const BS8_STATIC_BROWSER_WITNESSES = new Set(['BS8-061', 'BS8-075', 'BS8-125'])
+const strictMultipleTargetSelectionCounts = new Map([
+  // BS8-031's second OnPlay effect must return exactly two Cookies whose
+  // total level is at most three. Its level-sum UI deliberately does not
+  // expose an "N / 2" counter, so the generic one-target guard is insufficient.
+  ['BS8-031', 2],
+])
 
 const clickFirstUnselected = async (panel, selectors, operations) => {
   const panelText = await panel.innerText().catch(() => '')
@@ -544,6 +764,16 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
     if (progress && Number(progress[1]) >= Number(progress[2])) continue
 
     const selectedCount = await group.locator('button.is-selected').count()
+    const route = await panel.evaluate(() => {
+      const params = new URL(window.location.href).searchParams
+      return {
+        contractCard: params.get('contract-card'),
+        testState: params.get('test-state') ?? '',
+      }
+    })
+    const strictSelectionCount = selector.includes('target')
+      ? strictMultipleTargetSelectionCounts.get(route.contractCard)
+      : undefined
     // `hpToTrash.amount` means how many HP cards are discarded after one
     // Cookie is selected. It is not a count of selectable Cookies, so the
     // UI always accepts exactly one source Cookie for this cost.
@@ -552,8 +782,15 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
       : progress
         ? Number(progress[2])
         : undefined
-    if (maxSelections !== undefined && selectedCount >= maxSelections) continue
-    if (!progress && !panelProgress && selector.includes('target') && selectedCount > 0) continue
+    const effectiveMaxSelections = strictSelectionCount ?? maxSelections
+    if (effectiveMaxSelections !== undefined && selectedCount >= effectiveMaxSelections) continue
+    if (
+      !progress &&
+      !panelProgress &&
+      selector.includes('target') &&
+      selectedCount > 0 &&
+      strictSelectionCount === undefined
+    ) continue
 
     const availableCandidates = group.locator(
       'button:not(.is-selected):not(:disabled)',
@@ -561,13 +798,6 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
     // BS7-039/082 are the dedicated ordered-all-target Browser proofs. Choose the
     // second rendered target first, then the remaining first target, so a
     // passing trace cannot be mistaken for automatic DOM-order damage.
-    const route = await panel.evaluate(() => {
-      const params = new URL(window.location.href).searchParams
-      return {
-        contractCard: params.get('contract-card'),
-        testState: params.get('test-state') ?? '',
-      }
-    })
     const chooseSecondTargetFirst =
       orderedAllTargetCards.has(route.contractCard) &&
       !route.testState.startsWith('card-negative:') &&
@@ -578,7 +808,8 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
       ? availableCandidates.nth(1)
       : availableCandidates.first()
     if (!(await enabled(candidate))) continue
-    await candidate.click({ force: true })
+    await candidate.focus()
+    await candidate.press('Enter')
     operations.push(`select:${selector}`)
     await wait(120)
     return true
@@ -1374,8 +1605,14 @@ const settlePending = async (
   throw new Error('pending UI did not settle')
 }
 
-const clickSkill = async (page) => {
-  const action = page.locator('.bottom-field .skill-action').first()
+const clickSkill = async (page, sourceCardNumber) => {
+  const action = sourceCardNumber
+    ? page
+        .locator(
+          `.bottom-field [data-card-instance-id^="player-one-${sourceCardNumber}"] .skill-action`,
+        )
+        .first()
+    : page.locator('.bottom-field .skill-action').first()
   if (!(await enabled(action))) return false
   await action.click({ force: true })
   await wait(180)
@@ -1390,7 +1627,7 @@ const clickStageAction = async (page) => {
   return true
 }
 
-const clickFirstHandAction = async (page) => {
+const clickFirstHandAction = async (page, _sourceCardNumber) => {
   // Do not open a non-actionable filler card just because it happens to be
   // first in the fan.  That inspection overlay can mask a later end-phase
   // decision (notably BS7-068/083) and turn a real effect path into repeated
@@ -1399,6 +1636,22 @@ const clickFirstHandAction = async (page) => {
   if (!(await visible(hand))) return false
   await hand.scrollIntoViewIfNeeded().catch(() => {})
   await hand.locator('.hand-card').click({ force: true })
+  await wait(120)
+  const action = hand.locator('.hand-card-action').first()
+  if (!(await enabled(action))) return false
+  await action.scrollIntoViewIfNeeded().catch(() => {})
+  await action.click({ force: true })
+  await wait(180)
+  return true
+}
+
+const clickNamedHandAction = async (page, cardName) => {
+  const handCard = page.getByTitle(cardName, { exact: true }).first()
+  if (!(await visible(handCard))) return false
+  const hand = handCard.locator('xpath=ancestor::div[contains(@class, "hand-card-wrap")]')
+  if (!(await visible(hand))) return false
+  await handCard.scrollIntoViewIfNeeded().catch(() => {})
+  await handCard.click({ force: true })
   await wait(120)
   const action = hand.locator('.hand-card-action').first()
   if (!(await enabled(action))) return false
@@ -1503,10 +1756,45 @@ const runVanillaNegative = async (page, operations) => {
   )
 }
 
-const runExistingCookieAttack = async (page, operations, { negative = false } = {}) => {
-  const attacker = page
-    .locator('.bottom-field .combat-card-wrap .card-face.is-attackable')
-    .first()
+const runExistingCookieAttack = async (
+  page,
+  operations,
+  { negative = false, requireNoPayment = false, sourceCardNumber } = {},
+) => {
+  const source = sourceCardNumber
+    ? page
+        .locator(
+          `.bottom-field [data-card-instance-id^="player-one-${sourceCardNumber}"] .card-face`,
+        )
+        .first()
+    : page
+        .locator('.bottom-field .combat-card-wrap .card-face.is-attackable')
+        .first()
+  if (negative && requireNoPayment) {
+    assert.ok(await visible(source), 'negative existing Cookie fixture must expose its source')
+    const legalPayment = page.locator(
+      '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
+    )
+    assert.equal(
+      await legalPayment.count(),
+      0,
+      'negative BS8 attack fixture must expose no legal printed-energy payment',
+    )
+    const sourceClass = (await source.getAttribute('class')) ?? ''
+    assert.equal(
+      sourceClass.includes('is-attackable'),
+      false,
+      'a BS8 attack source without legal printed-energy payment must not become attackable',
+    )
+    assert.equal(
+      sourceClass.includes('is-rested'),
+      false,
+      'an attack without a legal payment must not rest its source',
+    )
+    operations.push('verify:negative-existing-attacker-unattackable')
+    return
+  }
+  const attacker = source
   assert.ok(await enabled(attacker), 'existing Cookie fixture must expose an attackable source')
   await attacker.click({ force: true })
   operations.push(negative ? 'select:negative-existing-attacker' : 'select:existing-attacker')
@@ -1539,6 +1827,139 @@ const runExistingCookieAttack = async (page, operations, { negative = false } = 
   await target.click({ force: true })
   operations.push('declare:existing-attack')
   await wait(360)
+}
+
+/**
+ * Strict ability witness for BS8-084. This is intentionally not an
+ * attack-Then check: the rested opponent-side Sherbet Cookie must require an
+ * attacker hand discard before the attack command is allowed to continue.
+ */
+const runBs8084AttackDiscardWitness = async (page, operations, { negative }) => {
+  const attackerSelector = 'bs8-084-tax-attacker'
+  await runExistingCookieAttack(page, operations, {
+    negative,
+    sourceCardNumber: attackerSelector,
+  })
+
+  const attacker = page
+    .locator(
+      `.bottom-field [data-card-instance-id^="player-one-${attackerSelector}"] .card-face`,
+    )
+    .first()
+  if (negative) {
+    await wait(220)
+    assert.equal(
+      await visible(page.locator('.hand-discard-modal[role="alertdialog"]')),
+      false,
+      'BS8-084 B path must not open a discard decision when the attacker has no hand card',
+    )
+    assert.equal(
+      (await attacker.getAttribute('class'))?.includes('is-rested') ?? false,
+      false,
+      'BS8-084 B path must not rest the attacker before its required discard can be paid',
+    )
+    return { requiredDiscard: 1, blockedWithoutHand: true }
+  }
+
+  await settlePending(page, operations)
+  assert.equal(
+    (await attacker.getAttribute('class'))?.includes('is-rested') ?? false,
+    true,
+    'BS8-084 A path must rest the attacker only after its hand discard settles',
+  )
+  assert.ok(
+    operations.includes('select:hand-discard'),
+    'BS8-084 A path must choose the required hand discard through the real modal',
+  )
+  assert.ok(
+    operations.includes('confirm:hand-discard'),
+    'BS8-084 A path must confirm the required hand discard through the real modal',
+  )
+  return { requiredDiscard: 1, discardedBeforeAttack: true }
+}
+
+const runBs8StaticStageAttack = async (page, operations, card, { negative }) => {
+  // React replaces the stage-card subtree when a stage is placed.  Resolve its
+  // title afresh from the player-owned resource control instead of retaining a
+  // locator chain that began on the old stage face.
+  const readPlayerStageTitle = () =>
+    page.evaluate(
+      () =>
+        document
+          .querySelector('.stage-zone .resource-summary[aria-label="玩家場景區"]')
+          ?.getAttribute('title') ?? '',
+    )
+  for (let round = 0; round < 8; round += 1) {
+    let title = await readPlayerStageTitle()
+    // StagePlacementModal dispatches the authoritative command before React
+    // swaps the old card face. Poll the rendered stage title briefly instead
+    // of treating that one visual tick as a failed placement.
+    if (
+      !title.startsWith(card.name) &&
+      operations.includes('confirm:stage-placement')
+    ) {
+      for (let retry = 0; retry < 4 && !title.startsWith(card.name); retry += 1) {
+        await wait(200)
+        title = await readPlayerStageTitle()
+      }
+    }
+    if (title.startsWith(card.name)) break
+    // A negative static-effect witness negates the post-placement condition,
+    // not the stage placement itself.  Place the real stage first, then prove
+    // the attack-cost branch is absent.
+    if (await settlePending(page, operations, { negative: false })) continue
+    if (await clickNamedHandAction(page, card.name)) {
+      operations.push('action:static-stage-hand')
+      continue
+    }
+    // The dialog has closed and the hand card is gone, but a final render tick
+    // can still be in flight.  Re-read once before reporting a failed stage
+    // placement so the Browser gate observes the committed public state.
+    await wait(120)
+    title = await readPlayerStageTitle()
+    if (title.startsWith(card.name)) break
+    const diagnostics = await page.evaluate(() => ({
+      stages: [...document.querySelectorAll('.stage-zone .resource-summary')].map(
+        (node) => ({
+          label: node.getAttribute('aria-label'),
+          title: node.getAttribute('title'),
+        }),
+      ),
+      actionableHand: [
+        ...document.querySelectorAll('.bottom-hand .hand-card-wrap.is-actionable'),
+      ].map((node) => ({
+        text: node.textContent?.trim() ?? '',
+        action: node.querySelector('.hand-card-action')?.textContent?.trim() ?? '',
+      })),
+      message: document.querySelector('.battle-status-message')?.textContent?.trim() ?? '',
+    }))
+    throw new Error(
+      `${card.baseCardNumber} did not expose a placeable static stage (observed stage: ${JSON.stringify(title)}, expected: ${JSON.stringify(card.name)}, diagnostics: ${JSON.stringify(diagnostics)})`,
+    )
+  }
+
+  const stageTitle = await readPlayerStageTitle()
+  assert.ok(
+    stageTitle.startsWith(card.name),
+    `${card.baseCardNumber} must be in the stage area before its static attack witness`,
+  )
+  const paymentStart = operations.filter(
+    (operation) => operation === 'select:existing-attack-payment',
+  ).length
+  await runExistingCookieAttack(page, operations)
+  await settlePending(page, operations, { negative })
+  const attackPaymentCount = operations.filter(
+    (operation) => operation === 'select:existing-attack-payment',
+  ).length - paymentStart
+  const expectedAttackPayments = card.baseCardNumber === 'BS8-075'
+    ? negative ? 0 : 1
+    : negative ? 1 : 0
+  assert.equal(
+    attackPaymentCount,
+    expectedAttackPayments,
+    `${card.baseCardNumber} ${negative ? 'negative' : 'positive'} static stage path has the wrong attack payment`,
+  )
+  return { stageTitle, attackPaymentCount, expectedAttackPayments }
 }
 
 const clickNextPhase = async (page) => {
@@ -1647,6 +2068,14 @@ const vanillaAttackDebug = async (page) => ({
   opponentCookies: await page
     .locator('.top-field .combat-card-wrap .card-face')
     .evaluateAll((nodes) => nodes.map((node) => node.className)),
+  ownBattleCards: await page
+    .locator('.bottom-field .combat-card-wrap')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        instanceId: node.getAttribute('data-card-instance-id'),
+        cardClass: node.querySelector('.card-face')?.className ?? '',
+      })),
+    ),
 })
 
 const runCard = async (
@@ -1686,12 +2115,60 @@ const runCard = async (
     const before = await bodyText(page)
     assert.ok(!/遊戲畫面發生錯誤|Application Error|Unhandled Runtime Error/i.test(before))
 
+    const requiresBs8AttackThen =
+      !auditBs8StrictAbilities &&
+      requestedSeries === 'BS8' && auditedSurfaces(card).includes('attack-then')
+    const requiresBs8084AbilityWitness =
+      auditBs8StrictAbilities && getBaseCardNumber(card) === 'BS8-084'
+    const requiresBs8StaticWitness =
+      requestedSeries === 'BS8' &&
+      BS8_STATIC_BROWSER_WITNESSES.has(getBaseCardNumber(card))
     const requiresExistingCookieAttack =
-      card.baseCardNumber === 'BS7-058' || card.baseCardNumber === 'BS7-094'
+      card.baseCardNumber === 'BS7-058' ||
+      card.baseCardNumber === 'BS7-094' ||
+      requiresBs8AttackThen
+    let bs8StaticWitness = null
 
-    if (requiresExistingCookieAttack) {
-      await runExistingCookieAttack(page, operations, { negative })
+    let bs8AbilityWitness = null
+
+    if (requiresBs8084AbilityWitness) {
+      bs8AbilityWitness = await runBs8084AttackDiscardWitness(page, operations, {
+        negative,
+      })
+    } else if (requiresBs8StaticWitness && getBaseCardNumber(card) === 'BS8-061') {
+      const source = page
+        .locator('.bottom-field [data-card-instance-id^="player-one-BS8-061"]')
+        .first()
+      const attackBadge = source.locator('.badge-atk').first()
+      const effectiveAttack = Number((await attackBadge.innerText()).trim())
+      const expectedAttack = negative ? 1 : 2
+      assert.equal(
+        effectiveAttack,
+        expectedAttack,
+        `BS8-061 ${negative ? 'negative' : 'positive'} fixture must expose its passive attack value`,
+      )
+      const attackTitle = (await attackBadge.getAttribute('title')) ?? ''
+      if (!negative) assert.match(attackTitle, /Chives Dumpling King \+1/)
+      await runExistingCookieAttack(page, operations, {
+        negative,
+        sourceCardNumber: 'BS8-061',
+      })
       await settlePending(page, operations, { negative })
+      bs8StaticWitness = { effectiveAttack, expectedAttack, attackTitle }
+    } else if (requiresBs8StaticWitness) {
+      bs8StaticWitness = await runBs8StaticStageAttack(page, operations, card, {
+        negative,
+      })
+    } else if (requiresExistingCookieAttack) {
+      await runExistingCookieAttack(page, operations, {
+        negative,
+        requireNoPayment: requiresBs8AttackThen,
+        sourceCardNumber: requiresBs8AttackThen ? getBaseCardNumber(card) : undefined,
+      })
+      await settlePending(page, operations, {
+        negative,
+        settleAttackEffects: requiresBs8AttackThen,
+      })
     } else if (requireVanillaAttack) {
       if (negative) {
         await runVanillaNegative(page, operations)
@@ -1708,7 +2185,12 @@ const runCard = async (
           allowNegativePayment,
         })
         if (operations.length !== settledBefore) continue
-        if (await clickSkill(page)) {
+        if (
+          await clickSkill(
+            page,
+            requestedSeries === 'BS8' ? getBaseCardNumber(card) : undefined,
+          )
+        ) {
           operations.push('action:skill')
           continue
         }
@@ -1716,7 +2198,12 @@ const runCard = async (
           operations.push('action:stage')
           continue
         }
-        if (await clickFirstHandAction(page)) {
+        if (
+          await clickFirstHandAction(
+            page,
+            requestedSeries === 'BS8' ? getBaseCardNumber(card) : undefined,
+          )
+        ) {
           operations.push('action:hand')
           continue
         }
@@ -1807,15 +2294,94 @@ const runCard = async (
       ),
     )
     const pendingSurface = await pendingSurfaceCount(page)
+    const attackThenResolved = traceSummary.commandKinds.includes(
+      'resolve-attack-effect',
+    )
+    const bs8AttackThenFingerprint =
+      requiresBs8AttackThen && !negative
+        ? verifyBs8AttackThenFingerprint(card, traceSummary, operations)
+        : null
 
     if (
       pendingSurface === 0 &&
       (hasInteractiveOperation || !requireInteractiveOperation)
     ) {
+      if (requiresBs8AttackThen && !negative && !attackThenResolved) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Missing attack-Then resolution',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          ...traceSummary,
+          error:
+            'BS8 attack-Then 正向路徑必須由真實攻擊結算並留下 resolve-attack-effect，不能以戰鬥傷害或其他技能取代。',
+        }
+      }
+      if (
+        requiresBs8AttackThen &&
+        negative &&
+        (traceSummary.commandKinds.includes('declare-attack') || attackThenResolved)
+      ) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Negative attack payment leaked',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          ...traceSummary,
+          error:
+            'BS8 attack-Then 負向路徑在所有支援卡疲勞時不得宣告攻擊或進入 resolve-attack-effect。',
+        }
+      }
+      if (
+        requiresBs8AttackThen &&
+        !negative &&
+        bs8AttackThenFingerprint &&
+        !bs8AttackThenFingerprint.passed
+      ) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Missing attack-Then semantic fingerprint',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          bs8AttackThenFingerprint,
+          ...traceSummary,
+          error:
+            'BS8 attack-Then 正向路徑雖已結算，但未留下此卡卡面指定的目標、結果或必要操作證據。',
+        }
+      }
       if (
         auditConfig.requireSubstantiveTrace &&
         !negative &&
-        !traceSummary.substantiveEffectEvidence
+        !traceSummary.substantiveEffectEvidence &&
+        !bs8StaticWitness &&
+        !bs8AbilityWitness
       ) {
         return {
           cardNumber: card.cardNumber,
@@ -1861,6 +2427,9 @@ const runCard = async (
         operations,
         contractTraceCard: traceCardNumberFor(card),
         orderedAllTargetProof,
+        ...(bs8StaticWitness ? { bs8StaticWitness } : {}),
+        ...(bs8AbilityWitness ? { bs8AbilityWitness } : {}),
+        ...(bs8AttackThenFingerprint ? { bs8AttackThenFingerprint } : {}),
         ...traceSummary,
       }
     }
@@ -1910,7 +2479,10 @@ const runCard = async (
       debug: {
         ...(await effectPanelDebug(page)),
         decisionModal: await pendingModalDebug(page),
-        ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
+        ...((requireVanillaAttack ||
+        (requestedSeries === 'BS8' && auditedSurfaces(card).includes('attack-then')))
+          ? { vanilla: await vanillaAttackDebug(page) }
+          : {}),
       },
     }
   } finally {
@@ -1933,20 +2505,27 @@ try {
     headless: true,
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   })
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
-  page.setDefaultTimeout(auditActionTimeout)
-  page.setDefaultNavigationTimeout(auditNavigationTimeout)
-
   console.log(
     `=== ${auditConfig.label} ${auditNegative ? 'negative A/B' : auditVanillaAttacks ? 'vanilla attack' : 'interactive effect'} ${auditConfig.candidate ? 'candidate' : 'formal'} audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
+    // A test-state route can deliberately resolve replacement/faint flows.
+    // Isolate each card in its own browser document so a late navigation from
+    // one card cannot destroy the next card's contract-trace execution
+    // context.
+    const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+    page.setDefaultTimeout(auditActionTimeout)
+    page.setDefaultNavigationTimeout(auditNavigationTimeout)
     const negativeConditionPath = negativeConditionCardNumbers.has(
       card.baseCardNumber,
     )
     const testState = auditNegative
       ? `card-negative:${card.cardNumber}`
-      : `card:${card.cardNumber}`
+      : auditBs8StrictAbilities
+        ? getBaseCardNumber(card) === 'BS8-084'
+          ? 'bs8-084-attack-discard:payable'
+          : `card-skill:${card.cardNumber}`
+        : `card:${card.cardNumber}`
     const runOptions = auditNegative
       ? {
           path: negativeConditionPath
@@ -1961,13 +2540,70 @@ try {
       : auditVanillaAttacks
         ? { path: 'vanilla-attack', requireVanillaAttack: true }
         : undefined
-    const genericResult = await runCard(
-      page,
-      card,
-      testState,
-      runOptions,
-    )
+    const strictBlocker =
+      auditConfig.blockedCardReasons?.[card.cardNumber] ??
+      auditConfig.blockedCardReasons?.[card.baseCardNumber]
+    const genericResult = strictBlocker
+      ? {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path: 'strict-contract-blocked',
+          testState,
+          status: 'BLOCKED',
+          auditStatus: 'Strict contract blocked',
+          operations: [],
+          contractTraceCard: traceCardNumberFor(card),
+          traceEntries: 0,
+          commandKinds: [],
+          steps: [],
+          substantiveEffectEvidence: false,
+          error: strictBlocker,
+        }
+      : await runCard(
+          page,
+          card,
+          testState,
+          runOptions,
+        )
     let result = genericResult
+    if (auditBs8StrictAbilities) {
+      const unmet = await runCard(
+        page,
+        card,
+        getBaseCardNumber(card) === 'BS8-084'
+          ? 'bs8-084-attack-discard:unpayable'
+          : `card-skill-negative:${card.cardNumber}`,
+        {
+          path: getBaseCardNumber(card) === 'BS8-084'
+            ? 'ability-negative-no-discard'
+            : 'ability-negative-no-payment',
+          negative: true,
+          requireInteractiveOperation: false,
+        },
+      )
+      result = {
+        ...genericResult,
+        status:
+          genericResult.status === 'PASS' && unmet.status === 'PASS'
+            ? 'PASS'
+            : genericResult.status === 'FAIL' || unmet.status === 'FAIL'
+              ? 'FAIL'
+              : 'BLOCKED',
+        auditStatus:
+          genericResult.status === 'PASS' && unmet.status === 'PASS'
+            ? 'Ability A/B settled'
+            : 'Ability A/B path failed or blocked',
+        abilityPaths: { payable: genericResult, unpayable: unmet },
+      }
+      console.log(
+        `  ability A/B ${card.cardNumber} positive=${genericResult.status} negative=${unmet.status}`,
+      )
+    }
     const conditionAuditCardNumber = conditionCardNumbers.has(card.cardNumber)
       ? card.cardNumber
       : conditionCardNumbers.has(card.baseCardNumber)
@@ -2024,10 +2660,10 @@ try {
     console.log(
       `${result.status} ${card.cardNumber} ${card.name} ${result.auditStatus} ${result.operations.join(',')}`,
     )
+    await page.close()
     if (auditFailFast && result.status !== 'PASS') break
   }
 
-  await page.close()
   await browser.close()
   browser = undefined
   server.kill()
@@ -2038,10 +2674,12 @@ try {
     viewport: '1440x960',
     sources: auditConfig.sources,
     scope: auditNegative
-      ? `Formal-pool negative A/B UI audit for every ${auditConfig.label} record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.`
+      ? `${auditConfig.candidate ? 'Candidate staging' : 'Formal-pool'} negative A/B UI audit for every ${auditConfig.label} record. The localhost-only fixture keeps the card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.`
       : auditVanillaAttacks
       ? `Formal-pool test-state UI audit for every ${auditConfig.label} vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.`
-      : `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
+      : auditBs8StrictAbilities
+        ? 'Candidate-only BS8 strict ability Browser A/B audit for the recorded 54 user-visible ability sources. Attack-Then clauses are intentionally excluded from this report. Every A path uses card-skill so a Then clause cannot hide the ability; every B path uses card-skill-negative so every support card is rested on that same ability surface. BS8-084 additionally proves the required pre-attack discard and no-hand rejection through the real UI.'
+        : `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {
       total: results.length,
       effectFlowPassed: results.filter((result) => result.status === 'PASS').length,

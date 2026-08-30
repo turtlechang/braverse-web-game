@@ -10,6 +10,7 @@ import {
   validateFormatRestrictions,
   type DeckFormat,
 } from './deck-rules'
+import { EXTRA_DECK_MAX_CARDS, EXTRA_DECK_MAX_COPIES_PER_CARD } from './extra-deck'
 import type { GameCard, PlayerId } from './types'
 
 const canonicalizeEntry = (entry: CustomDeckEntry): CustomDeckEntry => {
@@ -280,11 +281,89 @@ export interface ExportableDeck {
   name: string
   entries: { cardNumber: string; count: number }[]
   format?: DeckFormat
+  /**
+   * Candidate-only metadata.  It is deliberately nested and opt-in so a
+   * normal JSON deck can never acquire BS8 EXTRA cards by card number alone.
+   */
+  candidateStaging?: CandidateStagingDeckConfig
 }
 
 export interface ImportDeckOptions {
   /** The editor's selected format takes precedence over the JSON metadata. */
   format?: DeckFormat
+  /**
+   * Only the separately labelled BS8 candidate staging editor may import the
+   * candidate-only EXTRA payload.  Standard import must reject it instead of
+   * silently dropping the cards.
+   */
+  allowCandidateStaging?: boolean
+}
+
+const hasOwn = (value: object, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key)
+
+/**
+ * Shared JSON shape guard for the candidate-only importer.  This deliberately
+ * validates only the isolated EXTRA construction boundary; candidate main
+ * deck lookup and strict-contract admission live in bs8-candidate-staging.
+ */
+export const parseCandidateStagingDeckConfig = (
+  raw: unknown,
+): { config: CandidateStagingDeckConfig | undefined; error: string | null } => {
+  if (raw === undefined) return { config: undefined, error: null }
+
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    (raw as Partial<CandidateStagingDeckConfig>).kind !== 'bs8-candidate-staging' ||
+    !Array.isArray((raw as Partial<CandidateStagingDeckConfig>).extraDeckEntries)
+  ) {
+    return { config: undefined, error: '候選驗收 EXTRA Deck 資料格式錯誤' }
+  }
+
+  const entries: CustomDeckEntry[] = []
+  const countsByCardNumber = new Map<string, number>()
+  let totalCards = 0
+  for (const rawEntry of (raw as CandidateStagingDeckConfig).extraDeckEntries) {
+    if (
+      typeof rawEntry !== 'object' ||
+      rawEntry === null ||
+      typeof rawEntry.cardNumber !== 'string' ||
+      rawEntry.cardNumber.length === 0 ||
+      typeof rawEntry.count !== 'number' ||
+      !Number.isInteger(rawEntry.count) ||
+      rawEntry.count < 1
+    ) {
+      return { config: undefined, error: '候選驗收 EXTRA Deck 卡號或數量格式錯誤' }
+    }
+
+    totalCards += rawEntry.count
+    const canonicalNumber = normalizeCardNumber(rawEntry.cardNumber)
+    const nextCount = (countsByCardNumber.get(canonicalNumber) ?? 0) + rawEntry.count
+    countsByCardNumber.set(canonicalNumber, nextCount)
+    if (nextCount > EXTRA_DECK_MAX_COPIES_PER_CARD) {
+      return {
+        config: undefined,
+        error: `EXTRA Deck 中 ${canonicalNumber} 合計 ${nextCount} 張，超過每卡最多 ${EXTRA_DECK_MAX_COPIES_PER_CARD} 張限制。`,
+      }
+    }
+    entries.push({ cardNumber: rawEntry.cardNumber, count: rawEntry.count })
+  }
+
+  if (totalCards > EXTRA_DECK_MAX_CARDS) {
+    return {
+      config: undefined,
+      error: `EXTRA Deck 最多只能放入 ${EXTRA_DECK_MAX_CARDS} 張，目前為 ${totalCards} 張。`,
+    }
+  }
+
+  return {
+    config: {
+      kind: 'bs8-candidate-staging',
+      extraDeckEntries: entries,
+    },
+    error: null,
+  }
 }
 
 export const exportDeck = (deck: CustomDeck): string => {
@@ -295,6 +374,16 @@ export const exportDeck = (deck: CustomDeck): string => {
       count: e.count,
     })),
     format: deck.format ?? DEFAULT_DECK_FORMAT,
+    ...(deck.candidateStaging
+      ? {
+          candidateStaging: {
+            kind: deck.candidateStaging.kind,
+            extraDeckEntries: deck.candidateStaging.extraDeckEntries.map(
+              (entry) => ({ ...entry }),
+            ),
+          },
+        }
+      : {}),
   }
   return JSON.stringify(data, null, 2)
 }
@@ -304,7 +393,34 @@ export const importDeck = (
   options: ImportDeckOptions = {},
 ): { deck: CustomDeck | null; error: string | null } => {
   try {
-    const data = JSON.parse(json) as ExportableDeck
+    const parsed: unknown = JSON.parse(json)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return { deck: null, error: '無法解析牌組資料' }
+    }
+    const data = parsed as ExportableDeck
+
+    // A top-level extraDeck was never a supported Standard JSON field.  Do
+    // not silently discard it: that could make a candidate-only deck look
+    // playable in Standard after import.
+    if (hasOwn(parsed, 'extraDeck') || hasOwn(parsed, 'extraDeckEntries')) {
+      return {
+        deck: null,
+        error: '正式牌組 JSON 不支援頂層 EXTRA Deck；請使用候選驗收牌組格式。',
+      }
+    }
+
+    const candidateStagingResult = parseCandidateStagingDeckConfig(
+      data.candidateStaging,
+    )
+    if (candidateStagingResult.error) {
+      return { deck: null, error: candidateStagingResult.error }
+    }
+    if (candidateStagingResult.config && !options.allowCandidateStaging) {
+      return {
+        deck: null,
+        error: 'BS8 候選驗收 EXTRA Deck 只能在候選驗收牌組編輯器匯入。',
+      }
+    }
 
     if (!data.name || typeof data.name !== 'string') {
       return { deck: null, error: '缺少牌組名稱' }
@@ -345,6 +461,9 @@ export const importDeck = (
       name: data.name,
       entries,
       format,
+      ...(candidateStagingResult.config
+        ? { candidateStaging: candidateStagingResult.config }
+        : {}),
       createdAt: now,
       updatedAt: now,
     }

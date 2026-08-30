@@ -87,7 +87,8 @@ Awakened 核心路徑。BS8
 
 ### Phase 3：UI 與線上對戰
 
-- 牌組編輯器提供獨立六槽 EXTRA Deck；主牌組計數與違規提示不受它污染。
+- 牌組編輯器已在候選 staging 提供獨立六槽 EXTRA Deck，主牌組計數與違規提示不受它污染；Standard 下拉可篩選 BS7，BS8 主牌與 EXTRA 只會在候選模式出現。
+- 候選 JSON 已以 `candidateStaging.extraDeckEntries` 保留順序與六槽資料；Standard 匯入器明確拒絕該標記，避免候選卡滲入正式牌組。
 - 戰場的基礎 EXTRA 區已呈現私密卡面與規則層決定的直接登場按鈕；仍須完成牌組編輯器、
   覆蓋關係、詳情、觀戰者 view 與線上重連的一致呈現。
 - 本機與雙瀏覽器線上流程都執行合法與阻擋 A/B：建構、選擇、覆蓋／主動登場、回應、
@@ -97,12 +98,10 @@ Awakened 核心路徑。BS8
 
 ### Phase 4：逐卡轉接與 promotion
 
-- 先處理五個基礎 EXTRA 卡號（15 筆含異圖），逐卡完成 adapter、嚴格契約、規則、
-  AI 回歸與 Browser A/B；再依顏色逐批處理 54 張主效果、54 項能力與 14 個 `Then`。
+- 五個基礎 EXTRA 卡號（15 筆含異圖）已完成候選 adapter、嚴格契約、規則與指定 Browser A/B。通用主效果的逐卡 Browser 為 146／146 正向、156／156 負向；54 項能力已完成獨立技能表面 A/B，14 個 `Then` 已完成實際攻擊語意 A/B。
 - 重跑 `validate:candidate`、strict capability／contract、正式卡池一致性與完整對局
   smoke；只在全部 gate 完成且使用者明確授權後才執行 promotion。
 
 ## 下一個實作切點
 
-完成自訂牌組、AI／雙瀏覽器線上驗收與逐卡 Browser gate 前，不可將
-核心 command 或 localhost test-state 視為完整 EXTRA 對局支援，更不得據此 promotion。
+候選自訂牌組、AI／雙瀏覽器線上驗收與逐卡 Browser gate 均不會將候選資料升格為正式功能。BS8-043 已依戰鬥區兩格上限綁定唯一的另一張本回合從 Break 登場 LV.3；所有候選規則 gate 已完成，仍須由使用者明確授權 promotion。

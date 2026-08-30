@@ -147,6 +147,77 @@ describe('item and stage actions', () => {
     expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(false)
   })
 
+  it('rejects Cookie hand cards but pays a purple non-Cookie discard cost', () => {
+    const item: GameCard = {
+      id: 'milk-cart',
+      instanceId: 'milk-cart-1',
+      name: 'Milk Cart',
+      type: 'item',
+      energyColor: 'purple',
+      item: {
+        cost: {
+          energy: { purple: 1 },
+          discardHand: 1,
+          discardHandColor: 'purple',
+          discardHandNonCookie: true,
+        },
+        text: 'Discard a purple non-Cookie card. Draw up to 2.',
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+      },
+    }
+    const purpleCookie: GameCard = {
+      id: 'purple-cookie',
+      instanceId: 'purple-cookie',
+      name: 'Purple Cookie',
+      type: 'cookie',
+      energyColor: 'purple',
+      level: 1,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+    }
+    const purpleTrap: GameCard = {
+      id: 'purple-trap',
+      instanceId: 'purple-trap',
+      name: 'Purple Trap',
+      type: 'trap',
+      energyColor: 'purple',
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item, purpleCookie, purpleTrap]
+    state.players['player-one'].supportArea = [{
+      card: { ...support('purple-pay'), energyColor: 'purple' },
+      rested: false,
+    }]
+
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(true)
+    expect(() =>
+      playItem(
+        state,
+        'player-one',
+        item.instanceId,
+        ['purple-pay'],
+        [],
+        [],
+        [purpleCookie.instanceId],
+      ),
+    ).toThrow('棄手牌費用必須選擇非 Cookie 卡牌。')
+
+    const next = playItem(
+      state,
+      'player-one',
+      item.instanceId,
+      ['purple-pay'],
+      [],
+      [],
+      [purpleTrap.instanceId],
+    )
+    expect(next.players['player-one'].hand).toEqual([purpleCookie])
+    expect(next.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([item, purpleTrap]),
+    )
+  })
+
   it('requires and pays a trashBattleCookie item cost (BS2-077 regression)', () => {
     const item: GameCard = {
       id: 'item',

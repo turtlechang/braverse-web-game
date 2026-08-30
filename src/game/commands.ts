@@ -48,7 +48,7 @@ import {
   expandChooseOne,
   expandChooseOneSequence,
 } from './effects/choose-one'
-import { advancePhase } from './turn'
+import { advancePhase, resumeActivePhaseAfterCookieDiscard } from './turn'
 import {
   activateCookieSkill,
   findSkillSource,
@@ -111,6 +111,9 @@ export interface OpponentHandDiscardDecision {
   effectText: string
   count: number
   atLeast?: boolean
+  optional?: boolean
+  energyColor?: import('./types').EnergyColor
+  drawEqualDiscarded?: boolean
 }
 
 /** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
@@ -136,6 +139,7 @@ export interface InspectDeckDecision {
   revealedCardIds: string[]
   restDestination?: InspectDeckRestDestination
   pickDestination?: 'hand' | 'battle' | 'support'
+  pickSupportRested?: boolean
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
@@ -163,6 +167,7 @@ export interface OptionalCostAttackDecision {
   effects: CardEffect[]
   effectText: string
   sourceEnergy?: EnergyCost
+  mandatory?: boolean
 }
 
 export interface DrawUpToDecision {
@@ -871,6 +876,9 @@ export const getPendingDecision = (
       effectText: pending.effectText,
       count: pending.count,
       ...(pending.atLeast ? { atLeast: true } : {}),
+      ...(pending.optional ? { optional: true } : {}),
+      ...(pending.energyColor ? { energyColor: pending.energyColor } : {}),
+      ...(pending.drawEqualDiscarded ? { drawEqualDiscarded: true } : {}),
     }
   }
 
@@ -909,6 +917,7 @@ export const getPendingDecision = (
       revealedCardIds: pending.revealedCards.map((c) => c.instanceId),
       restDestination: pending.restDestination,
       pickDestination: pending.pickDestination,
+      pickSupportRested: pending.pickSupportRested,
       filterColor: pending.filterColor,
       filterType: pending.filterType,
       filterKeyword: pending.filterKeyword,
@@ -942,6 +951,7 @@ export const getPendingDecision = (
       effects: pending.effects,
       effectText: pending.effectText,
       sourceEnergy: pending.sourceEnergy,
+      mandatory: pending.mandatory,
     }
   }
 
@@ -1140,11 +1150,21 @@ const applyPendingDecisionCommand = (
     case 'resolve-opponent-hand-discard': {
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
       const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
+      const activePhaseCookieInstanceId =
+        state.pendingOpponentHandDiscard?.activePhaseCookieInstanceId
       const resolved = resolveOpponentHandDiscard(
         state,
         command.playerId,
         command.cardIds,
       )
+      if (activePhaseCookieInstanceId) {
+        return resumeActivePhaseAfterCookieDiscard(
+          resolved,
+          command.playerId,
+          activePhaseCookieInstanceId,
+          command.cardIds.length > 0,
+        )
+      }
       if (attackDeclaration) {
         if (attackDeclaration.attackerPlayerId !== command.playerId) {
           throw new GameRuleError('不是目前可繼續宣告攻擊的玩家。')
@@ -1946,7 +1966,8 @@ const resolvePendingAbilityEffect = (
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-break' ||
     effect.kind === 'support-to-battle' ||
-    effect.kind === 'trash-to-battle'
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'gain-hp'
       ? effect.thenEffects
       : undefined
   const hasConditionalThen =

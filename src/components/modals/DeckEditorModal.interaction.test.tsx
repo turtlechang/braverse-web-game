@@ -114,7 +114,7 @@ describe('DeckEditorModal pool interactions', () => {
     await cleanup()
   })
 
-  it('separates the BS3, BS4, and BS6 series filters by card number', async () => {
+  it('separates the BS3, BS4, BS6, and BS7 series filters by card number', async () => {
     const { container, cleanup } = await render()
     const seriesSelect = Array.from(
       container.querySelectorAll<HTMLSelectElement>('.deck-editor-filters select'),
@@ -154,6 +154,14 @@ describe('DeckEditorModal pool interactions', () => {
     ).map((button) => button.title)
     expect(bs6Titles.length).toBeGreaterThan(0)
     expect(bs6Titles.every((title) => title.startsWith('BS6-'))).toBe(true)
+
+    await setSeries('BS7')
+    const bs7Titles = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-pool-card-btn'),
+    ).map((button) => button.title)
+    expect(bs7Titles.length).toBeGreaterThan(0)
+    expect(bs7Titles.every((title) => title.startsWith('BS7-'))).toBe(true)
+    expect(Array.from(seriesSelect!.options).some((option) => option.value === 'BS8')).toBe(false)
 
     await cleanup()
   })

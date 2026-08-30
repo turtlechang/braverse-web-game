@@ -208,8 +208,17 @@ const canSafelyExpand = (
 
 export const selectLv4StrategicContribution = (
   breakdown: ReturnType<typeof scoreLv3ActionCandidate>['breakdown'],
-): number => breakdown.contributions
+): number => {
+  // `attack-tempo` 是「沒有其他公開理由時不要白白結束主要階段」的預設。
+  // Lv.5 若已明確因唯一 Trap／Blocker 或可支付防守而給 advance 正向保留值，
+  // 則該保留判斷比泛用節奏規則更具體；不能讓 -70 把它完全壓過。
+  const hasDefensiveReserveOverride = breakdown.contributions.some(
+    (contribution) =>
+      contribution.id === 'defensive-reserve' && contribution.amount > 0,
+  )
+  return breakdown.contributions
   .filter((contribution) =>
+    (contribution.id === 'attack-tempo' && !hasDefensiveReserveOverride) ||
     contribution.id === 'tactical-payoff' ||
     contribution.id === 'tactical-setup' ||
     contribution.id === 'deployment-tempo' ||
@@ -222,6 +231,7 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'unknown-information',
   )
   .reduce((total, contribution) => total + contribution.amount, 0)
+}
 
 export const advanceLv4Plan = (
   previous: Lv4PlanProgress,

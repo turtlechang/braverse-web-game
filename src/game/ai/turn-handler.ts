@@ -15,6 +15,7 @@ import {
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
 } from '../skills'
 import { createSeededShuffle } from '../helpers'
@@ -151,8 +152,7 @@ export const chooseAiStageCostIds = (
     .filter(
       (support) =>
         !supportToTrashSet.has(support.card.instanceId) &&
-        (cost.supportToHandType === undefined ||
-          support.card.type === cost.supportToHandType),
+        isSupportToHandCostCandidate(cost, support),
     )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled

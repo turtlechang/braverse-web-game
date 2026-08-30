@@ -5863,6 +5863,9 @@ describe('BS8 candidate serial contract', () => {
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
       },
     ])
+    expect(convertOfficialAttackEffects(findBs8Candidate('BS8-083'))).toEqual([
+      { kind: 'draw-up-to', max: 3, untilHandSize: 3 },
+    ])
     expect(convertOfficialAttackEffects(findBs8Candidate('BS8-084'))).toEqual([
       {
         kind: 'draw-up-to',

@@ -245,6 +245,27 @@ const matchesSelector = (
     return false
   }
 
+  if (
+    selector.cardNames !== undefined &&
+    !selector.cardNames.includes(cookie.card.name)
+  ) {
+    return false
+  }
+
+  if (
+    selector.enteredFrom !== undefined &&
+    cookie.enteredFrom !== selector.enteredFrom
+  ) {
+    return false
+  }
+
+  if (
+    selector.enteredThisTurn === true &&
+    cookie.enteredTurn !== state.turnNumber
+  ) {
+    return false
+  }
+
   return (
     (selector.minLevel === undefined ||
       cookie.card.level >= selector.minLevel) &&
@@ -452,7 +473,7 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'modify-all-effect-damage' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'draw-up-to-break-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break' | 'deferred-end-of-turn' | 'opponent-rests-support' | 'hp-to-trash-all' | 'break-source-to-trash' | 'reveal-hand' | 'disable-traps'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'modify-all-effect-damage' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-then-draw-same' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'draw-up-to-break-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break' | 'deferred-end-of-turn' | 'opponent-rests-support' | 'hp-to-trash-all' | 'break-source-to-trash' | 'reveal-hand' | 'disable-traps'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -466,6 +487,7 @@ export const isEffectUntargeted = (
   effect.kind === 'multiply-attack-damage' ||
   effect.kind === 'place-source-to-support' ||
   effect.kind === 'discard-hand' ||
+  effect.kind === 'discard-hand-then-draw-same' ||
   effect.kind === 'discard-hand-all' ||
   effect.kind === 'opponent-discard-hand' ||
   effect.kind === 'opponent-random-discard' ||
@@ -494,7 +516,7 @@ export const isEffectUntargeted = (
   || effect.kind === 'flip-to-break'
   || effect.kind === 'hp-to-trash-all'
   || effect.kind === 'break-source-to-trash'
-  || effect.kind === 'reveal-hand'
+  || (effect.kind === 'reveal-hand' && !effect.selectCard)
 
 type TargetSelectableGainHpEffect = GainHpEffect & {
   target: NonNullable<GainHpEffect['target']>
@@ -552,7 +574,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'support-to-trash' ||
   effect.kind === 'support-to-hand' ||
   effect.kind === 'hand-to-support' ||
-  effect.kind === 'hand-to-break' ||
+  (effect.kind === 'hand-to-break' && !effect.revealedCardOnly) ||
   effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'break-to-hand' ||
   effect.kind === 'rest-support' ||
@@ -562,6 +584,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'trash-to-break' ||
   effect.kind === 'trash-to-deck' ||
   effect.kind === 'prevent-support-active-next-phase' ||
+  (effect.kind === 'reveal-hand' && effect.selectCard) ||
   (effect.kind === 'set-active' && Boolean(effect.selectable))
 
 export const getEffectSelectionLimits = (
@@ -612,7 +635,11 @@ export const getEffectSelectionLimits = (
     return { min: effect.cardCount, max: effect.cardCount }
   }
   if (effect.kind === 'hand-to-break' || effect.kind === 'break-to-hand') {
+    if (effect.kind === 'hand-to-break' && effect.revealedCardOnly) return null
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
+  }
+  if (effect.kind === 'reveal-hand' && effect.selectCard) {
+    return { min: effect.amount, max: effect.amount }
   }
   if (effect.kind === 'support-to-hp') {
     if (effect.selectTarget) return { min: effect.optional ? 0 : 1, max: 2 }
@@ -774,6 +801,7 @@ export const getEffectSelectionCandidates = (
     return getTrashToDeckCandidates(state, context, effect)
   }
   if (effect.kind === 'hand-to-break') {
+    if (effect.revealedCardOnly) return []
     return state.players[context.sourcePlayerId].hand.filter(
       (card) =>
         card.type === 'cookie' &&
@@ -799,6 +827,18 @@ export const getEffectSelectionCandidates = (
           card.keywords?.includes(effect.keyword)) &&
         (effect.minLevel === undefined || card.level >= effect.minLevel) &&
         (effect.maxLevel === undefined || card.level <= effect.maxLevel),
+    )
+  }
+  if (effect.kind === 'reveal-hand') {
+    return state.players[context.sourcePlayerId].hand.filter(
+      (card) =>
+        (effect.cookieOnly !== true || card.type === 'cookie') &&
+        (effect.energyColor === undefined || card.energyColor === effect.energyColor) &&
+        (effect.keyword === undefined || card.keywords?.includes(effect.keyword)) &&
+        (effect.minLevel === undefined ||
+          (card.type === 'cookie' && card.level >= effect.minLevel)) &&
+        (effect.maxLevel === undefined ||
+          (card.type === 'cookie' && card.level <= effect.maxLevel)),
     )
   }
   if (effect.kind === 'break-to-trash') {
@@ -1176,6 +1216,8 @@ export const getTrashToHandCandidates = (
     cookieOnly?: boolean
     keyword?: CardKeyword
     maxLevel?: number
+    cardName?: string
+    cardNames?: string[]
     excludeCardName?: string
   },
 ): GameCard[] =>
@@ -1185,6 +1227,8 @@ export const getTrashToHandCandidates = (
         card.energyColor === effect.energyColor) &&
       (!effect.cookieOnly || card.type === 'cookie') &&
       (effect.keyword === undefined || card.keywords?.includes(effect.keyword)) &&
+      (effect.cardName === undefined || card.name === effect.cardName) &&
+      (effect.cardNames === undefined || effect.cardNames.includes(card.name)) &&
       (effect.excludeCardName === undefined ||
         card.name !== effect.excludeCardName) &&
       (effect.maxLevel === undefined || (card.type === 'cookie' && card.level <= effect.maxLevel)),
@@ -1581,6 +1625,38 @@ export const isEffectConditionMet = (
   if (condition?.kind === 'cookie-played-from-trash-this-turn') {
     return Boolean(
       state.cookiesPlayedFromTrashThisTurn?.[context.sourcePlayerId],
+    )
+  }
+
+  if (condition?.kind === 'cookie-played-from-break-this-turn') {
+    return state.players[context.sourcePlayerId].battleArea.some(
+      (cookie) =>
+        cookie.enteredFrom === 'break' &&
+        cookie.enteredTurn === state.turnNumber,
+    )
+  }
+
+  if (condition?.kind === 'previous-effect-target-remaining-hp') {
+    const selectedIds = state.pendingAbilityEffect?.previousEffectTargetIds
+    if (!selectedIds || selectedIds.length === 0) return false
+    return selectedIds.every((instanceId) => {
+      const owner = state.players[context.sourcePlayerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === instanceId,
+      ) ?? state.players[getOpponentId(context.sourcePlayerId)].battleArea.find(
+        (cookie) => cookie.card.instanceId === instanceId,
+      )
+      return owner !== undefined && getCookieEffectiveHp(owner) === condition.remainingHp
+    })
+  }
+
+  if (condition?.kind === 'battle-area-rested-cookie-count-at-least') {
+    return (
+      state.players[context.sourcePlayerId].battleArea.filter((cookie) => cookie.rested)
+        .length +
+        state.players[getOpponentId(context.sourcePlayerId)].battleArea.filter(
+          (cookie) => cookie.rested,
+        ).length >=
+        condition.count
     )
   }
 

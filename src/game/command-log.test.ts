@@ -352,6 +352,57 @@ describe('describeCommandSteps', () => {
     expect(steps?.[1].cards?.map((card) => card.instanceId)).toEqual(['attacker'])
   })
 
+  it('records the actual all-Cookie damage resolved by a trap', () => {
+    const base = createBattleState()
+    const trap: GameCard = {
+      id: 'all-damage-trap',
+      instanceId: 'all-damage-trap',
+      name: 'All Damage Trap',
+      type: 'trap',
+      trap: {
+        text: 'Deal 1 damage to all Cookies.',
+        cost: { energy: {} },
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [trap],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: previous.players['player-two'].battleArea.map((entry) => ({
+            ...entry,
+            hpCards: entry.hpCards.slice(1),
+          })),
+        },
+      },
+    }
+
+    expect(
+      describeCommandSteps(previous, next, {
+        kind: 'play-trap',
+        playerId: 'player-one',
+        trapInstanceId: trap.instanceId,
+        paymentIds: [],
+        targetIds: [],
+      })?.map((step) => step.text),
+    ).toEqual([
+      '發動陷阱卡：「All Damage Trap」',
+      '效果結算：「attacker」受到 1 點傷害',
+    ])
+  })
+
   it('breaks an activate-skill command into payment + effect target + choose-one steps', () => {
     const state = createBattleState()
     const steps = describeCommandSteps(state, state, {
@@ -1105,6 +1156,133 @@ describe('describeCommandSteps', () => {
     expect(
       describeCommandSteps(state, state, { kind: 'skip-trap', playerId: 'player-one' }),
     ).toBeUndefined()
+  })
+
+  it('records blocker payment and the redirected attack target as public steps', () => {
+    const base = createBattleState()
+    const blocker = {
+      ...cookie('blocker', 1, 2),
+      skill: {
+        trigger: 'block' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 } },
+        text: '{bl}',
+        effects: [{
+          kind: 'redirect-attack' as const,
+          target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true },
+        }],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        declaredDamage: 3,
+        remainingDamage: 3,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            {
+              card: blocker,
+              hpCards: [item('blocker-hp-a'), item('blocker-hp-b')],
+              rested: false,
+              battleEntryId: 'blocker:battle:3',
+            },
+          ],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingBattle: {
+        ...previous.pendingBattle!,
+        targetInstanceId: blocker.instanceId,
+        stage: 'damage',
+      },
+    }
+
+    expect(
+      describeCommandSteps(previous, next, {
+        kind: 'play-blocker',
+        playerId: 'player-one',
+        sourceInstanceId: blocker.instanceId,
+        paymentIds: ['p1-support-a'],
+      })?.map((step) => step.text),
+    ).toEqual([
+      '支付能量（橫置）：p1-support-a',
+      '阻擋效果結果：攻擊目標從「defender」改為「blocker」',
+    ])
+  })
+
+  it('records an Activate skill that moves its source from battle to trash', () => {
+    const base = createBattleState()
+    const source = {
+      ...cookie('self-sacrifice', 1, 2),
+      skill: {
+        trigger: 'activate' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Place this Cookie in the trash.',
+        effects: [{
+          kind: 'field-to-trash' as const,
+          target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true },
+        }],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            card: source,
+            hpCards: [item('self-sacrifice-hp-a')],
+            rested: false,
+            battleEntryId: 'self-sacrifice:1',
+          }],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: [],
+          discardPile: [source],
+        },
+      },
+    }
+
+    expect(
+      describeCommandSteps(previous, next, {
+        kind: 'activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+        trigger: 'activate',
+        paymentIds: [],
+      })?.map((step) => step.text),
+    ).toEqual(['效果結算：「self-sacrifice」從戰鬥區送入棄牌區'])
   })
 
   it('names every extra-cost field with the actual cards used, not just a count', () => {

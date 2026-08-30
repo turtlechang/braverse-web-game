@@ -6,9 +6,11 @@ import type {
   GameCard,
 } from '../../game'
 import {
+  convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
   normalizeOfficialCardRecord,
 } from '../official-card-adapter'
+import { materializeExtraDeckCookie } from '../../game/extra-deck'
 import { parseOfficialCardText } from '../official-text-parser'
 import type { OfficialCardRecord } from '../types'
 import type {
@@ -254,6 +256,9 @@ const additionalRuntimeSelectorsForEffect = (
     ...(record.cookieOnly === true ? { cardType: 'cookie' as const } : {}),
     ...(record.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
     ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(Array.isArray(record.cardNames) && record.cardNames.every((name) => typeof name === 'string')
+      ? { cardNames: record.cardNames as string[] }
+      : {}),
     ...(record.sameLevelAsPreviousEffectTarget === true
       ? { sameLevelAsPreviousEffectTarget: true }
       : {}),
@@ -380,6 +385,9 @@ const runtimeSelectorForEffect = (
       ? { keyword: record.keyword as EffectTargetSelector['keyword'] }
       : {}),
     ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(Array.isArray(record.cardNames) && record.cardNames.every((name) => typeof name === 'string')
+      ? { cardNames: record.cardNames as string[] }
+      : {}),
     ...(record.sameLevelAsPreviousEffectTarget === true
       ? { sameLevelAsPreviousEffectTarget: true }
       : {}),
@@ -541,6 +549,9 @@ const runtimeSelectorsForCost = (
       ...(typeof value.supportToHandType === 'string'
         ? { cardType: value.supportToHandType as EffectTargetSelector['cardType'] }
         : {}),
+      ...(typeof value.supportToHandColor === 'string'
+        ? { energyColor: value.supportToHandColor as EffectTargetSelector['energyColor'] }
+        : {}),
     })
   }
   const hpToTrash = value.hpToTrash
@@ -663,8 +674,13 @@ const bracketClauses = (
     if (/^select\s+1\s+cookies?\s+from\s+each\s+player\.?$/i.test(inner)) {
       continue
     }
+    // EXTRA BS8-027 selects a specifically named Cookie from trash. It is a
+    // public target selection, never an unknown bracketed payment.
+    if (/^select\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+in\s+your\s+trash\.?$/i.test(inner)) {
+      continue
+    }
     const discard = inner.match(
-      /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
+      /discard\s+(?:(\d+)|an?)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:non-)?(?:cards?|cookies?|traps?|items?)/i,
     )
     const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
     const supportTrash = inner.match(
@@ -696,7 +712,7 @@ const bracketClauses = (
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
-    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
+    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
     const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
       discard ||
@@ -791,7 +807,7 @@ const bracketClauses = (
         hpToHand
       costs.push({
         kind,
-        amount: amountMatch ? Number(amountMatch[1]) : 1,
+        amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
       if (selfAndHandBreak) {
@@ -882,6 +898,34 @@ const targetClauses = (
       clauseIds: [clauseId],
     })
   }
+  // BS8-050 的「LV.3 Cookie that was played from your break area during this
+  // turn」沒有重複寫出 battle area，卻仍是場上 Cookie 的單一選擇。保留進場
+  // 來源與回合限制，避免 audit 把一般 LV.3 目標誤當成充分證據。
+  const currentTurnBreakEntrySelection =
+    /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(?:your\s+)?LV\.\s*(\d+)\s+Cookie\s+that\s+was\s+played\s+from\s+your\s+break\s+area\s+during\s+this\s+turn\b/gi
+  for (const match of text.matchAll(currentTurnBreakEntrySelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const level = Number(match[3])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        minLevel: level,
+        maxLevel: level,
+        enteredFrom: 'break',
+        enteredThisTurn: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
   const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:other\s+)?(?:cookies?|cards?)(?:\s+other\s+than\s+\[[^\]]+\])?\s+(?:from|in)\s+(your opponent's|opponent's|your|the|either player's)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
   for (const match of text.matchAll(zoneSelection)) {
     const start = match.index ?? 0
@@ -925,6 +969,47 @@ const targetClauses = (
       },
       clauseIds: [clauseId],
       zone,
+    })
+    structuredRanges.push({ start, end })
+  }
+  const namedTrashSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+in\s+your\s+trash\b/gi
+  for (const match of text.matchAll(namedTrashSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardName: match[3],
+      },
+      clauseIds: [clauseId],
+      zone: 'trash',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const namedAlternativeTrashReturn =
+    /\breturn\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+or\s+\[([^\]]+)\]\s+from\s+your\s+trash\b/gi
+  for (const match of text.matchAll(namedAlternativeTrashReturn)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardNames: [match[3], match[4]],
+      },
+      clauseIds: [clauseId],
+      zone: 'trash',
     })
     structuredRanges.push({ start, end })
   }
@@ -1447,7 +1532,14 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
     attackEffects: card.type === 'cookie' ? card.attackEffects : undefined,
     flip: card.flip ? { cost: card.flip.cost, effects: card.flip.effects } : undefined,
     ability: card.item
-      ? { cost: card.item.cost, effects: card.item.effects }
+      ? {
+          cost: card.item.cost,
+          sourceEnergy: card.item.sourceEnergy,
+          // 這裡只保留物品啟動時立刻結算的效果，才能和 GameCard 根層的
+          // effect sequence 一一對照；裝備後攻擊效果仍由上方的全卡遞迴
+          // collectRuntime 收集，不得混成這次物品啟動的 Then 序列。
+          effects: card.item.effects,
+        }
       : card.stageAbility
         ? {
             cost: card.stageAbility.cost,
@@ -1777,7 +1869,12 @@ const buildContract = (
     costs,
     targets,
     steps,
-    status: blockers.length > 0 ? (evidence.unsupportedReason ? 'blocked' : 'needs-review') : 'verified',
+    status:
+      blockers.length > 0
+        ? evidence.unsupportedReason
+          ? 'blocked'
+          : 'needs-review'
+        : 'verified',
     blockers,
   }
 }
@@ -1790,11 +1887,27 @@ export const analyzeOfficialCardBehavior = (
   // BS4-080@2 欄位併寫、BS6 傷害 errata）發生在 adapter 內，若契約仍以
   // 原始記錄建立子句，這些已修正的來源就永遠找不到 runtime evidence。
   const normalized = normalizeOfficialCardRecord(record)
-  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(normalized) : null
-  const card = runtimeCard === undefined && conversion?.status === 'converted' ? conversion.gameCard : runtimeCard ?? null
+  const conversion = runtimeCard === undefined && normalized.type !== 'extra'
+    ? convertOfficialCardToGameCard(normalized)
+    : null
+  const extraConversion = runtimeCard === undefined && normalized.type === 'extra'
+    ? convertOfficialCardToExtraDeckCard(normalized)
+    : null
+  const card = runtimeCard === undefined
+    ? conversion?.status === 'converted'
+      ? conversion.gameCard
+      : extraConversion?.status === 'converted'
+        ? materializeExtraDeckCookie(extraConversion.extraDeckCard)
+        : null
+    : runtimeCard ?? null
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
-    unsupportedReason: conversion?.status === 'unsupported' ? conversion.reason : undefined,
+    unsupportedReason:
+      conversion?.status === 'unsupported'
+        ? conversion.reason
+        : extraConversion?.status === 'unsupported'
+          ? extraConversion.reason
+          : undefined,
   }
   const contract = buildContract(normalized, evidence)
   const runtime = {
@@ -1859,6 +1972,7 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'self-to-trash') {
       return (
         keys.has('selfToTrash') ||
+        keys.has('stageSourceToTrash') ||
         // The adapter represents a self-trash payment as the generic
         // battle-cookie trash key when the source is the attacking Cookie.
         keys.has('trashBattleCookie') ||

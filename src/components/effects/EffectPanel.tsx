@@ -206,6 +206,9 @@ function EffectPanelContent({
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const supportCostTypeLabel =
     skill?.cost.supportToHandType === 'cookie' ? '餅乾' : '卡牌'
+  const supportCostColorLabel = skill?.cost.supportToHandColor
+    ? `${energyColorLabel[skill.cost.supportToHandColor]} `
+    : ''
   const isRestSupportAndDamageEffect =
     currentEffect?.kind === 'rest-support-and-damage'
   const selectedRestSupportIds = new Set(
@@ -254,11 +257,17 @@ function EffectPanelContent({
                   ? currentEffect.cardCount
                   : candidateCards.length,
             }
-        : currentEffect?.kind === 'hand-to-break' ||
+        : (currentEffect?.kind === 'hand-to-break' && !currentEffect.revealedCardOnly) ||
+            (currentEffect?.kind === 'reveal-hand' && currentEffect.selectCard) ||
             currentEffect?.kind === 'break-to-hand' ||
             currentEffect?.kind === 'rest-support'
           ? {
-              min: currentEffect.optional ? 0 : currentEffect.amount,
+              min:
+                currentEffect.kind === 'reveal-hand'
+                  ? currentEffect.amount
+                  : currentEffect.optional
+                    ? 0
+                    : currentEffect.amount,
               max: currentEffect.amount,
             }
           : currentEffect?.kind === 'hand-to-hp'
@@ -780,7 +789,7 @@ function EffectPanelContent({
                 {costSupportCandidates.length > 0 && (
                   <>
                     <small>
-                      選擇要作為代價移動的支援區{supportCostTypeLabel}
+                      選擇要作為代價移動的支援區{supportCostColorLabel}{supportCostTypeLabel}
                     </small>
                     <CandidateButtons
                       cards={costSupportCandidates}

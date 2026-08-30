@@ -33,6 +33,7 @@ import {
   getTrashBattleCookieCostCandidates,
   getBattleCookieToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getTrashCookieCandidates,
@@ -348,6 +349,7 @@ export function usePendingEffect(params: {
     pendingEffect &&
     currentEffect &&
     (currentEffect.kind === 'hand-to-break' ||
+      (currentEffect.kind === 'reveal-hand' && currentEffect.selectCard) ||
       currentEffect.kind === 'break-to-hand' ||
       currentEffect.kind === 'hand-to-support' ||
       currentEffect.kind === 'hand-to-hp' ||
@@ -574,8 +576,7 @@ export function usePendingEffect(params: {
             !pendingEffect.selectedPaymentIds.includes(
               support.card.instanceId,
             ) &&
-            (pendingEffect.skill.cost.supportToHandType === undefined ||
-              support.card.type === pendingEffect.skill.cost.supportToHandType) &&
+            isSupportToHandCostCandidate(pendingEffect.skill.cost, support) &&
             (pendingEffect.skill.cost.supportToTrashKeyword === undefined ||
               support.card.keywords?.includes(
                 pendingEffect.skill.cost.supportToTrashKeyword,
@@ -943,6 +944,13 @@ export function usePendingEffect(params: {
       }
       if (effect.kind === 'field-to-deck-bottom') {
         return hasRequiredEffectTargets(nextGame, context, effect)
+      }
+      // A source-only field-to-trash effect is self-targeting by definition.
+      // Its legal source was already verified by canActivateCookieSkill;
+      // asking the generic selector again can incorrectly hide the immediate
+      // activation panel (BS8-020) before the source leaves battle.
+      if (effect.kind === 'field-to-trash' && effect.target?.sourceOnly) {
+        return true
       }
       if (isEffectUntargeted(effect) || !('target' in effect) || !effect.target) {
         return true
@@ -1413,9 +1421,15 @@ export function usePendingEffect(params: {
                 ? supportEffectCandidates.length
                 : currentEffect.amount)
             : currentEffect.amount
-        : currentEffect.kind === 'hand-to-break' ||
-            currentEffect.kind === 'break-to-hand' ||
-            currentEffect.kind === 'rest-support'
+         : currentEffect.kind === 'hand-to-break' ||
+             currentEffect.kind === 'break-to-hand' ||
+             currentEffect.kind === 'rest-support'
+           ? currentEffect.amount
+        : currentEffect.kind === 'reveal-hand' && currentEffect.selectCard
+          // A selectable reveal (BS8-047) is a real hand-card selection. It
+          // has no `target` field, so letting it fall through to the generic
+          // target branch would give it a zero-card selection cap and render
+          // an enabled-looking candidate that can never be chosen.
           ? currentEffect.amount
         : currentEffect.kind === 'support-to-hp'
           ? currentEffect.selectTarget

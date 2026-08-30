@@ -213,6 +213,7 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'stage-source-to-deck') return '場景卡已放回牌庫。'
   if (effect.kind === 'stage-source-to-trash') return '場景卡已放入棄牌區。'
   if (effect.kind === 'break-source-to-battle') return '從休息區登場。'
+  if (effect.kind === 'reveal-hand') return '展示符合條件的手牌。'
   if (effect.kind === 'hand-to-break') return '手牌餅乾已放入休息區。'
   if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
   if (effect.kind === 'flip-to-break') return '將這張 FLIP 卡放入休息區。'

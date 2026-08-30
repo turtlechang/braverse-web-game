@@ -32,6 +32,7 @@ import {
   buildReplayIssueBundle,
   buildBattleReplayExport,
   getEnergyCostTotal,
+  isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   isEffectConditionMet,
@@ -44,6 +45,8 @@ import {
 } from '../game'
 import {
   createAttackEffectDemoState,
+  createBs8076ActivePreventionDemoState,
+  createBs8084AttackRequirementDemoState,
   createBs8ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
@@ -178,6 +181,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs8-extra-deck') {
       return createBs8ExtraDeckDemoState(testStateConfig.conditionMet)
     }
+    if (testStateConfig?.kind === 'bs8-076-active-prevention') {
+      return createBs8076ActivePreventionDemoState()
+    }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return createSupportToTrashSkillDemoState()
     }
@@ -206,10 +212,17 @@ export function useMatchController(params: {
       return createBlueSt4TrapDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'card-check') {
-      return createCardCheckDemoState(testStateConfig.cardNumber)
+      return createCardCheckDemoState(testStateConfig.cardNumber, {
+        preferSkillSurface: testStateConfig.preferSkillSurface,
+      })
+    }
+    if (testStateConfig?.kind === 'bs8-084-attack-discard') {
+      return createBs8084AttackRequirementDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'card-negative') {
-      return createCardNegativeDemoState(testStateConfig.cardNumber)
+      return createCardNegativeDemoState(testStateConfig.cardNumber, {
+        preferSkillSurface: testStateConfig.preferSkillSurface,
+      })
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
@@ -380,6 +393,9 @@ export function useMatchController(params: {
         ? '測試狀態：BS8-005 已滿足從 EXTRA Deck 登場條件。'
         : '測試狀態：BS8-005 尚未滿足從 EXTRA Deck 登場條件。'
     }
+    if (testStateConfig?.kind === 'bs8-076-active-prevention') {
+      return '測試狀態：BS8-076 目標可選擇不棄，或恰好棄 2 張手牌恢復 active。'
+    }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return '測試狀態：ST3-002 支援卡代價技能。'
     }
@@ -414,7 +430,14 @@ export function useMatchController(params: {
         : '測試狀態：ST4-020 手牌不足，不能發動。'
     }
     if (testStateConfig?.kind === 'card-check') {
-      return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+      return testStateConfig.preferSkillSurface
+        ? `測試狀態：卡片技能 strict 檢查 ${testStateConfig.cardNumber}。`
+        : `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+    }
+    if (testStateConfig?.kind === 'bs8-084-attack-discard') {
+      return testStateConfig.payable
+        ? 'BS8-084 正向驗證：攻擊前必須棄置 1 張手牌。'
+        : 'BS8-084 反向驗證：沒有手牌時不得宣告攻擊。'
     }
     if (testStateConfig?.kind === 'bs6-010-movement') {
       return testStateConfig.blocked
@@ -775,8 +798,8 @@ export function useMatchController(params: {
             (support) =>
               !selectedFaintPaymentIds.includes(support.card.instanceId) &&
               !selectedFaintCostSupportIds.includes(support.card.instanceId) &&
-              (pendingFaint.cost?.supportToHandType === undefined ||
-                support.card.type === pendingFaint.cost.supportToHandType),
+              (!pendingFaint.cost ||
+                isSupportToHandCostCandidate(pendingFaint.cost, support)),
           )
           .map((support) => support.card)
       : []

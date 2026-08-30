@@ -31,6 +31,7 @@ import {
   getDiscardHandCostCandidates,
   getBattleCookieToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
@@ -129,6 +130,7 @@ const chooseEffectTargets = (
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
     effect.kind === 'hand-to-break' ||
+    (effect.kind === 'reveal-hand' && effect.selectCard) ||
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
@@ -562,8 +564,7 @@ const chooseAbilityCostIds = (
     .filter(
       (support) =>
         !supportToTrashSet.has(support.card.instanceId) &&
-        (cost.supportToHandType === undefined ||
-          support.card.type === cost.supportToHandType),
+        isSupportToHandCostCandidate(cost, support),
     )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
@@ -958,8 +959,7 @@ const resolveAiSkill = (
     .filter(
       (support) =>
         !costSupportToTrashSet.has(support.card.instanceId) &&
-        (skill.cost.supportToHandType === undefined ||
-          support.card.type === skill.cost.supportToHandType),
+        isSupportToHandCostCandidate(skill.cost, support),
     )
     .map((support) => support.card.instanceId)
   const costSupportToHandIds = skill.cost.supportToHand

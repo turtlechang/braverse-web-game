@@ -132,7 +132,7 @@ npm run cards:analyze:bs8-candidate
 npm run validate:candidate
 ```
 
-匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`。目前快照有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組。專用 `convertOfficialCardToExtraDeckCard` 已轉接五個基礎 EXTRA 卡號；BS8-005／069／090 有直接登場核心 TDD，且戰場提供持有者私密卡面與 localhost-only `met`／`unmet` Browser A/B；BS8-027／104 已依官方規則與 FAQ 實作 Awakened 覆蓋、`HP+2`、裝備／暫時效果與昏厥去向的純規則 TDD。尚無自訂牌組、BS8 AI 策略、雙瀏覽器線上與逐卡 Browser gate；即使 `validate:candidate` 通過也只代表來源與結構正確，不得改寫 `candidateStatus` 或執行 `promote:candidate`。
+匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`。目前快照有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組，專用 `convertOfficialCardToExtraDeckCard` 則只為候選 staging 使用。候選自訂牌組可設定 0–6 張 EXTRA，固定 seed Lv.1–Lv.5、雙瀏覽器候選線上房與對手遮罩均與 Standard 分離；它們不構成完整逐卡 Browser gate。strict audit 目前為 171 verified／0 needs-review／0 blocked；BS8-076 已有候選 Browser A/B，驗證對手 Active Phase 棄 0 張維持 rested、恰好棄 2 張才轉 active。BS8-043 依戰鬥區兩格上限，將來源以外唯一的本回合從 Break 登場 LV.3 綁定為目標，不可改為任選或全體。即使 `validate:candidate` 通過也只代表來源與結構正確，不得改寫 `candidateStatus` 或執行 `promote:candidate`。
 
 以下 serial gate 段落保留各卡在逐卡稽核當時的候選資料與 `inventory` 狀態；其中「候選仍為 `inventory`／不可 promote」是當時的歷史狀態，不代表目前。BS7 已於 2026-08-22 完成 promotion，現在以正式卡池為準。BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
 

@@ -20,6 +20,7 @@ import {
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
 } from '../skills'
 import { chooseAiEffectMode } from './choose-one-mode'
@@ -273,8 +274,7 @@ export const handleAiPendingDecision = (
     )
     const faintSupportToHandCandidates = faintSupportToTrashCandidates.filter(
       (support) =>
-        faintTriggeredCost?.supportToHandType === undefined ||
-        support.card.type === faintTriggeredCost.supportToHandType,
+        !faintTriggeredCost || isSupportToHandCostCandidate(faintTriggeredCost, support),
     )
     const canPayTriggeredCost =
       !faintTriggeredCost ||
@@ -441,13 +441,17 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇棄置手牌。`,
       }
     }
-    const hand = state.players[playerId].hand
+    const hand = state.players[playerId].hand.filter(
+      (card) =>
+        pendingDecision.energyColor === undefined ||
+        card.energyColor === pendingDecision.energyColor,
+    )
     const discardedCards = universal.enabled
       ? universal.orderCostIds(
           hand.map((card) => card.instanceId),
-          pendingDecision.count,
+          pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count,
         ).map((instanceId) => hand.find((card) => card.instanceId === instanceId)!)
-      : hand.slice(0, pendingDecision.count)
+      : hand.slice(0, pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count)
     const discardIds = discardedCards.map((card) => card.instanceId)
     return withPendingReason({
       state: applyGameCommand(state, {
@@ -457,7 +461,7 @@ export const handleAiPendingDecision = (
       }),
       action: 'idle',
       revealedCards: discardedCards,
-      description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
+      description: `${state.players[playerId].name}棄置 ${discardIds.length} 張手牌。`,
     }, 'discard', pendingDecision.sourceInstanceId)
   }
 
@@ -587,8 +591,7 @@ export const handleAiPendingDecision = (
       .filter(
         (support) =>
           !paymentIds?.includes(support.card.instanceId) &&
-          (pendingDecision.cost.supportToHandType === undefined ||
-            support.card.type === pendingDecision.cost.supportToHandType),
+          isSupportToHandCostCandidate(pendingDecision.cost, support),
       )
       .map((support) => support.card.instanceId)
     const supportToHandIds = universal.enabled

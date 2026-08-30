@@ -1223,6 +1223,58 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
   })
 })
 
+describe('usePendingEffect BS8-047 selectable reveal', () => {
+  it('selects the revealed LV.3 hand Cookie before its Then movement', async () => {
+    const state = createCardCheckDemoState('BS8-047')
+    const itemCard = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-047',
+    )
+    if (!itemCard?.item) throw new Error('BS8-047 fixture requires its item ability')
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCardAbility(itemCard, itemCard.item!, 'item', '使用物品'),
+    )
+
+    const revealed = captured!.genericEffectCandidateCards.find(
+      (card) => card.id === 'BS8-yellow-lv3-hand',
+    )
+    expect(captured!.currentEffect?.kind).toBe('reveal-hand')
+    expect(revealed).toBeDefined()
+
+    await act(() => captured!.toggleEffectTarget(revealed!.instanceId))
+    expect(captured!.pendingEffect?.selectedTargetIds).toEqual([
+      revealed!.instanceId,
+    ])
+    await act(() => root.unmount())
+  })
+})
+
 describe('usePendingEffect BS4-062 staged selections', () => {
   it('excludes paid supports and preserves four extra rests when selecting an opponent', async () => {
     const game = createCardCheckDemoState('BS4-062')

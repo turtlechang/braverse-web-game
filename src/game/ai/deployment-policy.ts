@@ -1,4 +1,4 @@
-import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
+import { getAttackEnergyCostForPlayer, selectEnergyPayment } from '../energy'
 import { canAttack } from '../turn'
 import type { GameCard, GameState, PlayerId } from '../types'
 
@@ -25,7 +25,10 @@ export const canDeployCookieForLethal = (
   }
 
   const player = state.players[playerId]
-  if (!selectEnergyPayment(getAttackEnergyCost(card), player.supportArea)) {
+  if (!selectEnergyPayment(
+    getAttackEnergyCostForPlayer(state, playerId, card),
+    player.supportArea,
+  )) {
     return false
   }
 

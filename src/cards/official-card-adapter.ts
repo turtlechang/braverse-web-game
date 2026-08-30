@@ -247,13 +247,58 @@ export const normalizeOfficialCardRecord = (
   // flipText，避免 runtime 卡沒有 FlipAbility 而產生空白、無法結算的 FLIP 視窗。
   if (
     sourceCard.type === 'flip' &&
-    !sourceCard.flipText &&
+    sourceCard.flipText === null &&
     sourceCard.skill.text
   ) {
     return {
       ...sourceCard,
       skill: { ...sourceCard.skill, text: null },
       flipText: sourceCard.skill.text,
+    }
+  }
+
+  // BS8-028@1／029@1 的官方資料把一般 Cookie 技能和攻擊併到 attackText，
+  // 卻同時標記成 FLIP。這兩張沒有獨立的 FLIP 效果；拆出技能後以空字串
+  // 阻止 flip adapter 把同一段 Activate 技能誤建為 FlipAbility。
+  if (
+    sourceCard.type === 'flip' &&
+    !sourceCard.skill.text &&
+    sourceCard.flipText === null &&
+    sourceCard.cardNumber === 'BS8-028@1' &&
+    /\{sk\}\s*Heart of the Mines Guard/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*3\s*$/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        ...sourceCard.skill,
+        name: '{sk} Heart of the Mines Guard',
+        text:
+          '{mob} {t1} During this turn, if a Cookie has been played from your break area, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+      },
+      attackText: '<{Y}{Y}{Y}> Sharp Beak {da} 3',
+      flipText: '',
+    }
+  }
+
+  if (
+    sourceCard.type === 'flip' &&
+    !sourceCard.skill.text &&
+    sourceCard.flipText === null &&
+    sourceCard.cardNumber === 'BS8-029@1' &&
+    /\{sk\}\s*Helmet on!/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*2\s*$/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        ...sourceCard.skill,
+        name: '{sk} Helmet on!',
+        text:
+          '{mob} {t1} During this turn, if a Cookie has been played from your break area, draw up to 1 card from your deck.',
+      },
+      attackText: '<{Y}{Y}> Helmet Headbutt! {da} 2',
+      flipText: '',
     }
   }
 

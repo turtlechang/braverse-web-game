@@ -4,6 +4,7 @@ import { continuePendingReplacements } from '../replacement'
 import { hasCookieOnPlayEffects } from '../skills'
 import type { GameCard, GameState, PlayerId, PlayerState } from '../types'
 import { finishWithDefeat } from '../victory'
+import { executeCardEffect } from './execute'
 
 export const resolveOpponentHandDiscard = (
   state: GameState,
@@ -20,13 +21,16 @@ export const resolveOpponentHandDiscard = (
   }
 
   const uniqueIds = [...new Set(selectedCardIds)]
-  if (
-    pending.atLeast
-      ? uniqueIds.length < pending.count
-      : uniqueIds.length !== pending.count
-  ) {
+  const validSelectionCount = pending.optional
+    ? uniqueIds.length === 0 || uniqueIds.length === pending.count
+    : pending.atLeast
+      ? uniqueIds.length >= pending.count
+      : uniqueIds.length === pending.count
+  if (!validSelectionCount) {
     throw new GameRuleError(
-      pending.atLeast
+      pending.optional
+        ? `必須棄置 0 張或恰好 ${pending.count} 張手牌。`
+        : pending.atLeast
         ? `至少必須選擇 ${pending.count} 張手牌棄置。`
         : `必須選擇 ${pending.count} 張手牌棄置。`,
     )
@@ -38,8 +42,12 @@ export const resolveOpponentHandDiscard = (
   }
 
   for (const instanceId of uniqueIds) {
-    if (!player.hand.some((card) => card.instanceId === instanceId)) {
+    const candidate = player.hand.find((card) => card.instanceId === instanceId)
+    if (!candidate) {
       throw new GameRuleError('選擇的卡片不在你的手牌中。')
+    }
+    if (pending.energyColor && candidate.energyColor !== pending.energyColor) {
+      throw new GameRuleError(`只能選擇 ${pending.energyColor} 能量顏色的手牌。`)
     }
   }
 
@@ -70,7 +78,7 @@ export const resolveOpponentHandDiscard = (
             discardPile: [...player.discardPile, ...selectedCards],
           }
 
-  return continuePendingReplacements({
+  const resolved = continuePendingReplacements({
     ...state,
     players: {
       ...state.players,
@@ -78,6 +86,19 @@ export const resolveOpponentHandDiscard = (
     },
     pendingOpponentHandDiscard: null,
   })
+
+  if (!pending.drawEqualDiscarded || selectedCards.length === 0) return resolved
+
+  return executeCardEffect(
+    resolved,
+    {
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    },
+    { kind: 'draw', amount: selectedCards.length },
+    [],
+  )
 }
 
 export const resolveOpponentRestSupport = (
@@ -246,7 +267,10 @@ export const resolveInspectDeck = (
         ...player,
         supportArea: [
           ...player.supportArea,
-          ...pickedCards.map((card) => ({ card, rested: true })),
+          ...pickedCards.map((card) => ({
+            card,
+            rested: pending.pickSupportRested ?? true,
+          })),
         ],
       }
     }
@@ -259,7 +283,15 @@ export const resolveInspectDeck = (
       ? { ...player, discardPile: [...player.discardPile, ...restCards] }
       : pending.restDestination === 'top'
         ? { ...player, deck: [...restCards, ...player.deck] }
-        : { ...player, deck: [...player.deck, ...restCards] }
+        : pending.restDestination === 'support-rested'
+          ? {
+              ...player,
+              supportArea: [
+                ...player.supportArea,
+                ...restCards.map((card) => ({ card, rested: true })),
+              ],
+            }
+          : { ...player, deck: [...player.deck, ...restCards] }
 
   const lastPlayedCookie = playedCookies.length > 0 ? playedCookies[playedCookies.length - 1] : null
   const playedCookieIds = new Set(playedCookies.map((card) => card.instanceId))

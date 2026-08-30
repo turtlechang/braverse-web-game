@@ -3,6 +3,8 @@ import type {
   EnergyColor,
   EnergyCost,
   GameState,
+  PlayerId,
+  StageAttackCostModifier,
   SupportCard,
 } from './types'
 
@@ -62,6 +64,97 @@ export const getRemainingEnergyCost = (
 export const getAttackEnergyCost = (card: CookieCard): EnergyCost =>
   card.attackEnergyCost ?? { neutral: card.attackCost }
 
+const applyStageAttackCostModifier = (
+  cost: EnergyCost,
+  modifier: StageAttackCostModifier,
+): EnergyCost => {
+  const next = { ...cost }
+  for (const [rawColor, amount] of Object.entries(modifier.energyCost)) {
+    if (typeof amount !== 'number' || amount <= 0) continue
+    const color = rawColor as keyof EnergyCost
+    const current = next[color] ?? 0
+    if (modifier.operation === 'increase') {
+      next[color] = current + amount
+    } else if (current <= amount) {
+      delete next[color]
+    } else {
+      next[color] = current - amount
+    }
+  }
+  return next
+}
+
+const stageAttackCostModifierApplies = (
+  state: GameState,
+  stageOwnerId: PlayerId,
+  attackerPlayerId: PlayerId,
+  attacker: CookieCard,
+  modifier: StageAttackCostModifier,
+): boolean => {
+  if (
+    (modifier.appliesTo === 'stage-owner' && stageOwnerId !== attackerPlayerId) ||
+    (modifier.targetCardName !== undefined && attacker.name !== modifier.targetCardName)
+  ) {
+    return false
+  }
+  if (!modifier.condition) return true
+
+  const conditionPlayerId = modifier.condition.player === 'stage-owner'
+    ? stageOwnerId
+    : attackerPlayerId
+  const player = state.players[conditionPlayerId]
+  return modifier.condition.kind === 'support-count-at-least'
+    ? player.supportArea.length >= modifier.condition.count
+    : player.discardPile.length >= modifier.condition.count
+}
+
+/**
+ * Apply continuous Stage effects to an attack cost.  This is deliberately
+ * evaluated from the current board rather than written into GameState: moving
+ * a Stage or crossing its threshold immediately updates every caller (rules,
+ * UI, online projections, and AI) without stale modifier cleanup.
+ */
+const applyStaticStageAttackCostModifiers = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+  attacker: CookieCard,
+  initialCost: EnergyCost,
+): EnergyCost => {
+  let cost = { ...initialCost }
+  for (const stageOwnerId of Object.keys(state.players) as PlayerId[]) {
+    const modifiers = state.players[stageOwnerId].stage?.card.stageAbility
+      ?.staticAttackCostModifiers ?? []
+    for (const modifier of modifiers) {
+      if (stageAttackCostModifierApplies(
+        state,
+        stageOwnerId,
+        attackerPlayerId,
+        attacker,
+        modifier,
+      )) {
+        cost = applyStageAttackCostModifier(cost, modifier)
+      }
+    }
+  }
+  return cost
+}
+
+/**
+ * Resolve a hand or in-play Cookie's printed attack cost plus continuous Stage
+ * rules.  It has no turn-scoped target override, so it also works before a
+ * hand Cookie has entered battle (for example, AI deployment evaluation).
+ */
+export const getAttackEnergyCostForPlayer = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+  attacker: CookieCard,
+): EnergyCost => applyStaticStageAttackCostModifiers(
+  state,
+  attackerPlayerId,
+  attacker,
+  getAttackEnergyCost(attacker),
+)
+
 /**
  * Resolve an attack cost after turn-scoped effects such as P-032 have been
  * applied. UI, AI, and the authoritative battle command all use this helper
@@ -71,12 +164,18 @@ export const getAttackEnergyCostForState = (
   state: GameState,
   attackerInstanceId: string,
 ): EnergyCost => {
-  const attacker = Object.values(state.players)
-    .flatMap((player) => player.battleArea)
-    .find((cookie) => cookie.card.instanceId === attackerInstanceId)
-  if (!attacker) {
+  const ownerAndAttacker = (Object.keys(state.players) as PlayerId[])
+    .map((playerId) => ({
+      playerId,
+      attacker: state.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === attackerInstanceId,
+      ),
+    }))
+    .find((candidate) => candidate.attacker !== undefined)
+  if (!ownerAndAttacker?.attacker) {
     throw new Error(`Unknown attacker: ${attackerInstanceId}`)
   }
+  const { playerId: attackerPlayerId, attacker } = ownerAndAttacker
 
   const modifier = [...(state.attackCostModifiers ?? [])]
     .reverse()
@@ -86,7 +185,12 @@ export const getAttackEnergyCostForState = (
         (candidate.expiresAfterTurn === null ||
           candidate.expiresAfterTurn >= state.turnNumber),
     )
-  return modifier ? { ...modifier.energyCost } : getAttackEnergyCost(attacker.card)
+  return applyStaticStageAttackCostModifiers(
+    state,
+    attackerPlayerId,
+    attacker.card,
+    modifier ? { ...modifier.energyCost } : getAttackEnergyCost(attacker.card),
+  )
 }
 
 /**

@@ -35,6 +35,7 @@ import {
   getTrashToDeckCandidates,
   getTrashToDeckCostCandidates,
   getEnergyCostTotal,
+  isSupportToHandCostCandidate,
   hasBlockingPending,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
@@ -327,8 +328,8 @@ export function useOnlineMatchController(params: {
             (support) =>
               !selectedFaintPaymentIds.includes(support.card.instanceId) &&
               !selectedFaintCostSupportIds.includes(support.card.instanceId) &&
-              (pendingFaint.cost?.supportToHandType === undefined ||
-                support.card.type === pendingFaint.cost.supportToHandType),
+              (!pendingFaint.cost ||
+                isSupportToHandCostCandidate(pendingFaint.cost, support)),
           )
           .map((support) => support.card)
       : []

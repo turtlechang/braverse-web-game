@@ -2391,4 +2391,91 @@ describe('new card-effect mechanics', () => {
     )
     expect(resolved.players['player-one'].breakArea).toEqual([three])
   })
+
+  it('locks BS8 current-turn break targets and chains HP only to that selected Cookie', () => {
+    const base = asMainPhase(createDemoGame())
+    const fromBreak = makeCookie({ instanceId: 'bs8-from-break', level: 3 })
+    const fromHand = makeCookie({ instanceId: 'bs8-from-hand', level: 3 })
+    const hpOne: GameCard = { id: 'hp-one', instanceId: 'hp-one', name: 'HP 1', type: 'item' }
+    const hpDrawOne: GameCard = { id: 'hp-draw-one', instanceId: 'hp-draw-one', name: 'HP draw 1', type: 'item' }
+    const hpDrawTwo: GameCard = { id: 'hp-draw-two', instanceId: 'hp-draw-two', name: 'HP draw 2', type: 'item' }
+    const first: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        minLevel: 3,
+        maxLevel: 3,
+        enteredFrom: 'break',
+        enteredThisTurn: true,
+      },
+      thenEffects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, previousEffectTargetOnly: true },
+        condition: { kind: 'previous-effect-target-remaining-hp', remainingHp: 2 },
+      }],
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [hpDrawOne, hpDrawTwo],
+          battleArea: [
+            {
+              card: fromBreak,
+              hpCards: [hpOne],
+              rested: false,
+              enteredFrom: 'break',
+              enteredTurn: base.turnNumber,
+            },
+            {
+              card: fromHand,
+              hpCards: [hpOne],
+              rested: false,
+              enteredFrom: 'hand',
+              enteredTurn: base.turnNumber,
+            },
+          ],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'bs8-stage-source',
+        sourceKind: 'stage',
+        effects: [first],
+        effectIndex: 0,
+      },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'bs8-stage-source' }
+
+    expect(getEffectSelectionCandidates(state, context, first).map((cookie) => cookie.instanceId))
+      .toEqual([fromBreak.instanceId])
+
+    const afterFirst = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [fromBreak.instanceId],
+    })
+    expect(afterFirst.pendingAbilityEffect).toMatchObject({
+      effectIndex: 1,
+      previousEffectTargetIds: [fromBreak.instanceId],
+    })
+
+    const afterThen = applyGameCommand(afterFirst, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(afterThen.players['player-one'].battleArea).toMatchObject([
+      { card: { instanceId: fromBreak.instanceId }, hpCards: [hpOne, hpDrawOne, hpDrawTwo] },
+      { card: { instanceId: fromHand.instanceId }, hpCards: [hpOne] },
+    ])
+    expect(afterThen.pendingAbilityEffect).toBeUndefined()
+  })
 })

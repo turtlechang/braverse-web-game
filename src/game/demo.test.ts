@@ -6,6 +6,7 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
+  getAttackEnergyCostForState,
   getForcedAttackTargetId,
   resolveNextDamage,
   resolveAttackEffect,
@@ -24,6 +25,8 @@ import {
   createBlueOptionalCostAttackDemoState,
   createAiDiscardRevealDemoState,
   createBs2015CostDepartureDemoState,
+  createBs8076ActivePreventionDemoState,
+  createBs8084AttackRequirementDemoState,
   createBs8ExtraDeckDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
@@ -168,6 +171,15 @@ describe('parseTestStateConfig', () => {
     expect(result).toBeNull()
   })
 
+  it('parses a strict skill-only card-check route only on localhost', () => {
+    expect(parseTestStateConfig('?test-state=card-skill:BS8-010', 'localhost')).toEqual({
+      kind: 'card-check',
+      cardNumber: 'BS8-010',
+      preferSkillSurface: true,
+    })
+    expect(parseTestStateConfig('?test-state=card-skill:BS8-010', 'example.com')).toBeNull()
+  })
+
   it('parses BS8 EXTRA Deck positive and blocked test-state routes only on localhost', () => {
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:met', 'localhost'),
@@ -177,6 +189,18 @@ describe('parseTestStateConfig', () => {
     ).toEqual({ kind: 'bs8-extra-deck', conditionMet: false })
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:met', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('parses the localhost-only BS8-084 attack-discard A/B routes', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs8-084-attack-discard:payable', 'localhost'),
+    ).toEqual({ kind: 'bs8-084-attack-discard', payable: true })
+    expect(
+      parseTestStateConfig('?test-state=bs8-084-attack-discard:unpayable', 'localhost'),
+    ).toEqual({ kind: 'bs8-084-attack-discard', payable: false })
+    expect(
+      parseTestStateConfig('?test-state=bs8-084-attack-discard:payable', 'example.com'),
     ).toBeNull()
   })
 
@@ -195,6 +219,23 @@ describe('parseTestStateConfig', () => {
     })
     expect(canPlayExtraDeckCookie(met, 'player-one', instanceId)).toBe(true)
     expect(canPlayExtraDeckCookie(unmet, 'player-one', instanceId)).toBe(false)
+  })
+
+  it('creates the BS8-076 active-phase decision with exactly two discard candidates', () => {
+    const state = createBs8076ActivePreventionDemoState()
+    const target = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.name === 'BS8-076 Active Phase Target',
+    )
+
+    expect(state.phase).toBe('active')
+    expect(state.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 2,
+      optional: true,
+      activePhaseCookieInstanceId: target?.card.instanceId,
+    })
+    expect(state.players['player-one'].hand).toHaveLength(2)
+    expect(target?.rested).toBe(true)
   })
 
   it('parses both BS2-015 post-cost test-state routes on localhost', () => {
@@ -305,6 +346,13 @@ describe('parseTestStateConfig', () => {
     expect(
       parseTestStateConfig('?test-state=card-negative:BS6-020', 'localhost'),
     ).toEqual({ kind: 'card-negative', cardNumber: 'BS6-020' })
+    expect(
+      parseTestStateConfig('?test-state=card-skill-negative:BS8-010', 'localhost'),
+    ).toEqual({
+      kind: 'card-negative',
+      cardNumber: 'BS8-010',
+      preferSkillSurface: true,
+    })
     expect(
       parseTestStateConfig('?test-state=card-negative:BS6-020', 'example.com'),
     ).toBeNull()
@@ -1018,6 +1066,240 @@ describe('createCardCheckDemoState', () => {
         peeledCarrotEffect,
       ).map((candidate) => candidate.instanceId),
     ).toContain('trash-cookie-2')
+  })
+
+  it('routes BS8 attack Then candidates through a real payable attack, not a prebuilt post-attack window', () => {
+    const state = createCardCheckDemoState('BS8-076')
+    const negative = createCardNegativeDemoState('BS8-076')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-076',
+    )
+
+    expect(source?.card.attackEffects).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        mandatory: true,
+        cost: { selfToDeckBottom: true },
+      },
+    ])
+    expect(source?.rested).toBe(false)
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].supportArea.some((support) => !support.rested)).toBe(true)
+    expect(negative.pendingBattle).toBeNull()
+    expect(negative.players['player-one'].supportArea.every((support) => support.rested)).toBe(true)
+  })
+
+  it('uses the normalized attack energy for a colourless BS8 alternate-art fixture', () => {
+    const state = createCardCheckDemoState('BS8-083@2')
+    const source = state.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.id === 'BS8-083',
+    )
+
+    expect(source?.card.attackEnergyCost).toEqual({ blue: 3 })
+    expect(state.players['player-one'].supportArea.map((support) => support.card.energyColor))
+      .toEqual(['blue', 'blue', 'blue', 'blue', 'blue', 'blue'])
+  })
+
+  it('sets the positive BS8 support-count attack Then fixtures to their printed condition', () => {
+    for (const [cardNumber, ownSupportCount] of [
+      ['BS8-054', 1],
+      ['BS8-067', 2],
+    ] as const) {
+      const state = createCardCheckDemoState(cardNumber)
+      expect(state.players['player-one'].supportArea).toHaveLength(ownSupportCount)
+      expect(state.players['player-two'].supportArea).toHaveLength(3)
+    }
+  })
+
+  it('keeps the BS8-084 attack Then hand condition met', () => {
+    expect(createCardCheckDemoState('BS8-084').players['player-one'].hand).toHaveLength(3)
+  })
+
+  it('can select the BS8-010 and BS8-083 ability surfaces without hiding them behind Then', () => {
+    const redVelvet = createCardCheckDemoState('BS8-010', {
+      preferSkillSurface: true,
+    })
+    const redVelvetSource = redVelvet.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-010',
+    )
+    expect(redVelvetSource).toBeDefined()
+    expect(redVelvet.cookiesFaintedThisTurn?.['player-one']).toBe(1)
+    expect(
+      canActivateCookieSkill(
+        redVelvet,
+        'player-one',
+        redVelvetSource!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+
+    const frostQueen = createCardCheckDemoState('BS8-083', {
+      preferSkillSurface: true,
+    })
+    expect(frostQueen.players['player-one'].hand).toContainEqual(
+      expect.objectContaining({ id: 'BS8-083' }),
+    )
+    expect(
+      frostQueen.players['player-one'].battleArea.some((entry) => entry.card.id === 'BS8-083'),
+    ).toBe(false)
+  })
+
+  it('builds the BS8-084 Browser A/B fixture around its mandatory pre-attack discard', () => {
+    const payable = createBs8084AttackRequirementDemoState(true)
+    const attacker = payable.players['player-one'].battleArea[0]
+    const sherbet = payable.players['player-two'].battleArea[0]
+    if (!attacker || !sherbet) {
+      throw new Error('BS8-084 Browser fixture is incomplete')
+    }
+
+    const pendingDiscard = applyGameCommand(payable, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: attacker.card.instanceId,
+      targetInstanceId: sherbet.card.instanceId,
+      supportPaymentIds: [],
+    })
+    expect(pendingDiscard.pendingBattle).toBeNull()
+    expect(pendingDiscard.players['player-one'].battleArea[0]?.rested).toBe(false)
+    expect(pendingDiscard.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 1,
+      sourceInstanceId: sherbet.card.instanceId,
+      attackDeclaration: {
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: sherbet.card.instanceId,
+      },
+    })
+
+    const unpayable = createBs8084AttackRequirementDemoState(false)
+    expect(() =>
+      applyGameCommand(unpayable, {
+        kind: 'declare-attack',
+        playerId: 'player-one',
+        attackerInstanceId: unpayable.players['player-one'].battleArea[0]!.card.instanceId,
+        targetInstanceId: unpayable.players['player-two'].battleArea[0]!.card.instanceId,
+        supportPaymentIds: [],
+      }),
+    ).toThrow('無法宣告攻擊：必須先棄置 1 張手牌。')
+  })
+
+  it('reserves a battle slot for BS8-112 to play its LV.2+ trash target', () => {
+    expect(createCardCheckDemoState('BS8-112').players['player-one'].battleArea).toHaveLength(1)
+  })
+
+  it('sets every BS8 conditional Activate fixture on its printed positive side', () => {
+    for (const cardNumber of [
+      'BS8-032',
+      'BS8-034',
+      'BS8-039',
+      'BS8-052',
+      'BS8-057',
+      'BS8-062',
+      'BS8-078',
+      'BS8-092',
+      'BS8-113',
+      'BS8-120',
+    ]) {
+      const state = createCardCheckDemoState(cardNumber)
+      const source = state.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === cardNumber,
+      )
+
+      expect(source, `${cardNumber} must be deployed`).toBeDefined()
+      expect(
+        canActivateCookieSkill(
+          state,
+          'player-one',
+          source!.card.instanceId,
+          'activate',
+        ),
+        `${cardNumber} positive card-check fixture must be legally activatable`,
+      ).toBe(true)
+    }
+  })
+
+  it('prepares BS8 static attack fixtures with their printed condition and cost boundary', () => {
+    const chives = createCardCheckDemoState('BS8-061')
+    expect(chives.players['player-one'].supportArea).toHaveLength(1)
+    expect(chives.players['player-two'].supportArea).toHaveLength(3)
+    const chivesSource = chives.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-061',
+    )
+    expect(chivesSource?.card.attack).toBe(1)
+    expect(getEffectiveAttack(chives, chivesSource!.card.instanceId)).toBe(2)
+
+    const chivesNegative = createCardNegativeDemoState('BS8-061')
+    const chivesNegativeSource = chivesNegative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-061',
+    )
+    expect(chivesNegative.players['player-one'].supportArea).toHaveLength(1)
+    expect(chivesNegative.players['player-two'].supportArea).toHaveLength(1)
+    expect(
+      getEffectiveAttack(chivesNegative, chivesNegativeSource!.card.instanceId),
+    ).toBe(1)
+
+    const cacao = createCardCheckDemoState('BS8-125')
+    const cacaoSource = cacao.players['player-one'].battleArea[0]
+    expect(cacaoSource?.card.name).toBe('Dark Cacao Cookie')
+    expect(cacaoSource?.card.attackEnergyCost).toEqual({ purple: 1 })
+    expect(createCardNegativeDemoState('BS8-075').players['player-one'].supportArea)
+      .toHaveLength(5)
+    const cacaoNegative = createCardNegativeDemoState('BS8-125')
+    expect(cacaoNegative.players['player-one'].discardPile).toHaveLength(13)
+    const cacaoStage = cacaoNegative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-125',
+    )!
+    const afterStagePlacement = applyGameCommand(cacaoNegative, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: cacaoStage.instanceId,
+      paymentIds: cacaoNegative.players['player-one'].supportArea
+        .slice(0, 2)
+        .map((support) => support.card.instanceId),
+    })
+    expect(afterStagePlacement.players['player-one'].discardPile).toHaveLength(14)
+    expect(
+      getAttackEnergyCostForState(
+        afterStagePlacement,
+        afterStagePlacement.players['player-one'].battleArea[0]!.card.instanceId,
+      ),
+    ).toEqual({ purple: 1 })
+  })
+
+  it('sets the merged BS8 Cheesebird skill condition through a real break-entry teammate', () => {
+    const state = createCardCheckDemoState('BS8-028@1')
+    const teammate = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+
+    expect(teammate).toMatchObject({
+      enteredFrom: 'break',
+      enteredTurn: state.turnNumber,
+    })
+  })
+
+  it('removes the merged BS8 Cheesebird break-entry fact from the negative fixture', () => {
+    const state = createCardNegativeDemoState('BS8-028@1')
+    const teammate = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+
+    expect(teammate?.enteredFrom).toBeUndefined()
+    expect(teammate?.enteredTurn).toBeUndefined()
+  })
+
+  it('prepares BS8-043 with its only other battle slot occupied by a LV.3 Cookie that entered from break this turn', () => {
+    const state = createCardCheckDemoState('BS8-043')
+    const teammate = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'self-extra-1',
+    )
+
+    expect(state.players['player-one'].battleArea).toHaveLength(2)
+    expect(teammate).toMatchObject({
+      card: { level: 3 },
+      enteredFrom: 'break',
+      enteredTurn: state.turnNumber,
+    })
   })
 
   it('prepares BS6-053 attack fixture with full HP and exactly five active supports', () => {

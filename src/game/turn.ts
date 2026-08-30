@@ -47,24 +47,107 @@ const assertPlaying = (state: GameState) => {
   }
 }
 
+/**
+ * 消耗一個 BS8-076 型的條件式 active 阻止標記。玩家沒有棄牌（或已無法
+ * 棄足）時，才把它轉入既有的一般 prevent map；有棄足時直接移除，交回普通
+ * Active Phase 的全場設為 active 邏輯。
+ */
+const consumeConditionalCookieActivePrevention = (
+  state: GameState,
+  playerId: PlayerId,
+  cookieInstanceId: string,
+  keepRested: boolean,
+): GameState => {
+  const existing = state.conditionalCookieActivePreventions?.[playerId] ?? []
+  const remaining = existing.filter(
+    (entry) => entry.cookieInstanceId !== cookieInstanceId,
+  )
+  const remainingConditional = {
+    ...(state.conditionalCookieActivePreventions ?? {}),
+  }
+  if (remaining.length > 0) {
+    remainingConditional[playerId] = remaining
+  } else {
+    delete remainingConditional[playerId]
+  }
+
+  const existingPreventions = state.preventCookieActiveNextPhase?.[playerId] ?? []
+  const nextPreventions = keepRested
+    ? {
+        ...(state.preventCookieActiveNextPhase ?? {}),
+        [playerId]: [...new Set([...existingPreventions, cookieInstanceId])],
+      }
+    : state.preventCookieActiveNextPhase
+
+  return {
+    ...state,
+    ...(Object.keys(remainingConditional).length > 0
+      ? { conditionalCookieActivePreventions: remainingConditional }
+      : { conditionalCookieActivePreventions: undefined }),
+    ...(nextPreventions && Object.keys(nextPreventions).length > 0
+      ? { preventCookieActiveNextPhase: nextPreventions }
+      : { preventCookieActiveNextPhase: undefined }),
+  }
+}
+
 const activateCurrentPlayer = (state: GameState): GameState => {
-  const player = state.players[state.activePlayerId]
+  let activationState = state
+
+  // 條件式標記要到「目標控制者下一個 Active Phase」才詢問。若沒有足夠手牌，
+  // 沒有可作出的選擇，直接消耗標記並維持 rested；多個標記則依建立順序逐一處理。
+  while (true) {
+    const pending =
+      activationState.conditionalCookieActivePreventions?.[
+        activationState.activePlayerId
+      ]?.[0]
+    if (!pending) break
+
+    const player = activationState.players[activationState.activePlayerId]
+    const targetExists = player.battleArea.some(
+      (cookie) => cookie.card.instanceId === pending.cookieInstanceId,
+    )
+    if (!targetExists || player.hand.length < pending.discardHandToSetActive) {
+      activationState = consumeConditionalCookieActivePrevention(
+        activationState,
+        activationState.activePlayerId,
+        pending.cookieInstanceId,
+        targetExists,
+      )
+      continue
+    }
+
+    return {
+      ...activationState,
+      pendingOpponentHandDiscard: {
+        playerId: activationState.activePlayerId,
+        count: pending.discardHandToSetActive,
+        optional: true,
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+        effectText: pending.effectText,
+        activePhaseCookieInstanceId: pending.cookieInstanceId,
+      },
+    }
+  }
+
+  const player = activationState.players[activationState.activePlayerId]
   const preventedCookieIds = new Set(
-    state.preventCookieActiveNextPhase?.[state.activePlayerId] ?? [],
+    activationState.preventCookieActiveNextPhase?.[activationState.activePlayerId] ?? [],
   )
   const preventedSupportIds = new Set(
-    state.preventSupportActiveNextPhase?.[state.activePlayerId] ?? [],
+    activationState.preventSupportActiveNextPhase?.[activationState.activePlayerId] ?? [],
   )
   const remainingPreventions = {
-    ...(state.preventCookieActiveNextPhase ?? {}),
+    ...(activationState.preventCookieActiveNextPhase ?? {}),
   }
-  delete remainingPreventions[state.activePlayerId]
+  delete remainingPreventions[activationState.activePlayerId]
   const remainingSupportPreventions = {
-    ...(state.preventSupportActiveNextPhase ?? {}),
+    ...(activationState.preventSupportActiveNextPhase ?? {}),
   }
-  delete remainingSupportPreventions[state.activePlayerId]
+  delete remainingSupportPreventions[activationState.activePlayerId]
 
-  const activatedState = updatePlayer(state, {
+  const activatedState = updatePlayer(activationState, {
     ...player,
     battleArea: player.battleArea.map((cookie) => ({
       ...cookie,
@@ -91,8 +174,8 @@ const activateCurrentPlayer = (state: GameState): GameState => {
       : { preventSupportActiveNextPhase: undefined }),
     cookiesFaintedThisTurn: {
       ...(activatedState.cookiesFaintedThisTurn ?? {}),
-      [state.activePlayerId]: 0,
-      [getOpponentId(state.activePlayerId)]: 0,
+      [activationState.activePlayerId]: 0,
+      [getOpponentId(activationState.activePlayerId)]: 0,
     } as Record<PlayerId, number>,
     supportCardsTrashedThisTurn: {},
     arenaCookiesPlacedInBreakThisTurn: {},
@@ -102,6 +185,47 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     cookiesPlayedFromTrashThisTurn: {},
     extraDeckPlayUsedThisTurn: false,
   }
+}
+
+const completeActivePhase = (state: GameState): GameState => {
+  const activatedState = activateCurrentPlayer(state)
+  if (activatedState.pendingOpponentHandDiscard) return activatedState
+
+  if (activatedState.turnNumber === 1) {
+    return { ...activatedState, phase: 'support' }
+  }
+
+  return enterDrawPhase({ ...activatedState, phase: 'draw' })
+}
+
+/**
+ * BS8-076：處理選擇棄牌後，消耗該 Cookie 的唯一條件式標記並回到同一個
+ * Active Phase。`discardedForActivation` 為 false 時，目標仍會留在 rested。
+ */
+export const resumeActivePhaseAfterCookieDiscard = (
+  state: GameState,
+  playerId: PlayerId,
+  cookieInstanceId: string,
+  discardedForActivation: boolean,
+): GameState => {
+  if (state.phase !== 'active' || state.activePlayerId !== playerId) {
+    throw new GameRuleError('目前不是可恢復的 Active Phase。')
+  }
+  const pending = state.conditionalCookieActivePreventions?.[playerId]?.find(
+    (entry) => entry.cookieInstanceId === cookieInstanceId,
+  )
+  if (!pending) {
+    throw new GameRuleError('目前沒有等待此餅乾的 Active Phase 棄牌決策。')
+  }
+
+  return completeActivePhase(
+    consumeConditionalCookieActivePrevention(
+      state,
+      playerId,
+      cookieInstanceId,
+      !discardedForActivation,
+    ),
+  )
 }
 
 const getEndPhaseSkills = (
@@ -338,15 +462,8 @@ export const advancePhase = (state: GameState): GameState => {
   assertPlaying(state)
 
   switch (state.phase) {
-    case 'active': {
-      const activatedState = activateCurrentPlayer(state)
-
-      if (activatedState.turnNumber === 1) {
-        return { ...activatedState, phase: 'support' }
-      }
-
-      return enterDrawPhase({ ...activatedState, phase: 'draw' })
-    }
+    case 'active':
+      return completeActivePhase(state)
     case 'draw':
       return { ...state, phase: 'support' }
     case 'support':

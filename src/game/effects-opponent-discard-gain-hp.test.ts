@@ -47,6 +47,15 @@ describe('opponent-discard-hand effect', () => {
       isEffectUntargeted({ kind: 'opponent-discard-hand', count: 1 }),
     ).toBe(true)
   })
+
+  it('treats an any-number discard followed by equal draw as untargeted', () => {
+    expect(
+      isEffectUntargeted({
+        kind: 'discard-hand-then-draw-same',
+        energyColor: 'blue',
+      }),
+    ).toBe(true)
+  })
 })
 
 describe('resolveOpponentHandDiscard', () => {

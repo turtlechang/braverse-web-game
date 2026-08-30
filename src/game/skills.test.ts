@@ -240,6 +240,79 @@ describe('cookie skill activation', () => {
     ).toThrow('支援區回手費用必須選擇 cookie。')
   })
 
+  it('enforces the support-to-hand energy color for skill costs', () => {
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        supportToHand: 1,
+        supportToHandColor: 'green',
+      },
+      text: 'Return 1 green card from your support area to your hand.',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }
+    let state: GameState = {
+      ...withSkill(createDemoGame(), 'player-one', skill),
+      phase: 'main',
+      activePlayerId: 'player-one',
+    }
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    const redSupport = createSupport('support-red', 'red')
+    const greenSupport = createSupport('support-green', 'green')
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [redSupport, greenSupport],
+        },
+      },
+    }
+
+    expect(canActivateCookieSkill(state, 'player-one', sourceId, 'activate')).toBe(true)
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        [],
+        ['support-red'],
+      ),
+    ).toThrow('支援區回手費用必須選擇 green 能量顏色的卡牌。')
+
+    const next = activateCookieSkill(
+      state,
+      'player-one',
+      sourceId,
+      'activate',
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      [],
+      ['support-green'],
+    )
+    expect(next.players['player-one'].hand.map((card) => card.instanceId)).toContain(
+      'support-green',
+    )
+  })
+
   it('pays colored costs first and neutral costs with any energy', () => {
     const supports = [
       createSupport('red-1', 'red'),

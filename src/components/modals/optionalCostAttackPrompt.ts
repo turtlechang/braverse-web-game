@@ -9,6 +9,7 @@ import {
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   isEffectConditionMet,
+  isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
   selectEnergyPayment,
@@ -24,6 +25,8 @@ export interface OptionalCostAttackPromptData {
   sourceCard?: GameCard
   sourceCardName: string
   effectText: string
+  /** BS8-076：沿用攻擊後代價面板，但不能略過。 */
+  mandatory: boolean
   discardHandCost: number
   discardHandCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCost: number
@@ -98,6 +101,7 @@ const describeCost = (
   hpToTrashCost: number,
   hpToHandCost: number,
   selfToBreakAreaCost: boolean,
+  selfToDeckBottomCost: boolean,
   trashToDeckCost: number,
 ): string => {
   const parts: string[] = []
@@ -118,6 +122,7 @@ const describeCost = (
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
   if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
   if (selfToBreakAreaCost) parts.push('將此餅乾放入休息區')
+  if (selfToDeckBottomCost) parts.push('將此餅乾放到牌庫底')
   if (trashToDeckCost > 0) {
     parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
   }
@@ -307,17 +312,13 @@ export function getOptionalCostAttackPrompt(
       ? `目前沒有足夠的可支付${Object.entries(energyCost)
           .filter(([, amount]) => (amount ?? 0) > 0)
           .map(([color]) => `${energyColorLabel[color] ?? color}`)
-          .join('、')}能量，無法執行攻擊後效果，請選擇「略過」。`
+          .join('、')}能量，無法執行攻擊後效果，${pending.mandatory ? '此效果必須支付。' : '請選擇「略過」。'}`
       : null
   const supportToHandCandidates =
     supportToHandCost === 0
       ? []
       : game.players[viewerPlayerId].supportArea
-          .filter(
-            (support) =>
-              pending.cost.supportToHandType === undefined ||
-              support.card.type === pending.cost.supportToHandType,
-          )
+          .filter((support) => isSupportToHandCostCandidate(pending.cost, support))
           .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
@@ -326,6 +327,7 @@ export function getOptionalCostAttackPrompt(
     )?.card,
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
+    mandatory: pending.mandatory === true,
     discardHandCost,
     discardHandCandidates,
     supportToHandCost,
@@ -343,6 +345,7 @@ export function getOptionalCostAttackPrompt(
       hpToTrashCost,
       hpToHandCost,
       pending.cost.selfToBreakArea === true,
+      pending.cost.selfToDeckBottom === true,
       trashToDeckCost,
     ),
     playerHand: game.players[viewerPlayerId].hand,

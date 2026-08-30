@@ -638,7 +638,10 @@ export const executeCardEffect = (
           context.sourcePlayerId,
         ) &&
         !isEffectDamagePrevented(state, cookie, targetPlayerId) &&
-        (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId),
+        (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId) &&
+        (!effect.excludeCardName || cookie.card.name !== effect.excludeCardName) &&
+        (effect.minRemainingHp === undefined ||
+          getCookieEffectiveHp(cookie) >= effect.minRemainingHp),
     )
 
     if (effect.sequential) {
@@ -1073,7 +1076,18 @@ export const executeCardEffect = (
 
   if (effect.kind === 'hand-to-break') {
     const player = state.players[context.sourcePlayerId]
-    const uniqueIds = [...new Set(selectedTargetIds)]
+    const revealedIds = effect.revealedCardOnly
+      ? state.costRecord?.revealedHandSourceInstanceId === context.sourceInstanceId
+        ? state.costRecord.revealedHandCardInstanceIds ?? []
+        : []
+      : undefined
+    if (effect.revealedCardOnly && selectedTargetIds.length > 0) {
+      throw new GameRuleError('展示後放入休息區不接受新的手牌選擇。')
+    }
+    if (effect.revealedCardOnly && (revealedIds?.length ?? 0) === 0) {
+      throw new GameRuleError('沒有可放入休息區的展示手牌。')
+    }
+    const uniqueIds = [...new Set(revealedIds ?? selectedTargetIds)]
     const minimum = effect.optional ? 0 : effect.amount
     if (uniqueIds.length < minimum || uniqueIds.length > effect.amount) {
       throw new GameRuleError('Invalid hand target.')
@@ -1483,6 +1497,37 @@ export const executeCardEffect = (
     )
     if (targets.length === 0) return { ...state }
     const targetPlayerId = getTargetPlayerId(context, effect.target)
+    if (effect.discardHandToSetActive !== undefined) {
+      const existing = state.conditionalCookieActivePreventions?.[targetPlayerId] ?? []
+      const selectedIds = new Set(targets.map((target) => target.card.instanceId))
+      const sourceCardName =
+        context.sourceCardName ??
+        state.players[context.sourcePlayerId].battleArea.find(
+          (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+        )?.card.name ??
+        'Unknown'
+      const retained = existing.filter(
+        (entry) => !selectedIds.has(entry.cookieInstanceId),
+      )
+      return {
+        ...state,
+        conditionalCookieActivePreventions: {
+          ...(state.conditionalCookieActivePreventions ?? {}),
+          [targetPlayerId]: [
+            ...retained,
+            ...targets.map((target) => ({
+              cookieInstanceId: target.card.instanceId,
+              discardHandToSetActive: effect.discardHandToSetActive!,
+              sourcePlayerId: context.sourcePlayerId,
+              sourceInstanceId: context.sourceInstanceId,
+              sourceCardName,
+              effectText:
+                'During your next Active Phase, discard cards from your hand to set the selected Cookie as active.',
+            })),
+          ],
+        },
+      }
+    }
     const existing = state.preventCookieActiveNextPhase?.[targetPlayerId] ?? []
     return {
       ...state,
@@ -2225,6 +2270,28 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ??
+          player.battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
+        effectText: effect.kind,
+      },
+    }
+  }
+
+  if (effect.kind === 'discard-hand-then-draw-same') {
+    const player = state.players[context.sourcePlayerId]
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId: context.sourcePlayerId,
+        count: 0,
+        atLeast: true,
+        ...(effect.energyColor ? { energyColor: effect.energyColor } : {}),
+        drawEqualDiscarded: true,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: context.sourceCardName ??
+          player.stage?.card.name ??
           player.battleArea.find(
             (c) => c.card.instanceId === context.sourceInstanceId,
           )?.card.name ?? 'Unknown',
@@ -3457,6 +3524,7 @@ export const executeCardEffect = (
           pickCount: effect.pickCount,
           restDestination: effect.restDestination,
           pickDestination: effect.pickDestination,
+          pickSupportRested: effect.pickSupportRested,
           filterColor: effect.filterColor,
           filterType: effect.filterType,
           filterKeyword: effect.filterKeyword,
@@ -3477,6 +3545,7 @@ export const executeCardEffect = (
         pickCount: effect.pickCount,
         restDestination: effect.restDestination,
         pickDestination: effect.pickDestination,
+        pickSupportRested: effect.pickSupportRested,
         filterColor: effect.filterColor,
         filterType: effect.filterType,
         filterKeyword: effect.filterKeyword,
@@ -3626,12 +3695,27 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'reveal-hand') {
-    const cards = state.players[context.sourcePlayerId].hand.filter(
-      (card) =>
-        effect.keyword === undefined || card.keywords?.includes(effect.keyword),
-    )
-    if (cards.length < effect.amount) return state
-    return state
+    const candidates = getEffectSelectionCandidates(state, context, effect)
+    if (!effect.selectCard) return state
+    const selectedIds = [...new Set(selectedTargetIds)]
+    if (
+      selectedIds.length !== effect.amount ||
+      selectedIds.length !== selectedTargetIds.length ||
+      selectedIds.some(
+        (instanceId) =>
+          !candidates.some((card) => card.instanceId === instanceId),
+      )
+    ) {
+      throw new GameRuleError('展示的手牌不符合卡牌效果條件。')
+    }
+    return {
+      ...state,
+      costRecord: {
+        ...state.costRecord,
+        revealedHandCardInstanceIds: selectedIds,
+        revealedHandSourceInstanceId: context.sourceInstanceId,
+      },
+    }
   }
 
   // Persistent effect-damage auras are evaluated at the moment a damage

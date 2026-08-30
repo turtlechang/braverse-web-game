@@ -146,6 +146,7 @@ const extractEffect = (
       })
       break
     case 'discard-hand':
+    case 'discard-hand-then-draw-same':
     case 'discard-hand-all':
     case 'opponent-discard-hand':
     case 'opponent-random-discard':

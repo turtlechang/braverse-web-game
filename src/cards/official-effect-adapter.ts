@@ -10,6 +10,7 @@ import type {
   FlipAbility,
   TrapAbility,
   StageAbility,
+  StageAttackCostModifier,
   ReturnToHandEffect,
   SkillTrigger,
 } from '../game'
@@ -3996,6 +3997,51 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
+    // BS8-018 Cake Wolf：昏厥後先把剛進休息區的來源送進棄牌區，再對至多
+    // 一張對手餅乾造成傷害；來源可作為 1 點紅色能量見 sourceEnergy map。
+    'BS8-018': [
+      { kind: 'break-source-to-trash' },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS8-028／029 的官方異畫資料將技能與攻擊合併；正規化後保留的技能
+    // 皆只在本回合確實有餅乾從休息區登場時才能結算。
+    'BS8-028': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'cookie-played-from-break-this-turn' },
+      },
+    ],
+    'BS8-029': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'cookie-played-from-break-this-turn' },
+      },
+    ],
+    // BS8-043 Fettuccine Cookie：啟動來源本身必須留在兩格戰鬥區，故唯一
+    // 可受益的「that Cookie」就是另一格本回合從 break 登場的 LV.3。此處
+    // 不加入玩家任選或全體語意；selector 只接受這一張實際場上實體。
+    'BS8-043': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          minLevel: 3,
+          maxLevel: 3,
+          enteredFrom: 'break',
+          enteredThisTurn: true,
+        },
+      },
+    ],
     // BS8-086 Cream Puff Cookie：On Play 的「Draw up to 1」不帶付款、目標
     // 或後續條件；保留 optional draw，讓牌庫不足時沿用通用的安全抽牌流程。
     'BS8-086': [{ kind: 'draw-up-to', max: 1 }],
@@ -4024,6 +4070,43 @@ export const convertOfficialCardEffects = (
         kind: 'draw-up-to',
         max: 1,
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    // BS8-061 Chives Dumpling King：這是持續被動，不可只靠文字解析的
+    // modify-attack 預設值；少兩張以上支援卡的門檻必須留在規則層，否則
+    // 在雙方支援區同數時仍會錯誤加攻。
+    'BS8-061': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+      },
+    ],
+    // BS8-071 Peach Baos：支援區張數落後時，只可補至多一張剩餘 HP 不超過 3
+    // 的己方餅乾，不能把條件或 HP 上限交給 UI 自行判斷。
+    'BS8-071': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 3 },
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    'BS8-096': [
+      {
+        kind: 'draw-up-to',
+        max: 4,
+        condition: { kind: 'hand-count-at-most', count: 2 },
+      },
+    ],
+    'BS8-097': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, maxLevel: 2 },
+        condition: { kind: 'hand-count-at-most', count: 2 },
       },
     ],
     // BS8-062 Shrimp Dumpling King：同一張數落後條件下，將至多一張手牌
@@ -4162,6 +4245,41 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'source-hp-less-than', amount: 2 },
       },
     ],
+    // BS8-022 Cake Hound's Crown：先使自己一張 Cookie 昏厥作為成本，再從
+    // 棄牌區回收至多兩張紅色 LV.1 Cookie。成本不能降成效果，否則無合法
+    // 昏厥目標時仍會違反卡面文字地回收卡牌。
+    'BS8-022': [
+      {
+        kind: 'trash-to-hand',
+        max: 2,
+        energyColor: 'red',
+        cookieOnly: true,
+        maxLevel: 1,
+      },
+    ],
+    // BS8-072 Soul Jam: Light of Apathy：展示的兩張都離開牌庫；至多一張
+    // 直立進支援區，其餘橫置進支援區，之後才可裝備到 Mystic Flour。
+    'BS8-072': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 2,
+        pickCount: 1,
+        restDestination: 'support-rested',
+        pickDestination: 'support',
+        pickSupportRested: false,
+        optionalPick: true,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS8-059',
+        gainHp: 1,
+      },
+    ],
+    // BS8-122 Milk Cart：紫色非 Cookie 手牌是啟動代價（見 item exactCosts），
+    // 成本付清後才抽至多兩張；不能把棄牌誤建模成抽牌效果的選擇目標。
+    'BS8-122': [{ kind: 'draw-up-to', max: 2 }],
     // BS8-092 Angel Cookie：手牌一張以下時，將來源自身置於牌庫底。
     'BS8-092': [
       {
@@ -4229,6 +4347,35 @@ export const convertOfficialCardEffects = (
     // BS8-059 Mystic Flour Cookie：支付一點綠色能量、把兩張綠色支援卡回手
     // 後，對每張對手 Cookie 各自移除至多兩張 HP 卡。
     'BS8-059': [{ kind: 'hp-to-trash-all', amount: 2, side: 'opponent' }],
+    // BS8-060 Peach Blossom Cookie：回手一張綠色支援卡後二選一；兩個模式
+    // 的目標陣營不同，必須保留成 choose-one，不能把傷害誤套到己方目標。
+    'BS8-060': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Select up to 1 of your Cookies. That Cookie gains +1 HP.',
+            effects: [
+              {
+                kind: 'gain-hp',
+                amount: 1,
+                target: { side: 'self', min: 0, max: 1 },
+              },
+            ],
+          },
+          {
+            label: "Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+            effects: [
+              {
+                kind: 'damage',
+                amount: 1,
+                target: { side: 'opponent', min: 0, max: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
     // BS8-038 Olive Cookie：登場時必須先把一張 LV.3 Cookie 自手牌放進
     // 休息區，之後才可把至多兩張 LV.1 Cookie 從休息區送入棄牌區。
     'BS8-038': [
@@ -4240,6 +4387,54 @@ export const convertOfficialCardEffects = (
     'BS8-039': [
       { kind: 'hand-to-break', amount: 1, minLevel: 2, maxLevel: 2 },
       { kind: 'break-to-battle', amount: 1, maxLevel: 2 },
+    ],
+    // BS8-047 Puny Strength：展示並不是「任選一張」的提示，而是後段 Then
+    // 必須移動的同一張手牌實體；`revealedCardOnly` 由規則層鎖定該 ID。
+    'BS8-047': [
+      {
+        kind: 'reveal-hand',
+        amount: 1,
+        selectCard: true,
+        cookieOnly: true,
+        minLevel: 3,
+        maxLevel: 3,
+      },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        optional: true,
+        exactLevel: 3,
+        energyColor: 'yellow',
+      },
+      {
+        kind: 'hand-to-break',
+        amount: 1,
+        minLevel: 3,
+        maxLevel: 3,
+        revealedCardOnly: true,
+      },
+    ],
+    // BS8-021 Soul Jam: Light of Destruction：傷害要排除所有同名的
+    // Burning Spice Cookie；裝備與攻擊時的陷阱封鎖則在 Item ability
+    // 的 equippedAttackEffects 保存，避免每次攻擊重複執行這次性的全體傷害。
+    'BS8-021': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'self',
+        excludeCardName: 'Burning Spice Cookie',
+      },
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        excludeCardName: 'Burning Spice Cookie',
+      },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS8-009',
+      },
     ],
     // BS8-032／034 Cheese Cookie：兩者均先把來源與一張手牌送入休息區；
     // 僅能讓指名的 Golden Cheese Cookie 從休息區登場。BS8-034 另覆寫為 6 HP。
@@ -5066,6 +5261,33 @@ export const convertOfficialItemAbility = (
       discardHand: 0,
       trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
     },
+    'BS8-022': {
+      energy: { red: 1 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1 },
+    },
+    'BS8-021': { energy: { red: 2 }, discardHand: 0 },
+    'BS8-047': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS8-072': { energy: { green: 2 }, discardHand: 0 },
+    'BS8-122': {
+      energy: { purple: 1 },
+      discardHand: 1,
+      discardHandColor: 'purple',
+      discardHandNonCookie: true,
+    },
+  }
+  const exactSourceEnergy: Partial<Record<string, EnergyCost>> = {
+    // 這是裝備後的來源能量，非物品啟動費用。
+    'BS8-021': { red: 1 },
+  }
+  const exactEquippedAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    'BS8-021': [
+      {
+        kind: 'disable-traps',
+        duration: 'current-battle',
+        condition: { kind: 'break-level-at-least', level: 8 },
+      },
+    ],
   }
   const parsedCost = parseAbilityCost(abilityText)
   const hasSpecialCost =
@@ -5078,6 +5300,12 @@ export const convertOfficialItemAbility = (
     cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
     text: abilityText,
     effects: conversion.effects,
+    ...(exactSourceEnergy[cardKey]
+      ? { sourceEnergy: exactSourceEnergy[cardKey] }
+      : {}),
+    ...(exactEquippedAttackEffects[cardKey]
+      ? { equippedAttackEffects: exactEquippedAttackEffects[cardKey] }
+      : {}),
     ...(P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey]
       ? { activationCostOverride: P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey] }
       : {}),
@@ -5149,6 +5377,81 @@ export const convertOfficialStageAbility = (
         condition: { kind: 'support-area-decreased-this-turn' },
       },
     ],
+    // BS8-024 Land of Fire & Ruin：兩位玩家的每一張 Cookie 都各受 1 點
+    // 傷害；不能把雙方併成不帶 side 的泛用全場效果。
+    'BS8-024': [
+      { kind: 'damage-all', amount: 1, side: 'self' },
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    // BS8-024@1 與 BS8-025：兩張都把「讓一張己方 Cookie 昏厥」放在
+    // 發動成本，後續才可選至多一張對手 Cookie 造成 1 點傷害。異圖的
+    // cardNumber 有獨立文字，不能沿用 BS8-024 基礎版的全體傷害效果。
+    'BS8-024@1': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS8-025': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS8-049 Simmering Lassi Springs：只可選「剛好」剩 1 HP 的己方 Cookie。
+    'BS8-049': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, remainingHp: 1 },
+      },
+    ],
+    // BS8-050 City of Eternal Gold：第一段先鎖定「本回合從 break 登場的
+    // LV.3」；Then 的 HP 檢查與額外補 HP 都只能作用到同一個已選目標。
+    'BS8-050': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 3,
+          maxLevel: 3,
+          enteredFrom: 'break',
+          enteredThisTurn: true,
+        },
+        thenEffects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              previousEffectTargetOnly: true,
+            },
+            condition: {
+              kind: 'previous-effect-target-remaining-hp',
+              remainingHp: 2,
+            },
+          },
+        ],
+      },
+    ],
+    // BS8-099 Frozen Mountain Depths：休息 Cookie 計數橫跨雙方戰鬥區。
+    'BS8-099': [
+      {
+        kind: 'draw-up-to',
+        max: 3,
+        condition: { kind: 'battle-area-rested-cookie-count-at-least', count: 3 },
+      },
+    ],
+    // BS8-100 Snowfall Lantern Tree：棄置張數決定 Then 的強制抽牌張數；
+    // 場景自身進垃圾桶是啟動代價，見 exactStageCosts。
+    'BS8-100': [{ kind: 'discard-hand-then-draw-same', energyColor: 'blue' }],
     // === BS2 場景卡 ===
     'BS2-051': [
       {
@@ -5557,6 +5860,37 @@ export const convertOfficialStageAbility = (
       },
     ],
   }
+  // 無 Activate 標記的 Stage 持續效果不能塞進 `effects`：它們沒有被玩家啟動
+  // 的單一結算點，必須在每次攻擊費用查詢時由目前場面重新計算。
+  const exactStaticAttackCostModifiers: Partial<
+    Record<string, StageAttackCostModifier[]>
+  > = {
+    // BS8-075 The Ivory Pagoda：不論場景持有者是誰，任何支援區滿六張的
+    // 玩家都各自增加一點中性攻擊費用。
+    'BS8-075': [{
+      operation: 'increase',
+      energyCost: { neutral: 1 },
+      appliesTo: 'all-players',
+      condition: {
+        kind: 'support-count-at-least',
+        count: 6,
+        player: 'affected-player',
+      },
+    }],
+    // BS8-125：僅此場景持有者的 Dark Cacao Cookie，且持有者垃圾桶達
+    // 十五張時，才減少一點紫色攻擊費用。
+    'BS8-125': [{
+      operation: 'reduce',
+      energyCost: { purple: 1 },
+      appliesTo: 'stage-owner',
+      targetCardName: 'Dark Cacao Cookie',
+      condition: {
+        kind: 'trash-count-at-least',
+        count: 15,
+        player: 'stage-owner',
+      },
+    }],
+  }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
       energy: {},
@@ -5565,6 +5899,25 @@ export const convertOfficialStageAbility = (
     },
     'BS1-052': { energy: { yellow: 2 }, discardHand: 0 },
     'BS1-078': { energy: {}, discardHand: 0 },
+    'BS8-024': { energy: { red: 2 }, discardHand: 0 },
+    'BS8-024@1': {
+      energy: { red: 1 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1 },
+    },
+    'BS8-025': {
+      energy: { red: 1 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1 },
+    },
+    'BS8-049': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS8-050': { energy: {}, discardHand: 0 },
+    'BS8-099': { energy: { blue: 2 }, discardHand: 0 },
+    'BS8-100': {
+      energy: { blue: 1 },
+      discardHand: 0,
+      stageSourceToTrash: true,
+    },
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
     'BS3-024': {
@@ -5623,16 +5976,28 @@ export const convertOfficialStageAbility = (
     },
     'BS7-107': { energy: {}, discardHand: 0 },
   }
-  const stageEffects = exactStageEffects[card.baseCardNumber] ?? P_EXACT_EFFECTS[card.baseCardNumber]
-  if (stageEffects) {
+  const stageEffects =
+    exactStageEffects[card.cardNumber] ??
+    exactStageEffects[card.baseCardNumber] ??
+    P_EXACT_EFFECTS[card.cardNumber] ??
+    P_EXACT_EFFECTS[card.baseCardNumber]
+  const staticAttackCostModifiers =
+    exactStaticAttackCostModifiers[card.cardNumber] ??
+    exactStaticAttackCostModifiers[card.baseCardNumber]
+  if (stageEffects || staticAttackCostModifiers) {
     return {
       placementCost: placement.cost,
       cost:
+        exactStageCosts[card.cardNumber] ??
         exactStageCosts[card.baseCardNumber] ??
+        P_EXACT_SKILL_COSTS[card.cardNumber] ??
         P_EXACT_SKILL_COSTS[card.baseCardNumber] ??
         (activation?.cost ?? {}),
       text: sourceText,
-      effects: stageEffects,
+      effects: stageEffects ?? [],
+      ...(staticAttackCostModifiers
+        ? { staticAttackCostModifiers }
+        : {}),
       // BS3-095@1 這個異畫版本的官方文字缺了「<Rest this card.>」（base／@2 都有），
       // 判斷是來源網站對該版本的資料缺漏，不是規則差異，固定以 baseCardNumber 覆寫。
       restSource:
@@ -5699,7 +6064,26 @@ export const convertOfficialAttackEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
-    // BS8 attack Then：以下八張只使用既有的攻擊後效果模型；條件與目標均保留
+    // BS8-006 Nutmeg Tiger Cookie：每一位玩家各選恰好一張 Cookie；兩段
+    // 必須保留為獨立強制目標，不能壓成跨區任選或全體傷害。
+    'BS8-006': [
+      { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1 } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } },
+    ],
+    // BS8-106 Lilac：棄牌是 Then 的第一步，來源移入棄牌區必須在其後。
+    'BS8-106': [
+      { kind: 'discard-hand', count: 1 },
+      {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS8-112 Espresso：棄牌完成後才可從棄牌區登場一張 LV.2 以上 Cookie。
+    'BS8-112': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'trash-to-battle', amount: 1, optional: true, minLevel: 2 },
+    ],
+    // BS8 attack Then：以下卡片只使用既有的攻擊後效果模型；條件與目標均保留
     // 在 CardEffect，避免 UI／AI 以卡號或攻擊文字重複判定。
     'BS8-010': [
       { kind: 'make-faint', target: { side: 'self', min: 0, max: 1 } },
@@ -5743,6 +6127,29 @@ export const convertOfficialAttackEffects = (
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
       },
     ],
+    // BS8-076 Icicle Yeti Cookie：Then 的尖括號是強制的攻擊後代價，
+    // 來源先進牌庫底才抽牌；所選對手 Cookie 到對手下一個 Active Phase
+    // 才可決定是否恰好棄 2 張換取 active，不能改成一般必定保持 rested。
+    'BS8-076': [
+      {
+        kind: 'optional-cost-attack',
+        mandatory: true,
+        cost: { energy: {}, discardHand: 0, selfToDeckBottom: true },
+        effects: [
+          { kind: 'draw', amount: 1 },
+          {
+            kind: 'prevent-cookie-active-next-phase',
+            target: { side: 'opponent', min: 0, max: 1 },
+            discardHandToSetActive: 2,
+          },
+        ],
+        effectText:
+          'Place this Cookie on the bottom of your deck. Draw 1 card from your deck and select up to 1 of your opponent\'s Cookies. During your opponent\'s next Active Phase, that Cookie is not set as active unless your opponent discards 2 cards from their hand.',
+      },
+    ],
+    // BS8-083 Frost Queen Cookie：攻擊後只補足到三張手牌，不是固定抽三張。
+    // DrawUpToEffect 的 untilHandSize 讓引擎以實際手牌數決定抽牌上限。
+    'BS8-083': [{ kind: 'draw-up-to', max: 3, untilHandSize: 3 }],
     'BS8-084': [
       {
         kind: 'draw-up-to',
@@ -8361,6 +8768,52 @@ export const convertOfficialTrapAbility = (
         { kind: 'damage-all', amount: 1, side: 'opponent' },
       ],
     },
+    'BS8-023': {
+      effects: [
+        { kind: 'damage-all', amount: 1, side: 'self', minRemainingHp: 2 },
+        { kind: 'damage-all', amount: 1, side: 'opponent', minRemainingHp: 2 },
+      ],
+    },
+    'BS8-048': {
+      cost: { energy: { yellow: 1 } },
+      condition: { kind: 'break-level-at-least', level: 3 },
+      effects: [
+        {
+          kind: 'trash-to-hand',
+          max: 1,
+          cardNames: [
+            'Soul Jam: Light of Destruction',
+            'Soul Jam: Light of Abundance',
+          ],
+        },
+      ],
+    },
+    'BS8-123': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'trash-to-hand',
+          max: 1,
+          cardName: 'Soul Jam: Light of Resolution',
+        },
+      ],
+    },
+    'BS8-124': {
+      condition: { kind: 'trash-count-at-least', count: 15 },
+      effects: [
+        {
+          kind: 'trash-to-hand',
+          max: 1,
+          energyColor: 'purple',
+          cookieOnly: true,
+        },
+      ],
+    },
     'BS3-046': {
       // 條件在戰鬥中延後判定：本次戰鬥有己方 {Y} LV.2 以上餅乾昏厥才發動。
       condition: {
@@ -9021,6 +9474,12 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   // 可防止通用英文 parser 漏掉 self reference 而讓技能無成本發動。
   'BS8-052': { energy: {}, discardHand: 0, selfToTrash: true },
   'BS8-059': { energy: { green: 1 }, discardHand: 0, supportToHand: 2 },
+  'BS8-060': {
+    energy: {},
+    discardHand: 0,
+    supportToHand: 1,
+    supportToHandColor: 'green',
+  },
   'BS8-019': { energy: {}, discardHand: 1 },
   'BS8-078': { energy: {}, discardHand: 0, selfToDeckBottom: true },
   'BS8-079': {
@@ -9403,6 +9862,7 @@ const exactCookieSkillSourceEnergy: Partial<
   // BS8-002 的 Then 句「can be used as {R}」是技能來源自身供應的一點紅色
   // 能量，不屬於啟動費用；保留在 CardSkill 供付款與 strict contract 共用。
   'BS8-002': { red: 1 },
+  'BS8-018': { red: 1 },
   'BS8-009': { red: 1 },
   'BS8-103': { purple: 1 },
   // BS7-040 Whipped Cream Cookie：昏厥效果可由自身作為 1 黃色能量支付。

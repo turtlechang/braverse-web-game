@@ -445,9 +445,84 @@ describe('HandDiscardResponseModal', () => {
     await act(() => root.unmount())
     container.remove()
   })
+
+  it('allows either zero or exactly the printed number of cards for an Active Phase recovery discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const hand = [createHandCard(1), createHandCard(2)]
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Icicle Yeti Cookie"
+          hand={hand}
+          requiredCount={2}
+          optional
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+    expect(container.textContent).toContain('可以選擇不棄置')
+    expect(findButtonByText(container, '確認棄置')!.disabled).toBe(false)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Icicle Yeti Cookie"
+          hand={hand}
+          requiredCount={2}
+          optional
+          selectedIds={[hand[0].instanceId]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+    expect(findButtonByText(container, '確認棄置')!.disabled).toBe(true)
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })
 
 describe('OptionalCostAttackModal', () => {
+  it('hides skip for a mandatory attack-after cost', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Icicle Yeti Cookie"
+          effectText="Place this Cookie on the bottom of your deck."
+          mandatory
+          discardHandCost={0}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetMax={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.textContent).toContain('攻擊後續代價（必須支付）')
+    expect(findButtonByText(container, '略過')).toBeUndefined()
+    expect(findButtonByText(container, '支付代價')).not.toBeUndefined()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('calls onPay with exact discard IDs and target ID after full flow', async () => {
     const hand = [createHandCard(1), createHandCard(2), createHandCard(3)]
     const opponents = [

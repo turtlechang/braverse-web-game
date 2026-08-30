@@ -1473,4 +1473,33 @@ describe('EffectPanel', () => {
     expect(container.textContent).toContain('棄置 1 張 HP 卡')
     await act(() => root.unmount())
   })
+
+  it('BS8-047：已展示的手牌移入休息區不再要求新的目標選擇', async () => {
+    const pending = createPendingEffect({
+      skillActivated: true,
+      effects: [{ kind: 'hand-to-break', amount: 1, revealedCardOnly: true }],
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={pending.effects[0]}
+        effectHistory={[]}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-panel-target-col')).toBeNull()
+    const confirm = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(confirm.disabled).toBe(false)
+    await act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    await act(() => root.unmount())
+  })
 })

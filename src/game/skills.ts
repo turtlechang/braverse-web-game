@@ -57,6 +57,16 @@ export const getCookieSkillCost = (
     ? skill.onPlayCost ?? (skill.onPlayEffects ? { energy: {}, discardHand: 0 } : skill.cost)
     : skill.cost
 
+/** True only when a support card satisfies every return-to-hand cost restriction. */
+export const isSupportToHandCostCandidate = (
+  cost: Pick<AbilityCost, 'supportToHandType' | 'supportToHandColor'>,
+  support: SupportCard,
+): boolean =>
+  (cost.supportToHandType === undefined ||
+    support.card.type === cost.supportToHandType) &&
+  (cost.supportToHandColor === undefined ||
+    support.card.energyColor === cost.supportToHandColor)
+
 /** 卡面是否在登場時有可處理的技能效果。 */
 export const hasCookieOnPlayEffects = (card: GameCard): boolean =>
   card.skill?.trigger === 'on-play' || Boolean(card.skill?.onPlayEffects?.length)
@@ -408,6 +418,7 @@ export const isDiscardHandCostCandidate = (
   card.instanceId !== sourceInstanceId &&
   (!cost.discardHandColor || card.energyColor === cost.discardHandColor) &&
   (!cost.discardHandType || card.type === cost.discardHandType) &&
+  (!cost.discardHandNonCookie || card.type !== 'cookie') &&
   (!cost.discardHandKeyword || Boolean(card.keywords?.includes(cost.discardHandKeyword))) &&
   (!cost.discardHandHasFlip || (card.type === 'cookie' && Boolean(card.flip)))
 
@@ -434,11 +445,13 @@ export const getFaintTriggeredCost = (
   | 'discardHand'
   | 'discardHandColor'
   | 'discardHandType'
+  | 'discardHandNonCookie'
   | 'discardHandKeyword'
  | 'discardHandHasFlip'
   | 'supportToTrash'
   | 'supportToHand'
   | 'supportToHandType'
+  | 'supportToHandColor'
 > | undefined => {
   const discardHand = skill.cost.discardHand ?? 0
   const supportToTrash = skill.cost.supportToTrash ?? 0
@@ -471,7 +484,9 @@ export const getFaintTriggeredCost = (
         effect.kind === 'support-to-hand' &&
         effect.amount >= supportToHand &&
         (skill.cost.supportToHandType === undefined ||
-          effect.cardType === skill.cost.supportToHandType),
+          effect.cardType === skill.cost.supportToHandType) &&
+        (skill.cost.supportToHandColor === undefined ||
+          effect.energyColor === skill.cost.supportToHandColor),
     )
 
   if (
@@ -490,6 +505,9 @@ export const getFaintTriggeredCost = (
     ...(skill.cost.discardHandType && !discardCovered
       ? { discardHandType: skill.cost.discardHandType }
       : {}),
+    ...(skill.cost.discardHandNonCookie && !discardCovered
+      ? { discardHandNonCookie: true }
+      : {}),
     ...(skill.cost.discardHandKeyword && !discardCovered
       ? { discardHandKeyword: skill.cost.discardHandKeyword }
       : {}),
@@ -502,6 +520,9 @@ export const getFaintTriggeredCost = (
       : {}),
     ...(skill.cost.supportToHandType && !supportToHandCovered
       ? { supportToHandType: skill.cost.supportToHandType }
+      : {}),
+    ...(skill.cost.supportToHandColor && !supportToHandCovered
+      ? { supportToHandColor: skill.cost.supportToHandColor }
       : {}),
   }
 }
@@ -1145,8 +1166,7 @@ export const canActivateCookieSkill = (
     player.supportArea.filter(
       (support) =>
         !energyPayment.includes(support.card.instanceId) &&
-        (cost.supportToHandType === undefined ||
-          support.card.type === cost.supportToHandType),
+        isSupportToHandCostCandidate(cost, support),
     ).length < (cost.supportToHand ?? 0)
   ) {
     return false
@@ -1313,13 +1333,15 @@ export const activateCookieSkill = (
     if (returned.length !== cost.supportToHand) {
       throw new GameRuleError('只能選擇自己的支援區卡牌返回手牌。')
     }
-    if (cost.supportToHandType) {
+    if (cost.supportToHandType || cost.supportToHandColor) {
       const invalidSupport = returned.find(
-        (support) => support.card.type !== cost.supportToHandType,
+        (support) => !isSupportToHandCostCandidate(cost, support),
       )
       if (invalidSupport) {
         throw new GameRuleError(
-          `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
+          cost.supportToHandColor
+            ? `支援區回手費用必須選擇 ${cost.supportToHandColor} 能量顏色的卡牌。`
+            : `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
         )
       }
     }

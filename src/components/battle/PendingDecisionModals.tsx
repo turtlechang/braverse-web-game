@@ -256,7 +256,11 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             ? match.game.players[match.viewerPlayerId].hand.filter((card) =>
                 descriptorCandidates.has(card.instanceId),
               )
-            : match.game.players[match.viewerPlayerId].hand
+            : match.game.players[match.viewerPlayerId].hand.filter(
+                (card) =>
+                  handDiscard.energyColor === undefined ||
+                  card.energyColor === handDiscard.energyColor,
+              )
 
           return (
             <HandDiscardResponseModal
@@ -266,6 +270,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               hand={hand}
               requiredCount={handDiscard.count}
               atLeast={handDiscard.atLeast}
+              optional={handDiscard.optional}
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
               onToggleCard={(instanceId) =>
@@ -564,6 +569,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           pickCount={pendingInspect.pickCount}
           restDestination={pendingInspect.restDestination}
           pickDestination={pendingInspect.pickDestination}
+          pickSupportRested={pendingInspect.pickSupportRested}
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
           filterKeyword={pendingInspect.filterKeyword}
@@ -574,7 +580,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 ? '棄牌區'
                 : pendingInspect.restDestination === 'top'
                   ? '牌庫頂'
-                  : '牌庫底'
+                  : pendingInspect.restDestination === 'support-rested'
+                    ? '支援區（橫置）'
+                    : '牌庫底'
             match.dispatch(
               {
                 kind: 'resolve-inspect-deck',
