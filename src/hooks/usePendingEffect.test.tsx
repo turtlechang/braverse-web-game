@@ -1050,6 +1050,61 @@ describe('usePendingEffect cancelPendingSkill', () => {
 })
 
 describe('usePendingEffect required target gating', () => {
+  it('excludes a source Cookie that leaves battle as an activation cost', async () => {
+    const gameState = createCardCheckDemoState('BS8-082', {
+      preferSkillSurface: true,
+    })
+    const source = gameState.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.id === 'BS8-082',
+    )?.card
+    if (!source?.skill) {
+      throw new Error('BS8-082 fixture requires Cotton Cookie in the battle area')
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => undefined,
+        dispatch: vi.fn(),
+        viewerPlayerId: 'player-one',
+        setMessage: () => undefined,
+        clearAttacker: () => undefined,
+        setInspectedHpPile: () => undefined,
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => undefined,
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => undefined,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCookieSkill(
+        gameState,
+        source,
+        'player-one',
+        'activate',
+        '主動技能',
+      ),
+    )
+
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.effectTargetCandidates.map((entry) => entry.card.instanceId)).toEqual([
+      'self-extra-1',
+    ])
+
+    await act(() => root.unmount())
+  })
+
   it('does not open BS2-058-style payment UI without an opposing level 3 Cookie', async () => {
     const baseGame = createItemUsageDemoState(true)
     const originalSource = baseGame.players['player-one'].battleArea[0]

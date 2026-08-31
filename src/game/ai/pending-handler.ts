@@ -650,17 +650,22 @@ export const handleAiPendingDecision = (
       sourcePlayerId: playerId,
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
-    const sharedSelection = chooseSharedEffectTargets(
-      state,
-      context,
-      pendingDecision.effects,
-      universal,
-    )
+    const isAbilityResolution = pendingDecision.resolution === 'ability'
+    const sharedSelection = isAbilityResolution
+      ? { targetIds: [], valid: true }
+      : chooseSharedEffectTargets(
+          state,
+          context,
+          pendingDecision.effects,
+          universal,
+        )
     const targetIds = sharedSelection.targetIds ?? []
     const hasTarget = sharedSelection.valid
-    const targetedEffect = pendingDecision.effects.find((effect) =>
-      requiresEffectCardSelection(effect),
-    )
+    const targetedEffect = isAbilityResolution
+      ? undefined
+      : pendingDecision.effects.find((effect) =>
+          requiresEffectCardSelection(effect),
+        )
     const optionalDefense = options.level === 5
       ? assessLv5OptionalCostDefense(
           state,
@@ -700,7 +705,9 @@ export const handleAiPendingDecision = (
           hpToHandIds,
         }),
         action: 'resolve-optional-cost-attack',
-        description: `${state.players[playerId].name}支付攻擊後續效果代價。`,
+        description: isAbilityResolution
+          ? `${state.players[playerId].name}支付技能 Then 代價。`
+          : `${state.players[playerId].name}支付攻擊後續效果代價。`,
       }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
       return optionalDefense
         ? {
@@ -719,9 +726,11 @@ export const handleAiPendingDecision = (
         action: 'skip',
       }),
       action: 'resolve-optional-cost-attack',
-      description: optionalDefense?.preserve
-        ? `${state.players[playerId].name}略過攻擊後續可選代價，保留唯一防守陷阱。`
-        : `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
+      description: isAbilityResolution
+        ? `${state.players[playerId].name}略過技能 Then 可選效果。`
+        : optionalDefense?.preserve
+          ? `${state.players[playerId].name}略過攻擊後續可選代價，保留唯一防守陷阱。`
+          : `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
     }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
     return optionalDefense
       ? {

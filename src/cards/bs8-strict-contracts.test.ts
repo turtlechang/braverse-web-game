@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { analyzeOfficialCardBehavior } from './contracts/ledger'
-import { convertOfficialCardToGameCard } from './official-card-adapter'
+import {
+  convertOfficialCardToExtraDeckCard,
+  convertOfficialCardToGameCard,
+} from './official-card-adapter'
 import type { OfficialCardRecord } from './types'
 import {
   advancePhase,
@@ -11,6 +14,7 @@ import {
   createDemoGame,
   executeCardEffect,
   getAttackEnergyCostForState,
+  refreshDeck,
   resolveAttackEffect,
   resolveInspectDeck,
   resolveOptionalCostAttack,
@@ -19,18 +23,18 @@ import {
 } from '../game'
 import { createCardCheckDemoState } from '../game/demo'
 
-const candidatePath = resolve(
+const formalPath = resolve(
   process.cwd(),
-  'data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json',
+  'data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json',
 )
 
 const records = (
-  JSON.parse(readFileSync(candidatePath, 'utf8')) as { cards: OfficialCardRecord[] }
+  JSON.parse(readFileSync(formalPath, 'utf8')) as { cards: OfficialCardRecord[] }
 ).cards
 
 const record = (cardNumber: string): OfficialCardRecord => {
   const found = records.find((candidate) => candidate.cardNumber === cardNumber)
-  if (!found) throw new Error(`Missing BS8 candidate ${cardNumber}`)
+  if (!found) throw new Error(`Missing BS8 formal card ${cardNumber}`)
   return found
 }
 
@@ -65,6 +69,46 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     }
   })
 
+  it('BS8-005 remains an EXTRA-only LV.3 direct-play card with its exact On Play and Then damage', () => {
+    const mainDeckResult = convertOfficialCardToGameCard(record('BS8-005'))
+    expect(mainDeckResult).toMatchObject({
+      status: 'unsupported',
+      reason: 'unsupported-card-type',
+    })
+
+    const result = convertOfficialCardToExtraDeckCard(record('BS8-005'))
+    expect(result.status).toBe('converted')
+    if (result.status !== 'converted') throw new Error('BS8-005 EXTRA conversion failed')
+
+    expect(result.extraDeckCard).toMatchObject({
+      id: 'BS8-005',
+      name: 'Avatar of Ruin',
+      type: 'extra',
+      officialType: 'extra',
+      level: 3,
+      hp: 5,
+      attack: 3,
+      attackEnergyCost: { red: 3 },
+      extraDeckPlayMode: 'enter-battle',
+      playRequirement: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'self',
+        count: 2,
+      },
+      skill: {
+        trigger: 'on-play',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+      },
+      attackEffects: [
+        { kind: 'damage-all', amount: 1, side: 'opponent' },
+        { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+      ],
+    })
+    expect(analyzeOfficialCardBehavior(record('BS8-005')).contract.status).toBe(
+      'verified',
+    )
+  })
+
   it('BS8-006 binds the Then damage to exactly one Cookie for each player', () => {
     const card = convertedCookie('BS8-006')
     expect(card.attackEffects).toEqual([
@@ -74,6 +118,240 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     expect(analyzeOfficialCardBehavior(record('BS8-006')).contract.status).toBe(
       'verified',
     )
+  })
+
+  it('BS8-003 discards first, then gives every eligible friendly Cookie +1 HP', () => {
+    const card = convertedCookie('BS8-003')
+    expect(card.skill).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: { discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 1,
+          max: 2,
+          maxRemainingHp: 4,
+          allMatching: true,
+        },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      }],
+    })
+    expect(analyzeOfficialCardBehavior(record('BS8-003')).contract.status).toBe(
+      'verified',
+    )
+  })
+
+  it('BS8-002 keeps the conditional HP gain separate from the optional skill Then payment', () => {
+    const card = convertedCookie('BS8-002')
+    expect(card.skill).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'source-hp-less-than', amount: 2 },
+        },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { red: 1 }, discardHand: 0 },
+          effects: [
+            { kind: 'draw-up-to', max: 1 },
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      ],
+    })
+    expect(analyzeOfficialCardBehavior(record('BS8-002')).contract.status).toBe(
+      'verified',
+    )
+  })
+
+  it('BS8-003 resolves to every eligible friendly Cookie and rejects a partial selection', () => {
+    const base = createDemoGame()
+    const hpCard = (instanceId: string): GameCard => ({
+      id: instanceId,
+      instanceId,
+      name: instanceId,
+      type: 'item',
+    })
+    const sourceHp = hpCard('bs8-003-source-hp')
+    const allyHpOne = hpCard('bs8-003-ally-hp-1')
+    const allyHpTwo = hpCard('bs8-003-ally-hp-2')
+    const allyHpThree = hpCard('bs8-003-ally-hp-3')
+    const allyHpFour = hpCard('bs8-003-ally-hp-4')
+    const deck = base.players['player-one'].deck
+    const source = { ...convertedCookie('BS8-003'), instanceId: 'bs8-003-source' }
+    const ally = { ...convertedCookie('BS8-006'), instanceId: 'bs8-003-ally' }
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck,
+          battleArea: [
+            {
+              card: source,
+              hpCards: [sourceHp],
+              rested: false,
+              battleEntryId: 'bs8-003-source:battle:1',
+            },
+            {
+              card: ally,
+              hpCards: [allyHpOne, allyHpTwo, allyHpThree, allyHpFour],
+              rested: false,
+              battleEntryId: 'bs8-003-ally:battle:1',
+            },
+          ],
+        },
+      },
+    }
+    const effect = source.skill!.effects[0]
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: source.instanceId }
+
+    expect(() => executeCardEffect(state, context, effect, [source.instanceId])).toThrow(
+      '必須選擇所有符合條件的餅乾。',
+    )
+
+    const resolved = executeCardEffect(
+      state,
+      context,
+      effect,
+      [source.instanceId, ally.instanceId],
+    )
+    expect(resolved.players['player-one'].battleArea.map((cookie) => cookie.hpCards)).toEqual([
+      [sourceHp, deck[0]],
+      [allyHpOne, allyHpTwo, allyHpThree, allyHpFour, deck[1]],
+    ])
+
+    const sourceAtTwoHp = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [{
+            ...state.players['player-one'].battleArea[0],
+            hpCards: [sourceHp, allyHpOne],
+          }, state.players['player-one'].battleArea[1]],
+        },
+      },
+    }
+    expect(() => executeCardEffect(
+      sourceAtTwoHp,
+      context,
+      effect,
+      [source.instanceId, ally.instanceId],
+    )).toThrow('尚未滿足卡牌效果的發動條件。')
+  })
+
+  it('BS8-003 resumes every queued HP gain after a Refresh', () => {
+    const base = createDemoGame()
+    const hpCard = (instanceId: string): GameCard => ({
+      id: instanceId,
+      instanceId,
+      name: instanceId,
+      type: 'item',
+    })
+    const sourceHp = hpCard('bs8-003-refresh-source-hp')
+    const allyHpOne = hpCard('bs8-003-refresh-ally-hp-1')
+    const allyHpTwo = hpCard('bs8-003-refresh-ally-hp-2')
+    const allyHpThree = hpCard('bs8-003-refresh-ally-hp-3')
+    const allyHpFour = hpCard('bs8-003-refresh-ally-hp-4')
+    const sourceGain = hpCard('bs8-003-refresh-source-gain')
+    const allyGain = hpCard('bs8-003-refresh-ally-gain')
+    const refreshCandidates = base.players['player-one'].hand.filter(
+      (card): card is CookieCard => card.type === 'cookie' && card.level >= 1,
+    )
+    const [refreshCookie, reserveCookie] = refreshCandidates
+    if (!refreshCookie || !reserveCookie) {
+      throw new Error('BS8-003 refresh test requires two LV1+ Cookies in hand')
+    }
+    const source = {
+      ...convertedCookie('BS8-003'),
+      instanceId: 'bs8-003-refresh-source',
+    }
+    const ally = {
+      ...convertedCookie('BS8-006'),
+      instanceId: 'bs8-003-refresh-ally',
+    }
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: base.players['player-one'].hand.filter(
+            (card) =>
+              card.instanceId !== refreshCookie.instanceId &&
+              card.instanceId !== reserveCookie.instanceId,
+          ),
+          deck: [],
+          discardPile: [
+            refreshCookie,
+            sourceGain,
+            allyGain,
+            reserveCookie,
+          ],
+          battleArea: [
+            {
+              card: source,
+              hpCards: [sourceHp],
+              rested: false,
+              battleEntryId: 'bs8-003-refresh-source:battle:1',
+            },
+            {
+              card: ally,
+              hpCards: [allyHpOne, allyHpTwo, allyHpThree, allyHpFour],
+              rested: false,
+              battleEntryId: 'bs8-003-refresh-ally:battle:1',
+            },
+          ],
+        },
+      },
+    }
+    const effect = source.skill!.effects[0]
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: source.instanceId,
+    }
+
+    const pending = executeCardEffect(
+      state,
+      context,
+      effect,
+      [source.instanceId, ally.instanceId],
+    )
+    expect(pending.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+      remainingHpGains: [
+        { targetInstanceId: source.instanceId, amount: 1 },
+        { targetInstanceId: ally.instanceId, amount: 1 },
+      ],
+    })
+
+    const refreshed = refreshDeck(
+      pending,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => cards,
+    )
+    expect(refreshed.players['player-one'].battleArea.map((cookie) => cookie.hpCards)).toEqual([
+      [sourceHp, sourceGain],
+      [allyHpOne, allyHpTwo, allyHpThree, allyHpFour, allyGain],
+    ])
+    expect(refreshed.pendingRefresh).toBeNull()
   })
 
   it('BS8-018 preserves both the break-source cost and the source-energy clause', () => {

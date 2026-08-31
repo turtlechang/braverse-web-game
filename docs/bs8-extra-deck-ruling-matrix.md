@@ -1,6 +1,6 @@
 # BS8 EXTRA Deck 規則裁決矩陣
 
-> 狀態：**Phase 0／Phase 1、三張可直接登場 EXTRA 與兩張 Awakened 的核心規則 TDD 已完成；BS8 卡牌仍為 `inventory`，不可 promote。**
+> 狀態：**Phase 0／Phase 1、三張可直接登場 EXTRA 與兩張 Awakened 的核心規則 TDD 已完成；BS8 來源記錄已完成正式 promotion，但 EXTRA Deck 仍與 Standard 牌組隔離。**
 >
 > 最後裁決：2026-08-29。此矩陣以官方英文綜合規則 v1.8 為準，將已確認的核心不變量與仍須逐卡轉接的行為分開；不以候選資料或其他卡牌遊戲慣例補造規則。
 
@@ -51,6 +51,5 @@ BS8-090、BS8-104。此路徑包含
 
 ## 下一個 gate
 
-下一個 gate 是獨立六槽 EXTRA 自訂牌組、固定 seed Lv.1–Lv.5 整場 AI、雙瀏覽器線上驗收，
-以及剩餘 BS8 效果、能力與攻擊 `Then` 的逐卡 strict contract／Browser 驗收。所有 gate 完成前，
-`data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json` 必須維持候選資料，且不可執行 promotion。
+後續 gate 是獨立六槽 EXTRA 自訂牌組、固定 seed Lv.1–Lv.5 整場 AI 與雙瀏覽器線上驗收；
+這些 staging gate 不會改變已完成 promotion 的 BS8 正式來源，也不會把 EXTRA 混入 Standard 牌組。

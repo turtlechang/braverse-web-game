@@ -163,6 +163,7 @@ const selectorMatches = (
     'maxRemainingHp',
     'excludeSource',
     'sourceOnly',
+    'allMatching',
     'attackTargetOnly',
     'excludeAttackTarget',
     'restedOnly',
@@ -897,6 +898,30 @@ const targetClauses = (
       },
       clauseIds: [clauseId],
     })
+  }
+  // BS8-003 的「all your Cookies that have 4 or less HP」沒有 select
+  // 動詞，卻是必須完整結算的戰鬥區目標集合。以場上兩格上限表示 runtime
+  // selector 的 max，並保留 allMatching 讓 contract 不把它弱化成任選一張。
+  const allFriendlyHpGain =
+    /\ball\s+your\s+Cookies?\s+that\s+have\s+(\d+)\s+or\s+less\s+HP\s+gain\s+\+?\d+\s+HP\b/gi
+  for (const match of text.matchAll(allFriendlyHpGain)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: 1,
+        max: 2,
+        maxRemainingHp: Number(match[1]),
+        allMatching: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
   }
   // BS8-050 的「LV.3 Cookie that was played from your break area during this
   // turn」沒有重複寫出 battle area，卻仍是場上 Cookie 的單一選擇。保留進場

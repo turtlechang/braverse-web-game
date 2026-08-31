@@ -677,6 +677,62 @@ describe('EffectPanel', () => {
     await act(() => root.unmount())
   })
 
+  it('labels an ability Then choice separately from an attack follow-up', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={null}
+        currentEffect={null}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        optionalCostAttack={{
+          sourceCardName: 'Cilantro Cobra Swordsman',
+          sourceCard: createCookieCard(99),
+          effectText: 'Then, <can be used as {R}.> Draw 1 card.',
+          resolution: 'ability',
+          discardHandCost: 0,
+          energyCostTotal: 1,
+          costText: '支付支援區 1 點紅色能量',
+          playerHand: [],
+          supportCandidates: [{
+            card: createSupportCard(100, 'red'),
+            instanceId: 'support-100',
+          }],
+          targetCandidates: [],
+          needsTarget: false,
+          targetMin: 0,
+          targetMax: 0,
+          targetLabel: '對手餅乾',
+          onSkip: () => undefined,
+          onPay: () => undefined,
+        }}
+      />,
+    ))
+
+    expect(container.textContent).toContain('技能 Then 可選效果')
+    expect(container.textContent).not.toContain('完整技能文字')
+    expect(container.textContent).not.toContain('remaining HP is 1')
+    expect(container.textContent).toContain('Then,')
+    expect(container.textContent).toContain('支付支援區 1 點紅色能量')
+    expect(container.querySelector('.optional-source-energy-options')).toBeNull()
+
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>('.modal-actions-decision button:last-child')!
+        .click()
+    })
+    expect(container.textContent).toContain('選擇 1 張支援區能量卡作為代價')
+    const sourceEnergyOption = container.querySelector(
+      '.modal-card-options button',
+    )!
+    expect(sourceEnergyOption).toBeTruthy()
+    await act(() => (sourceEnergyOption as HTMLButtonElement).click())
+    expect(sourceEnergyOption.className).toContain('is-selected')
+    act(() => root.unmount())
+  })
+
   it('labels a Cookie-only support return cost as a Cookie cost', async () => {
     const paymentCard = createSupportCard(50, 'green')
     const costCookie = createCookieCard(51)

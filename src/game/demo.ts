@@ -21,7 +21,7 @@ import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
-import bs8CandidateDocument from '../../data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
@@ -914,15 +914,35 @@ export const createBs8ExtraDeckDemoState = (
 ): GameState => {
   const p1Deck = DECK_CREATORS.red('player-one')
   const p2Deck = DECK_CREATORS.red('player-two')
-  const p1Cookie = p1Deck.find((card) => card.type === 'cookie') as CookieCard
-  const p2Cookie = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+  // Pick durable, deterministic witnesses so the browser flow can observe
+  // both parts of Avatar's Then clause without a faint/replacement modal
+  // obscuring the HP changes.  These remain ordinary Standard cards; only
+  // Avatar itself is the localhost-only EXTRA candidate fixture.
+  const p1Cookie = p1Deck.find((card) => card.id === 'ST1-009') as CookieCard
+  const p2Cookie = p2Deck.find((card) => card.id === 'ST1-014') as CookieCard
+  if (!p1Cookie || !p2Cookie) {
+    throw new Error('BS8-005 fixture requires the Red starter HP witnesses')
+  }
   const usedP1 = new Set([p1Cookie.instanceId])
   const usedP2 = new Set([p2Cookie.instanceId])
-  const p1HpCard = p1Deck.find((card) => !usedP1.has(card.instanceId))!
-  usedP1.add(p1HpCard.instanceId)
+  const p1HpCards = p1Deck
+    .filter((card) => !usedP1.has(card.instanceId))
+    .slice(0, 3)
+  p1HpCards.forEach((card) => usedP1.add(card.instanceId))
+  const p1SupportCards = p1Deck
+    .filter(
+      (card) =>
+        !usedP1.has(card.instanceId) &&
+        card.energyColor === 'red',
+    )
+    .slice(0, 3)
+  if (p1SupportCards.length !== 3) {
+    throw new Error('BS8-005 fixture requires three active Red supports')
+  }
+  p1SupportCards.forEach((card) => usedP1.add(card.instanceId))
   const p2HpCards = p2Deck
     .filter((card) => !usedP2.has(card.instanceId))
-    .slice(0, 2)
+    .slice(0, 6)
   p2HpCards.forEach((card) => usedP2.add(card.instanceId))
   const avatar: ExtraDeckCard = {
     id: 'BS8-005',
@@ -951,6 +971,10 @@ export const createBs8ExtraDeckDemoState = (
       text: 'Deals 1 damage to all of your opponent\'s Cookies.',
       effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
     },
+    attackEffects: [
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+    ],
   }
 
   return {
@@ -964,11 +988,12 @@ export const createBs8ExtraDeckDemoState = (
         battleArea: [
           {
             card: p1Cookie,
-            hpCards: [p1HpCard],
+            hpCards: p1HpCards,
             rested: false,
             battleEntryId: `${p1Cookie.instanceId}:battle:1`,
           },
         ],
+        supportArea: p1SupportCards.map((card) => ({ card, rested: false })),
       },
       'player-two': {
         id: 'player-two',
@@ -2803,9 +2828,9 @@ const getBs7CandidateTestCard = (cardNumber: string): GameCard | null => {
  */
 const getBs8CandidateTestCard = (cardNumber: string): GameCard | null => {
   const trimmed = cardNumber.trim()
-  const source = (bs8CandidateDocument.cards as OfficialCardRecord[]).find(
+  const source = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === trimmed,
-  ) ?? (bs8CandidateDocument.cards as OfficialCardRecord[]).find(
+  ) ?? (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.baseCardNumber === trimmed,
   )
   if (!source || source.flags.extra) return null

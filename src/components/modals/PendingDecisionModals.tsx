@@ -3,6 +3,7 @@ import { AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'luc
 import type {
   CardKeyword,
   EnergyColor,
+  EnergyCost,
   GameCard,
   InspectDeckRestDestination,
   PendingEffectOrderItem,
@@ -13,6 +14,7 @@ import {
   type GuidedPhase,
   type GuidedPhaseId,
 } from '../effects/GuidedPhaseSteps'
+import { energyColorLabel } from '../gameUiLabels'
 import './PendingDecisionModals.css'
 
 const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
@@ -675,7 +677,11 @@ export function ReorderHpModal({
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
   sourceCard?: GameCard
+  /** 來源餅乾可以直接提供的能量；在能量步驟以固定來源說明呈現。 */
+  sourceEnergy?: EnergyCost
   effectText: string
+  /** `ability` 用於技能 Then 的可選效果；預設為攻擊後續效果。 */
+  resolution?: 'attack' | 'ability'
   discardHandCost: number
   /** 可作為棄手牌代價的合法候選；省略時相容既有呼叫端，退回整副手牌。 */
   discardHandCandidates?: { card: GameCard; instanceId: string }[]
@@ -726,7 +732,10 @@ type AttackPayStep = 'decision' | 'pay'
 
 export function OptionalCostAttackModal({
   sourceCardName,
+  sourceCard,
+  sourceEnergy,
   effectText,
+  resolution = 'attack',
   discardHandCost,
   playerHand,
   discardHandCandidates = playerHand.map((card) => ({ card, instanceId: card.instanceId })),
@@ -754,6 +763,18 @@ export function OptionalCostAttackModal({
   unmetConditionWarning = null,
   paymentUnavailableWarning = null,
 }: OptionalCostAttackModalProps) {
+  const isAbilityResolution = resolution === 'ability'
+  const sourceEnergyTotal = Object.values(sourceEnergy ?? {}).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+  const sourceEnergyLabel = Object.entries(sourceEnergy ?? {})
+    .filter(([, amount]) => (amount ?? 0) > 0)
+    .map(
+      ([color, amount]) =>
+        `${amount} 點${energyColorLabel[color] ?? color}能量`,
+    )
+    .join('、')
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<AttackPayStep>('decision')
   const [phaseIndex, setPhaseIndex] = useState(0)
@@ -766,6 +787,7 @@ export function OptionalCostAttackModal({
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
 
   const canPay =
+    (sourceEnergyTotal === 0 || Boolean(sourceCard)) &&
     discardHandCandidates.length >= discardHandCost &&
     supportCandidates.length >= energyCostTotal &&
     supportToHandCandidates.filter(
@@ -887,7 +909,7 @@ export function OptionalCostAttackModal({
   // 比照其他效果提示框的能量／代價／目標分步流程(見 EffectPanel.tsx 的
   // GuidedPhaseSteps),一次只處理一件事,而非把代價與目標塞進同一畫面。
   const phaseIds: GuidedPhaseId[] = [
-    ...(energyCostTotal > 0 ? (['energy'] as const) : []),
+    ...(sourceEnergyTotal > 0 || energyCostTotal > 0 ? (['energy'] as const) : []),
     ...(discardHandCost > 0 ? (['cost'] as const) : []),
     ...(supportToHandCost > 0 ? (['support-cost'] as const) : []),
     ...(hpToTrashCost > 0 ? (['hp-cost'] as const) : []),
@@ -916,7 +938,8 @@ export function OptionalCostAttackModal({
   }))
   const activePhaseReady =
     activePhase === 'energy'
-      ? selectedPaymentIds.length === energyCostTotal
+      ? (sourceEnergyTotal === 0 || Boolean(sourceCard)) &&
+        selectedPaymentIds.length === energyCostTotal
       : activePhase === 'cost'
         ? selectedDiscardIds.length === discardHandCost
         : activePhase === 'support-cost'
@@ -971,7 +994,15 @@ export function OptionalCostAttackModal({
         onClick={() => setMinimized(false)}
       >
         <span>
-          <strong>{mandatory ? '攻擊後續代價' : '攻擊可選效果'}</strong>
+          <strong>
+            {isAbilityResolution
+              ? mandatory
+                ? '技能 Then 代價'
+                : '技能 Then 可選效果'
+              : mandatory
+                ? '攻擊後續代價'
+                : '攻擊可選效果'}
+          </strong>
           <small>{sourceCardName}</small>
         </span>
         <Maximize2 aria-hidden="true" />
@@ -1004,13 +1035,21 @@ export function OptionalCostAttackModal({
           type="button"
           className="minimize-reveal"
           onClick={() => setMinimized(true)}
-          title="縮小攻擊可選效果"
+          title={isAbilityResolution ? '縮小技能 Then 可選效果' : '縮小攻擊可選效果'}
         >
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
       )}
-        <span>{mandatory ? '攻擊後續代價（必須支付）' : '攻擊可選效果'}</span>
+        <span>
+          {isAbilityResolution
+            ? mandatory
+              ? '技能 Then 代價（必須支付）'
+              : '技能 Then 可選效果'
+            : mandatory
+              ? '攻擊後續代價（必須支付）'
+              : '攻擊可選效果'}
+        </span>
         {!embedded && <h2>{sourceCardName}</h2>}
         {!embedded && (
           <p className="optional-cost-attack-text">{effectText}</p>
@@ -1053,26 +1092,48 @@ export function OptionalCostAttackModal({
             {activePhase === 'energy' && (
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">能量</span>
-                <strong>
-                  選擇 {energyCostTotal} 張支援區能量卡作為代價
-                </strong>
-                <div className="modal-card-options">
-                  {supportCandidates.map((entry) => (
-                    <button
-                      type="button"
-                      key={entry.instanceId}
-                      className={
-                        selectedPaymentIds.includes(entry.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      onClick={() => togglePayment(entry.instanceId)}
-                    >
-                      <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
-                      <span>{entry.card.name}</span>
-                    </button>
-                  ))}
-                </div>
+                {sourceEnergyTotal > 0 && (
+                  <>
+                    <strong>
+                      來源餅乾固定提供 {sourceEnergyLabel}
+                    </strong>
+                    {sourceCard ? (
+                      <div className="modal-card-options optional-source-energy-options">
+                        <div className="optional-source-energy-option" role="status">
+                          <CardFace card={sourceCard} />
+                          <span>{sourceCard.name}</span>
+                          <small>來源餅乾能量（固定，不需選支援卡）</small>
+                        </div>
+                      </div>
+                    ) : (
+                      <small>來源餅乾已不在戰鬥區，無法提供這筆能量。</small>
+                    )}
+                  </>
+                )}
+                {energyCostTotal > 0 && (
+                  <>
+                    <strong>
+                      選擇 {energyCostTotal} 張支援區能量卡作為代價
+                    </strong>
+                    <div className="modal-card-options">
+                      {supportCandidates.map((entry) => (
+                        <button
+                          type="button"
+                          key={entry.instanceId}
+                          className={
+                            selectedPaymentIds.includes(entry.instanceId)
+                              ? 'is-selected'
+                              : ''
+                          }
+                          onClick={() => togglePayment(entry.instanceId)}
+                        >
+                          <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
+                          <span>{entry.card.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

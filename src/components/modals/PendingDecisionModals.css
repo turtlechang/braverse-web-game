@@ -15,6 +15,38 @@
   font-weight: 800;
 }
 
+.optional-source-energy-options {
+  margin-top: 10px;
+}
+
+.optional-source-energy-option {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 128px;
+  padding: 8px;
+  border: 1px solid rgba(174, 220, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.52);
+  color: #fff;
+}
+
+.optional-source-energy-option::before {
+  content: '✓';
+  color: #9aedff;
+  font-weight: 900;
+}
+
+.optional-source-energy-option {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.optional-source-energy-options small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.66rem;
+}
+
 .modal-actions-sticky {
   position: sticky;
   bottom: 0;

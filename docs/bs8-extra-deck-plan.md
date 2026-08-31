@@ -1,9 +1,9 @@
 # BS8 EXTRA Deck 核心模型分階段方案（提案）
 
-> 狀態：**Phase 0／Phase 1、可直接登場 EXTRA command、Awakened 核心裁決 TDD、攻擊後效果、基礎 AI 與戰場私密檢視已實作；自訂牌組構築、正式 Browser gate 與 promotion 仍未完成。**
+> 狀態：**Phase 0／Phase 1、可直接登場 EXTRA command、Awakened 核心裁決 TDD、攻擊後效果、基礎 AI 與戰場私密檢視已實作；BS8 正式來源已完成 promotion，獨立 EXTRA staging 的自訂牌組與線上 gate 仍持續。**
 >
-> 這份文件不改變正式卡池、60 張主牌組或既有對局行為；在規則裁決與使用者確認前，
-> BS8 維持 `inventory`／不可 promote。
+> 這份文件不改變正式卡池、60 張主牌組或既有對局行為；BS8 的 15 筆 EXTRA 雖已納入正式來源
+> registry，仍不會經一般 `GameCard` adapter 進入 Standard 主牌組。
 
 ## 已有依據與仍待裁決事項
 
@@ -44,7 +44,7 @@ Awakened 核心路徑。BS8
   [`docs/bs8-extra-deck-ruling-matrix.md`](bs8-extra-deck-ruling-matrix.md)，並從
   `docs/game-rules.md` 連結。
 - 矩陣涵蓋 0–6／超量、EXTRA／Awakened 類別、每卡號四張、主牌組隔離、資訊遮罩與所有未裁決操作的禁止狀態。
-- Gate：**尚不接入 BS8 正式卡。**
+- Gate：**BS8 正式來源已接入 registry；EXTRA 仍維持獨立 staging 行為。**
 
 ### Phase 1：純規則與資料模型（不先做 UI；區域模型已完成）
 
@@ -104,4 +104,4 @@ Awakened 核心路徑。BS8
 
 ## 下一個實作切點
 
-候選自訂牌組、AI／雙瀏覽器線上驗收與逐卡 Browser gate 均不會將候選資料升格為正式功能。BS8-043 已依戰鬥區兩格上限綁定唯一的另一張本回合從 Break 登場 LV.3；所有候選規則 gate 已完成，仍須由使用者明確授權 promotion。
+候選自訂牌組、AI／雙瀏覽器線上驗收與逐卡 Browser gate 均維持 EXTRA staging 與 Standard 分離。BS8-043 已依戰鬥區兩格上限綁定唯一的另一張本回合從 Break 登場 LV.3；BS8 正式來源已完成 promotion。

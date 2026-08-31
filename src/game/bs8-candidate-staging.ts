@@ -1,4 +1,4 @@
-import officialBs8Candidates from '../../data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import officialBs8Formal from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -18,9 +18,10 @@ import { createCard } from './starter-deck'
 import type { ExtraDeckCard, GameCard, PlayerId, PlayerSetup } from './types'
 
 /**
- * A deliberately opt-in room/deck marker.  It is never inferred from a card
+ * A deliberately opt-in room/deck marker. It is never inferred from a card
  * number, so normal custom decks and Standard rooms cannot accidentally gain
- * access to candidate cards.
+ * access to the isolated EXTRA staging path, even though BS8 main records are
+ * now available from the formal card pool.
  */
 export const BS8_CANDIDATE_STAGING_KIND = 'bs8-candidate-staging' as const
 
@@ -54,9 +55,9 @@ export interface Bs8CandidateExtraDeckCardDefinition {
 }
 
 /**
- * Candidate-only main-deck records have the same surface as the formal pool
- * so the staging editor can reuse card filtering/rendering without adding
- * BS8 to generated-card-pool or Standard lookup.
+ * BS8 staging main-deck records have the same surface as the formal pool so
+ * the isolated editor can reuse card filtering/rendering. The explicit
+ * staging marker remains required for the EXTRA deck path.
  */
 export type Bs8CandidateMainDeckCardDefinition = CardPoolEntry
 
@@ -70,11 +71,12 @@ export interface Bs8CandidateStagingDeckImportResult {
   error: string | null
 }
 
-const candidateCards = officialBs8Candidates.cards as OfficialCardRecord[]
-const candidateInventoryStatus = (
-  officialBs8Candidates as { source?: { candidateStatus?: unknown } }
+const candidateCards = officialBs8Formal.cards as OfficialCardRecord[]
+const stagingSourceStatus = (
+  officialBs8Formal as { source?: { candidateStatus?: unknown } }
 ).source?.candidateStatus
-const isCandidateInventory = candidateInventoryStatus === 'inventory'
+const isStagingSourceReady =
+  stagingSourceStatus === 'inventory' || stagingSourceStatus === 'promotion-ready'
 
 const candidateExtraRecords = new Map(
   candidateCards
@@ -279,8 +281,8 @@ const validateCandidateMainDeck = (
   let trapCards = 0
   let stageCards = 0
 
-  if (!isCandidateInventory) {
-    errors.push('BS8 候選資料目前不是 inventory 狀態，不能用於候選驗收牌組。')
+  if (!isStagingSourceReady) {
+    errors.push('BS8 staging 資料狀態無法用於候選驗收牌組。')
   }
 
   const { cards, errors: materializeErrors } = materializeCandidateMainDeck(
@@ -343,10 +345,9 @@ const validateCandidateMainDeck = (
 }
 
 /**
- * Validates a candidate-only staging deck. Its main deck may combine the
- * formal pool with BS8 records that are both candidate-inventory and
- * strict-verified; EXTRA cards remain isolated behind their own adapter.
- * No data/cards or generated registry is involved.
+ * Validates an explicitly tagged BS8 staging deck. Its main deck reuses the
+ * formal BS8 records while EXTRA cards remain isolated behind their own
+ * adapter; Standard deck import and rooms never infer this marker.
  */
 export const validateBs8CandidateStagingDeck = (
   deck: Bs8CandidateStagingDeck,

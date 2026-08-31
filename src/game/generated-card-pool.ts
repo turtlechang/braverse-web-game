@@ -9,14 +9,15 @@ import official_age_of_heroes_and_kingdoms_bs6_en_json_3 from '../../data/cards/
 import official_arena_of_glory_bs7_en_json_4 from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import official_brave_beginning_bs1_en_json_5 from '../../data/cards/official-brave-beginning-bs1.en.json'
 import official_brave_beginning_bs2_en_json_6 from '../../data/cards/official-brave-beginning-bs2.en.json'
-import official_p_0xx_remaining_en_json_7 from '../../data/cards/official-p-0xx-remaining.en.json'
-import official_promotion_p001_p032_remaining_en_json_8 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
-import official_promotion_p001_p032_en_json_9 from '../../data/cards/official-promotion-p001-p032.en.json'
-import official_sample_en_json_10 from '../../data/cards/official-sample.en.json'
-import official_starter_deck_blue_en_json_11 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_12 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_13 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_14 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_7 from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import official_p_0xx_remaining_en_json_8 from '../../data/cards/official-p-0xx-remaining.en.json'
+import official_promotion_p001_p032_remaining_en_json_9 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import official_promotion_p001_p032_en_json_10 from '../../data/cards/official-promotion-p001-p032.en.json'
+import official_sample_en_json_11 from '../../data/cards/official-sample.en.json'
+import official_starter_deck_blue_en_json_12 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_13 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_14 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_15 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_age_of_heroes_and_kingdoms_bs3_en_json_0,
@@ -26,12 +27,13 @@ export const officialCardDatasets = [
   official_arena_of_glory_bs7_en_json_4,
   official_brave_beginning_bs1_en_json_5,
   official_brave_beginning_bs2_en_json_6,
-  official_p_0xx_remaining_en_json_7,
-  official_promotion_p001_p032_remaining_en_json_8,
-  official_promotion_p001_p032_en_json_9,
-  official_sample_en_json_10,
-  official_starter_deck_blue_en_json_11,
-  official_starter_deck_green_en_json_12,
-  official_starter_deck_purple_en_json_13,
-  official_starter_deck_yellow_en_json_14,
+  official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_7,
+  official_p_0xx_remaining_en_json_8,
+  official_promotion_p001_p032_remaining_en_json_9,
+  official_promotion_p001_p032_en_json_10,
+  official_sample_en_json_11,
+  official_starter_deck_blue_en_json_12,
+  official_starter_deck_green_en_json_13,
+  official_starter_deck_purple_en_json_14,
+  official_starter_deck_yellow_en_json_15,
 ] as const

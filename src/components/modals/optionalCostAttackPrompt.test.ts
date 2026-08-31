@@ -30,6 +30,38 @@ describe('getOptionalCostAttackPrompt', () => {
     expect(prompt?.costText).toBe('支付支援區 1 點藍色能量')
   })
 
+  it('shows source Cookie energy and defers nested targets for a skill Then', () => {
+    const state = createBattleState()
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Cilantro Cobra Swordsman',
+      resolution: 'ability',
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      sourceEnergy: { red: 1 },
+      effects: [
+        { kind: 'draw-up-to', max: 1 },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+      effectText: 'Use this Cookie as {R}. Draw 1 card and deal 1 damage.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt).toMatchObject({
+      resolution: 'ability',
+      costText: '使用此餅乾作為 1 點紅色能量',
+      sourceEnergy: { red: 1 },
+      energyCostTotal: 0,
+      needsTarget: false,
+      targetCandidates: [],
+    })
+  })
+
   it('explains when the remaining attack-after cost has no payable energy', () => {
     const state = createBattleState()
     state.players['player-two'].supportArea = [

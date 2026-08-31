@@ -249,7 +249,7 @@ describe('DeckEditorPage', () => {
       Array.from(select.options).some((option) => option.value === 'BS7'),
     )
     expect(seriesSelect).toBeTruthy()
-    expect(Array.from(seriesSelect!.options).some((option) => option.value === 'BS8')).toBe(false)
+    expect(Array.from(seriesSelect!.options).some((option) => option.value === 'BS8')).toBe(true)
 
     const nativeSetter = Object.getOwnPropertyDescriptor(
       window.HTMLSelectElement.prototype,
@@ -276,7 +276,7 @@ describe('DeckEditorPage', () => {
     await act(() => root.unmount())
   })
 
-  it('matches BS7 by card-number text search without exposing BS8 in Standard', async () => {
+  it('matches BS7 and BS8 by card-number text search in Standard', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
@@ -301,13 +301,16 @@ describe('DeckEditorPage', () => {
       nativeSetter.call(search, 'BS8')
       search!.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(0)
-    expect(container.querySelector('.deck-editor-page-empty-pool')?.textContent).toContain('沒有符合條件')
+    const bs8CardNumbers = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+    ).map((button) => button.title)
+    expect(bs8CardNumbers).toHaveLength(156)
+    expect(bs8CardNumbers.every((cardNumber) => cardNumber.startsWith('BS8-'))).toBe(true)
 
     await act(() => root.unmount())
   })
 
-  it('shows the BS8 series filter only in candidate staging without adding it to the Standard pool', async () => {
+  it('shows BS8 in Standard and labels the isolated staging filter for candidates', async () => {
     const standardContainer = document.createElement('div')
     const standardRoot = createRoot(standardContainer)
     await act(() => standardRoot.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
@@ -317,7 +320,9 @@ describe('DeckEditorPage', () => {
       standardContainer.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
     ).find((select) => Array.from(select.options).some((option) => option.value === 'BS7'))
     expect(standardSeries).toBeTruthy()
-    expect(Array.from(standardSeries!.options).some((option) => option.value === 'BS8')).toBe(false)
+    expect(
+      Array.from(standardSeries!.options).find((option) => option.value === 'BS8')?.textContent,
+    ).toBe('BS8')
     await act(() => standardRoot.unmount())
 
     const candidateContainer = document.createElement('div')

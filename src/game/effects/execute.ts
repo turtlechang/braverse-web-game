@@ -26,6 +26,7 @@ import type {
   EffectDuration,
   EffectDamageContinuation,
   EffectDamageTarget,
+  GameCard,
   GameState,
   PendingBattle,
   PlayerId,
@@ -1010,39 +1011,74 @@ export const executeCardEffect = (
         effect.amount
       : effect.amount
     if (gainedAmount === 0) return { ...state }
+    const targetSelector = effect.target ?? { side: 'self' as const, min: 0, max: 1 }
     const targetPlayerId = getTargetPlayerId(
       context,
-      effect.target ?? { side: 'self', min: 0, max: 1 },
+      targetSelector,
     )
     const player = state.players[targetPlayerId]
     const isOptionalTarget =
-      !effect.target?.sourceOnly && (effect.target?.min ?? 1) === 0
-    const targetInstanceId =
-      effect.target?.sourceOnly
-        ? context.sourceInstanceId
-        : selectedTargetIds[0] ??
-          state.pendingBattle?.damageTargetInstanceId ??
-          state.pendingBattle?.targetInstanceId
-    if (!targetInstanceId) {
+      !targetSelector.sourceOnly && targetSelector.min === 0
+    const targetInstanceIds = targetSelector.sourceOnly
+      ? [context.sourceInstanceId]
+      : selectedTargetIds.length > 0
+        ? selectEffectTargets(state, context, targetSelector, selectedTargetIds).map(
+            (target) => target.card.instanceId,
+          )
+        : [
+            state.pendingBattle?.damageTargetInstanceId ??
+              state.pendingBattle?.targetInstanceId,
+          ].filter((instanceId): instanceId is string => Boolean(instanceId))
+    if (targetSelector.allMatching) {
+      const candidateIds = getEffectTargetCandidates(state, context, targetSelector)
+        .map((candidate) => candidate.card.instanceId)
+      const selectedIds = new Set(targetInstanceIds)
+      if (
+        selectedIds.size !== targetInstanceIds.length ||
+        selectedIds.size !== candidateIds.length ||
+        candidateIds.some((instanceId) => !selectedIds.has(instanceId))
+      ) {
+        throw new GameRuleError('必須選擇所有符合條件的餅乾。')
+      }
+    }
+    if (targetInstanceIds.length === 0) {
       if (isOptionalTarget) return { ...state }
       throw new GameRuleError('增加 HP 需要明確目標餅乾。')
     }
-    const targetIndex = player.battleArea.findIndex(
-      (cookie) => cookie.card.instanceId === targetInstanceId,
+    const targetIndexes = targetInstanceIds.map((targetInstanceId) =>
+      player.battleArea.findIndex(
+        (cookie) => cookie.card.instanceId === targetInstanceId,
+      ),
     )
-    const target = player.battleArea[targetIndex]
-    if (!target) {
+    if (targetIndexes.some((targetIndex) => targetIndex < 0)) {
       if (isOptionalTarget) return { ...state }
       throw new GameRuleError('增加 HP 的目標餅乾不在戰鬥區。')
     }
-    const gainedCards = player.deck.slice(0, gainedAmount)
-    const remainingHpGain = gainedAmount - gainedCards.length
+    const gainedCards = player.deck.slice(0, gainedAmount * targetInstanceIds.length)
+    let nextCardIndex = 0
+    const gainedCardsByTarget = new Map<string, GameCard[]>()
+    const pendingHpGains: Array<{ targetInstanceId: string; amount: number }> = []
+    for (const targetInstanceId of targetInstanceIds) {
+      const targetCards = gainedCards.slice(nextCardIndex, nextCardIndex + gainedAmount)
+      nextCardIndex += targetCards.length
+      gainedCardsByTarget.set(targetInstanceId, targetCards)
+      const remainingAmount = gainedAmount - targetCards.length
+      if (remainingAmount > 0) {
+        pendingHpGains.push({ targetInstanceId, amount: remainingAmount })
+      }
+    }
     const updatedState = updatePlayer(state, {
       ...player,
       deck: player.deck.slice(gainedCards.length),
-      battleArea: player.battleArea.map((cookie, index) =>
-        index === targetIndex
-          ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
+      battleArea: player.battleArea.map((cookie) =>
+        gainedCardsByTarget.has(cookie.card.instanceId)
+          ? {
+              ...cookie,
+              hpCards: [
+                ...cookie.hpCards,
+                ...(gainedCardsByTarget.get(cookie.card.instanceId) ?? []),
+              ],
+            }
           : cookie,
       ),
     })
@@ -1062,13 +1098,14 @@ export const executeCardEffect = (
       pendingRefresh: {
         playerId: targetPlayerId,
         remainingDraws: 0,
-        ...(remainingHpGain > 0
+        ...(pendingHpGains.length === 1
           ? {
               remainingHpGain: {
-                targetInstanceId,
-                amount: remainingHpGain,
+                ...pendingHpGains[0],
               },
             }
+          : pendingHpGains.length > 1
+            ? { remainingHpGains: pendingHpGains }
           : {}),
       },
     }

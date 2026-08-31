@@ -931,6 +931,7 @@ const describeAttackEffectResultStep = (
 const describeAttackEffectEnergyStep = (
   sourceCard: GameCard | undefined,
   sourceEnergy: Partial<Record<string, number>> | undefined,
+  label = '攻擊後代價',
 ): LogStepDetail | undefined => {
   if (!sourceEnergy || Object.values(sourceEnergy).every((amount) => !amount)) {
     return undefined
@@ -950,7 +951,7 @@ const describeAttackEffectEnergyStep = (
     .map(([color, amount]) => `${labels[color] ?? color}${amount}`)
     .join('、')
   return {
-    text: `攻擊後代價：由「${sourceCard?.name ?? '攻擊餅乾'}」提供 ${costText} 能量`,
+    text: `${label}：由「${sourceCard?.name ?? '攻擊餅乾'}」提供 ${costText} 能量`,
     cards: sourceCard ? [sourceCard] : undefined,
   }
 }
@@ -1284,6 +1285,7 @@ export const describeCommand = (
     case 'resolve-optional-cost-attack':
       {
         const pending = previous.pendingOptionalCostAttack
+        const isAbilityResolution = pending?.resolution === 'ability'
         const sourceCard = getAttackEffectSourceCard(previous, command)
         const sourceName =
           sourceCard?.name ?? pending?.sourceCardName ?? '未知餅乾'
@@ -1295,8 +1297,8 @@ export const describeCommand = (
         if (command.action === 'skip') {
           const paymentWarning = describeOptionalCostAttackPaymentWarning(previous)
           return paymentWarning
-            ? `${actor} 選擇略過「${sourceName}」的攻擊後效果（${paymentWarning}，未支付代價，後續動作未執行）`
-            : `${actor} 選擇略過「${sourceName}」的攻擊後效果（未支付代價，後續動作未執行）`
+            ? `${actor} 選擇略過「${sourceName}」的${isAbilityResolution ? '技能 Then 可選效果' : '攻擊後效果'}（${paymentWarning}，未支付代價，後續動作未執行）`
+            : `${actor} 選擇略過「${sourceName}」的${isAbilityResolution ? '技能 Then 可選效果' : '攻擊後效果'}（未支付代價，後續動作未執行）`
         }
         const outcome = describeAttackEffectResultStep(
           previous,
@@ -1304,7 +1306,7 @@ export const describeCommand = (
           command.playerId,
           pending?.effects ?? [],
         ).text
-        return `${actor} 支付「${sourceName}」的攻擊後代價並結算效果：${effectText}；${outcome.replace(/^攻擊後效果結果：/, '')}`
+        return `${actor} 支付「${sourceName}」的${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}並結算效果：${effectText}；${outcome.replace(/^攻擊後效果結果：/, '')}`
       }
     case 'resolve-draw-up-to': {
       const pending = state.pendingDrawUpTo
@@ -1395,6 +1397,12 @@ export const resolveLogCategory = (
       next.players[command.playerId].hand.length -
       previous.players[command.playerId].hand.length
     if (drawnCount > 0) return 'draw'
+  }
+  if (
+    command.kind === 'resolve-optional-cost-attack' &&
+    previous.pendingOptionalCostAttack?.resolution === 'ability'
+  ) {
+    return 'activate'
   }
   return LOG_CATEGORY_BY_COMMAND_KIND[command.kind]
 }
@@ -1796,21 +1804,27 @@ export const describeCommandSteps = (
     case 'resolve-optional-cost-attack': {
       const pending = previous.pendingOptionalCostAttack
       if (!pending) return undefined
+      const isAbilityResolution = pending.resolution === 'ability'
       const sourceCard = getAttackEffectSourceCard(previous, command)
       const steps: LogStepDetail[] = [
-        describeAttackEffectSourceStep(
-          previous,
-          command,
-          pending.effects[0],
-          pending.effectText,
-        ),
+        isAbilityResolution
+          ? {
+              text: `技能 Then 來源：「${pending.sourceCardName}」；效果：${pending.effectText}`,
+              cards: sourceCard ? [sourceCard] : undefined,
+            }
+          : describeAttackEffectSourceStep(
+              previous,
+              command,
+              pending.effects[0],
+              pending.effectText,
+            ),
       ]
       if (command.action === 'skip') {
         const paymentWarning = describeOptionalCostAttackPaymentWarning(previous)
         steps.push({
           text: paymentWarning
-            ? `攻擊後效果未生效：${paymentWarning}，未支付代價，後續動作未執行`
-            : '玩家選擇略過攻擊後效果，未支付代價，後續動作未執行',
+            ? `${isAbilityResolution ? '技能 Then 可選效果' : '攻擊後效果'}未生效：${paymentWarning}，未支付代價，後續動作未執行`
+            : `玩家選擇略過${isAbilityResolution ? '技能 Then 可選效果' : '攻擊後效果'}，未支付代價，後續動作未執行`,
         })
         return steps
       }
@@ -1818,23 +1832,24 @@ export const describeCommandSteps = (
       const sourceEnergyStep = describeAttackEffectEnergyStep(
         sourceCard,
         pending.sourceEnergy,
+        isAbilityResolution ? '技能 Then 代價' : '攻擊後代價',
       )
       if (sourceEnergyStep) steps.push(sourceEnergyStep)
       const paymentStep = describeCardListStep(
         state,
-        '攻擊後代價：支付能量（橫置）',
+        `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：支付能量（橫置）`,
         command.paymentIds,
       )
       if (paymentStep) steps.push(paymentStep)
       const discardStep = describeCardListStep(
         state,
-        '攻擊後代價：棄置手牌',
+        `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：棄置手牌`,
         command.discardCardIds,
       )
       if (discardStep) steps.push(discardStep)
       const supportToHandStep = describeCardListStep(
         state,
-        '攻擊後代價：支援卡返回手牌',
+        `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：支援卡返回手牌`,
         command.supportToHandIds,
       )
       if (supportToHandStep) steps.push(supportToHandStep)
@@ -1852,7 +1867,7 @@ export const describeCommandSteps = (
       if (hpToHandStep) steps.push(hpToHandStep)
       const trashToDeckStep = describeCardListStep(
         state,
-        '攻擊後代價：棄牌區卡片洗回牌庫',
+        `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：棄牌區卡片洗回牌庫`,
         command.trashToDeckIds,
       )
       if (trashToDeckStep) steps.push(trashToDeckStep)
@@ -1865,7 +1880,9 @@ export const describeCommandSteps = (
         !hpToHandStep &&
         !trashToDeckStep
       ) {
-        steps.push({ text: '攻擊後代價：已支付（無需額外選牌）' })
+        steps.push({
+          text: `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：已支付（無需額外選牌）`,
+        })
       }
       const targetStep = describeAttackEffectTargetStep(
         state,

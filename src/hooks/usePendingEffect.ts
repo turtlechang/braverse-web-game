@@ -247,6 +247,21 @@ export function usePendingEffect(params: {
     !pendingEffect.skillActivated
       ? pendingEffect.selectedHpToTrashTargetIds[0]
       : undefined
+  // Skill costs are kept in the local pending UI until the final confirmation.
+  // If the source Cookie is paid by leaving the battle area (for example
+  // BS8-082 puts itself on the bottom of the deck), it must not remain a
+  // selectable target in this pre-payment projection.  The rules engine
+  // validates against the post-cost state, so exposing the source here would
+  // let the player select a target that can never resolve and leave the panel
+  // stuck on an error after payment.
+  const sourceLeavesBattleBeforeEffect = Boolean(
+    pendingEffect &&
+      !pendingEffect.skillActivated &&
+      (pendingEffect.skill.cost.selfToTrash ||
+        pendingEffect.skill.cost.selfToBreakArea ||
+        pendingEffect.skill.cost.selfToDeckBottom),
+  )
+  const sourceInstanceId = pendingEffect?.context.sourceInstanceId
   const rawEffectTargetCandidates =
     pendingEffect &&
     selectionEffect &&
@@ -288,8 +303,10 @@ export function usePendingEffect(params: {
                 : candidates
             })()
       : []
-  const effectTargetCandidates = rawEffectTargetCandidates.filter((cookie) =>
-    isDescriptorCandidate(cookie.card.instanceId),
+  const effectTargetCandidates = rawEffectTargetCandidates.filter(
+    (cookie) =>
+      (!sourceLeavesBattleBeforeEffect || cookie.card.instanceId !== sourceInstanceId) &&
+      isDescriptorCandidate(cookie.card.instanceId),
   )
 
   const supportEffectCandidates =
@@ -874,6 +891,45 @@ export function usePendingEffect(params: {
         getPendingDecision(game),
     )
     if (hasBlockingDecision) return
+
+    // BS8-002 的技能 Then 會共用 optional-cost-attack 的付款面板，但付款後
+    // 規則層可能把 wrapper 替換成巢狀 effects，或在略過時直接跳到下一段。
+    // `suspendedEffect` 是開面板當下的快照，不能把舊 wrapper/索引重新放回去；
+    // 以 authoritative pendingAbilityEffect 同步最新佇列，避免支付後又回到
+    // 已結算的 optional 面板，或略過後重複執行抽牌／傷害。
+    const suspendedCurrentEffect =
+      suspendedEffect.effects[suspendedEffect.effectIndex]
+    if (
+      suspendedCurrentEffect?.kind === 'optional-cost-attack' &&
+      suspendedCurrentEffect.resolution === 'ability'
+    ) {
+      const authoritative = game.pendingAbilityEffect
+      if (
+        authoritative &&
+        authoritative.sourceInstanceId === suspendedEffect.context.sourceInstanceId &&
+        authoritative.playerId === suspendedEffect.context.sourcePlayerId &&
+        authoritative.effectIndex < authoritative.effects.length
+      ) {
+        const timer = window.setTimeout(() => {
+          setPendingEffect({
+            ...suspendedEffect,
+            effects: authoritative.effects,
+            effectIndex: authoritative.effectIndex,
+            selectedTargetIds: [],
+            selectedDiscardHandIds: [],
+            selectedHpToTrashTargetIds: [],
+            selectedTrashBattleCookieIds: [],
+            skillActivated: true,
+          })
+          setSuspendedEffect(null)
+        }, 0)
+        return () => window.clearTimeout(timer)
+      }
+
+      // 略過後整條技能效果已結束，沒有可恢復的效果面板。
+      const timer = window.setTimeout(() => setSuspendedEffect(null), 0)
+      return () => window.clearTimeout(timer)
+    }
 
     const timer = window.setTimeout(() => {
       setPendingEffect(suspendedEffect)

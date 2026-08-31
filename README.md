@@ -10,9 +10,9 @@ BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆�
 
 BS7「Arena of Glory」已於 2026-08-22 完成正式 promote：官方英文卡表快照的 143 筆記錄、108 個基礎卡號與 35 個異圖／變體已納入 `data/cards/`，正式卡池共 1,244 筆。108 張基礎卡的 runtime／strict contract 已完成，主效果待轉接 0 張、額外能力待轉接 0 張、攻擊後 `Then` 23／23 已轉接；BS7 formal strict contract 143／143 verified，整體 `validate:cards` 1,244／1,244 且 registry consistent。BS7-039 與 BS7-082 的「對手全體餅乾受傷」使用 sequential 逐目標結算；Browser 專項會刻意先選第二張、再選第一張，逐張處理 HP、FLIP 與昏厥。BS7-097 依官方英文勘誤轉為對手下回合「受到的攻擊傷害 -1」，不再誤作降低自身攻擊力。`gain-hp`、登場 HP 補充或抽牌恰好耗盡最後一張牌時都會建立 pending Refresh；只有被中斷的該張登場餅乾會以明確的 `remainingHpSetup` 接續補 HP，之後才接續尚未補完的效果 HP，絕不藉 Refresh 回滿其他受傷餅乾；無合法回收 LV.1 餅乾時立即以 `refresh-unavailable` 判負。
 
-BS8「Land of Fire & Ruin, Realm of Apathy」維持 171 筆候選記錄、125 個基礎卡號（含 15 筆 `EXTRA`），只保留在 `data/candidates/`，不可 promote。EXTRA Deck Phase 0／1、六槽候選牌組編輯器、固定 seed Lv.1–Lv.5 staging AI、候選雙瀏覽器房與對手 EXTRA 遮罩均和 Standard 分離；牌組編輯器在 Standard 可篩選 BS7，BS8 與其主牌／六槽 EXTRA 僅會在候選模式出現，匯入／匯出以明確的 `candidateStaging.extraDeckEntries` JSON 相容格式保留，Standard importer 會拒絕此標記。BS8-005／069／090 的直接登場及 BS8-027／104 的 Awaken 覆蓋核心已有 TDD。候選 strict audit 現為 **171 verified／0 needs-review／0 blocked**；BS8-076 的強制「自身置牌庫底 → 抽 1 → 對手下一個 Active Phase 可選擇棄 0 或恰好 2 張以活躍目標」已補齊規則、UI、TDD 與兩條 Browser 分支。BS8-043 依已確認的戰鬥區兩格上限，讓來源 Fettuccine Cookie 佔一格、另一格的本回合從 Break 登場 LV.3 成為唯一合法目標；strict selector 不可退化為任選或全體。詳見 [BS8 卡表盤點](docs/bs8-card-inventory.md)、[效果覆蓋盤點](docs/bs8-effect-coverage.md)、[規則裁決矩陣](docs/bs8-extra-deck-ruling-matrix.md)與 [EXTRA Deck 分階段方案](docs/bs8-extra-deck-plan.md)。
+BS8「Land of Fire & Ruin, Realm of Apathy」已於 2026-08-31 完成正式 promotion：171 筆記錄、125 個基礎卡號（含 15 筆 `EXTRA`）已納入 `data/cards/`，正式卡池由 1,244 增至 1,415 種卡號；156 張非 EXTRA 可玩記錄通過 runtime 轉接，15 筆 EXTRA 保留在 registry 並由獨立 `ExtraDeckCard` staging 流程處理，不會混入 60 張 Standard 主牌組。EXTRA Deck Phase 0／1、六槽候選牌組編輯器、固定 seed Lv.1–Lv.5 staging AI、候選雙瀏覽器房與對手 EXTRA 遮罩均和 Standard 分離；牌組編輯器在 Standard 可篩選 BS7，BS8 主牌可由正式卡池搜尋，六槽 EXTRA 仍只在候選模式出現，匯入／匯出以明確的 `candidateStaging.extraDeckEntries` JSON 相容格式保留，Standard importer 會拒絕此標記。BS8-005／069／090 的直接登場及 BS8-027／104 的 Awaken 覆蓋核心已有 TDD。正式 strict audit 為 **171 verified／0 needs-review／0 blocked**；BS8-076 的強制「自身置牌庫底 → 抽 1 → 對手下一個 Active Phase 可選擇棄 0 或恰好 2 張以活躍目標」已補齊規則、UI、TDD 與兩條 Browser 分支。BS8-043 依已確認的戰鬥區兩格上限，讓來源 Fettuccine Cookie 佔一格、另一格的本回合從 Break 登場 LV.3 成為唯一合法目標；strict selector 不可退化為任選或全體。詳見 [BS8 卡表盤點](docs/bs8-card-inventory.md)、[效果覆蓋盤點](docs/bs8-effect-coverage.md)、[規則裁決矩陣](docs/bs8-extra-deck-ruling-matrix.md)與 [EXTRA Deck 分階段方案](docs/bs8-extra-deck-plan.md)。
 
-候選 staging Browser 已驗證同環境加入、己方 EXTRA 可見及對手 EXTRA 僅顯示張數；逐卡 Browser gate 亦完成通用主效果 146／146 正向、156／156 負向，54／54 張能力的獨立技能表面 A/B，以及 14 個 Then 的實際攻擊語意 A/B。這些都是候選驗收，不是正式 Standard 功能。所有候選規則 gate 已完成；promotion 仍須使用者明確授權。
+正式卡池 Browser 已驗證通用主效果 146／146 正向、156／156 負向，54／54 張能力的獨立技能表面 A/B，以及 14 個 Then 的實際攻擊語意 A/B；EXTRA Deck 的卡面私密性與直接登場仍維持獨立 staging Browser gate。所有 BS8 正式來源 strict gate 已完成；後續官方更新仍須回到候選流程，完成同一套驗收後再 promotion。
 
 BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將所選餅乾最上方至多 1 張 HP 卡移回手牌，並保留可略過選擇與既有必要自身目標陷阱的相容行為。攻擊回應只有陷阱時會直接進入陷阱視窗；只有同時存在 Blocker／攻擊回應技能時才顯示通用回應選擇器，避免同一個攻擊宣告重複顯示兩層視窗。
 
@@ -213,7 +213,7 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
 - **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），Lv.5 為可選的實驗 challenger；所有等級只讀 `PlayerView` 保證資訊邊界。Lv.5 已加入通用 ComboPlan、同 plan 跨步記憶、資源預留及牌庫耗盡／Refresh／空場敗北預測，但全 corpus 尚未證明勝率優於 Lv.4。效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。Lv.5 戰鬥區已有一張餅乾時預設保留第二張手牌，公開 Combo／斬殺／有效 OnPlay／補防例外才允許第二張；Lv.2–4 維持原有手牌品質與 FLIP 保留策略。等級 benchmark 強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率；見 [docs/ai-levels.md](docs/ai-levels.md)。
-- **卡牌池**：BS1～BS7、五色起始牌組與 P-0XX 特典卡均已匯入正式 `data/cards/`；正式卡池共 15 個資料檔、1,244 筆記錄，其中 BS7 143 筆與 P-0XX 全量 153 筆（含異圖變體）皆已完成 adapter conversion、Browser 稽核與 promote，`data/candidates/` 目前沒有待驗證 JSON。詳見 [BS7 匯入盤點](docs/bs7-card-inventory.md)、[BS7 效果稽核](docs/bs7-effect-coverage.md)、[P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及高風險卡語意契約。
+- **卡牌池**：BS1～BS8、五色起始牌組與 P-0XX 特典卡均已匯入正式 `data/cards/`；正式卡池共 16 個資料檔、1,415 種卡號（1,400 張可轉接記錄，另 15 筆 EXTRA 保留於 registry），其中 BS7 143 筆、BS8 171 筆與 P-0XX 全量 153 筆（含異圖變體）皆已完成對應 strict／Browser gate 與 promote，`data/candidates/` 目前沒有待驗證 JSON。詳見 [BS7 匯入盤點](docs/bs7-card-inventory.md)、[BS7 效果稽核](docs/bs7-effect-coverage.md)、[BS8 匯入盤點](docs/bs8-card-inventory.md)、[BS8 效果稽核](docs/bs8-effect-coverage.md)、[P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及高風險卡語意契約。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1164×777 平板與 1366×768、1440×900、1920×1080 通用桌面 viewport 均以實際卡面邊界驗證，短高度桌面的手牌高度依 viewport 縮放並完整留在畫布內；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；BS6-057 的綠色能量、自身送棄牌區與支援區 Cookie 回手三項代價會在抽牌前逐項呈現；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **戰鬥區卡槽**：中央「戰鬥區」文字固定不位移；單張餅乾落在左槽，雙張餅乾以放大的左右間隔排開。HP 卡 dock 置於卡片下緣；能量不足與技能提示以所屬卡片外側的垂直中線排列，左卡向左、右卡向右，本機與線上對戰共用。
 - **戰場視覺同步**：`/?mockup=battlefield` 直接重用正式戰場元件與桌面 `tactical-clean` 樣式；對手紅框、我方青框、深藍戰鬥區與次深藍支援區、支援張數與休息區等級文字均同步套用。平板橫向正式對戰與 mockup 共用 `src/styles/tablet-layout.css`，本機與 mockup 都已移除會穿過手牌的全畫面裝飾框；responsive gate 同時檢查手牌實際卡面，不只檢查手牌 dock 容器。
@@ -235,7 +235,7 @@ BS7-001～BS7-108 已完成 runtime 轉接、strict contract、正式 promote、
 
 通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
 
-卡牌行為契約維持 shadow mode 盤點正式卡池；BS7 formal strict contract 為 143／143 `verified`，整體 strict audit 與正式資料驗證皆為 1,244／1,244。payment、runtime energy、cost、target、Then、timing 與 resolution order 缺口皆已補上可追溯的來源與 runtime 證據，新卡或官方卡文更新仍必須重新通過 strict gate。
+卡牌行為契約維持 shadow mode 盤點正式卡池；BS7 formal strict contract 為 143／143、BS8 為 171／171 `verified`，整體正式 strict audit 與資料驗證分別為 1,415／1,415 與 1,400／1,400（EXTRA 15 筆由獨立 adapter 處理）。payment、runtime energy、cost、target、Then、timing 與 resolution order 缺口皆已補上可追溯的來源與 runtime 證據，新卡或官方卡文更新仍必須重新通過 strict gate。
 
 本輪亦修正 P-015 攻擊後可選代價的多段效果續接、P-016 從棄牌區移至 break 的候選與 descriptor 接線、BS4-014／BS4-080 特殊效果正規化，以及稽核驅動對 P-053／P-130 條件、P-099／P-100 FLIP 與無效果異圖的分類。最新完整 Vitest（229 檔、3,612 項）與本輪修改檔案 lint、typecheck、build 均已通過；本輪 build 後 AI Browser 20／20、stuck=0。全域 lint 尚有工作樹既有的 `.tmp-probe-deploy.ts` 與 `scripts/diagnose-lv5-conservatism.ts` 未使用變數，未納入本輪修正。
 
@@ -316,8 +316,11 @@ npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
 npm run test:online:match:browser # 本機雙瀏覽器好友房猜拳、順位、依序調度、起始餅乾揭示、對戰動態、階段同步、拒絕提示、斷線與連線失敗驗證
-npm run test:bs8:076:browser # 候選 BS8-076：對手 Active Phase 棄 0／恰好 2 張的 Browser A/B
-npm run test:bs8:abilities:browser # 候選 BS8：54 張能力的獨立技能表面 Browser A/B
+npm run test:bs8:effects:browser # 正式 BS8 主效果 146／146 正向 Browser gate
+npm run test:bs8:effects:negative:browser # 正式 BS8 主效果 156／156 負向 Browser A/B
+npm run test:bs8:abilities:browser # 正式 BS8：54 張能力的獨立技能表面 Browser A/B（含 14 個 Then）
+npm run test:bs8-005:browser # BS8-005 EXTRA Avatar of Ruin staging 登場／On Play／攻擊後 Then A/B
+npm run test:bs8:076:browser # BS8-076：對手 Active Phase 棄 0／恰好 2 張的 Browser A/B
 npm run ai:audit:capabilities # 正式 runtime 卡池的 AI capability strict gate
 npm run benchmark:ai:challenger -- --seeds=10 --seed-start=401 # Lv.5/Lv.4 五色雙邊換位 gate
 npm run benchmark:ai:challenger -- --corpus=full --matchups=both --seeds=2 --seed-start=501 # 46 副全 corpus、mirror＋輪替跨牌組 gate
@@ -350,7 +353,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-31 | BS8-043 Fettuccine Cookie 依戰鬥區只能有兩張餅乾的已確認規則，將來源外唯一的「本回合從 Break 登場 LV.3」以 strict selector 綁定為 HP +1 目標；TDD、候選 strict audit（171 verified／0 needs-review／0 blocked）與通用 Browser 146／146 正向、156／156 負向均通過。所有候選規則 gate 已完成，但未執行 promotion，仍須使用者明確授權。 |
+| 2026-08-31 | BS8 完成正式 promotion：171 筆記錄／125 個基礎卡號（含 15 筆 EXTRA）移入 `data/cards/`，正式 card-pool 增至 1,415 種卡號；修正 Stage 靜態攻擊費用 modifier 的驗證 payload 判定，正式 `validate:cards` 1,400／1,400、strict contract 171／171，Browser 正向 146／146、負向 156／156、能力 A/B 54／54 與 Then 14／14 均通過，EXTRA Deck 維持獨立 staging。 |
 | 2026-08-30 | BS8 候選 strict contract 為 170 verified／0 needs-review／1 explicit official-ruling block；補齊 BS8-076 強制置牌庫底、抽牌與對手 Active Phase 棄 0／2 張分支，並以 `test:bs8:076:browser` 實際驗證兩條分支。通用主效果 Browser 為 145／145 正向、155／155 負向；`test:bs8:abilities:browser` 完成 54／54 獨立技能表面 A/B，14 個 Then 的實際攻擊語意 A/B 亦完成。牌組編輯器新增 Standard 的 BS7 篩選及候選限定的 BS8 主牌／六槽 EXTRA、專用 JSON 匯入匯出；BS8-043 官方裁決仍阻擋 promotion。 |
 | 2026-08-29 | BS8 EXTRA Deck 依官方 Comprehensive Rules v1.8 完成 Phase 0／1 與首批直接登場核心：0–6 張、EXTRA／Awakened、每卡號四張、私密重排、主牌組／開局隔離、玩家 view／線上遮罩及 `play-extra-deck-cookie` 均有 TDD；BS8-005／090 攻擊後效果、Lv.1／Lv.2 通用 AI 路徑與線上 payload 拒絕測試也已補齊。其後以規則 §2-4-2-2、§3-5-5-1、§4-9、§4-12-2、§9-4-2 與 FAQ 補齊 BS8-027／104 Awaken 的 HP、裝備、效果清理與昏厥去向 TDD，並完成 BS8-002 首張 serial strict contract。自訂牌組、固定 seed 整場 AI、正式線上／逐卡 Browser gate 與 promotion 仍待完成。 |
 | 2026-08-28 | BS7 Blue 100 場診斷修正 search 漏算的 `attack-tempo`，並保留明確唯一防守資源的例外；新增回歸與獨立 seed 健康驗證。修正後 46 副全 corpus、368 場 holdout 為 180 勝（48.9%）、安全異常 0，未達 Lv.5 升格門檻。BS8 官方資料以 171 筆 `inventory` 候選匯入，15 筆 EXTRA 與效果缺口維持不可 promote，並建立核心模型分階段方案。 |

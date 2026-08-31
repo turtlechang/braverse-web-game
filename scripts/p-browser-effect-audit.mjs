@@ -261,17 +261,16 @@ const AUDIT_CONFIGS = {
     negativeConditionCardNumbers: ['BS7-035', 'BS7-057'],
   },
   BS8: {
-    label: 'BS8 staging',
+    label: 'BS8',
     sources: [
-      'data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json',
+      'data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json',
     ],
     report: 'output/playwright/bs8-effect-audit.json',
     negativeReport: 'output/playwright/bs8-effect-audit-negative.json',
-    // BS8 is candidate-only. The 15 EXTRA records are intentionally excluded
-    // here because their cards cannot enter the normal 60-card test-state;
-    // source records retain their ordinary card type, so this must use
-    // `flags.extra` rather than `type` alone. They remain covered by the
-    // separate EXTRA staging flows.
+    // The 15 EXTRA records are intentionally excluded here because their cards
+    // cannot enter the normal 60-card test-state; source records retain their
+    // ordinary card type, so this must use `flags.extra` rather than `type`
+    // alone. They remain covered by the separate EXTRA staging flows.
     expectedEffectCardCount: 146,
     // A candidate promotion gate may not treat an empty command trace as a
     // settled effect.  This is deliberately stricter than the generic smoke
@@ -283,7 +282,6 @@ const AUDIT_CONFIGS = {
     conditionTestStatePrefix: 'bs8-condition',
     conditionCardNumbers: [],
     alwaysIncludeCardNumbers: [],
-    candidate: true,
   },
 }
 const auditConfig = AUDIT_CONFIGS[requestedSeries]
@@ -628,6 +626,51 @@ const verifyBs8AttackThenFingerprint = (card, traceSummary, operations) => {
   }
 }
 
+// BS8-002 is the only strict ability whose Then is an optional payment
+// decision rather than an attack follow-up. A settled trace alone is not
+// enough here: the Browser path must show the red support-energy choice before
+// drawing, and the negative A/B path must prove that choosing Skip suppresses
+// the whole Then.
+const verifyBs8002OptionalThenFingerprint = (traceSummary, operations, negative) => {
+  const traceText = traceSummary.steps.join('\n')
+  const missing = []
+  if (!operations.includes('witness:bs8-002-optional-visible')) {
+    missing.push('operation:witness:bs8-002-optional-visible')
+  }
+  if (negative) {
+    if (!operations.includes('skip:bs8-002-then')) {
+      missing.push('operation:skip:bs8-002-then')
+    }
+    if (traceSummary.commandKinds.includes('resolve-draw-up-to')) {
+      missing.push('negative:resolve-draw-up-to-absent')
+    }
+    if (/抽牌結果：抽了/.test(traceText)) {
+      missing.push('negative:draw-result-absent')
+    }
+  } else {
+    for (const operation of [
+      'start:optional-cost-attack',
+      'select:optional-cost',
+      'confirm:optional-cost',
+    ]) {
+      if (!operations.includes(operation)) missing.push(`operation:${operation}`)
+    }
+    if (!traceSummary.commandKinds.includes('resolve-draw-up-to')) {
+      missing.push('trace:resolve-draw-up-to')
+    }
+    if (!/技能 Then 代價：支付能量（橫置）/.test(traceText)) {
+      missing.push('trace:skill-then-red-energy-payment')
+    }
+    if (!/抽牌結果：抽了 1 張牌/.test(traceText)) {
+      missing.push('trace:draw-one-after-payment')
+    }
+    if (!/效果目標：opp-lv1/.test(traceText)) {
+      missing.push('trace:opponent-target-after-payment')
+    }
+  }
+  return { passed: missing.length === 0, missing, negative }
+}
+
 const traceHasSubstantiveEffectEvidence = (trace) =>
   trace
     .filter((entry) => entry.commandKind !== 'declare-attack')
@@ -713,6 +756,9 @@ const activeContractCard = (page) =>
 const orderedAllTargetCards = new Set(['BS7-039', 'BS7-082'])
 const BS8_STATIC_BROWSER_WITNESSES = new Set(['BS8-061', 'BS8-075', 'BS8-125'])
 const strictMultipleTargetSelectionCounts = new Map([
+  // BS8-003 must select every own Cookie at 4 or less remaining HP; the
+  // generic fixture exposes both the source and its companion as recipients.
+  ['BS8-003', 2],
   // BS8-031's second OnPlay effect must return exactly two Cookies whose
   // total level is at most three. Its level-sum UI deliberately does not
   // expose an "N / 2" counter, so the generic one-target guard is insufficient.
@@ -829,6 +875,50 @@ const driveEffectPanel = async (
   const panel = activePanel(page)
   if (!(await visible(panel))) return false
 
+  const optionalAttack = panel.locator('.optional-cost-attack-inline').first()
+  const isBs8002OptionalThen = activeContractCard(page) === 'BS8-002'
+  if (isBs8002OptionalThen && (await visible(optionalAttack))) {
+    const panelText = await panel.innerText().catch(() => '')
+    const optionalText = await optionalAttack.innerText().catch(() => '')
+    assert.match(
+      panelText,
+      /技能 Then 可選效果/,
+      'BS8-002 must present its Then as a skill-level optional decision',
+    )
+    assert.match(
+      optionalText,
+      /支付支援區\s*1\s*點紅色能量/,
+      'BS8-002 must show the red support-energy payment in the decision UI',
+    )
+    assert.doesNotMatch(
+      optionalText,
+      /If this Cookie's remaining HP is 1|完整技能文字/,
+      'BS8-002 Then UI must not repeat the complete source skill text',
+    )
+    assert.equal(
+      await visible(page.locator('.draw-up-to-modal')),
+      false,
+      'BS8-002 must not draw before the player resolves the optional Then',
+    )
+    if (!operations.includes('witness:bs8-002-optional-visible')) {
+      operations.push('witness:bs8-002-optional-visible')
+    }
+    if (negative) {
+      const skip = optionalAttack
+        .locator('.modal-actions-decision button')
+        .filter({ hasText: /略過|Skip/i })
+        .first()
+      assert.ok(
+        await enabled(skip),
+        'BS8-002 negative A/B path must expose an enabled Skip choice',
+      )
+      await skip.click({ force: true })
+      operations.push('skip:bs8-002-then')
+      await wait(520)
+      return true
+    }
+  }
+
   // `card-negative` keeps an attack-Then card at the real post-attack
   // pending window. The attack payment has already happened before this
   // window, so B-path validation must resolve the actual Then UI instead of
@@ -891,7 +981,6 @@ const driveEffectPanel = async (
     return false
   }
 
-  const optionalAttack = panel.locator('.optional-cost-attack-inline').first()
   if (await visible(optionalAttack)) {
     const pay = optionalAttack
       .locator('.modal-actions-decision button')
@@ -1321,6 +1410,9 @@ const driveOtherModal = async (
 
   const draw = page.locator('.draw-up-to-modal').first()
   if (await visible(draw)) {
+    if (activeContractCard(page) === 'BS8-002' && !negative) {
+      operations.push('witness:bs8-002-draw-visible')
+    }
     const option = draw.locator('.draw-up-to-option').first()
     if (await enabled(option)) await option.click({ force: true })
     const confirm = draw.locator('.draw-up-to-actions button:not(:disabled)').last()
@@ -2301,6 +2393,17 @@ const runCard = async (
       requiresBs8AttackThen && !negative
         ? verifyBs8AttackThenFingerprint(card, traceSummary, operations)
         : null
+    const bs8OptionalThenFingerprint =
+      auditBs8StrictAbilities && getBaseCardNumber(card) === 'BS8-002'
+        ? verifyBs8002OptionalThenFingerprint(traceSummary, operations, negative)
+        : null
+    if (
+      bs8OptionalThenFingerprint &&
+      !negative &&
+      traceSummary.commandKinds.includes('resolve-draw-up-to')
+    ) {
+      operations.push('witness:bs8-002-draw-resolved')
+    }
 
     if (
       pendingSurface === 0 &&
@@ -2376,6 +2479,27 @@ const runCard = async (
             'BS8 attack-Then 正向路徑雖已結算，但未留下此卡卡面指定的目標、結果或必要操作證據。',
         }
       }
+      if (bs8OptionalThenFingerprint && !bs8OptionalThenFingerprint.passed) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Missing BS8-002 optional Then semantic fingerprint',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          bs8OptionalThenFingerprint,
+          ...traceSummary,
+          error:
+            'BS8-002 必須在技能 Then 面板中先讓玩家選擇付款或略過，且只能在付款後抽牌。',
+        }
+      }
       if (
         auditConfig.requireSubstantiveTrace &&
         !negative &&
@@ -2430,6 +2554,7 @@ const runCard = async (
         ...(bs8StaticWitness ? { bs8StaticWitness } : {}),
         ...(bs8AbilityWitness ? { bs8AbilityWitness } : {}),
         ...(bs8AttackThenFingerprint ? { bs8AttackThenFingerprint } : {}),
+        ...(bs8OptionalThenFingerprint ? { bs8OptionalThenFingerprint } : {}),
         ...traceSummary,
       }
     }
@@ -2678,7 +2803,7 @@ try {
       : auditVanillaAttacks
       ? `Formal-pool test-state UI audit for every ${auditConfig.label} vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.`
       : auditBs8StrictAbilities
-        ? 'Candidate-only BS8 strict ability Browser A/B audit for the recorded 54 user-visible ability sources. Attack-Then clauses are intentionally excluded from this report. Every A path uses card-skill so a Then clause cannot hide the ability; every B path uses card-skill-negative so every support card is rested on that same ability surface. BS8-084 additionally proves the required pre-attack discard and no-hand rejection through the real UI.'
+        ? 'Formal-pool BS8 strict ability Browser A/B audit for the recorded 54 user-visible ability sources. Attack-Then clauses are intentionally excluded from this report. Every A path uses card-skill so a Then clause cannot hide the ability; every B path uses card-skill-negative on the same ability surface. BS8-002 additionally proves the visible pay-or-skip choice, red support-energy payment before drawing, and no draw after Skip; BS8-084 proves the required pre-attack discard and no-hand rejection through the real UI.'
         : `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {
       total: results.length,

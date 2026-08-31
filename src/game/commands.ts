@@ -166,6 +166,7 @@ export interface OptionalCostAttackDecision {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  resolution?: 'attack' | 'ability'
   sourceEnergy?: EnergyCost
   mandatory?: boolean
 }
@@ -950,6 +951,7 @@ export const getPendingDecision = (
       cost: pending.cost,
       effects: pending.effects,
       effectText: pending.effectText,
+      resolution: pending.resolution,
       sourceEnergy: pending.sourceEnergy,
       mandatory: pending.mandatory,
     }
@@ -1665,6 +1667,22 @@ const executeAbilityEffects = (
     }
     if (!isEffectConditionMet(nextState, context, effect)) continue
     if (hasNoLegalSelectableTargets(nextState, context, queue, index)) break
+    if (effect.kind === 'optional-cost-attack' && effect.resolution === 'ability') {
+      return openOptionalAbilityEffect(
+        nextState,
+        {
+          playerId: context.sourcePlayerId,
+          sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName: context.sourceCardName,
+          sourceKind,
+          effects: queue,
+          effectIndex: index,
+        },
+        index,
+        context,
+      )
+    }
     nextState = executeCardEffect(
       nextState,
       context,
@@ -1700,6 +1718,44 @@ const executeAbilityEffects = (
     }
   }
   return nextState
+}
+
+/**
+ * 建立技能 Then 的可選付款決策。這個 wrapper 故意保留在
+ * `pendingAbilityEffect` 的目前 index，付款後才會把巢狀 effects 插回同一條
+ * 效果佇列；因此略過時可以精確跳過整個 Then，而不是誤執行抽牌／傷害。
+ */
+const openOptionalAbilityEffect = (
+  state: GameState,
+  pending: NonNullable<GameState['pendingAbilityEffect']>,
+  effectIndex: number,
+  context: EffectContext,
+): GameState => {
+  const effect = pending.effects[effectIndex]
+  if (effect?.kind !== 'optional-cost-attack' || effect.resolution !== 'ability') {
+    return {
+      ...state,
+      pendingAbilityEffect: { ...pending, effectIndex },
+    }
+  }
+
+  const sourceCardName =
+    pending.sourceCardName ?? context.sourceCardName ?? 'Unknown'
+  return {
+    ...state,
+    pendingAbilityEffect: { ...pending, effectIndex },
+    pendingOptionalCostAttack: {
+      playerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName,
+      cost: effect.cost,
+      effects: effect.effects,
+      effectText: effect.effectText,
+      resolution: 'ability',
+      sourceEnergy: effect.sourceEnergy,
+      mandatory: effect.mandatory,
+    },
+  }
 }
 
 /**
@@ -1746,6 +1802,20 @@ const resolvePendingAbilityEffect = (
   const continueBattle = (candidate: GameState): GameState =>
     continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
+  // 技能 Then 的可選效果沿用 optional-cost-attack 的付款／決策通道，
+  // 但它不是攻擊後效果，不能交給 battle resolver。若前一步因 Refresh
+  // 暫停，這裡會在牌庫續補完成後再次被呼叫並建立決策。
+  if (
+    effect?.kind === 'optional-cost-attack' &&
+    effect.resolution === 'ability'
+  ) {
+    return openOptionalAbilityEffect(
+      state,
+      pending,
+      pending.effectIndex,
+      context,
+    )
+  }
   const resolvedTargetIds =
     effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
       ? pending.previousEffectTargetIds ?? targetIds
@@ -2045,6 +2115,26 @@ const continueAbilityQueue = (
   }
   if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
+  }
+  const nextEffect = pending.effects[nextIndex]
+  if (
+    nextEffect?.kind === 'optional-cost-attack' &&
+    nextEffect.resolution === 'ability'
+  ) {
+    // Refresh／On Play 必須先完成；此時只保留 wrapper 的 effectIndex，
+    // 待下一次 resolvePendingAbilityEffect 再建立付款決策。
+    if (resolved.pendingRefresh || resolved.pendingOnPlay) {
+      return {
+        ...resolved,
+        pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
+      }
+    }
+    return openOptionalAbilityEffect(
+      resolved,
+      pending,
+      nextIndex,
+      context,
+    )
   }
   return {
     ...resolved,

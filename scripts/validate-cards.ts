@@ -105,6 +105,7 @@ for (const entry of poolEntries) {
       gameCard.skill ||
       gameCard.flip ||
       gameCard.attackEffects?.length ||
+      gameCard.stageAbility?.staticAttackCostModifiers?.length ||
       // 場景卡的特殊勝利條件（如 BS3-121）本身就是效果，effects 刻意留空。
       gameCard.stageAbility?.specialVictory,
   )

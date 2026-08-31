@@ -101,6 +101,7 @@ const SERIES_OPTIONS = [
   { value: 'BS5', label: 'BS5' },
   { value: 'BS6', label: 'BS6' },
   { value: 'BS7', label: 'BS7' },
+  { value: 'BS8', label: 'BS8' },
   { value: 'PROMOTION CARD', label: '特典卡' },
 ]
 
@@ -174,8 +175,14 @@ export function DeckEditorPage({
 }: DeckEditorPageProps) {
   const isCandidateStaging = mode === 'bs8-candidate-staging'
   const seriesOptions = isCandidateStaging
-    ? [...SERIES_OPTIONS, BS8_CANDIDATE_SERIES_OPTION]
+    ? SERIES_OPTIONS.map((option) =>
+        option.value === 'BS8' ? BS8_CANDIDATE_SERIES_OPTION : option,
+      )
     : SERIES_OPTIONS
+  const formalMainPool = useMemo(
+    () => getAllCardPoolEntries().filter((entry) => entry.type !== 'extra'),
+    [],
+  )
   const candidateMainPool = useMemo(
     () => (isCandidateStaging ? getBs8CandidateMainDeckCardDefinitions() : []),
     [isCandidateStaging],
@@ -183,9 +190,9 @@ export function DeckEditorPage({
   const editorPool = useMemo(
     () =>
       isCandidateStaging
-        ? [...getAllCardPoolEntries(), ...candidateMainPool]
-        : undefined,
-    [candidateMainPool, isCandidateStaging],
+        ? [...formalMainPool, ...candidateMainPool]
+        : formalMainPool,
+    [candidateMainPool, formalMainPool, isCandidateStaging],
   )
   const editor = useDeckEditor({ poolEntries: editorPool })
   const { loadDeck } = editor

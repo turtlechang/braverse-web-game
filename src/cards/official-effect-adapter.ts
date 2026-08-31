@@ -3980,9 +3980,10 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS8-002 Cilantro Cobra Swordsman：Activate／每回合一次。來源剩餘
-    // HP 恰為 1 時，先讓來源補 1 HP，再依 Then 順序抽 1 並對至多一張
-    // 對手餅乾造成 1 傷害；尖括號內的「can be used as {R}」是來源能量，
-    // 不可誤當成另一筆支援區支付費用。
+    // HP 恰為 1 時，先讓來源補 1 HP；Then 是玩家可選的技能後續，必須
+    // 先支付 1 點紅色能量，再抽 1 並對至多一張對手餅乾造成 1 傷害。
+    // 沿用 optional-cost-attack 的付款管道，但標記為 `ability`，避免被
+    // 攻擊後效果的 battle resolver 誤處理。
     'BS8-002': [
       {
         kind: 'gain-hp',
@@ -3990,11 +3991,37 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
         condition: { kind: 'source-hp-less-than', amount: 2 },
       },
-      { kind: 'draw-up-to', max: 1 },
       {
-        kind: 'damage',
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        effectText:
+          'Then, <can be used as {R}.> Draw 1 card from your deck and select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+        effects: [
+          { kind: 'draw-up-to', max: 1 },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    ],
+    // BS8-003 Cilantro Cobra Fighter：不是「選 1 張」；來源剩餘 HP 恰為
+    // 1 時，所有目前剩餘 HP 為 4 以下的己方戰鬥區餅乾都各自獲得 1 HP。
+    // 戰鬥區上限為兩張，`allMatching` 會在規則層強制結算每一張合法目標。
+    'BS8-003': [
+      {
+        kind: 'gain-hp',
         amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
+        target: {
+          side: 'self',
+          min: 1,
+          max: 2,
+          maxRemainingHp: 4,
+          allMatching: true,
+        },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
       },
     ],
     // BS8-018 Cake Wolf：昏厥後先把剛進休息區的來源送進棄牌區，再對至多
@@ -9859,9 +9886,6 @@ const exactCookieSkillSourceEnergy: Partial<
   Record<string, CardSkill['sourceEnergy']>
 > = {
   'P-017': { green: 1 },
-  // BS8-002 的 Then 句「can be used as {R}」是技能來源自身供應的一點紅色
-  // 能量，不屬於啟動費用；保留在 CardSkill 供付款與 strict contract 共用。
-  'BS8-002': { red: 1 },
   'BS8-018': { red: 1 },
   'BS8-009': { red: 1 },
   'BS8-103': { purple: 1 },

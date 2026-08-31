@@ -9,8 +9,10 @@ import {
 import { analyzeOfficialCardBehavior } from '../src/cards/contracts/ledger'
 import type { OfficialCardRecord } from '../src/cards/types'
 
-export const DEFAULT_BS8_CANDIDATE_INPUT =
-  'data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+export const DEFAULT_BS8_FORMAL_INPUT =
+  'data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+/** @deprecated Use DEFAULT_BS8_FORMAL_INPUT after BS8 promotion. */
+export const DEFAULT_BS8_CANDIDATE_INPUT = DEFAULT_BS8_FORMAL_INPUT
 export const DEFAULT_BS8_EFFECT_COVERAGE_OUTPUT = 'docs/bs8-effect-coverage.md'
 
 const tableRows = (entries: Bs6EffectCoverageEntry[]) =>
@@ -55,9 +57,9 @@ export const createBs8EffectCoverageMarkdown = (
 ) => {
   const extraCards = cards.filter((card) => card.type === 'extra' || card.flags.extra)
   const strict = strictContractSummary(cards)
-  return `# BS8 Land of Fire & Ruin, Realm of Apathy 效果覆蓋盤點（候選資料）
+  return `# BS8 Land of Fire & Ruin, Realm of Apathy 效果覆蓋盤點（正式卡池）
 
-> 由 \`npm run cards:analyze:bs8-candidate\` 產生。資料來源是 \`${DEFAULT_BS8_CANDIDATE_INPUT}\`；parser inventory 與 strict contract 是不同量表，兩者都不是 promotion 或 Browser 驗收證據。
+> 由 \`npm run cards:analyze:bs8\` 產生。資料來源是 \`${DEFAULT_BS8_FORMAL_INPUT}\`；parser inventory 與 strict contract 是不同量表，Browser 證據另見正式 BS8 Browser 稽核產物。
 
 ## 摘要
 
@@ -76,7 +78,7 @@ export const createBs8EffectCoverageMarkdown = (
 
 ## EXTRA 核心規則阻塞
 
-主牌組用的通用 adapter 仍會明確將 \`extra\` 視為 \`unsupported-card-type\`，避免 EXTRA 誤混入 60 張牌組；因此上表的 parser 待轉接不等於 strict contract 未驗證。專用 \`convertOfficialCardToExtraDeckCard\` 已轉接 BS8-005／027／069／090／104，其中 BS8-005／069／090 有核心直接登場 command、戰場私密檢視、攻擊後效果與 localhost-only Browser A/B；Lv.1／Lv.2 也只透過通用合法指令與既有 Cookie 評分使用直接 EXTRA，沒有卡號特判。BS8-027／104 已依官方規則與 FAQ 轉接 Awakened 的覆蓋目標、\`HP+2\`、裝備保留、既有套用效果清除及昏厥區域去向，並有純規則 TDD。BS8-076 的候選 Browser A/B 會實際驗證對手下一個 Active Phase 選擇棄 0 張時維持 rested，恰好棄 2 張時才轉 active。候選 staging 牌組編輯器的 BS8 篩選、主牌組與六槽 EXTRA 都只出現在明確模式；匯入／匯出只接受帶 \`candidateStaging.extraDeckEntries\` 的專用 JSON，Standard importer 會拒絕它。這些流程不會寫入正式卡池、Standard 房間或正式牌組資料。
+主牌組用的通用 adapter 仍會明確將 \`extra\` 視為 \`unsupported-card-type\`，避免 EXTRA 誤混入 60 張牌組；15 筆 EXTRA 記錄已隨 BS8 正式資料進入 registry，但仍由專用 \`convertOfficialCardToExtraDeckCard\` 與獨立 staging 流程處理。該轉接已涵蓋 BS8-005／027／069／090／104，其中 BS8-005／069／090 有核心直接登場 command、戰場私密檢視、攻擊後效果與 Browser A/B；Lv.1／Lv.2 也只透過通用合法指令與既有 Cookie 評分使用直接 EXTRA，沒有卡號特判。BS8-027／104 已依官方規則與 FAQ 轉接 Awakened 的覆蓋目標、\`HP+2\`、裝備保留、既有套用效果清除及昏厥區域去向，並有純規則 TDD。BS8-076 的 Browser A/B 會實際驗證對手下一個 Active Phase 選擇棄 0 張時維持 rested，恰好棄 2 張時才轉 active。牌組編輯器的 BS8 篩選、主牌組與六槽 EXTRA 仍只在明確 staging 模式出現；匯入／匯出只接受帶 \`candidateStaging.extraDeckEntries\` 的專用 JSON，Standard importer 會拒絕它。這些額外牌組流程不會混入 Standard 牌組或正式房間。
 
 | 卡號 | 顏色 | 卡名 | 官方文字 |
 | --- | --- | --- | --- |
@@ -96,28 +98,31 @@ ${tableRows(report.primaryUnsupportedCards.filter((entry) => entry.type !== 'ext
 
 ## 後續 gate
 
-1. BS8 候選只能執行 \`npm run validate:candidate\` 的來源／結構驗證；inventory 狀態必須保持不可 promote。
+1. BS8 正式資料以 \`npm run validate:cards\` 與 \`npm run check:card-pool\` 驗證；來源 metadata 的 \`promotion-ready\` 僅作匯入稽核證據。
 2. BS8-043 依已確認的戰鬥區兩張餅乾上限裁決：來源 Fettuccine Cookie 自己佔一格，另一格若是本回合從 Break 登場的 LV.3，即為唯一合法目標。runtime 以 \`gain-hp\` 的 \`self／LV.3／enteredFrom=break／enteredThisTurn／min=max=1\` selector 綁定，不能改成任選或全體。
-3. 逐卡 Browser 已完成：通用主效果 146／146 正向、156／156 負向；54／54 張能力使用獨立 \`card-skill\`／\`card-skill-negative\` A/B；14 個 Then 使用實際攻擊語意 A/B。這些都是候選 staging 驗收。
-4. 所有候選 strict 規則 gate 已完成；promotion 仍必須由使用者明確授權，且不得由本報告或 \`validate:candidate\` 隱含觸發。
+3. 正式 Browser 逐卡 gate：通用主效果 146／146 正向、156／156 負向；54／54 張能力使用獨立 \`card-skill\`／\`card-skill-negative\` A/B；14 個 Then 使用實際攻擊語意 A/B。EXTRA 仍另走 staging Browser 流程。
+4. BS8 已完成使用者授權的 promotion；後續官方更新仍必須回到候選目錄，完成同一套 strict／Browser gate 後再 promote。
 `
 }
 
-export const readBs8CandidateCards = async (
-  input = DEFAULT_BS8_CANDIDATE_INPUT,
+export const readBs8Cards = async (
+  input = DEFAULT_BS8_FORMAL_INPUT,
 ): Promise<OfficialCardRecord[]> => {
   const payload: unknown = JSON.parse(await readFile(resolve(input), 'utf8'))
   if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { cards?: unknown }).cards)) {
-    throw new Error(`BS8 候選資料格式錯誤：${input}`)
+    throw new Error(`BS8 資料格式錯誤：${input}`)
   }
   return (payload as { cards: OfficialCardRecord[] }).cards
 }
 
+/** @deprecated Use readBs8Cards. */
+export const readBs8CandidateCards = readBs8Cards
+
 export const writeBs8EffectCoverage = async ({
-  input = DEFAULT_BS8_CANDIDATE_INPUT,
+  input = DEFAULT_BS8_FORMAL_INPUT,
   output = DEFAULT_BS8_EFFECT_COVERAGE_OUTPUT,
 } = {}) => {
-  const cards = await readBs8CandidateCards(input)
+  const cards = await readBs8Cards(input)
   const report = analyzeBs6EffectCoverage(cards)
   const outputPath = resolve(output)
   await writeFile(outputPath, createBs8EffectCoverageMarkdown(cards, report), 'utf8')
@@ -132,7 +137,7 @@ if (isDirectExecution) {
   try {
     const { outputPath, report, extraCount } = await writeBs8EffectCoverage()
     console.log(
-      `BS8 候選效果盤點：${report.baseCardCount} 張基礎卡、EXTRA ${extraCount} 筆、主效果待轉接 ${report.primaryConversion['unsupported-effect-text']}。`,
+      `BS8 正式效果盤點：${report.baseCardCount} 張基礎卡、EXTRA ${extraCount} 筆、主效果待轉接 ${report.primaryConversion['unsupported-effect-text']}。`,
     )
     console.log(`已更新 ${outputPath}`)
   } catch (error) {

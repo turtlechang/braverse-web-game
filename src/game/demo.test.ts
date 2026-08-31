@@ -216,9 +216,19 @@ describe('parseTestStateConfig', () => {
     expect(avatar).toMatchObject({
       id: 'BS8-005',
       name: 'Avatar of Ruin Cookie',
+      type: 'extra',
+      level: 3,
+      attackEffects: [
+        { kind: 'damage-all', amount: 1, side: 'opponent' },
+        { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+      ],
     })
     expect(canPlayExtraDeckCookie(met, 'player-one', instanceId)).toBe(true)
     expect(canPlayExtraDeckCookie(unmet, 'player-one', instanceId)).toBe(false)
+    expect(playerOne.supportArea).toHaveLength(3)
+    expect(playerOne.supportArea.every((support) => !support.rested)).toBe(true)
+    expect(playerOne.battleArea[0]?.hpCards).toHaveLength(3)
+    expect(met.players['player-two'].battleArea[0]?.hpCards).toHaveLength(6)
   })
 
   it('creates the BS8-076 active-phase decision with exactly two discard candidates', () => {

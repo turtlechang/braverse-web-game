@@ -262,6 +262,11 @@ export interface EffectTargetSelector {
   side: EffectTargetSelectorSide
   min: number
   max: number
+  /**
+   * 效果必須對每一張符合此 selector 的餅乾結算；不是由玩家任選至多 `max`
+   * 張（BS8-003 的「all your Cookies that have 4 or less HP」）。
+   */
+  allMatching?: boolean
   excludeSource?: boolean
   sourceOnly?: boolean
   remainingHp?: number
@@ -1513,6 +1518,12 @@ export interface InspectDeckEffect {
 
 export interface OptionalCostAttackEffect {
   kind: 'optional-cost-attack'
+  /**
+   * `attack`（預設）代表攻擊後效果；`ability` 代表技能 Then 的可選效果。
+   * 兩者共用付款與目標驗證，但後者不應要求 `pendingBattle`，也不應被
+   * 攻擊後 UI／戰鬥收尾誤當成一次攻擊。
+   */
+  resolution?: 'attack' | 'ability'
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
@@ -2433,6 +2444,14 @@ export interface GameState {
       amount: number
     }
     /**
+     * 多個餅乾同時增加 HP 時，Refresh 後依原結算順序續補的佇列。
+     * 單一目標仍使用 `remainingHpGain`，維持既有序列化格式與相容性。
+     */
+    remainingHpGains?: Array<{
+      targetInstanceId: string
+      amount: number
+    }>
+    /**
      * 餅乾登場設置 HP 途中牌庫耗盡時，Refresh 後要繼續補入的 HP 卡。
      * 只記錄實際被中斷的登場，不能用場上所有餅乾的缺額推測。
      */
@@ -2508,6 +2527,7 @@ export interface GameState {
     cost: AbilityCost
     effects: CardEffect[]
     effectText: string
+    resolution?: 'attack' | 'ability'
     sourceEnergy?: EnergyCost
     mandatory?: boolean
   } | null

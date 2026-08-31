@@ -1,14 +1,14 @@
-# BS8 Land of Fire & Ruin, Realm of Apathy 卡牌資料盤點（候選資料）
+# BS8 Land of Fire & Ruin, Realm of Apathy 卡牌資料盤點（正式卡池）
 
-> 本文件由 `npm run cards:import:bs8-candidate` 產生。BS8 只隔離於候選資料區，不會進入 runtime 或正式卡池。
+> 本文件由 `npm run cards:import:bs8-candidate` 產生的來源快照更新而來；BS8 已於 2026-08-31 完成 promotion，正式資料位於 `data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`。
 
-## 來源與候選狀態
+## 來源與正式狀態
 
 - 官方卡表：[CookieRun: Braverse Card List](https://cookierunbraverse.com/en/cardList)
 - 官方 JSON：`https://cookierunbraverse.com/data/json/cardList_en.json`
 - 抓取時間：`2026-08-27T16:07:30.127Z`
 - 篩選規則：完整卡號以 `BS8-` 開頭，保留異圖／促銷變體。
-- 候選狀態：`inventory`
+- 正式狀態：已 promotion；來源 metadata `candidateStatus` 為 `promotion-ready`
 - 圖片下載：否
 
 ## 數量摘要
@@ -66,9 +66,9 @@
 | `PURE` 顏色 | 0 | 無 |
 | `Ancient` 關鍵字 | 11 | BS8-026, BS8-027, BS8-104 |
 
-## BS8 候選資料門檻
+## BS8 正式資料門檻
 
-1. 執行 `npm run validate:candidate`，確認 schema、卡號唯一性與官方欄位結構。
-2. 執行 `npm run cards:analyze:bs8-candidate`，列出既有 runtime 對各類型的轉接缺口，並獨立標示 EXTRA 卡。
-3. EXTRA Deck、覆蓋與進入戰鬥區的規則仍屬核心模型擴充；在官方規則與逐卡 Browser A/B 驗證完成前，EXTRA 卡必須維持候選／不可 promote。
-4. 不執行 `npm run promote:candidate`，也不修改 60 張 Main Deck 計數或正式卡池 registry。
+1. 執行 `npm run validate:cards` 與 `npm run check:card-pool`，確認正式資料、轉接與 registry 一致。
+2. 執行 `npm run cards:analyze:bs8`，列出 runtime 對各類型的轉接缺口，並獨立標示 EXTRA 卡。
+3. 15 筆 EXTRA 已保留在正式來源與 registry，但一般 `GameCard` adapter 仍拒絕把它們混入 60 張 Main Deck；EXTRA Deck 仍走獨立 staging／`ExtraDeckCard` 流程。
+4. 後續官方更新仍須先寫入 `data/candidates/`，完成 strict contract 與 Browser A/B 後才可再次 promotion。

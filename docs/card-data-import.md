@@ -124,7 +124,7 @@ npm run cards:analyze:bs7
 
 匯入指令會建立 `data/candidates/official-arena-of-glory-bs7.en.json` 與 `docs/bs7-card-inventory.md`，供官方更新重新進入候選流程；目前正式效果覆蓋報告由 `npm run cards:analyze:bs7` 從 `data/cards/official-arena-of-glory-bs7.en.json` 產生。未來候選仍須完成 strict contract、逐色正反 Browser gate、正式 smoke 與人工覆核，才可將 `candidateStatus` 改為 `promotion-ready` 並 promote。
 
-BS8「Land of Fire & Ruin, Realm of Apathy」目前僅完成候選盤點，不可 promote：
+BS8「Land of Fire & Ruin, Realm of Apathy」已於 2026-08-31 完成正式 promotion；未來官方更新仍先回到候選流程：
 
 ```bash
 npm run cards:import:bs8-candidate
@@ -132,7 +132,7 @@ npm run cards:analyze:bs8-candidate
 npm run validate:candidate
 ```
 
-匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`。目前快照有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組，專用 `convertOfficialCardToExtraDeckCard` 則只為候選 staging 使用。候選自訂牌組可設定 0–6 張 EXTRA，固定 seed Lv.1–Lv.5、雙瀏覽器候選線上房與對手遮罩均與 Standard 分離；它們不構成完整逐卡 Browser gate。strict audit 目前為 171 verified／0 needs-review／0 blocked；BS8-076 已有候選 Browser A/B，驗證對手 Active Phase 棄 0 張維持 rested、恰好棄 2 張才轉 active。BS8-043 依戰鬥區兩格上限，將來源以外唯一的本回合從 Break 登場 LV.3 綁定為目標，不可改為任選或全體。即使 `validate:candidate` 通過也只代表來源與結構正確，不得改寫 `candidateStatus` 或執行 `promote:candidate`。
+匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`；完成 gate 後由 `promote:candidate` 移入正式 `data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`。目前正式資料有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組，專用 `convertOfficialCardToExtraDeckCard` 則由獨立 EXTRA staging 使用。正式卡池 `validate:cards` 為 1,400 張可轉接記錄，`check:card-pool` 已確認 registry 一致；strict audit 為 171 verified／0 needs-review／0 blocked。正式 Browser gate 通用主效果 146／146 正向、156／156 負向，能力 A/B 54／54，攻擊 `Then` 14／14；BS8-076 與 BS8-043 的規則裁決及 A/B 證據亦已納入。EXTRA 自訂牌組、固定 seed AI 與雙瀏覽器房仍維持 staging，Standard importer 會拒絕 `candidateStaging.extraDeckEntries`。
 
 以下 serial gate 段落保留各卡在逐卡稽核當時的候選資料與 `inventory` 狀態；其中「候選仍為 `inventory`／不可 promote」是當時的歷史狀態，不代表目前。BS7 已於 2026-08-22 完成 promotion，現在以正式卡池為準。BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
 

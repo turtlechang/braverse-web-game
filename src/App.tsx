@@ -825,7 +825,9 @@ function App() {
                       playerId: match.viewerPlayerId,
                       action: 'skip',
                     },
-                    '已略過攻擊後續效果。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已略過技能 Then 可選效果。'
+                      : '已略過攻擊後續效果。',
                   )
                 },
                 onPay: (
@@ -850,7 +852,9 @@ function App() {
                       trashToDeckIds,
                       hpToHandIds,
                     },
-                    '已支付攻擊後續效果費用。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已支付技能 Then 費用。'
+                      : '已支付攻擊後續效果費用。',
                   )
                 },
               }

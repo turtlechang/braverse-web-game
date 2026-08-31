@@ -9,7 +9,7 @@ import officialPurpleSample from '../../data/cards/official-starter-deck-purple.
 import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
 import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import officialBS7Candidates from '../../data/cards/official-arena-of-glory-bs7.en.json'
-import officialBS8Candidates from '../../data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import officialBS8Candidates from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import { convertOfficialCardToGameCard } from './official-card-adapter'
 import {
   convertOfficialCardEffects,
@@ -5216,11 +5216,10 @@ describe('BS7 candidate effect adapter', () => {
 })
 
 describe('BS8 candidate serial contract', () => {
-  it('maps BS8-002 as an ordered Activate skill with its self-supplied red energy', () => {
+  it('maps BS8-002 as an ordered Activate skill with an optional Then paid by one red energy', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-002'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
-      sourceEnergy: { red: 1 },
       effects: [
         {
           kind: 'gain-hp',
@@ -5228,11 +5227,20 @@ describe('BS8 candidate serial contract', () => {
           target: { side: 'self', min: 1, max: 1, sourceOnly: true },
           condition: { kind: 'source-hp-less-than', amount: 2 },
         },
-        { kind: 'draw-up-to', max: 1 },
         {
-          kind: 'damage',
-          amount: 1,
-          target: { side: 'opponent', min: 0, max: 1 },
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { red: 1 }, discardHand: 0 },
+          effectText:
+            "Then, <can be used as {R}.> Draw 1 card from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+          effects: [
+            { kind: 'draw-up-to', max: 1 },
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
         },
       ],
     })

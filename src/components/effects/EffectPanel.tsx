@@ -588,7 +588,11 @@ function EffectPanelContent({
       <>
         <div className="effect-panel-body">
           <div className="effect-panel-heading">
-            <span>攻擊後續效果</span>
+            <span>
+              {optionalCostAttack.resolution === 'ability'
+                ? '技能 Then 可選效果'
+                : '攻擊後續效果'}
+            </span>
             <strong>{optionalCostAttack.sourceCardName}</strong>
           </div>
           {optionalCostAttack.sourceCard && (
@@ -1070,7 +1074,10 @@ export function EffectPanel(props: EffectPanelProps) {
     props.pendingEffect?.sourceCard.name ??
     props.optionalCostAttack?.sourceCardName
   const minimizedPromptLabel =
-    props.pendingEffect?.triggerLabel ?? '攻擊後續效果'
+    props.pendingEffect?.triggerLabel ??
+    (props.optionalCostAttack?.resolution === 'ability'
+      ? '技能 Then 可選效果'
+      : '攻擊後續效果')
 
   if (
     !props.pendingEffect &&

@@ -2753,6 +2753,154 @@ export const resolveAttackEffect = (
   return advanceAttackEffect(nextState, nextBattle)
 }
 
+/**
+ * Resolve an optional `Then` attached to a skill (currently BS8-002).  The
+ * existing optional-cost-attack state is intentionally reused for the UI and
+ * command protocol, but this path never requires a `pendingBattle`: it edits
+ * the authoritative ability queue instead.
+ */
+const resolveOptionalAbilityEffect = (
+  state: GameState,
+  playerId: PlayerId,
+  action: 'skip' | 'pay',
+  discardCardIds: string[],
+  targetIds: string[],
+  paymentIds: string[],
+  supportToHandIds: string[],
+  hpToTrashIds: string[],
+  trashToDeckIds: string[],
+  hpToHandIds: string[],
+): GameState => {
+  const pending = state.pendingOptionalCostAttack
+  const pendingAbility = state.pendingAbilityEffect
+  if (
+    !pending ||
+    pending.resolution !== 'ability' ||
+    !pendingAbility ||
+    pendingAbility.playerId !== playerId ||
+    pendingAbility.sourceInstanceId !== pending.sourceInstanceId
+  ) {
+    throw new GameRuleError('目前沒有待處理的技能 Then 效果。')
+  }
+
+  const effect = pendingAbility.effects[pendingAbility.effectIndex]
+  if (effect?.kind !== 'optional-cost-attack' || effect.resolution !== 'ability') {
+    throw new GameRuleError('技能 Then 效果佇列已變更，無法結算。')
+  }
+
+  if (action === 'skip') {
+    if (pending.mandatory) {
+      throw new GameRuleError('此技能 Then 效果的代價必須支付。')
+    }
+    const nextIndex = pendingAbility.effectIndex + 1
+    return {
+      ...state,
+      pendingOptionalCostAttack: null,
+      pendingAbilityEffect:
+        nextIndex < pendingAbility.effects.length
+          ? { ...pendingAbility, effectIndex: nextIndex }
+          : undefined,
+    }
+  }
+
+  // BS8-002 的 Then 只會有來源餅乾能量與後續 effects；其他代價欄位若
+  // 出現在 ability wrapper，不能默默當成已支付，避免產生不完整的規則解算。
+  if (
+    (pending.cost.supportToTrash ?? 0) > 0 ||
+    (pending.cost.supportToHand ?? 0) > 0 ||
+    pending.cost.hpToTrash ||
+    pending.cost.hpToHand ||
+    pending.cost.trashToDeck ||
+    pending.cost.selfToTrash ||
+    pending.cost.selfToBreakArea ||
+    pending.cost.selfToDeckBottom ||
+    pending.cost.trashBattleCookie ||
+    pending.cost.battleCookieToHand ||
+    pending.cost.handToBreakArea
+  ) {
+    throw new GameRuleError('此技能 Then 的代價類型尚未支援。')
+  }
+
+  if (targetIds.length > 0) {
+    // 目標屬於付款後的巢狀效果，必須在下一個效果步驟重新選擇，不能
+    // 在玩家尚未確認支付前預先鎖定目標。
+    throw new GameRuleError('技能 Then 的目標必須在支付後選擇。')
+  }
+  if (supportToHandIds.length > 0 || hpToTrashIds.length > 0 || trashToDeckIds.length > 0 || hpToHandIds.length > 0) {
+    throw new GameRuleError('此技能 Then 不需要這類額外代價。')
+  }
+
+  const player = state.players[playerId]
+  const uniqueDiscardIds = [...new Set(discardCardIds)]
+  const discardAmount = pending.cost.discardHand ?? 0
+  if (uniqueDiscardIds.length !== discardCardIds.length || uniqueDiscardIds.length !== discardAmount) {
+    throw new GameRuleError(`必須棄置 ${discardAmount} 張手牌作為技能 Then 代價。`)
+  }
+  const discardCandidates = new Set(
+    getDiscardHandCostCandidates(
+      pending.cost,
+      player.hand,
+      pending.sourceInstanceId,
+    ).map((card) => card.instanceId),
+  )
+  if (uniqueDiscardIds.some((id) => !discardCandidates.has(id))) {
+    throw new GameRuleError('手牌不符合技能 Then 棄牌代價。')
+  }
+
+  const source = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+  )
+  if (pending.sourceEnergy && !source) {
+    throw new GameRuleError('來源餅乾不在戰鬥區，無法提供技能 Then 能量。')
+  }
+
+  const energyCost = getRemainingEnergyCost(
+    pending.cost.energy ?? {},
+    pending.sourceEnergy,
+  )
+  const uniquePaymentIds = [...new Set(paymentIds)]
+  if (uniquePaymentIds.length !== paymentIds.length) {
+    throw new GameRuleError('能量支付卡不能重複。')
+  }
+  const paymentValidation = validateEnergyPayment(
+    energyCost,
+    player.supportArea,
+    uniquePaymentIds,
+  )
+  if (!paymentValidation.valid) {
+    throw new GameRuleError(`技能 Then 能量支付無效：${paymentValidation.reason}`)
+  }
+
+  const paymentSet = new Set(uniquePaymentIds)
+  const discarded = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
+  const nextPlayer = {
+    ...player,
+    hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+    discardPile: [...player.discardPile, ...discarded],
+    supportArea: player.supportArea.map((support) =>
+      paymentSet.has(support.card.instanceId)
+        ? { ...support, rested: true }
+        : support,
+    ),
+  }
+  const expandedEffects = [
+    ...pendingAbility.effects.slice(0, pendingAbility.effectIndex),
+    ...effect.effects,
+    ...pendingAbility.effects.slice(pendingAbility.effectIndex + 1),
+  ]
+
+  return {
+    ...state,
+    pendingOptionalCostAttack: null,
+    players: { ...state.players, [playerId]: nextPlayer },
+    pendingAbilityEffect: {
+      ...pendingAbility,
+      effects: expandedEffects,
+      effectIndex: pendingAbility.effectIndex,
+    },
+  }
+}
+
 export const resolveOptionalCostAttack = (
   state: GameState,
   playerId: PlayerId,
@@ -2768,6 +2916,20 @@ export const resolveOptionalCostAttack = (
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
     throw new GameRuleError('Invalid battle action.')
+  }
+  if (pending.resolution === 'ability') {
+    return resolveOptionalAbilityEffect(
+      state,
+      playerId,
+      action,
+      discardCardIds,
+      targetIds,
+      paymentIds,
+      supportToHandIds,
+      hpToTrashIds,
+      trashToDeckIds,
+      hpToHandIds,
+    )
   }
   if (action === 'skip') {
     if (pending.mandatory) {
@@ -3670,6 +3832,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
 
     if (nextState.pendingOptionalCostAttack) {
       const pending = nextState.pendingOptionalCostAttack
+      const isAbilityResolution = pending.resolution === 'ability'
       const hand = nextState.players[pending.playerId].hand
       const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
       const effectiveEnergyCost = getRemainingEnergyCost(
@@ -3734,9 +3897,11 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const applicableEffects = pending.effects.filter((effect) =>
         isEffectConditionMet(nextState, context, effect),
       )
-      const selectableEffect = applicableEffects.find((effect) =>
-        requiresEffectCardSelection(effect),
-      )
+      const selectableEffect = isAbilityResolution
+        ? undefined
+        : applicableEffects.find((effect) =>
+            requiresEffectCardSelection(effect),
+          )
       let autoTargetIds: string[] = []
       let selectionLimits: { min: number; max: number } | null = null
       if (selectableEffect) {
@@ -3770,7 +3935,9 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
           .slice(0, selectionLimits?.max ?? 0)
           .map((card) => card.instanceId)
       }
-      const hasTarget = selectableEffect
+      const hasTarget = isAbilityResolution
+        ? true
+        : selectableEffect
         ? autoTargetIds.length >= (selectionLimits?.min ?? Number.POSITIVE_INFINITY)
         : applicableEffects.length > 0
       if (
@@ -3788,7 +3955,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
           pending.playerId,
           'pay',
           discardIds,
-          autoTargetIds,
+          isAbilityResolution ? [] : autoTargetIds,
           paymentIds ?? undefined,
           supportToHandIds,
           hpToTrashIds,

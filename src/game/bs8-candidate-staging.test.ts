@@ -69,7 +69,7 @@ describe('BS8 candidate staging deck', () => {
     expect(extraDeck.every((card) => card.instanceId.startsWith('candidate-bs8:player-one:'))).toBe(true)
   })
 
-  it('exposes only inventory, strict-verified BS8 main cards through the isolated staging pool', () => {
+  it('exposes strict-verified BS8 main cards through the isolated staging pool', () => {
     const definitions = getBs8CandidateMainDeckCardDefinitions()
 
     expect(definitions).toContainEqual(expect.objectContaining({ cardNumber: 'BS8-002' }))
@@ -82,12 +82,12 @@ describe('BS8 candidate staging deck', () => {
     expect(getBs8CandidateMainDeckCardBlocker('BS8-043')).toBeUndefined()
   })
 
-  it('allows strict-verified BS8 main cards only on the explicit candidate setup path', () => {
+  it('keeps the EXTRA staging setup explicitly tagged even when BS8 main cards are formal', () => {
     const entries = withCandidateMainCard('BS8-002')
     const deck = candidateDeck([], entries)
 
-    expect(validateCustomDeck(entries).errors).toContain('BS8-002 不在可用卡池中')
-    expect(getCardPoolEntry('BS8-002')).toBeUndefined()
+    expect(validateCustomDeck(entries).errors).not.toContain('BS8-002 不在可用卡池中')
+    expect(getCardPoolEntry('BS8-002')).toBeDefined()
     expect(validateBs8CandidateStagingDeck(deck)).toMatchObject({
       isValid: true,
       stats: { mainDeckCards: 60, cookieCards: expect.any(Number) },

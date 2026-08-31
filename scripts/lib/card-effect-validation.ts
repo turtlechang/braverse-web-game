@@ -162,7 +162,9 @@ export const validateCardEffectSemantics = (
     entry.type === 'stage' &&
     entry.attackText &&
     (!card.stageAbility ||
-      (card.stageAbility.effects.length === 0 && !card.stageAbility.specialVictory))
+      (card.stageAbility.effects.length === 0 &&
+        !card.stageAbility.staticAttackCostModifiers?.length &&
+        !card.stageAbility.specialVictory))
   ) {
     errors.push(`${label}: 場景文字必須轉出含至少 1 個效果的 stageAbility`)
   }
