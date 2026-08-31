@@ -22,7 +22,10 @@ import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
-import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
+import {
+  convertOfficialCardToExtraDeckCard,
+  convertOfficialCardToGameCard,
+} from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
   CustomDeck,
@@ -944,37 +947,29 @@ export const createBs8ExtraDeckDemoState = (
     .filter((card) => !usedP2.has(card.instanceId))
     .slice(0, 6)
   p2HpCards.forEach((card) => usedP2.add(card.instanceId))
+  const avatarSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === 'BS8-005',
+  )
+  if (!avatarSource) {
+    throw new Error('BS8-005 fixture requires the formal EXTRA card record')
+  }
+  const avatarConversion = convertOfficialCardToExtraDeckCard(
+    avatarSource,
+    'demo-avatar',
+  )
+  if (avatarConversion.status !== 'converted') {
+    throw new Error(
+      `BS8-005 fixture cannot convert the formal EXTRA card: ${avatarConversion.reason}`,
+    )
+  }
   const avatar: ExtraDeckCard = {
-    id: 'BS8-005',
+    ...avatarConversion.extraDeckCard,
+    // Keep a stable id for Browser selectors while preserving the official
+    // card text, artwork, play requirement, and attack Then effects above.
     instanceId: 'bs8-005-demo-avatar',
+    // The demo names the materialized unit explicitly as a Cookie so its
+    // battle-area label is unambiguous; its model type remains `extra` here.
     name: 'Avatar of Ruin Cookie',
-    type: 'extra',
-    officialType: 'extra',
-    cardColor: 'red',
-    energyColor: 'red',
-    level: 3,
-    hp: 5,
-    attack: 3,
-    attackCost: 3,
-    attackEnergyCost: { red: 3 },
-    playRequirement: {
-      kind: 'cookies-fainted-this-turn-at-least',
-      side: 'self',
-      count: 2,
-    },
-    skill: {
-      trigger: 'on-play',
-      oncePerTurn: false,
-      yourTurn: false,
-      restSource: false,
-      cost: { energy: {}, discardHand: 0 },
-      text: 'Deals 1 damage to all of your opponent\'s Cookies.',
-      effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
-    },
-    attackEffects: [
-      { kind: 'damage-all', amount: 1, side: 'opponent' },
-      { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
-    ],
   }
 
   return {
@@ -2891,6 +2886,13 @@ export const createCardCheckDemoState = (
   cardNumber: string,
   options: { preferSkillSurface?: boolean } = {},
 ): GameState => {
+  // EXTRA cards are deliberately not GameCards.  Route the generic localhost
+  // card-check URL through the isolated EXTRA fixture instead of allowing the
+  // normal `createCard` fallback to silently classify `type: extra` as an item
+  // and place it in the player's hand.
+  if (cardNumber.trim().split('@')[0] === 'BS8-005') {
+    return createBs8ExtraDeckDemoState(true)
+  }
   const card = getCardCheckCard(cardNumber)
   // Some official alternate-art records omit their printed colour even though
   // the normalized runtime attack still has a coloured energy cost (for
@@ -4863,6 +4865,12 @@ export const createCardNegativeDemoState = (
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']
   const baseCardNumber = cardNumber.split('@')[0]
+  if (baseCardNumber === 'BS8-005') {
+    // Keep the card in EXTRA Deck and make only its official faint-count
+    // requirement fail; this is the negative Browser path for the same
+    // `card-negative:` entry point, not an unrelated energy failure.
+    return createBs8ExtraDeckDemoState(false)
+  }
   const negativeDiscardPile =
     cardNumber === 'BS5-093' || cardNumber.startsWith('BS5-093@')
       ? player.discardPile.filter(

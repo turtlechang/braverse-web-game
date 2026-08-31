@@ -627,6 +627,42 @@ describe('createBs6008TrapDemoState', () => {
 })
 
 describe('createCardCheckDemoState', () => {
+  it('keeps BS8-005 in the independent EXTRA Deck for generic card-check A/B routes', () => {
+    const positive = createCardCheckDemoState('BS8-005')
+    const positivePlayer = positive.players['player-one']
+    const positiveExtra = positivePlayer.extraDeck?.[0]
+
+    expect(positivePlayer.hand.some((card) => card.id === 'BS8-005')).toBe(false)
+    expect(positiveExtra).toMatchObject({
+      id: 'BS8-005',
+      type: 'extra',
+      extraDeckPlayMode: 'enter-battle',
+      playRequirement: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'self',
+        count: 2,
+      },
+      skill: {
+        trigger: 'on-play',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+      },
+      attackEffects: [
+        { kind: 'damage-all', amount: 1, side: 'opponent' },
+        { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+      ],
+    })
+    expect(positivePlayer.extraDeck).toHaveLength(1)
+    expect(canPlayExtraDeckCookie(positive, 'player-one', positiveExtra!.instanceId)).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS8-005')
+    const negativePlayer = negative.players['player-one']
+    const negativeExtra = negativePlayer.extraDeck?.[0]
+    expect(negativePlayer.hand.some((card) => card.id === 'BS8-005')).toBe(false)
+    expect(negativeExtra).toMatchObject({ id: 'BS8-005', type: 'extra' })
+    expect(negativePlayer.extraDeck).toHaveLength(1)
+    expect(canPlayExtraDeckCookie(negative, 'player-one', negativeExtra!.instanceId)).toBe(false)
+  })
+
   it('keeps a deployed Blocker at positive full HP in card-check fixtures', () => {
     const state = createCardCheckDemoState('BS4-014')
     const blocker = state.players['player-one'].battleArea.find(
