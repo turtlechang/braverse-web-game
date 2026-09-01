@@ -1247,11 +1247,60 @@ const driveOtherModal = async (
   const blockerResponse = page.locator('.blocker-response-modal').first()
   if (await visible(blockerResponse)) {
     const blocker = blockerResponse
-      .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
+      .locator('.blocker-candidates button:not(.is-selected):not(:disabled)')
       .first()
     if (await enabled(blocker)) {
       await blocker.click({ force: true })
       operations.push('select:blocker')
+      await wait(120)
+      return true
+    }
+    if (
+      activeContractCard(page) === 'BS8-008' &&
+      !negative &&
+      !operations.includes('witness:bs8-008-blocker-payment-ui')
+    ) {
+      const paymentSection = blockerResponse.locator('.blocker-payment-section')
+      const paymentText = await paymentSection.innerText().catch(() => '')
+      const paymentCandidates = blockerResponse.locator(
+        '.blocker-payment-candidates button',
+      )
+      const confirm = blockerResponse
+        .locator('.modal-actions button')
+        .filter({ hasText: /使用 Blocker|Use Blocker/i })
+        .first()
+      if (!(await visible(paymentSection))) {
+        throw new Error('BS8-008 Blocker modal omitted its payment section')
+      }
+      if (!/支付 Blocker 費用/.test(paymentText)) {
+        throw new Error('BS8-008 Blocker modal omitted its payment label')
+      }
+      if ((await paymentCandidates.count()) < 1) {
+        throw new Error('BS8-008 Blocker modal omitted payment candidates')
+      }
+      if (!(await visible(confirm)) || !(await confirm.isDisabled())) {
+        throw new Error(
+          'BS8-008 Blocker confirm must stay disabled before payment',
+        )
+      }
+      operations.push('witness:bs8-008-blocker-payment-ui')
+    }
+    const paymentProgress = await blockerResponse
+      .locator('.blocker-payment-section .faint-payment-cost')
+      .innerText()
+      .catch(() => '')
+    const progress = paymentProgress.match(/已選\s*(\d+)\s*[\/／]\s*(\d+)/)
+    const selectedPaymentCount = Number(progress?.[1] ?? 0)
+    const requiredPaymentCount = Number(progress?.[2] ?? 0)
+    const payment = blockerResponse
+      .locator('.blocker-payment-candidates button:not(.is-selected):not(:disabled)')
+      .first()
+    if (
+      selectedPaymentCount < requiredPaymentCount &&
+      (await enabled(payment))
+    ) {
+      await payment.click({ force: true })
+      operations.push('select:blocker-payment')
       await wait(120)
       return true
     }

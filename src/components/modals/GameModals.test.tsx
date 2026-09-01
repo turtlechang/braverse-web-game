@@ -8,6 +8,7 @@ import type { CookieCard, CookieInBattle, GameCard } from '../../game'
 import {
   AttackResponseModal,
   AttackResponseSkillModal,
+  BlockerResponseModal,
   CardDetailModal,
   DecisionModal,
   DiscardRevealModal,
@@ -665,6 +666,65 @@ describe('AttackResponseModal', () => {
     await click(findButton(container, 'Rambutan Cookie'))
     expect(onSelectAttackResponse).toHaveBeenCalledWith(responseCookie.card.instanceId)
     expect(container.querySelector('.attack-response-skill-option')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('BlockerResponseModal', () => {
+  it('exposes and requires the printed coloured energy payment', async () => {
+    const blocker = createBattleCookie(60)
+    const payment: GameCard = {
+      id: 'RED-SUPPORT-60',
+      instanceId: 'red-support-60',
+      name: '紅色支援能量 60',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const onTogglePayment = vi.fn()
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <BlockerResponseModal
+        blockerCards={[blocker]}
+        selectedBlockerId={blocker.card.instanceId}
+        paymentCost={{ red: 1 }}
+        paymentCostTotal={1}
+        paymentCandidates={[payment]}
+        selectedPaymentIds={[]}
+        paymentValid={false}
+        onTogglePayment={onTogglePayment}
+        onSelectBlocker={() => undefined}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('支付 Blocker 費用')
+    expect(container.textContent).toContain('紅色支援能量 60')
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(true)
+
+    await click(findButton(container, '紅色支援能量 60'))
+    expect(onTogglePayment).toHaveBeenCalledWith(payment.instanceId)
+
+    await act(() => root.render(
+      <BlockerResponseModal
+        blockerCards={[blocker]}
+        selectedBlockerId={blocker.card.instanceId}
+        paymentCost={{ red: 1 }}
+        paymentCostTotal={1}
+        paymentCandidates={[payment]}
+        selectedPaymentIds={[payment.instanceId]}
+        paymentValid
+        onTogglePayment={onTogglePayment}
+        onSelectBlocker={() => undefined}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(false)
 
     await act(() => root.unmount())
   })

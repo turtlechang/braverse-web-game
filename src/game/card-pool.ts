@@ -7,6 +7,44 @@ export interface CardPoolEntry extends OfficialCardRecord {
   poolId: string
 }
 
+/**
+ * Sort official card numbers in the order players expect to browse them:
+ * series prefix, numeric series/card number, then alternate-art suffix.
+ *
+ * The generated registry is assembled by dataset, so relying on insertion
+ * order makes the deck editor start at BS3/BS8 as new sets are promoted.
+ * Keeping this comparator next to the pool also gives candidate and formal
+ * entries the same deterministic ordering.
+ */
+export const compareCardNumbers = (left: string, right: string): number => {
+  const parse = (value: string) => {
+    const match = value.trim().match(/^([A-Za-z]+)(\d+)?-(\d+)(?:@(\d+))?$/)
+    if (!match) return null
+    return {
+      prefix: match[1].toUpperCase(),
+      series: Number(match[2] ?? 0),
+      number: Number(match[3]),
+      variant: Number(match[4] ?? 0),
+    }
+  }
+
+  const a = parse(left)
+  const b = parse(right)
+  if (a && b) {
+    return (
+      a.prefix.localeCompare(b.prefix) ||
+      a.series - b.series ||
+      a.number - b.number ||
+      a.variant - b.variant ||
+      left.localeCompare(right)
+    )
+  }
+
+  // Keep unknown/legacy identifiers deterministic without making them block
+  // the normal BS1 → BS8 ordering of official card numbers.
+  return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
+}
+
 // 一張卡是否為「具有 FLIP 的卡」應與 runtime 一致：官方 `type: flip` 的卡片一律視為
 // FLIP（即使 flipText 為空的 vanilla FLIP，例如 BS2-042／P-047）；`type: cookie`
 // 的卡片只有在轉接後真的有 `FlipAbility`（效果或附著加成）才算 FLIP。
@@ -96,7 +134,9 @@ export const normalizeCardNumber = (cardNumber: string): string => {
 }
 
 export const getAllCardPoolEntries = (): CardPoolEntry[] =>
-  Array.from(poolByRawCardNumber.values())
+  Array.from(poolByRawCardNumber.values()).sort((left, right) =>
+    compareCardNumbers(left.cardNumber, right.cardNumber),
+  )
 
 export const getCardPoolEntry = (
   cardNumber: string,

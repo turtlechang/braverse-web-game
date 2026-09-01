@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
   createBs8011DoubleSkillDemoState,
+  createCardCheckDemoState,
+  createCardNegativeDemoState,
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
@@ -184,6 +186,34 @@ describe('BattleRow desktop interactions', () => {
     expect(ownerMarkup).toContain('Avatar of Ruin Cookie')
     expect(opponentMarkup).toContain('對手的 EXTRA Deck 內容為私密資訊。')
     expect(opponentMarkup).not.toContain('Avatar of Ruin Cookie')
+  })
+
+  it('highlights only a currently playable EXTRA Deck card from the BS8-005 A/B fixture', () => {
+    const playableMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: createCardCheckDemoState('BS8-005'),
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+    const blockedMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: createCardNegativeDemoState('BS8-005'),
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(playableMarkup).toContain('resource-summary is-extra-deck-ready')
+    expect(playableMarkup).toContain('data-extra-deck-ready="true"')
+    expect(playableMarkup).toContain('EXTRA 可登場')
+    expect(blockedMarkup).not.toContain('is-extra-deck-ready')
+    expect(blockedMarkup).toContain('data-extra-deck-ready="false"')
+    expect(blockedMarkup).not.toContain('EXTRA 可登場')
   })
 
   it('marks a single battle cookie so its zone label can avoid the card', () => {

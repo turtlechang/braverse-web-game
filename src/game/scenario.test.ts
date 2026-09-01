@@ -134,4 +134,55 @@ describe('buildScenarioState', () => {
     expect(result.state).toBeNull()
     expect(result.errors).toContain('無法辨識支援區能量顏色「orange」。')
   })
+
+  it('builds an isolated EXTRA Deck from official EXTRA card records', () => {
+    const result = buildScenarioState({
+      player: emptySide({
+        battle: [{ cardNumber: 'BS3-017' }],
+        extraDeck: ['BS8-005', 'BS8-069'],
+      }),
+      ai: emptySide({
+        extraDeck: ['BS8-090'],
+      }),
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.state).not.toBeNull()
+
+    const player = result.state!.players['player-one']
+    const ai = result.state!.players['player-two']
+    expect(player.extraDeck?.map((card) => card.id)).toEqual([
+      'BS8-005',
+      'BS8-069',
+    ])
+    expect(ai.extraDeck?.map((card) => card.id)).toEqual(['BS8-090'])
+    expect(player.extraDeck?.every((card) => card.type === 'extra')).toBe(true)
+    expect(player.extraDeck?.[0].playRequirement).toMatchObject({
+      kind: 'cookies-fainted-this-turn-at-least',
+      count: 2,
+    })
+    expect(player.deck.every((card) => card.id !== 'BS8-005')).toBe(true)
+  })
+
+  it('rejects non-EXTRA cards and invalid EXTRA Deck limits', () => {
+    const nonExtra = buildScenarioState({
+      player: emptySide({
+        battle: [{ cardNumber: 'BS3-017' }],
+        extraDeck: ['BS3-018'],
+      }),
+      ai: emptySide(),
+    })
+    expect(nonExtra.state).toBeNull()
+    expect(nonExtra.errors).toContain('「BS3-018」不是可放入額外牌組的 EXTRA 餅乾卡。')
+
+    const tooMany = buildScenarioState({
+      player: emptySide({
+        battle: [{ cardNumber: 'BS3-017' }],
+        extraDeck: Array.from({ length: 7 }, () => 'BS8-005'),
+      }),
+      ai: emptySide(),
+    })
+    expect(tooMany.state).toBeNull()
+    expect(tooMany.errors).toContain('EXTRA Deck 最多只能放入 6 張，目前為 7 張。')
+  })
 })

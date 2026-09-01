@@ -699,6 +699,23 @@
   transform: scale(0.98);
 }
 
+/* EXTRA readiness is an affordance only: BattleRow receives the result from
+ * canPlayExtraDeckCookie and never recreates individual card requirements. */
+.extra-zone > .resource-summary.is-extra-deck-ready {
+  border-color: rgba(255, 218, 100, 0.96);
+  background: linear-gradient(145deg, rgba(128, 77, 12, 0.74), rgba(9, 50, 101, 0.72));
+  box-shadow:
+    0 0 0 1px rgba(255, 239, 158, 0.2),
+    0 0 16px rgba(255, 191, 67, 0.56);
+}
+
+.extra-zone > .resource-summary.is-extra-deck-ready .extra-ready-hint {
+  color: #fff0ad;
+  font-size: 0.48rem;
+  letter-spacing: 0.025em;
+  text-shadow: 0 1px 5px rgba(106, 54, 0, 0.92);
+}
+
 .resource-summary span,
 .zone-heading span {
   color: rgba(227, 242, 255, 0.76);

@@ -645,7 +645,33 @@
 
 .deck-editor-page-empty-deck { grid-column: 1 / -1; }
 
+.deck-editor-page-pool-card.is-extra-card {
+  border-color: rgba(255, 214, 92, 0.5);
+  background: rgba(53, 38, 8, 0.25);
+}
+
+.deck-editor-page-pool-card.is-extra-card.is-selected {
+  border-color: var(--deck-page-gold);
+  box-shadow: 0 0 0 2px rgba(255, 214, 92, 0.22);
+}
+
+.deck-editor-page-pool-card-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(55, 40, 6, 0.9);
+  color: var(--deck-page-gold);
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
 .deck-editor-page-extra-deck {
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 12px;
@@ -668,43 +694,43 @@
   line-height: 1.45;
 }
 
-.deck-editor-page-candidate-extra-options {
+.deck-editor-page-extra-card-grid {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  align-content: start;
+  gap: 8px;
 }
 
-.deck-editor-page-candidate-extra-options article {
+.deck-editor-page-extra-card {
+  min-width: 0;
+}
+
+.deck-editor-page-extra-card .deck-editor-page-deck-card-face {
+  border-color: rgba(255, 214, 92, 0.35);
+}
+
+.deck-editor-page-extra-card .deck-editor-page-deck-card-face:hover {
+  border-color: var(--deck-page-gold);
+  box-shadow: 0 0 0 2px rgba(255, 214, 92, 0.2);
+}
+
+.deck-editor-page-extra-card .deck-editor-page-deck-card-controls strong {
+  color: var(--deck-page-gold);
+}
+
+.deck-editor-page-empty-extra {
+  grid-column: 1 / -1;
+  min-height: 76px;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 6px;
-  padding: 7px;
-  border: 1px solid rgba(126, 231, 240, 0.18);
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed rgba(126, 231, 240, 0.22);
   border-radius: 6px;
   background: rgba(5, 24, 53, 0.52);
-}
-
-.deck-editor-page-candidate-extra-options article > span,
-.deck-editor-page-candidate-extra-options small {
   color: var(--deck-page-muted);
-  font-size: 0.58rem;
-}
-
-.deck-editor-page-candidate-extra-options article > strong {
-  overflow: hidden;
-  color: var(--deck-page-text);
-  font-size: 0.64rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.deck-editor-page-candidate-extra-options article > div {
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  font-size: 0.68rem;
+  text-align: center;
 }
 
 .deck-editor-page-errors {

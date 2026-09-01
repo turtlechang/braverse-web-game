@@ -61,6 +61,26 @@ describe('DeckEditorPage', () => {
     expect(container.querySelector('.deck-editor-page-counter')?.textContent).toContain('1')
     expect(container.querySelectorAll('[data-testid^="deck-editor-deck-section-"]')).toHaveLength(5)
     expect(container.querySelector('[data-testid="deck-editor-extra-deck"]')).not.toBeNull()
+    expect(
+      container.querySelector('.deck-editor-page-deck-grid > [data-testid="deck-editor-extra-deck"]'),
+    ).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('orders the card pool by card number starting at BS1-001', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+
+    const cardNumbers = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-select'),
+    )
+      .slice(0, 4)
+      .map((button) => button.querySelector('span')?.textContent)
+
+    expect(cardNumbers).toEqual(['BS1-001', 'BS1-002', 'BS1-002@1', 'BS1-003'])
 
     await act(() => root.unmount())
   })
@@ -83,8 +103,20 @@ describe('DeckEditorPage', () => {
       />,
     ))
 
-    const avatar = container.querySelector<HTMLButtonElement>('[data-testid="candidate-extra-add-BS8-005"]')
-    const golden = container.querySelector<HTMLButtonElement>('[data-testid="candidate-extra-add-BS8-027"]')
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+    const typeSelect = container.querySelector<HTMLSelectElement>('[aria-label="卡牌類型"]')
+    expect(typeSelect).not.toBeNull()
+    const selectSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      selectSetter.call(typeSelect, 'extra')
+      typeSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    const avatar = container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card-button[title^="BS8-005"]')
+    const golden = container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card-button[title^="BS8-027"]')
     expect(avatar).not.toBeNull()
     expect(golden).not.toBeNull()
 
@@ -95,6 +127,10 @@ describe('DeckEditorPage', () => {
     expect(avatar?.disabled).toBe(true)
     expect(golden?.disabled).toBe(true)
 
+    await act(() => {
+      selectSetter.call(typeSelect, '')
+      typeSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
     const mainDeckCard = container.querySelector<HTMLButtonElement>(
       '.deck-editor-page-pool-card-button:not(:disabled)',
     )
@@ -323,6 +359,7 @@ describe('DeckEditorPage', () => {
     expect(
       Array.from(standardSeries!.options).find((option) => option.value === 'BS8')?.textContent,
     ).toBe('BS8')
+    expect(standardContainer.textContent).toContain('BS8 候選 EXTRA 驗收')
     await act(() => standardRoot.unmount())
 
     const candidateContainer = document.createElement('div')
@@ -339,8 +376,98 @@ describe('DeckEditorPage', () => {
     expect(
       Array.from(candidateSeries!.options).find((option) => option.value === 'BS8')?.textContent,
     ).toContain('候選驗收')
+    expect(candidateContainer.textContent).toContain('點擊卡面即可加入')
 
     await act(() => candidateRoot.unmount())
+  })
+
+  it('shows BS8 EXTRA cards in the candidate pool and adds them to the separate six-slot deck', async () => {
+    const standardContainer = document.createElement('div')
+    const standardRoot = createRoot(standardContainer)
+    await act(() => standardRoot.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+
+    const standardToggle = standardContainer.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => standardToggle!.click())
+    const standardType = standardContainer.querySelector<HTMLSelectElement>('[aria-label="卡牌類型"]')
+    expect(standardType).toBeTruthy()
+    expect(Array.from(standardType!.options).some((option) => option.value === 'extra')).toBe(false)
+    const standardSearch = standardContainer.querySelector<HTMLInputElement>('[data-testid="deck-editor-search"]')
+    const inputSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      inputSetter.call(standardSearch, 'BS8-005')
+      standardSearch!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(standardContainer.querySelector('.deck-editor-page-pool-card-button')).toBeNull()
+    await act(() => standardRoot.unmount())
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DeckEditorPage mode="bs8-candidate-staging" onSave={vi.fn()} onClose={vi.fn()} />,
+    ))
+
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+    const typeSelect = container.querySelector<HTMLSelectElement>('[aria-label="卡牌類型"]')
+    expect(typeSelect).toBeTruthy()
+    expect(Array.from(typeSelect!.options).some((option) => option.value === 'extra')).toBe(true)
+
+    const selectSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      selectSetter.call(typeSelect, 'extra')
+      typeSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const search = container.querySelector<HTMLInputElement>('[data-testid="deck-editor-search"]')
+    await act(() => {
+      inputSetter.call(search, 'BS8-005')
+      search!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(
+      Array.from(container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button')),
+    ).toHaveLength(1)
+    expect(
+      container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card-button')?.title,
+    ).toMatch(/^BS8-005\b/)
+    await act(() => {
+      inputSetter.call(search, '')
+      search!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    const extraCards = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+    )
+    expect(extraCards).toHaveLength(5)
+    expect(extraCards.every((button) => button.title.startsWith('BS8-'))).toBe(true)
+    const avatar = extraCards.find((button) => button.title.startsWith('BS8-005'))
+    expect(avatar).toBeTruthy()
+
+    await act(() => avatar!.click())
+    expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toContain('1 / 6')
+    expect(
+      container.querySelector('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card'),
+    ).toBeNull()
+    const extraCard = container.querySelector<HTMLElement>('[data-testid="deck-editor-extra-card-BS8-005"]')
+    expect(extraCard).not.toBeNull()
+    expect(
+      container.querySelector('.deck-editor-page-deck-grid > [data-testid="deck-editor-extra-deck"]'),
+    ).not.toBeNull()
+    expect(extraCard?.querySelector('.deck-editor-page-deck-card-face')).not.toBeNull()
+    expect(extraCard?.querySelector('.deck-page-card-image, .deck-page-card-fallback')).not.toBeNull()
+    expect(extraCard?.textContent).toContain('BS8-005')
+
+    const detailAdd = container.querySelector<HTMLButtonElement>('[aria-label="加入一張到額外牌組"]')
+    expect(detailAdd).not.toBeNull()
+    await act(() => detailAdd!.click())
+    expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toContain('2 / 6')
+
+    await act(() => root.unmount())
   })
 
   it('filters and imports strict-verified BS8 cards with the isolated six-slot EXTRA payload', async () => {
@@ -415,7 +542,11 @@ describe('DeckEditorPage', () => {
       await act(() => confirmImport!.click())
 
       expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toContain('6')
-      expect(container.querySelector('.deck-editor-page-deck-card')?.textContent).toContain('BS8-002')
+    expect(
+      Array.from(container.querySelectorAll('.deck-editor-page-deck-card')).find(
+        (element) => element.textContent?.includes('BS8-002'),
+      )?.textContent,
+    ).toContain('BS8-002')
 
       const exportButton = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
         button.textContent?.includes('匯出 JSON'),

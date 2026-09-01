@@ -29,6 +29,7 @@ import {
   createBs8011DoubleSkillDemoState,
   createBs8084AttackRequirementDemoState,
   createBs8ExtraDeckDemoState,
+  createBs8ExtraDeckReadinessDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
   createBs5CroissantEndPhaseDemoState,
@@ -184,10 +185,13 @@ describe('parseTestStateConfig', () => {
   it('parses BS8 EXTRA Deck positive and blocked test-state routes only on localhost', () => {
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:met', 'localhost'),
-    ).toEqual({ kind: 'bs8-extra-deck', conditionMet: true })
+    ).toEqual({ kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: true })
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:unmet', 'localhost'),
-    ).toEqual({ kind: 'bs8-extra-deck', conditionMet: false })
+    ).toEqual({ kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: false })
+    expect(
+      parseTestStateConfig('?test-state=bs8-extra-deck:BS8-069:met', 'localhost'),
+    ).toEqual({ kind: 'bs8-extra-deck', cardNumber: 'BS8-069', conditionMet: true })
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:met', 'example.com'),
     ).toBeNull()
@@ -239,6 +243,42 @@ describe('parseTestStateConfig', () => {
     expect(playerOne.supportArea.every((support) => !support.rested)).toBe(true)
     expect(playerOne.battleArea[0]?.hpCards).toHaveLength(3)
     expect(met.players['player-two'].battleArea[0]?.hpCards).toHaveLength(6)
+  })
+
+  it.each([
+    ['BS8-027', 'Golden Cheese Cookie', 'break'],
+    ['BS8-069', 'Peak of Apathy', undefined],
+    ['BS8-090', 'Will of Nature', undefined],
+    ['BS8-104', 'Dark Cacao Cookie', 'trash'],
+  ] as const)('builds %s EXTRA positive and blocked fixtures', (cardNumber, name, awakenFrom) => {
+    const positive = createBs8ExtraDeckDemoState(true, cardNumber)
+    const negative = createBs8ExtraDeckDemoState(false, cardNumber)
+    const positiveExtra = positive.players['player-one'].extraDeck?.[0]
+    const negativeExtra = negative.players['player-one'].extraDeck?.[0]
+
+    expect(positiveExtra).toMatchObject({ id: cardNumber, name, type: 'extra' })
+    expect(negativeExtra).toMatchObject({ id: cardNumber, name, type: 'extra' })
+    expect(canPlayExtraDeckCookie(positive, 'player-one', positiveExtra!.instanceId)).toBe(true)
+    expect(canPlayExtraDeckCookie(negative, 'player-one', negativeExtra!.instanceId)).toBe(false)
+
+    if (awakenFrom) {
+      const target = positive.players['player-one'].battleArea[0]
+      expect(target?.card.name).toBe(name)
+      expect(target?.enteredFrom).toBe(awakenFrom)
+      expect(target?.enteredTurn).toBe(positive.turnNumber)
+      expect(negative.players['player-one'].battleArea[0]?.enteredFrom).not.toBe(awakenFrom)
+    }
+    if (cardNumber === 'BS8-069') {
+      expect(positive.players['player-one'].supportArea).toHaveLength(0)
+      expect(positive.players['player-two'].supportArea).toHaveLength(2)
+      expect(negative.players['player-one'].supportArea).toHaveLength(2)
+    }
+    if (cardNumber === 'BS8-090') {
+      expect(positive.players['player-one'].hand).toHaveLength(2)
+      expect(negative.players['player-one'].hand).toHaveLength(3)
+      expect(positive.players['player-one'].battleArea[0]?.card.energyColor).toBe('blue')
+      expect(positive.players['player-one'].battleArea[0]?.card.level).toBe(2)
+    }
   })
 
   it('creates the BS8-076 active-phase decision with exactly two discard candidates', () => {
@@ -689,6 +729,11 @@ describe('createCardCheckDemoState', () => {
     })
     expect(positivePlayer.extraDeck).toHaveLength(1)
     expect(canPlayExtraDeckCookie(positive, 'player-one', positiveExtra!.instanceId)).toBe(true)
+    expect(positive.cookiesFaintedThisTurn?.['player-one']).toBe(2)
+    expect(positivePlayer.breakArea).toHaveLength(2)
+    expect(
+      positive.commandLog?.filter((entry) => entry.commandKind === 'activate-skill'),
+    ).toHaveLength(2)
 
     const negative = createCardNegativeDemoState('BS8-005')
     const negativePlayer = negative.players['player-one']
@@ -697,6 +742,51 @@ describe('createCardCheckDemoState', () => {
     expect(negativeExtra).toMatchObject({ id: 'BS8-005', type: 'extra' })
     expect(negativePlayer.extraDeck).toHaveLength(1)
     expect(canPlayExtraDeckCookie(negative, 'player-one', negativeExtra!.instanceId)).toBe(false)
+    expect(negative.cookiesFaintedThisTurn?.['player-one']).toBe(1)
+    expect(negativePlayer.breakArea).toHaveLength(1)
+    expect(
+      negative.commandLog?.filter((entry) => entry.commandKind === 'activate-skill'),
+    ).toHaveLength(1)
+  })
+
+  it.each(['BS8-005', 'BS8-027', 'BS8-069', 'BS8-090', 'BS8-104'])(
+    'keeps %s out of hand on generic positive and negative card routes',
+    (cardNumber) => {
+      const positive = createCardCheckDemoState(cardNumber)
+      const negative = createCardNegativeDemoState(cardNumber)
+
+      for (const state of [positive, negative]) {
+        const player = state.players['player-one']
+        expect(player.extraDeck).toHaveLength(1)
+        expect(player.extraDeck?.[0]).toMatchObject({
+          id: cardNumber,
+          type: 'extra',
+        })
+        expect(player.hand.some((card) => card.id === cardNumber)).toBe(false)
+      }
+    },
+  )
+
+  it('sets BS8-009 positive break-area LV total to exactly three', () => {
+    const state = createCardCheckDemoState('BS8-009')
+    const levels = state.players['player-one'].breakArea.map((card) => card.level)
+
+    expect(levels).toEqual([3])
+    expect(levels.reduce((total, level) => total + level, 0) % 3).toBe(0)
+  })
+
+  it('builds the BS8-005 readiness snapshot from real skill damage and faint commands', () => {
+    const state = createBs8ExtraDeckReadinessDemoState(true)
+
+    expect(state.cookiesFaintedThisTurn?.['player-one']).toBe(2)
+    expect(state.players['player-one'].breakArea).toHaveLength(2)
+    expect(state.pendingReplacement).toBeNull()
+    expect(state.commandLog?.map((entry) => entry.commandKind)).toEqual([
+      'activate-skill',
+      'replace-cookie',
+      'activate-skill',
+      'skip-replacement',
+    ])
   })
 
   it('keeps a deployed Blocker at positive full HP in card-check fixtures', () => {

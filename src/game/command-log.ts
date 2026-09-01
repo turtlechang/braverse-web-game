@@ -835,10 +835,11 @@ const describeAttackEffectTargetStep = (
   effect: CardEffect | undefined,
   targetIds: string[] | undefined,
   sourceCard: GameCard | undefined,
+  label = '攻擊後效果',
 ): LogStepDetail | undefined => {
   const ids = targetIds ?? []
   if (ids.length > 0) {
-    return describeCardListStep(state, '攻擊後效果目標', ids)
+    return describeCardListStep(state, `${label}目標`, ids)
   }
   if (!effect) return undefined
 
@@ -851,13 +852,13 @@ const describeAttackEffectTargetStep = (
   if (selectors.length === 0) return undefined
   if (selectors.some((selector) => selector.sourceOnly) && sourceCard) {
     return {
-      text: `攻擊後效果目標：「${sourceCard.name}」`,
+      text: `${label}目標：「${sourceCard.name}」`,
       cards: [sourceCard],
     }
   }
   return selectors.some((selector) => selector.min > 0)
-    ? { text: '攻擊後效果未生效：沒有符合條件的目標' }
-    : { text: '攻擊後效果目標：未選擇目標（效果未生效）' }
+    ? { text: `${label}未生效：沒有符合條件的目標` }
+    : { text: `${label}目標：未選擇目標（效果未生效）` }
 }
 
 const describeGainHpOutcome = (
@@ -894,9 +895,10 @@ const describeAttackEffectResultStep = (
   next: GameState,
   commandPlayerId: PlayerId,
   effects: CardEffect[],
+  label = '攻擊後效果',
 ): LogStepDetail => {
   if (isAttackEffectConditionUnmet(previous, effects)) {
-    return { text: '攻擊後效果結果：條件不成立，效果未執行' }
+    return { text: `${label}結果：條件不成立，效果未執行` }
   }
   const continuation = next.pendingBattle?.effectDamageSequence?.continuation
   if (
@@ -905,7 +907,7 @@ const describeAttackEffectResultStep = (
     next.pendingRevealTopDeck?.battleContinuation === 'attack-effect' ||
     next.pendingAbilityEffect?.battleContinuation === 'attack-effect'
   ) {
-    return { text: '攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算' }
+    return { text: `${label}結果：等待後續傷害／FLIP 或巢狀效果結算` }
   }
   const damageOutcome = describeDamageOutcome(
     previous,
@@ -913,16 +915,16 @@ const describeAttackEffectResultStep = (
     commandPlayerId,
     effects,
   )
-  if (damageOutcome) return { text: `攻擊後效果結果：${damageOutcome}` }
+  if (damageOutcome) return { text: `${label}結果：${damageOutcome}` }
   const gainHpOutcome = describeGainHpOutcome(
     previous,
     next,
     commandPlayerId,
     effects,
   )
-  if (gainHpOutcome) return { text: `攻擊後效果結果：${gainHpOutcome}` }
+  if (gainHpOutcome) return { text: `${label}結果：${gainHpOutcome}` }
   return {
-    text: `攻擊後效果結果：${flattenAttackEffects(effects)
+    text: `${label}結果：${flattenAttackEffects(effects)
       .map(describeAttackEffectAction)
       .join('；') || '效果已結算'}`,
   }
@@ -1305,8 +1307,9 @@ export const describeCommand = (
           next,
           command.playerId,
           pending?.effects ?? [],
+          isAbilityResolution ? '技能 Then' : '攻擊後效果',
         ).text
-        return `${actor} 支付「${sourceName}」的${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}並結算效果：${effectText}；${outcome.replace(/^攻擊後效果結果：/, '')}`
+        return `${actor} 支付「${sourceName}」的${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}並結算效果：${effectText}；${outcome.replace(/^(?:攻擊後效果|技能 Then)\s*結果：/, '')}`
       }
     case 'resolve-draw-up-to': {
       const pending = state.pendingDrawUpTo
@@ -1889,6 +1892,7 @@ export const describeCommandSteps = (
         pending.effects[0],
         command.targetIds,
         sourceCard,
+        isAbilityResolution ? '技能 Then ' : '攻擊後效果',
       )
       if (targetStep) steps.push(targetStep)
       steps.push(
@@ -1897,6 +1901,7 @@ export const describeCommandSteps = (
           next,
           command.playerId,
           pending.effects,
+          isAbilityResolution ? '技能 Then ' : '攻擊後效果',
         ),
       )
       return steps

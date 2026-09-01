@@ -68,8 +68,9 @@ Awakened 核心路徑。BS8
   手牌再登場阻擋，以及線上 command payload 型別。
 - 戰場的 EXTRA 區會公開張數、僅讓持有者查看卡面；當規則層判定合法時才顯示「從 EXTRA 登場」。
   本機／線上畫面都接至既有 command，但尚未以雙瀏覽器完成線上流程。
-- localhost-only `bs8-extra-deck:met`／`bs8-extra-deck:unmet` Browser A/B 已驗證 BS8-005 的卡面私密性、
-  條件成立的登場與 On Play 全體傷害，以及條件不成立時不可點選。它不是候選資料的正式逐卡 gate。
+- localhost-only `bs8-extra-deck:met`／`bs8-extra-deck:unmet` Browser A/B 已驗證五張 BS8 EXTRA 的卡面私密性、
+  條件成立的登場與條件不成立時不可點選；BS8-005 另覆核 On Play 全體傷害。五張卡的 generic
+  `card:`／`card-negative:` route 也只在獨立 `extraDeck` 建立，不會出現在手牌。它不是候選資料的正式逐卡 gate。
 - Gate：Lv.1 可由通用合法指令選取直接 EXTRA；Lv.2 在手牌無適合登場時，會以既有通用 Cookie 評分選擇
   合法的直接 EXTRA，兩者都不以 BS8 卡號特判。尚未建立自訂牌組／匯入格式，也尚未完成固定 seed 的
   Lv.1–Lv.5 整場策略與 telemetry gate。

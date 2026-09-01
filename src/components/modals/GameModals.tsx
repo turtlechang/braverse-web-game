@@ -1902,7 +1902,13 @@ export function FaintEffectResponseModal({
 export interface BlockerResponseModalProps {
   blockerCards: CookieInBattle[]
   selectedBlockerId: string | null
-  paymentCards: GameCard[]
+  paymentCost: EnergyCost
+  paymentCostTotal: number
+  paymentCandidates: GameCard[]
+  selectedPaymentIds: string[]
+  paymentValid: boolean
+  paymentValidationReason?: string
+  onTogglePayment: (instanceId: string) => void
   attackerCard?: GameCard | null
   attackTargetCard?: GameCard | null
   onSelectBlocker: (instanceId: string) => void
@@ -1915,7 +1921,13 @@ export interface BlockerResponseModalProps {
 export function BlockerResponseModal({
   blockerCards,
   selectedBlockerId,
-  paymentCards,
+  paymentCost,
+  paymentCostTotal,
+  paymentCandidates,
+  selectedPaymentIds,
+  paymentValid,
+  paymentValidationReason,
+  onTogglePayment,
   attackerCard,
   attackTargetCard,
   onSelectBlocker,
@@ -1924,6 +1936,8 @@ export function BlockerResponseModal({
   onBack,
 }: BlockerResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
+  const selectedPaymentIdSet = new Set(selectedPaymentIds)
+  const paymentReady = paymentCostTotal === 0 || paymentValid
 
   if (minimized) {
     return (
@@ -1982,7 +1996,7 @@ export function BlockerResponseModal({
           attackerCard={attackerCard}
           attackTargetCard={attackTargetCard}
         />
-        <div className="modal-card-options">
+        <div className="modal-card-options blocker-candidates">
           {blockerCards.map((cookie) => (
             <button
               type="button"
@@ -1997,12 +2011,41 @@ export function BlockerResponseModal({
             </button>
           ))}
         </div>
-        {selectedBlockerId && (
-          <div className="battle-response-summary">
-            <strong>付款支援卡</strong>
-            <span>
-              {paymentCards.map((card) => card.name).join('、') || '不需能量'}
-            </span>
+        {selectedBlockerId && paymentCostTotal > 0 && (
+          <div className="faint-payment-section blocker-payment-section">
+            <strong>支付 Blocker 費用</strong>
+            <div className="faint-payment-cost">
+              <EnergyCostIcons cost={paymentCost} />
+              <span>
+                已選 {selectedPaymentIds.length}/{paymentCostTotal} 張支援卡
+              </span>
+            </div>
+            {paymentCandidates.length > 0 ? (
+              <div className="modal-card-options compact blocker-payment-candidates">
+                {paymentCandidates.map((candidate) => {
+                  const selected = selectedPaymentIdSet.has(candidate.instanceId)
+                  return (
+                    <button
+                      type="button"
+                      key={candidate.instanceId}
+                      className={selected ? 'is-selected' : ''}
+                      aria-pressed={selected}
+                      onClick={() => onTogglePayment(candidate.instanceId)}
+                    >
+                      <CardFace card={candidate} selected={selected} />
+                      <span>{candidate.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <small>沒有可支付的活躍支援卡，無法使用此 Blocker。</small>
+            )}
+            {!paymentValid && selectedPaymentIds.length > 0 && (
+              <small className="blocker-payment-error">
+                {paymentValidationReason ?? '所選支援卡無法支付此費用。'}
+              </small>
+            )}
           </div>
         )}
         <div className="modal-actions">
@@ -2011,7 +2054,7 @@ export function BlockerResponseModal({
           </button>
           <button
             type="button"
-            disabled={!selectedBlockerId}
+            disabled={!selectedBlockerId || !paymentReady}
             onClick={onConfirm}
           >
             使用 Blocker

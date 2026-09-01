@@ -103,6 +103,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onSelectBlocker={(id) => {
               match.setPendingResponseMode('blocker')
               match.setSelectedBlockerId(id)
+              match.setSelectedBlockerPaymentIds([])
             }}
             onSelectAttackResponse={(id) => {
               match.setPendingResponseMode('attack-response')
@@ -363,16 +364,17 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             selectedBlockerId={match.selectedBlockerId}
             attackerCard={attackAttackerCard}
             attackTargetCard={attackTargetCard}
-            paymentCards={match.game.players[
-              match.viewerPlayerId
-            ].supportArea
-              .filter((support) =>
-                match.selectedBlockerPaymentIds.includes(
-                  support.card.instanceId,
-                ),
-              )
-              .map((support) => support.card)}
-            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
+            paymentCost={match.blockerEnergyCost}
+            paymentCostTotal={match.blockerEnergyCostTotal}
+            paymentCandidates={match.blockerPaymentCandidates}
+            selectedPaymentIds={match.selectedBlockerPaymentIds}
+            paymentValid={match.blockerPaymentValid}
+            paymentValidationReason={match.blockerPaymentValidationReason}
+            onTogglePayment={match.toggleBlockerPayment}
+            onSelectBlocker={(id) => {
+              match.setSelectedBlockerId(id)
+              match.setSelectedBlockerPaymentIds([])
+            }}
             onConfirm={() => {
               if (!match.selectedBlockerId) return
               match.dispatch(
@@ -387,6 +389,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             }}
             onSkip={() => {
               match.setSelectedBlockerId(null)
+              match.setSelectedBlockerPaymentIds([])
               match.setPendingResponseMode(null)
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
@@ -395,6 +398,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             }}
             onBack={() => {
               match.setSelectedBlockerId(null)
+              match.setSelectedBlockerPaymentIds([])
               match.setPendingResponseMode(null)
             }}
           />

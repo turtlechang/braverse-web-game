@@ -83,11 +83,28 @@ const drainBlockerResponseModal = async (page: Page): Promise<boolean> => {
   const modal = page.locator('.blocker-response-modal')
   if ((await modal.count()) === 0) return false
 
-  const selected = modal.locator('.modal-card-options > button.is-selected')
-  if ((await selected.count()) === 0) {
-    const option = modal.locator('.modal-card-options > button').first()
+  const selectedBlocker = modal.locator('.blocker-candidates > button.is-selected')
+  if ((await selectedBlocker.count()) === 0) {
+    const option = modal.locator('.blocker-candidates > button').first()
     if ((await option.count()) > 0) {
       await option.click({ force: true })
+      await page.waitForTimeout(100)
+    }
+  }
+
+  const paymentProgress = await modal
+    .locator('.blocker-payment-section .faint-payment-cost')
+    .innerText()
+    .catch(() => '')
+  const progress = paymentProgress.match(/已選\s*(\d+)\s*[/／]\s*(\d+)/)
+  const selectedPaymentCount = Number(progress?.[1] ?? 0)
+  const requiredPaymentCount = Number(progress?.[2] ?? 0)
+  if (selectedPaymentCount < requiredPaymentCount) {
+    const payment = modal
+      .locator('.blocker-payment-candidates > button:not(.is-selected):not(:disabled)')
+      .first()
+    if ((await payment.count()) > 0) {
+      await payment.click({ force: true })
       await page.waitForTimeout(100)
     }
   }

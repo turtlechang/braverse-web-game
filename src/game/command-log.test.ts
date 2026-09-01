@@ -643,6 +643,59 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('labels an ability Then target and result separately from attack-after effects', () => {
+    const base = createBattleState()
+    const source = base.players['player-two'].battleArea[0]!.card
+    const effect: CardEffect = {
+      kind: 'modify-attack-by-break-count',
+      perCount: 1,
+      groupSize: 3,
+      countMode: 'break-level',
+      duration: 'this-turn',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: source.instanceId,
+        sourceCardName: source.name,
+        resolution: 'ability',
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        sourceEnergy: { red: 1 },
+        effects: [effect],
+        effectText:
+          'Then, <can be used as {R}.> For each 3 levels your break area has reached, during this turn, this Cookie gains +1 attack damage.',
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingOptionalCostAttack: null,
+      attackModifiers: [
+        {
+          sourceInstanceId: source.instanceId,
+          targetInstanceId: source.instanceId,
+          amount: 1,
+          expiresAfterTurn: previous.turnNumber,
+        },
+      ],
+    }
+    const command = {
+      kind: 'resolve-optional-cost-attack' as const,
+      playerId: 'player-two' as const,
+      action: 'pay' as const,
+      paymentIds: [],
+      targetIds: [source.instanceId],
+    }
+
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      `技能 Then 來源：「${source.name}」；效果：Then, <can be used as {R}.> For each 3 levels your break area has reached, during this turn, this Cookie gains +1 attack damage.`,
+      `技能 Then 代價：由「${source.name}」提供 紅1 能量`,
+      `技能 Then 目標：${source.instanceId}`,
+      '技能 Then 結果：依休息區張數修改目標攻擊力',
+    ])
+  })
+
   it('records that an attack-after effect is waiting for the optional-cost decision', () => {
     const base = createBattleState()
     const effect: CardEffect = {

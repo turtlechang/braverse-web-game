@@ -266,6 +266,69 @@ const runBlockedPath = async (browser) => {
   }
 }
 
+const runCardRouteReadinessHint = async (browser) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  page.setDefaultTimeout(7000)
+  const errors = recordBrowserErrors(page)
+
+  const inspect = async (route, ready) => {
+    await page.goto(`${baseUrl}?test-state=${route}`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await page.locator('.game-shell').waitFor({ state: 'visible' })
+    const extraDeck = page.getByLabel('玩家 EXTRA Deck 1 張')
+    await extraDeck.waitFor({ state: 'visible' })
+    const className = (await extraDeck.getAttribute('class')) ?? ''
+    const hint = await extraDeck.textContent()
+
+    assert.equal(
+      await extraDeck.getAttribute('data-extra-deck-ready'),
+      String(ready),
+      `${route} must expose its rule-derived EXTRA readiness state`,
+    )
+    assert.equal(
+      className.includes('is-extra-deck-ready'),
+      ready,
+      `${route} must ${ready ? '' : 'not '}highlight Avatar readiness`,
+    )
+    assert.equal(
+      hint?.includes('EXTRA 可登場') ?? false,
+      ready,
+      `${route} must ${ready ? '' : 'not '}show the EXTRA entry reminder`,
+    )
+    const breakZone = page.locator('.bottom-field .break-zone')
+    const breakHeading = await breakZone.locator('.zone-heading').textContent()
+    const faintedCookieCount = await breakZone.locator('.break-card-wrap').count()
+    const expectedFaintedCookieCount = ready ? 2 : 1
+    assert.match(
+      breakHeading,
+      new RegExp(`${expectedFaintedCookieCount} 張`),
+      `${route} must expose ${expectedFaintedCookieCount} real fainted Cookies in Break`,
+    )
+    assert.equal(
+      faintedCookieCount,
+      expectedFaintedCookieCount,
+      `${route} must derive readiness from real skill-damage departures`,
+    )
+    return {
+      route,
+      ready,
+      className,
+      hint: hint?.replace(/\s+/g, ' ').trim(),
+      faintedCookieCount,
+    }
+  }
+
+  try {
+    const met = await inspect('card:BS8-005', true)
+    const unmet = await inspect('card-negative:BS8-005', false)
+    assert.deepEqual(errors, [], `browser errors: ${errors.join('; ')}`)
+    return { met, unmet }
+  } finally {
+    await page.close()
+  }
+}
+
 let browser
 try {
   await waitForPreview()
@@ -275,7 +338,14 @@ try {
   })
   const positive = await runPositivePath(browser)
   const blocked = await runBlockedPath(browser)
-  console.log(JSON.stringify({ card: 'BS8-005', browser: 'playwright', positive, blocked }, null, 2))
+  const readinessHint = await runCardRouteReadinessHint(browser)
+  console.log(JSON.stringify({
+    card: 'BS8-005',
+    browser: 'playwright',
+    positive,
+    blocked,
+    readinessHint,
+  }, null, 2))
 } finally {
   await browser?.close().catch(() => {})
   server.kill()

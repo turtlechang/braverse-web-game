@@ -37,7 +37,6 @@ import {
   isPlayerControllingState,
   isEffectConditionMet,
   requiresTargetSelection,
-  selectEnergyPayment,
   getTrashToDeckCostCandidates,
   validateEnergyPayment,
   type BuiltInDeckChoice,
@@ -180,7 +179,10 @@ export function useMatchController(params: {
       return createAttackEffectDemoState()
     }
     if (testStateConfig?.kind === 'bs8-extra-deck') {
-      return createBs8ExtraDeckDemoState(testStateConfig.conditionMet)
+      return createBs8ExtraDeckDemoState(
+        testStateConfig.conditionMet,
+        testStateConfig.cardNumber,
+      )
     }
     if (testStateConfig?.kind === 'bs8-011-double-skill') {
       return createBs8011DoubleSkillDemoState()
@@ -394,8 +396,8 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs8-extra-deck') {
       return testStateConfig.conditionMet
-        ? '測試狀態：BS8-005 已滿足從 EXTRA Deck 登場條件。'
-        : '測試狀態：BS8-005 尚未滿足從 EXTRA Deck 登場條件。'
+        ? `測試狀態：${testStateConfig.cardNumber} 已滿足從 EXTRA Deck 登場條件。`
+        : `測試狀態：${testStateConfig.cardNumber} 尚未滿足從 EXTRA Deck 登場條件。`
     }
     if (testStateConfig?.kind === 'bs8-011-double-skill') {
       return '測試狀態：兩張 BS8-011 各自可發動一次技能；先完成一個技能後再驗證另一張。'
@@ -573,6 +575,7 @@ export function useMatchController(params: {
   const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
+  const [selectedBlockerPaymentIds, setSelectedBlockerPaymentIds] = useState<string[]>([])
   const [selectedAttackResponseId, setSelectedAttackResponseId] = useState<string | null>(null)
   const [selectedAttackResponseTrashToDeckIds, setSelectedAttackResponseTrashToDeckIds] =
     useState<string[]>([])
@@ -1312,12 +1315,50 @@ export function useMatchController(params: {
   const selectedBlocker = playerBlockerCandidates.find(
     (cookie) => cookie.card.instanceId === selectedBlockerId,
   )
-  const selectedBlockerPaymentIds = selectedBlocker?.card.skill
-    ? selectEnergyPayment(
-        selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost,
-        game.players[viewerPlayerId].supportArea,
-    ) ?? []
-    : []
+  const blockerEnergyCost = selectedBlocker?.card.skill
+    ? selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost
+    : {}
+  const blockerEnergyCostTotal = getEnergyCostTotal(blockerEnergyCost)
+  const blockerPaymentCandidates =
+    blockerEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea
+          .filter((support) => {
+            if (support.rested) return false
+            if (selectedBlockerPaymentIds.includes(support.card.instanceId)) {
+              return true
+            }
+            if (selectedBlockerPaymentIds.length >= blockerEnergyCostTotal) {
+              return false
+            }
+            return isEnergyColorCompatibleWithCost(
+              blockerEnergyCost,
+              support.card.energyColor,
+            )
+          })
+          .map((support) => support.card)
+      : []
+  const blockerPaymentValidation =
+    blockerEnergyCostTotal === 0
+      ? { valid: true, reason: '不需支付能量。' }
+      : validateEnergyPayment(
+          blockerEnergyCost,
+          game.players[viewerPlayerId].supportArea,
+          selectedBlockerPaymentIds,
+        )
+  const blockerPaymentValid = blockerPaymentValidation.valid
+  const toggleBlockerPayment = (instanceId: string) => {
+    if (blockerEnergyCostTotal === 0) return
+    setSelectedBlockerPaymentIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= blockerEnergyCostTotal) return current
+      if (!blockerPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
 
   const playerAttackResponseCandidates =
     game.pendingBattle?.stage === 'trap' &&
@@ -1570,6 +1611,7 @@ export function useMatchController(params: {
       setSelectedOpponentDiscardIds([])
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
+      setSelectedBlockerPaymentIds([])
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
@@ -1600,6 +1642,7 @@ export function useMatchController(params: {
       setSelectedOpponentDiscardIds([])
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
+      setSelectedBlockerPaymentIds([])
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
@@ -1713,8 +1756,15 @@ export function useMatchController(params: {
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,
-    playerBlockerCandidates,
     selectedBlockerPaymentIds,
+    setSelectedBlockerPaymentIds,
+    blockerEnergyCost,
+    blockerEnergyCostTotal,
+    blockerPaymentCandidates,
+    blockerPaymentValid,
+    blockerPaymentValidationReason: blockerPaymentValidation.reason,
+    toggleBlockerPayment,
+    playerBlockerCandidates,
     pendingResponseMode,
     setPendingResponseMode,
     playerAttackResponseCandidates,

@@ -170,6 +170,22 @@ export const BS6_CONDITION_CARD_NUMBERS = ['BS6-012', 'BS6-039'] as const
 export type Bs6ConditionCardNumber =
   (typeof BS6_CONDITION_CARD_NUMBERS)[number]
 
+/** BS8 formal EXTRA cards covered by the isolated localhost staging flow. */
+export const BS8_EXTRA_DECK_CARD_NUMBERS = [
+  'BS8-005',
+  'BS8-027',
+  'BS8-069',
+  'BS8-090',
+  'BS8-104',
+] as const
+export type Bs8ExtraDeckCardNumber =
+  (typeof BS8_EXTRA_DECK_CARD_NUMBERS)[number]
+
+const isBs8ExtraDeckCardNumber = (
+  value: string,
+): value is Bs8ExtraDeckCardNumber =>
+  (BS8_EXTRA_DECK_CARD_NUMBERS as readonly string[]).includes(value)
+
 const isListedCardNumber = <T extends readonly string[]>(
   values: T,
   value: string,
@@ -193,7 +209,11 @@ export const parseTestStateConfig = (
   | { kind: 'trap-pretzel'; attack: 4 | 5 }
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
-  | { kind: 'bs8-extra-deck'; conditionMet: boolean }
+  | {
+      kind: 'bs8-extra-deck'
+      cardNumber: Bs8ExtraDeckCardNumber
+      conditionMet: boolean
+    }
   | { kind: 'bs8-011-double-skill' }
   | { kind: 'bs8-076-active-prevention' }
   | { kind: 'bs8-084-attack-discard'; payable: boolean }
@@ -343,10 +363,23 @@ export const parseTestStateConfig = (
     return { kind: 'attack-effect' }
   }
   if (testState === 'bs8-extra-deck:met') {
-    return { kind: 'bs8-extra-deck', conditionMet: true }
+    return { kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: true }
   }
   if (testState === 'bs8-extra-deck:unmet') {
-    return { kind: 'bs8-extra-deck', conditionMet: false }
+    return { kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: false }
+  }
+  const bs8ExtraDeckMatch = testState?.match(
+    /^bs8-extra-deck:(BS8-(?:005|027|069|090|104)):(met|unmet)$/,
+  )
+  if (bs8ExtraDeckMatch) {
+    const [, cardNumber, status] = bs8ExtraDeckMatch
+    if (isBs8ExtraDeckCardNumber(cardNumber)) {
+      return {
+        kind: 'bs8-extra-deck',
+        cardNumber,
+        conditionMet: status === 'met',
+      }
+    }
   }
   if (testState === 'bs8-011-double-skill') {
     return { kind: 'bs8-011-double-skill' }
@@ -918,7 +951,11 @@ export const createAttackEffectDemoState = (): GameState => {
  */
 export const createBs8ExtraDeckDemoState = (
   conditionMet: boolean,
+  cardNumber: Bs8ExtraDeckCardNumber = 'BS8-005',
 ): GameState => {
+  if (cardNumber !== 'BS8-005') {
+    return createBs8ExtraDeckScenarioState(cardNumber, conditionMet)
+  }
   const p1Deck = DECK_CREATORS.red('player-one')
   const p2Deck = DECK_CREATORS.red('player-two')
   // Pick durable, deterministic witnesses so the browser flow can observe
@@ -1034,6 +1071,276 @@ export const createBs8ExtraDeckDemoState = (
     pendingRefresh: null,
     pendingBattle: null,
   }
+}
+
+/**
+ * Build the remaining BS8 EXTRA cards' isolated Browser fixtures.  These
+ * snapshots deliberately use the same `playExtraDeckCookie` command as a
+ * real match; only the surrounding board state is arranged to make one
+ * printed requirement true or false.  They never enter the Standard deck or
+ * generated card-pool registry.
+ */
+function createBs8ExtraDeckScenarioState(
+  cardNumber: Exclude<Bs8ExtraDeckCardNumber, 'BS8-005'>,
+  conditionMet: boolean,
+): GameState {
+  const base = createBs8ExtraDeckDemoState(false)
+  const extraSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+    (record) =>
+      record.baseCardNumber === cardNumber &&
+      record.cardNumber === cardNumber,
+  ) ?? (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === cardNumber,
+  )
+  if (!extraSource) {
+    throw new Error(`${cardNumber} fixture requires the formal EXTRA card record`)
+  }
+  const extraConversion = convertOfficialCardToExtraDeckCard(
+    extraSource,
+    `demo-${cardNumber.toLowerCase()}`,
+  )
+  if (extraConversion.status !== 'converted') {
+    throw new Error(
+      `${cardNumber} fixture cannot convert the formal EXTRA card: ${extraConversion.reason}`,
+    )
+  }
+  const extraCard: ExtraDeckCard = {
+    ...extraConversion.extraDeckCard,
+    instanceId: `bs8-${cardNumber.slice(4).toLowerCase()}-demo-extra`,
+  }
+
+  const makeFormalCookie = (cardNumber: string, instanceId: string): CookieCard => {
+    const source = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+      (record) => record.cardNumber === cardNumber,
+    ) ?? (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+      (record) => record.baseCardNumber === cardNumber,
+    )
+    if (!source) throw new Error(`${cardNumber} fixture requires its base Cookie card`)
+    const conversion = convertOfficialCardToGameCard(
+      source,
+      `demo-${cardNumber.toLowerCase()}`,
+    )
+    if (
+      conversion.status !== 'converted' ||
+      conversion.gameCard.type !== 'cookie'
+    ) {
+      throw new Error(`${cardNumber} fixture cannot convert its base Cookie card`)
+    }
+    return { ...conversion.gameCard, instanceId }
+  }
+
+  const player = base.players['player-one']
+  const opponent = base.players['player-two']
+  let playerUpdate: Partial<PlayerState>
+  let opponentUpdate: Partial<PlayerState> = {}
+
+  if (cardNumber === 'BS8-069') {
+    const opponentSupports = [
+      { card: testSupportCard('bs8-069-opponent-support-a', 'red'), rested: false },
+      { card: testSupportCard('bs8-069-opponent-support-b', 'yellow'), rested: false },
+    ]
+    playerUpdate = {
+      supportArea: conditionMet
+        ? []
+        : [
+            { card: testSupportCard('bs8-069-player-support-a', 'green'), rested: false },
+            { card: testSupportCard('bs8-069-player-support-b', 'green'), rested: false },
+          ],
+      discardPile: [testSupportCard('bs8-069-green-trash', 'green')],
+    }
+    opponentUpdate = { supportArea: opponentSupports }
+  } else if (cardNumber === 'BS8-090') {
+    const blueTarget = cardCheckFillerCookie(
+      'bs8-090-blue-target',
+      2,
+      4,
+      0,
+      'blue',
+    )
+    playerUpdate = {
+      hand: Array.from({ length: conditionMet ? 2 : 3 }, (_, index) =>
+        testSupportCard(`bs8-090-hand-${index + 1}`, 'blue'),
+      ),
+      battleArea: [cardCheckBattleEntry(blueTarget.cookie, blueTarget.hpCards, 1)],
+    }
+  } else {
+    const awakenBase =
+      cardNumber === 'BS8-027'
+        ? makeFormalCookie('BS8-026', 'bs8-027-awaken-target')
+        : makeFormalCookie('BS8-103', 'bs8-104-awaken-target')
+    const playedFrom = cardNumber === 'BS8-027' ? 'break' : 'trash'
+    playerUpdate = {
+      battleArea: [
+        {
+          ...cardCheckBattleEntry(
+            awakenBase,
+            Array.from({ length: Math.max(2, awakenBase.hp - 1) }, (_, index) =>
+              testSupportCard(`bs8-${cardNumber.slice(4)}-awaken-hp-${index + 1}`),
+            ),
+            1,
+          ),
+          enteredFrom: conditionMet ? playedFrom : 'hand',
+          enteredTurn: conditionMet ? base.turnNumber : base.turnNumber - 1,
+        },
+      ],
+      hand:
+        cardNumber === 'BS8-104'
+          ? [testSupportCard('bs8-104-on-play-discard', 'purple')]
+          : [],
+      discardPile:
+        cardNumber === 'BS8-104'
+          ? [testSupportCard('bs8-104-purple-return', 'purple')]
+          : [],
+    }
+  }
+
+  return {
+    ...base,
+    extraDeckPlayUsedThisTurn: false,
+    pendingOnPlay: null,
+    pendingBattle: null,
+    commandLog: [],
+    players: {
+      ...base.players,
+      'player-one': {
+        ...player,
+        ...playerUpdate,
+        extraDeck: [extraCard],
+      },
+      'player-two': {
+        ...opponent,
+        ...opponentUpdate,
+      },
+    },
+  }
+}
+
+/**
+ * 僅供 `card:BS8-005`／`card-negative:BS8-005` 的 localhost Browser A/B。
+ *
+ * 這個 fixture 不直接填寫 `cookiesFaintedThisTurn` 來假裝條件成立，而是
+ * 透過正式 BS8-011「Saffron Buffalo Shaman」技能各造成一次 1 點效果傷害：
+ * 第一張讓另一張昏厥、補位後第二張再讓第一張昏厥。兩次支付、目標、昏厥
+ * 與補位都走 `applyGameCommand`，所以 EXTRA 登場條件讀到的是規則結算後
+ * 的實際本回合昏厥計數。負向路徑只完成第一次技能，保留 1 次昏厥。
+ */
+export const createBs8ExtraDeckReadinessDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const base = createBs8ExtraDeckDemoState(false)
+  const saffronSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === 'BS8-011',
+  )
+  if (!saffronSource) {
+    throw new Error('BS8-005 readiness fixture requires BS8-011')
+  }
+  const saffronConversion = convertOfficialCardToGameCard(
+    saffronSource,
+    'bs8-005-readiness',
+  )
+  if (
+    saffronConversion.status !== 'converted' ||
+    saffronConversion.gameCard.type !== 'cookie'
+  ) {
+    throw new Error('BS8-005 readiness fixture cannot convert BS8-011')
+  }
+
+  const saffronCard = saffronConversion.gameCard
+  const makeSaffron = (instanceId: string): CookieCard => ({
+    ...saffronCard,
+    instanceId,
+  })
+  const firstSaffron = makeSaffron('bs8-005-readiness-saffron-a')
+  const secondSaffron = makeSaffron('bs8-005-readiness-saffron-b')
+  const replacementSaffron = makeSaffron('bs8-005-readiness-saffron-c')
+  const player = base.players['player-one']
+  const opponent = base.players['player-two']
+  const opponentTarget = opponent.battleArea[0]
+  const paymentIds = player.supportArea
+    .slice(0, 2)
+    .map((support) => support.card.instanceId)
+  if (paymentIds.length !== 2 || !opponentTarget) {
+    throw new Error('BS8-005 readiness fixture requires two payments and a target')
+  }
+
+  const hpCard = (instanceId: string): GameCard =>
+    testSupportCard(instanceId)
+  let state: GameState = {
+    ...base,
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    phase: 'main',
+    turnNumber: 2,
+    cookiesFaintedThisTurn: { 'player-one': 0, 'player-two': 0 },
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingBattle: null,
+    pendingReplacement: null,
+    extraDeckPlayUsedThisTurn: false,
+    commandLog: [],
+    players: {
+      ...base.players,
+      'player-one': {
+        ...player,
+        hand: [replacementSaffron],
+        battleArea: [
+          cardCheckBattleEntry(
+            firstSaffron,
+            [hpCard('bs8-005-readiness-a-hp')],
+            1,
+          ),
+          cardCheckBattleEntry(
+            secondSaffron,
+            [hpCard('bs8-005-readiness-b-hp')],
+            2,
+          ),
+        ],
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        breakArea: [],
+      },
+      'player-two': {
+        ...opponent,
+        battleArea: [opponentTarget],
+      },
+    },
+  }
+
+  state = applyGameCommand(state, {
+    kind: 'activate-skill',
+    playerId: 'player-one',
+    sourceInstanceId: firstSaffron.instanceId,
+    trigger: 'activate',
+    paymentIds: [paymentIds[0]],
+    effectTargets: [
+      [secondSaffron.instanceId],
+      [opponentTarget.card.instanceId],
+    ],
+  })
+  state = applyGameCommand(state, {
+    kind: 'replace-cookie',
+    playerId: 'player-one',
+    instanceId: replacementSaffron.instanceId,
+  })
+
+  if (!conditionMet) return state
+
+  state = applyGameCommand(state, {
+    kind: 'activate-skill',
+    playerId: 'player-one',
+    sourceInstanceId: replacementSaffron.instanceId,
+    trigger: 'activate',
+    paymentIds: [paymentIds[1]],
+    effectTargets: [
+      [firstSaffron.instanceId],
+      [opponentTarget.card.instanceId],
+    ],
+  })
+  return applyGameCommand(state, {
+    kind: 'skip-replacement',
+    playerId: 'player-one',
+  })
 }
 
 /**
@@ -2894,8 +3201,12 @@ export const createCardCheckDemoState = (
   // card-check URL through the isolated EXTRA fixture instead of allowing the
   // normal `createCard` fallback to silently classify `type: extra` as an item
   // and place it in the player's hand.
-  if (cardNumber.trim().split('@')[0] === 'BS8-005') {
-    return createBs8ExtraDeckDemoState(true)
+  const baseCardNumber = cardNumber.trim().split('@')[0]
+  if (isBs8ExtraDeckCardNumber(baseCardNumber)) {
+    if (baseCardNumber === 'BS8-005') {
+      return createBs8ExtraDeckReadinessDemoState(true)
+    }
+    return createBs8ExtraDeckDemoState(true, baseCardNumber)
   }
   // The strict ability surface has an explicit duplicate-card fixture for
   // BS8-011. It proves Once Per Turn is tracked per physical battle entry;
@@ -3248,7 +3559,7 @@ export const createCardCheckDemoState = (
         ? [
             cardCheckFillerCookie('BS6-025-break-lv2', 2, 4, 0, payColor).cookie,
           ]
-    : card.id === 'BS6-036'
+      : card.id === 'BS6-036'
         ? [
             // Zombie Cookie gains +1 HP for each exact LV.3 Cookie in its
             // break area. Keep a real LV.3 candidate visible in the generic
@@ -3256,6 +3567,13 @@ export const createCardCheckDemoState = (
             // actual HP-gain path instead of resolving as a zero-count no-op.
             cardCheckFillerCookie('BS6-036-break-lv3', 3, 4, 0, payColor).cookie,
             cardCheckFillerCookie('BS6-036-break-lv2', 2, 4, 0, payColor).cookie,
+          ]
+      : card.id === 'BS8-009'
+        ? [
+            // Burning Spice counts total Cookie levels, not the number of
+            // cards.  Keep the positive fixture at exactly one LV.3 so the
+            // optional Then visibly resolves one +1 attack bonus.
+            cardCheckFillerCookie('BS8-009-break-lv3', 3, 4, 0, 'red').cookie,
           ]
       : card.id === 'BS8-031'
         ? [
@@ -4947,11 +5265,14 @@ export const createCardNegativeDemoState = (
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']
   const baseCardNumber = cardNumber.split('@')[0]
-  if (baseCardNumber === 'BS8-005') {
-    // Keep the card in EXTRA Deck and make only its official faint-count
-    // requirement fail; this is the negative Browser path for the same
-    // `card-negative:` entry point, not an unrelated energy failure.
-    return createBs8ExtraDeckDemoState(false)
+  if (isBs8ExtraDeckCardNumber(baseCardNumber)) {
+    // Keep every BS8 EXTRA card in the isolated EXTRA Deck.  BS8-005 uses
+    // the real faint-count readiness fixture; the remaining cards use their
+    // dedicated unmet-condition board snapshots.
+    if (baseCardNumber === 'BS8-005') {
+      return createBs8ExtraDeckReadinessDemoState(false)
+    }
+    return createBs8ExtraDeckDemoState(false, baseCardNumber)
   }
   const negativeDiscardPile =
     cardNumber === 'BS5-093' || cardNumber.startsWith('BS5-093@')

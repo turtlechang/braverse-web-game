@@ -161,6 +161,36 @@ describe('card effect engine', () => {
     ])
   })
 
+  it('counts a Cookie fainted by direct effect damage during the current turn', () => {
+    const initial = createDemoGame()
+    const target = initial.players['player-two'].battleArea[0]
+    const state: GameState = {
+      ...initial,
+      cookiesFaintedThisTurn: { 'player-one': 0, 'player-two': 0 },
+      players: {
+        ...initial.players,
+        'player-two': {
+          ...initial.players['player-two'],
+          battleArea: [{ ...target, hpCards: target.hpCards.slice(0, 1) }],
+        },
+      },
+    }
+
+    const fainted = executeCardEffect(
+      state,
+      context,
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [target.card.instanceId],
+    )
+
+    expect(fainted.players['player-two'].battleArea).toHaveLength(0)
+    expect(fainted.cookiesFaintedThisTurn?.['player-two']).toBe(1)
+  })
+
   it('applies positive and negative attack modifiers with a zero floor', () => {
     let state = createDemoGame()
     const ownCookie = state.players['player-one'].battleArea[0]

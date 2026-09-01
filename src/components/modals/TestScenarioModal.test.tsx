@@ -46,6 +46,7 @@ describe('TestScenarioModal', () => {
     expect(container.textContent).toContain('精確 HP 卡')
     expect(container.textContent).toContain('起始手牌')
     expect(container.textContent).toContain('牌庫')
+    expect(container.textContent).toContain('額外牌組')
     expect(container.textContent).toContain('指定支援區卡')
     expect(container.textContent).toContain('補足能量顏色')
     expect(container.textContent).toContain('場景卡')
@@ -101,6 +102,63 @@ describe('TestScenarioModal', () => {
     ])
     expect(player.stage?.card.id).toBe('BS3-096')
     expect(player.discardPile.map((card) => card.id)).toEqual(['BS3-019'])
+
+    await act(() => root.unmount())
+  })
+
+  it('passes separate EXTRA Deck entries for both scenario players', async () => {
+    const onStart = vi.fn()
+    const { container, root } = await renderModal(onStart)
+
+    await click(
+      container.querySelector('[data-testid="scenario-preset-bs3-018-blocker"]'),
+    )
+    await changeInput(
+      container.querySelector<HTMLInputElement>(
+        '[data-testid="scenario-player-extra-deck"]',
+      ),
+      'BS8-005,BS8-005',
+    )
+    await changeInput(
+      container.querySelector<HTMLInputElement>(
+        '[data-testid="scenario-ai-extra-deck"]',
+      ),
+      'BS8-069',
+    )
+    await click(container.querySelector('[data-testid="scenario-start-button"]'))
+
+    expect(onStart).toHaveBeenCalledTimes(1)
+    const state = onStart.mock.calls[0][0] as GameState
+    expect(state.players['player-one'].extraDeck?.map((card) => card.id)).toEqual([
+      'BS8-005',
+      'BS8-005',
+    ])
+    expect(state.players['player-two'].extraDeck?.map((card) => card.id)).toEqual([
+      'BS8-069',
+    ])
+    expect(state.players['player-one'].extraDeck?.every((card) => card.type === 'extra')).toBe(true)
+    expect(state.players['player-two'].extraDeck?.every((card) => card.type === 'extra')).toBe(true)
+
+    await act(() => root.unmount())
+  })
+
+  it('rejects a non-EXTRA card in the scenario EXTRA Deck field', async () => {
+    const onStart = vi.fn()
+    const { container, root } = await renderModal(onStart)
+
+    await click(
+      container.querySelector('[data-testid="scenario-preset-bs3-018-blocker"]'),
+    )
+    await changeInput(
+      container.querySelector<HTMLInputElement>(
+        '[data-testid="scenario-player-extra-deck"]',
+      ),
+      'BS3-018',
+    )
+    await click(container.querySelector('[data-testid="scenario-start-button"]'))
+
+    expect(onStart).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('不是可放入額外牌組的 EXTRA 餅乾卡')
 
     await act(() => root.unmount())
   })

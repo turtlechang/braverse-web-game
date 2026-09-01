@@ -5,6 +5,7 @@ import {
 } from '../game/custom-deck'
 import type { CardPoolEntry } from '../game/card-pool'
 import {
+  compareCardNumbers,
   getAllCardPoolEntries,
   hasFlipAbility,
   normalizeCardNumber,
@@ -241,7 +242,7 @@ export function useDeckEditor(
         }
       }
       return true
-    })
+    }).sort((left, right) => compareCardNumbers(left.cardNumber, right.cardNumber))
   }, [
     searchText,
     filterColor,

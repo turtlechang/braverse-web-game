@@ -89,6 +89,7 @@
     "test:bs8:effects:negative:browser": "node scripts/p-browser-effect-audit.mjs --series=BS8 --negative",
     "test:bs8:abilities:browser": "node scripts/p-browser-effect-audit.mjs --series=BS8 --bs8-strict-abilities",
     "test:bs8-005:browser": "node scripts/bs8-005-browser-validation.mjs",
+    "test:bs8:extra-deck:browser": "node scripts/bs8-extra-deck-browser-validation.mjs",
     "test:bs6:decks:browser": "node scripts/bs6-deck-browser-validation.mjs",
     "test:bs6-079:rest-support:browser": "node scripts/bs6-079-multi-target-probe.mjs",
     "test:bs6:competitive:decks:browser": "set BS6_DECK_BROWSER_MODE=competitive&& node scripts/bs6-deck-browser-validation.mjs",

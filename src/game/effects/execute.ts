@@ -180,7 +180,22 @@ const resolveDamageOutcome = (
 
   const departedCookies = departedCookieCards
 
-  let faintState = updatedState
+  // Effect damage can remove a Cookie immediately when none of its HP cards
+  // are FLIP cards, so it does not pass through battle.ts's
+  // removeFaintedCookie path.  A Cookie fainted by an ability, item, stage,
+  // or attack-after effect still counts toward same-turn conditions such as
+  // BS8-005's EXTRA entry requirement.
+  const faintedCookiesThisTurn: Record<PlayerId, number> = {
+    'player-one': updatedState.cookiesFaintedThisTurn?.['player-one'] ?? 0,
+    'player-two': updatedState.cookiesFaintedThisTurn?.['player-two'] ?? 0,
+  }
+  faintedCookiesThisTurn[damagedPlayerId] += departedCookies.length
+  const faintedState =
+    departedCookies.length === 0
+      ? updatedState
+      : { ...updatedState, cookiesFaintedThisTurn: faintedCookiesThisTurn }
+
+  let faintState = faintedState
   for (const cookie of departedCookies) {
     const faintSkill = cookie.skill
     if (faintSkill && faintSkill.faint) {

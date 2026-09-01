@@ -2754,7 +2754,8 @@ export const resolveAttackEffect = (
 }
 
 /**
- * Resolve an optional `Then` attached to a skill (currently BS8-002).  The
+ * Resolve an optional `Then` attached to a skill (for example BS8-002 or
+ * BS8-009).  The
  * existing optional-cost-attack state is intentionally reused for the UI and
  * command protocol, but this path never requires a `pendingBattle`: it edits
  * the authoritative ability queue instead.
@@ -2803,8 +2804,9 @@ const resolveOptionalAbilityEffect = (
     }
   }
 
-  // BS8-002 的 Then 只會有來源餅乾能量與後續 effects；其他代價欄位若
-  // 出現在 ability wrapper，不能默默當成已支付，避免產生不完整的規則解算。
+  // Ability wrapper 的能量代價一律由支援區支付；只有卡文明確轉接
+  // `sourceEnergy` 時才會在下方扣除來源餅乾供能。其他代價欄位若出現在
+  // ability wrapper，不能默默當成已支付，避免產生不完整的規則解算。
   if (
     (pending.cost.supportToTrash ?? 0) > 0 ||
     (pending.cost.supportToHand ?? 0) > 0 ||

@@ -5591,11 +5591,13 @@ describe('BS8 candidate serial contract', () => {
     })
   })
 
-  it('maps BS8-009 all-other damage, source energy, and every-three-break-level attack bonus', () => {
-    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-009'))).toMatchObject({
+  it('maps BS8-009 all-other damage and optional support-energy Then attack bonus', () => {
+    const skill = convertOfficialCookieSkill(findBs8Candidate('BS8-009'))
+    if (!skill) throw new Error('BS8-009 fixture should convert to a skill')
+    expect(skill).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
-      sourceEnergy: { red: 1 },
+      cost: { energy: { red: 1 } },
       effects: [
         {
           kind: 'damage-all',
@@ -5611,15 +5613,24 @@ describe('BS8 candidate serial contract', () => {
           condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
         },
         {
-          kind: 'modify-attack-by-break-count',
-          perCount: 1,
-          groupSize: 3,
-          countMode: 'break-level',
-          duration: 'this-turn',
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { red: 1 }, discardHand: 0 },
+          effectText: expect.stringContaining('For each 3 levels'),
+          effects: [
+            {
+              kind: 'modify-attack-by-break-count',
+              perCount: 1,
+              groupSize: 3,
+              countMode: 'break-level',
+              duration: 'this-turn',
+              target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            },
+          ],
         },
       ],
     })
+    expect(skill.effects[2]).not.toHaveProperty('sourceEnergy')
   })
 
   it('maps BS8-084 as a rested passive attack-declaration discard requirement', () => {

@@ -258,19 +258,39 @@ export function BattleRow({
     </div>
   )
   const extraDeck = player.extraDeck ?? []
+  // The rule layer remains the sole authority for EXTRA eligibility.  The
+  // resource dock only surfaces a reminder when its owner can actually use
+  // at least one card now (for BS8-005: two of their Cookies fainted this
+  // turn), rather than duplicating that condition in the UI.
+  const playableExtraDeckCardIds = new Set(
+    canOperate
+      ? extraDeck
+          .filter((card) =>
+            canPlayExtraDeckCookie(game, playerId, card.instanceId),
+          )
+          .map((card) => card.instanceId)
+      : [],
+  )
+  const hasPlayableExtraDeckCard = playableExtraDeckCardIds.size > 0
   const extraZone = (
     <div className="extra-zone resource-dock">
       <button
-        className="resource-summary"
+        className={`resource-summary${hasPlayableExtraDeckCard ? ' is-extra-deck-ready' : ''}`}
         type="button"
         aria-label={`${player.name} EXTRA Deck ${extraDeck.length} 張`}
         aria-expanded={openResourceKind === 'extra'}
         title={`EXTRA Deck ${extraDeck.length} 張${isOpponent ? '；內容為私密資訊' : ''}`}
+        data-extra-deck-ready={hasPlayableExtraDeckCard}
         onClick={() => toggleResource('extra')}
       >
         <Layers3 aria-hidden="true" />
         <strong>{extraDeck.length} 張</strong>
         <span>EXTRA</span>
+        {hasPlayableExtraDeckCard && (
+          <span className="extra-ready-hint" aria-live="polite">
+            EXTRA 可登場
+          </span>
+        )}
       </button>
       {openResourceKind === 'extra' && (
         <div
@@ -287,9 +307,7 @@ export function BattleRow({
           ) : (
             <div className="extra-deck-card-list">
               {extraDeck.map((card) => {
-                const canPlay =
-                  canOperate &&
-                  canPlayExtraDeckCookie(game, playerId, card.instanceId)
+                const canPlay = playableExtraDeckCardIds.has(card.instanceId)
                 return (
                   <div className="extra-deck-card-entry" key={card.instanceId}>
                     <strong>{card.name}</strong>

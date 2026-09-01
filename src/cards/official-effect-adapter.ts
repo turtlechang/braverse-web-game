@@ -4173,7 +4173,8 @@ export const convertOfficialCardEffects = (
     ],
     // BS8-009 Burning Spice Cookie：兩個 damage-all 分別覆蓋對手與己方，
     // 但己方段排除來源，合起來正是「all other Cookies」。後段的加傷以
-    // 休息區總 LV.（不是卡片張數）每滿 3 點計算一次。
+    // 休息區總 LV.（不是卡片張數）每滿 3 點計算一次；Then 的尖括號是
+    // 玩家可選的支援區紅色能量支付，不是來源餅乾自動供能。
     'BS8-009': [
       {
         kind: 'damage-all',
@@ -4189,12 +4190,21 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
       },
       {
-        kind: 'modify-attack-by-break-count',
-        perCount: 1,
-        groupSize: 3,
-        countMode: 'break-level',
-        duration: 'this-turn',
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        effectText:
+          'Then, <can be used as {R}.> For each 3 levels your break area has reached, during this turn, this Cookie gains +1 attack damage.',
+        effects: [
+          {
+            kind: 'modify-attack-by-break-count',
+            perCount: 1,
+            groupSize: 3,
+            countMode: 'break-level',
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
       },
     ],
     // BS8-084 Sherbet Cookie：這是休息時的攻擊宣告門檻，不是攻擊 Then。
@@ -9887,7 +9897,6 @@ const exactCookieSkillSourceEnergy: Partial<
 > = {
   'P-017': { green: 1 },
   'BS8-018': { red: 1 },
-  'BS8-009': { red: 1 },
   'BS8-103': { purple: 1 },
   // BS7-040 Whipped Cream Cookie：昏厥效果可由自身作為 1 黃色能量支付。
   'BS7-040': { yellow: 1 },
