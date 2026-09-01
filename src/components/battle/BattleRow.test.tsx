@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
+  createBs8011DoubleSkillDemoState,
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
@@ -255,6 +256,41 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('energy-shortfall-hint')
     expect(markup).toContain('skill-action')
     expect(markup).toContain('combat-card-wrap is-single-slot is-left-slot')
+  })
+
+  it('shows both BS8-011 skill actions and hides them during attack payment', () => {
+    const game = createBs8011DoubleSkillDemoState()
+    const player = game.players['player-one']
+    const readyMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(readyMarkup.match(/class="skill-action"/g)).toHaveLength(2)
+    expect(readyMarkup).toContain(
+      'data-card-instance-id="player-one-BS8-011-double-a"',
+    )
+    expect(readyMarkup).toContain(
+      'data-card-instance-id="player-one-BS8-011-double-b"',
+    )
+
+    const paymentMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+          selectedAttackerId: player.battleArea[0].card.instanceId,
+          interactionLocked: false,
+        })}
+      />,
+    )
+    expect(paymentMarkup.match(/class="skill-action"/g)).toBeNull()
   })
 
   it('highlights an opponent attack preview and rests its selected support', () => {

@@ -47,6 +47,7 @@ import {
   createAttackEffectDemoState,
   createBs8076ActivePreventionDemoState,
   createBs8084AttackRequirementDemoState,
+  createBs8011DoubleSkillDemoState,
   createBs8ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
@@ -180,6 +181,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs8-extra-deck') {
       return createBs8ExtraDeckDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs8-011-double-skill') {
+      return createBs8011DoubleSkillDemoState()
     }
     if (testStateConfig?.kind === 'bs8-076-active-prevention') {
       return createBs8076ActivePreventionDemoState()
@@ -392,6 +396,9 @@ export function useMatchController(params: {
       return testStateConfig.conditionMet
         ? '測試狀態：BS8-005 已滿足從 EXTRA Deck 登場條件。'
         : '測試狀態：BS8-005 尚未滿足從 EXTRA Deck 登場條件。'
+    }
+    if (testStateConfig?.kind === 'bs8-011-double-skill') {
+      return '測試狀態：兩張 BS8-011 各自可發動一次技能；先完成一個技能後再驗證另一張。'
     }
     if (testStateConfig?.kind === 'bs8-076-active-prevention') {
       return '測試狀態：BS8-076 目標可選擇不棄，或恰好棄 2 張手牌恢復 active。'

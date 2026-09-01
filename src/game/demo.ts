@@ -194,6 +194,7 @@ export const parseTestStateConfig = (
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
   | { kind: 'bs8-extra-deck'; conditionMet: boolean }
+  | { kind: 'bs8-011-double-skill' }
   | { kind: 'bs8-076-active-prevention' }
   | { kind: 'bs8-084-attack-discard'; payable: boolean }
   | { kind: 'support-to-trash-skill' }
@@ -346,6 +347,9 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs8-extra-deck:unmet') {
     return { kind: 'bs8-extra-deck', conditionMet: false }
+  }
+  if (testState === 'bs8-011-double-skill') {
+    return { kind: 'bs8-011-double-skill' }
   }
   if (testState === 'bs8-076-active-prevention') {
     return { kind: 'bs8-076-active-prevention' }
@@ -2893,6 +2897,15 @@ export const createCardCheckDemoState = (
   if (cardNumber.trim().split('@')[0] === 'BS8-005') {
     return createBs8ExtraDeckDemoState(true)
   }
+  // The strict ability surface has an explicit duplicate-card fixture for
+  // BS8-011. It proves Once Per Turn is tracked per physical battle entry;
+  // the ordinary skill card-check route also exposes two real copies below.
+  if (
+    cardNumber.trim().split('@')[0] === 'BS8-011' &&
+    options.preferSkillSurface
+  ) {
+    return createBs8011DoubleSkillDemoState()
+  }
   const card = getCardCheckCard(cardNumber)
   // Some official alternate-art records omit their printed colour even though
   // the normalized runtime attack still has a coloured energy cost (for
@@ -4740,29 +4753,50 @@ export const createCardCheckDemoState = (
               : card.id === 'BS6-055'
                 ? scenarioSupports('BS6-055-opponent-support', 6, 'green')
                 : undefined
+    const skillSource = card as CookieCard
+    // BS8-011 is a normal Once Per Turn skill on each physical Cookie.  The
+    // generic card-check route should expose two real copies as well, so a
+    // player can verify that resolving one source does not consume the other
+    // source's skill entry.  Keep unique card and HP-stack IDs just as the
+    // real deploy path does.
+    const bs8011SecondEntry =
+      card.id === 'BS8-011'
+        ? cardCheckBattleEntry(
+            {
+              ...skillSource,
+              instanceId: `${skillSource.instanceId}-second`,
+            },
+            Array.from({ length: skillSource.hp }, (_, index) =>
+              testSupportCard(`BS8-011-second-source-hp-${index + 1}`, payColor),
+            ),
+            5,
+          )
+        : null
     const skillBattleArea = [
       {
-        ...cardCheckBattleEntry(card as CookieCard, sourceHpCards, 4),
+        ...cardCheckBattleEntry(skillSource, sourceHpCards, 4),
         ...(card.id === 'BS7-032' || card.id === 'BS7-053' || card.id === 'BS8-113'
           ? { rested: true }
           : {}),
       },
-      ...(card.id === 'BS7-055' || card.id === 'BS8-032' || card.id === 'BS8-034' || card.id === 'BS8-039' || card.id === 'BS8-120'
-        ? []
-        : [
-            {
-              ...cardCheckBattleEntry(
-                selfExtra1.cookie,
-                selfExtra1.hpCards,
-                6,
-              ),
-              // BS8-028@1／029@1 與 BS8-043 的「本回合從 break 登場」
-              // 條件由唯一同伴承載，避免把正在發動的來源錯當成該事件。
-              ...(card.id === 'BS8-028' || card.id === 'BS8-029' || card.id === 'BS8-043'
-                ? { enteredFrom: 'break' as const, enteredTurn: state.turnNumber }
-                : {}),
-            },
-          ]),
+      ...(bs8011SecondEntry
+        ? [bs8011SecondEntry]
+        : card.id === 'BS7-055' || card.id === 'BS8-032' || card.id === 'BS8-034' || card.id === 'BS8-039' || card.id === 'BS8-120'
+          ? []
+          : [
+              {
+                ...cardCheckBattleEntry(
+                  selfExtra1.cookie,
+                  selfExtra1.hpCards,
+                  6,
+                ),
+                // BS8-028@1／029@1 與 BS8-043 的「本回合從 break 登場」
+                // 條件由唯一同伴承載，避免把正在發動的來源錯當成該事件。
+                ...(card.id === 'BS8-028' || card.id === 'BS8-029' || card.id === 'BS8-043'
+                  ? { enteredFrom: 'break' as const, enteredTurn: state.turnNumber }
+                  : {}),
+              },
+            ]),
     ]
     return {
       ...state,
@@ -4838,6 +4872,54 @@ export const createCardCheckDemoState = (
         battleArea: opponentBattleArea,
       },
     },
+  }
+}
+
+/**
+ * Localhost-only BS8-011 duplicate-source fixture.
+ *
+ * Saffron Buffalo Shaman is Once Per Turn per card instance, not a global
+ * per-name limit. The fixture exposes two real BS8-011 Cookie entries with
+ * unique card/battle-entry IDs and full HP, so Browser validation can activate
+ * one source and then verify the other remains available in the same turn.
+ */
+export const createBs8011DoubleSkillDemoState = (): GameState => {
+  const state = createCardCheckDemoState('BS8-011')
+  const player = state.players['player-one']
+  const source = player.battleArea.find(
+    (entry) => entry.card.id === 'BS8-011',
+  )
+  if (!source || source.card.type !== 'cookie' || !source.card.skill) {
+    throw new Error(
+      'BS8-011 duplicate-skill fixture requires a Cookie skill source',
+    )
+  }
+
+  const sourceCard = source.card as CookieCard
+  const makeEntry = (instanceId: string, sequence: number) =>
+    cardCheckBattleEntry(
+      { ...sourceCard, instanceId },
+      Array.from({ length: sourceCard.hp }, (_, index) =>
+        testSupportCard(`bs8-011-double-${sequence}-hp-${index + 1}`, 'red'),
+      ),
+      sequence,
+    )
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        battleArea: [
+          makeEntry('player-one-BS8-011-double-a', 21),
+          makeEntry('player-one-BS8-011-double-b', 22),
+        ],
+      },
+    },
+    skillUsesThisTurn: [],
+    pendingBattle: null,
+    pendingOnPlay: null,
   }
 }
 

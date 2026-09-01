@@ -26,6 +26,7 @@ import {
   createAiDiscardRevealDemoState,
   createBs2015CostDepartureDemoState,
   createBs8076ActivePreventionDemoState,
+  createBs8011DoubleSkillDemoState,
   createBs8084AttackRequirementDemoState,
   createBs8ExtraDeckDemoState,
   createBs3SilverbellConditionDemoState,
@@ -189,6 +190,15 @@ describe('parseTestStateConfig', () => {
     ).toEqual({ kind: 'bs8-extra-deck', conditionMet: false })
     expect(
       parseTestStateConfig('?test-state=bs8-extra-deck:met', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('parses the localhost-only BS8-011 duplicate-skill route', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs8-011-double-skill', 'localhost'),
+    ).toEqual({ kind: 'bs8-011-double-skill' })
+    expect(
+      parseTestStateConfig('?test-state=bs8-011-double-skill', 'example.com'),
     ).toBeNull()
   })
 
@@ -627,6 +637,32 @@ describe('createBs6008TrapDemoState', () => {
 })
 
 describe('createCardCheckDemoState', () => {
+  it('exposes two independent BS8-011 sources in the ordinary card route', () => {
+    const state = createCardCheckDemoState('BS8-011')
+    const sources = state.players['player-one'].battleArea.filter(
+      (entry) => entry.card.id === 'BS8-011',
+    )
+
+    expect(sources).toHaveLength(2)
+    expect(new Set(sources.map((entry) => entry.card.instanceId)).size).toBe(2)
+    expect(new Set(sources.map((entry) => entry.battleEntryId)).size).toBe(2)
+  })
+
+  it('builds two distinct full-HP BS8-011 skill sources for the strict fixture', () => {
+    const state = createBs8011DoubleSkillDemoState()
+    const battleArea = state.players['player-one'].battleArea
+
+    expect(battleArea).toHaveLength(2)
+    expect(battleArea.map((entry) => entry.card.id)).toEqual([
+      'BS8-011',
+      'BS8-011',
+    ])
+    expect(new Set(battleArea.map((entry) => entry.card.instanceId)).size).toBe(2)
+    expect(new Set(battleArea.map((entry) => entry.battleEntryId)).size).toBe(2)
+    expect(battleArea.map((entry) => entry.hpCards)).toHaveLength(2)
+    expect(battleArea.every((entry) => entry.hpCards.length === entry.card.hp)).toBe(true)
+  })
+
   it('keeps BS8-005 in the independent EXTRA Deck for generic card-check A/B routes', () => {
     const positive = createCardCheckDemoState('BS8-005')
     const positivePlayer = positive.players['player-one']

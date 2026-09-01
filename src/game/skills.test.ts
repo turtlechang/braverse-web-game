@@ -13,6 +13,7 @@ import {
   type GameState,
   type PlayerId,
 } from '.'
+import { createBs8011DoubleSkillDemoState } from './demo'
 
 const effect = {
   kind: 'damage' as const,
@@ -66,6 +67,49 @@ const withSkill = (
 }
 
 describe('cookie skill activation', () => {
+  it('tracks BS8-011 Once Per Turn usage per physical battle entry', () => {
+    const state = createBs8011DoubleSkillDemoState()
+    const player = state.players['player-one']
+    const first = player.battleArea[0]
+    const second = player.battleArea[1]
+    if (!first || !second) throw new Error('BS8-011 fixture must provide two sources')
+    const paymentId = player.supportArea[0]?.card.instanceId
+    if (!paymentId) throw new Error('BS8-011 fixture must provide an energy payment')
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', first.card.instanceId, 'activate'),
+    ).toBe(true)
+    expect(
+      canActivateCookieSkill(state, 'player-one', second.card.instanceId, 'activate'),
+    ).toBe(true)
+
+    const afterFirst = activateCookieSkill(
+      state,
+      'player-one',
+      first.card.instanceId,
+      'activate',
+      [paymentId],
+    )
+
+    expect(afterFirst.skillUsesThisTurn).toContain(first.battleEntryId)
+    expect(
+      canActivateCookieSkill(
+        afterFirst,
+        'player-one',
+        first.card.instanceId,
+        'activate',
+      ),
+    ).toBe(false)
+    expect(
+      canActivateCookieSkill(
+        afterFirst,
+        'player-one',
+        second.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+  })
+
   it('only accepts an HP payment source with enough matching HP cards', () => {
     const redOneHp: GameCard = {
       id: 'red-one-hp',

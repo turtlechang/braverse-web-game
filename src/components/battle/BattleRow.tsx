@@ -400,6 +400,7 @@ export function BattleRow({
                   // （即使旁邊常駐格子上其實有）。
                   const canActivateFromBreakPopover =
                     canOperate &&
+                    !selectedAttackerId &&
                     canActivateCookieSkill(game, playerId, card.instanceId, 'activate')
                   return (
                     <div className="resource-card-entry" key={card.instanceId}>
@@ -534,6 +535,7 @@ export function BattleRow({
                 canTarget && !attackTargetRestricted
               const canActivateSkill =
                 canOperate &&
+                !selectedAttackerId &&
                 canActivateCookieSkill(
                   game,
                   playerId,
