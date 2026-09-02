@@ -176,6 +176,38 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     )
   })
 
+  it('marks BS8-010 needs-review when the source faint condition is stripped from runtime', () => {
+    const source = convertedCookie('BS8-010')
+    const stripCondition = (effect: NonNullable<GameCard['effects']>[number]) => {
+      if (effect.kind !== 'damage') return effect
+      const copy = { ...effect }
+      delete (copy as { condition?: unknown }).condition
+      return copy
+    }
+    const runtimeWithoutCondition: CookieCard = {
+      ...source,
+      effects: source.effects?.map(stripCondition),
+      skill: source.skill
+        ? {
+            ...source.skill,
+            effects: source.skill.effects.map((effect) => {
+              return stripCondition(effect)
+            }),
+          }
+        : source.skill,
+      attackEffects: source.attackEffects?.map(stripCondition),
+    }
+
+    const audit = analyzeOfficialCardBehavior(
+      record('BS8-010'),
+      runtimeWithoutCondition,
+    )
+    expect(audit.contract.status).toBe('needs-review')
+    expect(audit.errors).toContain(
+      'condition evidence missing: friendly-cookie-fainted-this-turn',
+    )
+  })
+
   it('BS8-003 resolves to every eligible friendly Cookie and rejects a partial selection', () => {
     const base = createDemoGame()
     const hpCard = (instanceId: string): GameCard => ({

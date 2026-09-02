@@ -19,7 +19,7 @@
 - `support-to-trash`：將指定數量的支援區卡牌移至棄牌區
 - `optional-cost-attack`：攻擊傷害後可略過的追加效果；來源餅乾可先提供 `sourceEnergy`，其餘費用才由支援區支付
 - `target`：目標陣營、最少／最多數量與篩選條件
-- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword 等條件
+- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword，以及「本回合己方／對手餅乾曾昏厥」等條件
 - `duration`：本回合、對手下回合或永久
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw` 與 `deck-to-support`）。
@@ -41,7 +41,7 @@
 
 ## 語意驗證防線
 
-`npm run validate:cards` 除了確認卡牌可轉換，還會驗證 ability 不是空殼、技能標記、可選抽牌與來源橫置語意。對容易發生「已有 payload 但語意不完整」的卡牌，`scripts/lib/card-effect-validation.ts` 維護人工覆核的高風險契約，鎖定效果 kind、代價、條件、目標與複合效果數量。契約是回歸防線，不取代官方文字與完整流程測試。
+`npm run validate:cards` 除了確認卡牌可轉換，還會驗證 ability 不是空殼、技能標記、可選抽牌與來源橫置語意。對容易發生「已有 payload 但語意不完整」的卡牌，`scripts/lib/card-effect-validation.ts` 維護人工覆核的高風險契約，鎖定效果 kind、代價、條件、目標與複合效果數量。`src/cards/contracts/ledger.ts` 另會對規則層已有明確計數器的條件句（例如本回合 Cookie 昏厥）比對 runtime `EffectCondition`；只要條件證據遺失就落到 `needs-review`，不允許部分 payload 冒充完整支援。契約是回歸防線，不取代官方文字與完整流程測試。
 
 ## 已支援效果
 
@@ -78,6 +78,7 @@
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
+| 本回合餅乾曾昏厥 | `cookies-fainted-this-turn-at-least` | 以 `GameState.cookiesFaintedThisTurn` 檢查指定陣營本回合昏厥張數；例如 BS8-010 沒有己方昏厥紀錄時，Activate 不可發動 |
 | 對手戰鬥區無 Blocker | `opponent-battle-area-has-no-blocker` | BS3-018 第二分支的條件；可選取該分支，但條件不成立時不造成傷害 |
 | 支援區 keyword 條件 | `support-keyword-at-least` | 檢查來源玩家支援區是否至少有指定數量的 keyword 卡，例如 `[Soul Jam]` |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |

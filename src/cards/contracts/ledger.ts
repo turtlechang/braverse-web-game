@@ -1601,6 +1601,60 @@ const flattenRuntimeEffects = (evidence: RuntimeCardEvidence): CardEffect[] => {
   return result
 }
 
+type TurnFaintConditionRequirement = {
+  side: 'self' | 'opponent'
+  count: number
+  label: 'friendly-cookie-fainted-this-turn' | 'opponent-cookie-fainted-this-turn'
+}
+
+/**
+ * 條件句不能只被 clause ledger 分類後就算完成：若 adapter 忘了把條件
+ * 寫進 runtime，舊版 shadow audit 仍可能因傷害／目標都存在而回報 verified。
+ * 這裡列出規則層已有明確計數器的「本回合 Cookie 昏厥」語句，讓 contract
+ * 對照實際 EffectCondition；未知或遺漏時至少會落到 needs-review。
+ */
+const requiredTurnFaintConditions = (
+  record: OfficialCardRecord,
+): TurnFaintConditionRequirement[] => {
+  if (record.type !== 'cookie') return []
+
+  const requirements = new Map<
+    string,
+    TurnFaintConditionRequirement
+  >()
+  const conditionPattern =
+    /(?:during\s+this\s+turn,\s*)?if\s+(?:(\d+)\s+or\s+more\s+of\s+)?(your\s+opponent['’]s|your)\s+Cookies?\s+(?:has\s+)?fainted(?:\s+(?:during\s+)?this\s+turn)?/gi
+
+  for (const text of Object.values(sourceSegments(record))) {
+    if (!text) continue
+    for (const match of text.matchAll(conditionPattern)) {
+      const side = /^your\s+opponent/i.test(match[2]) ? 'opponent' : 'self'
+      const count = match[1] ? Number(match[1]) : 1
+      const label = side === 'self'
+        ? 'friendly-cookie-fainted-this-turn'
+        : 'opponent-cookie-fainted-this-turn'
+      requirements.set(`${label}:${count}`, { side, count, label })
+    }
+  }
+
+  return [...requirements.values()]
+}
+
+const hasRuntimeTurnFaintCondition = (
+  evidence: RuntimeCardEvidence,
+  requirement: TurnFaintConditionRequirement,
+): boolean =>
+  flattenRuntimeEffects(evidence).some((effect) => {
+    const condition = (effect as CardEffect & { condition?: unknown }).condition
+    if (!condition || typeof condition !== 'object') return false
+    const candidate = condition as Record<string, unknown>
+    return (
+      candidate.kind === 'cookies-fainted-this-turn-at-least' &&
+      candidate.side === requirement.side &&
+      candidate.count === requirement.count
+    )
+  })
+
 const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
   // `attackEffects` is the runtime slot for the printed post-attack/Then
   // sequence.  Older cards do not carry a nested `thenEffects` property, but
@@ -1840,6 +1894,11 @@ const buildContract = (
   }
   const blockers: string[] = []
   if (evidence.unsupportedReason) blockers.push(`runtime:${evidence.unsupportedReason}`)
+  for (const requirement of requiredTurnFaintConditions(record)) {
+    if (!hasRuntimeTurnFaintCondition(evidence, requirement)) {
+      blockers.push(`condition evidence missing: ${requirement.label}`)
+    }
+  }
   // A FLIP card is still rendered as a Cookie at runtime, so merely seeing
   // its normal attack fields is not evidence that its HP-attached text was
   // converted.  Require a FlipAbility whenever official FLIP text exists;

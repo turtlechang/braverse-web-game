@@ -156,6 +156,26 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     }
   }
 
+  // 官方卡文會把「本回合曾昏厥」寫在效果句前（例如 BS8-010：
+  // "During this turn, if your Cookie fainted, ..."），也可能省略
+  // "During this turn" 而只保留 "if ... fainted this turn"。這是規則層
+  // 已有明確計數器的共用條件，必須在 generic parser 保留，不能因未命中
+  // 其他牌卡的 exact map 就降級成無條件效果。
+  const cookiesFaintedThisTurnMatch = text.match(
+    /(?:during\s+this\s+turn,\s*)?if\s+(?:(\d+)\s+or\s+more\s+of\s+)?(your\s+opponent['’]s|your)\s+Cookies?\s+(?:has\s+)?fainted(?:\s+(?:during\s+)?this\s+turn)?/i,
+  )
+  if (cookiesFaintedThisTurnMatch) {
+    return {
+      kind: 'cookies-fainted-this-turn-at-least',
+      side: /^your\s+opponent/i.test(cookiesFaintedThisTurnMatch[2])
+        ? 'opponent'
+        : 'self',
+      count: cookiesFaintedThisTurnMatch[1]
+        ? Number(cookiesFaintedThisTurnMatch[1])
+        : 1,
+    }
+  }
+
   // BS4-083「if your hand contains 5 cards or more」。
   const handCountAtLeastMatch = text.match(
     /your hand contains?\s+(\d+)\s+cards?\s+or\s+more/i,

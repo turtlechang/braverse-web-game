@@ -1167,6 +1167,56 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
+    it('parses friendly and opponent Cookie fainted-this-turn conditions', () => {
+      const friendlyFaint = makeCard({
+        cardNumber: 'TEST-FAINT-SELF',
+        baseCardNumber: 'TEST-FAINT-SELF',
+        type: 'cookie',
+        skill: {
+          name: null,
+          text:
+            "{mob}{t1} During this turn, if your Cookie fainted, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        },
+      })
+      expect(convertOfficialCardEffects(friendlyFaint)).toMatchObject({
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            condition: {
+              kind: 'cookies-fainted-this-turn-at-least',
+              side: 'self',
+              count: 1,
+            },
+          },
+        ],
+      })
+
+      const opponentFaint = makeCard({
+        cardNumber: 'TEST-FAINT-OPPONENT',
+        baseCardNumber: 'TEST-FAINT-OPPONENT',
+        type: 'cookie',
+        skill: {
+          name: null,
+          text:
+            "{mob} If 2 or more of your opponent's Cookies fainted this turn, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+          },
+      })
+      expect(convertOfficialCardEffects(opponentFaint)).toMatchObject({
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            condition: {
+              kind: 'cookies-fainted-this-turn-at-least',
+              side: 'opponent',
+              count: 2,
+            },
+          },
+        ],
+      })
+    })
+
     it('exposes cookie discard-hand costs so payment can be handled by game logic', () => {
       const card = makeCard({
         type: 'cookie',
@@ -5216,6 +5266,25 @@ describe('BS7 candidate effect adapter', () => {
 })
 
 describe('BS8 candidate serial contract', () => {
+  it('gates BS8-010 Activate behind a friendly Cookie faint this turn', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-010'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'cookies-fainted-this-turn-at-least',
+            side: 'self',
+            count: 1,
+          },
+        },
+      ],
+    })
+  })
+
   it('maps BS8-002 as an ordered Activate skill with an optional Then paid by one red energy', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-002'))).toMatchObject({
       trigger: 'activate',

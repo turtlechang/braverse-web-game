@@ -5285,6 +5285,24 @@ export const createCardNegativeDemoState = (
       : cardNumber === 'BS5-092' || cardNumber.startsWith('BS5-092@')
         ? player.discardPile.filter((card) => card.type === 'cookie')
         : player.discardPile
+  if (baseCardNumber === 'BS8-010') {
+    // Red Velvet Cookie 的 Browser B 必須只移除「本回合己方曾昏厥」旗標，
+    // 保留啟動技能與對手目標所需的活躍支援區，避免被支付失敗掩蓋條件封鎖。
+    return updateDemoPlayer(
+      {
+        ...state,
+        cookiesFaintedThisTurn: { 'player-one': 0, 'player-two': 0 },
+      },
+      'player-one',
+      {
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        discardPile: negativeDiscardPile,
+      },
+    )
+  }
   if (baseCardNumber === 'BS8-028' || baseCardNumber === 'BS8-029') {
     // 正向 Browser fixture 以同伴的本回合 Break 登場事件滿足合併技能的
     // 條件；B 路徑必須移除那個真實狀態，不能僅把無關支援卡改為休息。

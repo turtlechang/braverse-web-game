@@ -1305,6 +1305,28 @@ describe('createCardCheckDemoState', () => {
       ),
     ).toBe(true)
 
+    const redVelvetNegative = createCardNegativeDemoState('BS8-010', {
+      preferSkillSurface: true,
+    })
+    const redVelvetNegativeSource = redVelvetNegative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-010',
+    )
+    expect(redVelvetNegative.cookiesFaintedThisTurn?.['player-one']).toBe(0)
+    expect(
+      redVelvetNegative.players['player-one'].supportArea.every(
+        (support) => !support.rested,
+      ),
+    ).toBe(true)
+    expect(redVelvetNegativeSource).toBeDefined()
+    expect(
+      canActivateCookieSkill(
+        redVelvetNegative,
+        'player-one',
+        redVelvetNegativeSource!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(false)
+
     const frostQueen = createCardCheckDemoState('BS8-083', {
       preferSkillSurface: true,
     })
