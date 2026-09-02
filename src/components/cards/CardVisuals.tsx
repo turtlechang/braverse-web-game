@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { CardSkill, EnergyCost, GameCard } from '../../game'
+import type { CardSkill, EnergyCost, ExtraDeckCard, GameCard } from '../../game'
 import {
   getCardEffectTokenLabel,
   getCardEffectTokenVisual,
@@ -201,7 +201,12 @@ export function CardEffectText({ text }: { text: string }) {
 }
 
 export interface CardFaceProps {
-  card: GameCard
+  /**
+   * EXTRA cards intentionally remain a separate runtime model from
+   * `GameCard`; the shared face is presentation-only and can render either
+   * model without allowing EXTRA cards into normal card rules.
+   */
+  card: GameCard | ExtraDeckCard
   className?: string
   concealed?: boolean
   rested?: boolean

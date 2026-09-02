@@ -4173,7 +4173,7 @@ export const convertOfficialCardEffects = (
     ],
     // BS8-009 Burning Spice Cookie：兩個 damage-all 分別覆蓋對手與己方，
     // 但己方段排除來源，合起來正是「all other Cookies」。後段的加傷以
-    // 休息區總 LV.（不是卡片張數）每滿 3 點計算一次；Then 的尖括號是
+    // 休息區總 LV.（不是卡片張數）每完成一組 3 點計算一次（Math.floor）；Then 的尖括號是
     // 玩家可選的支援區紅色能量支付，不是來源餅乾自動供能。
     'BS8-009': [
       {

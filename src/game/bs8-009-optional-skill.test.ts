@@ -1,9 +1,78 @@
 import { describe, expect, it } from 'vitest'
-import { applyGameCommand } from './index'
+import { applyGameCommand, getBreakAreaLevel, type CookieCard } from './index'
 import { createCardCheckDemoState } from './demo'
 
 const createBs8009State = () =>
   createCardCheckDemoState('BS8-009', { preferSkillSurface: true })
+
+const addBreakLevels = (
+  state: ReturnType<typeof createBs8009State>,
+  levels: number[],
+) => {
+  const player = state.players['player-one']
+  const template = player.breakArea.find(
+    (card): card is CookieCard => card.type === 'cookie',
+  )
+  if (!template) throw new Error('BS8-009 fixture requires a Cookie in break')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        breakArea: [
+          ...player.breakArea,
+          ...levels.map((level, index) => ({
+            ...template,
+            id: `BS8-009-break-extra-${level}-${index}`,
+            instanceId: `BS8-009-break-extra-${level}-${index}`,
+            level,
+          })),
+        ],
+      },
+    },
+  }
+}
+
+const resolveBreakLevelBonus = (
+  additionalBreakLevels: number[],
+) => {
+  const initial = addBreakLevels(createBs8009State(), additionalBreakLevels)
+  const sourceInstanceId = initial.players['player-one'].battleArea[0]!.card.instanceId
+  const firstPaymentId = initial.players['player-one'].supportArea[0]!.card.instanceId
+  const thenPaymentId = initial.players['player-one'].supportArea[1]!.card.instanceId
+  let state = applyGameCommand(initial, {
+    kind: 'begin-activate-skill',
+    playerId: 'player-one',
+    sourceInstanceId,
+    trigger: 'activate',
+    paymentIds: [firstPaymentId],
+  })
+  state = applyGameCommand(state, {
+    kind: 'resolve-ability-effect',
+    playerId: 'player-one',
+    targetIds: [],
+  })
+  state = applyGameCommand(state, {
+    kind: 'resolve-ability-effect',
+    playerId: 'player-one',
+    targetIds: [],
+  })
+  state = applyGameCommand(state, {
+    kind: 'resolve-optional-cost-attack',
+    playerId: 'player-one',
+    action: 'pay',
+    paymentIds: [thenPaymentId],
+    targetIds: [],
+  })
+  state = applyGameCommand(state, {
+    kind: 'resolve-ability-effect',
+    playerId: 'player-one',
+    targetIds: [sourceInstanceId],
+  })
+  return state
+}
 
 describe('BS8-009 Burning Spice Cookie skill', () => {
   it('resolves all other Cookies before opening the optional support-energy Then', () => {
@@ -109,4 +178,18 @@ describe('BS8-009 Burning Spice Cookie skill', () => {
       }),
     )
   })
+
+  it.each([
+    { additionalBreakLevels: [1], expectedBreakLevel: 4, expectedBonus: 1 },
+    { additionalBreakLevels: [1, 3], expectedBreakLevel: 7, expectedBonus: 2 },
+  ])(
+    'counts each completed group of three Break levels at total LV $expectedBreakLevel',
+    ({ additionalBreakLevels, expectedBreakLevel, expectedBonus }) => {
+      const state = resolveBreakLevelBonus(additionalBreakLevels)
+      expect(getBreakAreaLevel(state, 'player-one')).toBe(expectedBreakLevel)
+      expect(state.attackModifiers).toContainEqual(
+        expect.objectContaining({ amount: expectedBonus }),
+      )
+    },
+  )
 })

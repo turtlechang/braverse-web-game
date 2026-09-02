@@ -310,19 +310,25 @@ export function BattleRow({
                 const canPlay = playableExtraDeckCardIds.has(card.instanceId)
                 return (
                   <div className="extra-deck-card-entry" key={card.instanceId}>
-                    <strong>{card.name}</strong>
-                    <small>{card.id}</small>
-                    {canPlay ? (
-                      <button
-                        className="skill-action"
-                        type="button"
-                        onClick={() => onPlayExtraDeckCookie?.(card.instanceId)}
-                      >
-                        從 EXTRA 登場
-                      </button>
-                    ) : (
-                      <small>目前無法登場</small>
-                    )}
+                    <CardFace
+                      card={card}
+                      className="extra-deck-card-image"
+                    />
+                    <div className="extra-deck-card-details">
+                      <strong>{card.name}</strong>
+                      <small>{card.id}</small>
+                      {canPlay ? (
+                        <button
+                          className="skill-action"
+                          type="button"
+                          onClick={() => onPlayExtraDeckCookie?.(card.instanceId)}
+                        >
+                          從 EXTRA 登場
+                        </button>
+                      ) : (
+                        <small>目前無法登場</small>
+                      )}
+                    </div>
                   </div>
                 )
               })}

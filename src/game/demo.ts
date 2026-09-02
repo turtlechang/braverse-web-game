@@ -3571,8 +3571,9 @@ export const createCardCheckDemoState = (
       : card.id === 'BS8-009'
         ? [
             // Burning Spice counts total Cookie levels, not the number of
-            // cards.  Keep the positive fixture at exactly one LV.3 so the
-            // optional Then visibly resolves one +1 attack bonus.
+            // cards.  Each completed group of three levels grants one bonus
+            // (so totals 3–5 grant +1); keep the positive fixture at LV.3 so
+            // the optional Then visibly resolves one +1 attack bonus.
             cardCheckFillerCookie('BS8-009-break-lv3', 3, 4, 0, 'red').cookie,
           ]
       : card.id === 'BS8-031'

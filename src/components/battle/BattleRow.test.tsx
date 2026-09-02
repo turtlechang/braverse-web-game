@@ -159,6 +159,7 @@ describe('BattleRow desktop interactions', () => {
       instanceId: 'bs8-005-ui',
       name: 'Avatar of Ruin Cookie',
       type: 'extra',
+      imageUrl: '/cards/bs8-005.webp',
     }
     game.players['player-one'].extraDeck = [extra]
 
@@ -184,8 +185,11 @@ describe('BattleRow desktop interactions', () => {
     )
 
     expect(ownerMarkup).toContain('Avatar of Ruin Cookie')
+    expect(ownerMarkup).toContain('class="card-face extra-deck-card-image"')
+    expect(ownerMarkup).toContain('src="/cards/bs8-005.webp"')
     expect(opponentMarkup).toContain('對手的 EXTRA Deck 內容為私密資訊。')
     expect(opponentMarkup).not.toContain('Avatar of Ruin Cookie')
+    expect(opponentMarkup).not.toContain('extra-deck-card-image')
   })
 
   it('highlights only a currently playable EXTRA Deck card from the BS8-005 A/B fixture', () => {

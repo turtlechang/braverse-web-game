@@ -86,6 +86,28 @@ const openExtraDialog = async (page) => {
   return dialog
 }
 
+const assertExtraCardPreview = async (entry, expected) => {
+  const preview = entry.locator('.extra-deck-card-image')
+  await preview.waitFor({ state: 'visible' })
+  // The official image may be blocked in an offline validation environment;
+  // CardFace then falls back to a readable card tile.  Either branch still
+  // proves the EXTRA entry owns a dedicated visual preview rather than only
+  // a name/id row.
+  const imageCount = await preview.locator('img').count()
+  const fallbackCount = await preview.locator('.card-fallback').count()
+  assert.ok(
+    imageCount === 1 || fallbackCount === 1,
+    `${expected.cardNumber} EXTRA entry must render card art or its visual fallback`,
+  )
+  if (imageCount === 1) {
+    assert.match(
+      await preview.locator('img').getAttribute('alt'),
+      new RegExp(expected.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `${expected.cardNumber} EXTRA art must expose the card name as alt text`,
+    )
+  }
+}
+
 const runPositivePath = async (browser, expected) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
   page.setDefaultTimeout(7000)
@@ -98,6 +120,7 @@ const runPositivePath = async (browser, expected) => {
     const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
     await entry.waitFor({ state: 'visible' })
     assert.match(await entry.innerText(), new RegExp(expected.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    await assertExtraCardPreview(entry, expected)
     const play = entry.getByRole('button', { name: '從 EXTRA 登場' })
     assert.ok(await enabled(play), `${expected.cardNumber} positive route must permit EXTRA entry`)
     await play.click({ force: true })
@@ -150,6 +173,7 @@ const runNegativePath = async (browser, expected) => {
     await dialog.waitFor({ state: 'visible' })
     const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
     await entry.waitFor({ state: 'visible' })
+    await assertExtraCardPreview(entry, expected)
     assert.equal(
       await entry.getByRole('button', { name: '從 EXTRA 登場' }).count(),
       0,
@@ -186,7 +210,9 @@ const runGenericCardRoute = async (browser, expected, conditionMet) => {
     await extraDeck.click({ force: true })
     const dialog = page.getByRole('dialog', { name: '玩家 EXTRA Deck' })
     await dialog.waitFor({ state: 'visible' })
-    await dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber }).waitFor({ state: 'visible' })
+    const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
+    await entry.waitFor({ state: 'visible' })
+    await assertExtraCardPreview(entry, expected)
     assert.equal(
       await page.locator(`.bottom-hand [data-card-instance-id="${expected.instanceId}"]`).count(),
       0,

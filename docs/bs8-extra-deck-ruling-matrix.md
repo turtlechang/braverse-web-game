@@ -2,7 +2,7 @@
 
 > 狀態：**Phase 0／Phase 1、三張可直接登場 EXTRA 與兩張 Awakened 的核心規則 TDD 已完成；BS8 來源記錄已完成正式 promotion，但 EXTRA Deck 仍與 Standard 牌組隔離。**
 >
-> 最後裁決：2026-08-29。此矩陣以官方英文綜合規則 v1.8 為準，將已確認的核心不變量與仍須逐卡轉接的行為分開；不以候選資料或其他卡牌遊戲慣例補造規則。
+> 最後裁決：2026-09-02。此矩陣以官方英文綜合規則 v1.8 與本專案已確認的逐卡裁決為準，將已確認的核心不變量與仍須逐卡轉接的行為分開；不以候選資料或其他卡牌遊戲慣例補造規則。
 
 ## 來源與範圍
 
@@ -28,6 +28,7 @@ BS8-090、BS8-104。此路徑包含
 | 開局與洗牌 | 主牌組洗牌；EXTRA Deck 保持持有者所定順序，不抽牌、不參與自願／強制調度。 | Rules §3-9、§5-2-1-2、§5-2-1-5。 | `createGame` 只對 `deck` 呼叫 `shuffle`，並複製 `extraDeck`。 |
 | 從 EXTRA Deck 出牌 | 只能由回合玩家在自己的主要階段、每回合一次，從 EXTRA Deck 登場一張已滿足條件的 `extra` 或 `awakened` 餅乾。 | Rules §6-5-2-2。 | `play-extra-deck-cookie` 只接受自己的 EXTRA Deck；`canPlayExtraDeckCookie` 檢查時機、每回合一次、戰鬥區空位與逐卡條件。已轉接 BS8-005／069／090 直接登場及 BS8-027／104 Awaken。 |
 | 覆蓋／Awakening | 已滿足條件的 Awakened 卡覆蓋既有 Cookie，覆蓋本身算出牌；不可再覆蓋已 Awakened 的 Cookie。覆蓋後為主動、保留既有裝備、清除先前套用效果；承接底卡剩餘 HP 後，再自牌庫加入卡面 `HP+N`。昏厥時 Awakened 本體進 Break，其餘底卡、HP 與裝備進 Trash。 | Rules §2-4-2-2、§3-5-5-1、§4-9、§4-12-2、§9-4-2；官方 FAQ `q=Awaken`。 | BS8-027／104 使用 adapter 資料宣告覆蓋目標與來源區；`play-extra-deck-cookie` 以新實體取代目標、保留裝備／既有 HP、加入 `HP+2`、清除暫時修正，並把底卡關聯保存至昏厥結算。`extra-deck.test.ts` 覆蓋正向、錯誤來源、HP、裝備、暫時效果與完整昏厥去向。 |
+| BS8-009 休息區等級加傷 | Then 支付一張紅色能量後，依休息區 Cookie 等級中「已完成的 3 等級組數」增加本回合攻擊傷害：總 LV 3–5 為 +1、6–8 為 +2、9–11 為 +3，計算為 `floor(總 LV ÷ 3)`，不是只有總 LV 恰為 3 的倍數才生效。 | 使用者逐卡裁決（2026-09-02）；卡面英文「For each 3 levels your break area has reached」。 | `modify-attack-by-break-count` 使用 `countMode: 'break-level'`、`groupSize: 3`；BS8-009 TDD 覆蓋總 LV 3、4、6、7 的 +1／+2 門檻，並保留 Then 的支援區紅色能量支付。 |
 | 主動進場、代價與來源 | 有些 EXTRA 卡可進入主動狀態；EXTRA／Awakened／Special Play 的條件成本是規則程序，且 EXTRA／Awakened 不得自其他區域登場。 | 產品頁；Rules §3-5-5、§6-5-2-2-1、§6-5-2-3。 | 可直接登場的卡會在出牌時 materialize 成帶有 `extraDeckOrigin: 'extra'` 的 `CookieCard`，沿用既有 HP、On Play 與 Refresh 結算；手牌／棄牌／Break／支援／牌庫進場入口一律拒絕此來源卡。 |
 | 逐卡例外 | 卡面或 FAQ 可改寫一般時機，例如從 EXTRA Deck 送入 Trash 作為成本、或禁止同回合再次登場。 | Rules §1-3-1；官方 FAQ。 | 仍維持候選資料，不轉接、不 promote。 |
 

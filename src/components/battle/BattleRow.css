@@ -2055,6 +2055,8 @@
 
 .extra-deck-card-entry {
   display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
   gap: 3px;
   padding: 7px;
   border: 1px solid rgba(174, 220, 255, 0.28);
@@ -2062,17 +2064,30 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.extra-deck-card-entry > strong {
+.extra-deck-card-entry .extra-deck-card-image {
+  width: 58px;
+  min-width: 58px;
+  grid-row: 1;
+}
+
+.extra-deck-card-details {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+
+.extra-deck-card-details > strong {
   font-size: 0.68rem;
   line-height: 1.25;
 }
 
-.extra-deck-card-entry > small {
+.extra-deck-card-details > small {
   color: rgba(224, 241, 255, 0.68);
   font-size: 0.58rem;
 }
 
-.extra-deck-card-entry .skill-action {
+.extra-deck-card-details .skill-action {
   min-height: 24px;
   padding-inline: 6px;
   font-size: 0.6rem;
