@@ -609,6 +609,58 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('does not describe a separately resolved all-Cookies damage as Then', () => {
+    const selfDamage: CardEffect = {
+      kind: 'damage-all',
+      amount: 1,
+      side: 'self',
+    }
+    const opponentDamage: CardEffect = {
+      kind: 'damage-all',
+      amount: 1,
+      side: 'opponent',
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createCookieCard(24),
+        id: 'BS8-024',
+        name: 'Land of Fire & Ruin',
+        type: 'stage',
+      },
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: true,
+        cost: { energy: { red: 2 }, discardHand: 0 },
+        text: 'Rest this card. All Cookies receive 1 damage.',
+        effects: [selfDamage, opponentDamage],
+      },
+      effects: [selfDamage, opponentDamage],
+      effectIndex: 1,
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={opponentDamage}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-sequence-status')?.textContent).toContain(
+      '前一段效果已完成，現在處理下一段效果。',
+    )
+    expect(container.querySelector('.effect-sequence-status')?.textContent).not.toContain(
+      'Then 的後續效果',
+    )
+
+    act(() => root.unmount())
+  })
+
   it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)

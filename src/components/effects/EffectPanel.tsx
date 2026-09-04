@@ -559,7 +559,7 @@ function EffectPanelContent({
   const effectSequenceHint = isDeckToTrashEffect
     ? '第一段為強制效果；確認後才會進入 Then 的後續目標選擇。'
     : pendingEffect && pendingEffect.effectIndex > 0
-      ? '前一段效果已完成，現在處理 Then 的後續效果。'
+      ? '前一段效果已完成，現在處理下一段效果。'
       : '效果會依卡面文字順序逐段結算。'
   const skipLabel =
     pendingEffect?.sourceKind === 'attack'
