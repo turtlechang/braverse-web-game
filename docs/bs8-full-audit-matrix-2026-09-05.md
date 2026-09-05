@@ -75,7 +75,7 @@
 | BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | FLIP卡、抽至多1；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
 | BS8-064 | Snake Fruit Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量2、不限顏色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-065 | Spinach Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、支援區少≥1時、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
-| BS8-066 | Almond Cookie | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
