@@ -2245,8 +2245,10 @@
 }
 
 /* Payment/cost choices must expose each complete hit area. The normal 28px
- * stack lets a card's centre hit its neighbour, especially after rotation. */
-:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) {
+ * stack lets a card's centre hit its neighbour, especially after rotation.
+ * Attack energy selection keeps the compact stack (is-attack-payment); only
+ * skill/cost/trap payments expand. */
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) {
   display: flex;
   gap: 8px;
   direction: ltr;
@@ -2254,19 +2256,19 @@
   overflow-y: hidden;
 }
 
-:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card-wrap {
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card-wrap {
   position: relative;
   flex: 0 0 108px;
   height: 100%;
 }
 
-:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card {
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card {
   left: 50%;
   right: auto;
   transform: translate(-50%, -50%);
 }
 
-:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card.is-rested {
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card.is-rested {
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
