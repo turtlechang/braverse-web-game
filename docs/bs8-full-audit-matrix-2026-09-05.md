@@ -77,7 +77,7 @@
 | BS8-065 | Spinach Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、支援區少≥1時、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
 | BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | 攻擊時觸發deck-to-support、支援區少≥1時牌庫頂1張進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 昏厥觸發opponent-rests-support、支援區少≥1時對手休息1張活躍支援卡；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-response流程確認 | PASS：同A路徑 | 未測 |
 | BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-071 | Peach Baos | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
