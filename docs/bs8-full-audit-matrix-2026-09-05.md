@@ -78,8 +78,8 @@
 | BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | 攻擊時觸發deck-to-support、支援區少≥1時牌庫頂1張進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 昏厥觸發opponent-rests-support、支援區少≥1時對手休息1張活躍支援卡；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-response流程確認 | PASS：同A路徑 | 未測 |
-| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 未測 | EXTRA Deck驗證中 | EXTRA Deck驗證中 | 未測 |
+| BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 無技能/FLIP、NN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-071 | Peach Baos | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-073 | Noodle Cocoon | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
