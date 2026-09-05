@@ -70,7 +70,7 @@
 | BS8-058 | Flavorless Cookie | GREEN | 1 | 一般 | 無技能/FLIP、GGNN/4攻擊4；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-059 | Mystic Flour Cookie | GREEN | 3 | 一般 | 修復回手2張支援卡漏掉綠色限制（官方卡文Return 2 {G}）；轉接補supportToHandColor green，AI／hook沿用共用候選判定。既有具名同名互斥回歸＋新增混色付款拒絕、綠卡不足不可發動 | 三變體官方卡圖於Browser載入核對 | 三圖×1440×960／1164×777正向／負向共12條通過：G付款＋2綠回手、對手全體HP各減2、同名在場不可發動 | 專卡完整對局／線上未測；bs8-059-desktop/tablet-positive／negative證據 |
 | BS8-060 | Peach Blossom Cookie | GREEN | 2 | 一般 | Activate技能、每回合一次、回手1張綠色支援卡、二選一（己方+1HP或對手1傷害）；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→choice→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-061 | Chives Dumpling King | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-061 | Chives Dumpling King | GREEN | 1 | 一般 | 持續被動、支援區少≥2時自身攻擊+1；語意核對通過、引擎回歸通過 | 未測 | PASS：existing-attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-062 | Shrimp Dumpling King | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-064 | Snake Fruit Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
