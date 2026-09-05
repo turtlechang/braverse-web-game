@@ -64,7 +64,7 @@
 | BS8-052 | Cloud Haetae Cookie | GREEN | 2 | 一般 | Activate技能、自身進棄牌(selfToTrash)、支援區比對手少≥2時、綠色手牌至多2張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→select targets→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-053 | Gim Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、綠色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-054 | Leek Cookie | GREEN | 1 | 一般 | 攻擊時觸發damage 1、條件支援區少≥1；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；GGG/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-056 | Spicy Dumpling King | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-057 | Vagabond Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-058 | Flavorless Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
