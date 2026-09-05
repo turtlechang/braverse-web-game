@@ -81,7 +81,7 @@
 | BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 未測 | EXTRA Deck驗證中 | EXTRA Deck驗證中 | 未測 |
 | BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 無技能/FLIP、NN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-071 | Peach Baos | GREEN | 1 | 一般 | 物品卡、G支付、支援區少≥1時己方餅乾剩餘HP≤3補1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | 物品卡、GG支付、支援區少≥1時牌庫頂2張選1進支援區、其餘橫置進支援區、裝備到Mystic Flour；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-073 | Noodle Cocoon | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-074 | White Flour Fog | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-075 | The Ivory Pagoda | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
