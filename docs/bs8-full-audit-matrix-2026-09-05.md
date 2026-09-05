@@ -62,7 +62,7 @@
 | BS8-050 | City of Eternal Gold | YELLOW | 2 | 一般 | Y配置、Activate僅橫置無能量費、選本回合從Break登場的LV.3 0–1補1HP、Then以後段剩餘HP=2再補1（HP1→3、HP2→3）；17項引擎回歸（兩變體、手牌／前回合／LV2／對手目標拒絕、Then不可改選、Refresh中斷續接、批次Then一致） | 兩變體官方卡圖HEAD 200可載入（@1另行確認） | 兩圖×1440×960／1164×777正向／負向／選0共12條通過：配置Y、啟動只橫置不耗支援、HP1→3、Then紀錄「HP 2 → 3」；選0不補HP仍橫置 | 專卡完整對局／線上及複合Refresh插入未測；bs8-048-050-desktop/tablet-positive／negative／zero證據 |
 | BS8-051 | Meat Dumpling King | GREEN | 1 | 一般 | 昏厥觸發support-to-battle、amount=1、optional=true；GG/2攻擊1；語意核對通過、引擎回歸通過（adapter+新增faint queue測試） | 未測 | PASS：faint-response→support-to-battle流程確認 | PASS：同A路徑 | 未測 |
 | BS8-052 | Cloud Haetae Cookie | GREEN | 2 | 一般 | Activate技能、自身進棄牌(selfToTrash)、支援區比對手少≥2時、綠色手牌至多2張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→select targets→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-053 | Gim Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-053 | Gim Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、綠色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-054 | Leek Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-056 | Spicy Dumpling King | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
