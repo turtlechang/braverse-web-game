@@ -276,6 +276,38 @@ describe('useMatchController auto-skip-trap effect', () => {
     vi.useRealTimers()
   })
 
+  it('stops test-state effect damage at an attached-HP FLIP instead of auto-declining it', async () => {
+    vi.useFakeTimers()
+    let captured: ReturnType<typeof useMatchController> | null = null
+    function TestHarness() {
+      captured = useMatchController({ testStateConfig: {
+        kind: 'card-check', cardNumber: 'BS8-021', bs8021Scenario: 'faint-flip',
+      } })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      const initial = captured!.game
+      const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
+      const paid = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId,
+        paymentIds: ['support-pay-0', 'support-pay-1'] })
+      const damage = applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+      await act(() => captured!.setGame(damage))
+      await act(() => vi.advanceTimersByTime(50))
+      expect(captured!.game.pendingBattle?.stage).toBe('flip')
+      expect(captured!.game.pendingBattle?.revealedHpCard?.id).toBe('BS8-015')
+      expect(captured!.game.pendingFaintEffects?.length ?? 0).toBe(0)
+      expect(captured!.game.pendingAbilityEffect?.sourceInstanceId).toBe(item.instanceId)
+      await act(() => vi.advanceTimersByTime(500))
+      expect(captured!.game.pendingBattle?.stage).toBe('flip')
+      expect(captured!.game.players['player-one'].hand).toHaveLength(4)
+    } finally {
+      await act(() => root.unmount())
+      vi.useRealTimers()
+    }
+  })
+
   it('does not auto-finish a card-check battle before the local attacker chooses its attack effect', async () => {
     vi.useFakeTimers()
     let captured: ReturnType<typeof useMatchController> | null = null

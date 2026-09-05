@@ -49,7 +49,7 @@ export interface CardSkill {
   onPlayCost?: AbilityCost
   /** Static clauses that share a card with an Activate/On Play skill. */
   passiveEffects?: CardEffect[]
-  /** Energy supplied by the Cookie itself when a triggered skill is used. */
+  /** Legacy field for optional Support Area energy payment of a triggered skill. */
   sourceEnergy?: EnergyCost
   /**
    * 「When this Cookie faints」整組技能可由持有者選擇是否發動。
@@ -81,8 +81,9 @@ export interface CardAbility {
   text: string
   effects: CardEffect[]
   /**
-   * 官方「can be used as {R}」等來源能量敘述。它是此物品被裝備後提供的
-   * 能量資訊，而不是啟動此物品時額外支付的費用。
+   * 舊資料相容欄位，不代表已建立可選付款流程。
+   * 物品 Then 的「can be used as {R}」須轉為支援區可選付款效果；
+   * 不得僅把費用存於此處，或視為裝備提供的免費能量。
    */
   sourceEnergy?: EnergyCost
   /** 在這張物品仍裝備於餅乾時，該餅乾每次攻擊都取得的效果。 */
@@ -792,7 +793,7 @@ export interface SplitDamageEffect {
 export interface DamageAllEffect {
   kind: 'damage-all'
   amount: number
-  side: EffectTargetSide
+  side: EffectTargetSide | 'either'
   condition?: EffectCondition
   /** 僅傷害剩餘 HP 達到此門檻的餅乾（BS8-023）。 */
   minRemainingHp?: number
@@ -1965,6 +1966,8 @@ export type AbilityCost = EnergyCost & {
   }
   trashBattleCookie?: {
     count: number
+    /** Make the selected Cookies faint (Break + faint triggers), rather than discard them directly. */
+    faint?: boolean
     level?: number
     minLevel?: number
     maxLevel?: number
@@ -2759,6 +2762,8 @@ export interface PendingBattle {
    */
   effectDamageSequence?: {
     remainingTargetInstanceIds: string[]
+    /** Preserve the declared attack target while an effect visits other Cookies. */
+    originalAttackTargetInstanceId?: string
     damage: number
     afterCurrentDamageResolved?: boolean
     /** 目標可能跨玩家，或 split-damage 需要不同傷害量時使用。 */

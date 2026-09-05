@@ -5,6 +5,7 @@ import {
   canSpecialPlayCookie,
   canPlayStage,
   getEnergyCostTotal,
+  hasPendingCardResolution,
   getTrashBattleCookieCostCandidates,
   validateEnergyPayment,
 } from '../../game'
@@ -507,9 +508,7 @@ export function OnlineBattleView({
   const phaseDisabled =
     game.status !== 'playing' ||
     Boolean(game.pendingReplacement) ||
-    Boolean(game.pendingOnPlay) ||
-    Boolean(game.pendingRefresh) ||
-    Boolean(game.pendingFaintEffects && game.pendingFaintEffects.length > 0) ||
+    hasPendingCardResolution(game) ||
     Boolean(pending.pendingEffect)
 
   const opponentSourcePreviewCard =
@@ -767,6 +766,10 @@ export function OnlineBattleView({
             pending.cancelAbilityCostDraft()
             return
           }
+          if (pending.abilityCostDraft?.trigger === 'on-play') {
+            pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)
+            return
+          }
           if (pending.pendingEffect?.sourceKind !== 'attack') return
           match.dispatch(
             {
@@ -817,14 +820,8 @@ export function OnlineBattleView({
         onToggleHandToBreakArea={pending.toggleDraftHandToBreakArea}
         handToBreakAreaCost={pending.draftHandToBreakAreaCost}
         showTargetSelection={!pending.draftRequiresPaymentBeforeTargets}
-        showCancelSkill={Boolean(pending.abilityCostDraft && pending.abilityCostDraft.trigger !== 'passive')}
-        onCancel={() => {
-          if (pending.abilityCostDraft?.trigger === 'on-play') {
-            pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)
-          } else {
-            pending.cancelAbilityCostDraft()
-          }
-        }}
+        showCancelSkill={pending.abilityCostDraft?.trigger === 'activate'}
+        onCancel={pending.cancelAbilityCostDraft}
         optionalCostAttack={
           optionalCostAttackPrompt
             ? {
@@ -837,7 +834,7 @@ export function OnlineBattleView({
                       action: 'skip',
                     },
                     optionalCostAttackPrompt.resolution === 'ability'
-                      ? '已略過技能 Then 可選效果。'
+                      ? '已略過Then 可選效果。'
                       : '已略過攻擊後續效果。',
                   )
                 },

@@ -630,7 +630,7 @@ function EffectPanelContent({
           <div className="effect-panel-heading">
             <span>
               {optionalCostAttack.resolution === 'ability'
-                ? '技能 Then 可選效果'
+                ? 'Then 可選效果'
                 : '攻擊後續效果'}
             </span>
             <strong>{optionalCostAttack.sourceCardName}</strong>
@@ -876,7 +876,9 @@ function EffectPanelContent({
                 )}
                 {trashBattleCookieCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價送入棄牌區的戰鬥區餅乾</small>
+                    <small>{pendingEffect.skill?.cost.trashBattleCookie?.faint
+                      ? '選擇要作為代價昏厥的己方餅乾（餅乾進入休息區，HP 卡進入棄牌區）'
+                      : '選擇要作為代價送入棄牌區的戰鬥區餅乾'}</small>
                     <CandidateButtons
                       cards={trashBattleCookieCandidates}
                       selectedIds={selectedTrashBattleCookieIds}
@@ -1050,6 +1052,11 @@ function EffectPanelContent({
                   className="effect-candidates-target"
                   labels={candidateLabels}
                 />
+                {currentEffect.kind === 'break-to-battle' && candidateCards.length === 0 && (
+                  <small role="status">
+                    目前沒有可登場的休息區餅乾；直接確認即可選擇 0 張並繼續。
+                  </small>
+                )}
                 {effectSelectionError && <small role="status">{effectSelectionError}</small>}
                 {currentEffect.kind === 'hand-to-break-by-level-sum' ||
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
@@ -1096,7 +1103,6 @@ function EffectPanelContent({
               onClick={onSkip}
             >
               <span className="effect-skip-label">{skipLabel}</span>
-              {skipLabel}
             </button>
           ) : null}
           {hasPreviousPhase && (
@@ -1153,7 +1159,7 @@ export function EffectPanel(props: EffectPanelProps) {
   const minimizedPromptLabel =
     props.pendingEffect?.triggerLabel ??
     (props.optionalCostAttack?.resolution === 'ability'
-      ? '技能 Then 可選效果'
+      ? 'Then 可選效果'
       : '攻擊後續效果')
 
   if (

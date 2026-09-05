@@ -763,6 +763,9 @@ describe('EffectPanel', () => {
     expect(container.querySelector('.effect-skip-label')?.textContent).toBe(
       '略過整個登場效果',
     )
+    expect(container.querySelector('.effect-skip-label')?.closest('button')?.textContent).toBe(
+      '略過整個登場效果',
+    )
 
     act(() => root.unmount())
   })
@@ -921,7 +924,7 @@ describe('EffectPanel', () => {
       />,
     ))
 
-    expect(container.textContent).toContain('技能 Then 可選效果')
+    expect(container.textContent).toContain('Then 可選效果')
     expect(container.textContent).not.toContain('完整技能文字')
     expect(container.textContent).not.toContain('remaining HP is 1')
     expect(container.textContent).toContain('Then,')
@@ -1767,5 +1770,29 @@ describe('EffectPanel', () => {
     await act(() => confirm.click())
     expect(onConfirm).toHaveBeenCalledTimes(1)
     await act(() => root.unmount())
+  })
+
+  it('explains an empty revival selection and still allows confirming zero targets', () => {
+    const effect: CardEffect = { kind: 'break-to-battle', amount: 1, maxLevel: 2 }
+    const pending = createPendingEffect({ skillActivated: true, effects: [effect] })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+    const render = (candidateCards: GameCard[]) => act(() => root.render(
+      <EffectPanel pendingEffect={pending} currentEffect={effect} effectHistory={[]}
+        candidateCards={candidateCards} onConfirm={onConfirm} onSkip={() => undefined} />,
+    ))
+    try {
+      render([])
+      expect(container.textContent).toContain('目前沒有可登場的休息區餅乾；直接確認即可選擇 0 張並繼續。')
+      const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+      expect(confirm.disabled).toBe(false)
+      act(() => confirm.click())
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+      render([createCookieCard(98)])
+      expect(container.textContent).not.toContain('目前沒有可登場的休息區餅乾')
+    } finally {
+      act(() => root.unmount())
+    }
   })
 })

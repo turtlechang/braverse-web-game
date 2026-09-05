@@ -317,16 +317,12 @@ const chooseEffectTargets = (
           )
         : undefined
   if (sequentialDamage?.target) {
-    const candidates = getEffectTargetCandidates(
+    const candidates = getEffectSelectionCandidates(
       state,
       context,
-      sequentialDamage.target,
-    ).filter(
-      (cookie) =>
-        !sequentialDamage.excludeSource ||
-        cookie.card.instanceId !== context.sourceInstanceId,
+      sequentialDamage,
     )
-    return candidates.map((cookie) => cookie.card.instanceId)
+    return candidates.map((card) => card.instanceId)
   }
 
   if (isEffectUntargeted(effect)) {

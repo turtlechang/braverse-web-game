@@ -134,7 +134,8 @@ export function usePendingEffect(params: {
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
   const breakAreaCostSelectionPending = Boolean(
     pendingEffect && !pendingEffect.skillActivated &&
-      (pendingEffect.skill.cost.trashCookieToBreakArea || pendingEffect.skill.cost.handToBreakArea),
+      (pendingEffect.skill.cost.trashCookieToBreakArea || pendingEffect.skill.cost.handToBreakArea ||
+        pendingEffect.skill.cost.trashBattleCookie?.faint),
   )
   const currentEffectConditionMet =
     pendingEffect && currentEffect

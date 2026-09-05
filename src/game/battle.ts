@@ -782,6 +782,7 @@ const validateTrapTargets = (
       effect.kind === 'trash-to-hand' ||
       effect.kind === 'trash-to-support' ||
       effect.kind === 'damage' ||
+      (effect.kind === 'damage-all' && effect.sequential === true) ||
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
@@ -807,6 +808,15 @@ const validateTrapTargets = (
   }
   for (const [effectIndex, effect] of effects.entries()) {
     if (!isTargetEffect(effect)) continue
+    if (effect.kind === 'damage-all' && effect.sequential) {
+      const ids = effectTargets?.[effectIndex] ?? targetIds
+      const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
+      if (new Set(ids).size !== ids.length || ids.length !== candidates.length ||
+          ids.some(id => !candidates.some(cookie => cookie.card.instanceId === id))) {
+        throw new GameRuleError('Select every legal damage target exactly once, in resolution order.')
+      }
+      continue
+    }
     if (effect.kind === 'trash-to-hand' || effect.kind === 'trash-to-support') {
       const explicitIds = effectTargets?.[effectIndex]
       if (explicitIds !== undefined || targetIds.length > 0) {
@@ -1806,7 +1816,7 @@ export const playTrap = (
   }
 
   const activeBattle = requirePendingBattle(nextState)
-  if (activeBattle.suspendedAttackDamage !== undefined) {
+  if (activeBattle.suspendedAttackDamage !== undefined || activeBattle.effectDamageSequence) {
     return nextState
   }
 
@@ -2469,6 +2479,9 @@ const finishDamageSequence = (state: GameState): GameState => {
       const completedBattle = {
         ...activeBattle,
         effectDamageSequence: undefined,
+        targetInstanceId: sequence.originalAttackTargetInstanceId ?? activeBattle.targetInstanceId,
+        damagePlayerId: undefined,
+        damageTargetInstanceId: undefined,
       }
       const completedState = {
         ...afterCurrentDamageState,
@@ -2548,6 +2561,7 @@ const finishDamageSequence = (state: GameState): GameState => {
         effectDamageSequence: {
           remainingTargetInstanceIds,
           damage: sequence.damage,
+          originalAttackTargetInstanceId: sequence.originalAttackTargetInstanceId,
           ...(remainingTargets ? { remainingTargets } : {}),
           continuation: sequence.continuation,
           resumeBattleAfterAbility: sequence.resumeBattleAfterAbility,
@@ -2691,7 +2705,9 @@ export const resolveAttackEffect = (
         destination: effect.destination,
         sourcePlayerId: playerId,
         sourceInstanceId: battle.attackerInstanceId,
-        sourceCardName: effectContext.sourceCardName ?? 'Unknown',
+        sourceCardName: effectContext.sourceCardName ??
+          player.battleArea.find((cookie) => cookie.card.instanceId === battle.attackerInstanceId)?.card.name ??
+          'Unknown',
         effectText: effect.kind,
       },
     }
@@ -4081,7 +4097,12 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         continue
       }
       const targetIds =
-        effect?.kind === 'break-to-trash'
+        effect?.kind === 'damage-all' && effect.sequential
+          ? getEffectTargetCandidatesForEffect(nextState, {
+              sourcePlayerId: battle.attackerPlayerId,
+              sourceInstanceId: battle.attackerInstanceId,
+            }, effect).map(cookie => cookie.card.instanceId)
+          : effect?.kind === 'break-to-trash'
           ? getBreakToTrashCandidates(
               nextState,
               {
@@ -4444,7 +4465,9 @@ export const resolveFaintEffect = (
       uniqueSupportToTrashIds.length === 0 &&
       uniqueSupportToHandIds.length === 0
     if (costWasSkipped) {
-      return continuePendingReplacements(nextState)
+      // A declined cost cancels this entire trigger, including split follow-up
+      // effects. Otherwise BS8-019 could recover a card without either cost.
+      return continuePendingReplacements(skipOptionalFaintTrigger(state, faint.sourceInstanceId))
     }
 
     const sourcePlayer = nextState.players[faint.context.sourcePlayerId]

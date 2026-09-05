@@ -14,6 +14,12 @@
 - 該站為粉絲整理，頁面明確聲明翻譯與整理內容非官方；正式匯入仍以官方 JSON／卡面與官方規則、公告為準。社群資料不得直接覆寫 `data/cards/`，也不得單獨作為 promote 依據。
 - 使用社群資料形成裁定或測試案例時，應在相關 inventory／coverage 文件記錄 URL、查閱日期與對應官方依據；若官方來源與社群整理不一致，保留差異並標記待確認。
 
+### 已核對的官方資料勘誤：BS8-024@1
+
+2026-09-05 核對[普通版卡面](https://cookierunbraverse.com/data/en_storage/QxVjxxQe8wNWZecvyoYUaw.webp)與[異圖卡面](https://cookierunbraverse.com/data/en_storage/RRMhMXvgUbkb1vWw5saNjA.webp)：兩者均為R配置、RR及橫置啟動，所有餅乾各受1傷害。原始JSON的異圖卻誤用BS8-025卡文。
+
+`normalizeKnownOfficialCardRecord` 僅在卡號、類型、卡名及已知錯誤全文符合時修正，保留原始JSON、卡號與圖片。牌池詳情及執行期轉接共用此邊界；`bs8-024-stage.test.ts` 驗證原始資料不變、正規化冪等性與兩圖費用／效果一致。此為既有正式資料的邊界勘誤，不變更候選資料的驗證與promote流程；雙方全體傷害已改為單一自選順序，剩餘線上與中斷情境見逐卡稽核矩陣。
+
 ## 指令
 
 預設匯入英文版綠色起始牌組 `Starter Deck GREEN`：

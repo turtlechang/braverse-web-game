@@ -33,7 +33,7 @@ import {
   continuePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
-import { defaultShuffle } from './helpers'
+import { defaultShuffle, getCookieEffectiveHp } from './helpers'
 import { resolveBreakLevelVictory } from './victory'
 import type { Shuffle } from './types'
 
@@ -834,12 +834,12 @@ export const payHpToTrashCost = (
   }
 }
 
-export const payTrashBattleCookieCost = (
+export const validateBattleCookieCostSelection = (
   player: PlayerState,
   cost: AbilityCost,
   selectedIds: string[],
   sourceInstanceId?: string,
-): { player: PlayerState; departedCount: number } => {
+): CookieInBattle[] => {
   const effectiveIds =
     cost.trashBattleCookie?.sourceOnly && sourceInstanceId
       ? [sourceInstanceId]
@@ -853,7 +853,7 @@ export const payTrashBattleCookieCost = (
     if (uniqueIds.length > 0) {
       throw new GameRuleError('此效果不需要支付戰鬥區餅乾代價。')
     }
-    return { player, departedCount: 0 }
+    return []
   }
 
   if (uniqueIds.length !== cost.trashBattleCookie.count) {
@@ -875,6 +875,23 @@ export const payTrashBattleCookieCost = (
   const trashedCookies = player.battleArea.filter((cookie) =>
     selectedSet.has(cookie.card.instanceId),
   )
+  return trashedCookies
+}
+
+export const payTrashBattleCookieCost = (
+  player: PlayerState,
+  cost: AbilityCost,
+  selectedIds: string[],
+  sourceInstanceId?: string,
+): { player: PlayerState; departedCount: number } => {
+  const trashedCookies = validateBattleCookieCostSelection(player, cost, selectedIds, sourceInstanceId)
+  if (cost.trashBattleCookie?.faint) {
+    // A PlayerState-only payment cannot resolve faint triggers or victory.
+    // Callers must explicitly use the full GameState faint path instead.
+    throw new GameRuleError('昏厥代價必須使用完整遊戲狀態結算。')
+  }
+  if (trashedCookies.length === 0) return { player, departedCount: 0 }
+  const selectedSet = new Set(trashedCookies.map(cookie => cookie.card.instanceId))
   return {
     player: {
       ...player,
@@ -1344,6 +1361,13 @@ export const getCookieSkillUnavailableReason = (
   }
   if (source && skill?.oncePerTurn && state.skillUsesThisTurn.includes(getSkillUseKey(source))) {
     return '此張餅乾本回合已使用過技能（每回合一次）。'
+  }
+  const unmetHpCondition = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
+    'condition' in effect && effect.condition?.kind === 'source-hp-less-than' &&
+    !isEffectConditionMet(state, context, effect),
+  )
+  if (source && unmetHpCondition && 'condition' in unmetHpCondition && unmetHpCondition.condition?.kind === 'source-hp-less-than') {
+    return `來源餅乾的剩餘 HP 必須低於 ${unmetHpCondition.condition.amount}，目前為 ${getCookieEffectiveHp(source)}。`
   }
   const unmetFaintCondition = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
     'condition' in effect && effect.condition?.kind === 'cookies-fainted-this-turn-at-least' &&

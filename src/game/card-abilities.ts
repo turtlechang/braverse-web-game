@@ -1,6 +1,7 @@
 import { GameRuleError } from './errors'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
+  executeCardEffect,
   getBreakCount,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
@@ -25,6 +26,7 @@ import {
   isSupportToHandCostCandidate,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
+  validateBattleCookieCostSelection,
 } from './skills'
 import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
@@ -389,10 +391,13 @@ const payAbilityCost = (
     }
   }
 
+  const faintCostCookies = cost.trashBattleCookie?.faint
+    ? validateBattleCookieCostSelection(updatedPlayer, cost, options.trashBattleCookieIds ?? [], options.sourceInstanceId)
+    : []
   const trashBattleCookiePayment = payTrashBattleCookieCost(
     updatedPlayer,
-    cost,
-    options.trashBattleCookieIds ?? [],
+    cost.trashBattleCookie?.faint ? { ...cost, trashBattleCookie: undefined } : cost,
+    cost.trashBattleCookie?.faint ? [] : options.trashBattleCookieIds ?? [],
     options.sourceInstanceId,
   )
   updatedPlayer = trashBattleCookiePayment.player
@@ -414,13 +419,21 @@ const payAbilityCost = (
     })
   }
 
-  return departedCount > 0
-    ? recordCookieDepartures(
+  if (departedCount > 0) {
+    nextState = recordCookieDepartures(
         clearDepartedCookieModifiers(nextState),
         playerId,
         departedCount,
       )
-    : nextState
+  }
+  if (faintCostCookies.length > 0) {
+    nextState = executeCardEffect(nextState, {
+      sourcePlayerId: playerId,
+      sourceInstanceId: options.sourceInstanceId ?? '',
+    }, { kind: 'make-faint', target: { side: 'self', min: faintCostCookies.length, max: faintCostCookies.length } },
+    faintCostCookies.map(cookie => cookie.card.instanceId))
+  }
+  return nextState
 }
 
 export const getItemAbility = (card: GameCard): CardAbility | null =>

@@ -5583,7 +5583,7 @@ describe('BS8 candidate serial contract', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-059'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
-      cost: { energy: { green: 1 }, supportToHand: 2 },
+      cost: { energy: { green: 1 }, supportToHand: 2, supportToHandColor: 'green' },
       effects: [{
         kind: 'hp-to-trash-all',
         amount: 2,

@@ -998,7 +998,7 @@ export function OptionalCostAttackModal({
             {isAbilityResolution
               ? mandatory
                 ? '技能 Then 代價'
-                : '技能 Then 可選效果'
+                : 'Then 可選效果'
               : mandatory
                 ? '攻擊後續代價'
                 : '攻擊可選效果'}
@@ -1035,7 +1035,7 @@ export function OptionalCostAttackModal({
           type="button"
           className="minimize-reveal"
           onClick={() => setMinimized(true)}
-          title={isAbilityResolution ? '縮小技能 Then 可選效果' : '縮小攻擊可選效果'}
+          title={isAbilityResolution ? '縮小 Then 可選效果' : '縮小攻擊可選效果'}
         >
           <Minimize2 aria-hidden="true" />
           縮小
@@ -1045,7 +1045,7 @@ export function OptionalCostAttackModal({
           {isAbilityResolution
             ? mandatory
               ? '技能 Then 代價（必須支付）'
-              : '技能 Then 可選效果'
+              : 'Then 可選效果'
             : mandatory
               ? '攻擊後續代價（必須支付）'
               : '攻擊可選效果'}

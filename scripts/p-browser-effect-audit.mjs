@@ -17,6 +17,13 @@ const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium
 if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
+const viewport = {
+  width: Number(process.env.BRAVERSE_TEST_WIDTH ?? 1440),
+  height: Number(process.env.BRAVERSE_TEST_HEIGHT ?? 960),
+}
+if (!Object.values(viewport).every(value => Number.isInteger(value) && value > 0)) {
+  throw new Error('BRAVERSE_TEST_WIDTH and BRAVERSE_TEST_HEIGHT must be positive integers')
+}
 const auditActionTimeout = Number(
   process.env.BRAVERSE_AUDIT_ACTION_TIMEOUT_MS ?? 7000,
 )
@@ -476,6 +483,14 @@ const cards = [
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
+if (requestedCardNumbers.length > 0) {
+  for (const requested of requestedCardNumbers) {
+    assert.ok(
+      cards.some(card => card.cardNumber === requested || getBaseCardNumber(card) === requested),
+      `Requested card ${requested} is outside this audit surface; no verification was performed. Check the card number and audit mode.`,
+    )
+  }
+}
 if (!auditVanillaAttacks && !auditNegative && requestedCardNumbers.length === 0) {
   assert.equal(
     cards.length,
@@ -542,6 +557,39 @@ const readContractTrace = async (page) => {
     // Preserve the Browser failure itself without letting diagnostics abort the
     // remaining card matrix.
     return []
+  }
+}
+
+const assertCompactCombatActionsVisible = async (page) => {
+  if (viewport.width > 680 || viewport.height <= 400) return
+  const controls = await page.locator('.combat-action-stack').evaluateAll(elements =>
+    elements.map(element => {
+      const boxes = [element, ...element.children].map(node => node.getBoundingClientRect())
+      return {
+        text: element.textContent,
+        rect: {
+          left: Math.min(...boxes.map(box => box.left)),
+          right: Math.max(...boxes.map(box => box.right)),
+          top: Math.min(...boxes.map(box => box.top)),
+          bottom: Math.max(...boxes.map(box => box.bottom)),
+        },
+        zone: element.closest('.combat-zone').getBoundingClientRect().toJSON(),
+        stats: Array.from(element.parentElement.querySelectorAll('.badge-hp, .badge-atk'))
+          .map(stat => stat.getBoundingClientRect().toJSON()),
+      }
+    }),
+  )
+  for (const control of controls) {
+    assert.ok(
+      control.rect.left >= control.zone.left && control.rect.right <= control.zone.right &&
+      control.rect.top >= control.zone.top && control.rect.bottom <= control.zone.bottom,
+      `Mobile skill/energy controls must remain in the battle area: ${JSON.stringify(control)}`,
+    )
+    for (const stat of control.stats) {
+      const overlaps = stat.left < control.rect.right && stat.right > control.rect.left &&
+        stat.top < control.rect.bottom && stat.bottom > control.rect.top
+      assert.equal(overlaps, false, `Mobile controls must not cover HP/attack: ${JSON.stringify(control)}`)
+    }
   }
 }
 
@@ -2587,6 +2635,7 @@ const runCard = async (
     assert.deepEqual(consoleErrors, [], `console errors: ${JSON.stringify(consoleErrors)}`)
     assert.deepEqual(pageErrors, [], `page errors: ${JSON.stringify(pageErrors)}`)
 
+    await assertCompactCombatActionsVisible(page)
     const contractTrace = await readContractTrace(page)
     const traceSummary = summarizeContractTrace(contractTrace)
     let orderedAllTargetProof
@@ -2911,6 +2960,16 @@ const runCard = async (
           assert.match(await source.innerText(), /本回合已使用過技能/)
         }
       }
+      if (viewport.width <= 680 && viewport.height > 400 && !negative &&
+        requestedSeries === 'BS8' && ['BS8-028', 'BS8-029'].includes(getBaseCardNumber(card))) {
+        // A disabled once-per-turn skill must not intercept selecting its Cookie
+        // as an attacker. Cancellation must also leave the settled skill intact.
+        const source = page.locator(`.bottom-field [data-card-instance-id^="player-one-${getBaseCardNumber(card)}"]`)
+        await source.locator(':scope > .card-face').click()
+        await page.getByRole('button', { name: '取消攻擊', exact: true }).click()
+        assert.equal(await source.locator('.skill-action').isEnabled(), false)
+        operations.push('verify:used-skill-does-not-block-attacker-selection')
+      }
       if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-031') {
         if (negative) {
           assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
@@ -3211,7 +3270,7 @@ try {
     // Isolate each card in its own browser document so a late navigation from
     // one card cannot destroy the next card's contract-trace execution
     // context.
-    const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+    const page = await browser.newPage({ viewport })
     page.setDefaultTimeout(auditActionTimeout)
     page.setDefaultNavigationTimeout(auditNavigationTimeout)
     const negativeConditionPath = negativeConditionCardNumbers.has(
@@ -3379,7 +3438,7 @@ try {
   const report = {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
-    viewport: '1440x960',
+    viewport: `${viewport.width}x${viewport.height}`,
     sources: auditConfig.sources,
     scope: auditNegative
       ? `${auditConfig.candidate ? 'Candidate staging' : 'Formal-pool'} negative A/B localhost fixture audit for the selected ${auditConfig.label} records. Default negative routes remove payment availability; dedicated condition routes retain legal payment and isolate a card-specific condition or cost. Per-record operations identify whether the attack was actually declared or a pending window was staged. PASS covers the asserted local UI, command trace, and settled state only; it does not prove a complete online match.`

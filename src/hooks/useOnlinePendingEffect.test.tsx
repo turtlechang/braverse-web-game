@@ -15,6 +15,53 @@ import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it('BS8-022 submits a faint payment before selecting a newly discarded HP Cookie', async () => {
+    const initial = createCardCheckDemoState('BS8-022')
+    const owner = initial.players['player-one']
+    const item = owner.hand.find(card => card.id === 'BS8-022')!
+    const costCookie = owner.battleArea[0]
+    const hpCookie = costCookie.hpCards.find(card => card.id === 'BS8-016')!
+    expect(hpCookie).toBeDefined()
+    let game = initial
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginPlayItem(item))
+      expect(captured!.draftRequiresPaymentBeforeTargets).toBe(true)
+      await act(() => captured!.toggleTarget(owner.discardPile[0].instanceId))
+      expect(captured!.selectedTargetIds).toEqual([])
+      await act(() => captured!.toggleDraftPayment(owner.supportArea[0].card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).not.toHaveBeenCalled()
+      await act(() => captured!.toggleDraftTrashBattleCookie(costCookie.card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(dispatch.mock.calls[0][0]).not.toHaveProperty('targetIds')
+      expect(game.players['player-one'].breakArea).toContainEqual(costCookie.card)
+      expect(game.players['player-one'].discardPile).toContainEqual(hpCookie)
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.draftRequiresPaymentBeforeTargets).toBe(false)
+      expect(captured!.candidateCards).toContainEqual(hpCookie)
+      expect(captured!.candidateCards).not.toContainEqual(costCookie.card)
+      await act(() => captured!.toggleTarget(hpCookie.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(game.players['player-one'].hand).toContainEqual(hpCookie)
+      expect(game.players['player-one'].supportArea.filter(s => s.rested)).toHaveLength(1)
+      expect(game.pendingAbilityEffect).toBeFalsy()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it.each([0, 1])('BS8-047 requires the real LV3 reveal cost, then summons %i and moves the same revealed card to Break', async (summonCount) => {
     const initial = createCardCheckDemoState('BS8-047')
     const owner = initial.players['player-one']

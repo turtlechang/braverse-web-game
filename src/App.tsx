@@ -7,6 +7,7 @@ import {
   canPlayStage,
   canSpecialPlayCookie,
   getEnergyCostTotal,
+  hasPendingCardResolution,
   getTrashBattleCookieCostCandidates,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -233,12 +234,7 @@ function App() {
   const phaseDisabled =
     match.game.status === 'finished' ||
     Boolean(match.game.pendingReplacement) ||
-    Boolean(match.game.pendingOnPlay) ||
-    Boolean(match.game.pendingRefresh) ||
-    Boolean(
-      match.game.pendingFaintEffects &&
-        match.game.pendingFaintEffects.length > 0,
-    ) ||
+    hasPendingCardResolution(match.game) ||
     Boolean(pending.pendingEffect)
 
   const currentJsxEffect = pending.currentEffect
@@ -356,11 +352,10 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    ((pe.sourceKind === 'cookie' && pe.trigger === 'on-play') ||
-      (pe.trigger === 'activate' &&
-        (pe.sourceKind === 'cookie' ||
-          pe.sourceKind === 'item' ||
-          pe.sourceKind === 'stage')))
+    pe.trigger === 'activate' &&
+    (pe.sourceKind === 'cookie' ||
+      pe.sourceKind === 'item' ||
+      pe.sourceKind === 'stage')
 
   const { activeSelectedHandCardId, setSelectedHandCardId } =
     useHandSelectionDismissal(playerHand, closeResourcePopover)
@@ -839,7 +834,7 @@ function App() {
                       action: 'skip',
                     },
                     optionalCostAttackPrompt.resolution === 'ability'
-                      ? '已略過技能 Then 可選效果。'
+                      ? '已略過Then 可選效果。'
                       : '已略過攻擊後續效果。',
                   )
                 },

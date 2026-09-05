@@ -22,6 +22,7 @@ const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium
 if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4182)
+const viewport = { width: Number(process.env.BRAVERSE_TEST_WIDTH ?? 1440), height: 960 }
 const baseUrl = `http://127.0.0.1:${port}`
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const browserExecutable =
@@ -83,7 +84,7 @@ const openExtraDialog = async (page) => {
     /is-extra-deck-ready/,
     'positive route must highlight the EXTRA resource dock',
   )
-  await extraDeck.click({ force: true })
+  await extraDeck.click()
   const dialog = page.getByRole('dialog', { name: '玩家 EXTRA Deck' })
   await dialog.waitFor({ state: 'visible' })
   return dialog
@@ -112,7 +113,7 @@ const assertExtraCardPreview = async (entry, expected) => {
 }
 
 const runPositivePath = async (browser, expected) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
   const errors = recordBrowserErrors(page)
   const route = `bs8-extra-deck:${expected.cardNumber}:met`
@@ -126,7 +127,7 @@ const runPositivePath = async (browser, expected) => {
     await assertExtraCardPreview(entry, expected)
     const play = entry.getByRole('button', { name: '從 EXTRA 登場' })
     assert.ok(await enabled(play), `${expected.cardNumber} positive route must permit EXTRA entry`)
-    await play.click({ force: true })
+    await play.click()
 
     const materialized = page.locator(
       `.bottom-field [data-card-instance-id="${expected.instanceId}"] > .card-face`,
@@ -135,20 +136,40 @@ const runPositivePath = async (browser, expected) => {
     await wait(180)
     if (expected.cardNumber === 'BS8-027') {
       assert.match(await materialized.locator('..').innerText(), /覺醒.*\+2/)
-      await materialized.click({ force: true })
+      await materialized.click()
       for (let payment = 0; payment < 3; payment += 1) {
         const support = page.locator('.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)').first()
         await support.focus()
         await support.press('Enter')
       }
-      await page.locator('.top-field .combat-card-wrap .card-face').first().click({ force: true })
+      await page.locator('.top-field .combat-card-wrap .card-face').first().click()
       const effect = page.locator('.effect-panel[role="alertdialog"]')
       await effect.waitFor()
+      if (viewport.width <= 680) {
+        const bounds = await page.locator('.combat-card-wrap > .card-face').evaluateAll(elements => elements.map(element => {
+          const card = element.getBoundingClientRect()
+          const zone = element.closest('.combat-zone').getBoundingClientRect()
+          return { left: card.left, right: card.right, zoneLeft: zone.left, zoneRight: zone.right }
+        }))
+        assert.ok(bounds.every(card => card.left >= card.zoneLeft - 1 && card.right <= card.zoneRight + 1),
+          `Active and rested cards must stay clear of resource docks: ${JSON.stringify(bounds)}`)
+      }
       assert.match(await effect.innerText(), /對手.*1.*傷害/)
       assert.equal(await effect.locator('.skip-effect').count(), 0)
+      const confirm = effect.getByRole('button', { name: '確認發動', exact: true })
+      assert.equal(await confirm.isEnabled(), false, 'Ordered damage requires every target')
+      const targets = effect.locator('.effect-candidates-target button')
+      assert.equal(await targets.count(), 2)
+      await targets.nth(1).click()
+      assert.equal(await confirm.isEnabled(), false, 'One selected target is incomplete')
+      await targets.nth(0).click()
+      assert.match(await targets.nth(1).innerText(), /第 1 順位/)
+      assert.match(await targets.nth(0).innerText(), /第 2 順位/)
+      assert.equal(await confirm.isEnabled(), true)
       await effect.getByRole('button', { name: '確認發動', exact: true }).click()
       await effect.waitFor({ state: 'hidden' })
       await page.waitForFunction(() => document.querySelector('.top-field .combat-card-wrap')?.textContent?.match(/2\s*\/\s*6/))
+      await page.waitForFunction(() => document.querySelectorAll('.top-field .combat-card-wrap')[1]?.textContent?.match(/5\s*\/\s*6/))
     }
     assert.equal(
       await page.getByLabel('玩家 EXTRA Deck 0 張').count(),
@@ -175,7 +196,7 @@ const runPositivePath = async (browser, expected) => {
 }
 
 const runNegativePath = async (browser, expected) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
   const errors = recordBrowserErrors(page)
   const route = `bs8-extra-deck:${expected.cardNumber}:unmet`
@@ -194,7 +215,7 @@ const runNegativePath = async (browser, expected) => {
       /is-extra-deck-ready/,
       'negative route must not highlight the EXTRA resource dock',
     )
-    await extraDeck.click({ force: true })
+    await extraDeck.click()
     const dialog = page.getByRole('dialog', { name: '玩家 EXTRA Deck' })
     await dialog.waitFor({ state: 'visible' })
     const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
@@ -219,7 +240,7 @@ const runNegativePath = async (browser, expected) => {
 }
 
 const runGenericCardRoute = async (browser, expected, conditionMet) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
   const errors = recordBrowserErrors(page)
   const route = `${conditionMet ? 'card' : 'card-negative'}:${expected.cardNumber}`
@@ -233,7 +254,7 @@ const runGenericCardRoute = async (browser, expected, conditionMet) => {
       String(conditionMet),
       `${route} must expose the expected EXTRA readiness state`,
     )
-    await extraDeck.click({ force: true })
+    await extraDeck.click()
     const dialog = page.getByRole('dialog', { name: '玩家 EXTRA Deck' })
     await dialog.waitFor({ state: 'visible' })
     const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
@@ -252,7 +273,7 @@ const runGenericCardRoute = async (browser, expected, conditionMet) => {
 }
 
 const runGoldenBreakSkill = async (browser, cardNumber, conditionMet) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(10000)
   const route = `${conditionMet ? 'card-skill' : 'card-skill-negative'}:${cardNumber}`
   try {
@@ -270,7 +291,7 @@ const runGoldenBreakSkill = async (browser, cardNumber, conditionMet) => {
     assert.match(await panel.innerText(), /先移至棄牌區.*再.*休息區/)
     const confirm = panel.getByRole('button', { name: '確認發動', exact: true })
     assert.equal(await confirm.isEnabled(), false)
-    await panel.getByRole('button', { name: 'Golden Cheese Cookie Golden Cheese Cookie', exact: true }).click()
+    await panel.locator('.effect-candidates-target').getByRole('button', { name: /Golden Cheese Cookie/ }).click()
     await confirm.click()
     await panel.waitFor({ state: 'hidden' })
     assert.match(await page.getByLabel('玩家休息區摘要', { exact: true }).getAttribute('title'), /LV\.9\/10/)
@@ -326,6 +347,7 @@ try {
   }
   const report = {
     browser: 'playwright',
+    viewport,
     scope: 'BS8 formal EXTRA Deck entry-condition A/B',
     cards: results,
     goldenBreak,

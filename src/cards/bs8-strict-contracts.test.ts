@@ -398,7 +398,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     expect(card.skill).toMatchObject({
       sourceEnergy: { red: 1 },
       effects: [
-        { kind: 'break-source-to-trash' },
+        { kind: 'break-source-to-trash', asCost: true },
         { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
       ],
     })
@@ -426,8 +426,8 @@ describe('BS8 strict contracts: deterministic first batch', () => {
   it('BS8-023 only damages Cookies with at least two remaining HP', () => {
     const card = converted('BS8-023')
     expect(card.trap?.effects).toEqual([
-      { kind: 'damage-all', amount: 1, side: 'self', minRemainingHp: 2 },
-      { kind: 'damage-all', amount: 1, side: 'opponent', minRemainingHp: 2 },
+      { kind: 'damage-all', amount: 1, side: 'either', sequential: true, minRemainingHp: 2,
+        target: { side: 'either', min: 0, max: 4, minRemainingHp: 2 } },
     ])
     expect(analyzeOfficialCardBehavior(record('BS8-023')).contract.status).toBe(
       'verified',
@@ -455,7 +455,6 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     ]
     expect(source.item).toMatchObject({
       cost: { energy: { red: 2 }, discardHand: 0 },
-      sourceEnergy: { red: 1 },
       effects: [
         {
           kind: 'damage-all',
@@ -470,9 +469,14 @@ describe('BS8 strict contracts: deterministic first batch', () => {
           excludeCardName: 'Burning Spice Cookie',
         },
         {
-          kind: 'equip-source',
-          target: { side: 'self', min: 0, max: 1 },
-          requiredCookieId: 'BS8-009',
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { red: 1 }, discardHand: 0 },
+          effects: [{
+            kind: 'equip-source',
+            target: { side: 'self', min: 0, max: 1 },
+            requiredCookieId: 'BS8-009',
+          }],
         },
       ],
       equippedAttackEffects: [
@@ -551,10 +555,14 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     )
     expect(afterOpponentDamage.players['player-two'].battleArea[0]?.hpCards).toHaveLength(1)
 
+    // This isolated assertion checks equipment/trap-lock semantics. The real
+    // paid Item chain is covered by bs8-021-equip-payment.test.ts.
+    const then = source.item!.effects[2]
+    if (then.kind !== 'optional-cost-attack') throw new Error('Missing optional equipment payment')
     const equipped = executeCardEffect(
       afterOpponentDamage,
       context,
-      source.item!.effects[2],
+      then.effects[0],
       ['burning-spice'],
     )
     expect(equipped.players['player-one'].battleArea[0].equippedCards).toEqual([source])
@@ -862,13 +870,13 @@ describe('BS8 strict contracts: deterministic first batch', () => {
   })
 
   it('keeps BS8 stage activation costs, target boundaries, and current-turn break entries', () => {
-    expect(converted('BS8-024').stageAbility).toMatchObject({
+    for (const number of ['BS8-024', 'BS8-024@1']) expect(converted(number).stageAbility).toMatchObject({
       placementCost: { red: 1 },
       cost: { energy: { red: 2 }, discardHand: 0 },
       restSource: true,
       effects: [
-        { kind: 'damage-all', amount: 1, side: 'self' },
-        { kind: 'damage-all', amount: 1, side: 'opponent' },
+        { kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+          target: { side: 'either', min: 0, max: 4 } },
       ],
     })
     expect(converted('BS8-049').stageAbility).toMatchObject({
@@ -915,7 +923,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
         condition: { kind: 'battle-area-rested-cookie-count-at-least', count: 3 },
       }],
     })
-    for (const cardNumber of ['BS8-024', 'BS8-049', 'BS8-050', 'BS8-050@1', 'BS8-099']) {
+    for (const cardNumber of ['BS8-024', 'BS8-024@1', 'BS8-049', 'BS8-050', 'BS8-050@1', 'BS8-099']) {
       expect(analyzeOfficialCardBehavior(record(cardNumber)).contract.status).toBe(
         'verified',
       )
@@ -963,7 +971,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     expect(converted('BS8-022').item).toMatchObject({
       cost: {
         energy: { red: 1 },
-        trashBattleCookie: { count: 1 },
+        trashBattleCookie: { count: 1, faint: true },
       },
       effects: [{
         kind: 'trash-to-hand',
@@ -974,12 +982,12 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       }],
     })
 
-    for (const cardNumber of ['BS8-024@1', 'BS8-025']) {
+    for (const cardNumber of ['BS8-025']) {
       expect(converted(cardNumber).stageAbility).toMatchObject({
         placementCost: { red: 2 },
         cost: {
           energy: { red: 1 },
-          trashBattleCookie: { count: 1 },
+          trashBattleCookie: { count: 1, faint: true },
         },
         restSource: true,
         effects: [{

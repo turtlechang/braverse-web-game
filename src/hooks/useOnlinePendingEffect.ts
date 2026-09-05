@@ -260,7 +260,8 @@ export function useOnlinePendingEffect(params: {
   // 移牌代價會改變後續效果候選；先讓伺服器付款，再從權威狀態選目標。
   const draftRequiresPaymentBeforeTargets = Boolean(
     abilityCostDraft?.ability.cost.trashCookieToBreakArea ||
-    abilityCostDraft?.ability.cost.handToBreakArea,
+    abilityCostDraft?.ability.cost.handToBreakArea ||
+    abilityCostDraft?.ability.cost.trashBattleCookie?.faint,
   )
   const draftContext: EffectContext | null = abilityCostDraft
     ? {
@@ -1215,7 +1216,7 @@ export function useOnlinePendingEffect(params: {
           selectedHandToBreakAreaIds: abilityCostDraft.selectedHandToBreakAreaIds,
           chooseOneModes: abilityCostDraft.chooseOneModes,
           skillActivated: false,
-          optional: abilityCostDraft.trigger === 'passive',
+          optional: abilityCostDraft.trigger === 'passive' || abilityCostDraft.trigger === 'on-play',
           endPhase: abilityCostDraft.trigger === 'passive',
           triggerLabel:
             abilityCostDraft.sourceKind === 'item'

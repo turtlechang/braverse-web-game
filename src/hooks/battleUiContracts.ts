@@ -230,6 +230,8 @@ export interface BattleUiMatchLike {
 }
 
 export interface BattleUiTrapEffectTargetStep {
+  /** Select every candidate; click order is damage resolution order. */
+  ordered?: boolean
   effectIndex: number
   candidates: CookieInBattle[]
   selectedTargetIds: string[]

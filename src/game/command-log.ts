@@ -1793,6 +1793,10 @@ export const describeCommandSteps = (
     case 'begin-activate-stage':
     case 'activate-stage': {
       const steps: LogStepDetail[] = []
+      const activationSource = 'instanceId' in command
+        ? findCard(previous, command.instanceId)
+        : previous.players[command.playerId].stage?.card
+      const faintCost = (activationSource?.item?.cost ?? activationSource?.stageAbility?.cost)?.trashBattleCookie?.faint
       if (command.kind === 'begin-activate-stage' || command.kind === 'activate-stage') {
         const source = previous.players[command.playerId].stage
         if (source && !source.rested && next.players[command.playerId].stage?.rested) {
@@ -1834,7 +1838,7 @@ export const describeCommandSteps = (
       if (hpToTrashStep) steps.push(hpToTrashStep)
       const trashBattleStep = describeCardListStep(
         state,
-        '額外代價：戰鬥區送入棄牌區',
+        faintCost ? '額外代價：使餅乾昏厥並送入休息區' : '額外代價：戰鬥區送入棄牌區',
         command.trashBattleCookieIds,
       )
       if (trashBattleStep) steps.push(trashBattleStep)

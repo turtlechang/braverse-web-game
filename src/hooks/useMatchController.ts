@@ -227,6 +227,9 @@ export function useMatchController(params: {
       return createCardCheckDemoState(testStateConfig.cardNumber, {
         preferSkillSurface: testStateConfig.preferSkillSurface,
         sourceHpCount: testStateConfig.sourceHpCount,
+        faintSourceMoved: testStateConfig.faintSourceMoved,
+        normalAttack: testStateConfig.normalAttack,
+        bs8021Scenario: testStateConfig.bs8021Scenario,
       })
     }
     if (testStateConfig?.kind === 'bs8-084-attack-discard') {
@@ -1150,14 +1153,16 @@ export function useMatchController(params: {
           )
           if (candidates.length === 0) return []
           const limits = getEffectSelectionLimits(effect)
+          const ordered = effect.kind === 'damage-all' && effect.sequential === true
           return [
             {
               effectIndex,
               candidates,
               selectedTargetIds: selectedTrapEffectTargets[effectIndex] ?? [],
-              min: limits?.min ?? 0,
-              max: limits?.max ?? 1,
-              allowEmpty: (limits?.min ?? 0) === 0,
+              ordered,
+              min: ordered ? candidates.length : limits?.min ?? 0,
+              max: ordered ? candidates.length : limits?.max ?? 1,
+              allowEmpty: !ordered && (limits?.min ?? 0) === 0,
             },
           ]
         })
@@ -1509,8 +1514,9 @@ export function useMatchController(params: {
     // played. A trap Then effect may create a real pending decision first
     // (for example BS5-087's draw up to 2), so wait until that decision is
     // resolved. When the local attacker has a printed attack-after effect,
-    // advance only one formal damage command at a time; resolve-battle would
-    // also auto-pick/skip the later target and hide the human decision UI.
+    // or an effect-damage sequence, advance one damage command at a time;
+    // resolve-battle would auto-skip HP FLIPs/faint triggers or auto-pick a
+    // later target, hiding the decisions this fixture is meant to verify.
     // Production matches never use this shortcut.
     if (
       testStateConfig &&
@@ -1525,11 +1531,12 @@ export function useMatchController(params: {
           ) {
             return current
           }
-          const preserveHumanAttackEffect =
-            current.pendingBattle.attackerPlayerId === viewerPlayerId &&
-            current.pendingBattle.attackEffects.length > 0
+          const preserveHumanDamageDecisions =
+            Boolean(current.pendingBattle.effectDamageSequence) ||
+            (current.pendingBattle.attackerPlayerId === viewerPlayerId &&
+              current.pendingBattle.attackEffects.length > 0)
           return applyGameCommand(current, {
-            ...(preserveHumanAttackEffect
+            ...(preserveHumanDamageDecisions
               ? {
                   kind: 'resolve-next-damage' as const,
                   playerId:

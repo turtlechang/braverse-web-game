@@ -3,6 +3,7 @@ import { getFaintTriggeredCost, hasCookieOnPlayEffects } from './skills'
 import { beginAttack } from './battle'
 import { materializeExtraDeckCookie } from './extra-deck'
 import { applyGameCommand } from './commands'
+import { executeCardEffect } from './effects'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -244,6 +245,9 @@ export const parseTestStateConfig = (
       /** 只供 strict Browser 驗收，把含 Then 的卡導向其技能表面。 */
       preferSkillSurface?: boolean
       sourceHpCount?: number
+      faintSourceMoved?: boolean
+      normalAttack?: 'payable' | 'blocked'
+      bs8021Scenario?: 'no-energy' | 'faint-flip'
     }
   | {
       kind: 'card-negative'
@@ -495,6 +499,24 @@ export const parseTestStateConfig = (
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber, preferSkillSurface: true }
     }
+  }
+  if (testState?.startsWith('card-attack:') || testState?.startsWith('card-attack-negative:')) {
+    const [route, cardNumber] = testState.split(':')
+    if (cardNumber?.trim()) return {
+      kind: 'card-check', cardNumber: cardNumber.trim(),
+      normalAttack: route === 'card-attack' ? 'payable' : 'blocked',
+    }
+  }
+  if (testState === 'bs8-018-source-moved') {
+    return { kind: 'card-check', cardNumber: 'BS8-018', faintSourceMoved: true }
+  }
+  const bs8021Scenario = /^bs8-021-(no-energy|faint-flip)(@1)?$/.exec(testState ?? '')
+  if (bs8021Scenario) {
+    return { kind: 'card-check', cardNumber: `BS8-021${bs8021Scenario[2] ?? ''}`,
+      bs8021Scenario: bs8021Scenario[1] === 'no-energy' ? 'no-energy' : 'faint-flip' }
+  }
+  if (testState === 'bs8-019-source-moved') {
+    return { kind: 'card-check', cardNumber: 'BS8-019@1', faintSourceMoved: true }
   }
   if (testState === 'bs8-hp-condition:BS8-002:unmet' || testState === 'bs8-hp-condition:BS8-003:unmet') {
     return { kind: 'card-check', cardNumber: testState.split(':')[1], preferSkillSurface: true, sourceHpCount: 2 }
@@ -1244,6 +1266,19 @@ function createBs8ExtraDeckScenarioState(
         cardNumber === 'BS8-104'
           ? [testSupportCard('bs8-104-purple-return', 'purple')]
           : [],
+    }
+  }
+
+  if (cardNumber === 'BS8-027') {
+    const first = opponent.battleArea[0]
+    opponentUpdate = {
+      ...opponentUpdate,
+      battleArea: [first, {
+        ...first,
+        card: { ...first.card, instanceId: 'bs8-027-second-opponent' },
+        hpCards: first.hpCards.map((card, index) => ({ ...card, instanceId: `bs8-027-second-hp-${index}` })),
+        battleEntryId: 'bs8-027-second-opponent:entry',
+      }],
     }
   }
 
@@ -3281,14 +3316,44 @@ const createBs8042EntryDemoState = (card: CookieCard): GameState => {
 
 export const createCardCheckDemoState = (
   cardNumber: string,
-  options: { preferSkillSurface?: boolean; sourceHpCount?: number } = {},
+  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip' } = {},
 ): GameState => {
+  if (options.bs8021Scenario) {
+    if (cardNumber.split('@')[0] !== 'BS8-021') throw new Error('Soul Jam continuation fixture requires BS8-021')
+    const state = createCardCheckDemoState(cardNumber, { ...options, bs8021Scenario: undefined })
+    const player = state.players['player-one']
+    if (options.bs8021Scenario === 'no-energy') {
+      // Preserve RR to use the Item, but leave no third red support for Then.
+      return updateDemoPlayer(state, 'player-one', {
+        supportArea: player.supportArea.map((support, index) => ({ ...support, rested: index >= 2 })),
+      })
+    }
+    // A genuine HP FLIP can save Cake Wolf; declining it causes a faint
+    // trigger that must finish without losing Soul Jam's remaining effects.
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: [player.battleArea[0], cardCheckBattleEntry(
+        cardCheckOfficialCookie('BS8-018', 'BS8-021-cake-wolf'),
+        [cardCheckOfficialCard('BS8-015', 'BS8-021-hp-flip')], 6,
+      )],
+    })
+  }
+  if (options.faintSourceMoved) {
+    const state = createCardCheckDemoState(cardNumber, { ...options, faintSourceMoved: false })
+    const faint = state.pendingFaintEffects?.[0]
+    if (faint?.effect.kind !== 'break-source-to-trash') {
+      throw new Error('Source-moved fixture requires a faint source movement effect')
+    }
+    // Keep the queued trigger and all payment resources, but move the source
+    // with the shared rules effect as if an earlier trigger had resolved first.
+    return executeCardEffect(state, faint.context, { kind: 'break-source-to-trash' }, [])
+  }
   // EXTRA cards are deliberately not GameCards.  Route the generic localhost
   // card-check URL through the isolated EXTRA fixture instead of allowing the
   // normal `createCard` fallback to silently classify `type: extra` as an item
   // and place it in the player's hand.
   const baseCardNumber = cardNumber.trim().split('@')[0]
   if (isBs8ExtraDeckCardNumber(baseCardNumber)) {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
     if (baseCardNumber === 'BS8-027' && options.preferSkillSurface) {
       return createBs8027BreakSkillDemoState(cardNumber, true)
     }
@@ -3311,7 +3376,7 @@ export const createCardCheckDemoState = (
   // the normalized runtime attack still has a coloured energy cost (for
   // example BS8-083@2).  Browser candidate fixtures must pay that actual
   // runtime cost instead of manufacturing an unrelated purple shortfall.
-  if (baseCardNumber === 'BS8-042' && card.type === 'cookie') return createBs8042EntryDemoState(card)
+  if (baseCardNumber === 'BS8-042' && card.type === 'cookie' && !options.normalAttack) return createBs8042EntryDemoState(card)
   const attackPaymentColor =
     card.type === 'cookie'
       ? card.attackEnergyCost
@@ -3799,6 +3864,24 @@ export const createCardCheckDemoState = (
   ]
 
   // --- Non-cookie cards (item / trap / stage) --------------------------
+  if (options.normalAttack) {
+    if (card.type !== 'cookie') throw new Error('Normal attack fixture requires a Cookie')
+    const state = baseState()
+    // Keep every printed ability, but start before declaration rather than in
+    // a FLIP/faint window. Payment and damage still use normal game commands.
+    return {
+      ...state,
+      players: {
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [cardCheckBattleEntry(card, Array.from({ length: card.hp }, (_, index) =>
+            testSupportCard(`${card.id}-attack-hp-${index + 1}`, payColor)), 4)],
+          supportArea: energySupports.map(card => ({ card, rested: options.normalAttack === 'blocked' })),
+        },
+        'player-two': { ...state.players['player-two'], battleArea: opponentBattleArea },
+      },
+    }
+  }
   if (card.type === 'item') {
     const state = baseState()
     // Keep the real BS6-084 card-check path above its hand-count threshold so
@@ -3849,7 +3932,10 @@ export const createCardCheckDemoState = (
           ...deckFiller('p1').slice(1),
         ]
       : deckFiller('p1')
-    const itemDiscardPile = card.id === 'BS7-105'
+    const itemDiscardPile = card.id === 'BS8-022'
+      ? ['BS8-002', 'BS8-013', 'BS8-015', 'BS8-053', 'BS8-021'].map(number =>
+          cardCheckOfficialCard(number, `BS8-022-trash-${number}`))
+      : card.id === 'BS7-105'
       ? [
           ...trashFillers,
           {
@@ -3888,6 +3974,11 @@ export const createCardCheckDemoState = (
                 ),
                 cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
               ]
+            : card.id === 'BS8-022'
+              ? [
+                  cardCheckBattleEntry(cardCheckOfficialCookie('BS8-020', 'BS8-022-cost-cookie'), [cardCheckOfficialCard('BS8-016', 'BS8-022-cost-hp-recovery'), selfExtra1.hpCards[1]], 4),
+                  cardCheckBattleEntry(cardCheckOfficialCookie('BS8-014', 'BS8-022-remaining-cookie'), selfExtra1.hpCards.map((hp, index) => ({ ...hp, instanceId: `BS8-022-remaining-hp-${index}` })), 6),
+                ]
             : card.id === 'BS8-046'
               ? [
                   cardCheckBattleEntry(cardCheckOfficialCookie('BS8-037', 'BS8-046-hp1'), selfExtra1.hpCards.slice(0, 1), 4),
@@ -4042,7 +4133,10 @@ export const createCardCheckDemoState = (
         'player-one': {
           ...state.players['player-one'],
           hand: stageHand,
-          battleArea: [
+          battleArea: card.id === 'BS8-025' ? [
+            cardCheckBattleEntry(cardCheckOfficialCookie('BS8-020', 'BS8-025-cost-cookie'), selfExtra1.hpCards.slice(0, 2), 4),
+            cardCheckBattleEntry(cardCheckOfficialCookie('BS8-014', 'BS8-025-remaining-cookie'), selfExtra1.hpCards.map((hp, index) => ({ ...hp, instanceId: `BS8-025-remaining-hp-${index}` })), 6),
+          ] : [
             {
               ...cardCheckBattleEntry(
                 stageBattleFixture.cookie,
@@ -4247,7 +4341,11 @@ export const createCardCheckDemoState = (
                   ? { ...entry, card: { ...entry.card, keywords: ['arena'] as ['arena'] } }
                   : entry,
               )
-            : trapBattleArea,
+            : card.id === 'BS8-023'
+              ? trapBattleArea.map((entry, index) => index === 1
+                  ? { ...entry, hpCards: [cardCheckOfficialCard('BS8-015', 'BS8-023-own-unrevealed-hp')] }
+                  : entry)
+              : trapBattleArea,
           // BS6-063 的卡面寫的是「有 5 張卡牌」，不是「5 張以上」；
           // 付款只會將支援卡橫置，不會減少張數，因此要以恰好 5 張
           // 建立成立分支，才能在支付後繼續進入牌庫頂放置效果。
@@ -4276,7 +4374,9 @@ export const createCardCheckDemoState = (
                 cardCheckBattleEntry(attacker, attackerHpCards, 5, true),
                 cardCheckBattleEntry(
                   trapOpponentSecondCookie,
-                  trapOpponentSecondCookie === opp1.cookie
+                  card.id === 'BS8-023'
+                    ? [cardCheckOfficialCard('BS8-015', 'BS8-023-opponent-unrevealed-hp')]
+                    : trapOpponentSecondCookie === opp1.cookie
                     ? opp1.hpCards
                     : opp2.hpCards,
                   6,

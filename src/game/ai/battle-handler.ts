@@ -687,7 +687,11 @@ export const handleAiPendingBattle = (
         (effect) =>
           'target' in effect && effect.target?.side !== 'self',
       )
-      const targetIds = universal.enabled
+      const targetIds = trapTargetEffect?.kind === 'damage-all' && trapTargetEffect.sequential
+        ? getEffectTargetCandidatesForEffect(state, {
+            sourcePlayerId: playerId, sourceInstanceId: trapCard.instanceId,
+          }, trapTargetEffect).map(cookie => cookie.card.instanceId)
+        : universal.enabled
         ? trapTargetEffect && 'target' in trapTargetEffect && trapTargetEffect.target
           ? (() => {
               const candidateIds = trapTargets.map((target) => target.card.instanceId)

@@ -102,7 +102,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `全體${effect.side === 'self' ? '我方' : '對手'}餅乾攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}。`
   }
   if (effect.kind === 'damage-all') {
-    const recipients = `${effect.excludeSource ? '來源以外的' : ''}所有${effect.side === 'self' ? '我方' : '對手'}餅乾`
+    const side = effect.side === 'either' ? '雙方' : effect.side === 'self' ? '我方' : '對手'
+    const threshold = effect.minRemainingHp === undefined ? '' : `剩餘 HP 至少 ${effect.minRemainingHp} 的`
+    const recipients = `${effect.excludeSource ? '來源以外的' : ''}所有${threshold}${side}餅乾`
     if (effect.sequential) {
       return `依點選順序，逐一對${recipients}造成 ${effect.amount} 點傷害；每次傷害先處理 FLIP 與昏厥。`
     }
@@ -207,7 +209,7 @@ export const describeEffect = (effect: CardEffect) => {
     return '先選擇 1 張對手休息區餅乾放入棄牌區；再可選擇剛好高 1 LV 的對手戰鬥區餅乾放入休息區。'
   }
   if (effect.kind === 'break-to-battle') {
-    return `從 break 區選最多 ${effect.amount} 張餅乾登場。`
+    return `從休息區選最多 ${effect.amount} 張餅乾登場（可選 0 張）。`
   }
   if (effect.kind === 'support-to-battle') {
     return `從支援區選最多 ${effect.amount} 張餅乾登場。`
@@ -217,7 +219,7 @@ export const describeEffect = (effect: CardEffect) => {
     const sum = effect.targetSumMode === 'at-most'
       ? `不得超過 ${effect.targetSum}`
       : `需為 ${effect.targetSum}`
-    return `從 break 區選擇${count}，等級總和${sum}，返回手牌。`
+    return `從休息區選擇${count}，等級總和${sum}，返回手牌。`
   }
   if (effect.kind === 'hand-to-break-by-level-sum') {
     return `從手牌選擇餅乾，等級總和需恰好為 ${effect.targetSum}，放入休息區。`
@@ -245,7 +247,11 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'stage-source-to-trash') return '場景卡已放入棄牌區。'
   if (effect.kind === 'break-source-to-battle') return '從休息區登場。'
   if (effect.kind === 'reveal-hand') return `${effect.asCost ? '支付展示代價：' : ''}展示符合條件的手牌${effect.asCost ? '（必選，稍後將同一張牌放入休息區）' : ''}。`
-  if (effect.kind === 'hand-to-break') return '手牌餅乾已放入休息區。'
+  if (effect.kind === 'hand-to-break') {
+    return effect.revealedCardOnly
+      ? '將先前展示的同一張手牌放入休息區（不能改選）。'
+      : '手牌餅乾已放入休息區。'
+  }
   if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
   if (effect.kind === 'flip-to-break') return '將這張 FLIP 卡放入休息區。'
   if (effect.kind === 'trash-to-break') return effect.sourceToTrashFirst
@@ -301,7 +307,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}放入支援區。`
   }
   if (effect.kind === 'battle-to-break' && t) {
-    return `選擇 ${t.count}${t.target}放入 break 區。`
+    if (effect.target.sourceOnly && effect.target.min === 1 && effect.target.max === 1) {
+      return '將此餅乾放入休息區。'
+    }
+    return `選擇 ${t.count}${t.target}放入休息區。`
   }
   if (effect.kind === 'disable-attack' && t) {
     return `選擇 ${t.count}${t.target}，下回合不能攻擊。`
@@ -438,15 +447,20 @@ export const describeEffectResult = (
       ? `${names} 已處理。`
       : '已完成休息區連鎖效果。'
   }
-  if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
+  if (effect.kind === 'break-to-battle') {
+    return targetNames.length > 0
+      ? '休息區餅乾已登場。'
+      : '未選擇休息區餅乾，已略過登場。'
+  }
   if (effect.kind === 'support-to-battle') {
     return targetNames.length > 0
       ? '支援區餅乾已登場。'
       : '未選擇支援區餅乾，已略過登場。'
   }
-  if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
+  if (effect.kind === 'break-to-hand-by-level-sum') return '休息區餅乾已返回手牌。'
   if (effect.kind === 'hand-to-break-by-level-sum') return '手牌餅乾已放入休息區。'
-  if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`
+  if (effect.kind === 'hand-to-break' && effect.revealedCardOnly) return '先前展示的同一張手牌已放入休息區。'
+  if (effect.kind === 'battle-to-break') return `${names} 已放入休息區。`
   if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
   if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`
   if (effect.kind === 'transfer-hp') {

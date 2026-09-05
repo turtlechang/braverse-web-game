@@ -8,6 +8,11 @@ import type {
 import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
 
 describe('damage-all recipient description', () => {
+  it('describes both players and the remaining HP threshold for ordered damage', () => {
+    expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+      minRemainingHp: 2, target: { side: 'either', min: 0, max: 4 } }))
+      .toBe('依點選順序，逐一對所有剩餘 HP 至少 2 的雙方餅乾造成 1 點傷害；每次傷害先處理 FLIP 與昏厥。')
+  })
   it('preserves the source exclusion in BS8-005 attack text', () => {
     expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'self', excludeSource: true }))
       .toBe('來源以外的所有我方餅乾受到 1 傷害。')
@@ -100,6 +105,14 @@ describe('describeEffectResult for optional trash-to-battle', () => {
     expect(describeEffectResult(effect, ['BS6-106-purple-hp2-trash-cookie'])).toBe(
       '棄牌區餅乾已登場。',
     )
+  })
+})
+
+describe('describeEffectResult for break-to-battle', () => {
+  it('distinguishes declining a revival from selecting a Cookie to enter battle', () => {
+    const effect = { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' } as const
+    expect(describeEffectResult(effect, [])).toBe('未選擇休息區餅乾，已略過登場。')
+    expect(describeEffectResult(effect, ['Golden Cheese Cookie'])).toBe('休息區餅乾已登場。')
   })
 })
 
@@ -207,5 +220,22 @@ describe('describeEffectResult for deck-to-trash', () => {
     expect(describeEffectResult(effect, [])).toBe(
       '對手牌庫頂 5 張牌已放入棄牌區。',
     )
+  })
+})
+
+describe('battle-to-break source and destination descriptions', () => {
+  it('identifies mandatory source movement without losing other selectors', () => {
+    const effect = { kind: 'battle-to-break' as const, target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true } }
+    expect(describeEffect(effect)).toBe('將此餅乾放入休息區。')
+    expect(describeEffect({ ...effect, target: { side: 'opponent', min: 0, max: 1 } })).toBe('選擇 最多 1 張對手餅乾放入休息區。')
+    expect(describeEffectResult(effect, ['Habanero Cookie'])).toBe('Habanero Cookie 已放入休息區。')
+  })
+})
+
+describe('revealed hand card movement descriptions', () => {
+  it('distinguishes the pending fixed-card instruction from its resolved result', () => {
+    const effect = { kind: 'hand-to-break' as const, amount: 1, revealedCardOnly: true }
+    expect(describeEffect(effect)).toBe('將先前展示的同一張手牌放入休息區（不能改選）。')
+    expect(describeEffectResult(effect, [])).toBe('先前展示的同一張手牌已放入休息區。')
   })
 })

@@ -6,6 +6,7 @@ import type {
   CardKeyword,
   CookieCard,
   CookieInBattle,
+  DamageAllEffect,
   DeckToSupportEffect,
   DrawEffect,
   EffectContext,
@@ -338,6 +339,52 @@ export const getBattleToBreakBlocker = (
     : undefined
 }
 
+// BS3-082「若手牌 5 張以下，此餅乾不受任何效果傷害」是 trigger: 'passive'
+// 的持續性條件被動，沒有任何玩家操作或系統事件會把它送進 executeCardEffect
+// 去寫入 effectDamagePreventedUntilTurn 快照（那個欄位/duration 是設計給
+// 一次性觸發、保護到某個回合為止的效果用的）。所以除了讀快照，這裡還要
+// 即時重新檢查目標身上「trigger: 'passive' 且以自己為目標」的
+// prevent-effect-damage 技能，條件成立就視為保護中，不然這張卡的被動永遠不會生效。
+export const isEffectDamagePrevented = (
+  state: GameState,
+  target: CookieInBattle,
+  ownerId: PlayerId,
+): boolean => {
+  const expiration = state.effectDamagePreventedUntilTurn?.[target.card.instanceId]
+  if (expiration !== undefined && state.turnNumber <= expiration) {
+    return true
+  }
+
+  const skill = target.card.skill
+  if (!skill || skill.trigger !== 'passive') {
+    return false
+  }
+
+  const context: EffectContext = {
+    sourcePlayerId: ownerId,
+    sourceInstanceId: target.card.instanceId,
+  }
+  return skill.effects.some(
+    (effect) =>
+      effect.kind === 'prevent-effect-damage' &&
+      effect.target.sourceOnly &&
+      isEffectConditionMet(state, context, effect),
+  )
+}
+
+/** UI and execution must agree on the complete ordered damage set. */
+export const getDamageAllCandidates = (
+  state: GameState, context: EffectContext, effect: DamageAllEffect,
+): CookieInBattle[] => getEffectTargetCandidates(state, context,
+  effect.target ?? { side: effect.side, min: 0, max: 4 },
+).filter(cookie => {
+  const ownerId = getCookieOwnerId(state, cookie.card.instanceId)
+  return ownerId !== null && !isEffectDamagePrevented(state, cookie, ownerId) &&
+    (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId) &&
+    (!effect.excludeCardName || cookie.card.name !== effect.excludeCardName) &&
+    (effect.minRemainingHp === undefined || getCookieEffectiveHp(cookie) >= effect.minRemainingHp)
+})
+
 /**
  * 回傳沒有標準 `target` selector 的卡牌效果之合法目標。
  *
@@ -421,7 +468,7 @@ export const getEffectTargetCandidatesForEffect = (
   // order. Treat it as a regular target effect here; otherwise the local
   // OnPlay panel receives an empty candidate list (for example BS3-113).
   if (effect.kind === 'damage-all' && effect.sequential && effect.target) {
-    return getEffectTargetCandidates(state, context, effect.target)
+    return getDamageAllCandidates(state, context, effect)
   }
 
   if (
@@ -1074,7 +1121,7 @@ export const hasRequiredEffectTargets = (
   if (effect.kind === 'damage-all' && effect.sequential) {
     return Boolean(
       effect.target &&
-        getEffectTargetCandidates(state, context, effect.target).length >=
+        getDamageAllCandidates(state, context, effect).length >=
           effect.target.min,
     )
   }
@@ -2024,7 +2071,7 @@ export const isEffectConditionMet = (
   if (effect.kind === 'damage-all' && effect.sequential) {
     return Boolean(
       effect.target &&
-        getEffectTargetCandidates(state, context, effect.target).length >=
+        getDamageAllCandidates(state, context, effect).length >=
           effect.target.min,
     )
   }

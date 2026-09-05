@@ -631,14 +631,16 @@ export function useOnlineMatchController(params: {
           )
           if (candidates.length === 0) return []
           const limits = getEffectSelectionLimits(effect)
+          const ordered = effect.kind === 'damage-all' && effect.sequential === true
           return [
             {
               effectIndex,
               candidates,
               selectedTargetIds: selectedTrapEffectTargets[effectIndex] ?? [],
-              min: limits?.min ?? 0,
-              max: limits?.max ?? 1,
-              allowEmpty: (limits?.min ?? 0) === 0,
+              ordered,
+              min: ordered ? candidates.length : limits?.min ?? 0,
+              max: ordered ? candidates.length : limits?.max ?? 1,
+              allowEmpty: !ordered && (limits?.min ?? 0) === 0,
             },
           ]
         })

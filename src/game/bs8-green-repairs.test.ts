@@ -114,6 +114,50 @@ describe('BS8-059 Mystic Flour Cookie', () => {
 
     expect(state.players['player-two'].battleArea.map((entry) => entry.hpCards.length)).toEqual([1, 1])
   })
+
+  it('requires both returned support cards to be green and rejects mixed-color payment', () => {
+    const state = mysticState(false)
+    const redSupport = { card: support('mystic-red-extra', 'red'), rested: false }
+    const withRed: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [...state.players['player-one'].supportArea, redSupport],
+        },
+      },
+    }
+    const snapshot = structuredClone(withRed)
+    expect(() => applyGameCommand(withRed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: 'BS8-059:source',
+      trigger: 'activate',
+      paymentIds: ['BS8-053:support-mystic-energy'],
+      supportToHandIds: [
+        'BS8-053:support-mystic-return-one',
+        'BS8-053:support-mystic-red-extra',
+      ],
+    })).toThrow(/支援區回手費用必須選擇 green 能量顏色的卡牌/)
+    expect(withRed).toEqual(snapshot)
+
+    const oneGreenShort: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: state.players['player-one'].supportArea.map((entry, index) =>
+            index === 2 ? { ...entry, card: { ...entry.card, energyColor: 'red' as const } } : entry,
+          ),
+        },
+      },
+    }
+    const unpaidSnapshot = structuredClone(oneGreenShort)
+    expect(() => activateMystic(oneGreenShort)).toThrow(/目前無法發動這個餅乾技能/)
+    expect(oneGreenShort).toEqual(unpaidSnapshot)
+  })
 })
 
 describe('BS8-065 Spinach Cookie', () => {

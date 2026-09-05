@@ -281,6 +281,58 @@ describe('usePendingEffect BS8-042 support selection', () => {
 })
 
 describe('usePendingEffect Break area costs', () => {
+  it('BS8-022 pays the faint cost before offering the discarded HP Cookie for recovery', async () => {
+    const initial = createCardCheckDemoState('BS8-022')
+    const owner = initial.players['player-one']
+    const item = owner.hand.find(card => card.id === 'BS8-022')!
+    if (item.type !== 'item') throw new Error('Expected the real BS8-022 Item')
+    const ability = item.item
+    if (!ability) throw new Error('Expected the real BS8-022 ability')
+    const costCookie = owner.battleArea[0]
+    const hpCookie = costCookie.hpCards.find(card => card.id === 'BS8-016')!
+    expect(hpCookie).toBeDefined()
+    let currentGame = initial
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      const [game, setGame] = useState(initial)
+      currentGame = game
+      captured = usePendingEffect({
+        game, setGame, dispatch: createDispatch(game, setGame), viewerPlayerId: 'player-one',
+        setMessage: vi.fn(), clearAttacker: () => {}, setInspectedHpPile: () => {},
+        hasFaint: false, faintTargetIds: new Set(), selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 }, setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false, afterDamageTargetIds: new Set(), selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 }, setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginCardAbility(item, ability, 'item', '使用物品'))
+      expect(captured!.breakAreaCostSelectionPending).toBe(true)
+      await act(() => captured!.toggleEffectTarget(owner.discardPile[0].instanceId))
+      expect(captured!.pendingEffect?.selectedTargetIds).toEqual([])
+      await act(() => captured!.toggleSkillPayment(owner.supportArea[0].card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame).toBe(initial)
+      await act(() => captured!.toggleSkillTrashBattleCookie(costCookie.card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.players['player-one'].breakArea).toContainEqual(costCookie.card)
+      expect(currentGame.players['player-one'].discardPile).toContainEqual(hpCookie)
+      expect(captured!.breakAreaCostSelectionPending).toBe(false)
+      expect(captured!.trashToHandCandidates).toContainEqual(hpCookie)
+      expect(captured!.trashToHandCandidates).not.toContainEqual(costCookie.card)
+      await act(() => captured!.toggleEffectTarget(hpCookie.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.players['player-one'].hand).toContainEqual(hpCookie)
+      expect(currentGame.players['player-one'].supportArea.filter(s => s.rested)).toHaveLength(1)
+      expect(currentGame.pendingAbilityEffect).toBeFalsy()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it.each(['trash', 'hand'] as const)('pays %s cost before opening effect selection and rejects invalid cost choices', async (zone) => {
     const base = createCardCheckDemoState('BS8-031')
     const originalSource = base.players['player-one'].hand.find((card) => card.id === 'BS8-031')!

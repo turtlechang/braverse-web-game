@@ -1242,7 +1242,9 @@ export function TrapResponseModal({
                     {trapEffectTargetSteps.map((targetStep, stepIndex) => (
                       <div className="trap-effect-target-step" key={targetStep.effectIndex}>
                         <span>
-                          第 {stepIndex + 1} 段目標（最多 {targetStep.max} 張）
+                          {targetStep.ordered
+                            ? `第 ${stepIndex + 1} 段傷害順序（依序選擇全部 ${targetStep.max} 張）`
+                            : `第 ${stepIndex + 1} 段目標（最多 ${targetStep.max} 張）`}
                         </span>
                         <div className="modal-card-options compact trap-target-options">
                           {targetStep.candidates.map((candidate) => {
@@ -1270,6 +1272,9 @@ export function TrapResponseModal({
                               >
                                 <CardFace card={candidate.card} selected={selected} />
                                 <span>{candidate.card.name}</span>
+                                {targetStep.ordered && selected && (
+                                  <small>第 {targetStep.selectedTargetIds.indexOf(candidate.card.instanceId) + 1} 張結算</small>
+                                )}
                                 {isAttacker && (
                                   <small className="attacker-badge">⚔ 攻擊中</small>
                                 )}
@@ -1278,7 +1283,7 @@ export function TrapResponseModal({
                           })}
                         </div>
                         <span>
-                          已選 {targetStep.selectedTargetIds.length}／最多 {targetStep.max}
+                          已選 {targetStep.selectedTargetIds.length}／{targetStep.ordered ? '全部' : '最多'} {targetStep.max}
                         </span>
                         {targetStep.allowEmpty && (
                           <button
@@ -1635,7 +1640,7 @@ export function FaintEffectResponseModal({
   const canConfirm =
     !unavailableReason && selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
-    ? '此效果沒有目標選擇，確認後會繼續結算效果。'
+    ? '此步驟不需選擇目標。確認後會結算此步驟；若後續需要選擇，會接著顯示提示。'
     : candidateCards.length > 0 || targetCandidateCards.length > 0
       ? minTargets === 0
         ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`

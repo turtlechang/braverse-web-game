@@ -4064,10 +4064,10 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
-    // BS8-018 Cake Wolf：昏厥後先把剛進休息區的來源送進棄牌區，再對至多
-    // 一張對手餅乾造成傷害；來源可作為 1 點紅色能量見 sourceEnergy map。
+    // BS8-018 Cake Wolf：可選擇先支付 1 紅色支援能量，再將休息區來源
+    // 送至棄牌區作為代價，最後對至多一張對手餅乾造成傷害。
     'BS8-018': [
-      { kind: 'break-source-to-trash' },
+      { kind: 'break-source-to-trash', asCost: true },
       {
         kind: 'damage',
         amount: 1,
@@ -4421,7 +4421,7 @@ export const convertOfficialCardEffects = (
     // BS8-019@1 Cake Hound：昏厥觸發的棄牌成本後，來源自休息區進棄牌區，
     // 再選至多一張非同名紅色 LV.1 Cookie 回手。
     'BS8-019': [
-      { kind: 'break-source-to-trash' },
+      { kind: 'break-source-to-trash', asCost: true },
       {
         kind: 'trash-to-hand',
         max: 1,
@@ -4527,8 +4527,8 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS8-021 Soul Jam: Light of Destruction：傷害要排除所有同名的
-    // Burning Spice Cookie；裝備與攻擊時的陷阱封鎖則在 Item ability
-    // 的 equippedAttackEffects 保存，避免每次攻擊重複執行這次性的全體傷害。
+    // Burning Spice Cookie；Then另付R支援能量才能裝備。攻擊時的陷阱
+    // 封鎖保存在 equippedAttackEffects，避免攻擊時重複執行全體傷害。
     'BS8-021': [
       {
         kind: 'damage-all',
@@ -4543,9 +4543,15 @@ export const convertOfficialCardEffects = (
         excludeCardName: 'Burning Spice Cookie',
       },
       {
-        kind: 'equip-source',
-        target: { side: 'self', min: 0, max: 1 },
-        requiredCookieId: 'BS8-009',
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        effectText: 'Then, <can be used as {R}.> You can 【Equip】 this card to your [Burning Spice Cookie].',
+        effects: [{
+          kind: 'equip-source',
+          target: { side: 'self', min: 0, max: 1 },
+          requiredCookieId: 'BS8-009',
+        }],
       },
     ],
     // BS8-032／034 Cheese Cookie：兩者均先把來源與一張手牌送入休息區；
@@ -5365,7 +5371,7 @@ export const convertOfficialItemAbility = (
     'BS8-022': {
       energy: { red: 1 },
       discardHand: 0,
-      trashBattleCookie: { count: 1 },
+      trashBattleCookie: { count: 1, faint: true },
     },
     'BS8-021': { energy: { red: 2 }, discardHand: 0 },
     'BS8-047': { energy: { yellow: 1 }, discardHand: 0 },
@@ -5376,10 +5382,6 @@ export const convertOfficialItemAbility = (
       discardHandColor: 'purple',
       discardHandNonCookie: true,
     },
-  }
-  const exactSourceEnergy: Partial<Record<string, EnergyCost>> = {
-    // 這是裝備後的來源能量，非物品啟動費用。
-    'BS8-021': { red: 1 },
   }
   const exactEquippedAttackEffects: Partial<Record<string, CardEffect[]>> = {
     'BS8-021': [
@@ -5401,9 +5403,6 @@ export const convertOfficialItemAbility = (
     cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
     text: abilityText,
     effects: conversion.effects,
-    ...(exactSourceEnergy[cardKey]
-      ? { sourceEnergy: exactSourceEnergy[cardKey] }
-      : {}),
     ...(exactEquippedAttackEffects[cardKey]
       ? { equippedAttackEffects: exactEquippedAttackEffects[cardKey] }
       : {}),
@@ -5478,22 +5477,13 @@ export const convertOfficialStageAbility = (
         condition: { kind: 'support-area-decreased-this-turn' },
       },
     ],
-    // BS8-024 Land of Fire & Ruin：兩位玩家的每一張 Cookie 都各受 1 點
-    // 傷害；不能把雙方併成不帶 side 的泛用全場效果。
+    // Resolve both players' Cookies in the activating player's chosen order.
     'BS8-024': [
-      { kind: 'damage-all', amount: 1, side: 'self' },
-      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      { kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+        target: { side: 'either', min: 0, max: 4 } },
     ],
-    // BS8-024@1 與 BS8-025：兩張都把「讓一張己方 Cookie 昏厥」放在
-    // 發動成本，後續才可選至多一張對手 Cookie 造成 1 點傷害。異圖的
-    // cardNumber 有獨立文字，不能沿用 BS8-024 基礎版的全體傷害效果。
-    'BS8-024@1': [
-      {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
-      },
-    ],
+    // BS8-024@1 的錯置卡文在 normalization 修正，沿用 024 基礎效果。
+    // BS8-025 自身才有昏厥代價及對手最多 1 張的傷害效果。
     'BS8-025': [
       {
         kind: 'damage',
@@ -6001,15 +5991,10 @@ export const convertOfficialStageAbility = (
     'BS1-052': { energy: { yellow: 2 }, discardHand: 0 },
     'BS1-078': { energy: {}, discardHand: 0 },
     'BS8-024': { energy: { red: 2 }, discardHand: 0 },
-    'BS8-024@1': {
-      energy: { red: 1 },
-      discardHand: 0,
-      trashBattleCookie: { count: 1 },
-    },
     'BS8-025': {
       energy: { red: 1 },
       discardHand: 0,
-      trashBattleCookie: { count: 1 },
+      trashBattleCookie: { count: 1, faint: true },
     },
     'BS8-049': { energy: { yellow: 1 }, discardHand: 0 },
     'BS8-050': { energy: {}, discardHand: 0 },
@@ -6156,7 +6141,10 @@ export const convertOfficialAttackEffects = (
       { kind: 'damage-all', amount: 1, side: 'opponent' },
       { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
     ],
-    'BS8-027': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    'BS8-027': [{
+      kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
+      target: { side: 'opponent', min: 0, max: 2 },
+    }],
     'BS8-090': [{ kind: 'draw-up-to', max: 2 }],
     'BS8-104': [
       {
@@ -8866,8 +8854,8 @@ export const convertOfficialTrapAbility = (
     },
     'BS8-023': {
       effects: [
-        { kind: 'damage-all', amount: 1, side: 'self', minRemainingHp: 2 },
-        { kind: 'damage-all', amount: 1, side: 'opponent', minRemainingHp: 2 },
+        { kind: 'damage-all', amount: 1, side: 'either', sequential: true, minRemainingHp: 2,
+          target: { side: 'either', min: 0, max: 4, minRemainingHp: 2 } },
       ],
     },
     'BS8-048': {
@@ -9645,7 +9633,12 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   // 可防止通用英文 parser 漏掉 self reference 而讓技能無成本發動。
   'BS8-052': { energy: {}, discardHand: 0, selfToTrash: true },
   'BS8-103': { energy: { purple: 1 }, discardHand: 0 },
-  'BS8-059': { energy: { green: 1 }, discardHand: 0, supportToHand: 2 },
+  'BS8-059': {
+    energy: { green: 1 },
+    discardHand: 0,
+    supportToHand: 2,
+    supportToHandColor: 'green',
+  },
   'BS8-060': {
     energy: {},
     discardHand: 0,

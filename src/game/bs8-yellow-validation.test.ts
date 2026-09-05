@@ -65,7 +65,7 @@ describe('BS8 yellow Browser condition fixtures', () => {
     expect(pending.pendingAbilityEffect?.effects).toHaveLength(1)
     expect(JSON.stringify(pending.commandLog)).toContain('技能代價：棄牌區餅乾放入休息區')
     const targetIds = player.breakArea.map((card) => card.instanceId)
-    for (const ids of [[], targetIds.slice(0, 1), [targetIds[0], costCard.instanceId], [targetIds[0], targetIds[0]]]) {
+    for (const ids of [[], targetIds.slice(0, 1), [targetIds[0], costCard.instanceId], [targetIds[0], targetIds[0]], [targetIds[0], targetIds[0], targetIds[1]]]) {
       expect(() => applyGameCommand(pending, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: ids })).toThrow()
     }
     const resolved = applyGameCommand(pending, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds })
@@ -76,6 +76,18 @@ describe('BS8 yellow Browser condition fixtures', () => {
     const negative = applyGameCommand(negativeInitial, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
     expect(canActivateCookieSkill(negative, 'player-one', source.instanceId, 'on-play')).toBe(false)
     expect(getCookieSkillUnavailableReason(negative, 'player-one', source.instanceId, 'on-play')).toContain('棄牌區沒有符合')
+    const atSeven = { ...state, players: { ...state.players, 'player-one': { ...player,
+      breakArea: [...player.breakArea,
+        { ...player.breakArea[1], instanceId: 'break-boundary-lv2-a' },
+        { ...player.breakArea[1], instanceId: 'break-boundary-lv2-b' }],
+    } } }
+    expect(atSeven.players['player-one'].breakArea.reduce((sum, card) => sum + card.level, 0)).toBe(7)
+    const defeated = applyGameCommand(atSeven, command)
+    expect(defeated.status).toBe('finished')
+    expect(defeated.result).toMatchObject({ winnerId: 'player-two', reason: 'break-level-limit' })
+    expect(defeated.players['player-one'].hand).toEqual(player.hand)
+    expect(defeated.players['player-one'].breakArea).toHaveLength(5)
+    expect(defeated.pendingAbilityEffect).toBeFalsy()
   })
   it('BS8-030 requires two yellow plus two arbitrary support energy for its vanilla attack', () => {
     const initial = createCardCheckDemoState('BS8-030')

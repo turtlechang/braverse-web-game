@@ -84,6 +84,20 @@ const BS4_VARIANT_DAMAGE_ERRATA: Record<
 export const normalizeKnownOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
+  // BS8-024 P 的官方實圖與 U 版均為 R 配置、RR 橫置、全體 1 傷害。
+  // 英文 JSON 的 @1 誤放 BS8-025 卡文；只修正這筆已核對的錯誤文字。
+  // https://cookierunbraverse.com/data/en_storage/RRMhMXvgUbkb1vWw5saNjA.webp
+  if (
+    sourceCard.cardNumber === 'BS8-024@1' &&
+    sourceCard.type === 'stage' &&
+    sourceCard.name === 'Land of Fire & Ruin' &&
+    sourceCard.skill.text?.replace(/\s+/g, ' ').trim() ===
+      "<{R}{R}> Place in your stage area. 【Activate】 <{R}> <Rest this card.> <Make 1 of your Cookies faint.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+  ) {
+    return { ...sourceCard, skill: { ...sourceCard.skill,
+      text: '<{R}> Place in your stage area.\r\n\r\n【Activate】 <{R}{R}> <Rest this card.> All Cookies receive 1 damage.',
+    } }
+  }
   // Missing color is common in official FLIP/alternate-art records. Recover
   // it from structured energyType, so deck construction and adapters agree.
   if (!sourceCard.color || sourceCard.color === 'null') {

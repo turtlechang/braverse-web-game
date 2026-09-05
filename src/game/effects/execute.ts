@@ -41,6 +41,8 @@ import {
 } from '../victory'
 import {
   getBreakCount,
+  getDamageAllCandidates,
+  isEffectDamagePrevented,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
@@ -343,39 +345,6 @@ const getExpirationTurn = (
     : state.turnNumber + 1
 }
 
-// BS3-082「若手牌 5 張以下，此餅乾不受任何效果傷害」是 trigger: 'passive'
-// 的持續性條件被動，沒有任何玩家操作或系統事件會把它送進 executeCardEffect
-// 去寫入 effectDamagePreventedUntilTurn 快照（那個欄位/duration 是設計給
-// 一次性觸發、保護到某個回合為止的效果用的）。所以除了讀快照，這裡還要
-// 即時重新檢查目標身上「trigger: 'passive' 且以自己為目標」的
-// prevent-effect-damage 技能，條件成立就視為保護中，不然這張卡的被動永遠不會生效。
-const isEffectDamagePrevented = (
-  state: GameState,
-  target: CookieInBattle,
-  ownerId: PlayerId,
-): boolean => {
-  const expiration = state.effectDamagePreventedUntilTurn?.[target.card.instanceId]
-  if (expiration !== undefined && state.turnNumber <= expiration) {
-    return true
-  }
-
-  const skill = target.card.skill
-  if (!skill || skill.trigger !== 'passive') {
-    return false
-  }
-
-  const context: EffectContext = {
-    sourcePlayerId: ownerId,
-    sourceInstanceId: target.card.instanceId,
-  }
-  return skill.effects.some(
-    (effect) =>
-      effect.kind === 'prevent-effect-damage' &&
-      effect.target.sourceOnly &&
-      isEffectConditionMet(state, context, effect),
-  )
-}
-
 export const executeCardEffect = (
   state: GameState,
   context: EffectContext,
@@ -665,94 +634,19 @@ export const executeCardEffect = (
     )
 
     if (effect.sequential) {
-      if (!effect.target) {
-        throw new GameRuleError('Sequential damage requires a target selector.')
-      }
-      const candidateIds = targets.map((target) => target.card.instanceId)
+      if (!effect.target) throw new GameRuleError('Sequential damage requires a target selector.')
+      const candidates = getDamageAllCandidates(state, context, effect)
       const selectedIds = [...new Set(selectedTargetIds)]
-      const selectedAllCandidates =
-        selectedIds.length === selectedTargetIds.length &&
-        selectedIds.length === candidateIds.length &&
-        selectedIds.every((instanceId) => candidateIds.includes(instanceId))
-      if (!selectedAllCandidates) {
-        throw new GameRuleError(
-          'Select every legal damage target exactly once, in resolution order.',
-        )
+      if (selectedIds.length !== selectedTargetIds.length || selectedIds.length !== candidates.length ||
+          selectedIds.some(id => !candidates.some(cookie => cookie.card.instanceId === id))) {
+        throw new GameRuleError('Select every legal damage target exactly once, in resolution order.')
       }
-
-      const [targetInstanceId, ...remainingTargetInstanceIds] = selectedIds
-      if (!targetInstanceId) return state
-
-      // Sequential damage may itself be an attack-after effect (for example
-      // BS7-039 / BS7-082). Preserve the active battle metadata so the
-      // existing damage／FLIP／faint state machine can resume the remaining
-      // attack effects after every selected opponent Cookie is resolved.
-      const existingBattle = state.pendingBattle
-      const continuation = existingBattle
-        ? state.pendingAbilityEffect
-          ? 'ability-effect'
-          : existingBattle.stage === 'attack-effect'
-            ? 'attack-effect'
-            : existingBattle.stage === 'trap'
-              ? 'after-trap'
-              : 'finish-battle'
-        : state.pendingAbilityEffect
-          ? 'ability-effect'
-          : 'finish-battle'
-      const pendingBattle: PendingBattle = existingBattle
-        ? {
-            ...existingBattle,
-            targetInstanceId,
-            declaredDamage: damageAmount,
-            remainingDamage: damageAmount,
-            stage: 'damage',
-            revealedHpCard: null,
-            damagePlayerId: targetPlayerId,
-            damageTargetInstanceId: targetInstanceId,
-            damagedInstanceIds: [],
-            effectDamageSequence: {
-              remainingTargetInstanceIds,
-              damage: damageAmount,
-              remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
-                playerId: targetPlayerId,
-                instanceId,
-                damage: damageAmount,
-              })),
-              continuation,
-              resumeBattleAfterAbility: continuation === 'ability-effect',
-            },
-          }
-        : {
-            attackerPlayerId: context.sourcePlayerId,
-            defenderPlayerId: targetPlayerId,
-            // 代價可能正好讓來源昏厥離場；已成功啟動的技能仍要完整結算。
-            attackerInstanceId: context.sourceInstanceId,
-            targetInstanceId,
-            declaredDamage: damageAmount,
-            remainingDamage: damageAmount,
-            stage: 'damage',
-            trapUsed: true,
-            revealedHpCard: null,
-            preventKnockoutTargetIds: [],
-            faintedColors: [],
-            attackEffects: [],
-            attackEffectIndex: 0,
-            damagePlayerId: targetPlayerId,
-            damageTargetInstanceId: targetInstanceId,
-            effectDamageSequence: {
-              remainingTargetInstanceIds,
-              damage: damageAmount,
-              remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
-                playerId: targetPlayerId,
-                instanceId,
-                damage: damageAmount,
-              })),
-              continuation,
-              resumeBattleAfterAbility: false,
-            },
-          }
-      return { ...state, pendingBattle }
+      const orderedTargets = selectedIds.map(instanceId => ({
+        playerId: getCookieOwnerId(state, instanceId)!, instanceId, damage: damageAmount,
+      }))
+      return beginEffectDamageSequence(state, context, orderedTargets, true) ?? state
     }
+    if (effect.side === 'either') throw new GameRuleError('Cross-player all-Cookie damage requires ordered resolution.')
 
     const effectDamageTargets: EffectDamageTarget[] = targets.map((target) => ({
       playerId: targetPlayerId,
@@ -3149,6 +3043,9 @@ export const executeCardEffect = (
     const player = state.players[context.sourcePlayerId]
     const candidates = getBreakToHandBySumCandidates(state, context, effect)
     const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== selectedTargetIds.length) {
+      throw new GameRuleError('同一張休息區餅乾不能重複選擇。')
+    }
     if (uniqueIds.length === 0) {
       if (effect.cardCount === undefined) return { ...state }
       throw new GameRuleError(`必須選擇 ${effect.cardCount} 張休息區餅乾。`)
@@ -4321,7 +4218,11 @@ const hasEffectDamageFlip = (
     const firstRemovedIndex = Math.max(0, cookie.hpCards.length - damage)
     return cookie.hpCards
       .slice(firstRemovedIndex)
-      .some((card) => Boolean(card.flip?.effects.length))
+      // Attached-HP FLIPs store their recovery separately from effects, but
+      // must still offer payment before the damaged Cookie can faint.
+      .some((card) => Boolean(card.flip && (
+        card.flip.effects.length > 0 || (card.flip.attachedHpBonus ?? 0) > 0
+      )))
   })
 
 const getEffectDamageContinuation = (
@@ -4343,11 +4244,12 @@ export const beginEffectDamageSequence = (
   state: GameState,
   context: EffectContext,
   targets: readonly EffectDamageTarget[],
+  forceSequence = false,
 ): GameState | null => {
   const normalizedTargets = targets.filter((target) => target.damage > 0)
   if (
     normalizedTargets.length === 0 ||
-    !hasEffectDamageFlip(state, normalizedTargets)
+    (!forceSequence && !hasEffectDamageFlip(state, normalizedTargets))
   ) {
     return null
   }
@@ -4395,6 +4297,7 @@ export const beginEffectDamageSequence = (
           (target) => target.instanceId,
         ),
         damage: first.damage,
+        originalAttackTargetInstanceId: existingBattle?.targetInstanceId,
         remainingTargets: remainingTargets.map((target) => ({ ...target })),
         continuation,
         resumeBattleAfterAbility:
