@@ -66,7 +66,7 @@
 | BS8-054 | Leek Cookie | GREEN | 1 | 一般 | 攻擊時觸發damage 1、條件支援區少≥1；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→target流程確認 | PASS：同A路徑 | 未測 |
 | BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；GGG/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-056 | Spicy Dumpling King | GREEN | 1 | 一般 | Blocker技能、G支付、攻擊重導向；GGG/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-057 | Vagabond Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-057 | Vagabond Cookie | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時抽至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→confirm→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
 | BS8-058 | Flavorless Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-059 | Mystic Flour Cookie | GREEN | 3 | 一般 | 修復回手2張支援卡漏掉綠色限制（官方卡文Return 2 {G}）；轉接補supportToHandColor green，AI／hook沿用共用候選判定。既有具名同名互斥回歸＋新增混色付款拒絕、綠卡不足不可發動 | 三變體官方卡圖於Browser載入核對 | 三圖×1440×960／1164×777正向／負向共12條通過：G付款＋2綠回手、對手全體HP各減2、同名在場不可發動 | 專卡完整對局／線上未測；bs8-059-desktop/tablet-positive／negative證據 |
 | BS8-060 | Peach Blossom Cookie | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
