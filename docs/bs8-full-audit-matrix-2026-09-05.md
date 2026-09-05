@@ -72,7 +72,7 @@
 | BS8-060 | Peach Blossom Cookie | GREEN | 2 | 一般 | Activate技能、每回合一次、回手1張綠色支援卡、二選一（己方+1HP或對手1傷害）；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→choice→target流程確認 | PASS：同A路徑 | 未測 |
 | BS8-061 | Chives Dumpling King | GREEN | 1 | 一般 | 持續被動、支援區少≥2時自身攻擊+1；語意核對通過、引擎回歸通過 | 未測 | PASS：existing-attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-062 | Shrimp Dumpling King | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時手牌至多1張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | FLIP卡、抽至多1；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
 | BS8-064 | Snake Fruit Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-065 | Spinach Cookie | GREEN | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-066 | Almond Cookie | GREEN | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
