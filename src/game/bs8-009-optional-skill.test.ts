@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyGameCommand, getBreakAreaLevel, type CookieCard } from './index'
+import { applyGameCommand, canActivateCookieSkill, getCookieSkillUnavailableReason, getBreakAreaLevel, getEffectiveAttack, type CookieCard } from './index'
 import { createCardCheckDemoState } from './demo'
 
 const createBs8009State = () =>
@@ -75,6 +75,26 @@ const resolveBreakLevelBonus = (
 }
 
 describe('BS8-009 Burning Spice Cookie skill', () => {
+  it.each(['BS8-009', 'BS8-009@1', 'BS8-009@2', 'BS8-009@3'])('%s rejects a solo source and reused payment, then expires its bonus at turn end', (cardNumber) => {
+    const initial = createCardCheckDemoState(cardNumber, { preferSkillSurface: true })
+    const owner = initial.players['player-one']
+    const sourceInstanceId = owner.battleArea[0].card.instanceId
+    const solo = { ...initial, players: { ...initial.players, 'player-one': { ...owner, battleArea: owner.battleArea.slice(0, 1) } } }
+    expect(canActivateCookieSkill(solo, 'player-one', sourceInstanceId, 'activate')).toBe(false)
+    expect(getCookieSkillUnavailableReason(solo, 'player-one', sourceInstanceId, 'activate')).toBe('自己的戰鬥區必須有來源以外的另一張餅乾。')
+    let state = applyGameCommand(initial, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId, trigger: 'activate', paymentIds: [owner.supportArea[0].card.instanceId] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    expect(() => applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: [owner.supportArea[0].card.instanceId], targetIds: [] })).toThrow()
+    state = applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: [owner.supportArea[1].card.instanceId], targetIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [sourceInstanceId] })
+    expect(getEffectiveAttack(state, sourceInstanceId)).toBe(4)
+    expect(canActivateCookieSkill(state, 'player-one', sourceInstanceId, 'activate')).toBe(false)
+    state = applyGameCommand(state, { kind: 'advance-phase', playerId: 'player-one' })
+    state = applyGameCommand(state, { kind: 'advance-phase', playerId: 'player-one' })
+    expect(state.activePlayerId).toBe('player-two')
+    expect(getEffectiveAttack(state, sourceInstanceId)).toBe(3)
+  })
   it('resolves all other Cookies before opening the optional support-energy Then', () => {
     let state = createBs8009State()
     const player = state.players['player-one']

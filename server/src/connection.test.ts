@@ -320,7 +320,7 @@ describe('ConnectionManager', () => {
     )
 
     expect(guestSocket.last()).toMatchObject({ type: 'command-rejected' })
-    expect(hostSocket.last()).toMatchObject({ type: 'match-start' })
+    expect(hostSocket.last()).toMatchObject({ type: 'match-start', seed: null })
   })
 
   it('只向對手轉送目前場面中合法的攻擊者與付款支援卡', () => {

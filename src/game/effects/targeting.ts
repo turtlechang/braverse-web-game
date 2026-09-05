@@ -351,6 +351,7 @@ export const getEffectTargetCandidatesForEffect = (
 ): CookieInBattle[] => {
   if (
     isBattleMovementEffect(effect) &&
+    !(effect.kind === 'field-to-trash' && effect.target.sourceOnly) &&
     isOpponentBattleMovementPrevented(state, context.sourcePlayerId)
   ) {
     return []
@@ -396,6 +397,19 @@ export const getEffectTargetCandidatesForEffect = (
       }
       return true
     })
+  }
+
+  // A source-only movement effect is not a free-form field target. Its only
+  // legal Cookie is the effect's source instance (for example BS8-020's
+  // "place this Cookie in the trash"), so every rules-layer candidate helper
+  // must expose the same singleton rather than the whole battle area.
+  if (effect.kind === 'field-to-trash' && effect.target.sourceOnly) {
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    return state.players[targetPlayerId].battleArea.filter(
+      (cookie) =>
+        cookie.card.instanceId === context.sourceInstanceId &&
+        matchesSelector(cookie, effect.target, context, state, targetPlayerId),
+    )
   }
 
   if (effect.kind === 'gain-hp' && effect.target && !effect.target.sourceOnly) {
@@ -463,7 +477,31 @@ export const selectEffectTargets = (
     throw new GameRuleError('選擇的卡牌不是此效果的合法目標。')
   }
 
+  // min: 0 allows declining the entire paired cost, never a partial pair.
+  if (selector.countPerPlayer !== undefined && uniqueIds.length > 0 &&
+    (['player-one', 'player-two'] as const).some((playerId) =>
+      uniqueIds.filter((id) => getCookieOwnerId(state, id) === playerId).length !== selector.countPerPlayer)) {
+    throw new GameRuleError(`必須從雙方各選 ${selector.countPerPlayer} 張餅乾。`)
+  }
+
   return selectedTargets as CookieInBattle[]
+}
+
+/** 提供 UI 的跨雙方選擇檢查；沿用權威 selector，無需模擬傷害或讀取 HP 身分。 */
+export const getPairedTargetSelectionError = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect | null,
+  selectedTargetIds: string[],
+): string | null => {
+  if (!effect || !('target' in effect) || effect.target?.countPerPlayer === undefined) return null
+  try {
+    selectEffectTargets(state, context, effect.target, selectedTargetIds)
+    return null
+  } catch (error) {
+    if (error instanceof GameRuleError) return error.message
+    throw error
+  }
 }
 
 export const isEffectUntargeted = (
@@ -571,12 +609,15 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'support-to-battle' ||
   effect.kind === 'trash-to-battle' ||
   effect.kind === 'trash-to-support' ||
+  effect.kind === 'trash-to-hand' ||
   effect.kind === 'support-to-trash' ||
   effect.kind === 'support-to-hand' ||
   effect.kind === 'hand-to-support' ||
   (effect.kind === 'hand-to-break' && !effect.revealedCardOnly) ||
   effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'break-to-hand' ||
+  (effect.kind === 'break-to-hand-by-level-sum' && effect.cardCount !== undefined) ||
+  effect.kind === 'break-to-trash' ||
   effect.kind === 'rest-support' ||
   effect.kind === 'hand-to-battle' ||
   effect.kind === 'opponent-trash-to-break' ||
@@ -609,6 +650,9 @@ export const getEffectSelectionLimits = (
   }
   if (effect.kind === 'trash-to-support') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
+  }
+  if (effect.kind === 'trash-to-hand') {
+    return { min: 0, max: effect.max }
   }
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     return { min: 0, max: 1 }
@@ -676,11 +720,17 @@ export const getEffectSelectionLimits = (
   if (effect.kind === 'opponent-trash-to-break') {
     return { min: 0, max: effect.max }
   }
+  if (effect.kind === 'break-to-trash') {
+    return { min: 0, max: effect.max }
+  }
   if (effect.kind === 'trash-to-break') {
     return { min: effect.amount, max: effect.amount }
   }
   if (effect.kind === 'opponent-battle-to-trash') {
     return { min: effect.min ?? 1, max: 1 }
+  }
+  if (effect.kind === 'field-to-trash' && effect.target.sourceOnly) {
+    return null
   }
   if (effect.kind === 'prevent-support-active-next-phase') {
     return effect.target
@@ -747,6 +797,9 @@ export const getEffectSelectionCandidates = (
   }
   if (effect.kind === 'break-to-battle') {
     return getBreakToBattleCandidates(state, context, effect)
+  }
+  if (effect.kind === 'break-to-hand-by-level-sum') {
+    return getBreakToHandBySumCandidates(state, context, effect)
   }
   if (effect.kind === 'support-to-battle') {
     return getSupportToBattleCandidates(state, context, effect)
@@ -942,6 +995,7 @@ export const getEffectSelectionCandidates = (
       : getEffectTargetCandidatesForEffect(state, context, effect).map(
           (cookie) => cookie.card,
         )
+    if (effect.target.sourceOnly) return battleCards
     if (!effect.allowStage && !effect.stageOnly) return battleCards
 
     const ownerIds: PlayerId[] =
@@ -984,6 +1038,12 @@ export const hasRequiredEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): boolean => {
+  if ('target' in effect && effect.target?.countPerPlayer !== undefined) {
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const count = effect.target.countPerPlayer
+    return (['player-one', 'player-two'] as const).every((playerId) =>
+      candidates.filter((cookie) => getCookieOwnerId(state, cookie.card.instanceId) === playerId).length >= count)
+  }
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     const isSecondStep = Boolean(
       state.pendingAbilityEffect?.pendingOpponentBreakToTrashThenBattleToBreak,
@@ -1165,11 +1225,17 @@ export const getBreakToTrashCandidates = (
   context: EffectContext,
   effect: BreakToTrashEffect,
 ): CookieCard[] => {
-  const priorTargetIds = state.pendingAbilityEffect?.previousEffectTargetIds ?? []
+  const pending = state.pendingAbilityEffect
+  const priorTargetIds = pending?.sourceInstanceId === context.sourceInstanceId && pending.sourcePlayerId === context.sourcePlayerId
+    ? pending.previousEffectTargetIds ?? [] : []
+  const payment = state.costRecord?.trashToBreakPayment
+  const paidLevel = payment?.sourceInstanceId === context.sourceInstanceId &&
+    payment.playerId === context.sourcePlayerId && payment.turnNumber === state.turnNumber && payment.cards.length === 1
+    ? payment.cards[0].level : undefined
   const priorTargetLevel = effect.sameLevelAsPreviousEffectTarget
     ? state.players[context.sourcePlayerId].breakArea.find(
       (card) => priorTargetIds.includes(card.instanceId),
-    )?.level
+    )?.level ?? paidLevel
     : undefined
   if (effect.sameLevelAsPreviousEffectTarget && priorTargetLevel === undefined) {
     return []
@@ -1428,6 +1494,13 @@ export const isEffectConditionMet = (
 ): boolean => {
   const condition = 'condition' in effect ? effect.condition : undefined
 
+  if (condition?.kind === 'last-deck-trash-has-card') {
+    const resolution = state.deckTrashResolution
+    return resolution?.sourcePlayerId === context.sourcePlayerId &&
+      resolution.sourceInstanceId === context.sourceInstanceId &&
+      resolution.cards.some(card => card.type === condition.cardType && card.energyColor === condition.energyColor)
+  }
+
   if (condition?.kind === 'all-of') {
     return condition.conditions.every((sub) =>
       isEffectConditionMet(state, context, { ...effect, condition: sub } as CardEffect),
@@ -1629,7 +1702,7 @@ export const isEffectConditionMet = (
   }
 
   if (condition?.kind === 'cookie-played-from-break-this-turn') {
-    return state.players[context.sourcePlayerId].battleArea.some(
+    return Boolean(state.cookiesPlayedFromBreakThisTurn?.[context.sourcePlayerId]) || state.players[context.sourcePlayerId].battleArea.some(
       (cookie) =>
         cookie.enteredFrom === 'break' &&
         cookie.enteredTurn === state.turnNumber,
@@ -1894,12 +1967,13 @@ export const isEffectConditionMet = (
       condition.side === 'self'
         ? context.sourcePlayerId
         : getOpponentId(context.sourcePlayerId)
-    return state.players[playerId].battleArea.some(
+    const found = state.players[playerId].battleArea.some(
       (cookie) =>
         cookie.card.name === condition.name &&
         (!condition.excludeSource ||
           cookie.card.instanceId !== context.sourceInstanceId),
     )
+    return condition.negate ? !found : found
   }
 
   if (condition?.kind === 'last-hp-trash-card-non-cookie') {

@@ -51,6 +51,7 @@ export const commandActionTypes: Record<
   'activate-skill': 'activate-skill',
   'begin-activate-skill': 'activate-skill',
   'skip-on-play': 'idle',
+  'skip-end-phase-skill': 'idle',
   'play-item': 'play-item',
   'begin-play-item': 'play-item',
   'play-stage': 'play-stage',

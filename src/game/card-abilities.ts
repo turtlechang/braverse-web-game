@@ -626,6 +626,12 @@ export const playItem = (
     throw new GameRuleError('物品卡本身不能作為自己的棄手牌費用。')
   }
 
+  const revealCost = ability.effects[0]
+  if (revealCost?.kind === 'reveal-hand' && revealCost.asCost &&
+    getEffectSelectionCandidates(state, { sourcePlayerId: playerId, sourceInstanceId: instanceId }, revealCost).length < revealCost.amount) {
+    throw new GameRuleError('無法支付展示代價：手牌沒有符合等級條件的餅乾。')
+  }
+
   const cost = getEffectiveCardAbilityCost(state, playerId, ability)
   const paidState = payAbilityCost(state, playerId, cost, {
     paymentIds,

@@ -131,8 +131,8 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
           kind: 'trash-to-break',
           amount: 1,
           cardName: 'Golden Cheese Cookie',
+          sourceToTrashFirst: true,
         },
-        { kind: 'break-source-to-trash' },
       ],
     },
   },
@@ -226,6 +226,7 @@ export const normalizeOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
   const knownNormalized = normalizeKnownOfficialCardRecord(sourceCard)
+  sourceCard = knownNormalized
 
   // BS6-021 的官方 STAGE 記錄把普通攻擊的傷害標記併在場景文字最前方；
   // 場景沒有普通攻擊，這個 `{da} 1` 會被 UI 誤顯示成額外的 Damage 1。

@@ -214,6 +214,7 @@ describe('P-0XX promotion card conversion (all 26 cards)', () => {
           gameCard.item?.effects.length ||
           gameCard.trap?.effects.length ||
           gameCard.stageAbility?.effects.length ||
+          gameCard.stageAbility?.staticAttackCostModifiers?.length ||
           (gameCard.type === 'cookie' && gameCard.attackEffects?.length),
       )
       expect(hasAnyEffectPayload).toBe(true)

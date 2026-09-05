@@ -33,6 +33,8 @@ import {
   getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
+  getHandToBreakAreaCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
@@ -116,6 +118,14 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if ('target' in effect && effect.target?.countPerPlayer !== undefined) {
+    const selector = effect.target
+    return (['self', 'opponent'] as const).flatMap((side) =>
+      chooseEffectTargets(state, context, {
+        ...effect, target: { ...selector, side, countPerPlayer: undefined,
+          min: selector.countPerPlayer!, max: selector.countPerPlayer! },
+      } as CardEffect))
+  }
   if (effect.kind === 'break-to-hand-by-level-sum') {
     return findBreakToHandBySumSelection(state, context, effect) ?? []
   }
@@ -215,6 +225,12 @@ const chooseEffectTargets = (
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     const stageOnly = effect.stageOnly ?? false
+    if (effect.target.sourceOnly) {
+      const source = targetPlayer.battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )
+      return source ? [source.card.instanceId] : []
+    }
     if (stageOnly) {
       if (targetPlayer.stage) {
         return [targetPlayer.stage.card.instanceId]
@@ -1085,6 +1101,13 @@ const resolveAiSkill = (
     }
   }
 
+  const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(skill.cost, player.discardPile)
+    .slice(0, skill.cost.trashCookieToBreakArea?.count ?? 0).map((card) => card.instanceId)
+  if (trashCookieToBreakAreaIds.length < (skill.cost.trashCookieToBreakArea?.count ?? 0)) return null
+  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(skill.cost, player.hand, source.card.instanceId)
+    .slice(0, skill.cost.handToBreakArea?.count ?? 0).map((card) => card.instanceId)
+  if (handToBreakAreaIds.length < (skill.cost.handToBreakArea?.count ?? 0)) return null
+
   const trashToDeckBottomCandidateIds = skill.cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
         .map((card) => card.instanceId)
@@ -1156,6 +1179,8 @@ const resolveAiSkill = (
         battleToHandIds,
         trashToDeckBottomIds,
         trashToDeckIds,
+        trashCookieToBreakAreaIds,
+        handToBreakAreaIds,
       }),
       action: 'activate-skill',
       description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
@@ -1179,6 +1204,10 @@ const resolveAiSkill = (
     hpToTrashTargetIds,
     costSupportToHandIds,
     battleToHandIds,
+    trashCookieToBreakAreaIds,
+    handToBreakAreaIds,
+    effects[0]?.kind === 'damage' && effects[0].selectionAsCost
+      ? universalChooseEffectTargets(state, context, effects[0]) : [],
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -1210,6 +1239,8 @@ const resolveAiSkill = (
         trashToDeckBottomIds,
         trashToDeckIds,
         effectTargets: sim.effectTargets,
+        trashCookieToBreakAreaIds,
+        handToBreakAreaIds,
         chooseOneModes: sim.chooseOneModes,
       },
       { shuffleSeed: effectShuffleSeed },

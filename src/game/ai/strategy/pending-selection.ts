@@ -357,13 +357,19 @@ export const createPendingSelectionStrategy = (
       }
       return retention(left) - retention(right) || left.localeCompare(right)
     }),
-    selectEffectTargetIds: (effect, candidateIds, max) =>
-      [...candidateIds]
+    selectEffectTargetIds: (effect, candidateIds, max) => {
+      const ordered = [...candidateIds]
         .sort((left, right) =>
           targetScore(effect, right) - targetScore(effect, left) ||
           left.localeCompare(right),
         )
-        .slice(0, max),
+      const perPlayer = 'target' in effect ? effect.target?.countPerPlayer : undefined
+      if (perPlayer !== undefined) {
+        return [false, true].flatMap((opponent) => ordered.filter((id) =>
+          isOpponentBattleCookie(view, id) === opponent).slice(0, perPlayer))
+      }
+      return ordered.slice(0, max)
+    },
     selectRevealedCardIds: (revealedCards, candidateIds, max) => {
       const revealedById = new Map(revealedCards.map((card) => [card.instanceId, card]))
       return [...candidateIds]

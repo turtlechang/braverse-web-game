@@ -176,6 +176,7 @@ const selectorMatches = (
     'costSelected',
     'noSkillOnly',
     'sameLevelAsPreviousEffectTarget',
+    'countPerPlayer',
   ] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key]) {
       // LV.1 is the lower bound of the Cookie level domain.  A number of
@@ -607,6 +608,9 @@ const runtimeSelectorsForCost = (
   if (trashCookie && typeof trashCookie === 'object') {
     const trash = trashCookie as Record<string, unknown>
     add(typeof trash.count === 'number' ? trash.count : 1, {
+      cardType: 'cookie',
+      ...(typeof trash.minLevel === 'number' ? { minLevel: trash.minLevel } : {}),
+      ...(typeof trash.maxLevel === 'number' ? { maxLevel: trash.maxLevel } : {}),
       ...(typeof trash.energyColor === 'string'
         ? { energyColor: trash.energyColor as EffectTargetSelector['energyColor'] }
         : {}),
@@ -630,6 +634,8 @@ const runtimeSelectorsForCost = (
     const hand = handToBreak as Record<string, unknown>
     add(typeof hand.count === 'number' ? hand.count : 1, {
       cardType: 'cookie',
+      ...(typeof hand.minLevel === 'number' ? { minLevel: hand.minLevel } : {}),
+      ...(typeof hand.maxLevel === 'number' ? { maxLevel: hand.maxLevel } : {}),
       ...(typeof hand.energyColor === 'string'
         ? { energyColor: hand.energyColor as EffectTargetSelector['energyColor'] }
         : {}),
@@ -669,9 +675,10 @@ const bracketClauses = (
     if (bracketTargetSelection.test(inner)) {
       continue
     }
-    // "Select 1 Cookie from each player" is likewise a pair of public battle
-    // targets. Its two selectors are recorded by `eachPlayerSelection`; it is
-    // never a payment merely because the official text puts it in brackets.
+    // A bracketed "Select 1 Cookie from each player" is a selection cost
+    // (v1.8 §8-2). Target cardinality is recorded by `eachPlayerSelection`;
+    // this ledger does not prove cost timing or Then optionality. The runtime
+    // paired selector and command/browser regressions must verify those.
     if (/^select\s+1\s+cookies?\s+from\s+each\s+player\.?$/i.test(inner)) {
       continue
     }
@@ -755,7 +762,7 @@ const bracketClauses = (
                 : selfTrash
                   ? 'self-to-trash'
                   : selfAndHandBreak
-                    ? 'battle-to-break'
+                    ? 'self-to-break'
                     : selfBreak
                   ? 'self-to-break'
                   : battleFaint
@@ -1179,12 +1186,18 @@ const targetClauses = (
     if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
     const clauseId = `${source}-${clauses.length + 1}`
     addClause(clauses, source, match[0], 'target', start, end, 'pattern')
-    for (const side of ['self', 'opponent'] as const) {
+    const prefix = text.slice(0, start)
+    if (/<\s*$/i.test(prefix)) {
+      const optionalThenCost = /\bThen\s*,?\s*<\s*$/i.test(prefix)
       targets.push({
-        selector: { side, min: 1, max: 1 },
-        clauseIds: [clauseId],
-        zone: 'battle',
+        selector: { side: 'either', min: optionalThenCost ? 0 : 2, max: 2, countPerPlayer: 1 },
+        clauseIds: [clauseId], zone: 'battle',
       })
+    } else {
+      // Ordinary effect selections (e.g. P-082) are not declaration costs.
+      for (const side of ['self', 'opponent'] as const) {
+        targets.push({ selector: { side, min: 1, max: 1 }, clauseIds: [clauseId], zone: 'battle' })
+      }
     }
     structuredRanges.push({ start, end })
   }

@@ -329,11 +329,15 @@ export function OnlineBattleView({
         (cost.discardHand ?? 0) +
         (cost.supportToTrash ?? 0) +
         (cost.supportToHand ?? 0) +
-        (cost.trashBattleCookie?.count ?? 0)
+        (cost.trashBattleCookie?.count ?? 0) +
+        (cost.trashCookieToBreakArea?.count ?? 0) +
+        (cost.handToBreakArea?.count ?? 0)
       const selectedCostCount =
         pending.selectedDraftDiscardHandIds.size +
         pending.selectedDraftCostSupportIds.size +
-        pending.selectedDraftTrashBattleCookieIds.size
+        pending.selectedDraftTrashBattleCookieIds.size +
+        pending.selectedDraftTrashCookieToBreakAreaIds.size +
+        pending.selectedDraftHandToBreakAreaIds.size
 
       if (requiredPayment > 0 && !pending.draftPaymentValid) {
         return {
@@ -472,6 +476,8 @@ export function OnlineBattleView({
     pending.selectedDraftDiscardHandIds.size,
     pending.selectedDraftPaymentIds.size,
     pending.selectedDraftTrashBattleCookieIds.size,
+    pending.selectedDraftTrashCookieToBreakAreaIds.size,
+    pending.selectedDraftHandToBreakAreaIds.size,
     pendingBattle,
     viewerPlayerId,
     selectedDraftPaymentKey,
@@ -753,7 +759,14 @@ export function OnlineBattleView({
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
         effectConditionMet={pending.effectConditionMet}
+        effectSelectionError={pending.effectSelectionError}
+        candidateLabels={Object.fromEntries(Object.values(game.players).flatMap((player) =>
+          player.battleArea.map((cookie, index) => [cookie.card.instanceId, `${player.name}・戰鬥區第 ${index + 1} 張`])))}
         onSkip={() => {
+          if (pending.abilityCostDraft?.trigger === 'passive') {
+            pending.cancelAbilityCostDraft()
+            return
+          }
           if (pending.pendingEffect?.sourceKind !== 'attack') return
           match.dispatch(
             {
@@ -795,8 +808,16 @@ export function OnlineBattleView({
         selectedBattleToHandIds={pending.selectedDraftBattleToHandIds}
         onToggleBattleToHand={pending.toggleDraftBattleCookieToHand}
         battleCookieToHandCost={pending.draftBattleCookieToHandCost}
-        showTargetSelection
-        showCancelSkill={Boolean(pending.abilityCostDraft)}
+        trashCookieToBreakAreaCandidates={pending.draftTrashCookieToBreakAreaCandidates}
+        selectedTrashCookieToBreakAreaIds={pending.selectedDraftTrashCookieToBreakAreaIds}
+        onToggleTrashCookieToBreakArea={pending.toggleDraftTrashCookieToBreakArea}
+        trashCookieToBreakAreaCost={pending.draftTrashCookieToBreakAreaCost}
+        handToBreakAreaCandidates={pending.draftHandToBreakAreaCandidates}
+        selectedHandToBreakAreaIds={pending.selectedDraftHandToBreakAreaIds}
+        onToggleHandToBreakArea={pending.toggleDraftHandToBreakArea}
+        handToBreakAreaCost={pending.draftHandToBreakAreaCost}
+        showTargetSelection={!pending.draftRequiresPaymentBeforeTargets}
+        showCancelSkill={Boolean(pending.abilityCostDraft && pending.abilityCostDraft.trigger !== 'passive')}
         onCancel={() => {
           if (pending.abilityCostDraft?.trigger === 'on-play') {
             pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)

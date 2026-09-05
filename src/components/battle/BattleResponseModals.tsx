@@ -32,6 +32,18 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
   const pendingBattle = match.game.pendingBattle
   const attackAttackerCard = findBattleCard(pendingBattle?.attackerInstanceId)
   const attackTargetCard = findBattleCard(pendingBattle?.targetInstanceId)
+  const trapLockSource = pendingBattle?.trapsDisabled
+    ? Object.values(match.game.players)
+        .flatMap((player) => player.battleArea)
+        .find((entry) => entry.card.instanceId === pendingBattle.attackerInstanceId)
+        ?.equippedCards?.find(
+          (card) =>
+            card.type === 'item' &&
+            card.item?.equippedAttackEffects?.some(
+              (effect) => effect.kind === 'disable-traps',
+            ),
+        ) ?? null
+    : null
   const flipChooseOneEffect =
     pendingBattle?.revealedHpCard?.flip?.effects.find(
       (effect): effect is Extract<CardEffect, { kind: 'choose-one' }> =>
@@ -69,6 +81,46 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
 
   return (
     <>
+      {pendingBattle?.stage === 'trap' &&
+        pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        pendingBattle.trapsDisabled &&
+        match.playerBlockerCandidates.length === 0 &&
+        match.playerAttackResponseCandidates.length === 0 && (
+          <div className="modal-backdrop" role="presentation">
+            <section
+              className="battle-response-modal trap-response-modal"
+              role="alertdialog"
+              aria-labelledby="trap-lock-title"
+            >
+              <span>攻擊宣告回應</span>
+              <h2 id="trap-lock-title">本次戰鬥無法發動陷阱</h2>
+              <p>
+                「{attackAttackerCard?.name ?? '攻擊餅乾'}」正在攻擊「
+                {attackTargetCard?.name ?? '目標餅乾'}」。
+              </p>
+              <p>
+                {trapLockSource
+                  ? `因「${trapLockSource.name}」裝載在「${attackAttackerCard?.name ?? '攻擊餅乾'}」上的效果，本次戰鬥中不能發動陷阱。`
+                  : '因攻擊餅乾的效果，本次戰鬥中不能發動陷阱。'}
+              </p>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-button primary"
+                  onClick={() =>
+                    match.dispatch(
+                      { kind: 'skip-trap', playerId: match.viewerPlayerId },
+                      '本次戰鬥的陷阱已被卡牌效果禁止，進入傷害結算。',
+                    )
+                  }
+                >
+                  了解，繼續傷害結算
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
       {shouldShowAttackResponseChooser({
         pendingBattle: match.game.pendingBattle,
         viewerPlayerId: match.viewerPlayerId,

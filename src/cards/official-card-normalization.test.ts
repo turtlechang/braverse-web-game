@@ -13,6 +13,45 @@ const attackDamage = (attackText: string | null): number | null => {
 }
 
 describe('normalizeKnownOfficialCardRecord', () => {
+  it.each([
+    { color: null, energyType: 'YELLOW' },
+    { color: 'null', energyType: 'YELLOW' },
+    { color: null, energyType: 'YELLOW MIX' },
+    { color: 'null', energyType: 'YELLOW MIX' },
+  ])('recovers missing color $color from $energyType without mutating the source', (fields) => {
+    const source: OfficialCardRecord = {
+      ...bs6Cards.find((card) => card.cardNumber === 'BS6-002')!,
+      ...fields,
+    }
+    const snapshot = structuredClone(source)
+    const normalized = normalizeKnownOfficialCardRecord(source)
+    expect(normalized.color).toBe('YELLOW')
+    expect(normalized.energyType).toBe(fields.energyType)
+    expect(normalized).not.toBe(source)
+    expect(source).toEqual(snapshot)
+    expect(normalizeKnownOfficialCardRecord(normalized)).toBe(normalized)
+  })
+
+  it('preserves an explicit card color even when energyType has a different prefix', () => {
+    const source: OfficialCardRecord = {
+      ...bs6Cards.find((card) => card.cardNumber === 'BS6-002')!,
+      color: 'RED',
+      energyType: 'YELLOW MIX',
+    }
+    expect(normalizeKnownOfficialCardRecord(source)).toBe(source)
+    expect(source.color).toBe('RED')
+  })
+
+  it('does not invent a card color from colorless MIX energyType', () => {
+    const source: OfficialCardRecord = {
+      ...bs6Cards.find((card) => card.cardNumber === 'BS6-002')!,
+      color: null,
+      energyType: 'MIX',
+    }
+    expect(normalizeKnownOfficialCardRecord(source)).toBe(source)
+    expect(source.color).toBeNull()
+  })
+
   it('P-059 drops the duplicate attack name from flipText', () => {
     const source = {
       baseCardNumber: 'P-059',

@@ -175,7 +175,7 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.checks.targetCovered).toBe(true)
   })
 
-  it('does not classify a bracketed one-from-each-player target as a cost', () => {
+  it('requires one declared pair for a bracketed selection cost and rejects unpartitioned targets', () => {
     const source = makeRecord({
       skill: {
         name: 'Spice',
@@ -191,8 +191,8 @@ describe('card behavior contract shadow ledger', () => {
         cost: { energy: { red: 1 } },
         text: source.skill.text ?? '',
         effects: [
-          { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1 } },
-          { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } },
+          { kind: 'damage', amount: 1, selectionAsCost: true,
+            target: { side: 'either', min: 2, max: 2, countPerPlayer: 1 } },
         ],
       },
     })
@@ -201,6 +201,10 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
     expect(audit.checks.costCovered).toBe(true)
     expect(audit.checks.targetCovered).toBe(true)
+    const effect = runtime.skill!.effects[0]
+    if (effect.kind !== 'damage') throw new Error('Expected paired damage')
+    effect.target.countPerPlayer = undefined
+    expect(analyzeOfficialCardBehavior(source, runtime).checks.targetCovered).toBe(false)
   })
 
   it('requires an ordered runtime Then continuation', () => {
@@ -491,16 +495,10 @@ describe('card behavior contract shadow ledger', () => {
         oncePerTurn: true,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { selfToBreakArea: true, handToBreakArea: { count: 1, minLevel: 2 } },
         text: source.skill.text ?? '',
         effects: [
-          {
-            kind: 'battle-to-break',
-            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-            condition: { kind: 'break-area-has-card', side: 'self' },
-          },
-          { kind: 'hand-to-break', amount: 1, minLevel: 2 },
-          { kind: 'draw-up-to', max: 2 },
+          { kind: 'draw-up-to', max: 2, condition: { kind: 'break-area-has-card', side: 'self' } },
           { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' },
         ],
       },
@@ -509,7 +507,7 @@ describe('card behavior contract shadow ledger', () => {
     const audit = analyzeOfficialCardBehavior(source, runtime)
 
     expect(audit.contract.costs.map((cost) => cost.kind)).toEqual([
-      'battle-to-break',
+      'self-to-break',
       'hand-to-break',
     ])
     expect(audit.contract.targets).toContainEqual(expect.objectContaining({

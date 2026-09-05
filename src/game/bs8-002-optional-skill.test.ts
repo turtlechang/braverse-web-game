@@ -13,6 +13,7 @@ import {
   convertOfficialCardToGameCard,
 } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
+import { describeCommandSteps } from './command-log'
 
 const formalPath = resolve(
   process.cwd(),
@@ -133,7 +134,7 @@ describe('BS8-002 optional skill Then', () => {
     expect(skipped.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
   })
 
-  it('uses the source Cookie as red energy, then resumes draw and optional damage target selection', () => {
+  it('pays red support, draws exactly one, then resumes optional damage target selection', () => {
     const state = beginAndResolveHp(createState())
     const paid = applyGameCommand(state, {
       kind: 'resolve-optional-cost-attack',
@@ -146,22 +147,29 @@ describe('BS8-002 optional skill Then', () => {
     expect(paid.pendingOptionalCostAttack).toBeNull()
     expect(paid.pendingAbilityEffect).toMatchObject({ effectIndex: 1 })
     expect(paid.pendingAbilityEffect?.effects[1]).toMatchObject({
-      kind: 'draw-up-to',
-      max: 1,
+      kind: 'draw',
+      amount: 1,
     })
+    expect(paid.players['player-one'].hand).toHaveLength(0)
+    expect(describeCommandSteps(state, paid, {
+      kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: ['bs8-002-support'],
+    })?.map((step) => step.text).join('\n')).toContain('等待後續')
+    expect(() => applyGameCommand(paid, {
+      kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount: 0,
+    })).toThrow()
 
-    const drawing = applyGameCommand(paid, {
+    const drawn = applyGameCommand(paid, {
       kind: 'resolve-ability-effect',
       playerId: 'player-one',
       targetIds: [],
     })
-    expect(drawing.pendingDrawUpTo).toMatchObject({ max: 1 })
-    const drawn = applyGameCommand(drawing, {
-      kind: 'resolve-draw-up-to',
-      playerId: 'player-one',
-      drawCount: 1,
-    })
+    expect(drawn.pendingDrawUpTo).toBeUndefined()
     expect(drawn.players['player-one'].hand).toHaveLength(1)
+    const drawSteps = describeCommandSteps(paid, drawn, {
+      kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [],
+    })
+    expect(drawSteps).toEqual([{ text: '抽牌結果：抽了 1 張牌' }])
+    expect(JSON.stringify(drawSteps)).not.toContain('bs8-002-draw-card')
     expect(drawn.pendingAbilityEffect).toMatchObject({ effectIndex: 2 })
 
     const damaged = applyGameCommand(drawn, {
@@ -185,5 +193,28 @@ describe('BS8-002 optional skill Then', () => {
         paymentIds: [],
       }),
     ).toThrowError(/能量支付無效/)
+  })
+
+  it('does not offer Then at HP 2, as required by the official BS8-002 FAQ', () => {
+    const initial = createState()
+    initial.players['player-one'].battleArea[0].hpCards.push(card('second-hp'))
+    expect(() => beginAndResolveHp(initial)).toThrow()
+    expect(initial.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    expect(initial.players['player-one'].supportArea[0].rested).toBe(false)
+    expect(initial.players['player-one'].deck).toHaveLength(3)
+    expect(initial.pendingOptionalCostAttack).toBeUndefined()
+  })
+
+  it('permits zero damage targets only after drawing, and consumes the once-per-turn use', () => {
+    const offered = beginAndResolveHp(createState())
+    const paid = applyGameCommand(offered, {
+      kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: ['bs8-002-support'],
+    })
+    const drawn = applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    expect(drawn.players['player-one'].hand).toHaveLength(1)
+    const skippedTarget = applyGameCommand(drawn, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    expect(skippedTarget.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+    expect(skippedTarget.pendingAbilityEffect).toBeUndefined()
+    expect(() => beginAndResolveHp(skippedTarget)).toThrow()
   })
 })

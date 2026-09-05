@@ -4,6 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CardEffect, CookieCard, EnergyColor, GameCard } from '../../game'
+import { createCardCheckDemoState } from '../../game/demo'
 import { EffectPanel } from './EffectPanel'
 import type { PendingEffect } from './effectUiTypes'
 
@@ -167,6 +168,87 @@ const createPendingEffect = (
   triggerLabel: '技能啟動',
   sourceKind: 'cookie',
   ...overrides,
+})
+
+describe('Break area selection costs', () => {
+  it.each(['trash', 'hand'] as const)('%s cost requires exactly the selected count and is not paid twice', async (zone) => {
+    const game = createCardCheckDemoState('BS8-031')
+    const cards = [
+      game.players['player-one'].hand.find((card) => card.id === 'BS8-031')!,
+      createCardCheckDemoState('BS8-026').players['player-one'].battleArea[0].card,
+    ]
+    const onToggle = vi.fn()
+    const onConfirm = vi.fn()
+    const onToggleTarget = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const effect: CardEffect = { kind: 'draw', amount: 1 }
+    const render = async (ids: string[], skillActivated = false) => {
+      const props = zone === 'trash'
+        ? {
+            trashCookieToBreakAreaCandidates: cards,
+            selectedTrashCookieToBreakAreaIds: new Set(ids),
+            onToggleTrashCookieToBreakArea: onToggle,
+            trashCookieToBreakAreaCost: 1,
+          }
+        : {
+            handToBreakAreaCandidates: cards,
+            selectedHandToBreakAreaIds: new Set(ids),
+            onToggleHandToBreakArea: onToggle,
+            handToBreakAreaCost: 1,
+          }
+      await act(() => root.render(
+        <EffectPanel
+          pendingEffect={createPendingEffect({
+            sourceCard: cards[0],
+            selectedTrashCookieToBreakAreaIds: zone === 'trash' ? ids : [],
+            selectedHandToBreakAreaIds: zone === 'hand' ? ids : [],
+            skillActivated,
+          })}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={onConfirm}
+          onSkip={() => undefined}
+          onToggleCandidate={onToggleTarget}
+          {...props}
+        />,
+      ))
+    }
+    const primary = () => container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    try {
+      await render([])
+      expect(container.textContent).toContain(zone === 'trash' ? '棄牌區 → 休息區（技能代價）' : '手牌 → 休息區（技能代價）')
+      expect(primary().disabled).toBe(true)
+      await act(() => primary().click())
+      expect(onConfirm).not.toHaveBeenCalled()
+      const candidates = container.querySelectorAll<HTMLButtonElement>(`.effect-candidates-cost-${zone}-to-break button`)
+      expect(candidates).toHaveLength(cards.length)
+      expect(candidates[0].textContent).toContain(cards[0].name)
+      expect(cards[0].imageUrl).toBeTruthy()
+      expect(candidates[0].querySelector('img')?.getAttribute('src')).toBe(cards[0].imageUrl)
+      await act(() => candidates[0].click())
+      expect(onToggle).toHaveBeenCalledExactlyOnceWith(cards[0].instanceId)
+      expect(onToggleTarget).not.toHaveBeenCalled()
+
+      await render(cards.slice(0, 2).map((card) => card.instanceId))
+      expect(primary().disabled).toBe(true)
+      await act(() => primary().click())
+      expect(onConfirm).not.toHaveBeenCalled()
+
+      await render([cards[0].instanceId])
+      expect(primary().disabled).toBe(false)
+      await act(() => primary().click())
+      expect(onConfirm).toHaveBeenCalledOnce()
+
+      await render([], true)
+      expect(container.querySelector('.effect-panel-extra-cost-col')).toBeNull()
+      expect(container.querySelector(`.effect-candidates-cost-${zone}-to-break`)).toBeNull()
+      expect(primary().disabled).toBe(false)
+      expect(onToggle).toHaveBeenCalledOnce()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
 })
 
 describe('EffectPanel', () => {
@@ -458,7 +540,83 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
-  it('allows skipping an attack follow-up effect', () => {
+  it.each([true, false])('does not offer skip for mandatory source HP recovery (condition met: %s)', (effectConditionMet) => {
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'source-hp-at-most', amount: 4 },
+    }
+    const pending = createPendingEffect({
+      skillActivated: true,
+      sourceKind: 'attack',
+      triggerLabel: '攻擊後續效果',
+      effects: [effect],
+    })
+    const onConfirm = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        effectConditionMet={effectConditionMet}
+        onConfirm={onConfirm}
+        onSkip={onSkip}
+      />,
+    ))
+
+    expect(container.querySelector('.skip-effect')).toBeNull()
+    expect(container.querySelector('.skill-labels')?.textContent).toBe('攻擊後續效果')
+    expect(container.querySelector('.skill-labels')?.textContent).not.toContain('Activate')
+    const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    expect(confirm.disabled).toBe(false)
+    act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledOnce()
+    expect(onSkip).not.toHaveBeenCalled()
+
+    act(() => root.unmount())
+  })
+
+  it('allows zero targets and skipping an up-to-one attack effect', () => {
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const pending = createPendingEffect({
+      skillActivated: true,
+      sourceKind: 'attack',
+      effects: [effect],
+    })
+    const onConfirm = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        candidateCards={[createCookieCard(1)]}
+        onConfirm={onConfirm}
+        onSkip={onSkip}
+      />,
+    ))
+
+    const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    expect(confirm.disabled).toBe(false)
+    act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledOnce()
+    act(() => container.querySelector<HTMLButtonElement>('.skip-effect')!.click())
+    expect(onSkip).toHaveBeenCalledOnce()
+
+    act(() => root.unmount())
+  })
+
+  it('allows skipping an optional-cost attack follow-up effect', () => {
     const pending = createPendingEffect({
       skillActivated: true,
       sourceKind: 'attack',

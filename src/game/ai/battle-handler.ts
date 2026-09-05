@@ -139,6 +139,13 @@ const chooseAttackEffectTargets = (
   const count = Math.min(effect.target.max, ordered.length)
   if (count < effect.target.min) return []
   const candidateIds = ordered.map((cookie) => cookie.card.instanceId)
+  if (!universal?.enabled && effect.target.countPerPlayer !== undefined) {
+    const countPerPlayer = effect.target.countPerPlayer
+    const groups = (['player-one', 'player-two'] as const).map((ownerId) =>
+      candidateIds.filter((id) => state.players[ownerId].battleArea.some(
+        (cookie) => cookie.card.instanceId === id)).slice(0, countPerPlayer))
+    return groups.every((group) => group.length === countPerPlayer) ? groups.flat() : []
+  }
   return universal?.enabled
     ? universal.selectEffectTargetIds(effect, candidateIds, count)
     : candidateIds.slice(0, count)

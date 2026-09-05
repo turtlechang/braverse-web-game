@@ -34,6 +34,8 @@ export interface CardSkill {
   oncePerTurn: boolean
   yourTurn: boolean
   restSource: boolean
+  /** Official ruling permits paying even if an effect condition is false (BS8-003). */
+  effectConditionsAtResolution?: boolean
   cost: AbilityCost
   text: string
   effects: CardEffect[]
@@ -235,6 +237,8 @@ export interface ExtraDeckCard {
 export interface CookieInBattle {
   card: CookieCard
   hpCards: GameCard[]
+  /** Read-only online projection of effective HP; no hidden card or position is disclosed. */
+  publicHp?: number
   rested: boolean
   battleEntryId?: string
   /** 此次登場的來源與回合，供「本回合從某區登場」的 Awaken 條件精確比對。 */
@@ -254,7 +258,7 @@ export type EffectTargetSide = 'self' | 'opponent'
 /**
  * 目標選取可以跨雙方戰鬥區（官方文字的「either player's battle area」）。
  * `either` 的擁有者必須逐一從被選中的餅乾推導，只有明確處理過的效果可以使用，
- * 目前是 `battle-to-break` 與 `battle-to-deck-top`。
+ * 包含 `damage`、`battle-to-break` 與 `battle-to-deck-top`。
  */
 export type EffectTargetSelectorSide = EffectTargetSide | 'either'
 
@@ -262,6 +266,8 @@ export interface EffectTargetSelector {
   side: EffectTargetSelectorSide
   min: number
   max: number
+  /** 每位玩家各選此數量；min: 0 可整組略過，其餘不能只選一方。 */
+  countPerPlayer?: number
   /**
    * 效果必須對每一張符合此 selector 的餅乾結算；不是由玩家任選至多 `max`
    * 張（BS8-003 的「all your Cookies that have 4 or less HP」）。
@@ -658,6 +664,8 @@ export interface BattleAreaHasNamedCookieCondition {
   name: string
   /** 「another」：不算來源自己。 */
   excludeSource?: boolean
+  /** 「is not in your battle area」：反轉指定卡名存在與否。 */
+  negate?: boolean
 }
 
 /**
@@ -692,6 +700,7 @@ export interface BattleAreaRestedCookieCountAtLeastCondition {
 
 export type EffectCondition =
   | AllOfCondition
+  | { kind: 'last-deck-trash-has-card'; energyColor: EnergyColor; cardType: CardType }
   | AnyOfCondition
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
@@ -756,6 +765,8 @@ export interface DamageEffect {
   kind: 'damage'
   amount: number
   target: EffectTargetSelector
+  /** 牌文將選擇目標列在 <> 代價內；技能付款前必須完整宣告。 */
+  selectionAsCost?: boolean
   condition?: EffectCondition
 }
 
@@ -945,6 +956,8 @@ export interface BreakToTrashEffect {
 export interface TrashToBreakEffect {
   kind: 'trash-to-break'
   amount: number
+  /** 選定棄牌區目標後，先將來源移出休息區，再把選定目標放入休息區。 */
+  sourceToTrashFirst?: boolean
   /** 指名卡名的休息區搬移（BS8-027）。 */
   cardName?: string
   energyColor?: EnergyColor
@@ -1576,12 +1589,16 @@ export interface RestCookieEffect {
 
 export interface BreakSourceToTrashEffect {
   kind: 'break-source-to-trash'
+  /** 括號內的來源移動代價；來源不在休息區時，整組後續效果不能發動。 */
+  asCost?: boolean
   condition?: EffectCondition
 }
 
 export interface RevealHandEffect {
   kind: 'reveal-hand'
   amount: number
+  /** 展示屬角括號代價，begin 指令需連同付款原子確認首段選牌。 */
+  asCost?: boolean
   /** 是否要求玩家指定實際展示的手牌；未指定時維持既有的純條件檢查。 */
   selectCard?: boolean
   cookieOnly?: boolean
@@ -1641,6 +1658,7 @@ export interface HpToSupportEffect {
 }
 
 export interface BreakToBattleEffect {
+  condition?: EffectCondition
   kind: 'break-to-battle'
   amount: number
   /** 「up to N」可選擇不從休息區登場（BS8-047）。 */
@@ -1967,6 +1985,8 @@ export type AbilityCost = EnergyCost & {
   /** 從自己的棄牌區將符合條件的餅乾放入休息區，作為替代代價。 */
   trashCookieToBreakArea?: {
     count: number
+    minLevel?: number
+    maxLevel?: number
     hp?: number
     energyColor?: EnergyColor
     excludeFlip?: boolean
@@ -2005,10 +2025,12 @@ export type AbilityCost = EnergyCost & {
   /**
    * 將手牌餅乾放入自己的休息區作為代價（BS3-046）。
    * 與 `discardHand`（放入棄牌區）不同，這會推進自己的 break 等級。
-   * 目前只有陷阱路徑（`playTrap`）實作。
+   * 陷阱與餅乾技能共用此成本描述；技能另依 minLevel／maxLevel 篩選付款。
    */
   handToBreakArea?: {
     count: number
+    minLevel?: number
+    maxLevel?: number
     energyColor?: EnergyColor
   }
 }
@@ -2018,11 +2040,9 @@ export interface FlipAbility {
   cost: AbilityCost
   effects: CardEffect[]
   /**
-   * 附著 HP 期間的連續 +1 HP（BS5-004／BS5-041／BS5-082／BS5-095 的
-   * 「The Cookie with this card attached for HP gains +1 HP」）。
-   * 不是一次性效果：只要這張卡還附著在目標餅乾的 HP，剩餘 HP 就 +1；
-   * 卡離開 HP（被傷害、代價磨掉……）加成就消失。
-   * 剩餘 HP 的計算一律以 `getCookieEffectiveHp`（helpers.ts）為準。
+   * FLIP 發動後，使原附著餅乾從牌庫補入的 HP 卡張數。
+   * 保留既有欄位名稱相容卡牌資料；這是支付代價後的一次性效果，
+   * 未翻開時不提供持續 HP 加成，也不得影響公開 HP 或條件判定。
    */
   attachedHpBonus?: number
 }
@@ -2091,6 +2111,17 @@ export type TrapCondition =
       kind: 'battle-area-has-keyword'
       keyword: CardKeyword
     }
+  | {
+      /** 陷阱擁有者的支援區張數至少比對手少指定張數（BS8-074）。 */
+      kind: 'support-count-less-than-opponent'
+      difference: number
+    }
+
+/** 依對戰當下狀態取代陷阱啟動費用（例如 BS8-074 的綠色費用減少）。 */
+export interface ConditionalTrapCost {
+  condition: TrapCondition
+  cost: AbilityCost
+}
 
 export interface TrapAbility {
   text: string
@@ -2099,6 +2130,8 @@ export interface TrapAbility {
   sourceEnergy?: EnergyCost
   /** 陷阱可選的替代支付方式；未指定時只使用 `cost`。 */
   alternativeCosts?: AbilityCost[]
+  /** 條件成立時取代卡面主費用，不和一般 alternativeCosts 混用。 */
+  conditionalCost?: ConditionalTrapCost
   condition?: TrapCondition
   effects: CardEffect[]
 }
@@ -2379,6 +2412,8 @@ export interface CommandLogEntry {
 }
 
 export interface GameState {
+  /** Cards moved by the current source's latest deck-to-trash effect, including Refresh continuation. */
+  deckTrashResolution?: { sourcePlayerId: PlayerId; sourceInstanceId: string; cards: GameCard[] }
   players: Record<PlayerId, PlayerState>
   firstPlayerId: PlayerId
   activePlayerId: PlayerId
@@ -2435,6 +2470,7 @@ export interface GameState {
   pendingRefresh: {
     playerId: PlayerId
     remainingDraws: number
+    remainingDeckToTrash?: { effect: DeckToTrashEffect; context: EffectContext; movedCards: GameCard[] }
     /**
      * 「增加 HP」途中牌庫耗盡時，Refresh 後要繼續補入的 HP 卡。
      * target player 與 pendingRefresh.playerId 相同。
@@ -2474,6 +2510,13 @@ export interface GameState {
    * 效果或條件消費，不跨回合保留。
    */
   costRecord?: {
+    /** 本次棄牌→休息區代價的等級快照，不依賴後续目標或移動後區域。 */
+    trashToBreakPayment?: {
+      playerId: PlayerId
+      sourceInstanceId: string
+      turnNumber: number
+      cards: { instanceId: string; level: number }[]
+    }
     hpTrashCookieInstanceId?: string
     hpTrashTopCardInstanceId?: string
     hpTrashTopCardType?: GameCard['type']
@@ -2482,6 +2525,21 @@ export interface GameState {
     revealedHandSourceInstanceId?: string
   }
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
+  /**
+   * Last completed HP inspection for each player. These are immutable snapshots
+   * of an authorized effect result, never permission to read the live HP zone.
+   * Online projections include only the viewer's entry; retain it across later
+   * commands so delayed snapshots do not lose the legitimate inspection result.
+   */
+  hpInspectionResults?: Partial<Record<PlayerId, {
+    sequence: number
+    sourceInstanceId: string
+    piles: Array<{
+      targetInstanceId: string
+      targetCardName: string
+      cards: GameCard[]
+    }>
+  }>>
   pendingInspectDeck?: {
     playerId: PlayerId
     sourceInstanceId: string
@@ -2577,6 +2635,13 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName?: string
     sourceKind: 'skill' | 'item' | 'stage' | 'trap'
+    /** The end-phase skill still needs its controller to choose and pay its cost. */
+    awaitingActivation?: boolean
+    /**
+     * 內部標記：這個 pending 只是昏厥觸發的傷害效果暫存，
+     * 不是外層技能／物品效果佇列。避免巢狀昏厥時誤覆寫或誤推進外層索引。
+     */
+    isFaintEffectContinuation?: boolean
     trigger?: 'activate' | 'on-play' | 'passive' | 'attacker-faint'
     effects: CardEffect[]
     effectIndex: number
@@ -2611,6 +2676,8 @@ export interface GameState {
   cookiesGainedHpThisTurn?: Partial<Record<PlayerId, boolean>>
   /** 各玩家本回合是否曾從棄牌區讓餅乾登場（BS6-107）。每回合開始時重置。 */
   cookiesPlayedFromTrashThisTurn?: Partial<Record<PlayerId, boolean>>
+  /** 本回合曾從休息區登場；離場或覺醒覆蓋後仍保留，換回合時重置。 */
+  cookiesPlayedFromBreakThisTurn?: Partial<Record<PlayerId, boolean>>
   /** 綜合規則 6-5-2-2：目前回合是否已從 EXTRA Deck 登場一張卡。 */
   extraDeckPlayUsedThisTurn?: boolean
 }
@@ -2700,6 +2767,13 @@ export interface PendingBattle {
     continuation?: EffectDamageContinuation
     /** 是否仍需保留建立序列前的外層 PendingBattle。 */
     resumeBattleAfterAbility?: boolean
+    /**
+     * 昏厥或 after-damage 觸發的巢狀效果若插入另一條尚未完成的技能
+     * 佇列，結算完巢狀傷害後不應把外層效果索引再往前推一次。未設定時
+     * 維持一般效果序列的既有 +1 行為；設定為 0 代表回到原本等待中的
+     * 外層效果。
+     */
+    resumeAbilityEffectAdvance?: number
   }
 }
 

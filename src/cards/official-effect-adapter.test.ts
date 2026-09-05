@@ -3626,6 +3626,14 @@ describe('Starter Deck RED official effect adapter', () => {
     )
   })
 
+  it('parses with N HP remaining as an exact effective-HP target', () => {
+    const template = findBs4Card('BS4-020')
+    const card = { ...template, cardNumber: 'TEST-EXACT-HP', baseCardNumber: 'TEST-EXACT-HP', skill: { name: null, text: '<{Y}> Select up to 1 of your Cookies with 1 HP remaining. That Cookie gains +1 HP.' } }
+    expect(convertOfficialItemAbility(card)?.effects).toEqual([
+      { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, minRemainingHp: 1, maxRemainingHp: 1 } },
+    ])
+  })
+
   describe('BS4 effect audit follow-up', () => {
     it('converts the red item and stage HP/attack effects with their color and level gates', () => {
       expect(convertOfficialItemAbility(findBs4Card('BS4-020'))).toMatchObject({
@@ -5303,7 +5311,7 @@ describe('BS8 candidate serial contract', () => {
           effectText:
             "Then, <can be used as {R}.> Draw 1 card from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
           effects: [
-            { kind: 'draw-up-to', max: 1 },
+            { kind: 'draw', amount: 1 },
             {
               kind: 'damage',
               amount: 1,
@@ -5571,28 +5579,76 @@ describe('BS8 candidate serial contract', () => {
     })
   })
 
-  it('maps BS8-059 support-return cost before every opponent Cookie loses up to two HP cards', () => {
+  it('maps BS8-059 support-return cost and blocks its HP removal while another Mystic Flour is in battle', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-059'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
       cost: { energy: { green: 1 }, supportToHand: 2 },
-      effects: [{ kind: 'hp-to-trash-all', amount: 2, side: 'opponent' }],
+      effects: [{
+        kind: 'hp-to-trash-all',
+        amount: 2,
+        side: 'opponent',
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Mystic Flour Cookie',
+          excludeSource: true,
+          negate: true,
+        },
+      }],
+    })
+  })
+
+  it('maps BS8 green conditional recovery and trap Then/cost-reduction clauses', () => {
+    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-065'))).toMatchObject({
+      trigger: 'on-play',
+      effects: [{
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        optional: true,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      }],
+    })
+    expect(convertOfficialTrapAbility(findBs8Candidate('BS8-073'))).toMatchObject({
+      cost: { energy: { green: 1 } },
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn' },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { green: 1 }, discardHand: 0 },
+          effects: [{
+            kind: 'opponent-rests-support',
+            amount: 1,
+            activeOnly: true,
+            condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+          }],
+        },
+      ],
+    })
+    expect(convertOfficialTrapAbility(findBs8Candidate('BS8-074'))).toMatchObject({
+      cost: { energy: { green: 1 } },
+      conditionalCost: {
+        condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+        cost: { energy: {} },
+      },
     })
   })
 
   it('maps BS8 yellow break-area progression with printed level bounds and ordering', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-038'))).toMatchObject({
       trigger: 'on-play',
+      cost: { handToBreakArea: { count: 1, minLevel: 3, maxLevel: 3 } },
       effects: [
-        { kind: 'hand-to-break', amount: 1, minLevel: 3, maxLevel: 3 },
         { kind: 'break-to-trash', max: 2, exactLevel: 1 },
       ],
     })
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-039'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
+      cost: { handToBreakArea: { count: 1, minLevel: 2, maxLevel: 2 } },
       effects: [
-        { kind: 'hand-to-break', amount: 1, minLevel: 2, maxLevel: 2 },
         { kind: 'break-to-battle', amount: 1, maxLevel: 2 },
       ],
     })
@@ -5602,27 +5658,17 @@ describe('BS8 candidate serial contract', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-032'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
+      cost: { selfToBreakArea: true, handToBreakArea: { count: 1, minLevel: 2 } },
       effects: [
-        {
-          kind: 'battle-to-break',
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-          condition: { kind: 'break-area-has-card', side: 'self' },
-        },
-        { kind: 'hand-to-break', amount: 1, minLevel: 2 },
-        { kind: 'draw-up-to', max: 2 },
+        { kind: 'draw-up-to', max: 2, condition: { kind: 'break-area-has-card', side: 'self' } },
         { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' },
       ],
     })
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-034'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
+      cost: { selfToBreakArea: true, handToBreakArea: { count: 1 } },
       effects: [
-        {
-          kind: 'battle-to-break',
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-          condition: { kind: 'break-area-has-card', side: 'self' },
-        },
-        { kind: 'hand-to-break', amount: 1 },
         {
           kind: 'break-to-battle',
           amount: 1,
@@ -5636,8 +5682,8 @@ describe('BS8 candidate serial contract', () => {
   it('maps BS8-035 only to a break-area Cookie with the preceding trash card\'s level', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-035'))).toMatchObject({
       trigger: 'on-play',
+      cost: { trashCookieToBreakArea: { count: 1 } },
       effects: [
-        { kind: 'trash-to-break', amount: 1 },
         {
           kind: 'break-to-trash',
           max: 1,
@@ -5716,9 +5762,8 @@ describe('BS8 candidate serial contract', () => {
   it('maps BS8-031 with its required LV.3 trash move before the two-card bounded-sum return', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-031'))).toMatchObject({
       trigger: 'on-play',
-      cost: { energy: { yellow: 1 } },
+      cost: { energy: { yellow: 1 }, trashCookieToBreakArea: { count: 1, minLevel: 3, maxLevel: 3 } },
       effects: [
-        { kind: 'trash-to-break', amount: 1, exactLevel: 3 },
         {
           kind: 'break-to-hand-by-level-sum',
           targetSum: 3,
@@ -5735,8 +5780,8 @@ describe('BS8 candidate serial contract', () => {
       oncePerTurn: true,
       cost: { energy: { red: 1 } },
       effects: [
-        { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1 } },
-        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } },
+        { kind: 'damage', amount: 1, selectionAsCost: true,
+          target: { side: 'either', min: 2, max: 2, countPerPlayer: 1 } },
       ],
     })
   })
@@ -5921,12 +5966,8 @@ describe('BS8 candidate serial contract', () => {
       },
     ])
     expect(convertOfficialAttackEffects(findBs8Candidate('BS8-040'))).toEqual([
-      {
-        kind: 'draw-up-to-then-discard',
-        max: 1,
-        discardCount: 1,
-        condition: { kind: 'break-level-at-least', level: 3 },
-      },
+      { kind: 'draw', amount: 1, condition: { kind: 'break-level-at-least', level: 3 } },
+      { kind: 'discard-hand', count: 1, condition: { kind: 'break-level-at-least', level: 3 } },
     ])
     expect(convertOfficialAttackEffects(findBs8Candidate('BS8-045'))).toEqual([
       {
@@ -5977,12 +6018,14 @@ describe('BS8 candidate serial contract', () => {
     ])
   })
 
-  it('maps BS8-103 only when it enters from trash and supplies its printed purple energy', () => {
-    expect(convertOfficialCookieSkill(findBs8Candidate('BS8-103@1'))).toMatchObject({
+  it('maps BS8-103 Trash entry with purple support payment and independent optional HP targets', () => {
+    const skill = convertOfficialCookieSkill(findBs8Candidate('BS8-103@1'))
+    expect(skill).toMatchObject({
       trigger: 'on-play',
       fromTrashArea: true,
-      sourceEnergy: { purple: 1 },
-      effects: [{ kind: 'hp-to-trash-all', amount: 1, side: 'opponent' }],
+      cost: { energy: {purple:1}, discardHand:0 },
+      effects: [{ kind: 'hp-to-trash', amount: 1, target: {side:'opponent',min:0,max:2} }],
     })
+    expect(skill?.sourceEnergy).toBeUndefined()
   })
 })

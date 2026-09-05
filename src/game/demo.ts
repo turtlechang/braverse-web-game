@@ -1,6 +1,7 @@
 import { createSeededShuffle, defaultShuffle } from './helpers'
 import { getFaintTriggeredCost, hasCookieOnPlayEffects } from './skills'
 import { beginAttack } from './battle'
+import { materializeExtraDeckCookie } from './extra-deck'
 import { applyGameCommand } from './commands'
 import {
   createGame,
@@ -37,6 +38,7 @@ import {
 } from './bs8-candidate-staging'
 import type {
   CardEffect,
+  CookieInBattle,
   CookieCard,
   EnergyColor,
   ExtraDeckCard,
@@ -181,6 +183,15 @@ export const BS8_EXTRA_DECK_CARD_NUMBERS = [
 export type Bs8ExtraDeckCardNumber =
   (typeof BS8_EXTRA_DECK_CARD_NUMBERS)[number]
 
+export const BS8_GREEN_CONDITION_CARD_NUMBERS = [
+  'BS8-059',
+  'BS8-065',
+  'BS8-073',
+  'BS8-074',
+] as const
+export type Bs8GreenConditionCardNumber =
+  (typeof BS8_GREEN_CONDITION_CARD_NUMBERS)[number]
+
 const isBs8ExtraDeckCardNumber = (
   value: string,
 ): value is Bs8ExtraDeckCardNumber =>
@@ -215,6 +226,7 @@ export const parseTestStateConfig = (
       conditionMet: boolean
     }
   | { kind: 'bs8-011-double-skill' }
+  | { kind: 'bs8-011-faint-continuation'; faint: boolean }
   | { kind: 'bs8-076-active-prevention' }
   | { kind: 'bs8-084-attack-discard'; payable: boolean }
   | { kind: 'support-to-trash-skill' }
@@ -231,6 +243,7 @@ export const parseTestStateConfig = (
       cardNumber: string
       /** 只供 strict Browser 驗收，把含 Then 的卡導向其技能表面。 */
       preferSkillSurface?: boolean
+      sourceHpCount?: number
     }
   | {
       kind: 'card-negative'
@@ -243,6 +256,12 @@ export const parseTestStateConfig = (
   | { kind: 'bs4-026-on-play'; blocked: boolean }
   | { kind: 'bs6-031-attack-after'; payable: boolean }
   | { kind: 'bs6-008-trap'; remainingHp: 4 | 5 }
+  | { kind: 'bs8-021-trap'; conditionMet: boolean }
+  | {
+      kind: 'bs8-green-condition'
+      cardNumber: Bs8GreenConditionCardNumber
+      conditionMet: boolean
+    }
   | { kind: 'bs4-077-timekeeper-cost' }
   | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
   | {
@@ -350,6 +369,26 @@ export const parseTestStateConfig = (
   if (testState === 'faint-damage') {
     return { kind: 'faint-damage' }
   }
+  if (testState === 'bs8-021-trap-locked') {
+    return { kind: 'bs8-021-trap', conditionMet: true }
+  }
+  if (testState === 'bs8-021-trap-open') {
+    return { kind: 'bs8-021-trap', conditionMet: false }
+  }
+  if (testState?.startsWith('bs8-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS8_GREEN_CONDITION_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs8-green-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
   if (testState === 'trap-pretzel-payable') {
     return { kind: 'trap-pretzel', attack: 5 }
   }
@@ -383,6 +422,12 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs8-011-double-skill') {
     return { kind: 'bs8-011-double-skill' }
+  }
+  if (testState === 'bs8-011-faint-continuation') {
+    return { kind: 'bs8-011-faint-continuation', faint: true }
+  }
+  if (testState === 'bs8-011-faint-continuation:no-faint') {
+    return { kind: 'bs8-011-faint-continuation', faint: false }
   }
   if (testState === 'bs8-076-active-prevention') {
     return { kind: 'bs8-076-active-prevention' }
@@ -450,6 +495,9 @@ export const parseTestStateConfig = (
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber, preferSkillSurface: true }
     }
+  }
+  if (testState === 'bs8-hp-condition:BS8-002:unmet' || testState === 'bs8-hp-condition:BS8-003:unmet') {
+    return { kind: 'card-check', cardNumber: testState.split(':')[1], preferSkillSurface: true, sourceHpCount: 2 }
   }
   if (testState?.startsWith('card-skill-negative:')) {
     const cardNumber = testState.slice('card-skill-negative:'.length).trim()
@@ -952,9 +1000,10 @@ export const createAttackEffectDemoState = (): GameState => {
 export const createBs8ExtraDeckDemoState = (
   conditionMet: boolean,
   cardNumber: Bs8ExtraDeckCardNumber = 'BS8-005',
+  variantCardNumber: string = cardNumber,
 ): GameState => {
   if (cardNumber !== 'BS8-005') {
-    return createBs8ExtraDeckScenarioState(cardNumber, conditionMet)
+    return createBs8ExtraDeckScenarioState(cardNumber, conditionMet, variantCardNumber)
   }
   const p1Deck = DECK_CREATORS.red('player-one')
   const p2Deck = DECK_CREATORS.red('player-two')
@@ -989,7 +1038,7 @@ export const createBs8ExtraDeckDemoState = (
     .slice(0, 6)
   p2HpCards.forEach((card) => usedP2.add(card.instanceId))
   const avatarSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
-    (record) => record.baseCardNumber === 'BS8-005',
+    (record) => record.cardNumber === variantCardNumber,
   )
   if (!avatarSource) {
     throw new Error('BS8-005 fixture requires the formal EXTRA card record')
@@ -1008,9 +1057,6 @@ export const createBs8ExtraDeckDemoState = (
     // Keep a stable id for Browser selectors while preserving the official
     // card text, artwork, play requirement, and attack Then effects above.
     instanceId: 'bs8-005-demo-avatar',
-    // The demo names the materialized unit explicitly as a Cookie so its
-    // battle-area label is unambiguous; its model type remains `extra` here.
-    name: 'Avatar of Ruin Cookie',
   }
 
   return {
@@ -1083,12 +1129,13 @@ export const createBs8ExtraDeckDemoState = (
 function createBs8ExtraDeckScenarioState(
   cardNumber: Exclude<Bs8ExtraDeckCardNumber, 'BS8-005'>,
   conditionMet: boolean,
+  variantCardNumber: string = cardNumber,
 ): GameState {
   const base = createBs8ExtraDeckDemoState(false)
   const extraSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) =>
       record.baseCardNumber === cardNumber &&
-      record.cardNumber === cardNumber,
+      record.cardNumber === variantCardNumber,
   ) ?? (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.baseCardNumber === cardNumber,
   )
@@ -1170,6 +1217,12 @@ function createBs8ExtraDeckScenarioState(
         : makeFormalCookie('BS8-103', 'bs8-104-awaken-target')
     const playedFrom = cardNumber === 'BS8-027' ? 'break' : 'trash'
     playerUpdate = {
+      ...(cardNumber === 'BS8-027' ? {
+        supportArea: Array.from({ length: 3 }, (_, index) => ({
+          card: makeFormalCookie('BS8-026', `bs8-027-yellow-support-${index + 1}`),
+          rested: false,
+        })),
+      } : {}),
       battleArea: [
         {
           ...cardCheckBattleEntry(
@@ -1226,8 +1279,9 @@ function createBs8ExtraDeckScenarioState(
  */
 export const createBs8ExtraDeckReadinessDemoState = (
   conditionMet: boolean,
+  variantCardNumber = 'BS8-005',
 ): GameState => {
-  const base = createBs8ExtraDeckDemoState(false)
+  const base = createBs8ExtraDeckDemoState(false, 'BS8-005', variantCardNumber)
   const saffronSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === 'BS8-011',
   )
@@ -1314,8 +1368,7 @@ export const createBs8ExtraDeckReadinessDemoState = (
     trigger: 'activate',
     paymentIds: [paymentIds[0]],
     effectTargets: [
-      [secondSaffron.instanceId],
-      [opponentTarget.card.instanceId],
+      [secondSaffron.instanceId, opponentTarget.card.instanceId],
     ],
   })
   state = applyGameCommand(state, {
@@ -1333,8 +1386,7 @@ export const createBs8ExtraDeckReadinessDemoState = (
     trigger: 'activate',
     paymentIds: [paymentIds[1]],
     effectTargets: [
-      [firstSaffron.instanceId],
-      [opponentTarget.card.instanceId],
+      [firstSaffron.instanceId, opponentTarget.card.instanceId],
     ],
   })
   return applyGameCommand(state, {
@@ -3193,9 +3245,43 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
  * (if any) can be triggered through the real UI. Throws if the card number
  * isn't in the shared official card pool.
  */
+const cardCheckOfficialCard = (cardNumber: string, instanceId: string): GameCard => {
+  const card = getCardCheckCard(cardNumber)
+  return { ...card, instanceId }
+}
+
+const cardCheckOfficialCookie = (cardNumber: string, instanceId: string): CookieCard => {
+  const card = cardCheckOfficialCard(cardNumber, instanceId)
+  if (card.type !== 'cookie') throw new Error(`${cardNumber} is not a Cookie`)
+  return card
+}
+
+const createBs8042EntryDemoState = (card: CookieCard): GameState => {
+    // Produce the Break origin with the real Shelly cost and summon commands.
+    const base = createCardCheckDemoState('BS8-039')
+    const source = base.players['player-one'].battleArea[0].card
+    const cost = cardCheckOfficialCookie('BS8-035', 'BS8-042-summon-cost')
+    const prepared: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': { ...base.players['player-one'], hand: [cost], breakArea: [card] },
+        'player-two': {
+          ...base.players['player-two'],
+          supportArea: [
+            { card: cardCheckOfficialCookie('BS8-037', 'BS8-042-opponent-rested'), rested: true },
+            { card: cardCheckOfficialCookie('BS8-040', 'BS8-042-opponent-active'), rested: false },
+          ],
+        },
+      },
+    }
+    const paid = applyGameCommand(prepared, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId, trigger: 'activate', paymentIds: [], handToBreakAreaIds: [cost.instanceId] })
+    return applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [card.instanceId] })
+}
+
 export const createCardCheckDemoState = (
   cardNumber: string,
-  options: { preferSkillSurface?: boolean } = {},
+  options: { preferSkillSurface?: boolean; sourceHpCount?: number } = {},
 ): GameState => {
   // EXTRA cards are deliberately not GameCards.  Route the generic localhost
   // card-check URL through the isolated EXTRA fixture instead of allowing the
@@ -3203,10 +3289,13 @@ export const createCardCheckDemoState = (
   // and place it in the player's hand.
   const baseCardNumber = cardNumber.trim().split('@')[0]
   if (isBs8ExtraDeckCardNumber(baseCardNumber)) {
-    if (baseCardNumber === 'BS8-005') {
-      return createBs8ExtraDeckReadinessDemoState(true)
+    if (baseCardNumber === 'BS8-027' && options.preferSkillSurface) {
+      return createBs8027BreakSkillDemoState(cardNumber, true)
     }
-    return createBs8ExtraDeckDemoState(true, baseCardNumber)
+    if (baseCardNumber === 'BS8-005') {
+      return createBs8ExtraDeckReadinessDemoState(true, cardNumber)
+    }
+    return createBs8ExtraDeckDemoState(true, baseCardNumber, cardNumber)
   }
   // The strict ability surface has an explicit duplicate-card fixture for
   // BS8-011. It proves Once Per Turn is tracked per physical battle entry;
@@ -3222,6 +3311,7 @@ export const createCardCheckDemoState = (
   // the normalized runtime attack still has a coloured energy cost (for
   // example BS8-083@2).  Browser candidate fixtures must pay that actual
   // runtime cost instead of manufacturing an unrelated purple shortfall.
+  if (baseCardNumber === 'BS8-042' && card.type === 'cookie') return createBs8042EntryDemoState(card)
   const attackPaymentColor =
     card.type === 'cookie'
       ? card.attackEnergyCost
@@ -3387,7 +3477,8 @@ export const createCardCheckDemoState = (
   // BS3-038 places a level-2-or-higher Cookie from hand into the break area).
   // Keep that legal candidate in the browser card-check fixture without
   // changing any production deck or runtime rule.
-  const handCookieFiller = cardCheckFillerCookie(
+  const handCookieFiller = card.id === 'BS8-038'
+    ? cardCheckOfficialCookie('BS8-030', 'BS8-038-cost-lv3') : cardCheckFillerCookie(
     'hand-cookie-filler',
     2,
     4,
@@ -3397,10 +3488,7 @@ export const createCardCheckDemoState = (
   // BS8's Cheese / conditional-deployment cards name a real Cookie rather
   // than accepting a generic filler. Keep the legal candidate data local to
   // the candidate Browser fixture so it never leaks into Standard decks.
-  const bs8GoldenCheeseFixture: CookieCard = {
-    ...cardCheckFillerCookie('BS8-golden-cheese-break', 3, 6, 0, 'yellow').cookie,
-    name: 'Golden Cheese Cookie',
-  }
+  const bs8GoldenCheeseFixture = cardCheckOfficialCookie('BS8-026', 'BS8-golden-cheese-break')
   const bs8BlueLevelTwoHandFixture = cardCheckFillerCookie(
     'BS8-blue-lv2-hand',
     2,
@@ -3408,17 +3496,80 @@ export const createCardCheckDemoState = (
     0,
     'blue',
   ).cookie
-  const bs8YellowLevelThreeHandFixture = cardCheckFillerCookie(
-    'BS8-yellow-lv3-hand',
-    3,
-    5,
-    0,
-    'yellow',
-  ).cookie
+  const bs8YellowLevelThreeHandFixture = cardCheckOfficialCookie('BS8-030', 'BS8-yellow-lv3-hand')
+  // BS8-021 必須和真正的 Burning Spice Cookie 一起驗證：道具先對其他
+  // Cookie 造成傷害，再可選擇裝載；之後攻擊時由裝備後效果檢查休息區 LV。
+  // 兩張皆取自同一份 BS8 官方資料，避免用同名 filler 偽造指名裝備目標。
+  const bs8021BurningSpice =
+    card.id === 'BS8-021'
+      ? (() => {
+          const candidate = getBs8CandidateTestCard('BS8-009')
+          if (!candidate || candidate.type !== 'cookie') {
+            throw new Error('BS8-021 fixture requires Burning Spice Cookie')
+          }
+          return { ...candidate, instanceId: 'BS8-021-burning-spice' }
+        })()
+      : null
+  const bs8021Trap =
+    card.id === 'BS8-021'
+      ? (() => {
+          const candidate = getBs8CandidateTestCard('BS8-023')
+          if (!candidate || candidate.type !== 'trap') {
+            throw new Error('BS8-021 fixture requires a payable Trap witness')
+          }
+          return { ...candidate, instanceId: 'BS8-021-opponent-trap' }
+        })()
+      : null
+  // BS8-013's faint Then is restricted to a red LV.1 Cookie and explicitly
+  // excludes Pomegranate Cake Shaman itself.  The generic trash filler has no
+  // colour, so it is intentionally not a legal substitute.  Add a real
+  // official red LV.1 Cookie to this localhost-only fixture so the faint
+  // queue reaches the actual trash selector and displays its card art/name.
+  const bs8013TrashCandidate =
+    card.id === 'BS8-013'
+      ? (() => {
+          const entry = getCardPoolEntry('BS8-002')
+          if (!entry) {
+            throw new Error('BS8-013 fixture requires a red LV.1 Cookie candidate')
+          }
+          return createCard(entry, 'player-one', 8013)
+        })()
+      : null
+  // BS8-017's Activate selects a red Cookie whose *printed* HP is 1 from
+  // trash, then only continues to its damage Then after that Cookie really
+  // enters battle.  The generic trash fillers are intentionally not legal
+  // (one has no colour and the other has printed HP 4), so keep the official
+  // BS8-013 Pomegranate Cake Shaman in this localhost-only fixture as the
+  // visible card-art/name candidate.
+  const bs8017TrashCandidate =
+    card.id === 'BS8-017'
+      ? (() => {
+          const entry = getCardPoolEntry('BS8-013')
+          if (!entry) {
+            throw new Error('BS8-017 fixture requires a red printed-HP-1 Cookie candidate')
+          }
+          return createCard(entry, 'player-one', 8017)
+        })()
+      : null
+  // BS8-019's faint effect returns a red LV.1 Cookie that is not Cake Hound.
+  // The generic trash fillers deliberately have no matching colour/level, so
+  // keep an actual official candidate in this localhost-only fixture.
+  const bs8019TrashCandidate =
+    card.id === 'BS8-019'
+      ? (() => {
+          const entry = getCardPoolEntry('BS8-002')
+          if (!entry) {
+            throw new Error('BS8-019 fixture requires a red LV.1 Cookie candidate')
+          }
+          return createCard(entry, 'player-one', 8019)
+        })()
+      : null
   // Trash (discard pile) filler for skills that select from trash.
   const trashFillers: GameCard[] = [
-    cardCheckFillerCookie('trash-cookie-1', 1, 3).cookie,
-    cardCheckFillerCookie('trash-cookie-2', 2, 4, 0, payColor).cookie,
+    ...(card.id === 'BS8-035'
+      ? [cardCheckOfficialCookie('BS8-033@1', 'BS8-035-cost-lv2')]
+      : [cardCheckFillerCookie('trash-cookie-1', 1, 3).cookie,
+        cardCheckFillerCookie('trash-cookie-2', 2, 4, 0, payColor).cookie]),
     testSupportCard('trash-item-1', payColor),
     ...Array.from({ length: 5 }, (_, i) =>
       testSupportCard(`trash-purple-cost-${i}`, 'purple'),
@@ -3445,7 +3596,7 @@ export const createCardCheckDemoState = (
     // BS8-031 first moves a real LV.3 Cookie from trash; BS8-114 needs 30
     // cards while BS8-113/117/120/125 each use the printed 15-card threshold.
     ...(card.id === 'BS8-031'
-      ? [cardCheckFillerCookie('BS8-031-trash-lv3', 3, 5, 0, 'yellow').cookie]
+      ? [cardCheckOfficialCookie('BS8-030', 'BS8-031-trash-lv3')]
       : []),
     ...(['BS8-113', 'BS8-117', 'BS8-120', 'BS8-125'].includes(card.id)
       ? Array.from({ length: 7 }, (_, index) =>
@@ -3485,6 +3636,9 @@ export const createCardCheckDemoState = (
           ).cookie,
         )
       : []),
+    ...(bs8013TrashCandidate ? [bs8013TrashCandidate] : []),
+    ...(bs8017TrashCandidate ? [bs8017TrashCandidate] : []),
+    ...(bs8019TrashCandidate ? [bs8019TrashCandidate] : []),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
   // (see deployCookie in actions.ts); an empty deck immediately triggers
@@ -3578,9 +3732,19 @@ export const createCardCheckDemoState = (
           ]
       : card.id === 'BS8-031'
         ? [
-            cardCheckFillerCookie('BS8-031-break-lv1', 1, 3, 0, 'yellow').cookie,
-            cardCheckFillerCookie('BS8-031-break-lv2', 2, 4, 0, 'yellow').cookie,
+            cardCheckOfficialCookie('BS8-037', 'BS8-031-break-lv1'),
+            cardCheckOfficialCookie('BS8-035', 'BS8-031-break-lv2'),
           ]
+      : card.id === 'BS8-035'
+        ? [cardCheckOfficialCookie('BS8-035', 'BS8-035-break-lv2'), cardCheckOfficialCookie('BS8-037', 'BS8-035-break-lv1')]
+      : card.id === 'BS8-038'
+        ? [cardCheckOfficialCookie('BS8-037', 'BS8-038-break-lv1-a'), cardCheckOfficialCookie('BS8-031', 'BS8-038-break-lv1-b'), cardCheckOfficialCookie('BS8-035', 'BS8-038-break-lv2')]
+      : card.id === 'BS8-039'
+        ? []
+      : card.id === 'BS8-040'
+        ? [cardCheckOfficialCookie('BS8-030', 'BS8-040-break-lv3')]
+      : card.id === 'BS8-045'
+        ? [cardCheckOfficialCookie('BS8-030', 'BS8-045-break-lv3-a'), cardCheckOfficialCookie('BS8-030', 'BS8-045-break-lv3-b')]
       : card.id === 'BS8-032' || card.id === 'BS8-034'
         ? [bs8GoldenCheeseFixture]
       : [
@@ -3656,7 +3820,13 @@ export const createCardCheckDemoState = (
             ? [card, ...handFillers.slice(0, 1)]
         : [card, ...handFillers]
     const itemBreakArea =
-      card.id === 'BS7-020'
+      card.id === 'BS8-021'
+        ? [
+            cardCheckFillerCookie('BS8-021-break-lv3-a', 3, 4, 0, 'red').cookie,
+            cardCheckFillerCookie('BS8-021-break-lv3-b', 3, 4, 0, 'red').cookie,
+            cardCheckFillerCookie('BS8-021-break-lv2', 2, 4, 0, 'red').cookie,
+          ]
+      : card.id === 'BS7-020'
         ? ownBreakArea
       : card.id === 'BS8-047'
         ? [
@@ -3707,7 +3877,23 @@ export const createCardCheckDemoState = (
         'player-one': {
           ...state.players['player-one'],
           hand: itemHand,
-          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          battleArea: bs8021BurningSpice
+            ? [
+                cardCheckBattleEntry(
+                  bs8021BurningSpice,
+                  Array.from({ length: bs8021BurningSpice.hp }, (_, index) =>
+                    testSupportCard(`BS8-021-burning-spice-hp-${index + 1}`, 'red'),
+                  ),
+                  4,
+                ),
+                cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+              ]
+            : card.id === 'BS8-046'
+              ? [
+                  cardCheckBattleEntry(cardCheckOfficialCookie('BS8-037', 'BS8-046-hp1'), selfExtra1.hpCards.slice(0, 1), 4),
+                  cardCheckBattleEntry(cardCheckOfficialCookie('BS8-034', 'BS8-046-hp2'), selfExtra1.hpCards.slice(1, 3), 6),
+                ]
+              : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
           deck: itemDeck,
           supportArea: itemPlayerSupportArea.map((c) => ({
             card: c,
@@ -3718,6 +3904,12 @@ export const createCardCheckDemoState = (
         },
         'player-two': {
           ...state.players['player-two'],
+          ...(bs8021Trap
+            ? {
+                hand: [bs8021Trap],
+                supportArea: scenarioSupports('BS8-021-opponent-trap-support', 2, 'red'),
+              }
+            : {}),
           battleArea: opponentBattleArea,
           stage: { card: opponentStage, rested: false },
           discardPile: opponentTrashFillers,
@@ -3745,6 +3937,22 @@ export const createCardCheckDemoState = (
   }
 
   if (card.type === 'stage') {
+    if (card.id === 'BS8-050') {
+      const base = createCardCheckDemoState('BS8-047')
+      const item = base.players['player-one'].hand.find((entry) => entry.id === 'BS8-047')!
+      const paid = applyGameCommand(base, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId, paymentIds: [base.players['player-one'].supportArea[0].card.instanceId], targetIds: ['BS8-yellow-lv3-hand'] })
+      const summoned = applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: ['BS8-047-yellow-lv3-break'] })
+      const resolved = applyGameCommand(summoned, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+      const player = resolved.players['player-one']
+      const target = player.battleArea.find((entry) => entry.card.instanceId === 'BS8-047-yellow-lv3-break')!
+      // The origin is created by the real Item. The fixture starts later in
+      // that same turn, with one HP left after prior damage.
+      return { ...resolved, players: { ...resolved.players, 'player-one': {
+        ...player, hand: [card],
+        battleArea: player.battleArea.map((entry) => entry === target ? { ...entry, hpCards: entry.hpCards.slice(0, 1) } : entry),
+        discardPile: [...player.discardPile, ...target.hpCards.slice(1)],
+      } } }
+    }
     const stageBattleCookie = card.id === 'P-032'
       ? { ...selfExtra1.cookie, keywords: ['ancient'] as ['ancient'] }
       : card.id === 'BS8-125'
@@ -3801,6 +4009,8 @@ export const createCardCheckDemoState = (
           3,
           payColor,
         )
+      : card.id === 'BS8-049'
+        ? { cookie: cardCheckOfficialCookie('BS8-037', 'BS8-049-hp1'), hpCards: selfExtra1.hpCards.slice(0, 1) }
       : { cookie: stageBattleCookie, hpCards: selfExtra1.hpCards }
     // BS6-064 activates only while our support area is smaller than the
     // opponent's.  The generic stage fixture normally supplies generous
@@ -3882,6 +4092,28 @@ export const createCardCheckDemoState = (
   }
 
   if (card.type === 'trap') {
+    if (card.id === 'BS8-048') {
+      const base = baseState()
+      const attacker = cardCheckOfficialCookie('BS8-036', 'BS8-048-attacker')
+      const defender = cardCheckOfficialCookie('BS8-034', 'BS8-048-defender')
+      const payment = cardCheckOfficialCard('BS8-037', 'BS8-048-attack-payment')
+      const prepared: GameState = {
+        ...base, firstPlayerId: 'player-two', activePlayerId: 'player-two',
+        players: { ...base.players,
+          'player-one': { ...base.players['player-one'], hand: [card],
+            battleArea: [cardCheckBattleEntry(defender, deckFiller('048-defender').slice(0, 5), 4)],
+            breakArea: [cardCheckOfficialCookie('BS8-030', 'BS8-048-break-lv3')],
+            supportArea: [{ card: cardCheckOfficialCard('BS8-037', 'BS8-048-payment'), rested: false }],
+            discardPile: [cardCheckOfficialCard('BS8-021', 'BS8-048-destruction'), cardCheckOfficialCard('BS3-043', 'BS8-048-abundance'), cardCheckOfficialCard('BS8-046', 'BS8-048-wrong-item')],
+          },
+          'player-two': { ...base.players['player-two'],
+            battleArea: [cardCheckBattleEntry(attacker, deckFiller('048-attacker').slice(0, 2), 5)],
+            supportArea: [{ card: payment, rested: false }],
+          },
+        },
+      }
+      return applyGameCommand(prepared, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: defender.instanceId, supportPaymentIds: [payment.instanceId] })
+    }
     // BS2-050 can only target an opponent Cookie with 3 or fewer remaining
     // HP.  Keep that condition satisfied in the generic trap fixture so the
     // response modal exposes the real target/payment flow instead of letting
@@ -4105,7 +4337,7 @@ export const createCardCheckDemoState = (
           ...state.players['player-one'],
           hand: handFillers,
           battleArea: [
-            cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+            cardCheckBattleEntry(card.id === 'BS8-036' ? cardCheckOfficialCookie('BS8-034', 'flip-defender') : defender.cookie, defender.hpCards, 4),
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ],
           breakArea: bigOwnBreakArea,
@@ -4141,7 +4373,29 @@ export const createCardCheckDemoState = (
   // createFaintDamageDemoState — the card is already in the break area with
   // a pending faint effect queued.
   if (card.skill?.faint) {
-    const target = cardCheckFillerCookie('faint-target', 2, 5, 0, payColor)
+    // BS8-018's printed effect targets an opponent Cookie after the source
+    // faints.  Use an actual harmless official Cookie in this fixture so the
+    // Browser route shows real card art/name instead of a synthetic
+    // "faint-target" placeholder.  The generic fallback remains available
+    // for other faint skills that only need a legal target witness.
+    const target = card.id === 'BS8-018'
+      ? (() => {
+          const targetEntry = getCardPoolEntry('BS1-007')
+          if (!targetEntry) {
+            throw new Error('BS8-018 fixture requires an official opponent Cookie target')
+          }
+          const targetCard = createCard(targetEntry, 'player-two', 8018)
+          if (targetCard.type !== 'cookie') {
+            throw new Error('BS8-018 fixture target must be a Cookie')
+          }
+          return {
+            cookie: targetCard,
+            hpCards: Array.from({ length: targetCard.hp }, (_, index) =>
+              testSupportCard(`BS8-018-opponent-target-hp-${index + 1}`, 'red'),
+            ),
+          }
+        })()
+      : cardCheckFillerCookie('faint-target', 2, 5, 0, payColor)
     const state = baseState()
     const faintCard: CookieCard = { ...(card as CookieCard) }
     const faintCost = getFaintTriggeredCost(card.skill)
@@ -4158,7 +4412,10 @@ export const createCardCheckDemoState = (
           sourcePlayerId: 'player-one',
           sourceInstanceId: faintCard.instanceId,
         },
-        ...(card.skill?.sourceEnergy
+        // A single "can be used as {R}" clause pays once for the whole
+        // faint-triggered skill, not once per effect split out of that
+        // trigger (BS8-018 has break-source-to-trash followed by damage).
+        ...(card.skill?.sourceEnergy && index === 0
           ? { sourceEnergy: card.skill.sourceEnergy }
           : {}),
         ...(faintCost && index === 0 ? { cost: faintCost } : {}),
@@ -4218,12 +4475,15 @@ export const createCardCheckDemoState = (
           // BS3-061 pays its faint cost from the support area before checking
           // the 5-card condition. Start with six cards so the default
           // card-check route exercises the condition-met path.
-          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101' || card.id === 'BS7-040'
+          // BS8-018 的「<can be used as {R}>」是昏厥效果的可選紅色
+          // 支援區支付；夾具必須提供活躍紅色支援卡，才能讓 Browser
+          // 實際走過能量選擇與支付 UI，而不是直接落入沒有能量的略過路徑。
+          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101' || card.id === 'BS7-040' || card.id === 'BS8-018'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
             : faintSupportArea
               ? { supportArea: faintSupportArea }
             : {}),
-          ...(card.id === 'BS2-043' || card.id === 'BS5-007' || card.id === 'BS7-090'
+          ...(card.id === 'BS2-043' || card.id === 'BS5-007' || card.id === 'BS7-090' || card.id === 'BS8-019'
             ? { hand: handFillers }
             : card.id === 'BS5-026'
               ? { hand: [handCookieFiller, ...handFillers] }
@@ -4241,7 +4501,11 @@ export const createCardCheckDemoState = (
               4,
               card.id === 'BS7-050',
             ),
-            ...opponentBattleArea,
+            // BS8-018 only needs one legal target ("up to 1").  Keep this
+            // route entirely on the official target card instead of adding a
+            // synthetic witness; other faint skills still retain one generic
+            // witness below the two-Cookie battle-area limit.
+            ...(card.id === 'BS8-018' ? [] : opponentBattleArea.slice(0, 1)),
           ],
           ...(opponentTrashForFaint.length > 0
             ? { discardPile: opponentTrashForFaint }
@@ -4295,7 +4559,9 @@ export const createCardCheckDemoState = (
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      usesLowHpAttackFixture
+      cookieCard.id === 'BS8-026'
+        ? 4
+        : usesLowHpAttackFixture
         ? 1
       : cookieCard.id === 'BS6-053'
         ? cookieCard.hp
@@ -4688,7 +4954,7 @@ export const createCardCheckDemoState = (
       const blockerHpCards = Array.from({ length: blockerCard.hp }, (_, index) =>
         testSupportCard(`${card.id}-blocker-hp-${index + 1}`, payColor),
       )
-      return {
+      const responseState: GameState = {
         ...state,
         firstPlayerId: 'player-two',
         activePlayerId: 'player-two',
@@ -4730,6 +4996,27 @@ export const createCardCheckDemoState = (
           attackEffectIndex: 0,
         },
       }
+      if (card.id === 'BS8-044') {
+        const support = cardCheckOfficialCookie('BS8-037', 'BS8-044-attack-payment')
+        const ready: GameState = {
+          ...responseState,
+          pendingBattle: null,
+          players: {
+            ...responseState.players,
+            'player-one': {
+              ...responseState.players['player-one'],
+              battleArea: responseState.players['player-one'].battleArea.map((entry, index) => index === 0 ? { ...entry, card: cardCheckOfficialCookie('BS8-034', defender.cookie.instanceId) } : entry),
+            },
+            'player-two': {
+              ...responseState.players['player-two'],
+              supportArea: [{ card: support, rested: false }],
+              battleArea: [{ ...responseState.players['player-two'].battleArea[0], card: cardCheckOfficialCookie('BS8-036', attacker.cookie.instanceId), hpCards: attacker.hpCards.slice(0, 2), rested: false }],
+            },
+          },
+        }
+        return applyGameCommand(ready, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.cookie.instanceId, targetInstanceId: defender.cookie.instanceId, supportPaymentIds: [support.instanceId] })
+      }
+      return responseState
     }
 
     if (hasCookieOnPlayEffects(card)) {
@@ -4972,7 +5259,16 @@ export const createCardCheckDemoState = (
     // trash to pay whatever cost it has, plus a spread of legal targets on
     // both sides.
     const sourceHpCards =
-      card.id === 'BS4-005'
+      options.sourceHpCount !== undefined
+        ? Array.from({length: options.sourceHpCount}, (_, index) => testSupportCard(`${card.id}-source-hp-${index + 1}`, payColor))
+      :
+      // BS8-020's Activate is legal only with exactly one remaining HP.  Keep
+      // that state explicit in the generic card-check fixture so the Browser
+      // route reaches the source-only field-to-trash effect instead of
+      // presenting an invalid full-HP source (or a fainted zero-HP source).
+      card.id === 'BS8-020'
+        ? [testSupportCard(`${card.id}-source-hp-1`, payColor)]
+      : card.id === 'BS4-005'
         ? [testSupportCard('BS4-005-source-hp')]
         : card.id === 'BS6-055'
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
@@ -5026,7 +5322,13 @@ export const createCardCheckDemoState = (
         ]
         : deckFiller('p1')
     const skillHand =
-      card.id === 'BS7-068'
+      card.id === 'BS8-032'
+        ? [cardCheckOfficialCookie('BS8-035', 'BS8-032-hand-lv2'), ...handFillers]
+      : card.id === 'BS8-034'
+        ? [cardCheckOfficialCookie('BS8-037', 'BS8-034-hand-lv1'), ...handFillers]
+      : card.id === 'BS8-039'
+        ? [cardCheckOfficialCookie('BS8-033@1', 'BS8-039-cost-lv2')]
+      : card.id === 'BS7-068'
         ? handFillers.slice(0, 2)
         : card.id === 'BS5-019' || card.id === 'BS6-032'
           ? [handCookieFiller, ...handFillers]
@@ -5100,12 +5402,12 @@ export const createCardCheckDemoState = (
       },
       ...(bs8011SecondEntry
         ? [bs8011SecondEntry]
-        : card.id === 'BS7-055' || card.id === 'BS8-032' || card.id === 'BS8-034' || card.id === 'BS8-039' || card.id === 'BS8-120'
+        : card.id === 'BS7-055' || card.id === 'BS8-017' || card.id === 'BS8-039' || card.id === 'BS8-120'
           ? []
           : [
               {
                 ...cardCheckBattleEntry(
-                  selfExtra1.cookie,
+                  card.id === 'BS8-043' ? cardCheckOfficialCookie('BS8-026', selfExtra1.cookie.instanceId) : selfExtra1.cookie,
                   selfExtra1.hpCards,
                   6,
                 ),
@@ -5243,6 +5545,105 @@ export const createBs8011DoubleSkillDemoState = (): GameState => {
 }
 
 /**
+ * Localhost-only regression fixture for BS8-011 damaging BS8-018 first.
+ *
+ * BS8-011 selects both players' targets before dealing damage. Selecting a
+ * 1-HP Cake Wolf and BS1-006 completes both damage before queued faint and
+ * after-damage effects. Cake Wolf then offers an optional red-energy payment
+ * and follow-up damage. The `faint` switch also exposes a no-faint control
+ * route where Cake Wolf starts at 2 HP; both routes use the real card records
+ * and command/state machinery rather than pre-populating a faint counter.
+ */
+export const createBs8011FaintContinuationDemoState = (
+  faint: boolean,
+): GameState => {
+  const base = createCardCheckDemoState('BS8-011')
+  const player = base.players['player-one']
+  const opponent = base.players['player-two']
+  const saffron = player.battleArea.find(
+    (entry) => entry.card.id === 'BS8-011',
+  )
+  if (!saffron || saffron.card.type !== 'cookie') {
+    throw new Error('BS8-011 faint-continuation fixture requires Saffron Buffalo Shaman')
+  }
+
+  const makeFormalCookie = (
+    cardNumber: string,
+    instanceId: string,
+  ): CookieCard => {
+    const source = getCardPoolEntry(cardNumber)
+    if (!source) {
+      throw new Error(`${cardNumber} faint-continuation fixture requires the card pool entry`)
+    }
+    const card = createCard(source, 'player-one', 8118)
+    if (card.type !== 'cookie') {
+      throw new Error(`${cardNumber} faint-continuation fixture requires a Cookie card`)
+    }
+    return { ...card, instanceId }
+  }
+
+  const cakeWolf = makeFormalCookie('BS8-018', 'bs8-018-faint-continuation')
+  // BS8-018's faint follow-up damages a separate opponent Cookie after the
+  // outer BS8-011 damage has already hit BS1-006. Keeping separate cards proves that
+  // each damage event is evaluated independently (including BS1-006's
+  // once-per-turn after-damage trigger).
+  const nestedTarget = makeFormalCookie('BS1-010', 'bs1-010-nested-target')
+  const malaSauce = makeFormalCookie('BS1-006', 'bs1-006-follow-up-target')
+  const saffronCard = { ...saffron.card, instanceId: 'bs8-011-faint-source' }
+  const saffronHp = Array.from({ length: saffronCard.hp }, (_, index) =>
+    testSupportCard(`bs8-011-faint-source-hp-${index + 1}`, 'red'),
+  )
+  const cakeHp = Array.from(
+    { length: faint ? cakeWolf.hp : Math.max(2, cakeWolf.hp) },
+    (_, index) => testSupportCard(`bs8-018-faint-target-hp-${index + 1}`, 'red'),
+  )
+  const nestedTargetHp = Array.from(
+    { length: nestedTarget.hp },
+    (_, index) => testSupportCard(`bs1-010-nested-target-hp-${index + 1}`, 'red'),
+  )
+  const malaHp = Array.from({ length: malaSauce.hp }, (_, index) =>
+    testSupportCard(`bs1-006-follow-up-target-hp-${index + 1}`, 'red'),
+  )
+
+  return {
+    ...base,
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    phase: 'main',
+    turnNumber: 2,
+    cookiesFaintedThisTurn: { 'player-one': 0, 'player-two': 0 },
+    pendingBattle: null,
+    pendingReplacement: null,
+    pendingOnPlay: null,
+    skillUsesThisTurn: [],
+    players: {
+      ...base.players,
+      'player-one': {
+        ...player,
+        battleArea: [
+          cardCheckBattleEntry(saffronCard, saffronHp, 41),
+          cardCheckBattleEntry(cakeWolf, cakeHp, 42),
+        ],
+        supportArea: player.supportArea.map((support) => ({
+          ...support,
+          rested: false,
+        })),
+        breakArea: [],
+      },
+      'player-two': {
+        ...opponent,
+        battleArea: [
+          cardCheckBattleEntry(nestedTarget, nestedTargetHp, 43),
+          cardCheckBattleEntry(malaSauce, malaHp, 44),
+        ],
+        hand: [],
+        breakArea: [],
+      },
+    },
+  }
+}
+
+/**
  * BS2-015 支付「將這個餅乾放入棄牌區」後的兩條正式流程：
  * 手牌沒有餅乾時立即敗北；有餅乾時先強制補位，再繼續結算技能。
  */
@@ -5266,14 +5667,114 @@ export const createCardNegativeDemoState = (
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']
   const baseCardNumber = cardNumber.split('@')[0]
+  if (baseCardNumber === 'BS8-012' || baseCardNumber === 'BS8-013' || baseCardNumber === 'BS8-016') {
+    // Simulate an earlier effect moving the queued source out of Break.
+    // Keep the later skill pending so B tests its unavailable source cost.
+    const sourceId = state.pendingFaintEffects?.[0]?.sourceInstanceId
+    const source = player.breakArea.find((card) => card.instanceId === sourceId)
+    if (source) return updateDemoPlayer(state, 'player-one', {
+      breakArea: player.breakArea.filter((card) => card.instanceId !== sourceId),
+      discardPile: [...player.discardPile, source],
+    })
+  }
+  if (baseCardNumber === 'BS8-042') {
+    const source = player.battleArea.find((entry) => entry.card.id === baseCardNumber)!
+    return {
+      ...updateDemoPlayer(state, 'player-one', {
+        hand: [source.card],
+        battleArea: player.battleArea.filter((entry) => entry !== source),
+        deck: [...source.hpCards, ...player.deck],
+      }),
+      pendingOnPlay: null,
+      cookiesPlayedFromBreakThisTurn: undefined,
+      commandLog: [],
+    }
+  }
+  if (baseCardNumber === 'BS8-032' || baseCardNumber === 'BS8-034') {
+    return updateDemoPlayer(state, 'player-one', { breakArea: [] })
+  }
+  if (baseCardNumber === 'BS8-035') {
+    return updateDemoPlayer(state, 'player-one', { discardPile: player.discardPile.filter((card) => card.type !== 'cookie') })
+  }
+  if (baseCardNumber === 'BS8-015' || baseCardNumber === 'BS8-036') {
+    return updateDemoPlayer(state, 'player-one', { hand: [] })
+  }
+  if (baseCardNumber === 'BS8-038') {
+    return updateDemoPlayer(state, 'player-one', { hand: player.hand.filter((card) => card.type !== 'cookie' || card.level !== 3) })
+  }
+  if (baseCardNumber === 'BS8-039') {
+    return updateDemoPlayer(state, 'player-one', { hand: [cardCheckOfficialCookie('BS8-037', 'BS8-039-wrong-lv1')] })
+  }
+  if (baseCardNumber === 'BS8-040') {
+    return updateDemoPlayer(state, 'player-one', { breakArea: [cardCheckOfficialCookie('BS8-035', 'BS8-040-break-lv2')] })
+  }
+  if (baseCardNumber === 'BS8-043') {
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) => entry.card.id === 'BS8-026' ? { ...entry, enteredFrom: 'hand' as const } : entry),
+    })
+  }
+  if (baseCardNumber === 'BS8-045') {
+    return updateDemoPlayer(state, 'player-one', { breakArea: [...player.breakArea, cardCheckOfficialCookie('BS8-037', 'BS8-045-break-lv1')] })
+  }
+  if (baseCardNumber === 'BS8-046') {
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) => entry.card.instanceId === 'BS8-046-hp1' ? { ...entry, hpCards: [...entry.hpCards, testSupportCard('BS8-046-negative-hp2', 'yellow')] } : entry),
+    })
+  }
+  if (baseCardNumber === 'BS8-047') {
+    return updateDemoPlayer(state, 'player-one', {
+      hand: player.hand.filter((card) => card.type !== 'cookie' || card.level !== 3),
+    })
+  }
+  if (baseCardNumber === 'BS8-048') {
+    return updateDemoPlayer(state, 'player-one', {
+      breakArea: [cardCheckOfficialCookie('BS8-035', 'BS8-048-break-lv2')],
+    })
+  }
+  if (baseCardNumber === 'BS8-049') {
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) => ({ ...entry, hpCards: [...entry.hpCards, testSupportCard('BS8-049-negative-hp2', 'yellow')] })),
+    })
+  }
+  if (baseCardNumber === 'BS8-050') {
+    const hp = player.discardPile.find((entry) => entry.type !== 'cookie')!
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) => entry.card.instanceId === 'BS8-047-yellow-lv3-break' ? { ...entry, hpCards: [...entry.hpCards, hp] } : entry),
+      discardPile: player.discardPile.filter((entry) => entry.instanceId !== hp.instanceId),
+    })
+  }
+  if (baseCardNumber === 'BS8-031') {
+    return updateDemoPlayer(state, 'player-one', {
+      discardPile: player.discardPile.filter((card) => card.type !== 'cookie' || card.level !== 3),
+    })
+  }
+  if (baseCardNumber === 'BS8-026') {
+    // Isolate the printed HP threshold. Both routes must still declare and
+    // pay for a real attack; exhausted supports would only test payment.
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.id === baseCardNumber
+          ? {
+              ...entry,
+              hpCards: Array.from({ length: 5 }, (_, index) =>
+                testSupportCard(`BS8-026-negative-hp-${index + 1}`, 'yellow'),
+              ),
+            }
+          : entry,
+      ),
+    })
+  }
   if (isBs8ExtraDeckCardNumber(baseCardNumber)) {
+    if (baseCardNumber === 'BS8-027' && options.preferSkillSurface) {
+      return createBs8027BreakSkillDemoState(cardNumber, false)
+    }
     // Keep every BS8 EXTRA card in the isolated EXTRA Deck.  BS8-005 uses
     // the real faint-count readiness fixture; the remaining cards use their
     // dedicated unmet-condition board snapshots.
     if (baseCardNumber === 'BS8-005') {
-      return createBs8ExtraDeckReadinessDemoState(false)
+      return createBs8ExtraDeckReadinessDemoState(false, cardNumber)
     }
-    return createBs8ExtraDeckDemoState(false, baseCardNumber)
+    return createBs8ExtraDeckDemoState(false, baseCardNumber, cardNumber)
   }
   const negativeDiscardPile =
     cardNumber === 'BS5-093' || cardNumber.startsWith('BS5-093@')
@@ -5285,6 +5786,46 @@ export const createCardNegativeDemoState = (
       : cardNumber === 'BS5-092' || cardNumber.startsWith('BS5-092@')
         ? player.discardPile.filter((card) => card.type === 'cookie')
         : player.discardPile
+  if (baseCardNumber === 'BS8-019') {
+    // Keep the same faint timing and valid recovery target, but remove every
+    // hand card. Browser B must therefore block on the printed discard-one
+    // cost before Cake Hound leaves the break area or any card returns.
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [],
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS8-021') {
+    // B 路徑保留真正的 Burning Spice、兩張可付款紅色支援與對手可付款
+    // 陷阱；只把休息區總 LV. 從 8 降為 7。這樣驗證的是裝備後攻擊的
+    // 陷阱封鎖條件，而不是「沒有目標」或「付不起」的假陰性。
+    return updateDemoPlayer(state, 'player-one', {
+      breakArea: player.breakArea.map((entry, index) =>
+        index === player.breakArea.length - 1
+          ? { ...entry, level: Math.max(1, entry.level - 1) }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS8-020') {
+    // The negative route must fail the printed remaining-HP condition, not
+    // merely rest supports (BS8-020 has no energy cost).  Restore the source
+    // Cookie to its full HP stack while preserving the legal hand witness.
+    return updateDemoPlayer(state, 'player-one', {
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.id === 'BS8-020'
+          ? {
+              ...entry,
+              hpCards: Array.from({ length: entry.card.hp }, (_, index) =>
+                testSupportCard(`BS8-020-negative-source-hp-${index + 1}`, 'red'),
+              ),
+            }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
   if (baseCardNumber === 'BS8-010') {
     // Red Velvet Cookie 的 Browser B 必須只移除「本回合己方曾昏厥」旗標，
     // 保留啟動技能與對手目標所需的活躍支援區，避免被支付失敗掩蓋條件封鎖。
@@ -6908,6 +7449,194 @@ export const createBs6008TrapDemoState = (
   )
 }
 
+function createBs8027BreakSkillDemoState(cardNumber: string, hasTarget: boolean): GameState {
+  const state = createBs8ExtraDeckDemoState(true, 'BS8-027', cardNumber)
+  const player = state.players['player-one']
+  const source = materializeExtraDeckCookie(player.extraDeck![0])
+  const target = { ...player.battleArea[0].card, instanceId: 'bs8-027-trash-golden' }
+  return updateDemoPlayer(state, 'player-one', {
+    extraDeck: [],
+    breakArea: [
+      source,
+      { ...target, instanceId: 'bs8-027-break-a' },
+      { ...target, instanceId: 'bs8-027-break-b' },
+    ],
+    discardPile: hasTarget ? [target] : [],
+  })
+}
+
+/**
+ * BS8-021 的正式陷阱 A/B 夾具。攻擊方的 Burning Spice Cookie 已裝載真正的
+ * Soul Jam: Light of Destruction；防守方手上保留可付款的 BS8-023。唯一差異
+ * 是攻擊方休息區的總 LV. 為 8 或 7，因此可驗證陷阱封鎖不是付款不足造成。
+ */
+export const createBs8021TrapDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const base = createCardCheckDemoState('BS8-021')
+  const burningSpice = base.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS8-009',
+  )
+  const defender = base.players['player-one'].battleArea.find(
+    (entry) => entry.card.id !== 'BS8-009',
+  )
+  const soulJam = base.players['player-one'].hand.find(
+    (card) => card.id === 'BS8-021',
+  )
+  const trap = base.players['player-two'].hand.find(
+    (card) => card.id === 'BS8-023',
+  )
+  if (!burningSpice || !defender || !soulJam || !trap) {
+    throw new Error('BS8-021 Trap fixture requires Burning Spice, Soul Jam, and a Trap')
+  }
+
+  const breakArea = base.players['player-one'].breakArea.map((card, index) =>
+    conditionMet || index !== base.players['player-one'].breakArea.length - 1
+      ? card
+      : { ...card, level: Math.max(1, card.level - 1) },
+  )
+  const state: GameState = {
+    ...base,
+    activePlayerId: 'player-two',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: undefined,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        hand: [trap],
+        battleArea: [defender],
+        supportArea: scenarioSupports('BS8-021-trap-support', 2, 'red'),
+        breakArea: [],
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        hand: [],
+        battleArea: [{
+          ...burningSpice,
+          equippedCards: [soulJam],
+        }],
+        supportArea: scenarioSupports('BS8-021-attack-support', 3, 'red'),
+        breakArea,
+      },
+    },
+  }
+
+  return beginAttack(
+    state,
+    burningSpice.card.instanceId,
+    defender.card.instanceId,
+    [
+      'BS8-021-attack-support-1',
+      'BS8-021-attack-support-2',
+      'BS8-021-attack-support-3',
+    ],
+  )
+}
+
+/**
+ * BS8 綠色卡牌的條件 A/B Browser 夾具。
+ *
+ * 每個分支只改變卡文指定的支援區／同名卡條件，保留正式卡池中的來源卡與
+ * 真實 command 流程，讓 browser audit 能辨識「沒有資格」而非付款不足。
+ */
+export const createBs8GreenConditionDemoState = (
+  cardNumber: Bs8GreenConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  const base = createCardCheckDemoState(cardNumber, {
+    preferSkillSurface: cardNumber === 'BS8-059',
+  })
+
+  if (cardNumber === 'BS8-059') {
+    const source = base.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-059',
+    )
+    if (!source || source.card.type !== 'cookie') {
+      throw new Error('BS8-059 condition fixture requires Mystic Flour Cookie')
+    }
+    if (conditionMet) return base
+    const secondSource: CookieInBattle = {
+      ...source,
+      card: { ...source.card, instanceId: 'BS8-059-second-mystic' },
+      hpCards: Array.from({ length: source.card.hp }, (_, index) =>
+        testSupportCard(`BS8-059-second-mystic-hp-${index + 1}`, 'green'),
+      ),
+      battleEntryId: 'BS8-059-second-mystic:entry',
+    }
+    return updateDemoPlayer(base, 'player-one', {
+      battleArea: [source, secondSource],
+    })
+  }
+
+  if (cardNumber === 'BS8-065') {
+    return {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          supportArea: scenarioSupports(
+            'BS8-065-self-support',
+            conditionMet ? 1 : 2,
+            'green',
+            true,
+          ),
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          supportArea: scenarioSupports(
+            'BS8-065-opponent-support',
+            2,
+            'green',
+          ),
+        },
+      },
+    }
+  }
+
+  const selfSupportCount =
+    cardNumber === 'BS8-073'
+      ? conditionMet
+        ? 2
+        : 3
+      : conditionMet
+        ? 0
+        : 1
+  const opponentSupportCount =
+    cardNumber === 'BS8-073'
+      ? conditionMet
+        ? 4
+        : 3
+      : conditionMet
+        ? 2
+        : 1
+  return {
+    ...base,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        supportArea: scenarioSupports(
+          `${cardNumber}-self-support`,
+          selfSupportCount,
+          'green',
+        ),
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        supportArea: scenarioSupports(
+          `${cardNumber}-opponent-support`,
+          opponentSupportCount,
+          'green',
+        ),
+      },
+    },
+  }
+}
+
 /**
  * BS5-060 的專用結束階段夾具。
  *
@@ -7670,7 +8399,7 @@ export const createPConditionDemoState = (
     case 'P-058':
       putSourceInBattle(2)
       setPlayer('player-one', {
-        supportArea: scenarioSupports('P-058-support', 4, 'green'),
+        supportArea: scenarioSupports('P-058-support', conditionMet ? 4 : 0, 'green'),
       })
       return { ...state, activePlayerId: 'player-one', phase: 'end' }
     case 'P-059':
@@ -7879,7 +8608,7 @@ export const createPConditionDemoState = (
     case 'P-145':
       putSourceInBattle(2)
       setPlayer('player-one', {
-        supportArea: scenarioSupports('P-145-support', 1, 'purple'),
+        supportArea: scenarioSupports('P-145-support', conditionMet ? 1 : 0, 'purple'),
       })
       return { ...state, activePlayerId: 'player-one', phase: 'end' }
   }

@@ -14,7 +14,6 @@ import {
   isEffectConditionMet,
   isEffectTargeted,
   requiresEffectCardSelection,
-  resolveDrawUpTo,
   selectEffectTargets,
   expandChooseOne,
 } from './effects'
@@ -146,7 +145,7 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('Invalid battle action.')
   }
 
-  if (state.pendingRefresh) {
+  if (state.pendingRefresh || state.pendingDrawUpTo) {
     throw new GameRuleError('Invalid battle action.')
   }
 
@@ -482,6 +481,13 @@ const isTrapConditionMet = (
     )
   }
 
+  if (condition.kind === 'support-count-less-than-opponent') {
+    return (
+      state.players[playerId].supportArea.length + condition.difference <=
+      state.players[getOpponentId(playerId)].supportArea.length
+    )
+  }
+
   return true
 }
 
@@ -612,7 +618,7 @@ export const explainUnavailableTraps = (
                         handCard.energyColor === trap.cost.discardHandColor),
                   ).length < (trap.cost.discardHand ?? 0)
                 ? 'not-enough-hand-to-discard'
-                : getTrapCostOptions(trap).some((cost) =>
+                : getTrapCostOptions(trap, state, playerId).some((cost) =>
                     canPayTrapCost(state, playerId, cost, card.instanceId),
                   )
                   ? 'unknown'
@@ -662,7 +668,7 @@ export const getTrapCandidates = (
           (!card.trap!.cost.discardHandColor ||
             handCard.energyColor === card.trap!.cost.discardHandColor),
       ).length >= (card.trap!.cost.discardHand ?? 0) &&
-      getTrapCostOptions(card.trap!).some((cost) =>
+      getTrapCostOptions(card.trap!, state, playerId).some((cost) =>
         canPayTrapCost(state, playerId, cost, card.instanceId),
       ),
   )
@@ -773,6 +779,8 @@ const validateTrapTargets = (
   effectTargets?: string[][],
 ) => {
   const isTargetEffect = (effect: CardEffect) =>
+      effect.kind === 'trash-to-hand' ||
+      effect.kind === 'trash-to-support' ||
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
@@ -799,6 +807,13 @@ const validateTrapTargets = (
   }
   for (const [effectIndex, effect] of effects.entries()) {
     if (!isTargetEffect(effect)) continue
+    if (effect.kind === 'trash-to-hand' || effect.kind === 'trash-to-support') {
+      const explicitIds = effectTargets?.[effectIndex]
+      if (explicitIds !== undefined || targetIds.length > 0) {
+        executeCardEffect(state, context, effect, explicitIds ?? targetIds)
+      }
+      continue
+    }
     const target = 'target' in effect ? effect.target : undefined
     if (!target) continue
     const explicitTargetIds = effectTargets?.[effectIndex]
@@ -902,10 +917,24 @@ export interface PlayTrapOptions {
   selfTargetIds?: string[]
 }
 
-export const getTrapCostOptions = (trap: TrapAbility): AbilityCost[] => [
-  trap.cost,
-  ...(trap.alternativeCosts ?? []),
-]
+export const getTrapCostOptions = (
+  trap: TrapAbility,
+  state?: GameState,
+  playerId?: PlayerId,
+): AbilityCost[] => {
+  if (
+    trap.conditionalCost &&
+    state &&
+    playerId &&
+    isTrapConditionMet(state, playerId, {
+      ...trap,
+      condition: trap.conditionalCost.condition,
+    })
+  ) {
+    return [trap.conditionalCost.cost]
+  }
+  return [trap.cost, ...(trap.alternativeCosts ?? [])]
+}
 
 const canPayTrapCost = (
   state: GameState,
@@ -1224,7 +1253,7 @@ export const playTrap = (
     throw new GameRuleError('Invalid battle action.')
   }
 
-  const costOptions = getTrapCostOptions(trap)
+  const costOptions = getTrapCostOptions(trap, state, playerId)
   const costOptionIndex = options.costOptionIndex ?? 0
   const paidCost = costOptions[costOptionIndex]
   if (!paidCost || !canPayTrapCost(state, playerId, paidCost, trapCard.instanceId)) {
@@ -1659,6 +1688,10 @@ export const playTrap = (
     // 不能把前一段戰鬥目標的 targetIds 直接傳進 executeCardEffect，否則
     // 會把對手戰鬥區 instanceId 當成自己的棄牌區餅乾而被規則層拒絕。
     if (effect.kind === 'trash-to-support' || effect.kind === 'trash-to-hand') {
+      if (hasExplicitTargetIds || requestedTargetIds.length > 0) {
+        nextState = executeCardEffect(nextState, context, effect, requestedTargetIds)
+        continue
+      }
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
         if (effect.kind === 'trash-to-support' && effect.optional) {
@@ -1714,6 +1747,25 @@ export const playTrap = (
     // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
     // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
     if (effect.kind === 'choose-one') {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
+    // BS8-073 等陷阱的「Then, <can be used as ...>」不是啟動費用；先把
+    // 前段效果完整處理後，交給和技能相同的可選支援區付款決策。如此玩家可
+    // 明確略過、支付，且對手能在後續效果真的執行時收到選卡提示。
+    if (effect.kind === 'optional-cost-attack' && effect.resolution === 'ability') {
       return {
         ...nextState,
         pendingAbilityEffect: {
@@ -1945,7 +1997,7 @@ const removeFaintedCookie = (
   )
 
   const faintSkill = target.card.skill
-  if (faintSkill && faintSkill.faint) {
+  if (faintSkill?.faint && (!faintSkill.yourTurn || state.activePlayerId === playerId)) {
     const context = {
       sourcePlayerId: playerId,
       sourceInstanceId: target.card.instanceId,
@@ -1953,6 +2005,7 @@ const removeFaintedCookie = (
     }
     const faintCost = getFaintTriggeredCost(faintSkill)
     let faintCostAttached = false
+    let sourceEnergyAttached = false
     let faintOptionalAttached = false
     for (const effect of faintSkill.effects) {
       if (!isEffectConditionMet(nextState, context, effect)) continue
@@ -1977,7 +2030,7 @@ const removeFaintedCookie = (
                   : {}),
                 effect,
                 context,
-                ...(faintSkill.sourceEnergy
+                ...(faintSkill.sourceEnergy && !sourceEnergyAttached
                   ? { sourceEnergy: faintSkill.sourceEnergy }
                   : {}),
                 ...(faintCost && !faintCostAttached
@@ -1987,6 +2040,7 @@ const removeFaintedCookie = (
             ],
           }
           faintCostAttached = true
+          sourceEnergyAttached = true
           faintOptionalAttached = true
         }
       } else {
@@ -2003,7 +2057,7 @@ const removeFaintedCookie = (
                 : {}),
               effect,
               context,
-              ...(faintSkill.sourceEnergy
+              ...(faintSkill.sourceEnergy && !sourceEnergyAttached
                 ? { sourceEnergy: faintSkill.sourceEnergy }
                 : {}),
               ...(faintCost && !faintCostAttached
@@ -2013,6 +2067,7 @@ const removeFaintedCookie = (
           ],
         }
         faintCostAttached = true
+        sourceEnergyAttached = true
         faintOptionalAttached = true
       }
     }
@@ -2175,11 +2230,7 @@ const collectAfterDamageEffects = (
   battle: PendingBattle,
 ): GameState => {
   const damagedIds = battle.damagedInstanceIds ?? []
-  return collectAfterDamageEffectsFromIds(
-    state,
-    damagedIds,
-    battle.effectDamageSequence ? 'effect' : undefined,
-  )
+  return collectAfterDamageEffectsFromIds(state, damagedIds)
 }
 
 const getAttackEffectContext = (
@@ -2225,12 +2276,13 @@ export const getPlayableTrapCostOption = (
   trap: TrapAbility,
   trapInstanceId?: string,
 ): { index: number; cost: AbilityCost } | null => {
-  const index = getTrapCostOptions(trap).findIndex((cost) =>
+  const costOptions = getTrapCostOptions(trap, state, playerId)
+  const index = costOptions.findIndex((cost) =>
     canPayTrapCost(state, playerId, cost, trapInstanceId),
   )
   return index < 0
     ? null
-    : { index, cost: getTrapCostOptions(trap)[index]! }
+    : { index, cost: costOptions[index]! }
 }
 
 export const advanceAttackEffect = (
@@ -2446,7 +2498,9 @@ const finishDamageSequence = (state: GameState): GameState => {
         const pendingAbility = completedState.pendingAbilityEffect
         if (!pendingAbility) return finishBattle(completedState)
 
-        const nextIndex = pendingAbility.effectIndex + 1
+        const nextIndex =
+          pendingAbility.effectIndex +
+          (sequence.resumeAbilityEffectAdvance ?? 1)
         const hasNextEffect = nextIndex < pendingAbility.effects.length
         const nextPendingAbility = hasNextEffect
           ? { ...pendingAbility, effectIndex: nextIndex }
@@ -2497,6 +2551,9 @@ const finishDamageSequence = (state: GameState): GameState => {
           ...(remainingTargets ? { remainingTargets } : {}),
           continuation: sequence.continuation,
           resumeBattleAfterAbility: sequence.resumeBattleAfterAbility,
+          ...(sequence.resumeAbilityEffectAdvance !== undefined
+            ? { resumeAbilityEffectAdvance: sequence.resumeAbilityEffectAdvance }
+            : {}),
         },
       },
     }
@@ -3178,7 +3235,9 @@ export const resolveOptionalCostAttack = (
     )
   }
   const isAutomaticSourceTarget = (effect: CardEffect) =>
-    (effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+    (effect.kind === 'battle-to-break' ||
+      effect.kind === 'hp-to-trash' ||
+      effect.kind === 'field-to-trash') &&
     effect.target.sourceOnly
   const firstSelectableEffect = applicableEffects.find(
     (effect) =>
@@ -3323,7 +3382,7 @@ export const resolveOptionalCostAttack = (
 }
 
 export const resolveNextDamage = (state: GameState): GameState => {
-  if (state.pendingRefresh) {
+  if (state.pendingRefresh || state.pendingDrawUpTo) {
     throw new GameRuleError('Invalid battle action.')
   }
 
@@ -3576,6 +3635,9 @@ export const resolveFlip = (
 
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
+    if (discardIds.length !== (options.discardHandIds ?? []).length) {
+      throw new GameRuleError('不能重複選擇同一張手牌作為 FLIP 代價。')
+    }
     if (discardIds.length !== (revealed.flip.cost.discardHand ?? 0)) {
       throw new GameRuleError(
         `Must discard exactly ${revealed.flip.cost.discardHand ?? 0} cards for FLIP activation.`,
@@ -3701,9 +3763,8 @@ export const resolveFlip = (
             }
           }
 
-          if (effect.kind === 'draw-up-to') {
-            nextState = resolveDrawUpTo(nextState, playerId, effect.max)
-          }
+          // Up-to remains a player decision even for FLIP; activation does
+          // not authorize choosing the maximum draw count on their behalf.
           break
         }
       }
@@ -3828,7 +3889,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       break
     }
 
-    if (nextState.pendingRefresh || nextState.pendingOnPlay) {
+    if (nextState.pendingRefresh || nextState.pendingOnPlay || nextState.pendingDrawUpTo || nextState.pendingOpponentHandDiscard) {
       break
     }
 
@@ -4282,6 +4343,15 @@ const skipOptionalFaintTrigger = (
   }
 }
 
+/** 共用來源代價合法性與原因；僅讀取公開休息區。 */
+export const getFaintSourceCostUnavailableReason = (state: GameState): string | null => {
+  const faint = state.pendingFaintEffects?.[0]
+  return faint?.effect.kind === 'break-source-to-trash' && faint.effect.asCost &&
+    !state.players[faint.sourcePlayerId].breakArea.some((card) => card.instanceId === faint.sourceInstanceId)
+    ? `「${faint.sourceCardName}」已不在休息區，無法支付來源代價，後續效果未執行。`
+    : null
+}
+
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
@@ -4305,6 +4375,10 @@ export const resolveFaintEffect = (
   }
 
   const faint = faints[0]
+  if (getFaintSourceCostUnavailableReason(state)) {
+    // v1.8 §8-2-1-2：不能支付來源代價時，不能只略過移動而繼續抽牌。
+    return continuePendingReplacements(skipOptionalFaintTrigger(state, faint.sourceInstanceId))
+  }
   const discardHandIds = costOptions.discardHandIds ?? []
   const supportToTrashIds = costOptions.supportToTrashIds ?? []
   const supportToHandIds = costOptions.supportToHandIds ?? []
@@ -4478,9 +4552,13 @@ export const resolveFaintEffect = (
   }
   if (faintEnergyCost) {
     // 「Select up to」搭配可選來源能量時，未選目標且未付款代表略過整組
-    // 昏厥效果；不能把空支付送進一般能量驗證而卡在提示框。
+    // 昏厥效果；不能只移除目前拆出的效果，否則 BS8-018 的後續傷害仍
+    // 會在未支付紅色支援能量時執行。沿用 nextState 以保留在此之前
+    // 已支付的必要昏厥代價。
     if (targetIds.length === 0 && paymentIds.length === 0) {
-      return continuePendingReplacements(nextState)
+      return continuePendingReplacements(
+        skipOptionalFaintTrigger(nextState, faint.sourceInstanceId),
+      )
     }
     if (
       targetIds.length === 0 &&
@@ -4522,6 +4600,16 @@ export const resolveFaintEffect = (
     ...faint.context,
     sourceCardName: faint.sourceCardName,
   }
+  // Damage generated by a faint trigger can be nested inside another
+  // multi-step ability (for example BS8-011 damaging BS8-018 first).  Keep
+  // that outer queue alive while resolving the faint trigger; only create the
+  // synthetic queue below when no outer queue exists.  Otherwise the faint
+  // damage would overwrite BS8-011's second target and the UI would show a
+  // stale, unconfirmable target panel.
+  const existingPendingAbility = nextState.pendingAbilityEffect
+  const resumesOuterAbility = Boolean(
+    existingPendingAbility && !existingPendingAbility.isFaintEffectContinuation,
+  )
 
   if (
     faint.effect.kind === 'damage' ||
@@ -4531,7 +4619,7 @@ export const resolveFaintEffect = (
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, faint.context, faint.effect.target, targetIds)
       const isDamageEffect = faint.effect.kind === 'damage'
-      if (isDamageEffect) {
+      if (isDamageEffect && !existingPendingAbility) {
         nextState = {
           ...nextState,
           pendingAbilityEffect: {
@@ -4540,6 +4628,7 @@ export const resolveFaintEffect = (
             sourceInstanceId: faint.context.sourceInstanceId,
             sourceCardName: faint.sourceCardName,
             sourceKind: 'skill',
+            isFaintEffectContinuation: true,
             effects: [faint.effect],
             effectIndex: 0,
             battleContinuation: 'finish',
@@ -4552,7 +4641,11 @@ export const resolveFaintEffect = (
         faint.effect,
         targetIds,
       )
-      if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
+      if (
+        isDamageEffect &&
+        !nextState.pendingBattle?.effectDamageSequence &&
+        !existingPendingAbility
+      ) {
         nextState = { ...nextState, pendingAbilityEffect: undefined }
       }
       if (nextState.pendingBattle?.effectDamageSequence) {
@@ -4563,7 +4656,10 @@ export const resolveFaintEffect = (
             effectDamageSequence: {
               ...nextState.pendingBattle.effectDamageSequence,
               continuation: 'ability-effect',
-              resumeBattleAfterAbility: true,
+              resumeBattleAfterAbility: Boolean(state.pendingBattle),
+              ...(resumesOuterAbility
+                ? { resumeAbilityEffectAdvance: 0 }
+                : {}),
             },
           },
         }
@@ -4627,6 +4723,16 @@ export const resolveNextAfterDamageEffect = (
 
   const pending = effects[0]
   const remaining = effects.slice(1)
+  // An after-damage trigger can be created while another multi-step ability is
+  // waiting for its next effect (for example BS8-011's second target).  Keep
+  // that outer queue as the continuation owner.  The old implementation
+  // always replaced it with a synthetic one-card queue for the after-damage
+  // effect, so resolving BS1-006's trigger silently discarded BS8-011's
+  // remaining effect and left the UI with an unconfirmable target panel.
+  const existingPendingAbility = state.pendingAbilityEffect
+  const resumesOuterAbility = Boolean(
+    existingPendingAbility && !existingPendingAbility.isFaintEffectContinuation,
+  )
   let nextState: GameState = {
     ...state,
     pendingAfterDamageEffects: remaining.length > 0 ? remaining : undefined,
@@ -4640,7 +4746,7 @@ export const resolveNextAfterDamageEffect = (
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, pending.context, pending.effect.target, targetIds)
       const isDamageEffect = pending.effect.kind === 'damage'
-      if (isDamageEffect) {
+      if (isDamageEffect && !existingPendingAbility) {
         nextState = {
           ...nextState,
           pendingAbilityEffect: {
@@ -4662,7 +4768,14 @@ export const resolveNextAfterDamageEffect = (
         targetIds,
       )
       if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
-        nextState = { ...nextState, pendingAbilityEffect: undefined }
+        // Clear the synthetic after-damage queue once it resolves, but never
+        // clear an outer ability that was already waiting before this trigger.
+        nextState = {
+          ...nextState,
+          pendingAbilityEffect: resumesOuterAbility
+            ? existingPendingAbility
+            : undefined,
+        }
       }
       if (nextState.pendingBattle?.effectDamageSequence) {
         nextState = {
@@ -4672,7 +4785,10 @@ export const resolveNextAfterDamageEffect = (
             effectDamageSequence: {
               ...nextState.pendingBattle.effectDamageSequence,
               continuation: 'ability-effect',
-              resumeBattleAfterAbility: true,
+              resumeBattleAfterAbility: Boolean(state.pendingBattle),
+              ...(resumesOuterAbility
+                ? { resumeAbilityEffectAdvance: 0 }
+                : {}),
             },
           },
         }

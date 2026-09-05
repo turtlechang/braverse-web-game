@@ -261,7 +261,7 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
     expect(resolved.skillUsesThisTurn).toContain('mala-once')
   })
 
-  it('does not trigger after-damage from effect damage (only battle damage)', () => {
+  it('triggers after-damage from effect damage when the Cookie survives', () => {
     const base = createDemoGame()
     const malaCookie = createMalaSauceCookie('mala-effect')
     const opponentCookie = makeCookie('opp-effect', 'Opponent', 1, 3)
@@ -298,7 +298,13 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
 
     const result = executeCardEffect(state, context, dmgEffect, ['mala-effect'])
 
-    expect(result.pendingAfterDamageEffects).toBeUndefined()
+    expect(result.pendingAfterDamageEffects).toMatchObject([
+      {
+        sourceInstanceId: 'mala-effect',
+        sourcePlayerId: 'player-one',
+        effect: { kind: 'damage', amount: 1 },
+      },
+    ])
 
     const damaged = result.players['player-one'].battleArea.find(
       (c) => c.card.instanceId === 'mala-effect',

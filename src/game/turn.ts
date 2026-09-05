@@ -183,6 +183,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     cookiesHpReducedThisTurn: {},
     arenaCookieDealtEffectDamageThisTurn: {},
     cookiesPlayedFromTrashThisTurn: {},
+    cookiesPlayedFromBreakThisTurn: {},
     extraDeckPlayUsedThisTurn: false,
   }
 }
@@ -298,6 +299,23 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
         sourceInstanceId: cookie.instanceId,
       }
 
+      const hasCost = skill.restSource || Object.values(skill.cost).some((value) =>
+        typeof value === 'object' && value !== null
+          ? Object.values(value).some((amount) => typeof amount === 'number' && amount > 0)
+          : value === true || (typeof value === 'number' && value > 0),
+      )
+      if (hasCost) {
+        // Resources and effects wait for an explicit payment or decline.
+        return {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId, sourcePlayerId: playerId, sourceInstanceId: cookie.instanceId,
+            sourceCardName: cookie.name, sourceKind: 'skill', trigger: 'passive',
+            awaitingActivation: true, effects: skill.effects, effectIndex: 0,
+          },
+        }
+      }
+
       for (const [effectIndex, effect] of skill.effects.entries()) {
         if (!isEffectConditionMet(nextState, context, effect)) {
           continue
@@ -401,12 +419,20 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
   }
 
   // 排空「Then, when your turn ends, ...」的延遲效果（BS5-056／060）。
-  const deferred = nextState.pendingEndOfTurnEffects ?? []
-  if (
-    deferred.length > 0 &&
-    deferred[0].sourcePlayerId === state.activePlayerId
-  ) {
-    const entry = deferred[0]
+  while (true) {
+    const deferred = nextState.pendingEndOfTurnEffects ?? []
+    const entryIndex = deferred.findIndex(
+      (entry) => entry.sourcePlayerId === state.activePlayerId,
+    )
+    if (entryIndex < 0) break
+
+    const entry = deferred[entryIndex]
+    // 先移出目前事件，讓結算中新加入的事件保留在既有待處理事件之後。
+    // 遇到互動／Refresh 時再放回續接書籤，避免重播已完成的效果。
+    nextState = {
+      ...nextState,
+      pendingEndOfTurnEffects: deferred.filter((_, index) => index !== entryIndex),
+    }
     const context: EffectContext = {
       sourcePlayerId: entry.sourcePlayerId,
       sourceInstanceId: entry.sourceInstanceId,
@@ -421,7 +447,6 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
         // 剩餘效果鏈交由 pendingAbilityEffect 佇列逐步處理，入口移出佇列。
         return {
           ...nextState,
-          pendingEndOfTurnEffects: deferred.slice(1),
           pendingAbilityEffect: {
             playerId: entry.playerId,
             sourcePlayerId: entry.sourcePlayerId,
@@ -443,15 +468,12 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
         return {
           ...nextState,
           pendingEndOfTurnEffects: [
+            ...(nextState.pendingEndOfTurnEffects ?? []).slice(0, entryIndex),
             { ...entry, effectIndex: index + 1 },
-            ...deferred.slice(1),
+            ...(nextState.pendingEndOfTurnEffects ?? []).slice(entryIndex),
           ],
         }
       }
-    }
-    nextState = {
-      ...nextState,
-      pendingEndOfTurnEffects: deferred.slice(1),
     }
   }
 
@@ -472,7 +494,7 @@ export const advancePhase = (state: GameState): GameState => {
       return { ...state, phase: 'end' }
     case 'end': {
       const endPhaseState = processEndPhaseEffects(state)
-      if (hasBlockingPending(endPhaseState)) {
+      if (endPhaseState.status !== 'playing' || hasBlockingPending(endPhaseState)) {
         return endPhaseState
       }
       return {
@@ -514,6 +536,7 @@ export const advancePhase = (state: GameState): GameState => {
         supportAreaDecreasedThisTurn: {},
         cookiesGainedHpThisTurn: {},
         cookiesPlayedFromTrashThisTurn: {},
+        cookiesPlayedFromBreakThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

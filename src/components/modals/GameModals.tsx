@@ -36,6 +36,7 @@ import {
   type GuidedPhaseId,
 } from '../effects/GuidedPhaseSteps'
 import './GameModals.css'
+import { useModalFocus } from '../../hooks/useModalFocus'
 
 const DeckEditorModal = lazy(async () => {
   const module = await import('./DeckEditorModal')
@@ -1543,6 +1544,7 @@ export function AttackResponseModal({
 
 export interface FaintEffectResponseModalProps {
   card: GameCard
+  unavailableReason?: string | null
   minTargets: number
   maxTargets: number
   selectedTargetCount: number
@@ -1583,6 +1585,7 @@ export interface FaintEffectResponseModalProps {
 
 export function FaintEffectResponseModal({
   card,
+  unavailableReason = null,
   minTargets,
   maxTargets,
   selectedTargetCount,
@@ -1630,7 +1633,7 @@ export function FaintEffectResponseModal({
     selectedCostSupportIds.length === costSupportAmount &&
     selectedCostSupportToHandIds.length === costSupportToHandAmount
   const canConfirm =
-    selectedTargetCount >= minTargets && paymentReady && faintCostReady
+    !unavailableReason && selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
     ? '此效果沒有目標選擇，確認後會繼續結算效果。'
     : candidateCards.length > 0 || targetCandidateCards.length > 0
@@ -1694,7 +1697,7 @@ export function FaintEffectResponseModal({
           縮小
         </button>
         <span>昏厥效果</span>
-        <h2>{card.name} {optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
+        <h2>{card.name} {unavailableReason ? '無法發動昏厥效果' : optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
         <div className="faint-effect-card-detail">
           <CardFace card={card} />
           <div>
@@ -1855,9 +1858,9 @@ export function FaintEffectResponseModal({
           </div>
         )}
         <p className="faint-target-hint">
-          {optional
+          {unavailableReason ?? (optional
             ? '可以選擇發動或不發動；若發動，請先完成顯示的代價。'
-            : displayTargetHint}
+            : displayTargetHint)}
         </p>
         {selectedTargetName && (
           <div className="battle-response-summary">
@@ -1887,7 +1890,7 @@ export function FaintEffectResponseModal({
         <div className="modal-actions">
           {allowSkip && (
             <button type="button" onClick={onSkip}>
-              不發動
+              {unavailableReason ? '繼續' : '不發動'}
             </button>
           )}
           <button type="button" disabled={!canConfirm} onClick={onConfirm}>
@@ -2274,6 +2277,7 @@ export function CardDetailModal({
   onInspectEquip,
   onClose,
 }: CardDetailModalProps) {
+  const modalRef = useModalFocus(onClose)
   const normalAttack = card.type === 'cookie' && card.attackText
     ? splitNormalAttackText(card.attackText)
     : null
@@ -2304,6 +2308,10 @@ export function CardDetailModal({
       <section
         className="card-detail-modal"
         role="dialog"
+        ref={modalRef}
+        aria-modal="true"
+        aria-label={`${card.name} 卡牌詳情`}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -2430,12 +2438,13 @@ export function PauseModal({
   onResume,
   onCopyIssueBundle,
 }: PauseModalProps) {
+  const modalRef = useModalFocus(onResume, '.match-toolbar-trigger')
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="pause-modal" role="dialog">
+      <section className="pause-modal" role="dialog" ref={modalRef} aria-modal="true" aria-label="遊戲已暫停" tabIndex={-1}>
         <Pause aria-hidden="true" />
         <span>對戰資訊</span>
         <h2>遊戲已暫停</h2>
@@ -2470,7 +2479,7 @@ export function PauseModal({
                 : '複製問題包'}
           </button>
         )}
-        <button type="button" onClick={onResume}>
+        <button type="button" onClick={onResume} data-modal-initial-focus>
           繼續對戰
         </button>
       </section>

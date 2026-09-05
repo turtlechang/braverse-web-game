@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
@@ -40,13 +41,15 @@ const enabled = async (locator) =>
   (await visible(locator)) &&
   (await locator.first().isEnabled().catch(() => false))
 
+const cardFilter = process.argv.find((arg) => arg.startsWith('--card='))?.slice(7)
 const expectedCards = [
   { cardNumber: 'BS8-005', name: 'Avatar of Ruin', instanceId: 'bs8-005-demo-avatar' },
   { cardNumber: 'BS8-027', name: 'Golden Cheese Cookie', instanceId: 'bs8-027-demo-extra' },
   { cardNumber: 'BS8-069', name: 'Peak of Apathy', instanceId: 'bs8-069-demo-extra' },
   { cardNumber: 'BS8-090', name: 'Will of Nature', instanceId: 'bs8-090-demo-extra' },
   { cardNumber: 'BS8-104', name: 'Dark Cacao Cookie', instanceId: 'bs8-104-demo-extra' },
-]
+].filter((card) => !cardFilter || card.cardNumber === cardFilter)
+assert.ok(expectedCards.length, 'Unknown EXTRA card filter')
 
 const recordBrowserErrors = (page) => {
   const errors = []
@@ -114,7 +117,7 @@ const runPositivePath = async (browser, expected) => {
   const errors = recordBrowserErrors(page)
   const route = `bs8-extra-deck:${expected.cardNumber}:met`
   try {
-    await page.goto(`${baseUrl}?test-state=${route}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${baseUrl}?test-state=${route}&contract-card=${expected.cardNumber}`, { waitUntil: 'domcontentloaded' })
     await page.locator('.game-shell').waitFor({ state: 'visible' })
     const dialog = await openExtraDialog(page)
     const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: expected.cardNumber })
@@ -130,18 +133,41 @@ const runPositivePath = async (browser, expected) => {
     )
     await materialized.waitFor({ state: 'visible' })
     await wait(180)
+    if (expected.cardNumber === 'BS8-027') {
+      assert.match(await materialized.locator('..').innerText(), /覺醒.*\+2/)
+      await materialized.click({ force: true })
+      for (let payment = 0; payment < 3; payment += 1) {
+        const support = page.locator('.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)').first()
+        await support.focus()
+        await support.press('Enter')
+      }
+      await page.locator('.top-field .combat-card-wrap .card-face').first().click({ force: true })
+      const effect = page.locator('.effect-panel[role="alertdialog"]')
+      await effect.waitFor()
+      assert.match(await effect.innerText(), /對手.*1.*傷害/)
+      assert.equal(await effect.locator('.skip-effect').count(), 0)
+      await effect.getByRole('button', { name: '確認發動', exact: true }).click()
+      await effect.waitFor({ state: 'hidden' })
+      await page.waitForFunction(() => document.querySelector('.top-field .combat-card-wrap')?.textContent?.match(/2\s*\/\s*6/))
+    }
     assert.equal(
       await page.getByLabel('玩家 EXTRA Deck 0 張').count(),
       1,
       `${expected.cardNumber} must leave the EXTRA Deck after entry`,
     )
     assert.deepEqual(errors, [], `browser errors for ${expected.cardNumber}: ${errors.join('; ')}`)
+    const trace = await page.evaluate(() => window.__braverseContractTrace ?? [])
+    if (expected.cardNumber === 'BS8-027') {
+      assert.match(JSON.stringify(trace), /declare-attack/)
+      assert.match(JSON.stringify(trace), /resolve-attack-effect/)
+    }
     return {
       cardNumber: expected.cardNumber,
       route,
       ready: true,
       enteredBattle: true,
       pendingOnPlay: await page.locator('.effect-panel[role="alertdialog"]').count() > 0,
+      trace,
     }
   } finally {
     await page.close()
@@ -225,6 +251,36 @@ const runGenericCardRoute = async (browser, expected, conditionMet) => {
   }
 }
 
+const runGoldenBreakSkill = async (browser, cardNumber, conditionMet) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  page.setDefaultTimeout(10000)
+  const route = `${conditionMet ? 'card-skill' : 'card-skill-negative'}:${cardNumber}`
+  try {
+    await page.goto(`${baseUrl}?test-state=${encodeURIComponent(route)}&contract-card=BS8-027`, { waitUntil: 'domcontentloaded' })
+    await page.locator('.bottom-field .break-cards button').last().click()
+    const activate = page.locator('.break-popover').getByRole('button', { name: '啟動技能', exact: true })
+    if (!conditionMet) {
+      assert.equal(await activate.isEnabled(), false, 'No matching trash target must block activation')
+      assert.match(await page.locator('.break-popover').innerText(), /棄牌區沒有可選擇.*Golden Cheese Cookie/)
+      return { route, blocked: true }
+    }
+    await activate.click()
+    const panel = page.locator('.effect-panel[role="alertdialog"]')
+    await panel.waitFor()
+    assert.match(await panel.innerText(), /先移至棄牌區.*再.*休息區/)
+    const confirm = panel.getByRole('button', { name: '確認發動', exact: true })
+    assert.equal(await confirm.isEnabled(), false)
+    await panel.getByRole('button', { name: 'Golden Cheese Cookie Golden Cheese Cookie', exact: true }).click()
+    await confirm.click()
+    await panel.waitFor({ state: 'hidden' })
+    assert.match(await page.getByLabel('玩家休息區摘要', { exact: true }).getAttribute('title'), /LV\.9\/10/)
+    const trace = await page.evaluate(() => window.__braverseContractTrace ?? [])
+    assert.match(JSON.stringify(trace), /resolve-ability-effect/)
+    assert.match(JSON.stringify(trace), /先將來源餅乾移至棄牌區，再將選定餅乾放入休息區/)
+    return { route, selectedOne: true, breakLevel: 9, trace }
+  } finally { await page.close() }
+}
+
 const server = spawn(
   process.execPath,
   [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(port)],
@@ -261,11 +317,21 @@ try {
       },
     })
   }
-  console.log(JSON.stringify({
+  const goldenBreak = []
+  if (expectedCards.some((card) => card.cardNumber === 'BS8-027')) {
+    const source = JSON.parse(await readFile(resolve(root, 'data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'), 'utf8'))
+    for (const card of source.cards.filter((card) => card.baseCardNumber === 'BS8-027')) {
+      for (const conditionMet of [true, false]) goldenBreak.push(await runGoldenBreakSkill(browser, card.cardNumber, conditionMet))
+    }
+  }
+  const report = {
     browser: 'playwright',
     scope: 'BS8 formal EXTRA Deck entry-condition A/B',
     cards: results,
-  }, null, 2))
+    goldenBreak,
+  }
+  if (process.env.BRAVERSE_AUDIT_REPORT) await writeFile(process.env.BRAVERSE_AUDIT_REPORT, JSON.stringify(report, null, 2))
+  console.log(JSON.stringify(report, null, 2))
 } finally {
   await browser?.close().catch(() => {})
   server.kill()

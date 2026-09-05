@@ -109,15 +109,22 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     )
   })
 
-  it('BS8-006 binds the Then damage to exactly one Cookie for each player', () => {
+  it('BS8-006 allows declining Then, otherwise requires one declared Cookie for each player', () => {
     const card = convertedCookie('BS8-006')
     expect(card.attackEffects).toEqual([
-      { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1 } },
-      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } },
+      {
+        kind: 'damage', amount: 1, selectionAsCost: true,
+        target: { side: 'either', min: 0, max: 2, countPerPlayer: 1 },
+      },
     ])
     expect(analyzeOfficialCardBehavior(record('BS8-006')).contract.status).toBe(
       'verified',
     )
+    const mandatoryThen = structuredClone(card)
+    const effect = mandatoryThen.attackEffects![0]
+    if (effect.kind !== 'damage') throw new Error('Expected paired Then')
+    effect.target.min = 2
+    expect(analyzeOfficialCardBehavior(record('BS8-006'), mandatoryThen).checks.targetCovered).toBe(false)
   })
 
   it('BS8-003 discards first, then gives every eligible friendly Cookie +1 HP', () => {
@@ -161,7 +168,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
           resolution: 'ability',
           cost: { energy: { red: 1 }, discardHand: 0 },
           effects: [
-            { kind: 'draw-up-to', max: 1 },
+            { kind: 'draw', amount: 1 },
             {
               kind: 'damage',
               amount: 1,
@@ -871,7 +878,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       effects: [{
         kind: 'gain-hp',
         amount: 1,
-        target: { side: 'self', min: 0, max: 1, remainingHp: 1 },
+        target: { side: 'self', min: 0, max: 1, minRemainingHp: 1, maxRemainingHp: 1 },
       }],
     })
     expect(converted('BS8-050').stageAbility).toMatchObject({
@@ -1349,7 +1356,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
   it('BS8-047 locks the displayed LV.3 hand Cookie as the exact Then-to-Break card', () => {
     const source = converted('BS8-047')
     const revealed = convertedCookie('BS8-026')
-    const breakCookie = convertedCookie('BS8-039')
+    const breakCookie = convertedCookie('BS8-030')
     const initial = createDemoGame(7)
     const state = {
       ...initial,
@@ -1389,14 +1396,11 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       playerId: 'player-one',
       instanceId: source.instanceId,
       paymentIds: ['yellow-payment'],
-    })
-    expect(queued.pendingAbilityEffect?.effects[0].kind).toBe('reveal-hand')
-
-    const afterReveal = applyGameCommand(queued, {
-      kind: 'resolve-ability-effect',
-      playerId: 'player-one',
       targetIds: [revealed.instanceId],
     })
+    expect(queued.pendingAbilityEffect?.effects[0].kind).toBe('reveal-hand')
+    expect(queued.pendingAbilityEffect?.effectIndex).toBe(1)
+    const afterReveal = queued
     expect(afterReveal.costRecord).toMatchObject({
       revealedHandCardInstanceIds: [revealed.instanceId],
       revealedHandSourceInstanceId: source.instanceId,

@@ -237,6 +237,141 @@ function createBs2015CostDepartureGameState(
   }
 }
 
+describe('usePendingEffect BS8-042 support selection', () => {
+  it.each([0, 1])('offers only both opponent supports and resolves %i selected target', async (count) => {
+    const initial = createCardCheckDemoState('BS8-042')
+    const source = initial.players['player-one'].battleArea.find((entry) => entry.card.id === 'BS8-042')!.card
+    const targets = initial.players['player-two'].supportArea.map((support) => support.card.instanceId)
+    const ownSupport = initial.players['player-one'].supportArea[0].card.instanceId
+    let currentGame = initial
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      const [game, setGame] = useState(initial)
+      currentGame = game
+      captured = usePendingEffect({
+        game, setGame, dispatch: createDispatch(game, setGame), viewerPlayerId: 'player-one', setMessage: () => {},
+        clearAttacker: () => {}, setInspectedHpPile: () => {},
+        hasFaint: false, faintTargetIds: new Set(), selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 }, setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false, afterDamageTargetIds: new Set(), selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 }, setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(initial, source, 'player-one', 'on-play', 'OnPlay'))
+    expect(targets).toHaveLength(2)
+    expect(captured!.genericEffectCandidateCards.map((card) => card.instanceId)).toEqual(targets)
+    await act(() => captured!.toggleEffectTarget(ownSupport))
+    expect(captured!.pendingEffect?.selectedTargetIds).toEqual([])
+    if (count === 1) await act(() => captured!.toggleEffectTarget(targets[0]))
+    await act(() => captured!.confirmEffect())
+    const expected = targets.slice(0, count)
+    expect(currentGame.commandLog).toContainEqual(expect.objectContaining({
+      commandKind: 'resolve-ability-effect', payload: expect.objectContaining({ targetIds: expected }),
+    }))
+    expect(currentGame.preventSupportActiveNextPhase?.['player-two'] ?? []).toEqual(expected)
+    expect(currentGame.players['player-one'].supportArea).toEqual(initial.players['player-one'].supportArea)
+    expect(currentGame.players['player-two'].supportArea.map((support) => support.rested)).toEqual([true, false])
+    expect(currentGame.pendingOnPlay).toBeNull()
+    expect(currentGame.pendingAbilityEffect).toBeFalsy()
+    await act(() => root.unmount())
+  })
+})
+
+describe('usePendingEffect Break area costs', () => {
+  it.each(['trash', 'hand'] as const)('pays %s cost before opening effect selection and rejects invalid cost choices', async (zone) => {
+    const base = createCardCheckDemoState('BS8-031')
+    const originalSource = base.players['player-one'].hand.find((card) => card.id === 'BS8-031')!
+    if (originalSource.type !== 'cookie' || !originalSource.skill) throw new Error('Expected the real BS8-031 Cookie skill')
+    const costCookie = base.players['player-one'].discardPile.find((card) => card.type === 'cookie' && card.level === 3)!
+    expect(costCookie).toBeDefined()
+    // The trash case is the real BS8-031 skill. The hand case exercises the same
+    // generic payment path without claiming another card's behavior is verified.
+    const source = zone === 'trash' ? originalSource : {
+      ...originalSource,
+      skill: { ...originalSource.skill!, cost: { energy: {}, handToBreakArea: { count: 1, minLevel: 3 } } },
+    }
+    const prepared: GameState = zone === 'trash' ? base : {
+      ...base,
+      players: { ...base.players, 'player-one': {
+        ...base.players['player-one'],
+        hand: [...base.players['player-one'].hand.map((card) => card.instanceId === source.instanceId ? source : card), costCookie],
+        discardPile: base.players['player-one'].discardPile.filter((card) => card.instanceId !== costCookie.instanceId),
+        battleArea: base.players['player-one'].battleArea.map((cookie) => cookie.card.instanceId === source.instanceId ? { ...cookie, card: source } : cookie),
+      } },
+    }
+    const initial = applyGameCommand(prepared, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+    let currentGame = initial
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    const setMessage = vi.fn()
+    function TestHarness() {
+      const [game, setGame] = useState(initial)
+      currentGame = game
+      captured = usePendingEffect({
+        game, setGame, dispatch: createDispatch(game, setGame), viewerPlayerId: 'player-one',
+        setMessage, clearAttacker: () => {}, setInspectedHpPile: () => {},
+        hasFaint: false, faintTargetIds: new Set(), selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 }, setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false, afterDamageTargetIds: new Set(), selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 }, setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    const toggleCost = (id: string) => zone === 'trash'
+      ? captured!.toggleSkillTrashCookieToBreakArea(id) : captured!.toggleSkillHandToBreakArea(id)
+    const selectedCost = () => zone === 'trash'
+      ? captured!.pendingEffect?.selectedTrashCookieToBreakAreaIds ?? [] : captured!.pendingEffect?.selectedHandToBreakAreaIds ?? []
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginCookieSkill(initial, source, 'player-one', 'on-play', '登場技能', false))
+      expect(captured!.breakAreaCostSelectionPending).toBe(true)
+      const candidates = zone === 'trash' ? captured!.skillTrashCookieToBreakAreaCandidates : captured!.skillHandToBreakAreaCandidates
+      expect(candidates.map((card) => card.instanceId)).toContain(costCookie.instanceId)
+      await act(() => toggleCost('not-a-legal-card'))
+      expect(selectedCost()).toEqual([])
+      await act(() => captured!.confirmEffect())
+      expect(currentGame).toBe(initial)
+      expect(setMessage).toHaveBeenLastCalledWith('請先選滿符合條件的休息區代價卡牌。')
+      await act(() => captured!.toggleEffectTarget(initial.players['player-one'].breakArea[0].instanceId))
+      expect(captured!.pendingEffect?.selectedTargetIds).toEqual([])
+      await act(() => toggleCost(costCookie.instanceId))
+      expect(selectedCost()).toEqual([costCookie.instanceId])
+      const selectedPending = captured!.pendingEffect!
+      for (const invalidIds of [[costCookie.instanceId, costCookie.instanceId], ['not-a-legal-card']]) {
+        await act(() => captured!.setPendingEffect({
+          ...selectedPending,
+          ...(zone === 'trash' ? { selectedTrashCookieToBreakAreaIds: invalidIds } : { selectedHandToBreakAreaIds: invalidIds }),
+        }))
+        await act(() => captured!.confirmEffect())
+        expect(currentGame).toBe(initial)
+      }
+      await act(() => captured!.setPendingEffect(selectedPending))
+      if (zone === 'trash') await act(() => captured!.toggleSkillPayment(initial.players['player-one'].supportArea[0].card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.players['player-one'].breakArea.map((card) => card.instanceId)).toContain(costCookie.instanceId)
+      expect(currentGame.players['player-one'].hand).toHaveLength(initial.players['player-one'].hand.length - (zone === 'hand' ? 1 : 0))
+      expect(currentGame.pendingAbilityEffect?.effectIndex).toBe(0)
+      expect(captured!.pendingEffect?.skillActivated).toBe(true)
+      expect(selectedCost()).toEqual([])
+      expect(captured!.breakAreaCostSelectionPending).toBe(false)
+      await act(() => toggleCost(costCookie.instanceId))
+      expect(selectedCost()).toEqual([])
+      expect(captured!.breakToHandBySumCandidates.map((card) => card.instanceId)).toContain(costCookie.instanceId)
+      for (const card of initial.players['player-one'].breakArea) await act(() => captured!.toggleEffectTarget(card.instanceId))
+      expect(captured!.pendingEffect?.selectedTargetIds).toHaveLength(2)
+      const handBefore = currentGame.players['player-one'].hand.length
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.players['player-one'].hand).toHaveLength(handBefore + 2)
+      expect(currentGame.players['player-one'].breakArea.map((card) => card.instanceId)).toContain(costCookie.instanceId)
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+})
+
 describe('usePendingEffect cancelPendingSkill', () => {
   it('clears pendingEffect without modifying GameState when canceling activate cookie skill', async () => {
     const gameState = createDiscardHandSkillGameState()
@@ -1317,7 +1452,7 @@ describe('usePendingEffect BS8-047 selectable reveal', () => {
     )
 
     const revealed = captured!.genericEffectCandidateCards.find(
-      (card) => card.id === 'BS8-yellow-lv3-hand',
+      (card) => card.id === 'BS8-030' && card.instanceId === 'BS8-yellow-lv3-hand',
     )
     expect(captured!.currentEffect?.kind).toBe('reveal-hand')
     expect(revealed).toBeDefined()

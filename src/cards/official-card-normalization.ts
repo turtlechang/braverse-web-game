@@ -84,6 +84,14 @@ const BS4_VARIANT_DAMAGE_ERRATA: Record<
 export const normalizeKnownOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
+  // Missing color is common in official FLIP/alternate-art records. Recover
+  // it from structured energyType, so deck construction and adapters agree.
+  if (!sourceCard.color || sourceCard.color === 'null') {
+    const color = sourceCard.energyType?.trim().split(/\s+/)[0].toUpperCase()
+    if (color && /^(RED|YELLOW|GREEN|BLUE|PURPLE|BLACK|PURE)$/.test(color)) {
+      sourceCard = { ...sourceCard, color }
+    }
+  }
   if (
     sourceCard.baseCardNumber === 'P-059' &&
     sourceCard.type === 'cookie' &&

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   activateCookieSkill,
+  applyGameCommand,
   advancePhase,
   canActivateCookieSkill,
   canPayEnergyCost,
@@ -83,13 +84,11 @@ describe('cookie skill activation', () => {
       canActivateCookieSkill(state, 'player-one', second.card.instanceId, 'activate'),
     ).toBe(true)
 
-    const afterFirst = activateCookieSkill(
-      state,
-      'player-one',
-      first.card.instanceId,
-      'activate',
-      [paymentId],
-    )
+    const afterFirst = applyGameCommand(state, {
+      kind: 'begin-activate-skill', playerId: 'player-one',
+      sourceInstanceId: first.card.instanceId, trigger: 'activate', paymentIds: [paymentId],
+      targetIds: [first.card.instanceId, state.players['player-two'].battleArea[0].card.instanceId],
+    })
 
     expect(afterFirst.skillUsesThisTurn).toContain(first.battleEntryId)
     expect(

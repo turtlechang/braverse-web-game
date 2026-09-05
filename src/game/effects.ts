@@ -7,6 +7,7 @@ export {
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getCookieOwnerId,
+  getPairedTargetSelectionError,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
   getBattleToBreakBlocker,

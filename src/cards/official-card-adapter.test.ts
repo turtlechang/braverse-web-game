@@ -62,6 +62,14 @@ const createOfficialCard = (
 })
 
 describe('official text parser', () => {
+  it.each([null, 'null'])('recovers missing card color %s from structured energyType, including MIX attacks', (color) => {
+    for (const energyType of ['YELLOW', 'YELLOW MIX']) {
+      const converted = convertOfficialCardToGameCard(createOfficialCard({ color, energyType }))
+      expect(converted).toMatchObject({ status: 'converted', gameCard: { cardColor: 'yellow', energyColor: 'yellow' } })
+    }
+    const explicit = convertOfficialCardToGameCard(createOfficialCard({ color: 'RED', energyType: 'YELLOW' }))
+    expect(explicit).toMatchObject({ status: 'converted', gameCard: { cardColor: 'red', energyColor: 'red' } })
+  })
   it('parses colored and neutral costs plus attack damage', () => {
     const parsed = parseOfficialCardText(
       '<{R}{R}{N}{K}> Perfect Deduction {da} 3',
@@ -638,8 +646,8 @@ describe('official card adapter', () => {
     })
     // 修復前這兩個欄位是 undefined，CardDetailModal 的 FLIP 段落因此不會渲染。
     expect(result.gameCard.effectText).toContain('gains +1 HP')
-    // 「gains +1 HP」統一以 attachedHpBonus 承載（附著期間連續 +1），
-    // 翻開發動時由 resolveFlip 轉成牌庫頂補 1 張 HP 卡。
+    // attachedHpBonus保留既有資料欄位；翻開並支付後由resolveFlip補1張HP，
+    // 未翻開時不提供持續加成。
     expect(result.gameCard.effects).toEqual([])
   })
 

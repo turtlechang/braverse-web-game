@@ -4,6 +4,7 @@ import {
   executeCardEffect,
   getAttackDamageAgainst,
   refreshDeck,
+  resolveDrawUpTo,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -144,6 +145,12 @@ describe('pending battle and FLIP', () => {
 
     state = resolveFlip(state, 'player-one', { activate: true })
 
+    expect(state.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 1 })
+    expect(state.players['player-one'].hand).not.toContainEqual(
+      expect.objectContaining({ instanceId: 'p1-deck-a' }),
+    )
+    expect(() => resolveNextDamage(state)).toThrow('Invalid battle action.')
+    state = resolveDrawUpTo(state, 'player-one', 1)
     expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.players['player-one'].hand).toContainEqual(
       expect.objectContaining({ instanceId: 'p1-deck-a' }),
@@ -239,7 +246,7 @@ describe('pending battle and FLIP', () => {
       .toEqual(expect.arrayContaining(['p1-hand-a', 'BS6-069:1']))
   })
 
-  it('P-099 FLIP opens a decision window and draws 1 card when revealed and activated', () => {
+  it('P-099 FLIP opens a draw decision and draws only after explicitly choosing 1', () => {
     const source = (officialP.cards as OfficialCardRecord[]).find(
       (card) => card.cardNumber === 'P-099',
     )
@@ -265,6 +272,10 @@ describe('pending battle and FLIP', () => {
     const handBefore = state.players['player-one'].hand.length
     state = resolveFlip(state, 'player-one', { activate: true })
 
+    expect(state.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 1 })
+    expect(state.players['player-one'].hand.length).toBe(handBefore)
+    state = resolveDrawUpTo(state, 'player-one', 1)
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.players['player-one'].hand.length).toBe(handBefore + 1)
     expect(state.players['player-one'].discardPile).toContainEqual(
       expect.objectContaining({ id: 'P-099' }),
@@ -315,6 +326,13 @@ describe('pending battle and FLIP', () => {
     state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
     state = resolveFlip(state, 'player-one', { activate: true })
 
+    expect(state.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 1 })
+    expect(state.pendingRefresh).toBeNull()
+    expect(state.players['player-one'].hand).not.toContainEqual(
+      expect.objectContaining({ instanceId: 'last-draw' }),
+    )
+    expect(() => resolveNextDamage(state)).toThrow('Invalid battle action.')
+    state = resolveDrawUpTo(state, 'player-one', 1)
     expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.players['player-one'].hand).toContainEqual(
       expect.objectContaining({ instanceId: 'last-draw' }),
@@ -334,7 +352,7 @@ describe('pending battle and FLIP', () => {
     expect(state.pendingBattle?.stage).toBe('damage')
   })
 
-  it('FLIP draw-up-to draws immediately without a pending decision', () => {
+  it('FLIP draw-up-to waits for an explicit choice before drawing', () => {
     const flipCard: GameCard = {
       ...cookie('name-flip'),
       name: 'Test FLIP Card',
@@ -351,10 +369,51 @@ describe('pending battle and FLIP', () => {
     state.players['player-one'].battleArea[0].hpCards = [flipCard]
     state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
     state = resolveFlip(state, 'player-one', { activate: true })
+    expect(state.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 1 })
+    expect(state.players['player-one'].hand).not.toContainEqual(
+      expect.objectContaining({ instanceId: 'draw-card' }),
+    )
+    state = resolveDrawUpTo(state, 'player-one', 1)
     expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.players['player-one'].hand).toContainEqual(
       expect.objectContaining({ instanceId: 'draw-card' }),
     )
+  })
+
+  it('can activate a draw FLIP, choose zero, and resume the remaining attack damage', () => {
+    const flipCard: GameCard = {
+      ...cookie('zero-draw-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Draw up to 1 card from your deck.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [item('hp-bottom'), flipCard]
+    const handBefore = [...state.players['player-one'].hand]
+    const deckBefore = [...state.players['player-one'].deck]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+    state = resolveFlip(state, 'player-one', { activate: true })
+    expect(state.pendingDrawUpTo).toMatchObject({ max: 1 })
+    expect(() => resolveNextDamage(state)).toThrow('Invalid battle action.')
+    state = resolveDrawUpTo(state, 'player-one', 0)
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.players['player-one'].hand).toEqual(handBefore)
+    expect(state.players['player-one'].deck).toEqual(deckBefore)
+    expect(state.players['player-one'].discardPile).toContainEqual(flipCard)
+    expect(state.pendingBattle?.stage).toBe('damage')
+    state = resolveNextDamage(state)
+    expect(state.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ instanceId: 'hp-bottom' }),
+    )
+    expect(state.players['player-one'].breakArea).toContainEqual(
+      expect.objectContaining({ instanceId: 'defender' }),
+    )
+    expect(state.pendingBattle).toMatchObject({ stage: 'damage', remainingDamage: 1 })
+    state = resolveNextDamage(state)
+    expect(state.pendingBattle).toBeNull()
   })
 
   it('resolves a choose-one FLIP mode before executing its deck effect', () => {

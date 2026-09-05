@@ -295,8 +295,8 @@ export function CardFace({
         attackable ? ' is-attackable' : ''
       }`}
       type="button"
-      title={card.name}
-      aria-label={ariaLabel}
+      title={concealed ? '未公開卡牌' : card.name}
+      aria-label={concealed ? '未公開卡牌' : ariaLabel}
       aria-pressed={ariaPressed}
       onClick={onClick}
     >

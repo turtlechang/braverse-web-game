@@ -7,6 +7,7 @@ import {
 } from './helpers'
 import { continuePendingReplacements } from './replacement'
 import { continueInspectDeckAfterRefresh } from './inspect-deck'
+import { executeDeckToTrash } from './effects/deck-to-trash'
 import type {
   CookieCard,
   GameState,
@@ -315,5 +316,9 @@ export const refreshDeck = (
     ...hpGainState,
     pendingRefresh: null,
   })
+  const remainingMill = state.pendingRefresh?.remainingDeckToTrash
+  if (remainingMill) {
+    return continuePendingReplacements(executeDeckToTrash(refreshedState, remainingMill.context, remainingMill.effect, remainingMill.movedCards))
+  }
   return continuePendingReplacements(refreshedState)
 }

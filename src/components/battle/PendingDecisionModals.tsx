@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { compilePendingDecisionDescriptor, getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
@@ -89,31 +88,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingDrawUpTo
       : null
 
-  const autoResolveDrawUpTo = pendingDrawUpTo?.max === 1
   const pendingStageTrigger = match.game.pendingStageTrigger
   const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
   const mustReplaceEmptyBattleArea =
     !match.game.pendingRefresh &&
     match.pendingPlayer?.battleArea.length === 0 &&
     match.pendingOptions.length > 0
-
-  useEffect(() => {
-    if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
-    const deckSize = match.game.players[match.viewerPlayerId].deck.length
-    const drawCount = Math.min(1, deckSize)
-    const reasonText = describeDrawUpToReason(match, pendingDrawUpTo)
-    match.dispatch(
-      {
-        kind: 'resolve-draw-up-to',
-        playerId: match.viewerPlayerId,
-        drawCount,
-      },
-      drawCount === 0
-        ? `${reasonText ?? '抽牌效果'}：已選擇不抽牌。`
-        : `${reasonText ?? '抽牌效果'}：已從牌庫抽取 ${drawCount} 張牌。`,
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoResolveDrawUpTo, pendingDrawUpTo?.sourceInstanceId])
 
   return (
     <>
@@ -369,7 +349,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           )
         })()}
 
-      {pendingDrawUpTo && !autoResolveDrawUpTo && (() => {
+      {pendingDrawUpTo && (() => {
           const drawUpTo = pendingDrawUpTo
           const sourceCard = Object.values(match.game.players)
             .flatMap((p) => p.battleArea)

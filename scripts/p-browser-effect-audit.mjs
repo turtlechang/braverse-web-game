@@ -37,8 +37,13 @@ const isBs6Audit = requestedSeries === 'BS6'
 const isBs7Audit = requestedSeries === 'BS7'
 const auditVanillaAttacks = process.argv.includes('--vanilla-attacks')
 const auditNegative = process.argv.includes('--negative')
+const auditZeroChoices = process.argv.includes('--zero-choices')
+const auditAbundance = process.argv.includes('--abundance')
+const auditDeclineFlip = process.argv.includes('--decline-flip')
+const auditDeclineBlocker = process.argv.includes('--decline-blocker')
 const auditFailFast = process.argv.includes('--fail-fast')
 const auditBs8StrictAbilities = process.argv.includes('--bs8-strict-abilities')
+const auditAllVariants = process.argv.includes('--all-variants')
 const requestedCardNumbers = process.argv
   .filter((argument) => argument.startsWith('--card='))
   .map((argument) => argument.slice('--card='.length))
@@ -267,6 +272,7 @@ const AUDIT_CONFIGS = {
     ],
     report: 'output/playwright/bs8-effect-audit.json',
     negativeReport: 'output/playwright/bs8-effect-audit-negative.json',
+    negativeConditionCardNumbers: ['BS8-026', 'BS8-028', 'BS8-029', 'BS8-031', 'BS8-032', 'BS8-034', 'BS8-035', 'BS8-038', 'BS8-039', 'BS8-040', 'BS8-042', 'BS8-043', 'BS8-045', 'BS8-046', 'BS8-047', 'BS8-048', 'BS8-049', 'BS8-050'],
     // The 15 EXTRA records are intentionally excluded here because their cards
     // cannot enter the normal 60-card test-state; source records retain their
     // ordinary card type, so this must use `flags.extra` rather than `type`
@@ -280,7 +286,10 @@ const AUDIT_CONFIGS = {
     excludedCardTypes: ['extra'],
     excludeExtraDeckCards: true,
     conditionTestStatePrefix: 'bs8-condition',
-    conditionCardNumbers: [],
+    // These four routes retain all non-condition requirements and alter only
+    // the printed support-count / same-name condition. They are the formal
+    // browser A/B witnesses for the BS8 Green repair set.
+    conditionCardNumbers: ['BS8-059', 'BS8-065', 'BS8-073', 'BS8-074'],
     alwaysIncludeCardNumbers: [],
   },
 }
@@ -400,6 +409,9 @@ const selectBs8StrictAbilityCards = (records) => {
     BS8_STRICT_ABILITY_BASE_CARD_NUMBERS.length,
     'BS8 strict ability inventory must have one official source per base card',
   )
+  if (auditAllVariants) {
+    return records.filter((card) => representatives.has(getBaseCardNumber(card)) && card.type === 'cookie')
+  }
   return BS8_STRICT_ABILITY_BASE_CARD_NUMBERS.map((cardNumber) => {
     const card = representatives.get(cardNumber)
     assert.ok(card, `missing BS8 strict ability source ${cardNumber}`)
@@ -553,7 +565,7 @@ const BS8_ATTACK_THEN_FINGERPRINTS = {
   },
   'BS8-040': {
     requiredOperations: ['select:hand-discard', 'confirm:hand-discard'],
-    requiredPatterns: [/抽至多 1 張牌，再棄置 1 張/, /抽了 1 張牌/],
+    requiredPatterns: [/攻擊後效果結果：抽 1 張牌/, /攻擊後效果結果：執行 discard-hand/],
   },
   'BS8-045': {
     minTargetSteps: 1,
@@ -626,6 +638,121 @@ const verifyBs8AttackThenFingerprint = (card, traceSummary, operations) => {
   }
 }
 
+// BS8-013 has two sequential faint effects.  The first moves the source from
+// Break to the discard pile; the second must still expose the real red LV.1
+// Cookie selector.  A generic "faint modal disappeared" check would accept
+// accidentally skipping that optional Then, so keep this card's Browser proof
+// explicit about the selected official fixture card and both command steps.
+const verifyBs8013FaintFingerprint = (traceSummary, operations) => {
+  const targetStep = traceSummary.steps.find((step) =>
+    step.startsWith('昏厥效果目標：'),
+  )
+  const missing = [
+    ...(traceSummary.traceEntries < 2 ? ['trace-entries>=2'] : []),
+    ...(!operations.includes('select:faint-target')
+      ? ['operation:select:faint-target']
+      : []),
+    ...(targetStep !== '昏厥效果目標：Cilantro Cobra Swordsman'
+      ? ['trace:faint-target:Cilantro Cobra Swordsman']
+      : []),
+  ]
+  return {
+    passed: missing.length === 0,
+    missing,
+    selectedTarget: targetStep?.replace('昏厥效果目標：', '') ?? null,
+  }
+}
+
+// BS8-017 must prove the complete two-part Activate in order: pay one red
+// support energy, select the legal red printed-HP-1 Cookie in the discard
+// pile, then select a Cookie in the battle area for the one-damage Then.  A
+// generic settled modal check would otherwise pass even if the trash selector
+// were empty or the Then were silently skipped.
+const verifyBs8017TrashThenFingerprint = (traceSummary, operations) => {
+  const targetSteps = traceSummary.steps.filter((step) =>
+    step.startsWith('效果目標：'),
+  )
+  const traceText = traceSummary.steps.join('\n')
+  const missing = [
+    ...(traceSummary.traceEntries < 3 ? ['trace-entries>=3'] : []),
+    ...(!traceSummary.commandKinds.includes('begin-activate-skill')
+      ? ['trace:begin-activate-skill']
+      : []),
+    ...(!traceSummary.commandKinds.includes('resolve-ability-effect')
+      ? ['trace:resolve-ability-effect']
+      : []),
+    ...(!operations.includes('select:.effect-candidates-payment')
+      ? ['operation:select:.effect-candidates-payment']
+      : []),
+    ...(!/支付能量（橫置）：support-pay-0/.test(traceText)
+      ? ['trace:red-support-payment']
+      : []),
+    ...(targetSteps[0] !== '效果目標：Pomegranate Cake Shaman'
+      ? ['trace:trash-target:Pomegranate Cake Shaman']
+      : []),
+    ...(targetSteps[1] !== '效果目標：Cake Monster Army'
+      ? ['trace:then-target:Cake Monster Army']
+      : []),
+  ]
+  return {
+    passed: missing.length === 0,
+    missing,
+    targetSteps,
+  }
+}
+
+// BS8-018 has one optional red Support payment for the complete faint
+// sequence: move Cake Wolf from Break to trash, then optionally target one
+// opposing Cookie for damage.  The payment must not be duplicated for the
+// second queued effect, and a no-payment B path must skip that whole trigger.
+const verifyBs8018FaintPaymentFingerprint = (traceSummary, operations, negative) => {
+  const traceText = traceSummary.steps.join('\n')
+  const paymentSelections = operations.filter(
+    (operation) => operation === 'select:faint-payment',
+  ).length
+  const targetSteps = traceSummary.steps.filter((step) =>
+    step.startsWith('昏厥效果目標：'),
+  )
+  const missing = [
+    ...(negative
+      ? [
+          ...(paymentSelections > 0 ? ['negative:payment-selection-absent'] : []),
+          ...(targetSteps.length > 0 ? ['negative:faint-target-absent'] : []),
+          ...(/受到 1 點傷害/.test(traceText)
+            ? ['negative:damage-result-absent']
+            : []),
+        ]
+      : [
+          ...(traceSummary.traceEntries < 2 ? ['trace-entries>=2'] : []),
+          ...(paymentSelections !== 1
+            ? ['operation:select:faint-payment-exactly-once']
+            : []),
+          ...(!/支付能量（橫置）：support-pay-0/.test(traceText)
+            ? ['trace:red-support-payment']
+            : []),
+          ...(!/昏厥效果來源：「Cake Wolf」/.test(traceText)
+            ? ['trace:source:Cake Wolf']
+            : []),
+          // BS8-018 card-check uses the official BS1-007 Melon Bun Cookie
+          // as the opponent target; synthetic `faint-target` is intentionally
+          // not used because a real battle area may contain at most two
+          // Cookies and the Browser evidence should show actual card identity.
+          ...(targetSteps[0] !== '昏厥效果目標：Melon Bun Cookie'
+            ? ['trace:faint-target:Melon Bun Cookie']
+            : []),
+          ...(!/「Melon Bun Cookie」受到 1 點傷害/.test(traceText)
+            ? ['trace:faint-damage-result']
+            : []),
+        ]),
+  ]
+  return {
+    passed: missing.length === 0,
+    missing,
+    paymentSelections,
+    targetSteps,
+  }
+}
+
 // BS8-002 is the only strict ability whose Then is an optional payment
 // decision rather than an attack follow-up. A settled trace alone is not
 // enough here: the Browser path must show the red support-energy choice before
@@ -655,8 +782,8 @@ const verifyBs8002OptionalThenFingerprint = (traceSummary, operations, negative)
     ]) {
       if (!operations.includes(operation)) missing.push(`operation:${operation}`)
     }
-    if (!traceSummary.commandKinds.includes('resolve-draw-up-to')) {
-      missing.push('trace:resolve-draw-up-to')
+    if (traceSummary.commandKinds.includes('resolve-draw-up-to')) {
+      missing.push('positive:mandatory-draw-must-not-offer-draw-up-to')
     }
     if (!/技能 Then 代價：支付能量（橫置）/.test(traceText)) {
       missing.push('trace:skill-then-red-energy-payment')
@@ -763,6 +890,7 @@ const strictMultipleTargetSelectionCounts = new Map([
   // total level is at most three. Its level-sum UI deliberately does not
   // expose an "N / 2" counter, so the generic one-target guard is insufficient.
   ['BS8-031', 2],
+  ['BS8-038', 2],
 ])
 
 const clickFirstUnselected = async (panel, selectors, operations) => {
@@ -841,6 +969,26 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
     const availableCandidates = group.locator(
       'button:not(.is-selected):not(:disabled)',
     )
+    const pairedTargets = selector.includes('target')
+      ? panelText.match(/先從雙方各選 (\d+) 張餅乾/)
+      : null
+    if (pairedTargets) {
+      // Follow the visible owner/position labels instead of choosing two own Cookies.
+      const ownerOf = async (button) => (await button.locator('small').allTextContents())
+        .find((label) => label.includes('・戰鬥區第'))?.split('・戰鬥區第')[0]
+      const selectedOwners = []
+      for (const button of await group.locator('button.is-selected').all()) selectedOwners.push(await ownerOf(button))
+      for (const button of await availableCandidates.all()) {
+        const owner = await ownerOf(button)
+        if (owner && selectedOwners.filter((selected) => selected === owner).length < Number(pairedTargets[1])) {
+          await button.click()
+          operations.push(`select:${selector}`)
+          await wait(180)
+          return true
+        }
+      }
+      continue
+    }
     // BS7-039/082 are the dedicated ordered-all-target Browser proofs. Choose the
     // second rendered target first, then the remaining first target, so a
     // passing trace cannot be mistaken for automatic DOM-order damage.
@@ -874,6 +1022,36 @@ const driveEffectPanel = async (
 ) => {
   const panel = activePanel(page)
   if (!(await visible(panel))) return false
+
+  if (activeContractCard(page) === 'BS8-048' && await visible(panel.locator('.effect-candidates-target'))) {
+    const choices = panel.locator('.effect-candidates-target button')
+    assert.equal(await choices.count(), 2)
+    assert.match(await panel.innerText(), /Soul Jam: Light of Destruction/)
+    assert.match(await panel.innerText(), /Soul Jam: Light of Abundance/)
+    if (auditAbundance && !operations.includes('select:abundance')) {
+      await choices.filter({ hasText: 'Soul Jam: Light of Abundance' }).click()
+      operations.push('select:abundance')
+      return true
+    }
+  }
+
+  if (auditZeroChoices && await visible(panel.locator('.effect-candidates-target'))) {
+    const primary = panel.locator('.effect-panel-primary-action').first()
+    if (await enabled(primary) && await panel.locator('.effect-candidates-target .is-selected').count() === 0 && /最多|至多|\bup to\b/i.test(await panel.innerText())) {
+      await primary.click({ force: true })
+      operations.push('confirm:zero-targets')
+      await wait(500)
+      return true
+    }
+  }
+
+  if (['BS8-026', 'BS8-040', 'BS8-045'].includes(activeContractCard(page))) {
+    assert.equal(
+      await panel.locator('button.skip-effect').count(),
+      0,
+      'Mandatory attack follow-up must not offer a misleading Skip action',
+    )
+  }
 
   const optionalAttack = panel.locator('.optional-cost-attack-inline').first()
   const isBs8002OptionalThen = activeContractCard(page) === 'BS8-002'
@@ -948,6 +1126,8 @@ const driveEffectPanel = async (
       [
         ...(allowNegativePayment ? ['.effect-candidates-payment'] : []),
         '.effect-candidates-cost-support',
+        '.effect-candidates-cost-trash-to-break',
+        '.effect-candidates-cost-hand-to-break',
         '.effect-candidates-discard-hand',
         '.effect-candidates-hp-cost',
         '.effect-candidates-trash-battle',
@@ -1050,6 +1230,8 @@ const driveEffectPanel = async (
     [
       '.effect-candidates-payment',
       '.effect-candidates-cost-support',
+      '.effect-candidates-cost-trash-to-break',
+      '.effect-candidates-cost-hand-to-break',
       '.effect-candidates-discard-hand',
       '.effect-candidates-hp-cost',
       '.effect-candidates-trash-battle',
@@ -1097,7 +1279,7 @@ const driveOtherModal = async (
     allowNegativePayment = false,
   } = {},
 ) => {
-  const strictNegative = negative && !settleAttackEffects
+  const strictNegative = negative && !settleAttackEffects && !allowNegativePayment
 
   const stagePlacement = page.locator('.stage-placement-modal').first()
   if (await visible(stagePlacement)) {
@@ -1146,11 +1328,14 @@ const driveOtherModal = async (
 
   const flip = page.locator('.flip-response-modal').first()
   if (await visible(flip)) {
-    if (strictNegative) {
+    if (strictNegative || auditDeclineFlip) {
+      if (activeContractCard(page) === 'BS8-036' && strictNegative) {
+        assert.equal(await flip.getByRole('button', { name: /發動 FLIP/ }).isEnabled(), false)
+      }
       const skip = flip.locator('.modal-actions button').first()
       if (!(await enabled(skip))) return false
       await skip.click({ force: true })
-      operations.push('skip:negative-flip')
+      operations.push(auditDeclineFlip ? 'skip:decline-flip' : 'skip:negative-flip')
       await wait(520)
       return true
     }
@@ -1246,6 +1431,12 @@ const driveOtherModal = async (
 
   const blockerResponse = page.locator('.blocker-response-modal').first()
   if (await visible(blockerResponse)) {
+    if (auditDeclineBlocker) {
+      await blockerResponse.getByRole('button', { name: '不使用', exact: true }).click()
+      operations.push('skip:decline-blocker')
+      await wait(520)
+      return true
+    }
     const blocker = blockerResponse
       .locator('.blocker-candidates button:not(.is-selected):not(:disabled)')
       .first()
@@ -1256,9 +1447,9 @@ const driveOtherModal = async (
       return true
     }
     if (
-      activeContractCard(page) === 'BS8-008' &&
+      ['BS8-008', 'BS8-044'].includes(activeContractCard(page)) &&
       !negative &&
-      !operations.includes('witness:bs8-008-blocker-payment-ui')
+      !operations.includes(`witness:${activeContractCard(page).toLowerCase()}-blocker-payment-ui`)
     ) {
       const paymentSection = blockerResponse.locator('.blocker-payment-section')
       const paymentText = await paymentSection.innerText().catch(() => '')
@@ -1283,7 +1474,7 @@ const driveOtherModal = async (
           'BS8-008 Blocker confirm must stay disabled before payment',
         )
       }
-      operations.push('witness:bs8-008-blocker-payment-ui')
+      operations.push(`witness:${activeContractCard(page).toLowerCase()}-blocker-payment-ui`)
     }
     const paymentProgress = await blockerResponse
       .locator('.blocker-payment-section .faint-payment-cost')
@@ -1460,9 +1651,11 @@ const driveOtherModal = async (
   const draw = page.locator('.draw-up-to-modal').first()
   if (await visible(draw)) {
     if (activeContractCard(page) === 'BS8-002' && !negative) {
-      operations.push('witness:bs8-002-draw-visible')
+      throw new Error('BS8-002 requires drawing exactly 1 after payment; a draw-up-to choice is incorrect')
     }
-    const option = draw.locator('.draw-up-to-option').first()
+    const option = auditZeroChoices
+      ? draw.locator('.draw-up-to-option').filter({ hasText: '不抽' }).first()
+      : draw.locator('.draw-up-to-option').last()
     if (await enabled(option)) await option.click({ force: true })
     const confirm = draw.locator('.draw-up-to-actions button:not(:disabled)').last()
     if (!(await enabled(confirm))) return false
@@ -2231,6 +2424,7 @@ const runCard = async (
     settleAttackEffects = false,
     driveActions = true,
     allowNegativePayment = false,
+    allowEmptyTrace = false,
   } = {},
 ) => {
   const consoleErrors = []
@@ -2255,6 +2449,9 @@ const runCard = async (
     await page.waitForTimeout(400)
     const before = await bodyText(page)
     assert.ok(!/遊戲畫面發生錯誤|Application Error|Unhandled Runtime Error/i.test(before))
+    if (requestedSeries === 'BS8' && ['BS8-028', 'BS8-029'].includes(getBaseCardNumber(card)) && negative) {
+      assert.match(before, /本回合尚未有我方餅乾從休息區登場/)
+    }
 
     const requiresBs8AttackThen =
       !auditBs8StrictAbilities &&
@@ -2303,7 +2500,7 @@ const runCard = async (
     } else if (requiresExistingCookieAttack) {
       await runExistingCookieAttack(page, operations, {
         negative,
-        requireNoPayment: requiresBs8AttackThen,
+        requireNoPayment: requiresBs8AttackThen && !allowNegativePayment,
         sourceCardNumber: requiresBs8AttackThen ? getBaseCardNumber(card) : undefined,
       })
       await settlePending(page, operations, {
@@ -2326,6 +2523,18 @@ const runCard = async (
           allowNegativePayment,
         })
         if (operations.length !== settledBefore) continue
+        if (negative && requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-039') {
+          const source = page.locator('.bottom-field [data-card-instance-id="player-one-BS8-039-1"]')
+          assert.equal(await source.locator('.skill-action').isEnabled(), false)
+          assert.match(await source.innerText(), /手牌沒有符合等級/)
+          break
+        }
+        if (negative && requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-043') {
+          const source = page.locator('.bottom-field [data-card-instance-id="player-one-BS8-043-1"]')
+          assert.equal(await source.locator('.skill-action').isEnabled(), false)
+          assert.match(await source.innerText(), /沒有本回合從休息區登場的 LV.3/)
+          break
+        }
         if (
           await clickSkill(
             page,
@@ -2348,6 +2557,7 @@ const runCard = async (
           operations.push('action:hand')
           continue
         }
+        if (requestedSeries === 'BS8' && ['BS8-028', 'BS8-029', 'BS8-032', 'BS8-034', 'BS8-039', 'BS8-042', 'BS8-043', 'BS8-046', 'BS8-047', 'BS8-049', 'BS8-050'].includes(getBaseCardNumber(card))) break
         if (await clickNextPhase(page)) {
           operations.push('action:next-phase')
           continue
@@ -2446,10 +2656,30 @@ const runCard = async (
       auditBs8StrictAbilities && getBaseCardNumber(card) === 'BS8-002'
         ? verifyBs8002OptionalThenFingerprint(traceSummary, operations, negative)
         : null
+    const bs8013FaintFingerprint =
+      requestedSeries === 'BS8' &&
+      path === 'generic' &&
+      getBaseCardNumber(card) === 'BS8-013' &&
+      !negative
+        ? verifyBs8013FaintFingerprint(traceSummary, operations)
+        : null
+    const bs8017TrashThenFingerprint =
+      requestedSeries === 'BS8' &&
+      path === 'generic' &&
+      getBaseCardNumber(card) === 'BS8-017' &&
+      !negative
+        ? verifyBs8017TrashThenFingerprint(traceSummary, operations)
+        : null
+    const bs8018FaintPaymentFingerprint =
+      requestedSeries === 'BS8' &&
+      (path === 'generic' || path === 'negative-no-payment') &&
+      getBaseCardNumber(card) === 'BS8-018'
+        ? verifyBs8018FaintPaymentFingerprint(traceSummary, operations, negative)
+        : null
     if (
       bs8OptionalThenFingerprint &&
       !negative &&
-      traceSummary.commandKinds.includes('resolve-draw-up-to')
+      bs8OptionalThenFingerprint.passed
     ) {
       operations.push('witness:bs8-002-draw-resolved')
     }
@@ -2481,6 +2711,7 @@ const runCard = async (
       if (
         requiresBs8AttackThen &&
         negative &&
+        !allowNegativePayment &&
         (traceSummary.commandKinds.includes('declare-attack') || attackThenResolved)
       ) {
         return {
@@ -2549,9 +2780,77 @@ const runCard = async (
             'BS8-002 必須在技能 Then 面板中先讓玩家選擇付款或略過，且只能在付款後抽牌。',
         }
       }
+      if (bs8013FaintFingerprint && !bs8013FaintFingerprint.passed) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Missing BS8-013 faint Then semantic fingerprint',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          bs8013FaintFingerprint,
+          ...traceSummary,
+          error:
+            'BS8-013 必須先將來源卡送入棄牌區，再由 Browser 選取紅色 LV.1 非同名餅乾完成 Then。',
+        }
+      }
+      if (bs8017TrashThenFingerprint && !bs8017TrashThenFingerprint.passed) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: 'Missing BS8-017 trash Then semantic fingerprint',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          bs8017TrashThenFingerprint,
+          ...traceSummary,
+          error:
+            'BS8-017 必須先支付紅色支援能量，再從棄牌區選紅色印刷 HP=1 餅乾登場，最後選戰鬥區餅乾完成 Then 1 點傷害。',
+        }
+      }
+      if (bs8018FaintPaymentFingerprint && !bs8018FaintPaymentFingerprint.passed) {
+        return {
+          cardNumber: card.cardNumber,
+          baseCardNumber: card.baseCardNumber,
+          variant: card.variant,
+          name: card.name,
+          type: card.type,
+          color: card.color,
+          effectSurfaces: auditedSurfaces(card),
+          path,
+          testState,
+          status: 'FAIL',
+          auditStatus: negative
+            ? 'Negative BS8-018 faint payment leaked'
+            : 'Missing BS8-018 faint payment semantic fingerprint',
+          operations,
+          contractTraceCard: traceCardNumberFor(card),
+          bs8018FaintPaymentFingerprint,
+          ...traceSummary,
+          error: negative
+            ? 'BS8-018 負向路徑未支付紅色支援能量時，不得繼續選擇目標或造成傷害。'
+            : 'BS8-018 必須先由支援區選擇並支付一張紅色能量，且同一次昏厥觸發不得重複收費。',
+        }
+      }
       if (
         auditConfig.requireSubstantiveTrace &&
         !negative &&
+        !allowEmptyTrace &&
+        !(auditDeclineBlocker && ['BS8-008', 'BS8-044'].includes(getBaseCardNumber(card)) && operations.includes('skip:decline-blocker')) &&
         !traceSummary.substantiveEffectEvidence &&
         !bs8StaticWitness &&
         !bs8AbilityWitness
@@ -2574,6 +2873,228 @@ const runCard = async (
           error:
             'Browser 操作已結束，但 contract trace 沒有目標／結果／狀態變更證據',
         }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-026') {
+        const sourceHp = await page.locator('.bottom-field .combat-card-wrap .badge-hp').first().innerText()
+        const targetHp = await page.locator('.top-field .combat-card-wrap .badge-hp').first().innerText()
+        assert.equal(sourceHp.trim(), '5/5', 'BS8-026 must end at 5 HP on both sides of the threshold')
+        assert.equal(targetHp.trim(), '3/6', 'both HP threshold paths must resolve the paid 3-damage attack')
+        assert.ok(traceSummary.commandKinds.includes('declare-attack'), 'HP threshold B must not stop at payment')
+        if (negative) {
+          assert.ok(!traceSummary.steps.some((step) => /增加 1 點 HP/.test(step)), 'HP 5 must not gain HP')
+          assert.ok(traceSummary.steps.some((step) => /條件不成立/.test(step)), 'HP 5 no-op must explain the unmet condition')
+        }
+        operations.push(`verify:bs8-026-hp-${negative ? '5-to-5' : '4-to-5'}:target-6-to-3`)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-028') {
+        const targetHp = await page.locator('.top-field .combat-card-wrap .badge-hp').first().innerText()
+        assert.equal(targetHp.trim(), negative || auditZeroChoices ? '6/6' : '5/6')
+        if (auditZeroChoices) {
+          assert.ok(operations.includes('confirm:zero-targets'))
+          assert.ok(traceSummary.steps.some((step) => step.includes('選擇 0 個目標')))
+        }
+        if (negative) assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+        else {
+          const source = page.locator('.bottom-field [data-card-instance-id^="player-one-BS8-028"]')
+          assert.equal(await source.locator('.skill-action').isEnabled(), false)
+          assert.match(await source.innerText(), /本回合已使用過技能/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-029') {
+        const deckSize = negative || auditZeroChoices ? 20 : 19
+        assert.equal(await page.getByLabel(`玩家牌庫 ${deckSize} 張`, { exact: true }).count(), 1)
+        if (negative) assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+        else {
+          assert.ok(traceSummary.commandKinds.includes('resolve-draw-up-to'))
+          const source = page.locator('.bottom-field [data-card-instance-id^="player-one-BS8-029"]')
+          assert.equal(await source.locator('.skill-action').isEnabled(), false)
+          assert.match(await source.innerText(), /本回合已使用過技能/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-031') {
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.ok(traceSummary.commandKinds.includes('skip-on-play'))
+        } else {
+          const traceText = traceSummary.steps.join('\n')
+          assert.match(traceText, /技能代價：棄牌區餅乾放入休息區.*Lassi Guard Kulfi/)
+          assert.ok(traceSummary.commandKinds.includes('resolve-ability-effect'))
+          assert.ok(operations.includes('select:.effect-candidates-cost-trash-to-break'))
+          assert.match(traceText, /Squid Ink Cookie/)
+          assert.match(traceText, /Cinnamon Cookie/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-032') {
+        const traceText = traceSummary.steps.join('\n')
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.match(await page.locator('.bottom-field').innerText(), /支付代價前，自己的休息區必須已有餅乾/)
+        } else {
+          assert.match(traceText, /技能代價：手牌餅乾放入休息區.*Cinnamon Cookie/)
+          assert.ok(traceSummary.commandKinds.includes('resolve-draw-up-to'))
+          assert.ok(operations.includes('select:.effect-candidates-cost-hand-to-break'))
+          const golden = page.locator('.bottom-field [data-card-instance-id="BS8-golden-cheese-break"]')
+          assert.equal(await golden.count(), auditZeroChoices ? 0 : 1)
+          if (auditZeroChoices) assert.ok(operations.includes('confirm:zero-targets'))
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-034') {
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.match(await page.locator('.bottom-field').innerText(), /支付代價前，自己的休息區必須已有餅乾/)
+        } else {
+          assert.match(traceSummary.steps.join('\n'), /技能代價：手牌餅乾放入休息區.*Squid Ink Cookie/)
+          assert.ok(operations.includes('select:.effect-candidates-cost-hand-to-break'))
+          const golden = page.locator('.bottom-field [data-card-instance-id="BS8-golden-cheese-break"]')
+          assert.equal(await golden.count(), auditZeroChoices ? 0 : 1)
+          if (auditZeroChoices) assert.ok(operations.includes('confirm:zero-targets'))
+          else assert.match(await golden.innerText(), /6\/5/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-035') {
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.ok(traceSummary.commandKinds.includes('skip-on-play'))
+        } else {
+          const traceText = traceSummary.steps.join('\n')
+          assert.match(traceText, /技能代價：棄牌區餅乾放入休息區.*Centipede Cookie/)
+          assert.ok(operations.includes('select:.effect-candidates-cost-trash-to-break'))
+          if (auditZeroChoices) {
+            assert.ok(operations.includes('confirm:zero-targets'))
+            assert.match(traceText, /選擇 0 個目標/)
+          } else assert.match(traceText, /效果目標：Cinnamon Cookie/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-036') {
+        assert.ok(traceSummary.commandKinds.includes('resolve-flip'))
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="flip-defender"] .badge-hp').innerText()).trim(), negative || auditDeclineFlip ? '1/5' : '2/5')
+        assert.ok(operations.includes(auditDeclineFlip ? 'skip:decline-flip' : negative ? 'skip:negative-flip' : 'select:flip-discard'))
+        if (!negative && !auditDeclineFlip) assert.ok(operations.includes('confirm:flip'))
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-037') {
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="player-one-BS8-037-1"] .badge-hp').innerText()).trim(), negative ? '2/2' : '3/2')
+        assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), !negative)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-038') {
+        if (negative) assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+        else {
+          const traceText = traceSummary.steps.join('\n')
+          assert.match(traceText, /技能代價：手牌餅乾放入休息區.*Lassi Guard Kulfi/)
+          if (auditZeroChoices) assert.match(traceText, /選擇 0 個目標/)
+          else {
+            assert.match(traceText, /效果目標：Squid Ink Cookie、Mozzarella Cookie/)
+            assert.equal(operations.filter((operation) => operation === 'select:.effect-candidates-target').length, 2)
+          }
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-039') {
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.match(await page.locator('.bottom-field').innerText(), /手牌沒有符合等級/)
+        } else {
+          assert.match(traceSummary.steps.join('\n'), /技能代價：手牌餅乾放入休息區.*Centipede Cookie/)
+          assert.equal(await page.locator('.bottom-field [data-card-instance-id="BS8-039-cost-lv2"]').count(), auditZeroChoices ? 0 : 1)
+          if (auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+          const source = page.locator('.bottom-field [data-card-instance-id="player-one-BS8-039-1"]')
+          assert.equal(await source.locator('.skill-action').isEnabled(), false)
+          assert.match(await source.innerText(), /本回合已使用過技能/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-040') {
+        assert.equal(await page.getByLabel(`玩家牌庫 ${negative ? 20 : 19} 張`, { exact: true }).count(), 1)
+        assert.equal(traceSummary.commandKinds.includes('resolve-draw-up-to'), false)
+        assert.equal(operations.includes('select:hand-discard'), !negative)
+        assert.equal(operations.includes('confirm:hand-discard'), !negative)
+        assert.equal(traceSummary.commandKinds.includes('resolve-opponent-hand-discard'), !negative)
+        assert.equal((await page.locator('.top-field .combat-card-wrap .badge-hp').first().innerText()).trim(), '5/6')
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-041') {
+        const declined = negative || auditDeclineFlip
+        assert.equal(await page.getByLabel(`玩家牌庫 ${declined || auditZeroChoices ? 20 : 19} 張`, { exact: true }).count(), 1)
+        assert.equal(operations.includes('confirm:draw-up-to'), !declined)
+        assert.equal(traceSummary.commandKinds.includes('resolve-draw-up-to'), !declined)
+        if (!declined) assert.match(traceSummary.steps.join('\n'), auditZeroChoices ? /選擇不抽牌/ : /抽了 1 張牌/)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-042') {
+        if (negative) {
+          assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), false)
+          assert.match(traceSummary.steps.join('\n'), /本次不是從休息區登場/)
+        }
+        else if (auditZeroChoices) {
+          assert.ok(operations.includes('confirm:zero-targets'))
+          assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+        } else {
+          assert.ok(operations.includes('select:.effect-candidates-target'))
+          assert.match(traceSummary.steps.join('\n'), /效果目標：Squid Ink Cookie/)
+          assert.match(traceSummary.steps.join('\n'), /下一個活躍階段不會設為活躍/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-043') {
+        const source = page.locator('.bottom-field [data-card-instance-id="player-one-BS8-043-1"]')
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="self-extra-1"] .badge-hp').innerText()).trim(), negative ? '4/5' : '5/5')
+        assert.equal(traceSummary.commandKinds.includes('begin-activate-skill'), !negative)
+        assert.equal(await source.locator('.skill-action').isEnabled(), false)
+        if (!negative) assert.match(await source.innerText(), /本回合已使用過技能/)
+      }
+      if (requestedSeries === 'BS8' && ['BS8-008', 'BS8-044'].includes(getBaseCardNumber(card))) {
+        const blockerNumber = getBaseCardNumber(card)
+        const redirected = !negative && !auditDeclineBlocker
+        assert.equal((await page.locator(`.bottom-field [data-card-instance-id="player-one-${blockerNumber}-1"] .badge-hp`).innerText()).trim(), redirected ? '2/3' : '3/3')
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="blocker-defender"] .badge-hp').innerText()).trim(), redirected ? '5/5' : '4/5')
+        assert.equal(operations.includes('select:blocker-payment'), redirected)
+        assert.equal(traceSummary.commandKinds.includes('play-blocker'), redirected)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-045') {
+        assert.equal(await page.locator('.bottom-field [data-card-instance-id="player-one-BS8-045-1"]').count(), negative ? 1 : 0)
+        assert.equal((await page.locator('.top-field .combat-card-wrap .badge-hp').first().innerText()).trim(), '3/6')
+        if (negative) assert.match(traceSummary.steps.join('\n'), /條件不成立，效果未執行/)
+        else assert.match(traceSummary.steps.join('\n'), /將目標餅乾放入休息區/)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-046') {
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="BS8-046-hp1"] .badge-hp').innerText()).trim(), auditZeroChoices && !negative ? '1/2' : '2/2')
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="BS8-046-hp2"] .badge-hp').innerText()).trim(), '2/5')
+        if (negative || auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+        else assert.match(traceSummary.steps.join('\n'), /Squid Ink Cookie/)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-047') {
+        const summoned = page.locator('.bottom-field [data-card-instance-id="BS8-047-yellow-lv3-break"]')
+        assert.equal(await summoned.count(), negative || auditZeroChoices ? 0 : 1)
+        if (negative) {
+          const item = page.locator('.bottom-hand .hand-card-wrap').filter({ has: page.getByTitle('Puny Strength', { exact: true }) })
+          assert.equal(await item.count(), 1)
+          assert.doesNotMatch(await item.getAttribute('class'), /is-actionable/)
+          assert.equal(traceSummary.traceEntries, 0)
+        } else {
+          assert.match(traceSummary.steps.join('\n'), /展示代價.*Lassi Guard Kulfi/)
+          assert.match(traceSummary.steps.join('\n'), /Then 結算：將先前展示的同一張牌「Lassi Guard Kulfi」放入休息區/)
+          if (auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+        }
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-048') {
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="BS8-048-defender"] .badge-hp').innerText()).trim(), '4/5')
+        const jamName = auditAbundance ? 'Soul Jam: Light of Abundance' : 'Soul Jam: Light of Destruction'
+        assert.equal(await page.locator('.bottom-hand').getByTitle(jamName, { exact: true }).count(), negative || auditZeroChoices ? 0 : 1)
+        if (negative) {
+          assert.equal(await page.locator('.bottom-hand').getByTitle('Kulfi Legends', { exact: true }).count(), 1)
+          assert.equal(traceSummary.traceEntries, 0)
+        } else if (auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+        else assert.ok(traceSummary.steps.some((step) => step.includes(`回收結果：${jamName} 從棄牌區返回手牌`)))
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-049') {
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="BS8-049-hp1"] .badge-hp').innerText()).trim(), auditZeroChoices ? '1/2' : '2/2')
+        assert.equal(await page.getByTitle('Simmering Lassi Springs (已橫置)', { exact: true }).count(), 1)
+        assert.equal(operations.filter((entry) => entry === 'select:stage-placement-payment').length, 2)
+        assert.match(traceSummary.steps.join('\n'), /場景代價：將「Simmering Lassi Springs」橫置/)
+        if (negative || auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+      }
+      if (requestedSeries === 'BS8' && getBaseCardNumber(card) === 'BS8-050') {
+        assert.equal((await page.locator('.bottom-field [data-card-instance-id="BS8-047-yellow-lv3-break"] .badge-hp').innerText()).trim(), auditZeroChoices ? '1/5' : '3/5')
+        assert.equal(await page.getByTitle('City of Eternal Gold (已橫置)', { exact: true }).count(), 1)
+        assert.equal(operations.filter((entry) => entry === 'select:stage-placement-payment').length, 1)
+        assert.ok(!operations.includes('select:.effect-candidates-payment'), 'Stage activation itself has no energy cost')
+        if (auditZeroChoices) assert.match(traceSummary.steps.join('\n'), /選擇 0 個目標/)
+        else if (negative) assert.match(traceSummary.steps.join('\n'), /Then HP 效果結果：條件不成立/)
+        else assert.match(traceSummary.steps.join('\n'), /同一張「Golden Cheese Cookie」HP 2 → 3/)
       }
       return {
         cardNumber: card.cardNumber,
@@ -2604,6 +3125,9 @@ const runCard = async (
         ...(bs8AbilityWitness ? { bs8AbilityWitness } : {}),
         ...(bs8AttackThenFingerprint ? { bs8AttackThenFingerprint } : {}),
         ...(bs8OptionalThenFingerprint ? { bs8OptionalThenFingerprint } : {}),
+        ...(bs8013FaintFingerprint ? { bs8013FaintFingerprint } : {}),
+        ...(bs8017TrashThenFingerprint ? { bs8017TrashThenFingerprint } : {}),
+        ...(bs8018FaintPaymentFingerprint ? { bs8018FaintPaymentFingerprint } : {}),
         ...traceSummary,
       }
     }
@@ -2693,13 +3217,20 @@ try {
     const negativeConditionPath = negativeConditionCardNumbers.has(
       card.baseCardNumber,
     )
+    const dedicatedConditionCardNumber = conditionCardNumbers.has(card.cardNumber)
+      ? card.cardNumber
+      : conditionCardNumbers.has(card.baseCardNumber)
+        ? card.baseCardNumber
+        : null
     const testState = auditNegative
       ? `card-negative:${card.cardNumber}`
       : auditBs8StrictAbilities
         ? getBaseCardNumber(card) === 'BS8-084'
           ? 'bs8-084-attack-discard:payable'
           : `card-skill:${card.cardNumber}`
-        : `card:${card.cardNumber}`
+        : dedicatedConditionCardNumber
+          ? conditionTestState(dedicatedConditionCardNumber, 'met')
+          : `card:${card.cardNumber}`
     const runOptions = auditNegative
       ? {
           path: negativeConditionPath
@@ -2804,6 +3335,9 @@ try {
           path: 'condition-unmet',
           requireInteractiveOperation: false,
           driveActions: false,
+          // A disabled condition path deliberately has no command trace;
+          // the paired met route above remains the substantive action proof.
+          allowEmptyTrace: true,
         },
       )
       const conditionPaths = { met, unmet }
@@ -2848,11 +3382,11 @@ try {
     viewport: '1440x960',
     sources: auditConfig.sources,
     scope: auditNegative
-      ? `${auditConfig.candidate ? 'Candidate staging' : 'Formal-pool'} negative A/B UI audit for every ${auditConfig.label} record. The localhost-only fixture keeps the card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.`
+      ? `${auditConfig.candidate ? 'Candidate staging' : 'Formal-pool'} negative A/B localhost fixture audit for the selected ${auditConfig.label} records. Default negative routes remove payment availability; dedicated condition routes retain legal payment and isolate a card-specific condition or cost. Per-record operations identify whether the attack was actually declared or a pending window was staged. PASS covers the asserted local UI, command trace, and settled state only; it does not prove a complete online match.`
       : auditVanillaAttacks
       ? `Formal-pool test-state UI audit for every ${auditConfig.label} vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.`
       : auditBs8StrictAbilities
-        ? 'Formal-pool BS8 strict ability Browser A/B audit for the recorded 54 user-visible ability sources. Attack-Then clauses are intentionally excluded from this report. Every A path uses card-skill so a Then clause cannot hide the ability; every B path uses card-skill-negative on the same ability surface. BS8-002 additionally proves the visible pay-or-skip choice, red support-energy payment before drawing, and no draw after Skip; BS8-084 proves the required pre-attack discard and no-hand rejection through the real UI.'
+        ? `Formal-pool BS8 strict ability Browser A/B audit for ${auditAllVariants ? 'each selected illustration record' : 'base-card representatives'} of the recorded 54 user-visible ability sources. Attack-Then clauses are intentionally excluded from this report. Every A path uses card-skill so a Then clause cannot hide the ability; every B path uses card-skill-negative on the same ability surface. BS8-002 additionally proves the visible pay-or-skip choice, red support-energy payment before drawing, and no draw after Skip; BS8-084 proves the required pre-attack discard and no-hand rejection through the real UI.`
         : `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {
       total: results.length,

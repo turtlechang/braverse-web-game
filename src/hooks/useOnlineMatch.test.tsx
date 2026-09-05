@@ -240,7 +240,7 @@ describe('useOnlineMatch', () => {
     })
   })
 
-  it('handles match updates, command rejection, and a terminal result', async () => {
+  it.each([7, null])('handles match updates, command rejection, and a terminal result with seed %s', async (seed) => {
     await mountHook()
     const initialState = createDemoGame()
     const updatedState = { ...initialState, turnNumber: initialState.turnNumber + 1 }
@@ -251,14 +251,14 @@ describe('useOnlineMatch', () => {
     await act(() =>
       socket.emitMessage({
         type: 'match-start',
-        seed: 7,
+        seed,
         viewerId: 'player-two',
         state: initialState,
       }),
     )
     expect(current().status).toBe('in-progress')
     expect(current().viewerPlayerId).toBe('player-two')
-    expect(current().seed).toBe(7)
+    expect(current().seed).toBe(seed)
     expect(current().maskedGame).toEqual(initialState)
 
     await act(() =>

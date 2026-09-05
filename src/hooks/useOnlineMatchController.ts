@@ -228,6 +228,8 @@ export function useOnlineMatchController(params: {
       // 同名效果的註解。
       battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
+      // 顯示卡牌造成的封鎖理由，由防守方明確確認後再送 skip-trap。
+      battle.trapsDisabled ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
       getBlockerCandidates(game, viewerPlayerId).length > 0 ||
       getAttackResponseSkillCandidates(game, viewerPlayerId).length > 0
@@ -265,7 +267,15 @@ export function useOnlineMatchController(params: {
             player.battleArea.find(
               (cookie: CookieInBattle) =>
                 cookie.card.instanceId === pendingFaint.sourceInstanceId,
-            )?.card
+            )?.card ??
+            // BS8-013 moves its fainting source from Break to the discard pile
+            // before its optional trash-to-battle Then is offered. Keep the
+            // source card visible while that queued decision is still pending.
+            player.discardPile.find(
+              (card): card is CookieCard =>
+                card.type === 'cookie' &&
+                card.instanceId === pendingFaint.sourceInstanceId,
+            )
           if (found) return found
         }
         return null
@@ -448,7 +458,7 @@ export function useOnlineMatchController(params: {
   )
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
   const trapCostOptions = selectedTrap?.trap
-    ? getTrapCostOptions(selectedTrap.trap)
+    ? getTrapCostOptions(selectedTrap.trap, game, viewerPlayerId)
     : []
   const selectedTrapCost =
     trapCostOptions[selectedTrapCostOptionIndex] ?? selectedTrap?.trap?.cost

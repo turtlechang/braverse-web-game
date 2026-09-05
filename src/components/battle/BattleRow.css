@@ -2244,6 +2244,39 @@
   aspect-ratio: 0.7;
 }
 
+/* Payment/cost choices must expose each complete hit area. The normal 28px
+ * stack lets a card's centre hit its neighbour, especially after rotation. */
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) {
+  display: flex;
+  gap: 8px;
+  direction: ltr;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card-wrap {
+  position: relative;
+  flex: 0 0 108px;
+  height: 100%;
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable) .support-card.is-rested {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* The hand fan occupies the same lower screen area on compact boards. Keep
+ * it out of pointer and keyboard selection while choosing support cards;
+ * the public hand count remains visible and the fan returns on cancellation. */
+:root[data-theme] .game-shell .bottom-field:has(.support-card.is-targetable) .hand-fan.bottom-hand {
+  visibility: hidden;
+}
+
 /* Combat cards expand to each combat zone's inner height in the <900px
  * compact layout (untouched by the redesign below). The 18px reserve matches
  * the desktop combat-slot vertical padding, leaving room for the HP stack

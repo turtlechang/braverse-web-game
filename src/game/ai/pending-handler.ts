@@ -17,6 +17,7 @@ import {
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
 import {
+  canActivateCookieSkill,
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
@@ -33,6 +34,7 @@ import {
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
 import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
+import { chooseAiStageCostIds } from './turn-handler'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -120,6 +122,34 @@ export const handleAiPendingDecision = (
         action: 'idle',
         description: `等待 ${state.players[pendingAbility.playerId].name} 處理卡牌效果。`,
       }
+    }
+    if (pendingAbility.awaitingActivation) {
+      const card = state.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card
+      const costs = card?.type === 'cookie' && card.skill &&
+        canActivateCookieSkill(state, playerId, card.instanceId, 'passive')
+        ? chooseAiStageCostIds(state, playerId, card.skill.cost, card.instanceId, universal)
+        : null
+      return withPendingReason({
+        state: applyGameCommand(state, costs ? {
+          kind: 'begin-activate-skill', playerId,
+          sourceInstanceId: pendingAbility.sourceInstanceId, trigger: 'passive',
+          paymentIds: costs.paymentIds,
+          costSupportToTrashIds: costs.supportToTrashIds,
+          supportToHandIds: costs.supportToHandIds,
+          discardHandIds: costs.discardHandIds,
+          hpToTrashTargetIds: costs.hpToTrashTargetIds,
+          trashBattleCookieIds: costs.trashBattleCookieIds,
+        } : {
+          kind: 'skip-end-phase-skill', playerId,
+          sourceInstanceId: pendingAbility.sourceInstanceId,
+        }),
+        action: costs ? 'activate-skill' : 'idle',
+        description: costs
+          ? `${state.players[playerId].name}支付${pendingAbility.sourceCardName ?? '餅乾'}的回合結束效果代價。`
+          : `${state.players[playerId].name}不發動${pendingAbility.sourceCardName ?? '餅乾'}的回合結束效果。`,
+      }, 'payment', pendingAbility.sourceInstanceId)
     }
     const effect = pendingAbility.effects[pendingAbility.effectIndex]
     const context: EffectContext = {

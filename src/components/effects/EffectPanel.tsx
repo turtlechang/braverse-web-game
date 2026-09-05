@@ -33,6 +33,7 @@ export interface EffectPanelProps {
   onSkip: () => void
   onCancel?: () => void
   candidateCards?: GameCard[]
+  candidateLabels?: Record<string, string>
   onToggleCandidate?: (instanceId: string) => void
   restSupportCandidates?: GameCard[]
   damageTargetCandidates?: GameCard[]
@@ -56,6 +57,14 @@ export interface EffectPanelProps {
   selectedTrashBattleCookieIds?: Set<string>
   onToggleTrashBattleCookie?: (instanceId: string) => void
   trashBattleCookieCost?: number
+  trashCookieToBreakAreaCandidates?: GameCard[]
+  selectedTrashCookieToBreakAreaIds?: Set<string>
+  onToggleTrashCookieToBreakArea?: (instanceId: string) => void
+  trashCookieToBreakAreaCost?: number
+  handToBreakAreaCandidates?: GameCard[]
+  selectedHandToBreakAreaIds?: Set<string>
+  onToggleHandToBreakArea?: (instanceId: string) => void
+  handToBreakAreaCost?: number
   battleCookieToHandCandidates?: GameCard[]
   selectedBattleToHandIds?: Set<string>
   onToggleBattleToHand?: (instanceId: string) => void
@@ -70,6 +79,7 @@ export interface EffectPanelProps {
   trashToDeckCost?: number
   showTargetSelection?: boolean
   effectConditionMet?: boolean
+  effectSelectionError?: string | null
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
   onChooseMode?: (modeIndex: number) => void
@@ -79,12 +89,14 @@ function CandidateButtons({
   cards,
   selectedIds,
   selectedOrderIds,
+  labels,
   onToggle,
   className,
 }: {
   cards: GameCard[]
   selectedIds: Set<string>
   selectedOrderIds?: string[]
+  labels?: Record<string, string>
   onToggle?: (instanceId: string) => void
   className: string
 }) {
@@ -104,6 +116,7 @@ function CandidateButtons({
           >
             <CardFace card={card} selected={selected} />
             <span>{card.name}</span>
+            {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
           </button>
         )
@@ -156,6 +169,7 @@ function EffectPanelContent({
   onSkip,
   onCancel,
   candidateCards = [],
+  candidateLabels,
   onToggleCandidate,
   restSupportCandidates = [],
   damageTargetCandidates = [],
@@ -179,6 +193,14 @@ function EffectPanelContent({
   selectedTrashBattleCookieIds = new Set<string>(),
   onToggleTrashBattleCookie,
   trashBattleCookieCost = 0,
+  trashCookieToBreakAreaCandidates = [],
+  selectedTrashCookieToBreakAreaIds = new Set<string>(),
+  onToggleTrashCookieToBreakArea,
+  trashCookieToBreakAreaCost = 0,
+  handToBreakAreaCandidates = [],
+  selectedHandToBreakAreaIds = new Set<string>(),
+  onToggleHandToBreakArea,
+  handToBreakAreaCost = 0,
   battleCookieToHandCandidates = [],
   selectedBattleToHandIds = new Set<string>(),
   onToggleBattleToHand,
@@ -193,6 +215,7 @@ function EffectPanelContent({
   trashToDeckCost = 0,
   showTargetSelection = true,
   effectConditionMet = true,
+  effectSelectionError = null,
   optionalCostAttack = null,
   onChooseMode,
 }: EffectPanelProps) {
@@ -311,6 +334,9 @@ function EffectPanelContent({
               min: currentEffect.optional ? 0 : currentEffect.amount,
               max: currentEffect.amount,
             }
+        : currentEffect?.kind === 'field-to-trash' &&
+            currentEffect.target.sourceOnly
+          ? null
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&
             !currentEffect.target.sourceOnly &&
@@ -364,6 +390,10 @@ function EffectPanelContent({
     discardPaid &&
     hpToTrashPaid &&
     trashBattleCookiePaid &&
+    (trashCookieToBreakAreaCost === 0 ||
+      (pendingEffect?.selectedTrashCookieToBreakAreaIds ?? []).length === trashCookieToBreakAreaCost) &&
+    (handToBreakAreaCost === 0 ||
+      (pendingEffect?.selectedHandToBreakAreaIds ?? []).length === handToBreakAreaCost) &&
     battleCookieToHandPaid &&
     trashToDeckBottomPaid &&
     trashToDeckPaid
@@ -387,7 +417,7 @@ function EffectPanelContent({
     currentEffect?.kind === 'break-to-hand-by-level-sum' &&
     currentEffect.targetSumMode === 'at-most'
 
-  const targetReady =
+  const targetReady = !effectSelectionError && (
     !showTargetSelection ||
     (isRestSupportAndDamageEffect
       ? Boolean(
@@ -414,7 +444,7 @@ function EffectPanelContent({
               requiresEffectCardSelection(currentEffect)) ||
               (pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
                 pendingEffect.selectedTargetIds.length <= selectionLimits.max)),
-        ))
+        )))
   const restSupportReady =
     !isRestSupportAndDamageEffect ||
     Boolean(
@@ -464,6 +494,8 @@ function EffectPanelContent({
       supportAreaCost > 0 ||
       discardHandCost > 0 ||
       trashBattleCookieCost > 0 ||
+      trashCookieToBreakAreaCost > 0 ||
+      handToBreakAreaCost > 0 ||
       battleCookieToHandCandidates.length > 0 ||
       battleCookieToHandCost > 0 ||
       trashToDeckBottomCandidates.length > 0 ||
@@ -546,7 +578,13 @@ function EffectPanelContent({
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
   const hasOptionalSkip =
     pendingEffect !== null &&
-    (pendingEffect.sourceKind === 'attack' ||
+    ((pendingEffect.sourceKind === 'attack' &&
+      currentEffect !== null &&
+      (currentEffect.kind === 'optional-cost-attack' ||
+        ('optional' in currentEffect && currentEffect.optional === true) ||
+        (selectionLimits?.min === 0 &&
+          (requiresEffectCardSelection(currentEffect) ||
+            !isEffectUntargeted(currentEffect))))) ||
       (!pendingEffect.skillActivated &&
         (pendingEffect.optional === true ||
           (currentEffect !== null &&
@@ -566,6 +604,8 @@ function EffectPanelContent({
       ? '略過'
       : pendingEffect?.trigger === 'on-play'
         ? '略過整個登場效果'
+        : pendingEffect?.endPhase
+          ? '不發動回合結束效果'
         : '不發動'
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
@@ -632,9 +672,11 @@ function EffectPanelContent({
               <span>{pendingEffect.sourceCard.id}</span>
               <strong>{pendingEffect.sourceCard.name}</strong>
               <div className="skill-labels">
-                {getSkillLabels(pendingEffect.skill, {
-                  endPhase: pendingEffect.endPhase,
-                }).map((label) => (
+                {(pendingEffect.sourceKind === 'attack'
+                  ? ['攻擊後續效果']
+                  : getSkillLabels(pendingEffect.skill, {
+                      endPhase: pendingEffect.endPhase,
+                    })).map((label) => (
                   <span key={label}>{label}</span>
                 ))}
               </div>
@@ -656,6 +698,13 @@ function EffectPanelContent({
               )}
             </div>
           </div>
+
+          {!effectConditionMet && !pendingEffect.skillActivated &&
+            pendingEffect.skill.effectConditionsAtResolution && (
+            <p className="effect-instruction" role="status">
+              目前效果條件不成立。仍可支付代價並消耗本次發動，但不會執行效果。
+            </p>
+          )}
 
           {pendingEffect.revealedHpCard && (
             <div className="effect-cost-resolution" role="status">
@@ -836,6 +885,32 @@ function EffectPanelContent({
                     />
                   </>
                 )}
+                {trashCookieToBreakAreaCost > 0 && (
+                  <>
+                    <small>
+                      棄牌區 → 休息區（技能代價）：已選 {(pendingEffect.selectedTrashCookieToBreakAreaIds ?? []).length}／{trashCookieToBreakAreaCost} 張餅乾
+                    </small>
+                    <CandidateButtons
+                      cards={trashCookieToBreakAreaCandidates}
+                      selectedIds={selectedTrashCookieToBreakAreaIds}
+                      onToggle={onToggleTrashCookieToBreakArea}
+                      className="effect-candidates-cost-trash-to-break"
+                    />
+                  </>
+                )}
+                {handToBreakAreaCost > 0 && (
+                  <>
+                    <small>
+                      手牌 → 休息區（技能代價）：已選 {(pendingEffect.selectedHandToBreakAreaIds ?? []).length}／{handToBreakAreaCost} 張卡牌
+                    </small>
+                    <CandidateButtons
+                      cards={handToBreakAreaCandidates}
+                      selectedIds={selectedHandToBreakAreaIds}
+                      onToggle={onToggleHandToBreakArea}
+                      className="effect-candidates-cost-hand-to-break"
+                    />
+                  </>
+                )}
                 {trashToDeckBottomCost > 0 && (
                   <small>
                     已選 {(pendingEffect.selectedTrashToDeckBottomIds ?? []).length}／
@@ -973,7 +1048,9 @@ function EffectPanelContent({
                   }
                   onToggle={onToggleCandidate}
                   className="effect-candidates-target"
+                  labels={candidateLabels}
                 />
+                {effectSelectionError && <small role="status">{effectSelectionError}</small>}
                 {currentEffect.kind === 'hand-to-break-by-level-sum' ||
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>

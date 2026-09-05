@@ -628,6 +628,7 @@ function App() {
 
       <MatchToolbar
         onReset={() => {
+          if (!window.confirm('重新開始會結束目前對局，尚未匯出的紀錄將會清除。確定重新開始？')) return
           resetGame(
             match.deckConfig,
             `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
@@ -730,6 +731,18 @@ function App() {
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
         effectConditionMet={pending.currentEffectConditionMet}
+        effectSelectionError={pending.effectSelectionError}
+        candidateLabels={Object.fromEntries(Object.values(match.game.players).flatMap((player) =>
+          player.battleArea.map((cookie, index) => [cookie.card.instanceId, `${player.name}・戰鬥區第 ${index + 1} 張`])))}
+        showTargetSelection={!pending.breakAreaCostSelectionPending}
+        trashCookieToBreakAreaCandidates={pending.skillTrashCookieToBreakAreaCandidates}
+        selectedTrashCookieToBreakAreaIds={pending.selectedSkillTrashCookieToBreakAreaIds}
+        onToggleTrashCookieToBreakArea={pending.toggleSkillTrashCookieToBreakArea}
+        trashCookieToBreakAreaCost={pending.trashCookieToBreakAreaCost}
+        handToBreakAreaCandidates={pending.skillHandToBreakAreaCandidates}
+        selectedHandToBreakAreaIds={pending.selectedSkillHandToBreakAreaIds}
+        onToggleHandToBreakArea={pending.toggleSkillHandToBreakArea}
+        handToBreakAreaCost={pending.handToBreakAreaCost}
         trashToDeckBottomCandidates={pending.skillTrashToDeckBottomCandidates}
         selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
         onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}

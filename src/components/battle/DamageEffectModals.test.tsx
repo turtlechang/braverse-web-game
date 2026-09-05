@@ -4,6 +4,7 @@ import { act, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import type { CookieCard, GameCard } from '../../game'
+import { createDemoGame } from '../../game'
 import type {
   BattleUiMatchLike,
   BattleUiPendingEffectLike,
@@ -40,6 +41,7 @@ describe('DamageEffectModals', () => {
         string[]
       >([])
       const match = {
+        game: createDemoGame(),
         faintActive: true,
         faintSourceCard: sourceCard,
         faintMin: 1,

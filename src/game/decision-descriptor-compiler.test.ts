@@ -192,4 +192,28 @@ describe('runtime decision descriptor compiler', () => {
       max: 1,
     })
   })
+
+  it('does not create a manual target step for source-only field-to-trash', () => {
+    const state = createDemoGame(26)
+    const source = state.players['player-one'].battleArea[0]
+    const descriptor = compileEffectDecisionDescriptor({
+      state,
+      playerId: 'player-one',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      sourceCardName: source.card.name,
+      context: {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      effect: {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      viewerPlayerId: 'player-one',
+    })
+
+    expect(descriptor.status).toBe('ready')
+    expect(descriptor.steps.some((step) => step.kind === 'target')).toBe(false)
+  })
 })

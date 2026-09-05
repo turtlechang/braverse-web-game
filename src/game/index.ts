@@ -29,6 +29,7 @@ export {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getPairedTargetSelectionError,
   getBattleToBreakBlocker,
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
@@ -68,7 +69,7 @@ export {
   createStageUsageDemoState,
 } from './demo'
 export type { DeckConfig } from './demo'
-export { createSeededRandom, createSeededShuffle } from './helpers'
+export { createSeededRandom, createSeededShuffle, getCookieEffectiveHp } from './helpers'
 export {
   EXTRA_DECK_MAX_CARDS,
   EXTRA_DECK_MAX_COPIES_PER_CARD,
@@ -253,6 +254,7 @@ export {
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
+  getFaintSourceCostUnavailableReason,
   getFaintEffectMinMax,
   getAttackResponseSkillCandidates,
   getBlockerCandidates,
@@ -317,6 +319,7 @@ export { advancePhase, canAttack, processEndPhaseEffects, TURN_PHASES } from './
 export {
   activateCookieSkill,
   canActivateCookieSkill,
+  getCookieSkillUnavailableReason,
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
   getBattleCookieToHandCostCandidates,
@@ -336,6 +339,7 @@ export {
   payBattleCookieToHandCost,
   payHpToHandCost,
   getTrashCookieToBreakAreaCostCandidates,
+  getHandToBreakAreaCostCandidates,
   getTrashToDeckBottomCostCandidates,
   isSkillEffectConditionDeferredUntilCost,
   payTrashCookieToBreakAreaCost,

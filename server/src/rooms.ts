@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto'
+import { createShuffle } from '../../src/game/helpers'
 import {
   GameRuleError,
   applyGameCommand,
@@ -19,6 +20,7 @@ import {
 } from '../../src/game'
 import {
   isValidOnlinePlayerName,
+  isOnlineGameCommand,
   type PublicCardReference,
   type PublicIntent,
   type PublicIntentDraft,
@@ -31,6 +33,7 @@ import {
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 4
+const serverShuffle = createShuffle(() => randomInt(0x100000000) / 0x100000000)
 
 /** 公開決策提示的伺服器權威倒數；不直接替玩家自動選擇，只提供同步期限。 */
 export const PUBLIC_INTENT_DEADLINE_MS = 45_000
@@ -144,7 +147,7 @@ export class RoomStore {
     code: string,
     deck: RoomDeck,
     send: (data: string) => void,
-    seed: number = Date.now(),
+    seed?: number,
     playerName = 'Player Two',
   ): Room {
     const room = this.rooms.get(code)
@@ -174,7 +177,9 @@ export class RoomStore {
       send,
     }
     room.status = 'opening'
-    room.seed = seed
+    // An explicit seed is for deterministic server-side tests only. Public
+    // rooms use fresh cryptographic entropy, never a guessable timestamp.
+    room.seed = seed ?? null
     room.opening = {
       stage: 'rps',
       round: 1,
@@ -199,11 +204,11 @@ export class RoomStore {
   }
 
   private createOpeningGame(room: Room, firstPlayerId: PlayerId): void {
-    if (!room.playerTwo || room.seed === null || !room.opening) {
+    if (!room.playerTwo || !room.opening) {
       throw new GameRuleError('開局資料不完整。')
     }
 
-    const shuffle = createSeededShuffle(room.seed)
+    const shuffle = room.seed === null ? serverShuffle : createSeededShuffle(room.seed)
     const toSetup = (slot: RoomSlot) => {
       if (room.environment === 'bs8-candidate-staging') {
         if (!isBs8CandidateStagingDeck(slot.deck)) {
@@ -312,7 +317,7 @@ export class RoomStore {
     room.state = applyGameCommand(state, {
       kind: replaceAll ? 'mulligan-opening-hand' : 'keep-opening-hand',
       playerId,
-    })
+    }, { shuffle: serverShuffle })
 
     if (!room.state.players[playerId].hand.some((card) => card.type === 'cookie')) {
       opening.stage = 'forced-mulligan'
@@ -343,7 +348,7 @@ export class RoomStore {
     room.state = applyGameCommand(state, {
       kind: 'force-mulligan-opening-hand',
       playerId,
-    })
+    }, { shuffle: serverShuffle })
     opening.stage = 'compensation'
     opening.actorId = opponentOf(playerId)
   }
@@ -477,7 +482,10 @@ export class RoomStore {
     if (command.playerId !== playerId) {
       throw new GameRuleError('指令的玩家與送出來源不符。')
     }
-    const nextState = applyGameCommand(room.state, command)
+    if (!isOnlineGameCommand(command)) {
+      throw new GameRuleError('線上對戰不允許此指令或欄位。')
+    }
+    const nextState = applyGameCommand(room.state, command, { shuffle: serverShuffle })
     room.state = nextState
     return nextState
   }

@@ -47,6 +47,7 @@ import {
   createBs8076ActivePreventionDemoState,
   createBs8084AttackRequirementDemoState,
   createBs8011DoubleSkillDemoState,
+  createBs8011FaintContinuationDemoState,
   createBs8ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
@@ -61,6 +62,8 @@ import {
   createBs6031AttackAfterDemoState,
   createBs6079OnPlayDemoState,
   createBs6008TrapDemoState,
+  createBs8021TrapDemoState,
+  createBs8GreenConditionDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -187,6 +190,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs8-011-double-skill') {
       return createBs8011DoubleSkillDemoState()
     }
+    if (testStateConfig?.kind === 'bs8-011-faint-continuation') {
+      return createBs8011FaintContinuationDemoState(testStateConfig.faint)
+    }
     if (testStateConfig?.kind === 'bs8-076-active-prevention') {
       return createBs8076ActivePreventionDemoState()
     }
@@ -220,6 +226,7 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber, {
         preferSkillSurface: testStateConfig.preferSkillSurface,
+        sourceHpCount: testStateConfig.sourceHpCount,
       })
     }
     if (testStateConfig?.kind === 'bs8-084-attack-discard') {
@@ -244,6 +251,15 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs6-008-trap') {
       return createBs6008TrapDemoState(testStateConfig.remainingHp)
+    }
+    if (testStateConfig?.kind === 'bs8-021-trap') {
+      return createBs8021TrapDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs8-green-condition') {
+      return createBs8GreenConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
     }
     if (testStateConfig?.kind === 'bs4-077-timekeeper-cost') {
       return createBs4077TimekeeperCostDemoState()
@@ -402,6 +418,11 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs8-011-double-skill') {
       return '測試狀態：兩張 BS8-011 各自可發動一次技能；先完成一個技能後再驗證另一張。'
     }
+    if (testStateConfig?.kind === 'bs8-011-faint-continuation') {
+      return testStateConfig.faint
+        ? '測試狀態：BS8-011 先讓 BS8-018 昏厥，再完成 BS8-018 的支付／傷害後續，最後讓 BS1-006 受到第二段傷害。'
+        : '測試狀態：BS8-011 先讓 2 HP 的 BS8-018 受傷但不昏厥，再完成 BS1-006 的第二段傷害。'
+    }
     if (testStateConfig?.kind === 'bs8-076-active-prevention') {
       return '測試狀態：BS8-076 目標可選擇不棄，或恰好棄 2 張手牌恢復 active。'
     }
@@ -472,6 +493,11 @@ export function useMatchController(params: {
       return testStateConfig.remainingHp === 4
         ? 'BS6-008 Sugar Swan 正向驗證：HP≤4，Tonic Spray 不可發動。'
         : 'BS6-008 Sugar Swan 反向驗證：HP=5，Tonic Spray 可進入回應。'
+    }
+    if (testStateConfig?.kind === 'bs8-021-trap') {
+      return testStateConfig.conditionMet
+        ? 'BS8-021 已裝載於 Burning Spice Cookie：休息區 LV.8，陷阱回應被禁止。'
+        : 'BS8-021 已裝載於 Burning Spice Cookie：休息區 LV.7，陷阱仍可發動。'
     }
     if (testStateConfig?.kind === 'bs3-061-condition') {
       return `BS3-061 Silverbell Cookie 昏厥測試：支援區 ${testStateConfig.conditionMet ? 6 : 5} 張，支付後條件${testStateConfig.conditionMet ? '成立' : '不成立'}。`
@@ -745,7 +771,15 @@ export function useMatchController(params: {
             player.battleArea.find(
               (cookie: CookieInBattle) =>
                 cookie.card.instanceId === pendingFaint.sourceInstanceId,
-            )?.card
+            )?.card ??
+            // BS8-013 moves its fainting source from Break to the discard pile
+            // before its optional trash-to-battle Then is offered. Keep the
+            // source card visible while that queued decision is still pending.
+            player.discardPile.find(
+              (card): card is CookieCard =>
+                card.type === 'cookie' &&
+                card.instanceId === pendingFaint.sourceInstanceId,
+            )
           if (found) return found
         }
         return null
@@ -931,7 +965,7 @@ export function useMatchController(params: {
     (card) => card.instanceId === selectedTrapId,
   )
   const trapCostOptions = selectedTrap?.trap
-    ? getTrapCostOptions(selectedTrap.trap)
+    ? getTrapCostOptions(selectedTrap.trap, game, viewerPlayerId)
     : []
   const selectedTrapCost =
     trapCostOptions[selectedTrapCostOptionIndex] ?? selectedTrap?.trap?.cost
@@ -1522,6 +1556,9 @@ export function useMatchController(params: {
       // 擋下拋錯，把整個 App 炸掉。
       battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
+      // 陷阱被卡牌效果禁止時，要先讓防守方看見原因並確認；不能悄悄
+      // 自動略過，否則線上對手只會誤以為手牌中的陷阱沒有被讀到。
+      battle.trapsDisabled ||
       // A nested decision owns the turn. It must reach its own UI before the
       // response window can be closed automatically.
       getPendingDecision(game) ||
@@ -1573,6 +1610,7 @@ export function useMatchController(params: {
           currentBattle?.stage !== 'trap' ||
           currentBattle.trapUsed ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
+          currentBattle.trapsDisabled ||
           getPendingDecision(current) ||
           getTrapCandidates(current, viewerPlayerId).length > 0 ||
           getBlockerCandidates(current, viewerPlayerId).length > 0 ||

@@ -55,6 +55,8 @@ import {
   getCookieSkillEffects,
   getSkillUseKey,
   skipCookieOnPlay,
+  isPendingEndPhaseSkill,
+  skipEndPhaseSkill,
 } from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
@@ -421,6 +423,8 @@ export interface DeclareAttackCommand {
 
 export interface ActivateSkillCommand {
   kind: 'activate-skill'
+  trashCookieToBreakAreaIds?: string[]
+  handToBreakAreaIds?: string[]
   playerId: PlayerId
   sourceInstanceId: string
   trigger: 'activate' | 'on-play'
@@ -447,9 +451,11 @@ export interface ActivateSkillCommand {
  */
 export interface BeginActivateSkillCommand {
   kind: 'begin-activate-skill'
+  trashCookieToBreakAreaIds?: string[]
+  handToBreakAreaIds?: string[]
   playerId: PlayerId
   sourceInstanceId: string
-  trigger: 'activate' | 'on-play'
+  trigger: 'activate' | 'on-play' | 'passive'
   paymentIds: string[]
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
@@ -470,6 +476,12 @@ export interface BeginActivateSkillCommand {
 
 export interface SkipOnPlayCommand {
   kind: 'skip-on-play'
+  playerId: PlayerId
+  sourceInstanceId: string
+}
+
+export interface SkipEndPhaseSkillCommand {
+  kind: 'skip-end-phase-skill'
   playerId: PlayerId
   sourceInstanceId: string
 }
@@ -660,6 +672,7 @@ export type PlayerActionCommand =
   | ActivateSkillCommand
   | BeginActivateSkillCommand
   | SkipOnPlayCommand
+  | SkipEndPhaseSkillCommand
   | PlayItemCommand
   | BeginPlayItemCommand
   | PlayStageCommand
@@ -1547,6 +1560,13 @@ const assertNoPendingDecision = (
   state: GameState,
   command: PlayerActionCommand,
 ) => {
+  if (state.pendingAbilityEffect?.awaitingActivation) {
+    if (!((command.kind === 'begin-activate-skill' && command.trigger === 'passive') ||
+      command.kind === 'skip-end-phase-skill') ||
+      !isPendingEndPhaseSkill(state, command.playerId, command.sourceInstanceId)) {
+      throw new GameRuleError('必須先決定是否發動並支付回合結束技能的代價。')
+    }
+  }
   const pending = getPendingDecision(state)
   if (!pending) return
 
@@ -1652,6 +1672,24 @@ const executeAbilityEffects = (
   sourceKind: 'skill' | 'item' | 'stage' = 'skill',
 ): GameState => {
   let nextState = state
+  // Linked HP Then clauses must use the same target snapshot and queue as
+  // interactive commands, including suspension for Refresh. Executing only
+  // the outer CardEffect silently drops the second HP gain in batch play.
+  if (effects.some((effect) => effect.kind === 'gain-hp' && effect.thenEffects?.length)) {
+    nextState = { ...state, pendingAbilityEffect: {
+      playerId: context.sourcePlayerId, sourcePlayerId: context.sourcePlayerId,
+      sourceInstanceId: context.sourceInstanceId, sourceCardName: context.sourceCardName,
+      sourceKind, effects: expandChooseOneSequence([...effects], chooseOneModes), effectIndex: 0,
+    } }
+    while (nextState.status === 'playing' && nextState.pendingAbilityEffect &&
+      !hasBlockingAbilityDecision(nextState) && !nextState.pendingDrawUpTo &&
+      !nextState.pendingOpponentHandDiscard && !nextState.pendingRevealTopDeck) {
+      const index = nextState.pendingAbilityEffect.effectIndex
+      nextState = resolvePendingAbilityEffect(nextState, context.sourcePlayerId, effectTargets?.[index] ?? [], { shuffle })
+      if (nextState.pendingAbilityEffect?.effectIndex === index) break
+    }
+    return nextState
+  }
   // 迴圈骨架必須與 ai/ability-effects.ts 的 simulateAbilityEffects 一致，
   // 包含「選擇一項」的就地展開，否則 effectTargets 的索引會對不上。
   let queue: CardEffect[] = [...effects]
@@ -1712,7 +1750,16 @@ const executeAbilityEffects = (
         },
       }
     }
-    if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    if (nextState.pendingRefresh || nextState.pendingOnPlay || nextState.pendingDrawUpTo) {
+      return index + 1 >= queue.length ? nextState : {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId: context.sourcePlayerId, sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId, sourceCardName: context.sourceCardName,
+          sourceKind, effects: queue, effectIndex: index + 1,
+        },
+      }
+    }
     if (hasNoEquipTarget(nextState, context, queue, index)) {
       index += 1
     }
@@ -1780,6 +1827,7 @@ const resolvePendingAbilityEffect = (
   if (!pending) {
     throw new GameRuleError('目前沒有待處理的效果。')
   }
+  if (pending.awaitingActivation) throw new GameRuleError('必須先支付技能代價。')
   if (pending.playerId !== playerId) {
     throw new GameRuleError('不是目前需要選擇效果目標的玩家。')
   }
@@ -1815,6 +1863,11 @@ const resolvePendingAbilityEffect = (
       pending.effectIndex,
       context,
     )
+  }
+  if (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly &&
+    targetIds.length > 0 && (new Set(targetIds).size !== targetIds.length ||
+      targetIds.some((id) => !pending.previousEffectTargetIds?.includes(id)))) {
+    throw new GameRuleError('後續 HP 效果只能作用於先前選定的同一張餅乾。')
   }
   const resolvedTargetIds =
     effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
@@ -2221,6 +2274,9 @@ const applyPlayerActionCommand = (
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
         command.battleToHandIds ?? [],
+        command.trashCookieToBreakAreaIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        command.effectTargets?.[0] ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -2258,6 +2314,9 @@ const applyPlayerActionCommand = (
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
         command.battleToHandIds ?? [],
+        command.trashCookieToBreakAreaIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        command.targetIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -2299,6 +2358,8 @@ const applyPlayerActionCommand = (
     }
     case 'skip-on-play':
       return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)
+    case 'skip-end-phase-skill':
+      return skipEndPhaseSkill(state, command.playerId, command.sourceInstanceId)
     case 'play-item': {
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
@@ -2333,6 +2394,14 @@ const applyPlayerActionCommand = (
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
       )
+      const revealCost = card?.item?.effects[0]
+      if (revealCost?.kind === 'reveal-hand' && revealCost.asCost) {
+        // Validate the public reveal before paying; the existing first effect
+        // is resolved atomically below, never left as an unpaid choice.
+        executeCardEffect(state, {
+          sourcePlayerId: command.playerId, sourceInstanceId: command.instanceId,
+        }, revealCost, command.targetIds ?? [], options.shuffle)
+      }
       const played = playItem(
         state,
         command.playerId,

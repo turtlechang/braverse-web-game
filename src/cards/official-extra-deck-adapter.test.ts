@@ -124,8 +124,7 @@ describe('BS8 official EXTRA card adapter', () => {
           trigger: 'activate',
           fromBreakArea: true,
           effects: [
-            { kind: 'trash-to-break', amount: 1, cardName: 'Golden Cheese Cookie' },
-            { kind: 'break-source-to-trash' },
+            { kind: 'trash-to-break', amount: 1, cardName: 'Golden Cheese Cookie', sourceToTrashFirst: true },
           ],
         },
         attackEffects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],

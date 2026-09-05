@@ -21,7 +21,7 @@
 
 | 熱點 | 對應測試 / 檢查 |
 |---|---|
-| BS1-006 after-damage 僅戰鬥傷害觸發 | `effects-bs1-after-damage.test.ts` |
+| BS1-006 after-damage：戰鬥／效果傷害後仍在場才觸發 | `effects-bs1-after-damage.test.ts` |
 | BS1-037 目標選擇與 battle area cap | `battle-area-cap-and-trap-targeting.test.ts` 等 |
 | ST5-021 無合法必選目標不得列入陷阱候選 | 紫對紫種子 6/19/29/33 |
 | 陷阱 support-to-hand / hand-to-support 傳錯 ID 卡死 | `battle-trap.test.ts`；Bean 牌組觸發路徑 |
