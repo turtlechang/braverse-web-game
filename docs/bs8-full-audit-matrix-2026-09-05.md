@@ -95,21 +95,21 @@
 | BS8-083 | Frost Queen Cookie | BLUE | 2 | 一般 | OnPlay付B、選對手0–1張下個Active Phase不轉正；BBB/3攻擊3、Then抽至手牌3張；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
 | BS8-084 | Sherbet Cookie | BLUE | 2 | 一般 | 休息時被動、對手攻擊前須棄1張手牌；BBN/2攻擊2、Then手牌≤3抽至多1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
 | BS8-085 | Pinecone Cookie | BLUE | 1 | 一般 | Activate、棄2張手牌、對手至多1張剩1HP餅乾昏厥；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-086 | Cream Puff Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-088 | Milk Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-089 | Carol Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-086 | Cream Puff Cookie | BLUE | 1 | 一般 | OnPlay、抽至多1（無付款）；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | OnPlay付B、退回己方藍色LV.1餅乾至手牌、對手至多1張LV.1進其牌庫底；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→battle-to-hand→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-088 | Milk Cookie | BLUE | 1 | 一般 | Activate每回合一次、付B、手牌≤5時恢復自身活躍；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→payment→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-089 | Carol Cookie | BLUE | 1 | 一般 | Activate每回合一次、棄1張手牌、對手至多1張LV.1受1傷害；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
 | BS8-090 | Will of Nature | BLUE | 2 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-091 | Tiger Lily Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-092 | Angel Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-093 | Cocoa Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-094 | Pancake Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-095 | Herb Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-096 | Warm Wind Flower | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-097 | Heartfelt Light | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-098 | Warmth of the Snowfield | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-099 | Frozen Mountain Depths | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-100 | Snowfall Lantern Tree | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-091 | Tiger Lily Cookie | BLUE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
+| BS8-092 | Angel Cookie | BLUE | 1 | 一般 | Activate、手牌≤1時來源置於牌庫底；B/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-093 | Cocoa Cookie | BLUE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；B/1攻擊1；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-094 | Pancake Cookie | BLUE | 1 | 一般 | 無技能/FLIP、BBNN/4攻擊3；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
+| BS8-095 | Herb Cookie | BLUE | 1 | 一般 | 昏厥觸發、棄1手牌、己方至多1張+1HP；BN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-target→faint-response流程確認 | PASS：同A路徑 | 未測 |
+| BS8-096 | Warm Wind Flower | BLUE | 1 | 一般 | 物品、BB支付、手牌≤2時抽至多4；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-097 | Heartfelt Light | BLUE | 1 | 一般 | 物品、B支付、手牌≤2時己方LV.2以下至多1張+1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-098 | Warmth of the Snowfield | BLUE | 1 | 一般 | 陷阱、BB支付、對手Cookie本回合-2攻、Then可作B支付、手牌≤2抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→optional-cost→draw流程確認 | PASS：同A路徑 | 未測 |
+| BS8-099 | Frozen Mountain Depths | BLUE | 1 | 一般 | 場景、B配置、Activate付BB並橫置、雙方戰鬥區休息餅乾≥3時抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→payment→draw流程確認 | PASS：同A路徑 | 未測 |
+| BS8-100 | Snowfall Lantern Tree | BLUE | 2 | 一般 | 場景、B配置、Activate付B＋場景進垃圾桶、棄任意張藍色手牌後抽同數量；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→discard流程確認 | PASS：同A路徑 | 未測 |
 | BS8-101 | Dark Cacao Adviser 1 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-102 | Dark Cacao Adviser 2 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-103 | Dark Cacao Cookie | PURPLE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
