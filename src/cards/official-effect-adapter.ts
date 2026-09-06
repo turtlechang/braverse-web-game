@@ -4222,6 +4222,25 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'trash-count-at-least', count: 15 },
       },
     ],
+    // BS8-115 Young Milk Villager Cookie：棄牌區五張以下才加 1 HP；
+    // 條件不成立時整組不發動，不能無條件回血。
+    'BS8-115': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'trash-count-at-most', count: 5 },
+      },
+    ],
+    // BS8-118 Healer Cookie 2：棄牌區達十五張才可補 1 HP。
+    'BS8-118': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      },
+    ],
     // BS8-009 Burning Spice Cookie：兩個 damage-all 分別覆蓋對手與己方，
     // 但己方段排除來源，合起來正是「all other Cookies」。後段的加傷以
     // 休息區總 LV.（不是卡片張數）每完成一組 3 點計算一次（Math.floor）；Then 的尖括號是

@@ -78,7 +78,7 @@
 | BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | 攻擊時觸發deck-to-support、支援區少≥1時牌庫頂1張進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 昏厥觸發opponent-rests-support、支援區少≥1時對手休息1張活躍支援卡；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-response流程確認 | PASS：同A路徑 | 未測 |
-| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 未測 | EXTRA Deck驗證中 | EXTRA Deck驗證中 | 未測 |
+| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-069-extra-audit.json | PASS：同A路徑 | 未測 |
 | BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 無技能/FLIP、NN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-071 | Peach Baos | GREEN | 1 | 一般 | 物品卡、G支付、支援區少≥1時己方餅乾剩餘HP≤3補1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | 物品卡、GG支付、支援區少≥1時牌庫頂2張選1進支援區、其餘橫置進支援區、裝備到Mystic Flour；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
@@ -99,7 +99,7 @@
 | BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | OnPlay付B、退回己方藍色LV.1餅乾至手牌、對手至多1張LV.1進其牌庫底；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→battle-to-hand→target流程確認 | PASS：同A路徑 | 未測 |
 | BS8-088 | Milk Cookie | BLUE | 1 | 一般 | Activate每回合一次、付B、手牌≤5時恢復自身活躍；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→payment→target流程確認 | PASS：同A路徑 | 未測 |
 | BS8-089 | Carol Cookie | BLUE | 1 | 一般 | Activate每回合一次、棄1張手牌、對手至多1張LV.1受1傷害；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-090 | Will of Nature | BLUE | 2 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-090 | Will of Nature | BLUE | 2 | EXTRA | EXTRA卡、手牌≤2可登場、OnPlay己方藍色LV.2以下至多1張回手；BBB/3攻擊3、Then抽至多2；語意核對通過 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-090-extra-audit.json | PASS：同A路徑 | 未測 |
 | BS8-091 | Tiger Lily Cookie | BLUE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
 | BS8-092 | Angel Cookie | BLUE | 1 | 一般 | Activate、手牌≤1時來源置於牌庫底；B/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-093 | Cocoa Cookie | BLUE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；B/1攻擊1；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
@@ -110,30 +110,30 @@
 | BS8-098 | Warmth of the Snowfield | BLUE | 1 | 一般 | 陷阱、BB支付、對手Cookie本回合-2攻、Then可作B支付、手牌≤2抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→optional-cost→draw流程確認 | PASS：同A路徑 | 未測 |
 | BS8-099 | Frozen Mountain Depths | BLUE | 1 | 一般 | 場景、B配置、Activate付BB並橫置、雙方戰鬥區休息餅乾≥3時抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→payment→draw流程確認 | PASS：同A路徑 | 未測 |
 | BS8-100 | Snowfall Lantern Tree | BLUE | 2 | 一般 | 場景、B配置、Activate付B＋場景進垃圾桶、棄任意張藍色手牌後抽同數量；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→discard流程確認 | PASS：同A路徑 | 未測 |
-| BS8-101 | Dark Cacao Adviser 1 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-102 | Dark Cacao Adviser 2 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-103 | Dark Cacao Cookie | PURPLE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-104 | Dark Cacao Cookie | PURPLE | 3 | EXTRA | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-105 | Strawberry Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-106 | Lilac Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-107 | Wizard Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-108 | Blackberry Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-109 | Affogato Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-110 | Affogato Cookie's Disciple | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-111 | Onion Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-112 | Espresso Cookie | PURPLE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-113 | Knight Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-114 | Old Milk Villager Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-115 | Young Milk Villager Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-116 | Milk Cookie | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-117 | Healer Cookie 1 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-118 | Healer Cookie 2 | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-119 | Crunchy Chip Cookie | PURPLE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-120 | Caramel Arrow Cookie | PURPLE | 5 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-121 | Black Concoction | PURPLE | 1 | 一般 | 已修復磨0–3、本次紫色Item判定、Refresh續磨；9項專測通過 | 手動瀏覽器實圖已載入 | 局部：P付款、磨3命中後HP+1；bs8-121-mill3-hp1.txt | 局部：磨0不加HP；bs8-121-mill0-no-hp.txt；其餘逐卡Browser待測 | 未測 |
-| BS8-122 | Milk Cart | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-123 | Dark Resolution | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-124 | Glorious Return | PURPLE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-125 | The Days of Resolution and Dignity | PURPLE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-101 | Dark Cacao Adviser 1 | PURPLE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；PP/2攻擊2；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-102 | Dark Cacao Adviser 2 | PURPLE | 1 | 一般 | FLIP卡、抽至多1；PPP/3攻擊3；語意核對通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-103 | Dark Cacao Cookie | PURPLE | 2 | 一般 | 從棄牌區登場時可付P、每張對手餅乾至多移除1張HP（至多2張）；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：payment→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-104 | Dark Cacao Cookie | PURPLE | 3 | EXTRA | EXTRA覺醒卡、本回合從棄牌區登場的Dark Cacao可Awaken、OnPlay棄1手牌回收紫色卡至多1；PPPP/4攻擊4、Then移除1張HP；語意核對通過、Awaken由規則TDD驗證 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-104-extra-audit.json | PASS：同A路徑 | 未測 |
+| BS8-105 | Strawberry Cookie | PURPLE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
+| BS8-106 | Lilac Cookie | PURPLE | 1 | 一般 | P/1攻擊1、Then棄1手牌後來源進棄牌區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→hand-discard流程確認 | PASS：同A路徑 | 未測 |
+| BS8-107 | Wizard Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄1張紫色物品、對手至多1張餅乾-1HP；PPP/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-108 | Blackberry Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.2以下至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-109 | Affogato Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.3至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-110 | Affogato Cookie's Disciple | PURPLE | 1 | 一般 | 無技能/FLIP、N/1攻擊1；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
+| BS8-111 | Onion Cookie | PURPLE | 1 | 一般 | OnPlay棄1手牌、牌庫頂至多4張進棄牌區（固定4待裁決）；PP/2攻擊2；語意核對通過 | 未測 | PASS：hand→discard→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-112 | Espresso Cookie | PURPLE | 2 | 一般 | PP/2攻擊2、Then棄1手牌、棄牌區LV.2以上至多1張登場；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-113 | Knight Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄牌區≥15時恢復自身活躍；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-114 | Old Milk Villager Cookie | PURPLE | 1 | 一般 | OnPlay、棄牌區≥30時全部洗回牌庫、Then自身+1HP；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-115 | Young Milk Villager Cookie | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≤5條件：OnPlay棄牌區≤5時自身+1HP；PP/2攻擊2；語意核對通過、引擎回歸新增 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-116 | Milk Cookie | PURPLE | 1 | 一般 | Blocker、P支付、攻擊重導向；PPP/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | PASS：同A路徑 | 未測 |
+| BS8-117 | Healer Cookie 1 | PURPLE | 1 | 一般 | OnPlay、棄牌區≥15時抽至多1；PN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-118 | Healer Cookie 2 | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≥15條件：OnPlay棄牌區≥15時己方至多1張+1HP；PN/2攻擊1；語意核對通過、引擎回歸新增 | 未測 | PASS：hand→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-119 | Crunchy Chip Cookie | PURPLE | 2 | 一般 | Activate付P、來源進棄牌區、棄牌區的Dark Cacao Cookie至多1張登場；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→payment流程確認 | PASS：同A路徑 | 未測 |
+| BS8-120 | Caramel Arrow Cookie | PURPLE | 5 | 一般 | Activate每回合一次、棄1手牌、棄牌區≥15時LV.2以上至多1張登場；PP/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 五變體PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-121 | Black Concoction | PURPLE | 1 | 一般 | 已修復磨0–3、本次紫色Item判定、Refresh續磨；9項專測通過；P支付、磨3命中後HP+1、磨0不加HP；語意核對通過 | 手動瀏覽器實圖已載入 | PASS：hand→payment→choice流程確認 | 局部：磨0不加HP；bs8-121-mill0-no-hp.txt | 未測 |
+| BS8-122 | Milk Cart | PURPLE | 1 | 一般 | 物品、P支付＋棄1張紫色非Cookie、抽至多2；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→discard→draw流程確認 | PASS：同A路徑 | 未測 |
+| BS8-123 | Dark Resolution | PURPLE | 1 | 一般 | 陷阱、PP支付、對手Cookie本回合-1攻、Then回收棄牌區的Soul Jam: Light of Resolution至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap流程確認 | PASS：同A路徑 | 未測 |
+| BS8-124 | Glorious Return | PURPLE | 1 | 一般 | 陷阱、P支付、棄牌區≥15時回收紫色Cookie至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-125 | The Days of Resolution and Dignity | PURPLE | 2 | 一般 | 場景、PP配置、棄牌區≥15時Dark Cacao Cookie攻擊費用-1P；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→attack流程確認 | PASS：同A路徑 | 未測 |
 
 補充普通攻擊證據：BS8-001／008／012／013／015／016各於1164／390驗證攻擊、取消及無能量，合計36路徑；見`bs8-prior-attacks-browser.json`。BS8-001的RR攻擊實傷2、BS8-008的RRR實傷2、BS8-015的RRR實傷3，其餘RN實傷1。

@@ -821,6 +821,26 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     }
   })
 
+  it('BS8-115 and BS8-118 keep their On Play trash-count gates', () => {
+    expect(convertedCookie('BS8-115').skill?.effects).toEqual([{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'trash-count-at-most', count: 5 },
+    }])
+    expect(convertedCookie('BS8-118').skill?.effects).toEqual([{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1 },
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }])
+    for (const cardNumber of ['BS8-115', 'BS8-118']) {
+      expect(analyzeOfficialCardBehavior(record(cardNumber)).contract.status).toBe(
+        'verified',
+      )
+    }
+  })
+
   it('BS8-123 and BS8-124 recover only the printed cards from trash', () => {
     expect(converted('BS8-123').trap?.effects).toEqual([
       {
