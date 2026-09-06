@@ -85,16 +85,16 @@
 | BS8-073 | Noodle Cocoon | GREEN | 1 | 一般 | 陷阱卡、G支付、對手Cookie-1攻、支援區少≥1時可再付G讓對手休息1張活躍支援；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
 | BS8-074 | White Flour Fog | GREEN | 1 | 一般 | 陷阱卡、G支付（支援區少≥2時免費）、對手Cookie-1攻；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
 | BS8-075 | The Ivory Pagoda | GREEN | 2 | 一般 | 場景卡、G支付、任何玩家支援區≥6張時該玩家攻擊+1N；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-076 | Icicle Yeti Cookie | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-077 | Kumiho Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-078 | Snow Sugar Cookie | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-079 | Snowflake Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-080 | Moon Rabbit Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-081 | Strawberry Cream Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-082 | Cotton Cookie | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-083 | Frost Queen Cookie | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-084 | Sherbet Cookie | BLUE | 2 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
-| BS8-085 | Pinecone Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
+| BS8-076 | Icicle Yeti Cookie | BLUE | 2 | 一般 | Then強制來源進牌庫底→抽1→選對手0–1張、其下個Active Phase不轉正除非恰好棄2張；BB/1傷害1；語意核對通過、引擎回歸通過（strict contract） | 未測 | 兩變體PASS：attack→optional-cost→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-077 | Kumiho Cookie | BLUE | 1 | 一般 | OnPlay、對手至多1張LV.1餅乾回其牌庫底；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→target→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-078 | Snow Sugar Cookie | BLUE | 2 | 一般 | Activate、手牌≤3、來源進牌庫底、手牌藍色LV.2+至多1張登場並+1HP；BB/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→confirm流程確認 | PASS：同A路徑 | 未測 |
+| BS8-079 | Snowflake Cookie | BLUE | 1 | 一般 | Activate、棄2張藍色手牌、來源進牌庫底、選對手至多1張LV.1下個Active Phase不轉正；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-080 | Moon Rabbit Cookie | BLUE | 1 | 一般 | FLIP卡、抽至多1；BBB/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-081 | Strawberry Cream Cookie | BLUE | 1 | 一般 | Blocker、B支付、攻擊重導向；BBB/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | PASS：同A路徑 | 未測 |
+| BS8-082 | Cotton Cookie | BLUE | 2 | 一般 | Activate、棄2張手牌、來源進牌庫底、己方藍色LV.2以下至多1張+1HP；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-083 | Frost Queen Cookie | BLUE | 2 | 一般 | OnPlay付B、選對手0–1張下個Active Phase不轉正；BBB/3攻擊3、Then抽至手牌3張；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-084 | Sherbet Cookie | BLUE | 2 | 一般 | 休息時被動、對手攻擊前須棄1張手牌；BBN/2攻擊2、Then手牌≤3抽至多1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
+| BS8-085 | Pinecone Cookie | BLUE | 1 | 一般 | Activate、棄2張手牌、對手至多1張剩1HP餅乾昏厥；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→confirm流程確認 | PASS：同A路徑 | 未測 |
 | BS8-086 | Cream Puff Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
 | BS8-088 | Milk Cookie | BLUE | 1 | 一般 | 已轉接，待語意核對 | 未測 | 未測 | 未測 | 未測 |
