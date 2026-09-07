@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
@@ -18,6 +18,13 @@ const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium
 if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
+const viewport = {
+  width: Number(process.env.BRAVERSE_TEST_WIDTH ?? 1440),
+  height: Number(process.env.BRAVERSE_TEST_HEIGHT ?? 960),
+}
+for (const [dimension, value] of Object.entries(viewport)) {
+  assert.ok(Number.isInteger(value) && value > 0, `Invalid viewport ${dimension}: ${value}`)
+}
 const baseUrl = `http://127.0.0.1:${port}`
 const requestedSeries = (
   process.argv
@@ -86,6 +93,11 @@ const cardAuditConfigs = {
     reportPath: 'docs/bs7-browser-card-audit-2026-08-21.json',
     expectedRecordCount: 143,
   },
+  BS8: {
+    label: 'BS8',
+    formalPaths: ['data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'],
+    expectedRecordCount: 171,
+  },
 }
 const auditConfig = cardAuditConfigs[requestedSeries]
 if (!auditConfig) {
@@ -95,8 +107,9 @@ if (!auditConfig) {
 }
 const reportPath = resolve(
   root,
-  process.env.BRAVERSE_AUDIT_REPORT ?? auditConfig.reportPath,
+  process.env.BRAVERSE_AUDIT_REPORT ?? `test-results/${requestedSeries.toLowerCase()}-browser-card-audit-${viewport.width}x${viewport.height}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
 )
+assert.ok(!existsSync(reportPath), `Refusing to overwrite existing report: ${reportPath}`)
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
 const viteEntry = resolve(dirname(vitePackageJson), 'bin/vite.js')
 const browserExecutable =
@@ -113,7 +126,7 @@ const sources = await Promise.all(
     JSON.parse(await readFile(resolve(root, formalPath), 'utf8')),
   ),
 )
-const cards = sources.flatMap((source) => source.cards).sort((left, right) =>
+let cards = sources.flatMap((source) => source.cards).sort((left, right) =>
   left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
 )
 assert.equal(
@@ -121,12 +134,18 @@ assert.equal(
   auditConfig.expectedRecordCount,
   `${auditConfig.label} formal pool must contain ${auditConfig.expectedRecordCount} records`,
 )
+const requestedCards = process.argv.find(argument => argument.startsWith('--cards='))?.slice(8).split(',')
+if (requestedCards) {
+  cards = cards.filter(card => requestedCards.includes(card.cardNumber))
+  assert.equal(cards.length, new Set(requestedCards).size, 'every requested exact card must exist')
+}
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
 const getEffectSurfaces = (card) => {
   const surfaces = []
-  if (card.type === 'cookie' && hasText(card.skill?.text)) surfaces.push('skill')
+  if (['cookie', 'extra'].includes(card.type) && hasText(card.skill?.text)) surfaces.push('skill')
+  if (card.type === 'extra') surfaces.push('extra-deck')
   if (hasText(card.attackText) && /\bThen\b/i.test(card.attackText)) {
     surfaces.push('attack-then')
   }
@@ -179,6 +198,14 @@ const firstPrompt = (bodyText) => {
 const runCardCheck = async (page, card) => {
   const consoleErrors = []
   const pageErrors = []
+  let exactImageRequested = false
+  let exactImageFailure = null
+  const onRequest = (request) => {
+    if (request.url() === card.imageUrl) exactImageRequested = true
+  }
+  const onRequestFailed = (request) => {
+    if (request.url() === card.imageUrl) exactImageFailure = request.failure()?.errorText ?? 'image request failed'
+  }
   const onConsole = (message) => {
     if (!ignoredConsoleError(message)) {
       const location = message.location()
@@ -190,6 +217,8 @@ const runCardCheck = async (page, card) => {
   const onPageError = (error) => pageErrors.push(error.message)
   page.on('console', onConsole)
   page.on('pageerror', onPageError)
+  page.on('request', onRequest)
+  page.on('requestfailed', onRequestFailed)
 
   try {
     await page.goto(
@@ -197,6 +226,43 @@ const runCardCheck = async (page, card) => {
       { waitUntil: 'domcontentloaded' },
     )
     await page.locator('.game-shell').waitFor({ state: 'visible' })
+    let detailIssue = null
+    let detailSurface = null
+    if (card.type === 'extra') {
+      await page.getByLabel('玩家 EXTRA Deck 1 張', { exact: true }).click()
+      const dialog = page.getByRole('dialog', { name: '玩家 EXTRA Deck', exact: true })
+      await dialog.waitFor({ state: 'visible' })
+      const entry = dialog.locator('.extra-deck-card-entry').filter({ hasText: card.name })
+      assert.equal(await entry.count(), 1, 'exact route must expose one matching EXTRA entry')
+      assert.equal(await entry.locator('.extra-deck-card-details small').innerText(), card.baseCardNumber)
+      detailSurface = 'extra-deck-entry'
+    } else {
+      // Inspect through existing visible controls only; pending effect overlays
+      // may legitimately prevent detail access, which remains an explicit gap.
+      try {
+        await page.waitForTimeout(350)
+        const face = page.locator('button.card-face').filter({ has: page.locator(`img[alt="${card.name}"]`) }).first()
+        const fallbackFace = page.locator('button.card-face').filter({ hasText: card.name }).first()
+        const hand = page.locator('.hand-card-wrap').filter({ has: page.locator(`button[title="${card.name}"]`) }).first()
+        const battle = page.locator('.combat-card-wrap').filter({ has: page.locator(`button[title="${card.name}"]`) }).first()
+        if (await hand.count()) {
+          await hand.locator('button.card-face').first().click({ timeout: 1500 })
+          if (!await page.locator('.card-detail-modal').count()) await hand.getByRole('button', { name: '詳情', exact: true }).click({ timeout: 1500 })
+        } else if (await battle.locator('.hp-card').count()) {
+          await battle.locator('.hp-card').first().click({ timeout: 1500 })
+        } else if (await face.count()) {
+          await face.click({ timeout: 1500 })
+        } else if (await fallbackFace.count()) {
+          await fallbackFace.click({ timeout: 1500 })
+        } else {
+          throw new Error('No visible inspect control for this exact card')
+        }
+        await page.getByRole('dialog', { name: `${card.name} 卡牌詳情`, exact: true }).waitFor({ state: 'visible', timeout: 1500 })
+        detailSurface = 'card-detail-modal'
+      } catch (error) {
+        detailIssue = error instanceof Error ? error.message.split('\n')[0] : String(error)
+      }
+    }
     // Modal creation is intentionally deferred by the React controller. The
     // delay avoids treating a valid lazy modal as a failed card route.
     await page.waitForTimeout(350)
@@ -229,11 +295,52 @@ const runCardCheck = async (page, card) => {
     )
     assert.equal(pageErrors.length, 0, `page errors: ${JSON.stringify(pageErrors)}`)
 
+    let detailFallbackIssue = null
+    if (!detailSurface && card.type !== 'extra') {
+      try {
+        // Route rendering above is already recorded. Use the ordinary deck
+        // editor's read-only detail selector; never settle the game decision.
+        await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
+        await page.getByRole('button', { name: '新增牌組', exact: true }).click()
+        const editor = page.getByTestId('deck-editor-page')
+        await editor.getByTestId('deck-editor-search').fill(card.cardNumber)
+        await editor.getByRole('button', { name: `查看 ${card.cardNumber} ${card.name}`, exact: true }).click()
+        await editor.locator('.deck-editor-page-detail-heading').filter({ hasText: card.cardNumber }).waitFor()
+        detailSurface = 'standard-deck-editor-detail'
+      } catch (error) {
+        detailFallbackIssue = error instanceof Error ? error.message : String(error)
+      }
+    }
+
     const modalCount = await page.locator('[role="dialog"]').count()
     const actionCount = await page
       .locator('button:not([disabled]), [role="button"]:not([aria-disabled="true"])')
       .count()
     const surfaces = getEffectSurfaces(card)
+    // Wait for real image completion, bounded even when the network is blocked.
+    await page.waitForFunction((expectedUrl) => {
+      const images = [...document.images].filter(image => image.src === expectedUrl)
+      return images.length === 0 || images.every(image => image.complete)
+    }, card.imageUrl, { timeout: 3000 }).catch(() => {})
+    const imageEvidence = await page.locator('img').evaluateAll((images, expectedUrl) => {
+      const matching = images.filter(image => image.src === expectedUrl)
+      return {
+        expectedUrl,
+        matchingImages: matching.length,
+        loadedImages: matching.filter(image => image.complete && image.naturalWidth > 0).length,
+      }
+    }, card.imageUrl)
+    imageEvidence.requested = exactImageRequested
+    imageEvidence.failure = exactImageFailure
+    imageEvidence.status = imageEvidence.loadedImages > 0 ? 'PASS' : 'NOT_LOADED'
+    if (card.type === 'extra') {
+      assert.ok(imageEvidence.matchingImages > 0 || exactImageRequested,
+        'EXTRA exact illustration URL must be observed in the rendered image or its request')
+    }
+    const visibleDetailText = detailSurface
+      ? await page.locator(detailSurface === 'card-detail-modal' ? '.card-detail-modal'
+        : detailSurface === 'standard-deck-editor-detail' ? '.deck-editor-page-detail' : '.extra-deck-card-entry').allInnerTexts()
+      : []
     return {
       cardNumber: card.cardNumber,
       baseCardNumber: card.baseCardNumber,
@@ -244,22 +351,31 @@ const runCardCheck = async (page, card) => {
       effectSurfaces: surfaces,
       status: 'PASS',
       auditStatus: '載入通過',
-      flow: auditConfig.candidate
+      flow: card.type === 'extra' ? 'extra-exact-card-check-entry' : auditConfig.candidate
         ? 'candidate-card-check-entry'
         : 'formal-card-check-entry',
       promptVisible: firstPrompt(bodyText),
       modalVisible: modalCount > 0,
       actionableControls: actionCount,
+      imageEvidence,
+      visibleDetailText,
+      detailSurface,
+      detailIssue,
+      detailFallbackIssue,
+      textSemanticVerification: false,
+      interactiveEffectProof: false,
     }
   } finally {
     page.off('console', onConsole)
     page.off('pageerror', onPageError)
+    page.off('request', onRequest)
+    page.off('requestfailed', onRequestFailed)
   }
 }
 
 const server = spawn(
   process.execPath,
-  [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(port)],
+  [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
   { cwd: root, stdio: 'ignore' },
 )
 let browser
@@ -271,7 +387,7 @@ try {
     headless: true,
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   })
-  const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
 
   console.log(
@@ -281,7 +397,7 @@ try {
     try {
       const result = await runCardCheck(page, card)
       results.push(result)
-      console.log(`PASS ${card.cardNumber} ${card.name} [${result.effectSurfaces.join(',')}]`)
+      console.log(`${result.status} ${card.cardNumber} ${card.name} [${result.effectSurfaces.join(',')}]`)
     } catch (error) {
       const failure = {
         cardNumber: card.cardNumber,
@@ -293,7 +409,7 @@ try {
         effectSurfaces: getEffectSurfaces(card),
         status: 'FAIL',
         auditStatus: '阻塞',
-        flow: auditConfig.candidate
+        flow: card.type === 'extra' ? 'extra-exact-card-check-entry' : auditConfig.candidate
           ? 'candidate-card-check-entry'
           : 'formal-card-check-entry',
         error: error instanceof Error ? error.message : String(error),
@@ -310,20 +426,23 @@ try {
 
   const passed = results.filter((result) => result.status === 'PASS').length
   const failed = results.filter((result) => result.status === 'FAIL').length
+  const blocked = results.filter((result) => result.status === 'BLOCKED').length
   const effectCards = results.filter((result) =>
     result.effectSurfaces.some((surface) => surface !== 'vanilla-attack'),
   )
   const report = {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
-    viewport: '1440x960',
+    viewport: `${viewport.width}x${viewport.height}`,
     sources: auditConfig.formalPaths,
     scope:
-      `${auditConfig.candidate ? 'Candidate' : 'Formal-pool'} card-check entry audit for every ${auditConfig.candidate ? 'inventory candidate' : `promoted ${auditConfig.label}`} record. This report separates route/card rendering from interactive effect proof.`,
+      `Load smoke for every ${auditConfig.label} source record: exact card-check routes for all records including EXTRA variants, with visible detail controls where accessible. PASS proves route/card-name rendering only; imageEvidence separately records exact image loading, and visibleDetailText captures UI copy without certifying its semantics or interactive effects.`,
     summary: {
       total: results.length,
       passed,
       failed,
+      blocked,
+      exactCardImageLoaded: results.filter(result => result.imageEvidence?.loadedImages > 0).length,
       effectBearingRecords: effectCards.length,
       interactiveEffectProof: 0,
       byType: Object.fromEntries(
@@ -337,17 +456,19 @@ try {
             failed: results.filter(
               (result) => result.type === type && result.status === 'FAIL',
             ).length,
+            blocked: results.filter(result => result.type === type && result.status === 'BLOCKED').length,
           },
         ]),
       ),
     },
     results,
   }
-  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
-  console.log(`\nSummary: ${passed}/${results.length} loaded; ${failed} failed`)
+  await mkdir(dirname(reportPath), { recursive: true })
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' })
+  console.log(`\nSummary: ${passed}/${results.length} loaded; ${failed} failed; ${blocked} blocked`)
   console.log(`Effect-bearing records needing interactive proof: ${effectCards.length}`)
   console.log(`Evidence: ${reportPath}`)
-  process.exitCode = failed === 0 ? 0 : 1
+  process.exitCode = failed === 0 && blocked === 0 ? 0 : 1
 } catch (error) {
   console.error(error)
   process.exitCode = 1

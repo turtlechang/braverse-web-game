@@ -7,6 +7,22 @@ import type {
 } from '../../game'
 import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
 
+describe('hand-to-support selection instructions', () => {
+  it('explains optional green hand selection, deselection and rested placement', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true,
+      energyColor: 'green', rested: true }))
+      .toBe('點選 0～2 張綠色手牌，以休息狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
+  })
+  it('uses the printed color and count without offering zero for mandatory selection', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 1, energyColor: 'blue' }))
+      .toBe('點選 1 張藍色手牌，以活躍狀態放入支援區。再次點選可取消選取。')
+  })
+  it('preserves a keyword filter and does not invent a color restriction', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true, keyword: 'arena' }))
+      .toBe('點選 0～2 張具有 [arena] 的手牌，以活躍狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
+  })
+})
+
 describe('damage-all recipient description', () => {
   it('describes both players and the remaining HP threshold for ordered damage', () => {
     expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'either', sequential: true,
@@ -26,6 +42,20 @@ describe('optional gain-hp description', () => {
     expect(describeEffect({ kind: 'gain-hp', amount: 1, target: {
       side: 'self', min: 0, max: 1, minRemainingHp: 1, maxRemainingHp: 1,
     } })).toBe('選擇最多 1 張剛好剩 1 HP 的我方餅乾，獲得 1 HP（可選 0 張）。')
+  })
+})
+
+describe('HP removal target instructions', () => {
+  it('asks for Cookies rather than suggesting the hidden HP cards can be selected', () => {
+    expect(describeEffect({ kind: 'hp-to-trash', amount: 2,
+      target: { side: 'opponent', min: 2, max: 2 } }))
+      .toBe('選擇對手 2 隻餅乾，將每隻 2 張 HP 卡放入棄牌區。')
+  })
+
+  it('explains the different amounts in target selection order', () => {
+    expect(describeEffect({ kind: 'hp-to-trash', amount: 2, amountByTargetIndex: [2, 1],
+      target: { side: 'opponent', min: 2, max: 2 } }))
+      .toBe('依點選順序選擇餅乾：第 1 隻移除 2 張 HP、第 2 隻移除 1 張 HP，將這些 HP 卡放入棄牌區。')
   })
 })
 

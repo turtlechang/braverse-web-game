@@ -705,7 +705,7 @@ export interface OptionalCostAttackModalProps {
   targetLabel: string
   /** 需要完整描述來源區域／顏色時使用，例如 BS6-051 的綠色手牌目標。 */
   targetInstruction?: string
-  /** BS8-076：此攻擊後續代價為強制，UI 不得提供 skip。 */
+  /** 僅明確強制的代價隱藏 skip；一般 Then 提供支付與略過。 */
   mandatory?: boolean
   onSkip: () => void
   onPay: (

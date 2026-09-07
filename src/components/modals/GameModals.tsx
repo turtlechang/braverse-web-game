@@ -1641,13 +1641,9 @@ export function FaintEffectResponseModal({
     !unavailableReason && selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
     ? '此步驟不需選擇目標。確認後會結算此步驟；若後續需要選擇，會接著顯示提示。'
-    : candidateCards.length > 0 || targetCandidateCards.length > 0
-      ? minTargets === 0
+    : minTargets === 0
         ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`
         : `必須選擇 ${minTargets} 張${candidateLabel}。`
-      : minTargets === 0
-        ? `可選擇最多 ${maxTargets} 個對手餅乾作為目標，也可以不選擇目標。`
-        : `必須選擇 ${minTargets} 個對手餅乾作為目標。`
   const confirmLabel = !hasTargetChoice
     ? '確認結算'
     : selectedTargetCount === 0

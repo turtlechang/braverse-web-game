@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   applyGameCommand,
   createDemoGame,
+  getEffectTargetCandidatesForEffect,
   takeAiStep,
   type GameState,
 } from '../game'
@@ -292,7 +293,10 @@ describe('useMatchController auto-skip-trap effect', () => {
       const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
       const paid = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId,
         paymentIds: ['support-pay-0', 'support-pay-1'] })
-      const damage = applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+      const targetIds = getEffectTargetCandidatesForEffect(paid, {
+        sourcePlayerId: 'player-one', sourceInstanceId: item.instanceId,
+      }, item.item!.effects[0]).map(cookie => cookie.card.instanceId)
+      const damage = applyGameCommand(paid, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds })
       await act(() => captured!.setGame(damage))
       await act(() => vi.advanceTimersByTime(50))
       expect(captured!.game.pendingBattle?.stage).toBe('flip')

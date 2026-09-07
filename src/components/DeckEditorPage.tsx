@@ -18,7 +18,9 @@ import {
   importDeck,
   loadCustomDecks,
   saveCustomDecks,
+  validateCustomDeckDefinition,
 } from '../game/custom-deck'
+import { EXTRA_DECK_MAX_CARDS } from '../game/extra-deck'
 import {
   getCardPoolEntry,
   getAllCardPoolEntries,
@@ -75,7 +77,7 @@ const TYPE_OPTIONS = [
   { value: 'flip', label: 'FLIP' },
 ]
 
-const CANDIDATE_EXTRA_TYPE_OPTION = { value: 'extra', label: 'EXTRA' }
+const EXTRA_TYPE_OPTION = { value: 'extra', label: 'EXTRA' }
 
 const RARITY_OPTIONS = ['', 'C', 'U', 'R', 'SR', 'SSR', 'UR', 'SEC', 'SUR']
 const LEVEL_OPTIONS = [1, 2, 3]
@@ -204,7 +206,7 @@ export function DeckEditorPage({
     () => {
       const entries = isCandidateStaging
         ? [...formalMainPool, ...candidateMainPool, ...candidateExtraPool]
-        : formalMainPool
+        : getAllCardPoolEntries()
 
       // BS8 is present in the formal pool after promotion, while candidate
       // staging may also expose the same strict-verified records. Keep one
@@ -219,11 +221,11 @@ export function DeckEditorPage({
   const editor = useDeckEditor({ poolEntries: editorPool })
   const { loadDeck } = editor
   const [selectedCardNumber, setSelectedCardNumber] = useState<string | null>(null)
-  const [candidateExtraDeckEntries, setCandidateExtraDeckEntries] = useState<CustomDeckEntry[]>(
+  const [extraDeckEntries, setExtraDeckEntries] = useState<CustomDeckEntry[]>(
     () =>
       isCandidateStaging && initialDeck && isBs8CandidateStagingDeck(initialDeck)
         ? initialDeck.candidateStaging.extraDeckEntries.map((entry) => ({ ...entry }))
-        : [],
+        : initialDeck?.extraDeckEntries?.map((entry) => ({ ...entry })) ?? [],
   )
   const [savedSnapshot, setSavedSnapshot] = useState<string>(() =>
     JSON.stringify(
@@ -233,14 +235,14 @@ export function DeckEditorPage({
             format: initialDeck.format ?? DEFAULT_DECK_FORMAT,
             entries: initialDeck.entries,
             ...(isCandidateStaging && isBs8CandidateStagingDeck(initialDeck)
-              ? { candidateExtraDeckEntries: initialDeck.candidateStaging.extraDeckEntries }
-              : {}),
+              ? { extraDeckEntries: initialDeck.candidateStaging.extraDeckEntries }
+              : { extraDeckEntries: initialDeck.extraDeckEntries ?? [] }),
           }
         : {
             name: editor.deckName,
             format: editor.deckFormat,
             entries: editor.deckEntries,
-            ...(isCandidateStaging ? { candidateExtraDeckEntries: [] } : {}),
+            extraDeckEntries: [],
           },
     ),
   )
@@ -260,7 +262,7 @@ export function DeckEditorPage({
       name: editor.deckName,
       format: editor.deckFormat,
       entries: editor.deckEntries,
-      ...(isCandidateStaging ? { candidateExtraDeckEntries } : {}),
+      extraDeckEntries,
     }) !== savedSnapshot
 
   useEffect(() => {
@@ -278,7 +280,7 @@ export function DeckEditorPage({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [closeImportPanel, showImportPanel])
 
-  const candidateDeckValidation = useMemo(
+  const deckValidation = useMemo(
     () =>
       isCandidateStaging
         ? validateBs8CandidateStagingDeck({
@@ -288,23 +290,25 @@ export function DeckEditorPage({
             format: editor.deckFormat,
             candidateStaging: {
               kind: BS8_CANDIDATE_STAGING_KIND,
-              extraDeckEntries: candidateExtraDeckEntries,
+              extraDeckEntries,
             },
             createdAt: '',
             updatedAt: '',
           })
-        : editor.deckValidation,
-    [candidateExtraDeckEntries, editor.deckEntries, editor.deckFormat, editor.deckName, editor.deckValidation, isCandidateStaging],
+        : validateCustomDeckDefinition({
+            entries: editor.deckEntries,
+            extraDeckEntries,
+            format: editor.deckFormat,
+          }),
+    [extraDeckEntries, editor.deckEntries, editor.deckFormat, editor.deckName, isCandidateStaging],
   )
   const filteredPool = editor.getFilteredPool()
-  const deckStats = candidateDeckValidation.stats
-  const candidateExtraTotal = candidateExtraDeckEntries.reduce(
+  const deckStats = deckValidation.stats
+  const extraDeckTotal = extraDeckEntries.reduce(
     (total, entry) => total + entry.count,
     0,
   )
-  const typeOptions = isCandidateStaging
-    ? [...TYPE_OPTIONS, CANDIDATE_EXTRA_TYPE_OPTION]
-    : TYPE_OPTIONS
+  const typeOptions = [...TYPE_OPTIONS, EXTRA_TYPE_OPTION]
   const getEditorPoolEntry = useCallback(
     (cardNumber: string): CardPoolEntry | undefined =>
       getCardPoolEntry(cardNumber) ??
@@ -332,17 +336,15 @@ export function DeckEditorPage({
       ),
     [editor.deckEntries, getEditorPoolEntry],
   )
-  const candidateExtraDeckCards = useMemo(
+  const extraDeckCards = useMemo(
     () =>
-      isCandidateStaging
-        ? candidateExtraDeckEntries.flatMap((entry) => {
+      extraDeckEntries.flatMap((entry) => {
             const poolEntry = getEditorPoolEntry(entry.cardNumber)
             return poolEntry ? [{ entry, poolEntry }] : []
           }).sort((left, right) =>
             compareCardNumbers(left.poolEntry.cardNumber, right.poolEntry.cardNumber),
-          )
-        : [],
-    [candidateExtraDeckEntries, getEditorPoolEntry, isCandidateStaging],
+          ),
+    [extraDeckEntries, getEditorPoolEntry],
   )
   const mainDeckSections = useMemo(
     () =>
@@ -375,11 +377,16 @@ export function DeckEditorPage({
     (selectedCard?.type === 'flip' ? selectedCardSkillText : '')
   const selectedCardSkillDisplayText =
     selectedCard?.type === 'flip' ? '' : selectedCardSkillText
-  const selectedCardIsExtra = isCandidateStaging && selectedCard?.type === 'extra'
+  const selectedCardIsExtra = selectedCard?.type === 'extra'
   const selectedCardDeckCount = selectedCard
     ? selectedCardIsExtra
-      ? countForBase(candidateExtraDeckEntries, selectedCard.cardNumber)
+      ? countForBase(extraDeckEntries, selectedCard.cardNumber)
       : countForBase(editor.deckEntries, selectedCard.cardNumber)
+    : 0
+  const selectedExtraCardCount = selectedCard
+    ? extraDeckEntries.find((entry) => entry.cardNumber === (
+        isCandidateStaging ? normalizeCardNumber(selectedCard.cardNumber) : selectedCard.cardNumber
+      ))?.count ?? 0
     : 0
 
   const showStatus = (message: string) => {
@@ -388,25 +395,26 @@ export function DeckEditorPage({
     statusTimeout.current = setTimeout(() => setStatusMsg(null), 2600)
   }
 
-  const addCandidateExtraCard = useCallback((cardNumber: string) => {
-    setCandidateExtraDeckEntries((previous) => {
+  const addExtraCard = useCallback((cardNumber: string) => {
+    setExtraDeckEntries((previous) => {
       const total = previous.reduce((sum, entry) => sum + entry.count, 0)
-      if (total >= 6) return previous
+      if (total >= EXTRA_DECK_MAX_CARDS) return previous
       const base = normalizeCardNumber(cardNumber)
       const current = countForBase(previous, base)
-      if (current >= 4) return previous
-      const existing = previous.find((entry) => entry.cardNumber === base)
+      if (current >= (isCandidateStaging ? 4 : getDeckCopyLimit(base, editor.deckFormat))) return previous
+      const storedNumber = isCandidateStaging ? base : cardNumber
+      const existing = previous.find((entry) => entry.cardNumber === storedNumber)
       return existing
         ? previous.map((entry) =>
-            entry.cardNumber === base ? { ...entry, count: entry.count + 1 } : entry,
+            entry.cardNumber === storedNumber ? { ...entry, count: entry.count + 1 } : entry,
           )
-        : [...previous, { cardNumber: base, count: 1 }]
+        : [...previous, { cardNumber: storedNumber, count: 1 }]
     })
-  }, [])
+  }, [editor.deckFormat, isCandidateStaging])
 
-  const removeCandidateExtraCard = useCallback((cardNumber: string) => {
-    const base = normalizeCardNumber(cardNumber)
-    setCandidateExtraDeckEntries((previous) => {
+  const removeExtraCard = useCallback((cardNumber: string) => {
+    const base = isCandidateStaging ? normalizeCardNumber(cardNumber) : cardNumber
+    setExtraDeckEntries((previous) => {
       const existing = previous.find((entry) => entry.cardNumber === base)
       if (!existing) return previous
       return existing.count === 1
@@ -415,7 +423,7 @@ export function DeckEditorPage({
             entry.cardNumber === base ? { ...entry, count: entry.count - 1 } : entry,
           )
     })
-  }, [])
+  }, [isCandidateStaging])
 
   const handleSave = useCallback(() => {
     if (editor.deckEntries.length === 0) return
@@ -425,6 +433,7 @@ export function DeckEditorPage({
       id: initialDeck?.id ?? `custom-${Date.now()}`,
       name: editor.deckName,
       entries: editor.deckEntries,
+      ...(!isCandidateStaging ? { extraDeckEntries: extraDeckEntries } : {}),
       format: editor.deckFormat,
       createdAt: initialDeck?.createdAt ?? now,
       updatedAt: now,
@@ -434,7 +443,7 @@ export function DeckEditorPage({
           ...baseDeck,
           candidateStaging: {
             kind: BS8_CANDIDATE_STAGING_KIND,
-            extraDeckEntries: candidateExtraDeckEntries.map((entry) => ({ ...entry })),
+            extraDeckEntries: extraDeckEntries.map((entry) => ({ ...entry })),
           },
         }
       : baseDeck
@@ -448,11 +457,11 @@ export function DeckEditorPage({
         name: deck.name,
         format: deck.format ?? DEFAULT_DECK_FORMAT,
         entries: deck.entries,
-        ...(isCandidateStaging ? { candidateExtraDeckEntries } : {}),
+        extraDeckEntries,
       }),
     )
     onSave(deck)
-  }, [candidateExtraDeckEntries, editor, initialDeck, isCandidateStaging, onSave])
+  }, [extraDeckEntries, editor, initialDeck, isCandidateStaging, onSave])
 
   const handleRequestClose = useCallback(() => {
     if (
@@ -472,8 +481,8 @@ export function DeckEditorPage({
       return
     }
     editor.clearDeck()
-    if (isCandidateStaging) setCandidateExtraDeckEntries([])
-  }, [editor, hasUnsavedChanges, isCandidateStaging])
+    setExtraDeckEntries([])
+  }, [editor, hasUnsavedChanges])
 
   const handleExport = useCallback(() => {
     if (editor.deckEntries.length === 0) {
@@ -486,6 +495,7 @@ export function DeckEditorPage({
       id: `export-${Date.now()}`,
       name: editor.deckName || '未命名牌組',
       entries: editor.deckEntries,
+      ...(!isCandidateStaging ? { extraDeckEntries: extraDeckEntries } : {}),
       createdAt: now,
       updatedAt: now,
     }
@@ -494,7 +504,7 @@ export function DeckEditorPage({
           ...baseDeck,
           candidateStaging: {
             kind: BS8_CANDIDATE_STAGING_KIND,
-            extraDeckEntries: candidateExtraDeckEntries.map((entry) => ({ ...entry })),
+            extraDeckEntries: extraDeckEntries.map((entry) => ({ ...entry })),
           },
         }
       : baseDeck
@@ -502,7 +512,7 @@ export function DeckEditorPage({
       () => showStatus(isCandidateStaging ? '已複製候選驗收牌組 JSON 到剪貼簿' : '已複製牌組 JSON 到剪貼簿'),
       () => showStatus('複製失敗，請改用匯入／匯出檔案功能'),
     )
-  }, [candidateExtraDeckEntries, editor, isCandidateStaging])
+  }, [extraDeckEntries, editor, isCandidateStaging])
 
   const handleImport = () => {
     const result = isCandidateStaging
@@ -521,9 +531,11 @@ export function DeckEditorPage({
     }
     editor.loadDeck(result.deck)
     if (isCandidateStaging && isBs8CandidateStagingDeck(result.deck)) {
-      setCandidateExtraDeckEntries(
+      setExtraDeckEntries(
         result.deck.candidateStaging.extraDeckEntries.map((entry) => ({ ...entry })),
       )
+    } else {
+      setExtraDeckEntries(result.deck.extraDeckEntries?.map((entry) => ({ ...entry })) ?? [])
     }
     closeImportPanel()
     showStatus(`已匯入牌組「${result.deck.name}」`)
@@ -548,8 +560,8 @@ export function DeckEditorPage({
               <h1>牌組編輯器</h1>
             </div>
             <div className="deck-editor-page-validation deck-editor-page-header-validation" role="status">
-              <span className={candidateDeckValidation.valid ? 'is-valid' : 'is-pending'}>
-                {candidateDeckValidation.valid ? '牌組合法，可進入對戰' : '牌組尚未完成，仍可先儲存草稿'}
+              <span className={deckValidation.valid ? 'is-valid' : 'is-pending'}>
+                {deckValidation.valid ? '牌組合法，可進入對戰' : '牌組尚未完成，仍可先儲存草稿'}
               </span>
               <small>點選牌組卡片查看詳細內容；使用 ＋／－調整張數。</small>
             </div>
@@ -597,13 +609,13 @@ export function DeckEditorPage({
           </label>
           <button
             type="button"
-            className={`deck-editor-page-save ${candidateDeckValidation.valid ? '' : 'is-draft'}`}
+            className={`deck-editor-page-save ${deckValidation.valid ? '' : 'is-draft'}`}
             disabled={editor.deckEntries.length === 0}
             onClick={handleSave}
             data-testid="deck-editor-page-save"
           >
             <Save aria-hidden="true" />
-            {candidateDeckValidation.valid ? '儲存牌組' : '儲存草稿'}
+            {deckValidation.valid ? '儲存牌組' : '儲存草稿'}
           </button>
         </div>
       </header>
@@ -691,10 +703,10 @@ export function DeckEditorPage({
                     type="button"
                     onClick={() =>
                       selectedCardIsExtra
-                        ? removeCandidateExtraCard(selectedCard.cardNumber)
+                        ? removeExtraCard(selectedCard.cardNumber)
                         : editor.removeCard(selectedCard.cardNumber)
                     }
-                    disabled={selectedCardDeckCount === 0}
+                    disabled={selectedCardIsExtra ? selectedExtraCardCount === 0 : selectedCardDeckCount === 0}
                     aria-label={selectedCardIsExtra ? '從額外牌組移除一張' : '從牌組移除一張'}
                   >
                     <Minus aria-hidden="true" />
@@ -703,12 +715,12 @@ export function DeckEditorPage({
                     type="button"
                     onClick={() =>
                       selectedCardIsExtra
-                        ? addCandidateExtraCard(selectedCard.cardNumber)
+                        ? addExtraCard(selectedCard.cardNumber)
                         : editor.addCard(selectedCard.cardNumber)
                     }
                     disabled={
                       selectedCardIsExtra
-                        ? selectedCardDeckCount >= 4 || candidateExtraTotal >= 6
+                        ? selectedCardDeckCount >= (isCandidateStaging ? 4 : getDeckCopyLimit(selectedCard.cardNumber, editor.deckFormat)) || extraDeckTotal >= EXTRA_DECK_MAX_CARDS
                         : selectedCardDeckCount >=
                           getDeckCopyLimit(selectedCard.cardNumber, editor.deckFormat)
                     }
@@ -804,25 +816,23 @@ export function DeckEditorPage({
               aria-labelledby="deck-editor-extra-deck-title"
             >
               <div>
-                <span>{isCandidateStaging ? 'BS8 候選驗收' : 'Standard 隔離'}</span>
+                <span>{isCandidateStaging ? 'BS8 候選驗收' : '正式 EXTRA'}</span>
                 <h3 id="deck-editor-extra-deck-title">額外牌組</h3>
               </div>
               <strong data-testid="deck-editor-extra-count">
-                {isCandidateStaging
-                  ? `${candidateExtraDeckEntries.reduce((total, entry) => total + entry.count, 0)} / 6 張`
-                  : '0 張'}
+                {`${extraDeckTotal} / ${EXTRA_DECK_MAX_CARDS} 張`}
               </strong>
-              {isCandidateStaging ? (
+              {
                 <>
                   <p>
-                    從右側卡池選擇「EXTRA」類型後，點擊卡面即可加入；也可在此區使用 ＋／－調整張數。僅供 BS8 候選驗收房間使用，不會寫入正式卡池、Standard 房間或正式匯出格式。
+                    從右側卡池選擇「EXTRA」類型後，點擊卡面即可加入；也可在此區使用 ＋／－調整張數。{isCandidateStaging ? '僅供 BS8 候選驗收房間使用。' : '額外牌組最多 6 張，不計入主要牌組的 60 張，並依所選賽制套用禁限卡。'}
                   </p>
                   <div
                     className="deck-editor-page-extra-card-grid"
                     data-testid="deck-editor-extra-cards"
                   >
-                    {candidateExtraDeckCards.length > 0 ? (
-                      candidateExtraDeckCards.map(({ entry, poolEntry }) => (
+                    {extraDeckCards.length > 0 ? (
+                      extraDeckCards.map(({ entry, poolEntry }) => (
                         <article
                           className="deck-editor-page-deck-card deck-editor-page-extra-card"
                           data-testid={`deck-editor-extra-card-${entry.cardNumber}`}
@@ -841,17 +851,17 @@ export function DeckEditorPage({
                             <strong>{poolEntry.cardNumber}</strong>
                             <button
                               type="button"
-                              onClick={() => removeCandidateExtraCard(entry.cardNumber)}
-                              aria-label={`移除候選 EXTRA ${poolEntry.name}`}
+                              onClick={() => removeExtraCard(entry.cardNumber)}
+                              aria-label={`移除${isCandidateStaging ? '候選 ' : ''}EXTRA ${poolEntry.name}`}
                             >
                               <Minus aria-hidden="true" />
                             </button>
                             <button
                               type="button"
-                              data-testid={`candidate-extra-add-${entry.cardNumber}`}
-                              onClick={() => addCandidateExtraCard(entry.cardNumber)}
-                              disabled={entry.count >= 4 || candidateExtraTotal >= 6}
-                              aria-label={`增加候選 EXTRA ${poolEntry.name}`}
+                              data-testid={`${isCandidateStaging ? 'candidate' : 'formal'}-extra-add-${entry.cardNumber}`}
+                              onClick={() => addExtraCard(entry.cardNumber)}
+                              disabled={countForBase(extraDeckEntries, entry.cardNumber) >= (isCandidateStaging ? 4 : getDeckCopyLimit(entry.cardNumber, editor.deckFormat)) || extraDeckTotal >= EXTRA_DECK_MAX_CARDS}
+                              aria-label={`增加${isCandidateStaging ? '候選 ' : ''}EXTRA ${poolEntry.name}`}
                             >
                               <Plus aria-hidden="true" />
                             </button>
@@ -865,16 +875,12 @@ export function DeckEditorPage({
                     )}
                   </div>
                 </>
-              ) : (
-                <p>
-                  目前是 Standard 編輯器，EXTRA 會維持隔離。要從卡池加入 EXTRA，請返回主選單，開啟「BS8 候選 EXTRA 驗收」；Standard 牌組、房間與匯出格式一律不會寫入 EXTRA。
-                </p>
-              )}
+              }
             </section>
           </div>
-          {candidateDeckValidation.errors.length > 0 && (
+          {deckValidation.errors.length > 0 && (
             <div className="deck-editor-page-errors" role="alert">
-              {candidateDeckValidation.errors.map((error) => (
+              {deckValidation.errors.map((error) => (
                 <span key={error}>{error}</span>
               ))}
             </div>
@@ -1007,18 +1013,18 @@ export function DeckEditorPage({
           <div className="deck-editor-page-pool-grid">
             {filteredPool.map((entry) => {
               const baseCardNumber = normalizeCardNumber(entry.cardNumber)
-              const isExtraCard = isCandidateStaging && entry.type === 'extra'
+              const isExtraCard = entry.type === 'extra'
               const total = isExtraCard
-                ? countForBase(candidateExtraDeckEntries, baseCardNumber)
+                ? countForBase(extraDeckEntries, baseCardNumber)
                 : countForBase(editor.deckEntries, baseCardNumber)
-              const restriction = isExtraCard
+              const restriction = isExtraCard && isCandidateStaging
                 ? 'none'
                 : getCardRestriction(baseCardNumber, editor.deckFormat)
-              const copyLimit = isExtraCard
+              const copyLimit = isExtraCard && isCandidateStaging
                 ? 4
                 : getDeckCopyLimit(baseCardNumber, editor.deckFormat)
               const atMax = isExtraCard
-                ? total >= copyLimit || candidateExtraTotal >= 6
+                ? total >= copyLimit || extraDeckTotal >= EXTRA_DECK_MAX_CARDS
                 : total >= copyLimit
               return (
                 <div
@@ -1031,7 +1037,7 @@ export function DeckEditorPage({
                     disabled={atMax || restriction === 'banned'}
                     onClick={() => {
                       setSelectedCardNumber(entry.cardNumber)
-                      if (isExtraCard) addCandidateExtraCard(entry.cardNumber)
+                      if (isExtraCard) addExtraCard(entry.cardNumber)
                       else editor.addCard(entry.cardNumber)
                     }}
                     title={`${baseCardNumber} ${entry.name}（點擊加入 1 張）`}

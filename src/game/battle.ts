@@ -4246,6 +4246,8 @@ export const getFaintEffectCandidateLabel = (state: GameState): string => {
   if (!effect) return '目標'
 
   switch (effect.kind) {
+    case 'support-to-battle':
+      return '自己的支援區餅乾'
     case 'support-to-trash':
     case 'support-to-hand':
     case 'rest-support':

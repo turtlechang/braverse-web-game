@@ -74,12 +74,13 @@ const mysticState = (hasAnotherMystic: boolean): GameState => {
   }
 }
 
-const activateMystic = (state: GameState): GameState =>
+const activateMystic = (state: GameState, mode = 5): GameState =>
   applyGameCommand(state, {
     kind: 'begin-activate-skill',
     playerId: 'player-one',
     sourceInstanceId: 'BS8-059:source',
     trigger: 'activate',
+    chooseOneModes: [mode],
     paymentIds: ['BS8-053:support-mystic-energy'],
     supportToHandIds: [
       'BS8-053:support-mystic-return-one',
@@ -104,15 +105,76 @@ describe('BS8-059 Mystic Flour Cookie', () => {
     expect(state.players['player-two'].battleArea.map((entry) => entry.hpCards.length)).toEqual([3, 3])
   })
 
-  it('removes up to two HP cards from every opponent Cookie when it is the only Mystic Flour', () => {
-    let state = activateMystic(mysticState(false))
-    state = applyGameCommand(state, {
-      kind: 'resolve-ability-effect',
-      playerId: 'player-one',
-      targetIds: [],
-    })
+  it.each([
+    { mode: 0, targets: [], hp: [3, 3] },
+    { mode: 1, targets: [0], hp: [2, 3] },
+    { mode: 1, targets: [1], hp: [3, 2] },
+    { mode: 2, targets: [0], hp: [1, 3] },
+    { mode: 2, targets: [1], hp: [3, 1] },
+    { mode: 3, targets: [0, 1], hp: [2, 2] },
+    { mode: 4, targets: [0, 1], hp: [1, 2] },
+    { mode: 4, targets: [1, 0], hp: [2, 1] },
+    { mode: 5, targets: [0, 1], hp: [1, 1] },
+  ])('chooses each opponent Cookie HP amount independently: $hp', ({ mode, targets, hp }) => {
+    const initial = mysticState(false)
+    const before = structuredClone(initial)
+    let state = activateMystic(initial, mode)
+    if (state.pendingAbilityEffect) {
+      state = applyGameCommand(state, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: targets.map(index => initial.players['player-two'].battleArea[index].card.instanceId),
+      })
+    }
+    expect(state.players['player-two'].battleArea.map(entry => entry.hpCards.length)).toEqual(hp)
+    expect(state.players['player-one'].hand).toHaveLength(initial.players['player-one'].hand.length + 2)
+    expect(state.players['player-one'].supportArea).toHaveLength(1)
+    expect(state.players['player-one'].supportArea[0].rested).toBe(true)
+    expect(state.skillUsesThisTurn).toHaveLength(1)
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(initial).toEqual(before)
+  })
 
-    expect(state.players['player-two'].battleArea.map((entry) => entry.hpCards.length)).toEqual([1, 1])
+  it('rejects missing, repeated, or friendly targets without changing the paid state', () => {
+    const initial = mysticState(false)
+    const paid = activateMystic(initial, 4)
+    const before = structuredClone(paid)
+    const opponent = initial.players['player-two'].battleArea[0].card.instanceId
+    for (const targetIds of [[], [opponent], [opponent, opponent], [opponent, 'BS8-059:source']]) {
+      expect(() => applyGameCommand(paid, {
+        kind: 'resolve-ability-effect', playerId: 'player-one', targetIds,
+      })).toThrow()
+      expect(paid).toEqual(before)
+    }
+  })
+
+  it('supports 0/1/2 when only one opponent Cookie remains', () => {
+    for (const mode of [0, 1, 2]) {
+      const initial = mysticState(false)
+      initial.players['player-two'].battleArea = initial.players['player-two'].battleArea.slice(0, 1)
+      const paid = activateMystic(initial, mode)
+      const state = paid.pendingAbilityEffect ? applyGameCommand(paid, {
+        kind: 'resolve-ability-effect', playerId: 'player-one',
+        targetIds: mode === 0 ? [] : [initial.players['player-two'].battleArea[0].card.instanceId],
+      }) : paid
+      expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(3 - mode)
+    }
+  })
+
+  it('never duplicates HP when zero is chosen and rejects malformed ordered amounts', () => {
+    const state = mysticState(false)
+    const before = structuredClone(state)
+    const targetIds = state.players['player-two'].battleArea.map(entry => entry.card.instanceId)
+    const effect = { kind: 'hp-to-trash' as const, amount: 0,
+      target: { side: 'opponent' as const, min: 2, max: 2 } }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'BS8-059:source' }
+    expect(executeCardEffect(state, context, effect, targetIds)).toEqual(state)
+    for (const amountByTargetIndex of [[2], [2, -1], [2, 3], [2, 0.5]]) {
+      expect(() => executeCardEffect(state, context, {
+        ...effect, amount: 2, amountByTargetIndex,
+      }, targetIds)).toThrow(/HP 移除數量/)
+      expect(state).toEqual(before)
+    }
   })
 
   it('requires both returned support cards to be green and rejects mixed-color payment', () => {

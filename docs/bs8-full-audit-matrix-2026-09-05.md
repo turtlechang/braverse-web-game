@@ -1,12 +1,16 @@
-# BS8 全卡逐張驗收矩陣（執行中）
+# BS8 全卡逐張驗收矩陣
 
 範圍：171 筆、125 基礎卡。五色皆包含，EXTRA 15 筆走專用流程。
 
-目前優先序依使用者更新：先完成桌機與平板，手機模式暫緩。既有手機證據保留，不將未測手機項目標為通過。紅色001–025已完成第一輪局部逐卡檢查；黃色續查至050（048／049／050本輪完成），下一張051。BS8-059修復回手綠色限制並完成兩尺寸Browser。完整正式對局、線上與複合效果仍依各列缺口補驗。
+目前優先桌機1907×863與平板1164×777，手機暫緩。本輪125張基礎卡局部序列已完成；最新逐筆桌機／平板來源與異圖覆蓋以[證據索引](bs8-browser-evidence-index-2026-09-07.md)為準，完整正式對局／線上保持分列。已核對本輪報告：059／067／072／111數量38例、076共12例、005／009／021排序8例、051共6例、052數量6例、069／090／104 EXTRA共36例通過；083基本版與@2技能兩尺寸通過。另有052／115／118／120條件邊界16例與010／083／084攻擊24例通過。上述均為test-state初始狀態搭配正式共用UI／命令的局部驗證，未證明完整正式對局或線上。
 
 每張原文、正規化文字、runtime、hash 與異圖路由：`test-results/ui-ux-audit-2026-09-05/bs8-runtime-inventory.json`。本矩陣只由實際本輪證據更新，不以舊報告或 shadow verified 自動勾選。
 
 `Browser A/B` 是局部正式共用 UI/命令驗證；`完整對戰/線上` 另列。文字／效果不同的異圖須補獨立案例；未測不得算完成。
+
+2026-09-07 報告判讀：`Ability A/B settled`／`status: PASS` 只代表腳本流程完成，仍須查看 `abilityPaths`、`commandKinds` 與 `steps`。例如052舊報告及120的B曾執行與A相同的begin／resolve，115／118舊B僅skip-on-play，均不足以單獨認證條件負向；目前已由獨立條件邊界16例補齊（115／118確認沒有可發動面板、登場HP基線不變及能繼續回合）。083技能B仍只認證略過，另有攻擊正向／無付款負向。下表已移除「同A路徑」當作負向PASS的舊標記；其他卡的B若缺獨立條件、資源或非法目標證據，仍未證明。
+
+本輪新增證據位於 `test-results/bs8-desktop-tablet-2026-09-07/`：`051-faint-browser-1788775819344.json`（6/6）、`bs8-052-hand-choice-1788776123016.json`（6/6）、`damage-order-browser-1788774700941.json`（8/8）、`083-desktop.json`／`083-tablet.json`、`115-desktop.json`／`115-tablet.json`、`118-desktop.json`／`118-tablet.json`。EXTRA另見 `test-results/bs8-extra-effects/report.json`（24/24）與 `attack-report.json`（12/12）；二者合計36例，未包含完整對局／線上。報告與截圖為本機驗證產物，不提交。
 
 | 卡號 | 名稱 | 顏色 | 含異圖筆數 | 路徑 | 原文／規則 | 卡面載入 | Browser A | Browser B | 完整對戰／線上 |
 | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- |
@@ -14,12 +18,12 @@
 | BS8-002 | Cilantro Cobra Swordsman | RED | 1 | 一般 | 已修復強制抽 1；HP≥2 依官方 FAQ 阻擋 Then | 手動瀏覽器實圖 746px 已載入 | 通過：HP→R 支付→抽 1→傷害；bs8-002-ab.json | 通過：無能量略過、未選付款阻擋、傷害選 0；引擎另測 HP2 | 未測 |
 | BS8-003 | Cilantro Cobra Fighter | RED | 1 | 一般 | 已修復官方 FAQ：HP2 可棄牌、無加 HP，消耗次數 | 手動瀏覽器實圖 746px 已載入 | 通過：棄牌後全體合格餅乾加 HP；bs8-003-ab.json | 通過：無手牌阻擋、HP2 付費 no-op 與付款前警示；bs8-003-hp2-paid-noop.txt | 未測 |
 | BS8-004 | Cilantro Cobra Cookie | RED | 2 | 一般 | 已修復來源有效 HP=1 才造成傷害；HP不符仍付費的邊界待專卡裁定 | 本圖／異圖實圖已載入 | 通過：R付款、橫置來源、傷害2；bs8-004-ab.json／paid-damage2.txt | 通過：無付款阻擋；引擎測HP2與加成，專卡付費no-op待確認 | 未測 |
-| BS8-005 | Avatar of Ruin | RED | 2 | EXTRA | 已核對2次昏厥登場、OnPlay、RRR與雙方其他餅乾傷害；修正中文來源排除提示 | 本圖／異圖745px已載入 | 通過：EXTRA登場與手動OnPlay→攻擊→Then，bs8-005-onplay-attack-then.txt | EXTRA條件不足阻擋；四尺寸付款不足／取消；異圖略過OnPlay保持對手HP4 | 未測 |
+| BS8-005 | Avatar of Ruin | RED | 2 | EXTRA | 已核對2次昏厥登場、OnPlay、RRR與雙方其他餅乾傷害；修正中文來源排除提示；2026-09-07排序Browser兩尺寸通過，damage-order-browser-1788774700941.json | 本圖／異圖745px已載入 | 通過：EXTRA登場與手動OnPlay→攻擊→Then，bs8-005-onplay-attack-then.txt | EXTRA條件不足阻擋；四尺寸付款不足／取消；異圖略過OnPlay保持對手HP4 | 未測 |
 | BS8-006 | Nutmeg Tiger Cookie | RED | 2 | 一般 | 依v1.8修正Then可整段略過，發動時先選齊雙方各1，再結算；AI Lv.1／2配對選擇同步修復 | 本圖／異圖745px已載入；本圖實際來源昏厥流程重驗 | 兩圖×1164／390×配對／略過，共8路徑；RR原攻擊傷害1，另選隊友4→3、非攻擊目標5→4。實圖來源昏厥後對手仍受傷並回到主要階段 | 漏選、同方2張不能確認；略過不追加傷害且保留原RR費用。12項引擎測試含來源昏厥／兩種FLIP順序／AI1–5 | 未測 |
 | BS8-007 | Dark Choco Cookie | RED | 1 | 一般 | 原文僅RRNN傷害4，無技能／Then；runtime一致 | 實圖746px已載入 | 通過：登場、4支援付款、攻擊；bs8-007-a.json | 通過：無付款不可攻擊；bs8-007-b.json | 未測 |
 | BS8-008 | Poison Mushroom Cookie | RED | 1 | 一般 | Blocker需R、改向來源；RRR傷害2轉接一致，普通攻擊已通過兩尺寸攻擊／取消／不足 | 實圖746px已載入 | Blocker付款後來源HP3→2、原目標保持5；bs8-008-a.json | 無能量／主動放棄均來源保持3、原目標5→4；008-b／skip.json | 未測 |
-| BS8-009 | Burning Spice Cookie | RED | 4 | 一般 | 四圖官方原文目視核對；@3確實印Then R；每滿3LV加傷及來源排除一致，8項引擎回歸通過 | 四圖在IAB實際呈現，寬745／746；headless圖片受環境網路限制 | 四圖技能A/B＋各自Then付款／略過後普通RRN攻擊，共8路徑，實際傷害4／3；009-browser.json | 未付款disabled、取消不耗支援、Then另付R、來源限定目標、同回合不可再發動；引擎另測來源唯一／重複付款拒絕／換回合加成消失 | 未測 |
-| BS8-010 | Red Velvet Cookie | RED | 2 | 一般 | 兩圖原文一致：本回合我方昏厥才可啟動、最多1傷害；RRN傷害3後可讓我方0／1張昏厥。補具體不可發動原因 | 兩圖官方卡面已目視核對、IAB呈現 | 兩圖技能A/B；實際攻擊→隊友昏厥→完成補位→技能選0／1、實傷0／1，010-browser.json | Then選0保留隊友且技能仍鎖定；可選來源本身昏厥；技能0目標仍消耗本回合次數；8路徑通過 | 未測 |
+| BS8-009 | Burning Spice Cookie | RED | 4 | 一般 | 四圖官方原文目視核對；@3確實印Then R；每滿3LV加傷及來源排除一致，8項引擎回歸通過；2026-09-07排序Browser兩尺寸通過，damage-order-browser-1788774700941.json | 四圖在IAB實際呈現，寬745／746；headless圖片受環境網路限制 | 四圖技能A/B＋各自Then付款／略過後普通RRN攻擊，共8路徑，實際傷害4／3；009-browser.json | 未付款disabled、取消不耗支援、Then另付R、來源限定目標、同回合不可再發動；引擎另測來源唯一／重複付款拒絕／換回合加成消失 | 未測 |
+| BS8-010 | Red Velvet Cookie | RED | 2 | 一般 | 兩圖原文一致：本回合我方昏厥才可啟動、最多1傷害；RRN傷害3後可讓我方0／1張昏厥。補具體不可發動原因 | 兩圖官方卡面已目視核對、IAB呈現 | 原技能A/B保留；新增兩尺寸基本版／@1攻擊Then選自身昏厥；010-attack-desktop/tablet.json | 無付款不宣告攻擊；桌機採010-attack-desktop-negative-fixed.json、平板negative，共8例 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
 | BS8-011 | Saffron Buffalo Shaman | RED | 1 | 一般 | 依v1.8 §8-2／8-3修正為付款時一次選齊雙方各1張；來源可選、每張實體各自一次；RRR傷害2一致 | IAB卡面已目視核對；實圖連鎖操作已保存 | 1164／390付款與RRR普通攻擊；實圖Cake Wolf昏厥→另付R→Devil傷害→Mala受傷反應→不補位正常接續 | 兩尺寸漏選／同方2張不能確認、取消不耗支援；引擎9項含兩種FLIP順序／AI2–5，hook4項、RoomStore1項通過 | 遮罩hook與RoomStore通過；專卡完整對戰／雙Browser未測 |
 | BS8-012 | Pomegranate Cake Hound | RED | 1 | 一般 | 修復Your Turn昏厥限制與來源代價失效仍抽牌；抽0也須先從休息區送來源至棄牌區。RN普通攻擊已通過兩尺寸攻擊／取消／不足 | IAB實圖746px載入並目視核對 | 嚴格A/B及1164／390抽0／1／來源代價不足共6路徑；抽1牌庫20→19、手牌0→1，抽0仍支付來源代價 | 來源已不在休息區時說明原因、確認disabled、繼續後無抽牌；引擎另測我方／對手回合的效果傷害與普通攻擊昏厥 | 專卡完整對戰／線上未測 |
 | BS8-013 | Pomegranate Cake Shaman | RED | 1 | 一般 | 修復來源代價未支付仍復活；Your Turn、紅色LV.1與排除同名核對，復活0張仍支付來源代價。RN普通攻擊已通過兩尺寸攻擊／取消／不足 | IAB實圖746px載入並目視核對 | 嚴格A/B及1164／390選0／復活／代價不足共6路徑；復活BS8-002補2HP、牌庫20→18，來源留在棄牌區 | 來源不在休息區時禁止確認並說明原因，繼續後無復活；引擎另拒絕同名、非紅、LV.2及非餅乾，驗證我方／對手回合昏厥 | 專卡完整對戰／線上未測 |
@@ -30,7 +34,7 @@
 | BS8-018 | Cake Wolf | RED | 1 | 一般 | 修復來源移動未標為必要代價；Your Turn、可選R支援支付、來源進棄牌後選0–1張對手受1傷害；RN普通攻擊1傷害 | IAB實圖已目視核對並操作付款／傷害 | strict A/B；1164／390共10條昏厥及6條普通攻擊路徑通過，付款只一次、傷害4→3或6→5 | 來源已移走但能量充足仍封鎖；無能量、不發動、付款後選0、取消攻擊；13項專卡規則回歸含錯色／重複支付與Your Turn | 專卡完整對戰／線上未測；最新3檔343項相關測試、build與scoped lint通過 |
 | BS8-019 | Cake Hound | RED | 1（@1） | 一般 | 修復不棄手牌仍回收、來源移動未標為代價；Your Turn、棄1張→來源進棄牌→紅色LV.1非同名回手0／1核對；RN攻擊1 | IAB實圖目視核對並實際回收BS8-002 | 正／負向稽查與1164／390共10條昏厥、6條普通攻擊通過；可回收剛支付的合法手牌 | 無手牌、不發動、來源消失均整組略過；選0仍棄牌並移動來源；11項引擎回歸含排除同名／錯色／LV.2／物品及保留其他來源佇列 | 專卡完整對戰／線上未測；全套280檔4,304項、build、scoped lint及AI20場通過 |
 | BS8-020 | Pepper Pangolin Cookie | RED | 1 | 一般 | HP1可啟動將自身與HP送棄牌、非昏厥；RR普通攻擊2傷害；HP2提示已具體化 | IAB實圖已目視核對 | 1164／390共6條技能與6條普通攻擊通過，來源移除、Break不變 | HP2不能發動；取消不移動卡片；6項專卡回歸含休息狀態、錯誤目標及回合 | 專卡完整對局／線上未測；4檔327項相關測試通過 |
-| BS8-021 | Soul Jam: Light of Destruction | RED | 2 | 一般 | 修復RR後漏收R裝備，及效果傷害漏掉補HP型FLIP；非Burning Spice受1傷害、Then付R裝備0／1、Break LV8禁陷阱 | 兩種IAB實圖皆已目視核對 | 兩圖×1164／390共20條付款、12條無能量／FLIP支付／昏厥續接；另4條LV7／8陷阱回應 | 16項專卡回歸：錯誤付款與目標、FLIP可救回最後HP、不發動則昏厥技能後再裝備；測試入口不再自動略過FLIP | 僅demo共用UI；RR→R→裝備→攻擊完整Browser連鎖及專卡完整對局／線上未測；本批全套4,328項通過 |
+| BS8-021 | Soul Jam: Light of Destruction | RED | 2 | 一般 | 修復RR後漏收R裝備，及效果傷害漏掉補HP型FLIP；非Burning Spice受1傷害、Then付R裝備0／1、Break LV8禁陷阱；2026-09-07排序Browser兩尺寸通過，damage-order-browser-1788774700941.json | 兩種IAB實圖皆已目視核對 | 兩圖×1164／390共20條付款、12條無能量／FLIP支付／昏厥續接；另4條LV7／8陷阱回應 | 16項專卡回歸：錯誤付款與目標、FLIP可救回最後HP、不發動則昏厥技能後再裝備；測試入口不再自動略過FLIP | 僅demo共用UI；RR→R→裝備→攻擊完整Browser連鎖及專卡完整對局／線上未測；本批全套4,328項通過 |
 | BS8-022 | Cake Hound's Crown | RED | 1 | 一般 | 修復必要昏厥代價被當成直接棄牌；先付款與昏厥，再從新狀態選紅色LV.1回收0–2張 | IAB實圖與卡文已核對 | 1164／390共8條：選0／1／2、取消、缺付款／代價時阻擋、回收剛棄置HP；IAB另實際操作HP回收 | 11項專卡規則及本機／線上hook回歸；含敗北停止、昏厥技能續接、錯色／LV／重複與覺醒下疊卡 | 僅demo共用UI，尚未證明正式狀態已修改；專卡完整真人對局／線上Browser未測；bs8-022-browser.json |
 | BS8-023 | Shadow of the Destroyer | RED | 1 | 一般 | RR及HP≥2門檻；已改為跨雙方選擇全體結算順序，恢復陷阱前原攻擊目標 | IAB實圖與卡文已核對 | 1164／390共4條發動／略過重跑；排序未選齊阻擋，HP1及未翻開015不受效果傷害 | 7項專卡；另共用12項排序／防護／FLIP／昏厥／AI及2項本機／線上hook | 僅demo；完整正式對局、專卡線上Browser與Refresh續接仍待；bs8-023-order-browser.json |
 | BS8-024 | Land of Fire & Ruin | RED | 2 | 一般 | @1錯置卡文已勘誤；R配置／RR橫置；全體1傷害改為跨雙方自選順序 | 兩款官方卡面、修正後詳情及IAB排序已核對 | 兩圖×1164／390共8條發動／取消重跑；對手→己方→對手、未選齊阻擋 | 5項專卡；共用排序回歸涵蓋所有目標各一次、FLIP後昏厥與免疫候選一致 | 僅demo；完整正式對局、專卡線上Browser與Refresh續接仍待；bs8-024-order-browser.json、bs8-024-order-iab.png |
@@ -60,80 +64,80 @@
 | BS8-048 | Kulfi Legends | YELLOW | 1 | 一般 | Y費用、己方Break LV≥3、棄牌區具名Soul Jam（Destruction=BS8-021、Abundance=BS3-043）回收0–1；12項引擎回歸（兩種具名、選0、錯名／手牌／對手棄牌／重複／超量拒絕、Break LV2不可發動、錯色／休息／缺付款拒絕） | 官方卡圖HEAD 200可載入；Browser以實際DOM確認回收 | 1440×960正向／負向／選0／Abundance共4條＋1164×777同4條通過：Y付款、支援橫置、回收進手牌、原攻擊續接傷害；Break不足留手牌無trace | 專卡完整對局／線上未測；bs8-048-050-desktop/tablet-positive、negative、048-abundance證據 |
 | BS8-049 | Simmering Lassi Springs | YELLOW | 1 | 一般 | YY配置、Activate再付Y＋橫置來源、選己方恰好剩餘HP1補1HP0–1；14項引擎回歸（選0仍付款橫置、HP2／對手／重複／未知目標拒絕、錯色／休息／缺付款拒絕、非主人主要階段拒絕、未翻開FLIP不預先計HP） | 官方卡圖HEAD 200可載入 | 1440×960與1164×777正向／負向／選0共6條通過：配置YY橫置2支援、啟動橫置場景、HP1→2、牌庫20→19；選0仍橫置，條件不足選0 | 專卡完整對局／線上及Refresh續接未測；bs8-048-050-desktop/tablet-positive／negative／zero證據 |
 | BS8-050 | City of Eternal Gold | YELLOW | 2 | 一般 | Y配置、Activate僅橫置無能量費、選本回合從Break登場的LV.3 0–1補1HP、Then以後段剩餘HP=2再補1（HP1→3、HP2→3）；17項引擎回歸（兩變體、手牌／前回合／LV2／對手目標拒絕、Then不可改選、Refresh中斷續接、批次Then一致） | 兩變體官方卡圖HEAD 200可載入（@1另行確認） | 兩圖×1440×960／1164×777正向／負向／選0共12條通過：配置Y、啟動只橫置不耗支援、HP1→3、Then紀錄「HP 2 → 3」；選0不補HP仍橫置 | 專卡完整對局／線上及複合Refresh插入未測；bs8-048-050-desktop/tablet-positive／negative／zero證據 |
-| BS8-051 | Meat Dumpling King | GREEN | 1 | 一般 | 昏厥觸發support-to-battle、amount=1、optional=true；GG/2攻擊1；語意核對通過、引擎回歸通過（adapter+新增faint queue測試） | 未測 | PASS：faint-response→support-to-battle流程確認 | PASS：同A路徑 | 未測 |
-| BS8-052 | Cloud Haetae Cookie | GREEN | 2 | 一般 | Activate技能、自身進棄牌(selfToTrash)、支援區比對手少≥2時、綠色手牌至多2張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→select targets→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-053 | Gim Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、綠色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-054 | Leek Cookie | GREEN | 1 | 一般 | 攻擊時觸發damage 1、條件支援區少≥1；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；GGG/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-056 | Spicy Dumpling King | GREEN | 1 | 一般 | Blocker技能、G支付、攻擊重導向；GGG/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-057 | Vagabond Cookie | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時抽至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→confirm→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-058 | Flavorless Cookie | GREEN | 1 | 一般 | 無技能/FLIP、GGNN/4攻擊4；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-059 | Mystic Flour Cookie | GREEN | 3 | 一般 | 修復回手2張支援卡漏掉綠色限制（官方卡文Return 2 {G}）；轉接補supportToHandColor green，AI／hook沿用共用候選判定。既有具名同名互斥回歸＋新增混色付款拒絕、綠卡不足不可發動 | 三變體官方卡圖於Browser載入核對 | 三圖×1440×960／1164×777正向／負向共12條通過：G付款＋2綠回手、對手全體HP各減2、同名在場不可發動 | 專卡完整對局／線上未測；bs8-059-desktop/tablet-positive／negative證據 |
-| BS8-060 | Peach Blossom Cookie | GREEN | 2 | 一般 | Activate技能、每回合一次、回手1張綠色支援卡、二選一（己方+1HP或對手1傷害）；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→choice→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-061 | Chives Dumpling King | GREEN | 1 | 一般 | 持續被動、支援區少≥2時自身攻擊+1；語意核對通過、引擎回歸通過 | 未測 | PASS：existing-attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-062 | Shrimp Dumpling King | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時手牌至多1張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | FLIP卡、抽至多1；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-064 | Snake Fruit Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量2、不限顏色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-065 | Spinach Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、支援區少≥1時、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
-| BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | 攻擊時觸發deck-to-support、支援區少≥1時牌庫頂1張進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 昏厥觸發opponent-rests-support、支援區少≥1時對手休息1張活躍支援卡；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-response流程確認 | PASS：同A路徑 | 未測 |
-| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-069-extra-audit.json | PASS：同A路徑 | 未測 |
-| BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 無技能/FLIP、NN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-071 | Peach Baos | GREEN | 1 | 一般 | 物品卡、G支付、支援區少≥1時己方餅乾剩餘HP≤3補1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | 物品卡、GG支付、支援區少≥1時牌庫頂2張選1進支援區、其餘橫置進支援區、裝備到Mystic Flour；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-073 | Noodle Cocoon | GREEN | 1 | 一般 | 陷阱卡、G支付、對手Cookie-1攻、支援區少≥1時可再付G讓對手休息1張活躍支援；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
-| BS8-074 | White Flour Fog | GREEN | 1 | 一般 | 陷阱卡、G支付（支援區少≥2時免費）、對手Cookie-1攻；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | PASS：同A路徑 | 未測 |
-| BS8-075 | The Ivory Pagoda | GREEN | 2 | 一般 | 場景卡、G支付、任何玩家支援區≥6張時該玩家攻擊+1N；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-076 | Icicle Yeti Cookie | BLUE | 2 | 一般 | Then強制來源進牌庫底→抽1→選對手0–1張、其下個Active Phase不轉正除非恰好棄2張；BB/1傷害1；語意核對通過、引擎回歸通過（strict contract） | 未測 | 兩變體PASS：attack→optional-cost→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-077 | Kumiho Cookie | BLUE | 1 | 一般 | OnPlay、對手至多1張LV.1餅乾回其牌庫底；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→target→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-078 | Snow Sugar Cookie | BLUE | 2 | 一般 | Activate、手牌≤3、來源進牌庫底、手牌藍色LV.2+至多1張登場並+1HP；BB/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-079 | Snowflake Cookie | BLUE | 1 | 一般 | Activate、棄2張藍色手牌、來源進牌庫底、選對手至多1張LV.1下個Active Phase不轉正；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-080 | Moon Rabbit Cookie | BLUE | 1 | 一般 | FLIP卡、抽至多1；BBB/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-081 | Strawberry Cream Cookie | BLUE | 1 | 一般 | Blocker、B支付、攻擊重導向；BBB/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | PASS：同A路徑 | 未測 |
-| BS8-082 | Cotton Cookie | BLUE | 2 | 一般 | Activate、棄2張手牌、來源進牌庫底、己方藍色LV.2以下至多1張+1HP；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-083 | Frost Queen Cookie | BLUE | 2 | 一般 | OnPlay付B、選對手0–1張下個Active Phase不轉正；BBB/3攻擊3、Then抽至手牌3張；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-084 | Sherbet Cookie | BLUE | 2 | 一般 | 休息時被動、對手攻擊前須棄1張手牌；BBN/2攻擊2、Then手牌≤3抽至多1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-085 | Pinecone Cookie | BLUE | 1 | 一般 | Activate、棄2張手牌、對手至多1張剩1HP餅乾昏厥；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-086 | Cream Puff Cookie | BLUE | 1 | 一般 | OnPlay、抽至多1（無付款）；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | OnPlay付B、退回己方藍色LV.1餅乾至手牌、對手至多1張LV.1進其牌庫底；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→battle-to-hand→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-088 | Milk Cookie | BLUE | 1 | 一般 | Activate每回合一次、付B、手牌≤5時恢復自身活躍；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→payment→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-089 | Carol Cookie | BLUE | 1 | 一般 | Activate每回合一次、棄1張手牌、對手至多1張LV.1受1傷害；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-090 | Will of Nature | BLUE | 2 | EXTRA | EXTRA卡、手牌≤2可登場、OnPlay己方藍色LV.2以下至多1張回手；BBB/3攻擊3、Then抽至多2；語意核對通過 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-090-extra-audit.json | PASS：同A路徑 | 未測 |
-| BS8-091 | Tiger Lily Cookie | BLUE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-092 | Angel Cookie | BLUE | 1 | 一般 | Activate、手牌≤1時來源置於牌庫底；B/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-093 | Cocoa Cookie | BLUE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；B/1攻擊1；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-094 | Pancake Cookie | BLUE | 1 | 一般 | 無技能/FLIP、BBNN/4攻擊3；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-095 | Herb Cookie | BLUE | 1 | 一般 | 昏厥觸發、棄1手牌、己方至多1張+1HP；BN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-target→faint-response流程確認 | PASS：同A路徑 | 未測 |
-| BS8-096 | Warm Wind Flower | BLUE | 1 | 一般 | 物品、BB支付、手牌≤2時抽至多4；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-097 | Heartfelt Light | BLUE | 1 | 一般 | 物品、B支付、手牌≤2時己方LV.2以下至多1張+1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-098 | Warmth of the Snowfield | BLUE | 1 | 一般 | 陷阱、BB支付、對手Cookie本回合-2攻、Then可作B支付、手牌≤2抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→optional-cost→draw流程確認 | PASS：同A路徑 | 未測 |
-| BS8-099 | Frozen Mountain Depths | BLUE | 1 | 一般 | 場景、B配置、Activate付BB並橫置、雙方戰鬥區休息餅乾≥3時抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→payment→draw流程確認 | PASS：同A路徑 | 未測 |
-| BS8-100 | Snowfall Lantern Tree | BLUE | 2 | 一般 | 場景、B配置、Activate付B＋場景進垃圾桶、棄任意張藍色手牌後抽同數量；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→discard流程確認 | PASS：同A路徑 | 未測 |
-| BS8-101 | Dark Cacao Adviser 1 | PURPLE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；PP/2攻擊2；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-102 | Dark Cacao Adviser 2 | PURPLE | 1 | 一般 | FLIP卡、抽至多1；PPP/3攻擊3；語意核對通過 | 未測 | PASS：flip→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-103 | Dark Cacao Cookie | PURPLE | 2 | 一般 | 從棄牌區登場時可付P、每張對手餅乾至多移除1張HP（至多2張）；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：payment→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-104 | Dark Cacao Cookie | PURPLE | 3 | EXTRA | EXTRA覺醒卡、本回合從棄牌區登場的Dark Cacao可Awaken、OnPlay棄1手牌回收紫色卡至多1；PPPP/4攻擊4、Then移除1張HP；語意核對通過、Awaken由規則TDD驗證 | 未測 | EXTRA A/B通過：條件成立登場＋OnPlay待選、不成立阻擋；bs8-104-extra-audit.json | PASS：同A路徑 | 未測 |
-| BS8-105 | Strawberry Cookie | PURPLE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-106 | Lilac Cookie | PURPLE | 1 | 一般 | P/1攻擊1、Then棄1手牌後來源進棄牌區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→hand-discard流程確認 | PASS：同A路徑 | 未測 |
-| BS8-107 | Wizard Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄1張紫色物品、對手至多1張餅乾-1HP；PPP/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-108 | Blackberry Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.2以下至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-109 | Affogato Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.3至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-110 | Affogato Cookie's Disciple | PURPLE | 1 | 一般 | 無技能/FLIP、N/1攻擊1；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | PASS：同A路徑 | 未測 |
-| BS8-111 | Onion Cookie | PURPLE | 1 | 一般 | OnPlay棄1手牌、牌庫頂至多4張進棄牌區（固定4待裁決）；PP/2攻擊2；語意核對通過 | 未測 | PASS：hand→discard→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-112 | Espresso Cookie | PURPLE | 2 | 一般 | PP/2攻擊2、Then棄1手牌、棄牌區LV.2以上至多1張登場；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→discard→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-113 | Knight Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄牌區≥15時恢復自身活躍；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-114 | Old Milk Villager Cookie | PURPLE | 1 | 一般 | OnPlay、棄牌區≥30時全部洗回牌庫、Then自身+1HP；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-115 | Young Milk Villager Cookie | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≤5條件：OnPlay棄牌區≤5時自身+1HP；PP/2攻擊2；語意核對通過、引擎回歸新增 | 未測 | PASS：hand→confirm流程確認 | PASS：同A路徑 | 未測 |
-| BS8-116 | Milk Cookie | PURPLE | 1 | 一般 | Blocker、P支付、攻擊重導向；PPP/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | PASS：同A路徑 | 未測 |
-| BS8-117 | Healer Cookie 1 | PURPLE | 1 | 一般 | OnPlay、棄牌區≥15時抽至多1；PN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | PASS：同A路徑 | 未測 |
-| BS8-118 | Healer Cookie 2 | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≥15條件：OnPlay棄牌區≥15時己方至多1張+1HP；PN/2攻擊1；語意核對通過、引擎回歸新增 | 未測 | PASS：hand→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-119 | Crunchy Chip Cookie | PURPLE | 2 | 一般 | Activate付P、來源進棄牌區、棄牌區的Dark Cacao Cookie至多1張登場；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→payment流程確認 | PASS：同A路徑 | 未測 |
-| BS8-120 | Caramel Arrow Cookie | PURPLE | 5 | 一般 | Activate每回合一次、棄1手牌、棄牌區≥15時LV.2以上至多1張登場；PP/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 五變體PASS：skill→discard→target流程確認 | PASS：同A路徑 | 未測 |
+| BS8-051 | Meat Dumpling King | GREEN | 1 | 一般 | 昏厥觸發support-to-battle、amount=1、optional=true；GG/2攻擊1；語意核對通過、引擎回歸通過（adapter+新增faint queue測試） | Chrome兩尺寸實際支援候選已呈現 | 通過：從支援區選Flavorless Cookie登場；051-faint-browser-1788775819344.json | 通過：選0不移卡；僅非餅乾支援時無合法候選；兩尺寸共6例 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-052 | Cloud Haetae Cookie | GREEN | 2 | 一般 | Activate技能、自身進棄牌(selfToTrash)、支援區比對手少≥2時、綠色手牌至多2張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 兩尺寸呈現Gim／Snake Fruit／White Ghost真實候選 | 通過：選0／1／2共6例，另支援差2時部署Gim／White Ghost；condition-boundary/report.json | 通過：支援差1無法啟動、無begin／resolve、區域不變；舊strict同A證據已由條件邊界取代 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-053 | Gim Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、綠色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-054 | Leek Cookie | GREEN | 1 | 一般 | 攻擊時觸發damage 1、條件支援區少≥1；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→payment→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-055 | Bellflower Cookie | GREEN | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；GGG/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip-discard→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-056 | Spicy Dumpling King | GREEN | 1 | 一般 | Blocker技能、G支付、攻擊重導向；GGG/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-057 | Vagabond Cookie | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時抽至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→confirm→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-058 | Flavorless Cookie | GREEN | 1 | 一般 | 無技能/FLIP、GGNN/4攻擊4；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-059 | Mystic Flour Cookie | GREEN | 3 | 一般 | G＋2綠支援回手、同名互斥保留；每隻HP可選0／1／2，混合amountByTargetIndex保留順序 | 三變體官方卡圖於Browser載入核對 | 1907×863／1164×777基礎版18例：0／1／2及混合分配通過；[38例Browser報告](../test-results/bs8-desktop-tablet-2026-09-07/optional-count-browser-1788774009804.json) | 既有三圖12例付款／同名阻擋保留；新增分配異圖Browser未補 | 本輪為test-state初始狀態與正式共用UI／command局部驗證；完整正式對局／線上未測 |
+| BS8-060 | Peach Blossom Cookie | GREEN | 2 | 一般 | Activate技能、每回合一次、回手1張綠色支援卡、二選一（己方+1HP或對手1傷害）；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→choice→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-061 | Chives Dumpling King | GREEN | 1 | 一般 | 持續被動、支援區少≥2時自身攻擊+1；語意核對通過、引擎回歸通過 | 未測 | PASS：existing-attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-062 | Shrimp Dumpling King | GREEN | 1 | 一般 | Activate技能、每回合一次、支援區少≥1時手牌至多1張以休息狀態進支援區；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-063 | Hydrangea Cookie | GREEN | 1 | 一般 | FLIP卡、抽至多1；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-064 | Snake Fruit Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量2、不限顏色、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-065 | Spinach Cookie | GREEN | 1 | 一般 | OnPlay觸發set-active、支援數量1、支援區少≥1時、可選、可略過；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-066 | Almond Cookie | GREEN | 2 | 一般 | OnPlay觸發、支援卡送棄牌區、自身+2HP；GG/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→cost-support→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-067 | Oyster Cookie | GREEN | 2 | 一般 | GG／2傷害；Then己方支援較少時choose-one選0／1張牌庫頂，以活躍進支援 | 未測 | 1907×863／1164×777基礎版0／1共4例通過；[38例Browser報告](../test-results/bs8-desktop-tablet-2026-09-07/optional-count-browser-1788774009804.json) | 新增條件不成立及異圖Browser未補；不沿用同A路徑作負向證明 | 本輪為test-state初始狀態與正式共用UI／command局部驗證；完整正式對局／線上未測 |
+| BS8-068 | Yugwa Cookie | GREEN | 1 | 一般 | 昏厥觸發opponent-rests-support、支援區少≥1時對手休息1張活躍支援卡；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-response流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-069 | Peak of Apathy | GREEN | 2 | EXTRA | EXTRA卡、支援區少≥2時可登場、OnPlay從棄牌區回收綠色卡；GGG/3攻擊3；語意核對通過 | 兩尺寸EXTRA／候選UI已操作；未另認證全部異圖載圖 | 通過：綠色Item取1／0／skip及GGG攻擊；bs8-extra-effects/report.json、attack-report.json | 通過：支援差不足拒絕登場；skip不重開，0不移卡；兩尺寸069共10例 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-070 | White Ghost Cookie | GREEN | 1 | 一般 | 無技能/FLIP、NN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-071 | Peach Baos | GREEN | 1 | 一般 | 物品卡、G支付、支援區少≥1時己方餅乾剩餘HP≤3補1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-072 | Soul Jam: Light of Apathy | GREEN | 2 | 一般 | GG；支援較少時先揭示0／1／2，再選至多1張活躍進支援，其餘橫置；Then可裝備Mystic Flour並加1HP | 未測 | 1907×863／1164×777基礎版揭示0／1／2共6例通過；[38例Browser報告](../test-results/bs8-desktop-tablet-2026-09-07/optional-count-browser-1788774009804.json) | 新增條件不成立及異圖Browser未補；不沿用同A路徑作負向證明 | 本輪為test-state初始狀態與正式共用UI／command局部驗證；完整正式對局／線上未測 |
+| BS8-073 | Noodle Cocoon | GREEN | 1 | 一般 | 陷阱卡、G支付、對手Cookie-1攻、支援區少≥1時可再付G讓對手休息1張活躍支援；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-074 | White Flour Fog | GREEN | 1 | 一般 | 陷阱卡、G支付（支援區少≥2時免費）、對手Cookie-1攻；語意核對通過、引擎回歸通過 | 未測 | PASS：condition met+unmet A/B流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-075 | The Ivory Pagoda | GREEN | 2 | 一般 | 場景卡、G支付、任何玩家支援區≥6張時該玩家攻擊+1N；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-076 | Icicle Yeti Cookie | BLUE | 2 | 一般 | BB／1傷害；Then可略過來源入底代價；支付後抽1並選對手0–1張，下個Active Phase不轉正除非恰好棄2 | 本輪headless未載入官方卡圖；文字與操作已驗 | 兩尺寸×基本／@1支付共4例：BB→1傷害→來源離場抽1與防止活躍command；[12例Browser報告](../test-results/bs8-076-attack-choice/report.json) | 兩尺寸×基本／@1略過共4例：留場不抽牌，攻擊付款／傷害不退回；Active Phase棄0／2另4例 | 本輪為test-state初始狀態與正式共用UI／command局部驗證；完整正式對局／線上未測 |
+| BS8-077 | Kumiho Cookie | BLUE | 1 | 一般 | OnPlay、對手至多1張LV.1餅乾回其牌庫底；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→target→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-078 | Snow Sugar Cookie | BLUE | 2 | 一般 | Activate、手牌≤3、來源進牌庫底、手牌藍色LV.2+至多1張登場並+1HP；BB/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-079 | Snowflake Cookie | BLUE | 1 | 一般 | Activate、棄2張藍色手牌、來源進牌庫底、選對手至多1張LV.1下個Active Phase不轉正；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-080 | Moon Rabbit Cookie | BLUE | 1 | 一般 | FLIP卡、抽至多1；BBB/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：flip→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-081 | Strawberry Cream Cookie | BLUE | 1 | 一般 | Blocker、B支付、攻擊重導向；BBB/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-082 | Cotton Cookie | BLUE | 2 | 一般 | Activate、棄2張手牌、來源進牌庫底、己方藍色LV.2以下至多1張+1HP；BB/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→discard→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-083 | Frost Queen Cookie | BLUE | 2 | 一般 | OnPlay付B、選對手0–1張下個Active Phase不轉正；BBB/3攻擊3、Then抽至手牌3張；語意核對通過、引擎回歸通過；@2原圖無每回合一次，已移除正規化t1，oncePerTurn=false | @2已由IAB核對官方原圖；技能Browser含基本版／@2 | OnPlay兩變體付B／選目標通過；新增兩尺寸Then抽1，083-attack-desktop/tablet.json | 技能無付款skip-on-play；攻擊無付款無declare；attack正負向合計8例含基本版／@2，非全抽牌數量證明 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-084 | Sherbet Cookie | BLUE | 2 | 一般 | 休息時被動、對手攻擊前須棄1張手牌；BBN/2攻擊2、Then手牌≤3抽至多1；語意核對通過、引擎回歸通過 | 未測 | 新增兩尺寸基本版／@1 attack→Then實抽1；084-attack-desktop/tablet.json | 攻擊無付款無declare，兩尺寸正負向合計8例；未將其當手牌大於3的Then條件反例 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-085 | Pinecone Cookie | BLUE | 1 | 一般 | Activate、棄2張手牌、對手至多1張剩1HP餅乾昏厥；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-086 | Cream Puff Cookie | BLUE | 1 | 一般 | OnPlay、抽至多1（無付款）；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-087 | Starfruit Cookie | BLUE | 1 | 一般 | OnPlay付B、退回己方藍色LV.1餅乾至手牌、對手至多1張LV.1進其牌庫底；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→battle-to-hand→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-088 | Milk Cookie | BLUE | 1 | 一般 | Activate每回合一次、付B、手牌≤5時恢復自身活躍；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→payment→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-089 | Carol Cookie | BLUE | 1 | 一般 | Activate每回合一次、棄1張手牌、對手至多1張LV.1受1傷害；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-090 | Will of Nature | BLUE | 2 | EXTRA | EXTRA卡、手牌≤2可登場、OnPlay己方藍色LV.2以下至多1張回手；BBB/3攻擊3、Then抽至多2；語意核對通過 | 兩尺寸EXTRA／目標UI已操作；未另認證全部異圖載圖 | 通過：OnPlay取1／0／skip、BBB攻擊Then抽0／1／2；EXTRA兩報告共14例 | 通過：手牌條件不足阻擋登場；skip與0不執行選卡效果 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-091 | Tiger Lily Cookie | BLUE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-092 | Angel Cookie | BLUE | 1 | 一般 | Activate、手牌≤1時來源置於牌庫底；B/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-093 | Cocoa Cookie | BLUE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；B/1攻擊1；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-094 | Pancake Cookie | BLUE | 1 | 一般 | 無技能/FLIP、BBNN/4攻擊3；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-095 | Herb Cookie | BLUE | 1 | 一般 | 昏厥觸發、棄1手牌、己方至多1張+1HP；BN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：faint-target→faint-response流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-096 | Warm Wind Flower | BLUE | 1 | 一般 | 物品、BB支付、手牌≤2時抽至多4；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-097 | Heartfelt Light | BLUE | 1 | 一般 | 物品、B支付、手牌≤2時己方LV.2以下至多1張+1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-098 | Warmth of the Snowfield | BLUE | 1 | 一般 | 陷阱、BB支付、對手Cookie本回合-2攻、Then可作B支付、手牌≤2抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→optional-cost→draw流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-099 | Frozen Mountain Depths | BLUE | 1 | 一般 | 場景、B配置、Activate付BB並橫置、雙方戰鬥區休息餅乾≥3時抽至多3；語意核對通過、引擎回歸通過 | 未測 | PASS：stage-placement→payment→draw流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-100 | Snowfall Lantern Tree | BLUE | 2 | 一般 | 場景、B配置、Activate付B＋場景進垃圾桶、棄任意張藍色手牌後抽同數量；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→discard流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-101 | Dark Cacao Adviser 1 | PURPLE | 1 | 一般 | FLIP卡、棄1手牌、附加HP+1；PP/2攻擊2；語意核對通過 | 未測 | PASS：flip-discard→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-102 | Dark Cacao Adviser 2 | PURPLE | 1 | 一般 | FLIP卡、抽至多1；PPP/3攻擊3；語意核對通過 | 未測 | PASS：flip→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-103 | Dark Cacao Cookie | PURPLE | 2 | 一般 | 從棄牌區登場時可付P、每張對手餅乾至多移除1張HP（至多2張）；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：payment→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-104 | Dark Cacao Cookie | PURPLE | 3 | EXTRA | EXTRA覺醒卡、本回合從棄牌區登場的Dark Cacao可Awaken、OnPlay棄1手牌回收紫色卡至多1；PPPP/4攻擊4、Then移除1張HP；語意核對通過、Awaken由規則TDD驗證 | 兩尺寸Awaken／目標UI已操作；未另認證全部異圖載圖 | 通過：OnPlay取1／0／skip、PPPP攻擊Then選0／1；EXTRA兩報告共12例 | 通過：Awaken條件不足阻擋；skip與0不回收卡 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-105 | Strawberry Cookie | PURPLE | 1 | 一般 | 無技能/FLIP、NN/2攻擊2；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-106 | Lilac Cookie | PURPLE | 1 | 一般 | P/1攻擊1、Then棄1手牌後來源進棄牌區；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→hand-discard流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-107 | Wizard Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄1張紫色物品、對手至多1張餅乾-1HP；PPP/2攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→discard→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-108 | Blackberry Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.2以下至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-109 | Affogato Cookie | PURPLE | 1 | 一般 | PP/2攻擊1、Then對手LV.3至多1張-1HP；語意核對通過、引擎回歸通過 | 未測 | PASS：attack→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-110 | Affogato Cookie's Disciple | PURPLE | 1 | 一般 | 無技能/FLIP、N/1攻擊1；語意核對通過 | 未測 | PASS：vanilla deploy+attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-111 | Onion Cookie | PURPLE | 1 | 一般 | OnPlay棄1手牌後choose-one選牌庫頂0–4張進棄牌區；PP／2傷害 | 未測 | 1907×863／1164×777基礎版0–4共10例通過；[38例Browser報告](../test-results/bs8-desktop-tablet-2026-09-07/optional-count-browser-1788774009804.json) | 選0仍支付棄1代價；缺棄牌代價新Browser未補 | 本輪為test-state初始狀態與正式共用UI／command局部驗證；完整正式對局／線上未測 |
+| BS8-112 | Espresso Cookie | PURPLE | 2 | 一般 | PP/2攻擊2、Then棄1手牌、棄牌區LV.2以上至多1張登場；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：attack→discard→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-113 | Knight Cookie | PURPLE | 1 | 一般 | Activate每回合一次、棄牌區≥15時恢復自身活躍；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：skill→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-114 | Old Milk Villager Cookie | PURPLE | 1 | 一般 | OnPlay、棄牌區≥30時全部洗回牌庫、Then自身+1HP；PPP/3攻擊3；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→confirm流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-115 | Young Milk Villager Cookie | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≤5條件：OnPlay棄牌區≤5時自身+1HP；PP/2攻擊2；語意核對通過、引擎回歸新增 | 未另認證載圖 | 通過：棄牌5張，登場HP2後技能加至3，牌庫另減1；condition-boundary/report.json | 通過：棄牌6張不出技能面板、無begin／resolve，登場後HP／牌庫不變並可推進階段；兩尺寸 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-116 | Milk Cookie | PURPLE | 1 | 一般 | Blocker、P支付、攻擊重導向；PPP/3攻擊2；語意核對通過、引擎回歸通過 | 未測 | PASS：attack-response→blocker-payment流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-117 | Healer Cookie 1 | PURPLE | 1 | 一般 | OnPlay、棄牌區≥15時抽至多1；PN/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→draw-up-to流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-118 | Healer Cookie 2 | PURPLE | 1 | 一般 | 修復漏掉的棄牌區≥15條件：OnPlay棄牌區≥15時己方至多1張+1HP；PN/2攻擊1；語意核對通過、引擎回歸新增 | 未另認證載圖 | 通過：棄牌15張，登場HP3後選目標加至4；condition-boundary/report.json | 通過：棄牌14張不出技能面板、無begin／resolve，登場後HP／牌庫不變並可推進階段；兩尺寸 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
+| BS8-119 | Crunchy Chip Cookie | PURPLE | 2 | 一般 | Activate付P、來源進棄牌區、棄牌區的Dark Cacao Cookie至多1張登場；P/1攻擊1；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：skill→payment流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-120 | Caramel Arrow Cookie | PURPLE | 5 | 一般 | Activate每回合一次、棄1手牌、棄牌區≥15時LV.2以上至多1張登場；PP/2攻擊1；語意核對通過、引擎回歸通過 | 未測 | 通過：兩尺寸棄牌15＋手牌1，付棄牌後部署目標；condition-boundary/report.json | 通過：手牌0無法支付、無begin／resolve且區域不變；新獨立負向取代舊strict同A，不泛化到全部異圖 | 僅test-state局部驗證；完整正式對局／線上未測；手機暫緩。 |
 | BS8-121 | Black Concoction | PURPLE | 1 | 一般 | 已修復磨0–3、本次紫色Item判定、Refresh續磨；9項專測通過；P支付、磨3命中後HP+1、磨0不加HP；語意核對通過 | 手動瀏覽器實圖已載入 | PASS：hand→payment→choice流程確認 | 局部：磨0不加HP；bs8-121-mill0-no-hp.txt | 未測 |
-| BS8-122 | Milk Cart | PURPLE | 1 | 一般 | 物品、P支付＋棄1張紫色非Cookie、抽至多2；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→discard→draw流程確認 | PASS：同A路徑 | 未測 |
-| BS8-123 | Dark Resolution | PURPLE | 1 | 一般 | 陷阱、PP支付、對手Cookie本回合-1攻、Then回收棄牌區的Soul Jam: Light of Resolution至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap流程確認 | PASS：同A路徑 | 未測 |
-| BS8-124 | Glorious Return | PURPLE | 1 | 一般 | 陷阱、P支付、棄牌區≥15時回收紫色Cookie至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→target流程確認 | PASS：同A路徑 | 未測 |
-| BS8-125 | The Days of Resolution and Dignity | PURPLE | 2 | 一般 | 場景、PP配置、棄牌區≥15時Dark Cacao Cookie攻擊費用-1P；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→attack流程確認 | PASS：同A路徑 | 未測 |
+| BS8-122 | Milk Cart | PURPLE | 1 | 一般 | 物品、P支付＋棄1張紫色非Cookie、抽至多2；語意核對通過、引擎回歸通過 | 未測 | PASS：hand→payment→discard→draw流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-123 | Dark Resolution | PURPLE | 1 | 一般 | 陷阱、PP支付、對手Cookie本回合-1攻、Then回收棄牌區的Soul Jam: Light of Resolution至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-124 | Glorious Return | PURPLE | 1 | 一般 | 陷阱、P支付、棄牌區≥15時回收紫色Cookie至多1；語意核對通過、引擎回歸通過 | 未測 | PASS：trap→target流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
+| BS8-125 | The Days of Resolution and Dignity | PURPLE | 2 | 一般 | 場景、PP配置、棄牌區≥15時Dark Cacao Cookie攻擊費用-1P；語意核對通過、引擎回歸通過 | 未測 | 兩變體PASS：stage-placement→attack流程確認 | 未證明：沿用A操作不能當負向阻擋證據 | 未測 |
 
 補充普通攻擊證據：BS8-001／008／012／013／015／016各於1164／390驗證攻擊、取消及無能量，合計36路徑；見`bs8-prior-attacks-browser.json`。BS8-001的RR攻擊實傷2、BS8-008的RRR實傷2、BS8-015的RRR實傷3，其餘RN實傷1。

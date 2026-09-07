@@ -102,7 +102,9 @@ const EFFECT_VALUE: Partial<Record<CardEffect['kind'], number>> = {
   'support-to-battle': 18,
   'trash-to-battle': 19,
   'deck-to-support': 14,
+  'deck-to-trash': 4,
   'inspect-deck': 12,
+  'hp-to-trash': 30,
   'trash-to-hand': 14,
   'trash-to-support': 14,
   'redirect-attack': 20,
@@ -150,6 +152,19 @@ const isOpponentBattleCookie = (
 )
 
 const effectScore = (effect: CardEffect): number => {
+  // 可選數量以結構化張數區分收益，避免 0 張模式與完整效果同分。
+  // 只使用公開效果資料，不讀取尚未揭露的牌庫或 HP 卡面。
+  if (effect.kind === 'deck-to-support' || effect.kind === 'deck-to-trash') {
+    return (EFFECT_VALUE[effect.kind] ?? 4) * effect.amount
+  }
+  if (effect.kind === 'inspect-deck') {
+    return (EFFECT_VALUE[effect.kind] ?? 4) * effect.lookCount
+  }
+  if (effect.kind === 'hp-to-trash') {
+    const amount = effect.amountByTargetIndex?.reduce((total, value) => total + value, 0)
+      ?? effect.amount * effect.target.max
+    return (EFFECT_VALUE[effect.kind] ?? 4) * amount
+  }
   if (effect.kind === 'choose-one') {
     return Math.max(...effect.modes.map((mode) =>
       mode.effects.reduce((score, child) => score + effectScore(child), 0),

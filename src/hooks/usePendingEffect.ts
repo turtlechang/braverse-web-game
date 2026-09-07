@@ -1845,6 +1845,17 @@ export function usePendingEffect(params: {
   }
 
   const skipOptionalSkill = () => {
+    // Before activation, skipping OnPlay must clear the authoritative trigger;
+    // advancing only the local optional-effect wizard reopens it immediately.
+    if (pendingEffect?.optional && pendingEffect.trigger === 'on-play' && !pendingEffect.skillActivated) {
+      dispatch({
+        kind: 'skip-on-play',
+        playerId: pendingEffect.context.sourcePlayerId,
+        sourceInstanceId: pendingEffect.sourceCard.instanceId,
+      }, `${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
+      setPendingEffect(null)
+      return
+    }
     if (pendingEffect?.endPhase && !pendingEffect.skillActivated) {
       const next = applyGameCommand(game, {
         kind: 'skip-end-phase-skill',

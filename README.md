@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-07 依桌機／平板優先範圍重查 BS8 全部125張基礎卡、171筆含異圖資料，逐張文字與runtime對照見 [本輪逐卡複核](docs/bs8-text-runtime-review-2026-09-07.md)，操作與驗證分層見 [桌機／平板稽查](docs/bs8-desktop-tablet-audit-2026-09-07.md)。已修復攻擊付款隱藏手牌、一般／攻擊支援卡間距、059／067／072／111「最多」數量、076可略過Then、005／009／021傷害順序、028／029基礎卡號遺失技能及083異圖多出的每回合一次標記；另補051／052真實候選、069綠色卡牌回收與略過、120零手牌邊界及promotion測試完整隔離。經確認後已開放正式EXTRA：Standard／Open編輯器、相容JSON、本機與標準好友房共用全牌組驗證和建構，15筆含異圖可放入獨立六張額外牌組。
+
 本輪稽核續查至黃色BS8-047（仍有逐卡驗收缺口），依使用者最新要求以桌機與平板為主，手機模式暫緩。已修復來源已離開休息區仍繼續補HP、未翻開的補HP FLIP提前影響剩餘HP與公開數字、付款面板遮擋攻擊目標及卡牌詳情關閉按鈕溢位，並補清楚可選0張與技能能量不足提示。022／025的昏厥代價改走完整昏厥結算，先付款再依新狀態選目標；024異圖誤用025卡文已在正規化邊界修正。027攻擊後全體傷害已支援自選順序；039補上無登場候選時的操作指引，040修正強制棄牌來源卡名Unknown。既有手機局部修正保留；局部卡牌驗證、完整套件與正式多人驗收仍分層記錄。
 
 2026-09-05 全專案 UI/UX 與 BS8 全卡稽核進行中：已修復線上隱藏資訊、命令捷徑／洗牌種子、結束事件遺漏／未付款結算及部分 BS8 文字／付款／效果問題；付款中的支援卡改為可逐張點選，資訊視窗補鍵盤焦點與重新開始確認。依官方 v1.8 修正 BS8-011 的完整目標選擇代價、BS8-006 的可選 Then 與配對選擇，並修復低階 AI 的同方誤選。市售 TCG 的主要差距、修復狀態與未完成範圍見 [稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 和 [125 張逐卡矩陣](docs/bs8-full-audit-matrix-2026-09-05.md)。既有 contract verified 不等於卡文語意或完整對戰驗收。
@@ -18,9 +20,9 @@ BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆�
 
 BS7「Arena of Glory」已於 2026-08-22 完成正式 promote：官方英文卡表快照的 143 筆記錄、108 個基礎卡號與 35 個異圖／變體已納入 `data/cards/`，正式卡池共 1,244 筆。108 張基礎卡的 runtime／strict contract 已完成，主效果待轉接 0 張、額外能力待轉接 0 張、攻擊後 `Then` 23／23 已轉接；BS7 formal strict contract 143／143 verified，整體 `validate:cards` 1,244／1,244 且 registry consistent。BS7-039 與 BS7-082 的「對手全體餅乾受傷」使用 sequential 逐目標結算；Browser 專項會刻意先選第二張、再選第一張，逐張處理 HP、FLIP 與昏厥。BS7-097 依官方英文勘誤轉為對手下回合「受到的攻擊傷害 -1」，不再誤作降低自身攻擊力。`gain-hp`、登場 HP 補充或抽牌恰好耗盡最後一張牌時都會建立 pending Refresh；只有被中斷的該張登場餅乾會以明確的 `remainingHpSetup` 接續補 HP，之後才接續尚未補完的效果 HP，絕不藉 Refresh 回滿其他受傷餅乾；無合法回收 LV.1 餅乾時立即以 `refresh-unavailable` 判負。
 
-BS8「Land of Fire & Ruin, Realm of Apathy」已於 2026-08-31 完成正式 promotion：171 筆記錄、125 個基礎卡號（含 15 筆 `EXTRA`）已納入 `data/cards/`，正式卡池由 1,244 增至 1,415 種卡號；156 張非 EXTRA 可玩記錄通過 runtime 轉接，15 筆 EXTRA 保留在 registry 並由獨立 `ExtraDeckCard` staging 流程處理，不會混入 60 張 Standard 主牌組。EXTRA Deck Phase 0／1、六槽候選牌組編輯器、固定 seed Lv.1–Lv.5 staging AI、候選雙瀏覽器房與對手 EXTRA 遮罩均和 Standard 分離；牌組編輯器在 Standard 可篩選 BS7，BS8 主牌可由正式卡池搜尋，六槽 EXTRA 仍只在候選模式出現，並可在同一個主要牌組捲動區以實際卡面、卡號、張數與加減控制檢視，匯入／匯出以明確的 `candidateStaging.extraDeckEntries` JSON 相容格式保留，Standard importer 會拒絕此標記。戰場中玩家開啟自己的 EXTRA Deck 時，也會看到每張卡的實際卡圖、卡名與卡號；對手內容仍維持私密遮罩。BS8-005／069／090 的直接登場及 BS8-027／104 的 Awaken 覆蓋核心已有 TDD；localhost `card:`／`card-negative:` 的 BS8-005／027／069／090／104 都會維持對應卡片在獨立 EXTRA Deck，絕不放入手牌；BS8-009 的正向 fixture 以休息區 Cookie LV 總和 3 驗證每滿 3 LV 的加傷，另以總 LV 4／7 回歸測試確認 +1／+2 門檻。正式 strict audit 為 **171 verified／0 needs-review／0 blocked**；BS8-076 的強制「自身置牌庫底 → 抽 1 → 對手下一個 Active Phase 可選擇棄 0 或恰好 2 張以活躍目標」已補齊規則、UI、TDD 與兩條 Browser 分支。BS8-043 依已確認的戰鬥區兩格上限，讓來源 Fettuccine Cookie 佔一格、另一格的本回合從 Break 登場 LV.3 成為唯一合法目標；strict selector 不可退化為任選或全體。本輪並將 BS8-005 的 `card:`／`card-negative:` fixture 接到規則層 eligibility，EXTRA 區只在至少兩張自家餅乾本回合昏厥時高光提醒；BS8-008 Blocker 的紅色能量則由 modal 明確選擇支援卡，未完成支付前禁止確認。凡卡文 `Then, <can be used as {R}>` 均由支援區選擇並支付紅色能量，不自動把來源餅乾當作能量。詳見 [BS8 卡表盤點](docs/bs8-card-inventory.md)、[效果覆蓋盤點](docs/bs8-effect-coverage.md)、[規則裁決矩陣](docs/bs8-extra-deck-ruling-matrix.md)與 [EXTRA Deck 分階段方案](docs/bs8-extra-deck-plan.md)。
+BS8「Land of Fire & Ruin, Realm of Apathy」已於 2026-08-31 完成正式 promotion：171 筆記錄、125 個基礎卡號（含 15 筆 `EXTRA`）已納入 `data/cards/`，正式卡池由 1,244 增至 1,415 種卡號；156 張非 EXTRA 可玩記錄通過 runtime 轉接，15 筆 EXTRA 由獨立 `ExtraDeckCard` 處理；2026-09-07 已開放正式 Standard／Open 額外牌組，不會混入 60 張主牌組。EXTRA Deck Phase 0／1、六槽候選牌組編輯器、固定 seed Lv.1–Lv.5 staging AI、候選雙瀏覽器房與對手 EXTRA 遮罩均和 Standard 分離；牌組編輯器在 Standard 可篩選 BS7，BS8 主牌可由正式卡池搜尋，六槽 EXTRA 已在正式與候選編輯器各自提供，並可在同一個主要牌組捲動區以實際卡面、卡號、張數與加減控制檢視，正式匯入／匯出使用選填 `extraDeckEntries`；候選仍使用 `candidateStaging.extraDeckEntries`，Standard importer 拒絕候選標記與雙欄位混用。戰場中玩家開啟自己的 EXTRA Deck 時，也會看到每張卡的實際卡圖、卡名與卡號；對手內容仍維持私密遮罩。BS8-005／069／090 的直接登場及 BS8-027／104 的 Awaken 覆蓋核心已有 TDD；localhost `card:`／`card-negative:` 的 BS8-005／027／069／090／104 都會維持對應卡片在獨立 EXTRA Deck，絕不放入手牌；BS8-009 的正向 fixture 以休息區 Cookie LV 總和 3 驗證每滿 3 LV 的加傷，另以總 LV 4／7 回歸測試確認 +1／+2 門檻。正式 strict audit 為 **171 verified／0 needs-review／0 blocked**；BS8-076 的可選 Then「自身置牌庫底 → 抽 1 → 對手下一個 Active Phase 可選擇棄 0 或恰好 2 張以活躍目標」已補齊規則、UI、TDD 與兩條 Browser 分支。BS8-043 依已確認的戰鬥區兩格上限，讓來源 Fettuccine Cookie 佔一格、另一格的本回合從 Break 登場 LV.3 成為唯一合法目標；strict selector 不可退化為任選或全體。本輪並將 BS8-005 的 `card:`／`card-negative:` fixture 接到規則層 eligibility，EXTRA 區只在至少兩張自家餅乾本回合昏厥時高光提醒；BS8-008 Blocker 的紅色能量則由 modal 明確選擇支援卡，未完成支付前禁止確認。凡卡文 `Then, <can be used as {R}>` 均由支援區選擇並支付紅色能量，不自動把來源餅乾當作能量。詳見 [BS8 卡表盤點](docs/bs8-card-inventory.md)、[效果覆蓋盤點](docs/bs8-effect-coverage.md)、[規則裁決矩陣](docs/bs8-extra-deck-ruling-matrix.md)與 [EXTRA Deck 分階段方案](docs/bs8-extra-deck-plan.md)。
 
-正式卡池 Browser 已驗證通用主效果 146／146 正向、156／156 負向，54／54 張能力的獨立技能表面 A/B，以及 14 個 Then 的實際攻擊語意 A/B；EXTRA Deck 的卡面私密性與直接登場仍維持獨立 staging Browser gate。所有 BS8 正式來源 strict gate 已完成；後續官方更新仍須回到候選流程，完成同一套驗收後再 promotion。官方卡文的條件句、支付、目標與 Then 轉接另受 fail-closed contract 與 parser 防漏規範約束，不能以部分效果冒充完整支援。巢狀昏厥觸發的 after-damage 結算現在會保留外層 `pendingAbilityEffect`；BS8-011 → BS8-018 → BS1-006 的第二段目標不會再被 after-damage 佇列清掉，效果面板與規則狀態保持同步。
+正式卡池 Browser 已驗證通用主效果 146／146 正向、156／156 負向，54／54 張能力的獨立技能表面 A/B，以及 14 個 Then 的實際攻擊語意 A/B；EXTRA Deck 的逐卡條件另有局部 Browser gate，正式編輯器／開局與標準好友房接線證據見[正式EXTRA方案](docs/bs8-formal-extra-plan-2026-09-07.md)。所有 BS8 正式來源 strict gate 已完成；後續官方更新仍須回到候選流程，完成同一套驗收後再 promotion。官方卡文的條件句、支付、目標與 Then 轉接另受 fail-closed contract 與 parser 防漏規範約束，不能以部分效果冒充完整支援。巢狀昏厥觸發的 after-damage 結算現在會保留外層 `pendingAbilityEffect`；BS8-011 → BS8-018 → BS1-006 的第二段目標不會再被 after-damage 佇列清掉，效果面板與規則狀態保持同步。
 
 BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將所選餅乾最上方至多 1 張 HP 卡移回手牌，並保留可略過選擇與既有必要自身目標陷阱的相容行為。攻擊回應只有陷阱時會直接進入陷阱視窗；只有同時存在 Blocker／攻擊回應技能時才顯示通用回應選擇器，避免同一個攻擊宣告重複顯示兩層視窗。
 
@@ -109,6 +111,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- 2026-09-07：完成125張文字／runtime複核與雙尺寸局部操作稽查，171筆實圖／詳情各尺寸全部通過；正式15筆EXTRA已開放Standard／Open編輯器、JSON往返、本機及標準好友房。最新全套292檔／4,498項測試、build、scoped lint、AI種子1–20通過；全域lint仍有既有診斷檔3項unused錯誤。桌機／平板已從真實首頁匯入儲存，正常開局後069由不符條件到可登場，好友房雙方6張EXTRA真圖／私密遮罩也通過。詳見[本輪報告](docs/bs8-desktop-tablet-audit-2026-09-07.md)與[正式EXTRA方案及驗證](docs/bs8-formal-extra-plan-2026-09-07.md)，未宣稱125張全效果完整線上對局通過。
 
 - BS8-020／021：補明確HP條件提示、修復RR傷害後漏收額外R即裝備；Then待結算時本機／線上均禁止推進階段，道具提示不再誤標技能。020共12條、021共36條桌面／手機Browser通過；本批全套282檔4,328項、build、scoped lint與AI20場通過；專卡完整多人仍未測。
 - BS8-018／019追加修復：來源代價失效仍傷害／回收、未棄手牌仍回收已修正；24項專卡回歸、兩卡共32條桌面／手機昏厥與攻擊路徑通過。另補001／008／012／013／015／016共36條普通攻擊路徑。全套4,304項、build、scoped lint與AI20場通過；逐卡完整對局仍未測。稽查工具現在拒絕指定卡號未實際納入的空跑。
@@ -245,9 +249,11 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-依 [本輪全面稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 接續黃色BS8-051；先做桌機與平板，手機模式暫緩。黃色026–050已記錄本輪卡面與局部效果證據，專卡完整對局仍需補驗。023／024跨玩家順序已修，仍需擴充Refresh與專卡線上驗收；前序完整對局證據集中補齊，包含021完整裝備後攻擊Browser連鎖，不延後黃色初查。保留配對代價、昏厥來源代價及未翻開FLIP不影響HP的回歸。另需修復結束階段同時觸發排序、覆核舊系列付款文字差異，推進BS8全色／EXTRA完整對戰驗收。UI中期改善以新手直接開局、來源卡文連續顯示、付款與目標集中、平板身分與操作區可見為主。候選卡測試的Windows寫入失敗需獨立查核，優先確認共用registry寫入與測試隔離，不能以反覆重跑取代根因修復。
+[2026-09-07 桌機／平板稽查](docs/bs8-desktop-tablet-audit-2026-09-07.md)的逐卡局部重驗、異圖入口與完整測試已完成。156筆非EXTRA可用於正式Standard主牌組；15筆EXTRA已開放正式自訂牌組與線上入口，JSON、共用驗證與房間協定已同步。逐卡完整正式對局及線上覆蓋另列後續，手機維持本次範圍外。下列早期計畫與測試數為歷史背景，本輪狀態以上述稽查文件為準。
 
-依 [BS8 綠色驗證紀錄](docs/bs8-green-validation-2026-09-05.md) 與 [BS8 黃色驗證紀錄](docs/bs8-yellow-validation-2026-09-04.md) 保留後續逐卡線上／正式完整對戰覆蓋範圍。先前AI Browser回歸通過；最新完整測試有候選工具寫入失敗，狀態以上方本輪紀錄為準。局部 test-state、靜態 contract 與本機 Browser 不等同全色逐卡完整線上對戰通過。
+依 [本輪全面稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 接續黃色BS8-051；先做桌機與平板，手機模式暫緩。黃色026–050已記錄本輪卡面與局部效果證據，專卡完整對局仍需補驗。023／024跨玩家順序已修，仍需擴充Refresh與專卡線上驗收；前序完整對局證據集中補齊，包含021完整裝備後攻擊Browser連鎖，不延後黃色初查。保留配對代價、昏厥來源代價及未翻開FLIP不影響HP的回歸。另需修復結束階段同時觸發排序、覆核舊系列付款文字差異，推進BS8全色／EXTRA完整對戰驗收。UI中期改善以新手直接開局、來源卡文連續顯示、付款與目標集中、平板身分與操作區可見為主。候選卡測試曾有Windows寫入失敗；2026-09-07已完成輸出隔離，完整套件通過。
+
+依 [BS8 綠色驗證紀錄](docs/bs8-green-validation-2026-09-05.md) 與 [BS8 黃色驗證紀錄](docs/bs8-yellow-validation-2026-09-04.md) 保留後續逐卡線上／正式完整對戰覆蓋範圍。先前AI Browser回歸通過；最新完整測試已通過，候選工具隔離修復與驗證以上方本輪紀錄為準。局部 test-state、靜態 contract 與本機 Browser 不等同全色逐卡完整線上對戰通過。
 
 Lv.5 的 attack-tempo 修正完成後，完整 46 副 corpus、mirror＋輪替跨牌組、雙 seed／雙邊換位的 368 場 holdout（seed `1001`–`1002`）為 180 勝（48.9%，Wilson 95% CI 43.8%–54.0%，安全指標全 0），未達升格門檻，Lv.4 維持 champion。下一輪先用 replay attribution 比較 Lv.5／Lv.4 在低勝率樣本的公開回應、防守預留、可選支付、攻擊節奏與終局生存判斷，預先登錄不含牌組／顏色／卡號的通用假設與回歸 fixture，再用新的未見 seed 重跑全 corpus；seed `1001`–`1002` 不得再作為調參後 holdout。只有安全指標全為 0、勝率至少 52% 且 Wilson 95% CI 下界高於 50%，才由實驗 challenger 升格。任何新卡池先通過 `ai:audit:capabilities --strict`，再進逐卡規則／Browser 與 promote gate。
 Arena telemetry 已依 player view 分拆候選與 reference 指標；本輪觀測到起始牌組 RED／GREEN、BS3 Blue Sorbet、BS5 Green Open 與 BS6 Green Standard 各僅 1／8，不可據此寫特判，僅能作為後續 replay 歸因的抽樣入口。
@@ -277,7 +283,7 @@ BS1～BS7 與 P 卡的資料、契約、規則回歸及本機 Browser 稽核均�
 
 後續持續以專用 A/B test-state 稽核「支付代價後來源離場」的卡牌，確認終局、補位、OnPlay 與原效果續接都遵守同一套 pending decision 優先順序。
 
-持續以桌機、平板與手機 viewport 實測主選單的欄位比例、開發者工具收合與牌組統計可讀性；平板橫向戰場已正式套用 mockup 版面，後續維持 1164×777 與其他短高度桌面尺寸的可讀性回歸，並維持合法與不合法牌組錯誤提示的 DOM 狀態一致。正式 Standard 仍不開放 EXTRA 牌組；候選 staging 已接入獨立 `ExtraDeckCard`、`GameState.extraDeck` 與 Browser A/B，且 `card:BS8-005`／`card-negative:BS8-005` 會驗證登場條件、On Play 與攻擊後 Then；符合條件時 BattleRow 會高光 EXTRA 區並提供登場提醒，開啟玩家自己的 EXTRA Deck 會顯示卡圖、卡名與卡號，未符合時維持一般狀態。BS8-008 Blocker 的支付 UI 也已納入正向／負向 Browser 回歸。後續官方逐卡裁決或新卡更新時，仍須在此隔離流程完成規則、UI、匯入／匯出與線上遮罩驗收後，才評估是否擴充候選範圍。
+持續以桌機、平板與手機 viewport 實測主選單的欄位比例、開發者工具收合與牌組統計可讀性；平板橫向戰場已正式套用 mockup 版面，後續維持 1164×777 與其他短高度桌面尺寸的可讀性回歸，並維持合法與不合法牌組錯誤提示的 DOM 狀態一致。正式 Standard 已開放獨立 EXTRA 牌組，採現有禁限卡表；候選 staging 保留獨立入口，兩者共用獨立 `ExtraDeckCard`、`GameState.extraDeck` 與 Browser A/B，且 `card:BS8-005`／`card-negative:BS8-005` 會驗證登場條件、On Play 與攻擊後 Then；符合條件時 BattleRow 會高光 EXTRA 區並提供登場提醒，開啟玩家自己的 EXTRA Deck 會顯示卡圖、卡名與卡號，未符合時維持一般狀態。BS8-008 Blocker 的支付 UI 也已納入正向／負向 Browser 回歸。後續官方逐卡裁決或新卡更新時，仍須在此隔離流程完成規則、UI、匯入／匯出與線上遮罩驗收後，才評估是否擴充候選範圍。
 
 持續以正式卡池驗證 BS3 條件效果的成立／不成立 UI 路徑，優先維持規則層條件判定、合法目標候選與效果面板顯示的一致性。
 
@@ -334,7 +340,7 @@ npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
 npm run test:bs6:decks:browser # BS6 五色牌組主選單開局與每色 20 場 Browser AI 驗證
 npm run test:bs6:competitive:decks:browser # BS6 五色競技環境牌組 Browser AI 驗證
-npm run test:deck:browser    # 牌組編輯器 Standard 隔離、BS8 候選 EXTRA 加入、匯入／儲存與 RWD smoke test
+npm run test:deck:browser    # 牌組編輯器正式 EXTRA、候選隔離、匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
 npm run test:online:match:browser # 本機雙瀏覽器好友房猜拳、順位、依序調度、起始餅乾揭示、對戰動態、階段同步、拒絕提示、斷線與連線失敗驗證
@@ -376,6 +382,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-07 | 完成BS8全125張文字／runtime與桌機平板局部稽查、171筆實圖詳情；修復手牌／支援間距、候選／數量／Then／傷害順序／異圖與promotion測試隔離。4,498項測試通過，正式EXTRA編輯器／JSON／本機登場／標準好友房與私密遮罩已開放並驗證。 |
 | 2026-09-06 | BS8藍色076～100與紫色101～125逐卡語意核對及Browser流程完成；修復BS8-115／118漏掉的棄牌區張數條件並補回歸；BS8-069／090／104 EXTRA A/B通過，125列矩陣全數更新。攻擊能量支付維持緊湊堆疊排版。 |
 | 2026-09-05 | BS8綠色重驗及全專案UI/UX稽核，續查至黃色050並修復綠色059回手顏色限制；修復付款／昏厥代價、效果排序、線上資訊、FLIP、登場略過與空候選提示、棄牌來源及異圖資料。後續優先桌機／平板，手機暫緩；完整測試有候選卡工具寫入失敗，逐卡與完整對局界線見稽核報告。 |
 | 2026-09-04 | BS8黃色026～050（35筆含異圖）逐卡Browser A/B與選0重驗；修正成本、目標、Then續接、HP條件及公開效果紀錄，完整驗證邊界見黃色驗證文件。 |
@@ -469,6 +476,6 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 P-0XX 127 筆已完成 `127/127` Browser 路由載入；108 筆 effect-bearing 卡已完成通用流程稽核，26 張條件／時機卡已完成 `met`／`unmet` A/B Browser 稽核，結果為 `108 passed / 0 blocked / 0 failed`。這批資料已正式 promote 到 `data/cards/official-p-0xx-remaining.en.json`，card-check 與 P-0XX Browser 稽核腳本均改讀正式檔；原始來源 metadata 的 `promotion-ready` 保留作為匯入稽核證據，不代表檔案仍在候選區。
 
-牌組編輯器採 Master Duel 取向的 Braverse 全頁工作台：左側卡圖與數值摘要、中間依餅乾／FLIP／物品／陷阱／場景分區的主要牌組，以及右側卡池。合法性、賽制、卡池統計與 JSON 工具均收斂至頁首；卡池篩選預設收合，卡片能更早顯示。JSON 匯入使用輔助提示框，不影響工作台版面；額外牌組僅預留 BS8 區段，尚未改動主牌組規則或匯入格式。完整桌面、平板與窄版驗收詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md) 與 [設計 QA](design-qa.md)。
+牌組編輯器採 Master Duel 取向的 Braverse 全頁工作台：左側卡圖與數值摘要、中間依餅乾／FLIP／物品／陷阱／場景分區的主要牌組，以及右側卡池。合法性、賽制、卡池統計與 JSON 工具均收斂至頁首；卡池篩選預設收合，卡片能更早顯示。JSON 匯入使用輔助提示框，不影響工作台版面；額外牌組已開放正式 BS8，使用選填 extraDeckEntries JSON，主牌仍須60張。完整桌面、平板與窄版驗收詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md) 與 [設計 QA](design-qa.md)。
 
 已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。牌組編輯器在手機與窄平板由頁面本身承接垂直捲動，可到達主要牌組加減按鈕與卡池；Browser gate 另涵蓋 `622×1040`、`390×844` 與 `280×720`。下一步為 P-0XX 正式牌池持續執行回歸與實戰驗證；官方新增卡牌仍先以候選資料流程隔離處理。

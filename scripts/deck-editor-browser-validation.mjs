@@ -68,12 +68,15 @@ try {
   })
 
   const results = []
-  for (const viewport of [
+  const viewports = process.env.BRAVERSE_DESKTOP_TABLET_ONLY === '1'
+    ? [{ width: 1366, height: 768 }, { width: 1164, height: 777 }]
+    : [
     { width: 1366, height: 768 },
     { width: 622, height: 1040 },
     { width: 390, height: 844 },
     { width: 280, height: 720 },
-  ]) {
+  ]
+  for (const viewport of viewports) {
     const page = await browser.newPage({ viewport })
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
@@ -106,9 +109,21 @@ try {
     assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 7)
     assert.equal(
       await editor.locator('[aria-label="卡牌類型"] option[value="extra"]').count(),
-      0,
-      'Standard editor must keep EXTRA cards out of the card-type filter',
+      1,
+      'Standard editor must expose the formal EXTRA card-type filter',
     )
+    const standardType = editor.locator('[aria-label="卡牌類型"]')
+    await standardType.selectOption('extra')
+    const formalExtraCards = editor.locator('.deck-editor-page-pool-card-button')
+    assert.equal(await formalExtraCards.count(), 15)
+    await formalExtraCards.first().click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /1\s*\/\s*6/)
+    assert.equal((await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(), '0')
+    assert.equal(await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(), 0,
+      'Formal EXTRA must never be added to the main deck')
+    await editor.locator('.deck-editor-page-current-footer button').click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /0\s*\/\s*6/)
+    await standardType.selectOption('')
     const seriesSelect = editor.locator('[aria-label="卡牌系列"]')
     await seriesSelect.selectOption('BS6')
     const bs6PoolCards = editor.locator('.deck-editor-page-pool-card-button')
@@ -270,8 +285,8 @@ try {
       60,
     )
 
-    // EXTRA cards are selectable only through the explicitly labelled BS8
-    // candidate staging editor; they must never be added to the Standard deck.
+    // Candidate staging retains its separate five-card pool and EXTRA payload;
+    // neither editor may add EXTRA cards to the 60-card main deck.
     if (viewport.width === 1366) {
       const candidateEntryButton = page.locator('[data-testid="open-bs8-candidate-deck-editor"]')
       await candidateEntryButton.waitFor({ state: 'visible' })

@@ -52,7 +52,8 @@ describe('BS8 official EXTRA card adapter', () => {
       },
       skill: {
         trigger: 'on-play',
-        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
+          target: { side: 'opponent', min: 0, max: 2 } }],
       },
       attack: 3,
       attackEnergyCost: { red: 3 },
@@ -173,6 +174,7 @@ describe('BS8 official EXTRA card adapter', () => {
             {
               kind: 'trash-to-support',
               amount: 1,
+              cookieOnly: false,
               optional: true,
               energyColor: 'green',
               rested: false,
@@ -235,8 +237,8 @@ describe('BS8 official EXTRA card adapter', () => {
       status: 'converted',
       extraDeckCard: {
         attackEffects: [
-          { kind: 'damage-all', amount: 1, side: 'opponent' },
-          { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+          { kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+            target: { side: 'either', min: 0, max: 4 }, excludeSource: true },
         ],
       },
     })

@@ -18,7 +18,8 @@ const official = (id: string, suffix: string): GameCard => {
 const setup = (stageId: 'BS8-049' | 'BS8-050', initialHp: number, eligible = true) => {
   const base = createBattleState()
   const stage = official(stageId, 'stage')
-  const target = official(eligible ? 'BS8-026' : 'BS8-028', 'target')
+  // A non-LV3 Cookie without another Activate option isolates the Stage decision.
+  const target = official(eligible ? 'BS8-026' : 'BS8-040', 'target')
   if (target.type !== 'cookie') throw new Error('Expected a Cookie target')
   const supports = Array.from({ length: 3 }, (_, index) => official('BS8-037', `support-${index}`))
   const initial: GameState = {

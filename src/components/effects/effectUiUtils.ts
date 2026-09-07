@@ -1,4 +1,5 @@
 import type { CardEffect, CardSkill, EffectTargetSelector } from '../../game'
+import { energyColorLabel } from '../gameUiLabels'
 
 export const getSkillLabels = (
   skill: CardSkill,
@@ -91,7 +92,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `將${prefix}${color}支援區卡返回手牌。`
   }
   if (effect.kind === 'hand-to-support') {
-    return `${effect.optional ? '最多' : ''}將 ${effect.amount} 張手牌以${effect.rested ? '休息' : '活躍'}狀態放入支援區。`
+    const count = effect.optional ? `0～${effect.amount}` : `${effect.amount}`
+    const color = effect.energyColor ? energyColorLabel[effect.energyColor] : ''
+    const keyword = effect.keyword ? `具有 [${effect.keyword}] 的` : ''
+    return `點選 ${count} 張${keyword}${color}手牌，以${effect.rested ? '休息' : '活躍'}狀態放入支援區。${effect.optional ? '不選卡牌也可確認；' : ''}再次點選可取消選取。`
   }
   if (effect.kind === 'trash-to-battle') {
     return effect.optional
@@ -137,9 +141,10 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'optional-cost-attack') return effect.effectText
   if (effect.kind === 'trash-to-support') {
+    const label = effect.cookieOnly === false ? '卡牌' : '餅乾'
     return effect.optional
-      ? `從棄牌區選擇最多 ${effect.amount} 張符合條件的餅乾放入支援區。`
-      : `從棄牌區選擇 ${effect.amount} 張符合條件的餅乾放入支援區。`
+      ? `從棄牌區選擇最多 ${effect.amount} 張符合條件的${label}放入支援區。`
+      : `從棄牌區選擇 ${effect.amount} 張符合條件的${label}放入支援區。`
   }
   if (effect.kind === 'disable-block') {
     return '本回合對手不能發動 {bl}。'
@@ -148,7 +153,14 @@ export const describeEffect = (effect: CardEffect) => {
     return '本次戰鬥中對手不能發動陷阱。'
   }
   if (effect.kind === 'hp-to-trash') {
-    return `選擇 ${effect.amount} 張 HP 卡放入棄牌區。`
+    if (effect.amount === 0) return '不移除任何 HP 卡。'
+    if (effect.amountByTargetIndex) {
+      return `依點選順序選擇餅乾：${effect.amountByTargetIndex.map((amount, index) =>
+        `第 ${index + 1} 隻移除 ${amount} 張 HP`).join('、')}，將這些 HP 卡放入棄牌區。`
+    }
+    const side = effect.target.side === 'opponent' ? '對手' : effect.target.side === 'self' ? '我方' : '雙方'
+    const count = effect.target.min === effect.target.max ? `${effect.target.max}` : `最多 ${effect.target.max}`
+    return `選擇${side} ${count} 隻餅乾，將每隻 ${effect.amount} 張 HP 卡放入棄牌區。`
   }
   if (effect.kind === 'draw-up-to-then-discard') {
     return `最多抽 ${effect.max} 張牌，然後棄 ${effect.discardCount} 張。`

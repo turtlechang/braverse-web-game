@@ -7,6 +7,7 @@ import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import { OnlineBattleView } from './OnlineBattleView'
 import { applyGameCommand } from '../../game/commands'
 import { createCardCheckDemoState } from '../../game/demo'
+import { getEffectTargetCandidatesForEffect } from '../../game/effects'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -47,9 +48,21 @@ describe('OnlineBattleView resource inspection', () => {
     const card = game.players['player-one'].hand.find(card => card.id === 'BS8-021')!
     game = applyGameCommand(game, { kind: 'begin-play-item', playerId: 'player-one',
       instanceId: card.instanceId, paymentIds: ['support-pay-0', 'support-pay-1'] })
-    for (let step = 0; step < 2; step++) {
-      game = applyGameCommand(game, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    const pending = game.pendingAbilityEffect!
+    const targetIds = getEffectTargetCandidatesForEffect(game, {
+      sourcePlayerId: pending.sourcePlayerId, sourceInstanceId: pending.sourceInstanceId,
+    }, pending.effects[pending.effectIndex]).map(cookie => cookie.card.instanceId)
+    game = applyGameCommand(game, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds })
+    for (let step = 0; game.pendingBattle && step < 20; step++) {
+      expect(game.pendingOptionalCostAttack).toBeFalsy()
+      expect(game.pendingBattle.stage).toBe('damage')
+      game = applyGameCommand(game, { kind: 'resolve-next-damage',
+        playerId: game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId })
     }
+    expect(game.pendingBattle).toBeFalsy()
+    expect(game.players['player-two'].battleArea.map(cookie => cookie.hpCards.length)).toEqual([5, 4])
+    expect(game.pendingAbilityEffect?.effects[game.pendingAbilityEffect.effectIndex].kind).toBe('optional-cost-attack')
+    game = applyGameCommand(game, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
     expect(game.pendingOptionalCostAttack).toMatchObject({ resolution: 'ability' })
     const container = document.createElement('div')
     document.body.append(container)

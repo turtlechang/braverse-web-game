@@ -32,7 +32,7 @@ import type { OfficialCardRecord } from '../cards/types'
 import type {
   CustomDeck,
 } from './custom-deck'
-import { createDeckFromCustomDeck } from './custom-deck'
+import { createCustomDeckPlayerSetup } from './custom-deck'
 import {
   createBs8CandidateStagingPlayerSetup,
   isBs8CandidateStagingDeck,
@@ -225,6 +225,7 @@ export const parseTestStateConfig = (
       kind: 'bs8-extra-deck'
       cardNumber: Bs8ExtraDeckCardNumber
       conditionMet: boolean
+      orderedTargets?: boolean
     }
   | { kind: 'bs8-011-double-skill' }
   | { kind: 'bs8-011-faint-continuation'; faint: boolean }
@@ -410,6 +411,9 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs8-extra-deck:unmet') {
     return { kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: false }
+  }
+  if (testState === 'bs8-extra-deck:BS8-005:order') {
+    return { kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: true, orderedTargets: true }
   }
   const bs8ExtraDeckMatch = testState?.match(
     /^bs8-extra-deck:(BS8-(?:005|027|069|090|104)):(met|unmet)$/,
@@ -786,22 +790,18 @@ export const createDemoSetupGame = (
   const shuffle =
     seed === undefined ? defaultShuffle : createSeededShuffle(seed)
 
-  const playerDeck =
-    playerChoice === 'custom' && playerCustomDeck
-      ? createDeckFromCustomDeck(playerCustomDeck, 'player-one')
-      : DECK_CREATORS[builtInPlayerChoice]('player-one')
   const playerSetup =
-    playerChoice === 'custom' &&
-    playerCustomDeck &&
-    isBs8CandidateStagingDeck(playerCustomDeck)
+    playerChoice === 'custom' && playerCustomDeck
       ? {
-          ...createBs8CandidateStagingPlayerSetup(playerCustomDeck, 'player-one'),
+          ...(isBs8CandidateStagingDeck(playerCustomDeck)
+            ? createBs8CandidateStagingPlayerSetup(playerCustomDeck, 'player-one')
+            : createCustomDeckPlayerSetup(playerCustomDeck, 'player-one')),
           name: '玩家',
         }
       : {
           id: 'player-one' as const,
           name: '玩家',
-          deck: playerDeck,
+          deck: DECK_CREATORS[builtInPlayerChoice]('player-one'),
         }
 
   return createGame(
@@ -1023,6 +1023,7 @@ export const createBs8ExtraDeckDemoState = (
   conditionMet: boolean,
   cardNumber: Bs8ExtraDeckCardNumber = 'BS8-005',
   variantCardNumber: string = cardNumber,
+  orderedTargets = false,
 ): GameState => {
   if (cardNumber !== 'BS8-005') {
     return createBs8ExtraDeckScenarioState(cardNumber, conditionMet, variantCardNumber)
@@ -1040,6 +1041,11 @@ export const createBs8ExtraDeckDemoState = (
   }
   const usedP1 = new Set([p1Cookie.instanceId])
   const usedP2 = new Set([p2Cookie.instanceId])
+  const secondOpponent = orderedTargets
+    ? p2Deck.find(card => card.id === p2Cookie.id && card.instanceId !== p2Cookie.instanceId) as CookieCard | undefined
+    : undefined
+  if (orderedTargets && !secondOpponent) throw new Error('BS8-005 order fixture requires a second durable opponent')
+  if (secondOpponent) usedP2.add(secondOpponent.instanceId)
   const p1HpCards = p1Deck
     .filter((card) => !usedP1.has(card.instanceId))
     .slice(0, 3)
@@ -1059,6 +1065,10 @@ export const createBs8ExtraDeckDemoState = (
     .filter((card) => !usedP2.has(card.instanceId))
     .slice(0, 6)
   p2HpCards.forEach((card) => usedP2.add(card.instanceId))
+  const secondOpponentHp = secondOpponent
+    ? p2Deck.filter(card => !usedP2.has(card.instanceId)).slice(0, secondOpponent.hp)
+    : []
+  secondOpponentHp.forEach(card => usedP2.add(card.instanceId))
   const avatarSource = (bs8FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === variantCardNumber,
   )
@@ -1111,6 +1121,8 @@ export const createBs8ExtraDeckDemoState = (
             rested: false,
             battleEntryId: `${p2Cookie.instanceId}:battle:2`,
           },
+          ...(secondOpponent ? [{ card: secondOpponent, hpCards: secondOpponentHp, rested: false,
+            battleEntryId: `${secondOpponent.instanceId}:battle:3` }] : []),
         ],
       },
     },
@@ -1127,7 +1139,7 @@ export const createBs8ExtraDeckDemoState = (
       'player-two': 0,
     },
     skillUsesThisTurn: [],
-    nextBattleEntrySequence: 3,
+    nextBattleEntrySequence: orderedTargets ? 4 : 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
@@ -1204,17 +1216,15 @@ function createBs8ExtraDeckScenarioState(
   let opponentUpdate: Partial<PlayerState> = {}
 
   if (cardNumber === 'BS8-069') {
-    const opponentSupports = [
-      { card: testSupportCard('bs8-069-opponent-support-a', 'red'), rested: false },
-      { card: testSupportCard('bs8-069-opponent-support-b', 'yellow'), rested: false },
-    ]
+    const opponentSupports = Array.from({ length: conditionMet ? 5 : 3 }, (_, index) => ({
+      card: makeFormalCookie('BS8-070', `bs8-069-opponent-support-${index + 1}`),
+      rested: false,
+    }))
     playerUpdate = {
-      supportArea: conditionMet
-        ? []
-        : [
-            { card: testSupportCard('bs8-069-player-support-a', 'green'), rested: false },
-            { card: testSupportCard('bs8-069-player-support-b', 'green'), rested: false },
-          ],
+      supportArea: Array.from({ length: 3 }, (_, index) => ({
+        card: makeFormalCookie('BS8-070', `bs8-069-player-support-${index + 1}`),
+        rested: false,
+      })),
       discardPile: [testSupportCard('bs8-069-green-trash', 'green')],
     }
     opponentUpdate = { supportArea: opponentSupports }
@@ -1227,6 +1237,10 @@ function createBs8ExtraDeckScenarioState(
       'blue',
     )
     playerUpdate = {
+      supportArea: Array.from({ length: 3 }, (_, index) => ({
+        card: makeFormalCookie('BS8-091', `bs8-090-blue-support-${index + 1}`),
+        rested: false,
+      })),
       hand: Array.from({ length: conditionMet ? 2 : 3 }, (_, index) =>
         testSupportCard(`bs8-090-hand-${index + 1}`, 'blue'),
       ),
@@ -1244,7 +1258,12 @@ function createBs8ExtraDeckScenarioState(
           card: makeFormalCookie('BS8-026', `bs8-027-yellow-support-${index + 1}`),
           rested: false,
         })),
-      } : {}),
+      } : {
+        supportArea: Array.from({ length: 4 }, (_, index) => ({
+          card: makeFormalCookie('BS8-105', `bs8-104-purple-support-${index + 1}`),
+          rested: false,
+        })),
+      }),
       battleArea: [
         {
           ...cardCheckBattleEntry(
@@ -3663,7 +3682,7 @@ export const createCardCheckDemoState = (
     ...(card.id === 'BS8-031'
       ? [cardCheckOfficialCookie('BS8-030', 'BS8-031-trash-lv3')]
       : []),
-    ...(['BS8-113', 'BS8-117', 'BS8-120', 'BS8-125'].includes(card.id)
+    ...(['BS8-113', 'BS8-117', 'BS8-118', 'BS8-120', 'BS8-125'].includes(card.id)
       ? Array.from({ length: 7 }, (_, index) =>
           testSupportCard(`${card.id}-trash-threshold-${index + 1}`, 'purple'),
         )
@@ -4539,7 +4558,9 @@ export const createCardCheckDemoState = (
           }
         : null
     const faintSupportArea =
-      card.id === 'BS7-050'
+      card.id === 'BS8-051'
+        ? [{ card: cardCheckOfficialCookie('BS8-058', 'BS8-051-support-cookie'), rested: true }]
+        : card.id === 'BS7-050'
         ? [
             ...energySupports.map((c) => ({ card: c, rested: false })),
             {
@@ -5148,7 +5169,9 @@ export const createCardCheckDemoState = (
             ]
           : ownBreakArea
       const bs6091DiscardPile =
-        trashFillers
+        // BS8-115 needs at most five trash cards; the generic eight-card
+        // filler silently disabled its positive OnPlay Browser route.
+        card.id === 'BS8-115' ? trashFillers.slice(0, 5) : trashFillers
       const bs6091Hand =
         fromTrashOnPlay
           ? [handCookieFiller, ...handFillers]
@@ -5422,7 +5445,10 @@ export const createCardCheckDemoState = (
         ]
         : deckFiller('p1')
     const skillHand =
-      card.id === 'BS8-032'
+      card.id === 'BS8-052'
+        ? ['BS8-053', 'BS8-064', 'BS8-070', 'BS8-007'].map((number, index) =>
+            cardCheckOfficialCookie(number, `BS8-052-hand-${index + 1}`))
+      : card.id === 'BS8-032'
         ? [cardCheckOfficialCookie('BS8-035', 'BS8-032-hand-lv2'), ...handFillers]
       : card.id === 'BS8-034'
         ? [cardCheckOfficialCookie('BS8-037', 'BS8-034-hand-lv1'), ...handFillers]
@@ -5438,7 +5464,7 @@ export const createCardCheckDemoState = (
               ? [handCookieFiller, ...handFillers]
               : card.id === 'BS8-078'
                 ? [bs8BlueLevelTwoHandFixture, ...handFillers.slice(0, 2)]
-                : card.id === 'BS8-092'
+                : card.id === 'BS8-092' || card.id === 'BS8-120'
                   ? handFillers.slice(0, 1)
                   : handFillers
     const skillPlayerSupportArea =
@@ -5767,6 +5793,28 @@ export const createCardNegativeDemoState = (
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']
   const baseCardNumber = cardNumber.split('@')[0]
+  if (baseCardNumber === 'BS8-120') {
+    // The Activate cost is a hand discard, so resting support does not block it.
+    return updateDemoPlayer(state, 'player-one', { hand: [] })
+  }
+  if (baseCardNumber === 'BS8-115') {
+    // Cross the printed boundary while preserving the same deployable card.
+    return updateDemoPlayer(state, 'player-one', {
+      discardPile: [...player.discardPile, testSupportCard('BS8-115-negative-sixth-trash', 'purple')],
+    })
+  }
+  if (baseCardNumber === 'BS8-118') {
+    return updateDemoPlayer(state, 'player-one', { discardPile: player.discardPile.slice(0, 14) })
+  }
+  if (baseCardNumber === 'BS8-052') {
+    return updateDemoPlayer(state, 'player-two', { supportArea: state.players['player-two'].supportArea.slice(0, 1) })
+  }
+  if (baseCardNumber === 'BS8-051') {
+    // Keep the faint trigger and an open battle slot, but no support Cookie.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: [{ card: testSupportCard('BS8-051-negative-support-item', 'green'), rested: true }],
+    })
+  }
   if (baseCardNumber === 'BS8-012' || baseCardNumber === 'BS8-013' || baseCardNumber === 'BS8-016') {
     // Simulate an earlier effect moving the queued source out of Break.
     // Keep the later skill pending so B tests its unavailable source cost.

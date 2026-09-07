@@ -4,7 +4,7 @@ import type { CustomDeck } from '../../game'
 import {
   isBs8CandidateStagingDeck,
   validateBs8CandidateStagingDeck,
-  validateCustomDeck,
+  validateCustomDeckDefinition,
 } from '../../game'
 import { useOnlineMatch } from '../../hooks/useOnlineMatch'
 import { ONLINE_PLAYER_NAME_MAX_LENGTH } from '../../net/onlineProtocol'
@@ -29,9 +29,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
   const selectedDeckValidation = selectedDeck
     ? isBs8CandidateStagingDeck(selectedDeck)
       ? validateBs8CandidateStagingDeck(selectedDeck)
-      : validateCustomDeck(selectedDeck.entries, {
-          format: selectedDeck.format,
-        })
+      : validateCustomDeckDefinition(selectedDeck)
     : null
 
   const handleClose = () => {

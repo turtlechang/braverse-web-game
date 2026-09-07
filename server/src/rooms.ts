@@ -4,13 +4,13 @@ import {
   GameRuleError,
   applyGameCommand,
   createBs8CandidateStagingPlayerSetup,
-  createDeckFromCustomDeck,
+  createCustomDeckPlayerSetup,
   createGame,
   createSeededShuffle,
   isBs8CandidateStagingDeck,
   maskGameStateForViewer,
   validateBs8CandidateStagingDeck,
-  validateCustomDeck,
+  validateCustomDeckDefinition,
   type Bs8CandidateStagingDeck,
   type CustomDeck,
   type GameCard,
@@ -102,7 +102,7 @@ export class RoomStore {
   private validateDeckForEnvironment(deck: RoomDeck): void {
     const validation = isBs8CandidateStagingDeck(deck)
       ? validateBs8CandidateStagingDeck(deck)
-      : validateCustomDeck(deck.entries, { format: deck.format })
+      : validateCustomDeckDefinition(deck)
     if (!validation.isValid) {
       throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
     }
@@ -220,9 +220,8 @@ export class RoomStore {
         }
       }
       return {
-        id: slot.playerId,
+        ...createCustomDeckPlayerSetup(slot.deck, slot.playerId),
         name: slot.playerName,
-        deck: createDeckFromCustomDeck(slot.deck, slot.playerId),
       }
     }
 

@@ -5,6 +5,7 @@ import { analyzeOfficialCardBehavior } from './contracts/ledger'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
+  normalizeOfficialCardRecord,
 } from './official-card-adapter'
 import type { OfficialCardRecord } from './types'
 import {
@@ -16,12 +17,14 @@ import {
   getAttackEnergyCostForState,
   refreshDeck,
   resolveAttackEffect,
+  resolveNextDamage,
   resolveInspectDeck,
   resolveOptionalCostAttack,
   type CookieCard,
   type GameCard,
 } from '../game'
 import { createCardCheckDemoState } from '../game/demo'
+import { getCardPoolEntry } from '../game/card-pool'
 
 const formalPath = resolve(
   process.cwd(),
@@ -53,6 +56,20 @@ const convertedCookie = (cardNumber: string): CookieCard => {
 }
 
 describe('BS8 strict contracts: deterministic first batch', () => {
+  it.each(['BS8-067', 'BS8-111'])('%s preserves every optional count in its formal adapter', cardNumber => {
+    const source = convertedCookie(cardNumber)
+    const choice = cardNumber === 'BS8-067' ? source.attackEffects?.[0] : source.skill?.effects[0]
+    if (choice?.kind !== 'choose-one') throw new Error('Expected optional count choice')
+    const max = cardNumber === 'BS8-067' ? 1 : 4
+    expect(choice.modes.map(mode => mode.effects[0])).toEqual(
+      Array.from({ length: max + 1 }, (_, amount) => cardNumber === 'BS8-067'
+        ? { kind: 'deck-to-support', amount, rested: false, condition: { kind: 'support-count-less-than-opponent', difference: 1 } }
+        : { kind: 'deck-to-trash', amount, side: 'self' }),
+    )
+    if (cardNumber === 'BS8-111') expect(source.skill?.cost.discardHand).toBe(1)
+    expect(analyzeOfficialCardBehavior(record(cardNumber)).contract.status).toBe('verified')
+  })
+
   it('audits EXTRA cards through their isolated adapter, never through the main-deck adapter', () => {
     for (const cardNumber of [
       'BS8-005',
@@ -97,11 +114,12 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       },
       skill: {
         trigger: 'on-play',
-        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
+          target: { side: 'opponent', min: 0, max: 2 } }],
       },
       attackEffects: [
-        { kind: 'damage-all', amount: 1, side: 'opponent' },
-        { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+        { kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+          target: { side: 'either', min: 0, max: 4 }, excludeSource: true },
       ],
     })
     expect(analyzeOfficialCardBehavior(record('BS8-005')).contract.status).toBe(
@@ -459,13 +477,9 @@ describe('BS8 strict contracts: deterministic first batch', () => {
         {
           kind: 'damage-all',
           amount: 1,
-          side: 'self',
-          excludeCardName: 'Burning Spice Cookie',
-        },
-        {
-          kind: 'damage-all',
-          amount: 1,
-          side: 'opponent',
+          side: 'either',
+          sequential: true,
+          target: { side: 'either', min: 0, max: 4 },
           excludeCardName: 'Burning Spice Cookie',
         },
         {
@@ -535,32 +549,30 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       sourceInstanceId: source.instanceId,
       sourceCardName: source.name,
     }
-    const afterSelfDamage = executeCardEffect(state, context, source.item!.effects[0], [])
+    let afterDamage = executeCardEffect(state, context, source.item!.effects[0], ['opponent', 'ally'])
+    for (let step = 0; step < 10 && afterDamage.pendingBattle?.effectDamageSequence; step++) {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+    expect(afterDamage.pendingBattle?.effectDamageSequence).toBeUndefined()
     expect(
-      afterSelfDamage.players['player-one'].battleArea.some(
+      afterDamage.players['player-one'].battleArea.some(
         (cookie) => cookie.card.instanceId === 'burning-spice',
       ),
     ).toBe(true)
     expect(
-      afterSelfDamage.players['player-one'].battleArea.find(
+      afterDamage.players['player-one'].battleArea.find(
         (cookie) => cookie.card.instanceId === 'ally',
       )?.hpCards,
     ).toHaveLength(1)
 
-    const afterOpponentDamage = executeCardEffect(
-      afterSelfDamage,
-      context,
-      source.item!.effects[1],
-      [],
-    )
-    expect(afterOpponentDamage.players['player-two'].battleArea[0]?.hpCards).toHaveLength(1)
+    expect(afterDamage.players['player-two'].battleArea[0]?.hpCards).toHaveLength(1)
 
     // This isolated assertion checks equipment/trap-lock semantics. The real
     // paid Item chain is covered by bs8-021-equip-payment.test.ts.
-    const then = source.item!.effects[2]
+    const then = source.item!.effects[1]
     if (then.kind !== 'optional-cost-attack') throw new Error('Missing optional equipment payment')
     const equipped = executeCardEffect(
-      afterOpponentDamage,
+      afterDamage,
       context,
       then.effects[0],
       ['burning-spice'],
@@ -597,7 +609,7 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     )
   })
 
-  it('BS8-076 must bottom-deck itself, draw, then let the selected Cookie pay exactly two cards to become active', () => {
+  it('BS8-076 may skip Then or bottom-deck itself and draw before the opponent Active Phase choice', () => {
     const icicleYeti = convertedCookie('BS8-076')
     const opponent = convertedCookie('BS8-006')
     const energyCard = (instanceId: string): GameCard => ({
@@ -611,7 +623,6 @@ describe('BS8 strict contracts: deterministic first batch', () => {
     expect(icicleYeti.attackEffects).toEqual([
       {
         kind: 'optional-cost-attack',
-        mandatory: true,
         cost: { energy: {}, discardHand: 0, selfToDeckBottom: true },
         effects: [
           { kind: 'draw', amount: 1 },
@@ -680,22 +691,26 @@ describe('BS8 strict contracts: deterministic first batch', () => {
         attackEffectIndex: 0,
       },
     }
-    const awaitingMandatoryCost = resolveAttackEffect(
+    const awaitingOptionalCost = resolveAttackEffect(
       attackEffectState,
       'player-one',
       [],
     )
 
-    expect(awaitingMandatoryCost.pendingOptionalCostAttack).toMatchObject({
-      mandatory: true,
+    expect(awaitingOptionalCost.pendingOptionalCostAttack).toMatchObject({
       cost: { selfToDeckBottom: true },
     })
-    expect(() =>
-      resolveOptionalCostAttack(awaitingMandatoryCost, 'player-one', 'skip'),
-    ).toThrow('必須支付')
+    expect(awaitingOptionalCost.pendingOptionalCostAttack?.mandatory).not.toBe(true)
+    const skipped = resolveOptionalCostAttack(awaitingOptionalCost, 'player-one', 'skip')
+    expect(skipped.pendingOptionalCostAttack).toBeNull()
+    expect(skipped.players['player-one'].battleArea).toEqual(awaitingOptionalCost.players['player-one'].battleArea)
+    expect(skipped.players['player-one'].hand).toEqual(awaitingOptionalCost.players['player-one'].hand)
+    expect(skipped.players['player-one'].deck).toEqual(awaitingOptionalCost.players['player-one'].deck)
+    expect(skipped.players['player-one'].supportArea).toEqual(awaitingOptionalCost.players['player-one'].supportArea)
+    expect(skipped.conditionalCookieActivePreventions).toBeUndefined()
 
     const resolvedAttack = resolveOptionalCostAttack(
-      awaitingMandatoryCost,
+      awaitingOptionalCost,
       'player-one',
       'pay',
       [],
@@ -948,6 +963,31 @@ describe('BS8 strict contracts: deterministic first batch', () => {
         'verified',
       )
     }
+  })
+
+  it.each(['BS8-028', 'BS8-029'])('%s canonical alias retains the variant skill, payment and condition', cardNumber => {
+    const alias = getCardPoolEntry(cardNumber)
+    if (!alias) throw new Error(`Missing canonical alias ${cardNumber}`)
+    expect(alias.cardNumber).toBe(cardNumber)
+    const original = structuredClone(alias)
+    const result = convertOfficialCardToGameCard(alias)
+    if (result.status !== 'converted') throw new Error(`Cannot convert ${cardNumber}`)
+    const variant = convertedCookie(`${cardNumber}@1`)
+    if (result.gameCard.type !== 'cookie') throw new Error('Expected canonical Cookie')
+    expect(result.gameCard.skill).toBeDefined()
+    expect(result.gameCard.skill).toEqual(variant.skill)
+    expect(result.gameCard.attackEnergyCost).toEqual(variant.attackEnergyCost)
+    expect(result.gameCard.attackCost).toBe(variant.attackCost)
+    expect(result.gameCard.flip).toBeUndefined()
+    const audit = analyzeOfficialCardBehavior(alias)
+    expect(audit.contract.status).toBe('verified')
+    expect(audit.errors).toEqual([])
+    expect(audit.checks).toEqual(analyzeOfficialCardBehavior(record(`${cardNumber}@1`)).checks)
+    expect(alias).toEqual(original)
+    const normalized = normalizeOfficialCardRecord(alias)
+    expect(normalizeOfficialCardRecord(normalized)).toEqual(normalized)
+    const unknownText = { ...alias, attackText: 'Unrecognized replacement text' }
+    expect(normalizeOfficialCardRecord(unknownText)).toEqual(unknownText)
   })
 
   it('repairs the two merged Cheesebird records without treating their skills as FLIP text', () => {
@@ -1211,14 +1251,16 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       cost: { energy: { green: 2 }, discardHand: 0 },
       effects: [
         {
-          kind: 'inspect-deck',
-          lookCount: 2,
-          pickCount: 1,
-          restDestination: 'support-rested',
-          pickDestination: 'support',
-          pickSupportRested: false,
-          optionalPick: true,
+          kind: 'choose-one',
           condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+          modes: [0, 1, 2].map((lookCount) => ({
+            effects: lookCount === 0 ? [] : [{
+              kind: 'inspect-deck', lookCount, pickCount: 1,
+              restDestination: 'support-rested', pickDestination: 'support',
+              pickSupportRested: false, optionalPick: true,
+              condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+            }],
+          })),
         },
         {
           kind: 'equip-source',
@@ -1260,10 +1302,12 @@ describe('BS8 strict contracts: deterministic first batch', () => {
       sourceInstanceId: source.instanceId,
       sourceCardName: source.name,
     }
+    const revealChoice = source.item!.effects[0]
+    if (revealChoice.kind !== 'choose-one') throw new Error('Expected reveal count choice')
     const inspect = executeCardEffect(
       state,
       context,
-      source.item!.effects[0],
+      revealChoice.modes[2].effects[0],
       [],
     )
     const afterReveal = resolveInspectDeck(

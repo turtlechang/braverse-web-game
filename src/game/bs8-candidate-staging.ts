@@ -359,6 +359,7 @@ export const validateBs8CandidateStagingDeck = (
   )
   const extra = validateExtraDeck(cards)
   const errors = [...main.errors, ...materializeErrors, ...extra.errors]
+  if (deck.extraDeckEntries !== undefined) errors.push('正式 EXTRA 與候選驗收 EXTRA 不可同時指定。')
   const isValid = errors.length === 0
 
   return {

@@ -125,13 +125,13 @@ describe('official card adapter', () => {
       hp: 4,
       skill: { name: null, text: null },
       attackText:
-        '{sk} Freezing Aura\n\n【On Play】 【Once Per Turn】 <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.\n\n<{B}{B}{B}> I will freeze your very breath! {da} 3\nThen, you can draw cards from your deck until there are 3 cards in your hand.',
+        '{sk} Freezing Aura\n\n【On Play】 <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.\n\n<{B}{B}{B}> I will freeze your very breath! {da} 3\nThen, you can draw cards from your deck until there are 3 cards in your hand.',
     })
 
     const normalized = normalizeOfficialCardRecord(source)
     expect(source.skill.text).toBeNull()
     expect(normalized.skill.text).toBe(
-      '{ap} {t1} <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.',
+      '{ap} <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.',
     )
     expect(normalized.attackText).toContain('<{B}{B}{B}>')
 
@@ -141,7 +141,7 @@ describe('official card adapter', () => {
       gameCard: {
         skill: {
           trigger: 'on-play',
-          oncePerTurn: true,
+          oncePerTurn: false,
           cost: { energy: { blue: 1 } },
           effects: [{
             kind: 'prevent-cookie-active-next-phase',

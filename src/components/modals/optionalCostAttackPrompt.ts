@@ -29,7 +29,7 @@ export interface OptionalCostAttackPromptData {
   effectText: string
   /** `ability` 代表技能 Then 的可選效果，而非攻擊後續效果。 */
   resolution?: 'attack' | 'ability'
-  /** BS8-076：沿用攻擊後代價面板，但不能略過。 */
+  /** 僅供明確規定不能略過的代價；一般 Then 代價維持可選。 */
   mandatory: boolean
   discardHandCost: number
   discardHandCandidates: { card: GameCard; instanceId: string }[]

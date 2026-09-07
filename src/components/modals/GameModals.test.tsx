@@ -771,6 +771,20 @@ describe('AttackResponseSkillModal', () => {
 })
 
 describe('FaintEffectResponseModal', () => {
+  it('keeps the support-zone label when no Cookie is available', () => {
+    const markup = renderToStaticMarkup(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={1}
+        selectedTargetCount={0}
+        candidateLabel="自己的支援區餅乾"
+        onConfirm={() => undefined}
+      />,
+    )
+    expect(markup).toContain('可選擇最多 1 張自己的支援區餅乾')
+    expect(markup).not.toContain('對手餅乾')
+  })
   const aloeCard: CookieCard = {
     id: 'BS2-040',
     instanceId: 'test-aloe',

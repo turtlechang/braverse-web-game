@@ -2540,6 +2540,21 @@ const applyPlayerActionCommand = (
     case 'resolve-choose-one': {
       const pending = state.pendingAbilityEffect
       if (!pending) {
+        const battle = state.pendingBattle
+        if (battle?.stage === 'attack-effect' &&
+            battle.attackEffects[battle.attackEffectIndex]?.kind === 'choose-one') {
+          if (battle.attackerPlayerId !== command.playerId) {
+            throw new GameRuleError('不是目前需要選擇項目的玩家。')
+          }
+          // 攻擊 Then 的佇列屬於 pendingBattle，不能只展開本機面板。
+          return {
+            ...state,
+            pendingBattle: {
+              ...battle,
+              attackEffects: expandChooseOne(battle.attackEffects, battle.attackEffectIndex, command.modeIndex),
+            },
+          }
+        }
         throw new GameRuleError('目前沒有待處理的效果。')
       }
       if (pending.playerId !== command.playerId) {

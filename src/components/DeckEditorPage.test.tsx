@@ -7,10 +7,126 @@ import { DeckEditorPage } from './DeckEditorPage'
 import { getCardPoolEntry } from '../game/card-pool'
 import { OFFICIAL_RED_STARTER_DECK } from '../game/starter-deck'
 import { getCardAttackPower } from '../hooks/useDeckEditor'
+import { loadCustomDecks, type CustomDeck } from '../game/custom-deck'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('DeckEditorPage', () => {
+  it('only enables the formal EXTRA detail minus button for the selected stored illustration', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const deck: CustomDeck = {
+      id: 'exact-extra-removal', name: 'EXTRA illustrations', format: 'standard',
+      entries: OFFICIAL_RED_STARTER_DECK,
+      extraDeckEntries: [{ cardNumber: 'BS8-005', count: 4 }],
+      createdAt: '', updatedAt: '',
+    }
+    try {
+      await act(() => root.render(<DeckEditorPage initialDeck={deck} onSave={vi.fn()} onClose={vi.fn()} />))
+      await act(() => container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card-select[aria-label^="查看 BS8-005@1 "]')!.click())
+      const minus = container.querySelector<HTMLButtonElement>('[aria-label="從額外牌組移除一張"]')
+      expect(minus).not.toBeNull()
+      expect(minus!.disabled).toBe(true)
+      expect(container.querySelector<HTMLButtonElement>('[aria-label="加入一張到額外牌組"]')!.disabled).toBe(true)
+      await act(() => minus!.click())
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('4 / 6 張')
+      await act(() => container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card-select[aria-label^="查看 BS8-005 "]')!.click())
+      expect(minus!.disabled).toBe(false)
+      await act(() => minus!.click())
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('3 / 6 張')
+    } finally { await act(() => root.unmount()) }
+  })
+
+  it('keeps formal EXTRA separate through add limits, save, reopen, export, import and dirty tracking', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const clipboardWrite = vi.fn().mockResolvedValue(undefined)
+    const previousClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    Object.defineProperty(navigator, 'clipboard', {configurable:true,value:{writeText:clipboardWrite}})
+    const deck: CustomDeck = { id:'formal-extra-ui',name:'Formal EXTRA',entries:OFFICIAL_RED_STARTER_DECK,format:'standard',createdAt:'',updatedAt:'' }
+    const click = async (selector: string) => {
+      const button = container.querySelector<HTMLButtonElement>(selector)
+      expect(button).not.toBeNull()
+      await act(() => button!.click())
+    }
+    const change = async (selector: string, value: string) => {
+      const element = container.querySelector<HTMLSelectElement | HTMLTextAreaElement>(selector)!
+      const prototype = element.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLTextAreaElement.prototype
+      await act(() => {
+        Object.getOwnPropertyDescriptor(prototype, 'value')!.set!.call(element,value)
+        element.dispatchEvent(new Event(element.tagName === 'SELECT' ? 'change' : 'input',{bubbles:true}))
+      })
+    }
+    try {
+      await act(() => root.render(<DeckEditorPage initialDeck={deck} onSave={onSave} onClose={onClose} />))
+      await click('[data-testid="deck-editor-page-back"]')
+      expect(confirm).not.toHaveBeenCalled()
+      await click('[data-testid="deck-editor-filter-toggle"]')
+      await change('[aria-label="卡牌類型"]','extra')
+      expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(15)
+      await click('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-005@1 "]) .deck-editor-page-pool-card-button')
+      await click('[data-testid="deck-editor-page-back"]')
+      expect(confirm).toHaveBeenCalledTimes(1)
+      for (let index=0;index<3;index++) await click('[data-testid="formal-extra-add-BS8-005@1"]')
+      expect(container.querySelector<HTMLButtonElement>('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-005 "]) .deck-editor-page-pool-card-button')?.disabled).toBe(true)
+      await click('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-069 "]) .deck-editor-page-pool-card-button')
+      expect(container.querySelector<HTMLButtonElement>('[data-testid="formal-extra-add-BS8-069"]')?.disabled).toBe(true)
+      await click('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-027 "]) .deck-editor-page-pool-card-button')
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('6 / 6 張')
+      expect(container.querySelectorAll('.deck-editor-page-pool-card-button:not(:disabled)')).toHaveLength(0)
+      expect(container.querySelector('.deck-editor-page-counter strong')?.textContent).toBe('60')
+      await click('[data-testid="deck-editor-page-save"]')
+      const saved: CustomDeck = onSave.mock.calls[0][0]
+      expect(saved.extraDeckEntries).toEqual([{cardNumber:'BS8-005@1',count:4},{cardNumber:'BS8-069',count:1},{cardNumber:'BS8-027',count:1}])
+      expect(saved.candidateStaging).toBeUndefined()
+      expect(loadCustomDecks().find(entry=>entry.id===deck.id)?.extraDeckEntries).toEqual(saved.extraDeckEntries)
+      await act(() => root.render(<DeckEditorPage key="reopened" initialDeck={saved} onSave={onSave} onClose={onClose} />))
+      await click('[data-testid="deck-editor-page-back"]')
+      expect(confirm).toHaveBeenCalledTimes(1)
+      await click('.deck-editor-page-io button:first-child')
+      const exported = clipboardWrite.mock.calls[0][0]
+      expect(JSON.parse(exported).extraDeckEntries).toEqual(saved.extraDeckEntries)
+      await click('.deck-editor-page-io button:nth-child(2)')
+      await change('[aria-label="牌組 JSON"]',exported)
+      await click('[data-testid="deck-editor-import-modal"] button:last-child')
+      expect(container.querySelector('[data-testid="deck-editor-import-modal"]')).toBeNull()
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('6 / 6 張')
+      await click('[data-testid="deck-editor-extra-card-BS8-069"] .deck-editor-page-deck-card-controls button:first-of-type')
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('5 / 6 張')
+    } finally {
+      confirm.mockRestore()
+      if (previousClipboard) Object.defineProperty(navigator,'clipboard',previousClipboard)
+      else Reflect.deleteProperty(navigator,'clipboard')
+      await act(() => root.unmount())
+    }
+  })
+
+  it('applies format restrictions to formal EXTRA and rejects mixed candidate imports', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const deck: CustomDeck = {id:'formal-open-extra',name:'Open EXTRA',format:'open',entries:OFFICIAL_RED_STARTER_DECK,extraDeckEntries:[{cardNumber:'BS8-069',count:2}],createdAt:'',updatedAt:''}
+    try {
+      await act(() => root.render(<DeckEditorPage initialDeck={deck} onSave={vi.fn()} onClose={vi.fn()} />))
+      expect(container.querySelector('.deck-editor-page-header-validation .is-valid')).not.toBeNull()
+      const select = container.querySelector<HTMLSelectElement>('[data-testid="deck-format-select"]')!
+      await act(() => {select.value='standard';select.dispatchEvent(new Event('change',{bubbles:true}))})
+      expect(container.querySelector('.deck-editor-page-header-validation .is-valid')).toBeNull()
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain('BS8-069')
+      await act(() => container.querySelector<HTMLButtonElement>('.deck-editor-page-io button:nth-child(2)')!.click())
+      const textarea = container.querySelector<HTMLTextAreaElement>('[aria-label="牌組 JSON"]')!
+      await act(() => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')!.set!.call(textarea,JSON.stringify({...deck,candidateStaging:{kind:'bs8-candidate-staging',extraDeckEntries:[{cardNumber:'BS8-005',count:1}]}}))
+        textarea.dispatchEvent(new Event('input',{bubbles:true}))
+      })
+      await act(() => container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-import-modal"] button:last-child')!.click())
+      expect(container.querySelector('[data-testid="deck-editor-import-modal"]')).not.toBeNull()
+      expect(container.querySelector('[data-testid="deck-editor-extra-count"]')?.textContent).toBe('2 / 6 張')
+    } finally { await act(() => root.unmount()) }
+  })
+
   it('renders the deck editor as a full page instead of a modal', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
@@ -340,7 +456,7 @@ describe('DeckEditorPage', () => {
     const bs8CardNumbers = Array.from(
       container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
     ).map((button) => button.title)
-    expect(bs8CardNumbers).toHaveLength(156)
+    expect(bs8CardNumbers).toHaveLength(171)
     expect(bs8CardNumbers.every((cardNumber) => cardNumber.startsWith('BS8-'))).toBe(true)
 
     await act(() => root.unmount())
@@ -359,7 +475,7 @@ describe('DeckEditorPage', () => {
     expect(
       Array.from(standardSeries!.options).find((option) => option.value === 'BS8')?.textContent,
     ).toBe('BS8')
-    expect(standardContainer.textContent).toContain('BS8 候選 EXTRA 驗收')
+    expect(standardContainer.textContent).toContain('正式 EXTRA')
     await act(() => standardRoot.unmount())
 
     const candidateContainer = document.createElement('div')
@@ -390,7 +506,7 @@ describe('DeckEditorPage', () => {
     await act(() => standardToggle!.click())
     const standardType = standardContainer.querySelector<HTMLSelectElement>('[aria-label="卡牌類型"]')
     expect(standardType).toBeTruthy()
-    expect(Array.from(standardType!.options).some((option) => option.value === 'extra')).toBe(false)
+    expect(Array.from(standardType!.options).some((option) => option.value === 'extra')).toBe(true)
     const standardSearch = standardContainer.querySelector<HTMLInputElement>('[data-testid="deck-editor-search"]')
     const inputSetter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype,
@@ -400,7 +516,7 @@ describe('DeckEditorPage', () => {
       inputSetter.call(standardSearch, 'BS8-005')
       standardSearch!.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    expect(standardContainer.querySelector('.deck-editor-page-pool-card-button')).toBeNull()
+    expect(standardContainer.querySelector('.deck-editor-page-pool-card-button')).not.toBeNull()
     await act(() => standardRoot.unmount())
 
     const container = document.createElement('div')

@@ -2100,24 +2100,25 @@ export const executeCardEffect = (
 
   if (effect.kind === 'trash-to-support') {
     const player = state.players[context.sourcePlayerId]
-    const cookieCandidates = getTrashToSupportCandidates(state, context, effect)
+    const candidates = getTrashToSupportCandidates(state, context, effect)
+    const label = effect.cookieOnly === false ? '卡牌' : '餅乾'
     const uniqueIds = [...new Set(selectedTargetIds)]
     const min = effect.optional ? 0 : effect.amount
     if (uniqueIds.length < min || uniqueIds.length > effect.amount) {
       throw new GameRuleError(
         effect.optional
-          ? `最多選擇 ${effect.amount} 張棄牌區餅乾。`
-          : `必須選擇 ${effect.amount} 張棄牌區餅乾。`,
+          ? `最多選擇 ${effect.amount} 張棄牌區${label}。`
+          : `必須選擇 ${effect.amount} 張棄牌區${label}。`,
       )
     }
     const selected = uniqueIds.map((id) =>
-      cookieCandidates.find((card) => card.instanceId === id),
+      candidates.find((card) => card.instanceId === id),
     )
     if (selected.some((card) => !card)) {
-      throw new GameRuleError('選擇的餅乾不在棄牌區。')
+      throw new GameRuleError(`選擇的${label}不是合法的棄牌區候選。`)
     }
     const selectedIds = new Set(uniqueIds)
-    const cookies = selected as CookieCard[]
+    const cards = selected as GameCard[]
     const updated = updatePlayer(state, {
       ...player,
       discardPile: player.discardPile.filter(
@@ -2125,7 +2126,7 @@ export const executeCardEffect = (
       ),
       supportArea: [
         ...player.supportArea,
-        ...cookies.map((card) => ({
+        ...cards.map((card) => ({
           card,
           rested: effect.rested ?? false,
         })),
@@ -3113,17 +3114,29 @@ export const executeCardEffect = (
       effect.target,
       selectedTargetIds,
     )
+    const amounts = effect.amountByTargetIndex
+    if (
+      !Number.isInteger(effect.amount) || effect.amount < 0 ||
+      (amounts && (
+        amounts.length !== targets.length ||
+        amounts.some((amount) => !Number.isInteger(amount) || amount < 0 || amount > effect.amount)
+      ))
+    ) {
+      throw new GameRuleError('HP 移除數量必須符合每個已選目標的順序與上限。')
+    }
     if (targets.length === 0) {
       return { ...state }
     }
     if (targets.length > 1) {
       let nextState = state
-      for (const target of targets) {
+      for (const [index, target] of targets.entries()) {
         nextState = executeCardEffect(
           nextState,
           context,
           {
             ...effect,
+            amount: amounts?.[index] ?? effect.amount,
+            amountByTargetIndex: undefined,
             target: { ...effect.target, min: 1, max: 1 },
           },
           [target.card.instanceId],
@@ -3134,6 +3147,10 @@ export const executeCardEffect = (
       return nextState
     }
     const target = targets[0]
+    const amount = amounts?.[0] ?? effect.amount
+    // slice(-0) selects the entire HP pile. Choosing zero must not move cards
+    // or trigger fainting, HP-reduction listeners, or replacements.
+    if (amount === 0) return { ...state }
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const player = state.players[targetPlayerId]
     const targetIndex = player.battleArea.findIndex(
@@ -3149,11 +3166,12 @@ export const executeCardEffect = (
     const protectedFromKnockout =
       state.pendingBattle?.preventKnockoutTargetIds.includes(
         target.card.instanceId,
-      ) && target.hpCards.length <= effect.amount
+      ) && target.hpCards.length <= amount
     if (protectedFromKnockout) {
       return { ...state }
     }
-    const removeCount = Math.min(effect.amount, target.hpCards.length)
+    const removeCount = Math.min(amount, target.hpCards.length)
+    if (removeCount === 0) return { ...state }
     const removedHpCards = target.hpCards.slice(-removeCount)
     const remainingHpCards = target.hpCards.slice(
       0,

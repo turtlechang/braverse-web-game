@@ -583,24 +583,24 @@
 .card-face.support-card {
   position: absolute;
   top: 50%;
-  left: calc(var(--support-index, 0) * 28px + 10px);
+  left: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 10px);
   flex: none;
   transform: translateY(-50%);
   transform-origin: center center;
 }
 
 .card-face.support-card.is-rested {
-  left: calc(var(--support-index, 0) * 28px + 20px);
+  left: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 20px);
   transform: translateY(-50%) rotate(90deg);
 }
 
 .top-field .card-face.support-card {
   left: auto;
-  right: calc(var(--support-index, 0) * 28px + 10px);
+  right: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 10px);
 }
 
 .top-field .card-face.support-card.is-rested {
-  right: calc(var(--support-index, 0) * 28px + 20px);
+  right: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 20px);
   transform: translateY(-50%) rotate(-90deg);
 }
 
@@ -2244,10 +2244,24 @@
   aspect-ratio: 0.7;
 }
 
-/* Payment/cost choices must expose each complete hit area. The normal 28px
- * stack lets a card's centre hit its neighbour, especially after rotation.
- * Attack energy selection keeps the compact stack (is-attack-payment); only
- * skill/cost/trap payments expand. */
+/* Skill/cost selections expose the complete card. Attack payment retains
+ * the overlapping support stack, with its spacing adjusted separately. */
+@container game-shell (min-width: 681px) {
+  .support-cards {
+    /* 52px keeps overlapping cards compact while exposing their centres,
+     * including when two adjacent payment previews are rotated. */
+    --support-spacing: 52px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@container game-shell (min-width: 681px) and (max-width: 1250px) {
+  .support-cards {
+    --support-spacing: 36px;
+  }
+}
+
 :root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) {
   display: flex;
   gap: 8px;
@@ -2272,11 +2286,12 @@
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
-/* The hand fan occupies the same lower screen area on compact boards. Keep
- * it out of pointer and keyboard selection while choosing support cards;
- * the public hand count remains visible and the fan returns on cancellation. */
-:root[data-theme] .game-shell .bottom-field:has(.support-card.is-targetable) .hand-fan.bottom-hand {
-  visibility: hidden;
+/* Only the phone layout shares its payment dock with the hand. Desktop and
+ * tablet layouts reserve separate hand space, so payment must not hide it. */
+@container game-shell (max-width: 680px) {
+  :root[data-theme] .game-shell .bottom-field:has(.support-card.is-targetable) .hand-fan.bottom-hand {
+    visibility: hidden;
+  }
 }
 
 /* Combat cards expand to each combat zone's inner height in the <900px

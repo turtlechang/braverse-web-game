@@ -3,17 +3,34 @@ import { applyGameCommand } from './commands'
 import { createCardCheckDemoState, parseTestStateConfig } from './demo'
 import { getTrapCandidates } from './battle'
 import type { GameState } from './types'
+import { getEffectTargetCandidatesForEffect } from './effects'
 
 const resolve = (state: GameState, targetIds: string[] = []) => applyGameCommand(state, {
   kind: 'resolve-ability-effect', playerId: 'player-one', targetIds,
 })
+const damageOrder = (state: GameState) => {
+  const pending = state.pendingAbilityEffect!
+  return getEffectTargetCandidatesForEffect(state, {
+    sourcePlayerId: pending.sourcePlayerId, sourceInstanceId: pending.sourceInstanceId,
+  }, pending.effects[pending.effectIndex]).map(cookie => cookie.card.instanceId)
+}
+const drainDamage = (initial: GameState) => {
+  let state = initial
+  for (let step = 0; state.pendingBattle && step < 20; step++) {
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle.stage).toBe('damage')
+    state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: state.pendingBattle.damagePlayerId ?? state.pendingBattle.defenderPlayerId })
+  }
+  expect(state.pendingBattle).toBeFalsy()
+  expect(state.pendingAbilityEffect?.effects[state.pendingAbilityEffect.effectIndex].kind).toBe('optional-cost-attack')
+  return resolve(state)
+}
 const afterDamage = (cardNumber = 'BS8-021') => {
   const initial = createCardCheckDemoState(cardNumber)
   const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
   let state = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId,
     paymentIds: ['support-pay-0', 'support-pay-1'] })
-  state = resolve(state)
-  state = resolve(state)
+  state = drainDamage(resolve(state, damageOrder(state)))
   return { initial, item, state }
 }
 const pay = (state: GameState, paymentIds = ['support-pay-2']) => applyGameCommand(state, {
@@ -21,6 +38,23 @@ const pay = (state: GameState, paymentIds = ['support-pay-2']) => applyGameComma
 })
 
 describe('BS8-021 separate optional R payment before equipment', () => {
+  it('accepts opponent-first order and rejects incomplete, duplicate, or excluded-name targets', () => {
+    const initial = createCardCheckDemoState('BS8-021')
+    const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
+    const state = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId, paymentIds: ['support-pay-0', 'support-pay-1'] })
+    const targets = damageOrder(state).reverse()
+    const before = structuredClone(state)
+    for (const ids of [targets.slice(1), [...targets, targets[0]], [...targets, initial.players['player-one'].battleArea[0].card.instanceId]]) {
+      expect(() => resolve(state, ids)).toThrow()
+      expect(state).toEqual(before)
+    }
+    const started = resolve(state, targets)
+    expect(started.pendingBattle?.damageTargetInstanceId).toBe(targets[0])
+    expect(started.pendingBattle?.damagePlayerId).toBe('player-two')
+    const result = drainDamage(started)
+    expect(result.players['player-two'].battleArea.map(cookie => cookie.hpCards.length)).toEqual([5, 4])
+    expect(result.pendingOptionalCostAttack?.resolution).toBe('ability')
+  })
   it.each(['BS8-021', 'BS8-021@1'])('%s can pay the Item RR but cannot pay Then without a third active support', (cardNumber) => {
     const suffix = cardNumber.endsWith('@1') ? '@1' : ''
     const config = parseTestStateConfig(`?test-state=bs8-021-no-energy${suffix}`, 'localhost')
@@ -29,7 +63,7 @@ describe('BS8-021 separate optional R payment before equipment', () => {
     const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
     let state = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId,
       paymentIds: ['support-pay-0', 'support-pay-1'] })
-    state = resolve(resolve(state))
+    state = drainDamage(resolve(state, damageOrder(state)))
     expect(state.pendingOptionalCostAttack).toBeTruthy()
     expect(state.players['player-one'].supportArea.every(s => s.rested)).toBe(true)
     const before = structuredClone(state)
@@ -46,7 +80,7 @@ describe('BS8-021 separate optional R payment before equipment', () => {
     const item = initial.players['player-one'].hand.find(card => card.id === 'BS8-021')!
     let state = applyGameCommand(initial, { kind: 'begin-play-item', playerId: 'player-one', instanceId: item.instanceId,
       paymentIds: ['support-pay-0', 'support-pay-1'] })
-    state = resolve(state)
+    state = resolve(state, damageOrder(state))
     expect(state.pendingBattle?.stage).toBe('damage')
     state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
     expect(state.pendingBattle?.stage).toBe('flip')
@@ -55,9 +89,6 @@ describe('BS8-021 separate optional R payment before equipment', () => {
     const discardId = state.players['player-one'].hand[0].instanceId
     state = applyGameCommand(state, { kind: 'resolve-flip', playerId: 'player-one', activate,
       discardHandIds: activate ? [discardId] : [] })
-    if (state.pendingBattle && !state.pendingFaintEffects?.length) {
-      state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
-    }
     const survivor = state.players['player-one'].battleArea.find(c => c.card.id === 'BS8-018')
     expect(survivor?.hpCards.length ?? 0).toBe(activate ? 1 : 0)
     expect(state.players['player-one'].deck).toHaveLength(activate ? 19 : 20)
@@ -70,8 +101,7 @@ describe('BS8-021 separate optional R payment before equipment', () => {
       state = applyGameCommand(state, { kind: 'resolve-faint-effect', playerId: 'player-one', targetIds: [], paymentIds: ['support-pay-2'] })
       state = applyGameCommand(state, { kind: 'resolve-faint-effect', playerId: 'player-one', targetIds: [] })
     }
-    if (state.pendingBattle) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
-    state = resolve(state)
+    state = drainDamage(state)
     expect(state.players['player-two'].battleArea.map(c => c.hpCards.length)).toEqual([5, 4])
     expect(state.pendingOptionalCostAttack?.resolution).toBe('ability')
     state = resolve(pay(state, [activate ? 'support-pay-2' : 'support-pay-3']), [state.players['player-one'].battleArea[0].card.instanceId])

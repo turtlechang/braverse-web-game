@@ -185,6 +185,8 @@ export function useMatchController(params: {
       return createBs8ExtraDeckDemoState(
         testStateConfig.conditionMet,
         testStateConfig.cardNumber,
+        testStateConfig.cardNumber,
+        testStateConfig.orderedTargets,
       )
     }
     if (testStateConfig?.kind === 'bs8-011-double-skill') {

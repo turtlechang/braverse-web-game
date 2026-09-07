@@ -11,7 +11,9 @@ import {
   type DeckFormat,
 } from './deck-rules'
 import { EXTRA_DECK_MAX_CARDS, EXTRA_DECK_MAX_COPIES_PER_CARD } from './extra-deck'
-import type { GameCard, PlayerId } from './types'
+import type { GameCard, PlayerId, PlayerSetup } from './types'
+import { isDeckEntryList, materializeFormalExtraDeck } from './custom-extra-deck'
+import { GameRuleError } from './errors'
 
 const canonicalizeEntry = (entry: CustomDeckEntry): CustomDeckEntry => {
   const base = normalizeCardNumber(entry.cardNumber)
@@ -39,6 +41,7 @@ export interface CustomDeck {
   name: string
   entries: CustomDeckEntry[]
   format?: DeckFormat
+  extraDeckEntries?: CustomDeckEntry[]
   candidateStaging?: CandidateStagingDeckConfig
   createdAt: string
   updatedAt: string
@@ -86,7 +89,9 @@ const isCustomDeckShape = (value: unknown): value is CustomDeck => {
   return (
     typeof deck.id === 'string' &&
     typeof deck.name === 'string' &&
-    Array.isArray(deck.entries) &&
+    isDeckEntryList(deck.entries) &&
+    (deck.extraDeckEntries === undefined || isDeckEntryList(deck.extraDeckEntries)) &&
+    !(deck.extraDeckEntries !== undefined && candidateStaging !== undefined) &&
     hasValidCandidateStaging
   )
 }
@@ -151,6 +156,9 @@ export const duplicateCustomDeck = (
     id: createCustomDeckId(),
     name: `${source.name}（複製）`,
     entries: source.entries.map((entry) => ({ ...entry })),
+    ...(source.extraDeckEntries !== undefined
+      ? { extraDeckEntries: source.extraDeckEntries.map((entry) => ({ ...entry })) }
+      : {}),
     format: source.format ?? DEFAULT_DECK_FORMAT,
     ...(source.candidateStaging
       ? {
@@ -185,6 +193,10 @@ export const validateCustomDeck = (
   let stageCards = 0
 
   for (const rawEntry of entries) {
+    if (!isDeckEntryList([rawEntry])) {
+      errors.push('主牌組卡號或數量格式錯誤。')
+      continue
+    }
     const entry = canonicalizeEntry(rawEntry)
     if (entry.count < 1) {
       errors.push(`${entry.cardNumber} 的數量不能小於 1`)
@@ -201,6 +213,11 @@ export const validateCustomDeck = (
     const poolEntry = getCardPoolEntry(entry.cardNumber)
     if (!poolEntry) {
       errors.push(`${entry.cardNumber} 不在可用卡池中`)
+      totalCount += entry.count
+      continue
+    }
+    if (poolEntry.type === 'extra') {
+      errors.push(`${entry.cardNumber} 是 EXTRA 卡，不能放入主牌組`)
       totalCount += entry.count
       continue
     }
@@ -237,7 +254,7 @@ export const validateCustomDeck = (
     errors.push(`FLIP 卡不得超過 ${MAX_FLIP_CARDS} 張，目前為 ${flipCards} 張`)
   }
 
-  errors.push(...validateFormatRestrictions(entries, format))
+  errors.push(...validateFormatRestrictions(entries.filter((entry) => isDeckEntryList([entry])), format))
 
   const isValid = errors.length === 0
 
@@ -261,16 +278,26 @@ export const createDeckFromCustomDeck = (
   playerId: PlayerId,
 ): GameCard[] => {
   const cards: GameCard[] = []
+  const copiesByCardNumber = new Map<string, number>()
 
   for (const rawEntry of deck.entries) {
+    if (!isDeckEntryList([rawEntry]) || rawEntry.count > MAX_COPIES_PER_CARD) {
+      throw new GameRuleError('主牌組卡號或數量格式錯誤。')
+    }
     const entry = canonicalizeEntry(rawEntry)
     const poolEntry = getCardPoolEntry(entry.cardNumber)
     if (!poolEntry) {
       throw new Error(`卡池中找不到 ${entry.cardNumber}`)
     }
+    // 直接建立對局的呼叫端也不可將 EXTRA 交給一般卡片建構器，否則會變成 item。
+    if (poolEntry.type === 'extra') {
+      throw new Error(`${entry.cardNumber} 是 EXTRA 卡，不能放入主牌組`)
+    }
 
     for (let i = 0; i < entry.count; i++) {
-      cards.push(createCard(poolEntry as OfficialCardRecord, playerId, i + 1))
+      const copy = (copiesByCardNumber.get(entry.cardNumber) ?? 0) + 1
+      copiesByCardNumber.set(entry.cardNumber, copy)
+      cards.push(createCard(poolEntry as OfficialCardRecord, playerId, copy))
     }
   }
 
@@ -281,6 +308,7 @@ export interface ExportableDeck {
   name: string
   entries: { cardNumber: string; count: number }[]
   format?: DeckFormat
+  extraDeckEntries?: CustomDeckEntry[]
   /**
    * Candidate-only metadata.  It is deliberately nested and opt-in so a
    * normal JSON deck can never acquire BS8 EXTRA cards by card number alone.
@@ -374,6 +402,9 @@ export const exportDeck = (deck: CustomDeck): string => {
       count: e.count,
     })),
     format: deck.format ?? DEFAULT_DECK_FORMAT,
+    ...(deck.extraDeckEntries !== undefined
+      ? { extraDeckEntries: deck.extraDeckEntries.map((entry) => ({ ...entry })) }
+      : {}),
     ...(deck.candidateStaging
       ? {
           candidateStaging: {
@@ -399,14 +430,18 @@ export const importDeck = (
     }
     const data = parsed as ExportableDeck
 
-    // A top-level extraDeck was never a supported Standard JSON field.  Do
-    // not silently discard it: that could make a candidate-only deck look
-    // playable in Standard after import.
-    if (hasOwn(parsed, 'extraDeck') || hasOwn(parsed, 'extraDeckEntries')) {
+    // Runtime card instances are not a supported JSON recipe.
+    if (hasOwn(parsed, 'extraDeck')) {
       return {
         deck: null,
-        error: '正式牌組 JSON 不支援頂層 EXTRA Deck；請使用候選驗收牌組格式。',
+        error: '正式牌組 JSON 請使用 extraDeckEntries 卡號與數量，不支援 extraDeck 實體。',
       }
+    }
+    if (hasOwn(parsed, 'extraDeckEntries') && !isDeckEntryList(data.extraDeckEntries)) {
+      return { deck: null, error: 'EXTRA Deck 卡號或數量格式錯誤。' }
+    }
+    if (hasOwn(parsed, 'extraDeckEntries') && hasOwn(parsed, 'candidateStaging')) {
+      return { deck: null, error: '正式 EXTRA 與候選驗收 EXTRA 不可同時指定。' }
     }
 
     const candidateStagingResult = parseCandidateStagingDeckConfig(
@@ -432,17 +467,17 @@ export const importDeck = (
 
     const entries: CustomDeckEntry[] = []
     for (const entry of data.entries) {
-      if (!entry.cardNumber || typeof entry.cardNumber !== 'string') {
+      if (!entry || typeof entry !== 'object' || !entry.cardNumber || typeof entry.cardNumber !== 'string') {
         return { deck: null, error: '卡號格式錯誤' }
       }
-      if (typeof entry.count !== 'number' || entry.count < 1) {
+      if (typeof entry.count !== 'number' || !Number.isSafeInteger(entry.count) || entry.count < 1) {
         return { deck: null, error: `${entry.cardNumber} 數量格式錯誤` }
       }
       const cardNumber = entry.cardNumber
       if (!getCardPoolEntry(cardNumber)) {
         return { deck: null, error: `卡池中找不到 ${entry.cardNumber}` }
       }
-      entries.push({ cardNumber, count: Math.floor(entry.count) })
+      entries.push({ cardNumber, count: entry.count })
     }
 
     const rawFormat = data.format
@@ -450,7 +485,7 @@ export const importDeck = (
       return { deck: null, error: '牌組賽制只能是 open 或 standard。' }
     }
     const format = options.format ?? rawFormat ?? DEFAULT_DECK_FORMAT
-    const validation = validateCustomDeck(entries, { format })
+    const validation = validateCustomDeckDefinition({ entries, format, extraDeckEntries: data.extraDeckEntries })
     if (!validation.valid) {
       return { deck: null, error: validation.errors.join('；') }
     }
@@ -461,6 +496,9 @@ export const importDeck = (
       name: data.name,
       entries,
       format,
+      ...(data.extraDeckEntries !== undefined
+        ? { extraDeckEntries: data.extraDeckEntries.map((entry) => ({ ...entry })) }
+        : {}),
       ...(candidateStagingResult.config
         ? { candidateStaging: candidateStagingResult.config }
         : {}),
@@ -471,5 +509,28 @@ export const importDeck = (
     return { deck, error: null }
   } catch {
     return { deck: null, error: '無法解析牌組資料' }
+  }
+}
+
+export const validateCustomDeckDefinition = (
+  deck: Pick<CustomDeck, 'entries' | 'format' | 'extraDeckEntries' | 'candidateStaging'>,
+): DeckValidationResult & { stats: DeckValidationResult['stats'] & { mainDeckCards: number; extraDeckCards: number } } => {
+  const main = validateCustomDeck(deck.entries, { format: deck.format })
+  const extra = materializeFormalExtraDeck(deck.extraDeckEntries === undefined ? [] : deck.extraDeckEntries, 'player-one', deck.format ?? DEFAULT_DECK_FORMAT)
+  const errors = [...main.errors, ...extra.errors]
+  if (deck.candidateStaging !== undefined) errors.push('候選驗收牌組必須使用獨立的候選驗證與開局流程。')
+  if (deck.format !== undefined && deck.format !== 'open' && deck.format !== 'standard') errors.push('牌組賽制只能是 open 或 standard。')
+  return {
+    ...main, isValid: errors.length === 0, valid: errors.length === 0, errors,
+    stats: { ...main.stats, mainDeckCards: main.stats.totalCards, extraDeckCards: extra.totalCards },
+  }
+}
+
+export const createCustomDeckPlayerSetup = (deck: CustomDeck, playerId: PlayerId): PlayerSetup => {
+  const validation = validateCustomDeckDefinition(deck)
+  if (!validation.isValid) throw new GameRuleError(validation.errors[0] ?? '正式牌組不合法。')
+  return {
+    id: playerId, name: deck.name, deck: createDeckFromCustomDeck(deck, playerId),
+    extraDeck: materializeFormalExtraDeck(deck.extraDeckEntries ?? [], playerId, deck.format ?? DEFAULT_DECK_FORMAT).cards,
   }
 }

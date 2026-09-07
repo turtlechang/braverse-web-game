@@ -1,9 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { applyGameCommand, canActivateCookieSkill, getCookieSkillUnavailableReason, getBreakAreaLevel, getEffectiveAttack, type CookieCard } from './index'
 import { createCardCheckDemoState } from './demo'
+import { getEffectTargetCandidatesForEffect } from './effects'
 
 const createBs8009State = () =>
   createCardCheckDemoState('BS8-009', { preferSkillSurface: true })
+
+const damageOrder = (state: ReturnType<typeof createBs8009State>) => {
+  const pending = state.pendingAbilityEffect!
+  return getEffectTargetCandidatesForEffect(state, {
+    sourcePlayerId: pending.sourcePlayerId,
+    sourceInstanceId: pending.sourceInstanceId,
+  }, pending.effects[pending.effectIndex]).map(cookie => cookie.card.instanceId)
+}
+
+const finishDamage = (initial: ReturnType<typeof createBs8009State>, targetIds = damageOrder(initial)) => {
+  let state = applyGameCommand(initial, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds })
+  for (let step = 0; state.pendingBattle && step < 20; step++) {
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle.stage).toBe('damage')
+    state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: state.pendingBattle.damagePlayerId ?? state.pendingBattle.defenderPlayerId })
+  }
+  expect(state.pendingBattle).toBeFalsy()
+  expect(state.pendingAbilityEffect?.effects[state.pendingAbilityEffect.effectIndex].kind).toBe('optional-cost-attack')
+  return applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+}
 
 const addBreakLevels = (
   state: ReturnType<typeof createBs8009State>,
@@ -49,16 +70,7 @@ const resolveBreakLevelBonus = (
     trigger: 'activate',
     paymentIds: [firstPaymentId],
   })
-  state = applyGameCommand(state, {
-    kind: 'resolve-ability-effect',
-    playerId: 'player-one',
-    targetIds: [],
-  })
-  state = applyGameCommand(state, {
-    kind: 'resolve-ability-effect',
-    playerId: 'player-one',
-    targetIds: [],
-  })
+  state = finishDamage(state)
   state = applyGameCommand(state, {
     kind: 'resolve-optional-cost-attack',
     playerId: 'player-one',
@@ -75,6 +87,18 @@ const resolveBreakLevelBonus = (
 }
 
 describe('BS8-009 Burning Spice Cookie skill', () => {
+  it('rejects incomplete, duplicate, or source-inclusive damage orders without resolving damage', () => {
+    const initial = createBs8009State()
+    const owner = initial.players['player-one']
+    const sourceInstanceId = owner.battleArea[0].card.instanceId
+    const state = applyGameCommand(initial, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId, trigger: 'activate', paymentIds: [owner.supportArea[0].card.instanceId] })
+    const targets = damageOrder(state)
+    const before = structuredClone(state)
+    for (const targetIds of [targets.slice(1), [...targets, targets[0]], [...targets, sourceInstanceId]]) {
+      expect(() => applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds })).toThrow()
+      expect(state).toEqual(before)
+    }
+  })
   it.each(['BS8-009', 'BS8-009@1', 'BS8-009@2', 'BS8-009@3'])('%s rejects a solo source and reused payment, then expires its bonus at turn end', (cardNumber) => {
     const initial = createCardCheckDemoState(cardNumber, { preferSkillSurface: true })
     const owner = initial.players['player-one']
@@ -83,8 +107,7 @@ describe('BS8-009 Burning Spice Cookie skill', () => {
     expect(canActivateCookieSkill(solo, 'player-one', sourceInstanceId, 'activate')).toBe(false)
     expect(getCookieSkillUnavailableReason(solo, 'player-one', sourceInstanceId, 'activate')).toBe('自己的戰鬥區必須有來源以外的另一張餅乾。')
     let state = applyGameCommand(initial, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId, trigger: 'activate', paymentIds: [owner.supportArea[0].card.instanceId] })
-    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
-    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    state = finishDamage(state)
     expect(() => applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: [owner.supportArea[0].card.instanceId], targetIds: [] })).toThrow()
     state = applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', paymentIds: [owner.supportArea[1].card.instanceId], targetIds: [] })
     state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [sourceInstanceId] })
@@ -111,25 +134,14 @@ describe('BS8-009 Burning Spice Cookie skill', () => {
 
     expect(state.players['player-one'].supportArea[0]!.rested).toBe(true)
 
-    state = applyGameCommand(state, {
-      kind: 'resolve-ability-effect',
-      playerId: 'player-one',
-      targetIds: [],
-    })
+    state = finishDamage(state, damageOrder(state).reverse())
     expect(state.players['player-two'].battleArea.map((entry) => entry.hpCards.length)).toEqual([5, 4])
-    expect(state.pendingAbilityEffect?.effectIndex).toBe(1)
-
-    state = applyGameCommand(state, {
-      kind: 'resolve-ability-effect',
-      playerId: 'player-one',
-      targetIds: [],
-    })
     expect(state.players['player-one'].battleArea.map((entry) => entry.hpCards.length)).toEqual([1, 3])
     expect(state.pendingOptionalCostAttack).toMatchObject({
       resolution: 'ability',
       sourceInstanceId,
       cost: { energy: { red: 1 }, discardHand: 0 },
-      effectText: expect.stringContaining('For each 3 levels'),
+      effectText: expect.stringContaining('休息區總等級每達到 3 級'),
     })
     expect(state.pendingOptionalCostAttack?.sourceEnergy).toBeUndefined()
   })
@@ -139,27 +151,10 @@ describe('BS8-009 Burning Spice Cookie skill', () => {
     const sourceInstanceId = initial.players['player-one'].battleArea[0]!.card.instanceId
     const initialPaymentId = initial.players['player-one'].supportArea[0]!.card.instanceId
     const begin = (state: ReturnType<typeof createBs8009State>) =>
-      applyGameCommand(
-        applyGameCommand(
-          applyGameCommand(state, {
-            kind: 'begin-activate-skill',
-            playerId: 'player-one',
-            sourceInstanceId,
-            trigger: 'activate',
-            paymentIds: [initialPaymentId],
-          }),
-          {
-            kind: 'resolve-ability-effect',
-            playerId: 'player-one',
-            targetIds: [],
-          },
-        ),
-        {
-          kind: 'resolve-ability-effect',
-          playerId: 'player-one',
-          targetIds: [],
-        },
-      )
+      finishDamage(applyGameCommand(state, {
+        kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId,
+        trigger: 'activate', paymentIds: [initialPaymentId],
+      }))
 
     const skipped = applyGameCommand(begin(createBs8009State()), {
       kind: 'resolve-optional-cost-attack',
@@ -180,7 +175,7 @@ describe('BS8-009 Burning Spice Cookie skill', () => {
       targetIds: [],
     })
     expect(paid.pendingOptionalCostAttack).toBeNull()
-    expect(paid.pendingAbilityEffect?.effectIndex).toBe(2)
+    expect(paid.pendingAbilityEffect?.effectIndex).toBe(1)
     expect(paid.players['player-one'].supportArea[1]!.rested).toBe(true)
 
     const resolved = applyGameCommand(paid, {

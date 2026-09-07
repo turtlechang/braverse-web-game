@@ -15,6 +15,58 @@ import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it('BS8-067 resolves the online attack choice through the authoritative battle queue', async () => {
+    let game = createCardCheckDemoState('BS8-067')
+    const owner = game.players['player-one']
+    const source = owner.battleArea[0].card
+    const target = game.players['player-two'].battleArea[0].card
+    game = applyGameCommand(game, {
+      kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: source.instanceId,
+      targetInstanceId: target.instanceId,
+      supportPaymentIds: owner.supportArea.map(support => support.card.instanceId),
+    })
+    game = applyGameCommand(game, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let step = 0; game.pendingBattle?.stage === 'damage' && step < 10; step++) {
+      game = applyGameCommand(game, { kind: 'resolve-next-damage',
+        playerId: game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId })
+    }
+    expect(game.pendingBattle?.stage).toBe('attack-effect')
+    expect(game.pendingAbilityEffect).toBeFalsy()
+    const supportBefore = game.players['player-one'].supportArea.length
+    const deckBefore = game.players['player-one'].deck.length
+    const topCard = game.players['player-one'].deck[0]
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.currentEffect?.kind).toBe('choose-one')
+      await act(() => captured!.chooseEffectMode(1))
+      expect(dispatch).toHaveBeenLastCalledWith({ kind: 'resolve-choose-one', playerId: 'player-one', modeIndex: 1 }, expect.any(String))
+      expect(game.pendingBattle?.attackEffects[game.pendingBattle.attackEffectIndex]).toMatchObject({ kind: 'deck-to-support', amount: 1, rested: false })
+      expect(game.players['player-one'].supportArea).toHaveLength(supportBefore)
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.currentEffect).toMatchObject({ kind: 'deck-to-support', amount: 1 })
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenLastCalledWith({ kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] }, expect.any(String))
+      expect(dispatch).toHaveBeenCalledTimes(2)
+      expect(game.players['player-one'].supportArea).toHaveLength(supportBefore + 1)
+      expect(game.players['player-one'].supportArea.at(-1)).toEqual({ card: topCard, rested: false })
+      expect(game.players['player-one'].deck).toHaveLength(deckBefore - 1)
+      expect(game.pendingBattle).toBeFalsy()
+      expect(game.pendingAbilityEffect).toBeFalsy()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it('BS8-022 submits a faint payment before selecting a newly discarded HP Cookie', async () => {
     const initial = createCardCheckDemoState('BS8-022')
     const owner = initial.players['player-one']

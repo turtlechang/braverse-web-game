@@ -69,6 +69,26 @@ describe('BS6-039 compound target UI', () => {
   })
 })
 
+describe('trash-to-support optional selection', () => {
+  it.each([true, false])('zero cards is enabled only when optional is %s', async (optional) => {
+    const effect: CardEffect = { kind: 'trash-to-support', amount: 1, optional }
+    const pending = createPendingEffect({ effects: [effect], skillActivated: true })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(
+        <EffectPanel pendingEffect={pending} currentEffect={effect} effectHistory={[]}
+          onConfirm={() => undefined} onSkip={() => undefined}
+          candidateCards={[createItemCard(69)]} onToggleCandidate={() => undefined} />,
+      ))
+      const confirm = container.querySelector('.effect-panel-primary-action') as HTMLButtonElement
+      expect(confirm.disabled).toBe(!optional)
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+})
+
 describe('sequential all-target damage UI', () => {
   it('shows the click order when every opposing Cookie must be damaged', async () => {
     const effect: CardEffect = {

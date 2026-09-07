@@ -1257,14 +1257,14 @@ export const getTrashToSupportCandidates = (
   state: GameState,
   context: EffectContext,
   effect?: Extract<CardEffect, { kind: 'trash-to-support' }>,
-): CookieCard[] =>
+): GameCard[] =>
   state.players[context.sourcePlayerId].discardPile.filter(
-    (card): card is CookieCard =>
-      card.type === 'cookie' &&
+    (card) =>
+      (effect?.cookieOnly === false || card.type === 'cookie') &&
       (effect?.energyColor === undefined ||
         card.energyColor === effect.energyColor) &&
-      (effect?.minLevel === undefined || card.level >= effect.minLevel) &&
-      (effect?.maxLevel === undefined || card.level <= effect.maxLevel),
+      (effect?.minLevel === undefined || (card.type === 'cookie' && card.level >= effect.minLevel)) &&
+      (effect?.maxLevel === undefined || (card.type === 'cookie' && card.level <= effect.maxLevel)),
   )
 
 export const getBreakToTrashCandidates = (

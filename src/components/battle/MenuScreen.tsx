@@ -8,7 +8,7 @@ import {
   deleteCustomDeck,
   duplicateCustomDeck,
   loadCustomDecks,
-  validateCustomDeck,
+  validateCustomDeckDefinition,
   type CustomDeck,
 } from '../../game/custom-deck'
 import { parseTestStateConfig } from '../../game/demo'
@@ -95,9 +95,7 @@ export function MenuScreen({
       selectedCustomDeck
         ? isBs8CandidateStagingDeck(selectedCustomDeck)
           ? validateBs8CandidateStagingDeck(selectedCustomDeck)
-          : validateCustomDeck(selectedCustomDeck.entries, {
-              format: selectedCustomDeck.format,
-            })
+          : validateCustomDeckDefinition(selectedCustomDeck)
         : null,
     [selectedCustomDeck],
   )

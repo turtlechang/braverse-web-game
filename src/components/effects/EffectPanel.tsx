@@ -317,7 +317,8 @@ function EffectPanelContent({
                 ? currentEffect.keepCount
                 : (currentEffect.kind === 'support-to-trash' ||
                     currentEffect.kind === 'support-to-hand' ||
-                    currentEffect.kind === 'trash-to-battle') &&
+                    currentEffect.kind === 'trash-to-battle' ||
+                    currentEffect.kind === 'trash-to-support') &&
                   currentEffect.optional
                   ? 0
                   : currentEffect.amount,
@@ -1044,7 +1045,8 @@ function EffectPanelContent({
                       : new Set(pendingEffect.selectedTargetIds)
                   }
                   selectedOrderIds={
-                    currentEffect.kind === 'damage-all' && currentEffect.sequential
+                    (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
+                    (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
                       ? pendingEffect.selectedTargetIds
                       : undefined
                   }

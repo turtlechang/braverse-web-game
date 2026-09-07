@@ -5585,9 +5585,7 @@ describe('BS8 candidate serial contract', () => {
       oncePerTurn: true,
       cost: { energy: { green: 1 }, supportToHand: 2, supportToHandColor: 'green' },
       effects: [{
-        kind: 'hp-to-trash-all',
-        amount: 2,
-        side: 'opponent',
+        kind: 'choose-one',
         condition: {
           kind: 'battle-area-has-named-cookie',
           side: 'self',
@@ -5595,6 +5593,24 @@ describe('BS8 candidate serial contract', () => {
           excludeSource: true,
           negate: true,
         },
+        modes: [
+          { amount: 0, count: 0 },
+          { amount: 1, count: 1 },
+          { amount: 2, count: 1 },
+          { amount: 1, count: 2 },
+          { amount: 2, count: 2, amountByTargetIndex: [2, 1] },
+          { amount: 2, count: 2 },
+        ].map(({ amount, count, amountByTargetIndex }) => ({
+          effects: [{
+            kind: 'hp-to-trash', amount,
+            ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
+            target: { side: 'opponent', min: count, max: count },
+            condition: {
+              kind: 'battle-area-has-named-cookie', side: 'self',
+              name: 'Mystic Flour Cookie', excludeSource: true, negate: true,
+            },
+          }],
+        })),
       }],
     })
   })
@@ -5717,13 +5733,9 @@ describe('BS8 candidate serial contract', () => {
         {
           kind: 'damage-all',
           amount: 1,
-          side: 'opponent',
-          condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
-        },
-        {
-          kind: 'damage-all',
-          amount: 1,
-          side: 'self',
+          side: 'either',
+          sequential: true,
+          target: { side: 'either', min: 0, max: 4 },
           excludeSource: true,
           condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
         },
@@ -5731,7 +5743,7 @@ describe('BS8 candidate serial contract', () => {
           kind: 'optional-cost-attack',
           resolution: 'ability',
           cost: { energy: { red: 1 }, discardHand: 0 },
-          effectText: expect.stringContaining('For each 3 levels'),
+          effectText: '接著，你可以支付 1 點紅色支援能量；若支付，自己的休息區總等級每達到 3 級，此餅乾在本回合的攻擊傷害就增加 1 點。',
           effects: [
             {
               kind: 'modify-attack-by-break-count',
@@ -5745,7 +5757,7 @@ describe('BS8 candidate serial contract', () => {
         },
       ],
     })
-    expect(skill.effects[2]).not.toHaveProperty('sourceEnergy')
+    expect(skill.effects[1]).not.toHaveProperty('sourceEnergy')
   })
 
   it('maps BS8-084 as a rested passive attack-declaration discard requirement', () => {
@@ -5902,7 +5914,9 @@ describe('BS8 candidate serial contract', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-111'))).toMatchObject({
       trigger: 'on-play',
       cost: { discardHand: 1 },
-      effects: [{ kind: 'deck-to-trash', amount: 4, side: 'self' }],
+      effects: [{ kind: 'choose-one', modes: [0, 1, 2, 3, 4].map(amount => ({
+        effects: [{ kind: 'deck-to-trash', amount, side: 'self' }],
+      })) }],
     })
   })
 
@@ -5986,10 +6000,15 @@ describe('BS8 candidate serial contract', () => {
     ])
     expect(convertOfficialAttackEffects(findBs8Candidate('BS8-067'))).toEqual([
       {
-        kind: 'deck-to-support',
-        amount: 1,
-        rested: false,
+        kind: 'choose-one',
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        modes: [0, 1].map(amount => ({
+          label: amount === 0 ? '不放入支援區' : '將牌庫頂 1 張以活躍狀態放入支援區',
+          effects: [{
+            kind: 'deck-to-support', amount, rested: false,
+            condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+          }],
+        })),
       },
     ])
     expect(convertOfficialAttackEffects(findBs8Candidate('BS8-083'))).toEqual([

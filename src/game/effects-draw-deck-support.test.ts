@@ -376,6 +376,26 @@ describe('trash-to-support effect', () => {
     }
   }
 
+  it('permits a matching non-Cookie only when the printed effect allows cards', () => {
+    const base = createStateWithDiscardCookies()
+    const greenItem = { ...base.players['player-one'].discardPile[1], energyColor: 'green' as const }
+    const redItem = { ...greenItem, instanceId: 'red-item', energyColor: 'red' as const }
+    const state = { ...base, players: { ...base.players, 'player-one': {
+      ...base.players['player-one'], discardPile: [greenItem, redItem],
+    } } }
+    const effect: CardEffect = {
+      kind: 'trash-to-support', amount: 1, optional: true,
+      cookieOnly: false, energyColor: 'green', rested: false,
+    }
+    expect(getTrashToSupportCandidates(state, trashSupportContext, effect)).toEqual([greenItem])
+    expect(getTrashToSupportCandidates(state, trashSupportContext, { ...effect, cookieOnly: true })).toEqual([])
+    expect(() => executeCardEffect(state, trashSupportContext, effect, [redItem.instanceId])).toThrow()
+    const next = executeCardEffect(state, trashSupportContext, effect, [greenItem.instanceId])
+    expect(next.players['player-one'].discardPile).toEqual([redItem])
+    expect(next.players['player-one'].supportArea.at(-1)).toEqual({ card: greenItem, rested: false })
+    expect(state.players['player-one'].discardPile).toEqual([greenItem, redItem])
+  })
+
   it('moves selected discard pile cookies to support area', () => {
     const state = createStateWithDiscardCookies()
     const player = state.players['player-one']

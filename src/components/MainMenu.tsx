@@ -3,7 +3,7 @@ import { AlertTriangle, Copy, FlaskConical, Pencil, Play, Plus, RefreshCw, Trash
 import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
-import { validateCustomDeck } from '../game/custom-deck'
+import { validateCustomDeckDefinition } from '../game/custom-deck'
 import {
   isBs8CandidateStagingDeck,
   validateBs8CandidateStagingDeck,
@@ -283,9 +283,7 @@ export function MainMenu({
               {decks.map((deck) => {
                 const validation = isBs8CandidateStagingDeck(deck)
                   ? validateBs8CandidateStagingDeck(deck)
-                  : validateCustomDeck(deck.entries, {
-                      format: deck.format,
-                    })
+                  : validateCustomDeckDefinition(deck)
                 return (
                   <article
                     key={deck.id}

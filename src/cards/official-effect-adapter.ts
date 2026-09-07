@@ -4241,21 +4241,17 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'trash-count-at-least', count: 15 },
       },
     ],
-    // BS8-009 Burning Spice Cookie：兩個 damage-all 分別覆蓋對手與己方，
-    // 但己方段排除來源，合起來正是「all other Cookies」。後段的加傷以
+    // BS8-009 Burning Spice Cookie：雙方其他餅乾由玩家一次決定傷害順序，
+    // 排除來源。後段的加傷以
     // 休息區總 LV.（不是卡片張數）每完成一組 3 點計算一次（Math.floor）；Then 的尖括號是
     // 玩家可選的支援區紅色能量支付，不是來源餅乾自動供能。
     'BS8-009': [
       {
         kind: 'damage-all',
         amount: 1,
-        side: 'opponent',
-        condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
-      },
-      {
-        kind: 'damage-all',
-        amount: 1,
-        side: 'self',
+        side: 'either',
+        sequential: true,
+        target: { side: 'either', min: 0, max: 4 },
         excludeSource: true,
         condition: { kind: 'battle-area-has-another-cookie', side: 'self' },
       },
@@ -4264,7 +4260,7 @@ export const convertOfficialCardEffects = (
         resolution: 'ability',
         cost: { energy: { red: 1 }, discardHand: 0 },
         effectText:
-          'Then, <can be used as {R}.> For each 3 levels your break area has reached, during this turn, this Cookie gains +1 attack damage.',
+          '接著，你可以支付 1 點紅色支援能量；若支付，自己的休息區總等級每達到 3 級，此餅乾在本回合的攻擊傷害就增加 1 點。',
         effects: [
           {
             kind: 'modify-attack-by-break-count',
@@ -4343,7 +4339,13 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS8-111 Onion Cookie：登場時棄一張手牌，將牌庫頂至多四張放入棄牌區。
-    'BS8-111': [{ kind: 'deck-to-trash', amount: 4, side: 'self' }],
+    'BS8-111': [{
+      kind: 'choose-one',
+      modes: [0, 1, 2, 3, 4].map((amount) => ({
+        label: amount === 0 ? '不放入棄牌區' : `將牌庫頂 ${amount} 張放入棄牌區`,
+        effects: [{ kind: 'deck-to-trash', amount, side: 'self' }],
+      })),
+    }],
     // BS8-020 Pepper Pangolin Cookie：僅在自身剩 1 HP 時，將來源自戰場放入棄牌區。
     'BS8-020': [
       {
@@ -4364,18 +4366,25 @@ export const convertOfficialCardEffects = (
         maxLevel: 1,
       },
     ],
-    // BS8-072 Soul Jam: Light of Apathy：展示的兩張都離開牌庫；至多一張
+    // BS8-072 Soul Jam: Light of Apathy：先選展示 0～2 張；至多一張
     // 直立進支援區，其餘橫置進支援區，之後才可裝備到 Mystic Flour。
     'BS8-072': [
       {
-        kind: 'inspect-deck',
-        lookCount: 2,
-        pickCount: 1,
-        restDestination: 'support-rested',
-        pickDestination: 'support',
-        pickSupportRested: false,
-        optionalPick: true,
+        kind: 'choose-one',
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        modes: [0, 1, 2].map((lookCount) => ({
+          label: lookCount === 0 ? '不展示卡牌' : `展示牌庫頂 ${lookCount} 張`,
+          effects: lookCount === 0 ? [] : [{
+            kind: 'inspect-deck',
+            lookCount,
+            pickCount: 1,
+            restDestination: 'support-rested',
+            pickDestination: 'support',
+            pickSupportRested: false,
+            optionalPick: true,
+            condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+          }],
+        })),
       },
       {
         kind: 'equip-source',
@@ -4467,9 +4476,7 @@ export const convertOfficialCardEffects = (
     // Cookie 各自移除至多兩張 HP 卡。這是效果條件，不是啟動限制。
     'BS8-059': [
       {
-        kind: 'hp-to-trash-all',
-        amount: 2,
-        side: 'opponent',
+        kind: 'choose-one',
         condition: {
           kind: 'battle-area-has-named-cookie',
           side: 'self',
@@ -4477,6 +4484,36 @@ export const convertOfficialCardEffects = (
           excludeSource: true,
           negate: true,
         },
+        modes: [
+          { label: '不移除 HP（每隻選擇 0 張）', effects: [{
+            kind: 'hp-to-trash', amount: 0,
+            target: { side: 'opponent', min: 0, max: 0 },
+            condition: { kind: 'battle-area-has-named-cookie', side: 'self',
+              name: 'Mystic Flour Cookie', excludeSource: true, negate: true },
+          }] },
+          ...[
+            { label: '選 1 隻，移除 1 張 HP', amount: 1, count: 1 },
+            { label: '選 1 隻，移除 2 張 HP', amount: 2, count: 1 },
+            { label: '選 2 隻，各移除 1 張 HP', amount: 1, count: 2 },
+            { label: '選 2 隻，第 1 隻移除 2 張、第 2 隻移除 1 張 HP', amount: 2, count: 2, amounts: [2, 1] },
+            { label: '選 2 隻，各移除 2 張 HP', amount: 2, count: 2 },
+          ].map(({ label, amount, count, amounts }) => ({
+            label,
+            effects: [{
+              kind: 'hp-to-trash' as const,
+              amount,
+              ...(amounts ? { amountByTargetIndex: amounts } : {}),
+              target: { side: 'opponent' as const, min: count, max: count },
+              condition: {
+                kind: 'battle-area-has-named-cookie' as const,
+                side: 'self' as const,
+                name: 'Mystic Flour Cookie',
+                excludeSource: true,
+                negate: true,
+              },
+            }],
+          })),
+        ],
       },
     ],
     // BS8-060 Peach Blossom Cookie：回手一張綠色支援卡後二選一；兩個模式
@@ -4552,13 +4589,9 @@ export const convertOfficialCardEffects = (
       {
         kind: 'damage-all',
         amount: 1,
-        side: 'self',
-        excludeCardName: 'Burning Spice Cookie',
-      },
-      {
-        kind: 'damage-all',
-        amount: 1,
-        side: 'opponent',
+        side: 'either',
+        sequential: true,
+        target: { side: 'either', min: 0, max: 4 },
         excludeCardName: 'Burning Spice Cookie',
       },
       {
@@ -6157,8 +6190,8 @@ export const convertOfficialAttackEffects = (
     // these mappings here so the effect is derived from the official card
     // number rather than reimplemented by the EXTRA command or UI.
     'BS8-005': [
-      { kind: 'damage-all', amount: 1, side: 'opponent' },
-      { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+      { kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+        target: { side: 'either', min: 0, max: 4 }, excludeSource: true },
     ],
     'BS8-027': [{
       kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
@@ -6227,19 +6260,23 @@ export const convertOfficialAttackEffects = (
     ],
     'BS8-067': [
       {
-        kind: 'deck-to-support',
-        amount: 1,
-        rested: false,
+        kind: 'choose-one',
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        modes: [0, 1].map((amount) => ({
+          label: amount === 0 ? '不放入支援區' : '將牌庫頂 1 張以活躍狀態放入支援區',
+          effects: [{
+            kind: 'deck-to-support', amount, rested: false,
+            condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+          }],
+        })),
       },
     ],
-    // BS8-076 Icicle Yeti Cookie：Then 的尖括號是強制的攻擊後代價，
+    // BS8-076 Icicle Yeti Cookie：Then 的尖括號是可略過的攻擊後代價，
     // 來源先進牌庫底才抽牌；所選對手 Cookie 到對手下一個 Active Phase
     // 才可決定是否恰好棄 2 張換取 active，不能改成一般必定保持 rested。
     'BS8-076': [
       {
         kind: 'optional-cost-attack',
-        mandatory: true,
         cost: { energy: {}, discardHand: 0, selfToDeckBottom: true },
         effects: [
           { kind: 'draw', amount: 1 },

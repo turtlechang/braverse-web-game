@@ -1544,7 +1544,7 @@ export interface OptionalCostAttackEffect {
   /** 攻擊餅乾自身能提供的額外費用；其餘費用才由支援區支付。 */
   sourceEnergy?: EnergyCost
   /**
-   * 此攻擊後續代價不能略過（BS8-076）。沿用既有 pending 管道以共用付款／
+   * 明確規定此攻擊後續代價不能略過時使用。沿用既有 pending 管道以共用付款／
    * 目標驗證，但規則與 UI 都必須拒絕 skip。
    */
   mandatory?: boolean
@@ -1571,6 +1571,8 @@ export interface OpponentRandomDiscardEffect {
 export interface HpToTrashEffect {
   kind: 'hp-to-trash'
   amount: number
+  /** Different amounts for the ordered targets, resolved as one effect. */
+  amountByTargetIndex?: number[]
   target: EffectTargetSelector
   condition?: EffectCondition
 }
@@ -1613,6 +1615,8 @@ export interface RevealHandEffect {
 export interface TrashToSupportEffect {
   kind: 'trash-to-support'
   amount: number
+  /** Defaults to Cookies; false permits any card matching the other filters. */
+  cookieOnly?: boolean
   rested?: boolean
   optional?: boolean
   energyColor?: EnergyColor

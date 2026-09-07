@@ -600,7 +600,9 @@ const assertCompactCombatActionsVisible = async (page) => {
 // optional no-op path.
 const BS8_ATTACK_THEN_FINGERPRINTS = {
   'BS8-006': {
-    minTargetSteps: 2,
+    // Both players' selections now share one ordered target trace entry.
+    minTargetSteps: 1,
+    requiredPatterns: [/攻擊後效果目標：[^\n]+、[^\n]+/],
     minimumPatternMatches: [{ pattern: /受到 1 點傷害/g, count: 2 }],
   },
   'BS8-010': {
@@ -1102,13 +1104,23 @@ const driveEffectPanel = async (
   }
 
   const optionalAttack = panel.locator('.optional-cost-attack-inline').first()
+  if (negative && activeContractCard(page) === 'BS8-021' && await visible(optionalAttack)) {
+    const pay = optionalAttack.locator('.modal-actions-decision button').filter({ hasText: /支付|Pay/i }).first()
+    assert.equal(await enabled(pay), false, 'BS8-021 must block the optional red payment after the two initial supports were spent')
+    const skip = optionalAttack.locator('.modal-actions-decision button').filter({ hasText: /略過|Skip/i }).first()
+    assert.ok(await enabled(skip), 'BS8-021 must still allow skipping its unpaid Then')
+    await skip.click()
+    operations.push('witness:bs8-021-optional-payment-blocked', 'skip:bs8-021-optional-then')
+    await wait(180)
+    return true
+  }
   const isBs8002OptionalThen = activeContractCard(page) === 'BS8-002'
   if (isBs8002OptionalThen && (await visible(optionalAttack))) {
     const panelText = await panel.innerText().catch(() => '')
     const optionalText = await optionalAttack.innerText().catch(() => '')
     assert.match(
       panelText,
-      /技能 Then 可選效果/,
+      /Then 可選效果/,
       'BS8-002 must present its Then as a skill-level optional decision',
     )
     assert.match(
@@ -1640,7 +1652,7 @@ const driveOtherModal = async (
           .innerText()
           .catch(() => '')
         const progress = progressText.match(
-          /(\d+)\s*[\/／]\s*(?:最多\s*)?(\d+)/,
+          /(\d+)\s*[\/／]\s*(?:(?:最多|全部)\s*)?(\d+)/,
         )
         const selectedCount = await group.locator('button.is-selected').count()
         const requiredCount = progress ? Number(progress[2]) : 1
@@ -3282,7 +3294,11 @@ try {
         ? card.baseCardNumber
         : null
     const testState = auditNegative
-      ? `card-negative:${card.cardNumber}`
+      ? getBaseCardNumber(card) === 'BS8-021'
+        ? `bs8-021-no-energy${card.cardNumber.slice('BS8-021'.length)}`
+        : card.cardNumber.startsWith('BS8-') && card.skill?.text && effectSurfaces(card).includes('attack-then') && !negativeConditionPath
+        ? `card-attack-negative:${card.cardNumber}`
+        : `card-negative:${card.cardNumber}`
       : auditBs8StrictAbilities
         ? getBaseCardNumber(card) === 'BS8-084'
           ? 'bs8-084-attack-discard:payable'
@@ -3292,14 +3308,16 @@ try {
           : `card:${card.cardNumber}`
     const runOptions = auditNegative
       ? {
-          path: negativeConditionPath
+          path: getBaseCardNumber(card) === 'BS8-021'
+            ? 'negative-optional-payment'
+            : negativeConditionPath
             ? 'negative-condition'
             : 'negative-no-payment',
           requireInteractiveOperation: false,
           requireVanillaAttack: isVanillaAttackCookie(card),
           negative: true,
           settleAttackEffects: effectSurfaces(card).includes('attack-then'),
-          allowNegativePayment: negativeConditionPath,
+          allowNegativePayment: negativeConditionPath || getBaseCardNumber(card) === 'BS8-021',
         }
       : auditVanillaAttacks
         ? { path: 'vanilla-attack', requireVanillaAttack: true }

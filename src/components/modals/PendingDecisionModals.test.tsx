@@ -489,7 +489,7 @@ describe('HandDiscardResponseModal', () => {
 })
 
 describe('OptionalCostAttackModal', () => {
-  it('hides skip for a mandatory attack-after cost', async () => {
+  it.each([false, true])('shows skip unless the attack-after cost is explicitly mandatory (%s)', async (mandatory) => {
     const container = document.createElement('div')
     document.body.appendChild(container)
     const root = createRoot(container)
@@ -499,7 +499,7 @@ describe('OptionalCostAttackModal', () => {
         <OptionalCostAttackModal
           sourceCardName="Icicle Yeti Cookie"
           effectText="Place this Cookie on the bottom of your deck."
-          mandatory
+          mandatory={mandatory}
           discardHandCost={0}
           energyCostTotal={0}
           supportCandidates={[]}
@@ -515,9 +515,13 @@ describe('OptionalCostAttackModal', () => {
       ),
     )
 
-    expect(container.textContent).toContain('攻擊後續代價（必須支付）')
-    expect(findButtonByText(container, '略過')).toBeUndefined()
-    expect(findButtonByText(container, '支付代價')).not.toBeUndefined()
+    if (mandatory) {
+      expect(container.textContent).toContain('攻擊後續代價（必須支付）')
+      expect(findButtonByText(container, '略過')).toBeUndefined()
+    } else {
+      expect(findButtonByText(container, '略過')).not.toBeUndefined()
+    }
+    expect(findButtonByText(container, mandatory ? '支付代價' : '支付')).not.toBeUndefined()
 
     await act(() => root.unmount())
     container.remove()

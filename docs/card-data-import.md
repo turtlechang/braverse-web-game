@@ -75,6 +75,8 @@ npm run validate:candidate
 npm run promote:candidate
 ```
 
+測試 promotion 時，以 `--dir <candidate目錄> --official-dir <輸出卡池目錄> --registry-path <輸出registry檔案>` 將輸入與兩個輸出完整隔離。後兩個參數必須成對提供；省略時仍使用正式路徑。候選工具回歸測試只寫入暫存目錄，並以雜湊確認正式卡池與 registry 未變更。
+
 `promote:candidate` 預設會一併執行 `--strict-contracts`；只有需要處理歷史候選的
 相容性診斷時，才可明確使用 `--allow-contract-gaps`，不得把它當成正式上線依據。
 
@@ -138,7 +140,7 @@ npm run cards:analyze:bs8-candidate
 npm run validate:candidate
 ```
 
-匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`；完成 gate 後由 `promote:candidate` 移入正式 `data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`。目前正式資料有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組，專用 `convertOfficialCardToExtraDeckCard` 則由獨立 EXTRA staging 使用。正式卡池 `validate:cards` 為 1,400 張可轉接記錄，`check:card-pool` 已確認 registry 一致；strict audit 為 171 verified／0 needs-review／0 blocked。正式 Browser gate 通用主效果 146／146 正向、156／156 負向，能力 A/B 54／54，攻擊 `Then` 14／14；BS8-076 與 BS8-043 的規則裁決及 A/B 證據亦已納入。EXTRA 自訂牌組、固定 seed AI 與雙瀏覽器房仍維持 staging，Standard importer 會拒絕 `candidateStaging.extraDeckEntries`。
+匯入會建立 `data/candidates/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`、`docs/bs8-card-inventory.md` 與 `docs/bs8-effect-coverage.md`；完成 gate 後由 `promote:candidate` 移入正式 `data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json`。目前正式資料有 171 筆記錄／125 個基礎卡號，包含 15 筆 `EXTRA`；一般 `GameCard` adapter 仍刻意將 `extra` 視為 `unsupported-card-type`，避免混入主牌組，專用 `convertOfficialCardToExtraDeckCard` 由正式與候選 EXTRA 建構流程使用，保留獨立區域。正式卡池 `validate:cards` 為 1,400 張可轉接記錄，`check:card-pool` 已確認 registry 一致；strict audit 為 171 verified／0 needs-review／0 blocked。正式 Browser gate 通用主效果 146／146 正向、156／156 負向，能力 A/B 54／54，攻擊 `Then` 14／14；BS8-076 與 BS8-043 的規則裁決及 A/B 證據亦已納入。2026-09-07 已開放正式 EXTRA 自訂牌組、本機與標準好友房。正式 JSON 使用選填 `extraDeckEntries: [{ cardNumber, count }]`；舊 JSON 缺省為空 EXTRA，匯入、儲存、複製與匯出保留精確異圖卡號。共用 `validateCustomDeckDefinition`／`createCustomDeckPlayerSetup` 檢查主牌60張、EXTRA最多6張與同號4張，Standard另套用現有ASIA禁限表。候選仍獨立，Standard importer拒絕 `candidateStaging.extraDeckEntries`，兩種EXTRA欄位不可混用。
 
 以下 serial gate 段落保留各卡在逐卡稽核當時的候選資料與 `inventory` 狀態；其中「候選仍為 `inventory`／不可 promote」是當時的歷史狀態，不代表目前。BS7 已於 2026-08-22 完成 promotion，現在以正式卡池為準。BS7 採單卡 serial gate，可用 `--card` 將 strict contract 限定在目前卡號（基礎卡號會一併涵蓋同卡異圖）：
 

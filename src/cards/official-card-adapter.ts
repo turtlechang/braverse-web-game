@@ -116,7 +116,8 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
       side: 'self',
       count: 2,
     },
-    onPlayEffects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    onPlayEffects: [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
+      target: { side: 'opponent', min: 0, max: 2 } }],
   },
   'BS8-027': {
     mode: 'awaken',
@@ -146,6 +147,7 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
       {
         kind: 'trash-to-support',
         amount: 1,
+        cookieOnly: false,
         rested: false,
         optional: true,
         energyColor: 'green',
@@ -261,11 +263,12 @@ export const normalizeOfficialCardRecord = (
   // BS8-028@1／029@1 的官方資料把一般 Cookie 技能和攻擊併到 attackText，
   // 卻同時標記成 FLIP。這兩張沒有獨立的 FLIP 效果；拆出技能後以空字串
   // 阻止 flip adapter 把同一段 Activate 技能誤建為 FlipAbility。
+  // 卡池以唯一異圖建立 base alias 時會移除 @1，兩個入口共用同一原文 guard。
   if (
     sourceCard.type === 'flip' &&
     !sourceCard.skill.text &&
     sourceCard.flipText === null &&
-    sourceCard.cardNumber === 'BS8-028@1' &&
+    ['BS8-028', 'BS8-028@1'].includes(sourceCard.cardNumber) &&
     /\{sk\}\s*Heart of the Mines Guard/i.test(sourceCard.attackText ?? '') &&
     /\{da\}\s*3\s*$/i.test(sourceCard.attackText ?? '')
   ) {
@@ -286,7 +289,7 @@ export const normalizeOfficialCardRecord = (
     sourceCard.type === 'flip' &&
     !sourceCard.skill.text &&
     sourceCard.flipText === null &&
-    sourceCard.cardNumber === 'BS8-029@1' &&
+    ['BS8-029', 'BS8-029@1'].includes(sourceCard.cardNumber) &&
     /\{sk\}\s*Helmet on!/i.test(sourceCard.attackText ?? '') &&
     /\{da\}\s*2\s*$/i.test(sourceCard.attackText ?? '')
   ) {
@@ -318,7 +321,7 @@ export const normalizeOfficialCardRecord = (
     }
   }
 
-  // 官方 BS8-083@2 異圖把 On Play／每回合一次技能與普通攻擊全文合併在
+  // 官方 BS8-083@2 異圖把 On Play 技能與普通攻擊全文合併在
   // attackText，skill 欄位為空。依該張卡實際印刷文字拆回兩個 runtime 欄位；
   // 這只修正 adapter 邊界，候選原始 JSON 仍保留官方回傳內容。
   if (
@@ -334,7 +337,7 @@ export const normalizeOfficialCardRecord = (
         ...sourceCard.skill,
         name: '{sk} Freezing Aura',
         text:
-          "{ap} {t1} <{B}> Select up to 1 of your opponent's Cookies. That Cookie is not set as active during your opponent's next Active Phase.",
+          "{ap} <{B}> Select up to 1 of your opponent's Cookies. That Cookie is not set as active during your opponent's next Active Phase.",
       },
       attackText:
         '<{B}{B}{B}> I will freeze your very breath! {da} 3 Then, you can draw cards from your deck until there are 3 cards in your hand.',

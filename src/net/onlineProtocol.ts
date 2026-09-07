@@ -373,19 +373,27 @@ export const isPublicIntent = (value: unknown): value is PublicIntent => {
   )
 }
 
+const isDeckEntries = (value: unknown): boolean =>
+  Array.isArray(value) && value.every((entry) =>
+    isRecord(entry) &&
+    typeof entry.cardNumber === 'string' && entry.cardNumber.trim().length > 0 &&
+    typeof entry.count === 'number' && Number.isInteger(entry.count) && entry.count > 0,
+  )
+
 const isCustomDeck = (value: unknown): value is CustomDeck =>
   isRecord(value) &&
   typeof value.id === 'string' &&
   typeof value.name === 'string' &&
   typeof value.createdAt === 'string' &&
   typeof value.updatedAt === 'string' &&
-  Array.isArray(value.entries) &&
-  value.entries.every(
-    (entry) =>
-      isRecord(entry) &&
-      typeof entry.cardNumber === 'string' &&
-      Number.isInteger(entry.count),
-  )
+  isDeckEntries(value.entries) &&
+  (value.extraDeckEntries === undefined || isDeckEntries(value.extraDeckEntries)) &&
+  (value.candidateStaging === undefined || (
+    isRecord(value.candidateStaging) &&
+    value.candidateStaging.kind === 'bs8-candidate-staging' &&
+    isDeckEntries(value.candidateStaging.extraDeckEntries) &&
+    !Object.prototype.hasOwnProperty.call(value, 'extraDeckEntries')
+  ))
 
 const commandShapes = {
   'resolve-faint-effect': {

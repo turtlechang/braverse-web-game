@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { CardEffect, CookieCard, GameCard } from '../../types'
+import type { CardEffect, ChooseOneEffect, CookieCard, GameCard } from '../../types'
 import type { PlayerView } from '../../player-view'
+import { createBattleState } from '../../test-helpers/battle-helpers'
+import { chooseAiEffectMode } from '../choose-one-mode'
 import { createKnowledgeState } from './knowledge-state'
 import { createPendingSelectionStrategy } from './pending-selection'
 
@@ -66,6 +68,68 @@ const view = (): PlayerView => ({
 })
 
 describe('G5 pending selection strategy', () => {
+  it.each([3, 4, 5] as const)('Lv.%i 的可選張數模式優先取得非零收益', (level) => {
+    const selection = createPendingSelectionStrategy(
+      view(), createKnowledgeState('player-one'), level,
+    )
+    const factories: ((amount: number) => CardEffect)[] = [
+      (amount) => ({ kind: 'deck-to-support', amount, rested: true }),
+      (amount) => ({ kind: 'deck-to-trash', amount, side: 'self' }),
+      (lookCount) => ({
+        kind: 'inspect-deck', lookCount, pickCount: 1,
+        restDestination: 'bottom', optionalPick: true,
+      }),
+    ]
+    for (const makeEffect of factories) {
+      const effect: ChooseOneEffect = {
+        kind: 'choose-one',
+        modes: [0, 1, 2].map((amount) => ({
+          label: 'same label', effects: [makeEffect(amount)],
+        })),
+      }
+      expect(selection.preferredModeIndices(effect)).toEqual([2, 1, 0])
+    }
+  })
+
+  it('HP 移除模式計入每個目標的張數，且略過湊不齊最低目標數的模式', () => {
+    const selection = createPendingSelectionStrategy(
+      view(), createKnowledgeState('player-one'), 4,
+    )
+    const effect: ChooseOneEffect = {
+      kind: 'choose-one',
+      modes: [
+        { label: 'zero', effects: [] },
+        { label: 'single', effects: [{
+          kind: 'hp-to-trash', amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        }] },
+        { label: 'two small', effects: [{
+          kind: 'hp-to-trash', amount: 1,
+          target: { side: 'opponent', min: 2, max: 2 },
+        }] },
+        { label: 'distributed', effects: [{
+          kind: 'hp-to-trash', amount: 1, amountByTargetIndex: [2, 1],
+          target: { side: 'opponent', min: 2, max: 2 },
+        }] },
+      ],
+    }
+    const preferences = selection.preferredModeIndices(effect)
+    expect(preferences).toEqual([3, 1, 2, 0])
+    const state = createBattleState()
+    const context = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: 'attacker', sourceCardName: 'source',
+    }
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(1)
+    const opponent = state.players['player-one']
+    opponent.battleArea.push({
+      card: cookie('second-target'), hpCards: [item('second-hp')], rested: false,
+    })
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(3)
+    opponent.battleArea = []
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(0)
+  })
+
   it('以結構化效果及公開 HP 優先選擇可擊倒的傷害目標', () => {
     const selection = createPendingSelectionStrategy(
       view(),

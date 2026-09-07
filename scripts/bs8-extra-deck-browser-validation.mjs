@@ -22,7 +22,7 @@ const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium
 if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4182)
-const viewport = { width: Number(process.env.BRAVERSE_TEST_WIDTH ?? 1440), height: 960 }
+const viewport = { width: Number(process.env.BRAVERSE_TEST_WIDTH ?? 1440), height: Number(process.env.BRAVERSE_TEST_HEIGHT ?? 960) }
 const baseUrl = `http://127.0.0.1:${port}`
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const browserExecutable =

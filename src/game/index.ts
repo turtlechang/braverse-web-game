@@ -212,6 +212,8 @@ export type { CardPoolEntry } from './card-pool'
 export {
   createCustomDeckId,
   createDeckFromCustomDeck,
+  createCustomDeckPlayerSetup,
+  validateCustomDeckDefinition,
   deleteCustomDeck,
   duplicateCustomDeck,
   loadCustomDecks,
