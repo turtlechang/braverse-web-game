@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   canActivateCookieSkill,
   canPlayItem,
   canActivateStage,
   compileEffectDecisionDescriptor,
+  executeCardEffect,
+  GameRuleError,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
   getNestedSequentialDamageSelectionEffect,
   getSupportEffectCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
+  getPairedTargetSelectionError,
   getEnergyCostTotal,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashBattleCookieCostCandidates,
   getBattleCookieToHandCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
+  getHandToBreakAreaCostCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
   requiresEffectCardSelection,
@@ -43,13 +48,15 @@ type AbilityCostDraft = {
   sourceKind: 'cookie' | 'item' | 'stage'
   card: GameCard
   ability: CardAbility | CardSkill
-  trigger: 'activate' | 'on-play'
+  trigger: 'activate' | 'on-play' | 'passive'
   selectedPaymentIds: string[]
   selectedCostSupportToTrashIds: string[]
   selectedDiscardHandIds: string[]
   selectedHpToTrashTargetIds: string[]
   selectedTrashBattleCookieIds: string[]
   selectedBattleToHandIds: string[]
+  selectedTrashCookieToBreakAreaIds: string[]
+  selectedHandToBreakAreaIds: string[]
   /** 玩家為「選擇一項」挑過的模式，依序累積後隨 begin-* 指令送出。 */
   chooseOneModes: number[]
 }
@@ -64,6 +71,9 @@ const getTargetSelector = (
   if (effect.kind === 'gain-hp') {
     return effect.target?.sourceOnly ? null : (effect.target ?? null)
   }
+  if (effect.kind === 'field-to-trash' && effect.target.sourceOnly) {
+    return null
+  }
   if (
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
@@ -73,6 +83,7 @@ const getTargetSelector = (
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
+    effect.kind === 'prevent-support-active-next-phase' ||
     effect.kind === 'support-to-hp' ||
     effect.kind === 'cycle-hp' ||
     effect.kind === 'rest-support-and-damage' ||
@@ -159,6 +170,29 @@ export function useOnlinePendingEffect(params: {
   const [effectHistory, setEffectHistory] = useState<string[]>([])
   const [abilityCostDraft, setAbilityCostDraft] =
     useState<AbilityCostDraft | null>(null)
+  const displayedHpInspection = useRef<string | null>(null)
+  const hpInspection = game.hpInspectionResults?.[viewerPlayerId]
+
+  useEffect(() => {
+    if (!hpInspection) {
+      displayedHpInspection.current = null
+      return
+    }
+    if (!setInspectedHpPile) return
+    const key = `${viewerPlayerId}:${hpInspection.sequence}:${hpInspection.sourceInstanceId}`
+    if (displayedHpInspection.current === key) return
+    // Only the acknowledged private result may reveal cards. The ordinary
+    // snapshot deliberately keeps even the viewer's HP piles concealed.
+    const timer = window.setTimeout(() => {
+      displayedHpInspection.current = key
+      if (hpInspection.piles.length === 0) return
+      setInspectedHpPile({
+        title: `${hpInspection.piles.map((pile) => pile.targetCardName).join('、')}的 HP 卡`,
+        cards: hpInspection.piles.flatMap((pile) => pile.cards),
+      })
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [hpInspection, setInspectedHpPile, viewerPlayerId])
 
   const pendingAbility = game.pendingAbilityEffect
   // 與本地端 usePendingEffect 的面板建立條件一致：補位／Refresh／OnPlay
@@ -167,6 +201,7 @@ export function useOnlinePendingEffect(params: {
   const abilityActiveForViewer = Boolean(
     pendingAbility &&
       pendingAbility.playerId === viewerPlayerId &&
+      !pendingAbility.awaitingActivation &&
       // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp BS4-044）第二階段等待
       // 放回手牌時，面板交給 PendingDecisionModals 的 place-hand-hp 提示。
       !pendingAbility.pendingPlace &&
@@ -222,6 +257,12 @@ export function useOnlinePendingEffect(params: {
       )
     : []
   const draftEffect = draftEffects[0] ?? null
+  // 移牌代價會改變後續效果候選；先讓伺服器付款，再從權威狀態選目標。
+  const draftRequiresPaymentBeforeTargets = Boolean(
+    abilityCostDraft?.ability.cost.trashCookieToBreakArea ||
+    abilityCostDraft?.ability.cost.handToBreakArea ||
+    abilityCostDraft?.ability.cost.trashBattleCookie?.faint,
+  )
   const draftContext: EffectContext | null = abilityCostDraft
     ? {
         sourcePlayerId: viewerPlayerId,
@@ -344,6 +385,23 @@ export function useOnlinePendingEffect(params: {
         : []
     : []
   const isEffectPending = Boolean(currentEffect)
+  // These zone moves are deterministic pure effects. Reuse their core validation
+  // rather than maintaining a second UI rule for linked levels and exact sums.
+  const effectSelectionError = (() => {
+    if (displayedContext && selectionEffect?.kind === 'damage' && selectionEffect.target.countPerPlayer !== undefined) {
+      return getPairedTargetSelectionError(game, displayedContext, selectionEffect, selectedTargetIds)
+    }
+    if (draftRequiresPaymentBeforeTargets || !displayedContext || !displayedEffectConditionMet ||
+      !(selectionEffect?.kind === 'break-to-trash' ||
+        (selectionEffect?.kind === 'break-to-hand-by-level-sum' && selectionEffect.cardCount !== undefined))) return null
+    try {
+      executeCardEffect(game, displayedContext, selectionEffect, selectedTargetIds)
+      return null
+    } catch (error) {
+      if (error instanceof GameRuleError) return error.message
+      throw error
+    }
+  })()
   const draftDiscardHandCandidates = abilityCostDraft
     ? abilityCostDraft.ability.cost.discardAllHand
       ? getDiscardAllHandCostCandidates(
@@ -430,6 +488,33 @@ export function useOnlinePendingEffect(params: {
         abilityCostDraft.card.instanceId,
       ).map((cookie) => cookie.card)
     : []
+  const draftTrashCookieToBreakAreaCost = abilityCostDraft?.ability.cost.trashCookieToBreakArea?.count ?? 0
+  const draftTrashCookieToBreakAreaCandidates = abilityCostDraft
+    ? getTrashCookieToBreakAreaCostCandidates(abilityCostDraft.ability.cost, game.players[viewerPlayerId].discardPile)
+    : []
+  const draftHandToBreakAreaCost = abilityCostDraft?.ability.cost.handToBreakArea?.count ?? 0
+  const draftHandToBreakAreaCandidates = abilityCostDraft
+    ? getHandToBreakAreaCostCandidates(abilityCostDraft.ability.cost, game.players[viewerPlayerId].hand, abilityCostDraft.card.instanceId)
+    : []
+
+  const toggleDraftTrashCookieToBreakArea = (instanceId: string) => {
+    setAbilityCostDraft((draft) => {
+      if (!draft || !draftTrashCookieToBreakAreaCandidates.some((card) => card.instanceId === instanceId)) return draft
+      const selected = draft.selectedTrashCookieToBreakAreaIds
+      if (selected.includes(instanceId)) return { ...draft, selectedTrashCookieToBreakAreaIds: selected.filter((id) => id !== instanceId) }
+      if (selected.length >= draftTrashCookieToBreakAreaCost) return draft
+      return { ...draft, selectedTrashCookieToBreakAreaIds: [...selected, instanceId] }
+    })
+  }
+  const toggleDraftHandToBreakArea = (instanceId: string) => {
+    setAbilityCostDraft((draft) => {
+      if (!draft || !draftHandToBreakAreaCandidates.some((card) => card.instanceId === instanceId)) return draft
+      const selected = draft.selectedHandToBreakAreaIds
+      if (selected.includes(instanceId)) return { ...draft, selectedHandToBreakAreaIds: selected.filter((id) => id !== instanceId) }
+      if (selected.length >= draftHandToBreakAreaCost) return draft
+      return { ...draft, selectedHandToBreakAreaIds: [...selected, instanceId] }
+    })
+  }
 
   const toggleDraftDiscardHand = (instanceId: string) => {
     setAbilityCostDraft((draft) => {
@@ -615,6 +700,7 @@ export function useOnlinePendingEffect(params: {
   ])
 
   const toggleTarget = (instanceId: string) => {
+    if (draftRequiresPaymentBeforeTargets) return
     if (displayedEffect?.kind === 'rest-support-and-damage') {
       const supportCandidateIds = new Set(
         restSupportAndDamageSupportCandidates.map(
@@ -657,6 +743,7 @@ export function useOnlinePendingEffect(params: {
       return
     }
 
+    if (!candidateCards.some((card) => card.instanceId === instanceId)) return
     const max = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 1
     setSelectedTargetState((currentState) => {
       const current =
@@ -674,6 +761,7 @@ export function useOnlinePendingEffect(params: {
   }
 
   const confirmEffect = () => {
+    if (effectSelectionError) return
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
       const sequentialAllTargets =
@@ -721,8 +809,12 @@ export function useOnlinePendingEffect(params: {
           (cost.trashBattleCookie?.count ?? 0) ||
         abilityCostDraft.selectedBattleToHandIds.length !==
           (cost.battleCookieToHand?.count ?? 0) ||
+        abilityCostDraft.selectedTrashCookieToBreakAreaIds.length !== draftTrashCookieToBreakAreaCost ||
+        abilityCostDraft.selectedTrashCookieToBreakAreaIds.some((id) => !draftTrashCookieToBreakAreaCandidates.some((card) => card.instanceId === id)) ||
+        abilityCostDraft.selectedHandToBreakAreaIds.length !== draftHandToBreakAreaCost ||
+        abilityCostDraft.selectedHandToBreakAreaIds.some((id) => !draftHandToBreakAreaCandidates.some((card) => card.instanceId === id)) ||
         !restSupportAndDamageSelectionValid ||
-        (requiresTargetSelection &&
+        (!draftRequiresPaymentBeforeTargets && requiresTargetSelection &&
           (selectedTargetIds.length < targetMin ||
             selectedTargetIds.length > targetMax))
       ) {
@@ -739,7 +831,7 @@ export function useOnlinePendingEffect(params: {
         ...(cost.battleCookieToHand
           ? { battleToHandIds: abilityCostDraft.selectedBattleToHandIds }
           : {}),
-        targetIds: selectedTargetIds,
+        ...(draftRequiresPaymentBeforeTargets ? {} : { targetIds: selectedTargetIds }),
         // 沒有「選擇一項」時就不要多送一個空陣列上線。
         ...(abilityCostDraft.chooseOneModes.length > 0
           ? { chooseOneModes: abilityCostDraft.chooseOneModes }
@@ -752,10 +844,14 @@ export function useOnlinePendingEffect(params: {
             ...sharedCost,
             sourceInstanceId: abilityCostDraft.card.instanceId,
             trigger: abilityCostDraft.trigger,
+            ...(cost.trashCookieToBreakArea ? { trashCookieToBreakAreaIds: abilityCostDraft.selectedTrashCookieToBreakAreaIds } : {}),
+            ...(cost.handToBreakArea ? { handToBreakAreaIds: abilityCostDraft.selectedHandToBreakAreaIds } : {}),
             costSupportToTrashIds:
               abilityCostDraft.selectedCostSupportToTrashIds,
           },
-          `${abilityCostDraft.card.name}已確認代價與效果目標。`,
+          draftRequiresPaymentBeforeTargets
+            ? `${abilityCostDraft.card.name}已確認技能代價，付款後選擇效果目標。`
+            : `${abilityCostDraft.card.name}已確認代價與效果目標。`,
         )
       } else if (abilityCostDraft.sourceKind === 'item') {
         dispatch(
@@ -788,24 +884,6 @@ export function useOnlinePendingEffect(params: {
         submittedEffectKeyRef.current = null
       }
     }, 1500)
-    if (
-      setInspectedHpPile &&
-      currentEffect?.kind === 'view-hp' &&
-      selectedTargetIds.length === 1 &&
-      currentTargetSelector
-    ) {
-      const target = getEffectTargetCandidates(
-        game,
-        context,
-        currentTargetSelector,
-      ).find((candidate) => candidate.card.instanceId === selectedTargetIds[0])
-      if (target) {
-        setInspectedHpPile({
-          title: `${target.card.name}的 HP 卡`,
-          cards: target.hpCards,
-        })
-      }
-    }
     if (attackEffectActive) {
       dispatch(
         {
@@ -894,11 +972,13 @@ export function useOnlinePendingEffect(params: {
       Boolean(cost.discardHandAtLeast) ||
       Boolean(cost.hpToTrash) ||
       (cost.trashBattleCookie?.count ?? 0) > 0 ||
+      (cost.trashCookieToBreakArea?.count ?? 0) > 0 ||
+      (cost.handToBreakArea?.count ?? 0) > 0 ||
       (cost.battleCookieToHand?.count ?? 0) > 0
     )
   }
 
-  const openAbilityCostDraft = (
+  const openAbilityCostDraft = useCallback((
     sourceKind: AbilityCostDraft['sourceKind'],
     card: GameCard,
     ability: CardAbility | CardSkill,
@@ -918,9 +998,34 @@ export function useOnlinePendingEffect(params: {
             selectedHpToTrashTargetIds: [],
             selectedTrashBattleCookieIds: [],
             selectedBattleToHandIds: [],
+            selectedTrashCookieToBreakAreaIds: [],
+            selectedHandToBreakAreaIds: [],
             chooseOneModes: [],
           },
     )
+  }, [])
+
+  useEffect(() => {
+    if (!pendingAbility?.awaitingActivation || pendingAbility.playerId !== viewerPlayerId) return
+    const card = game.players[viewerPlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === pendingAbility.sourceInstanceId,
+    )?.card
+    if (card?.type !== 'cookie' || !card.skill) return
+    const ability = card.skill
+    // 即使資源不足也必須顯示「不發動」，讓結束階段能繼續。
+    const timer = window.setTimeout(() => openAbilityCostDraft('cookie', card, ability, 'passive'), 0)
+    return () => window.clearTimeout(timer)
+  }, [game.players, openAbilityCostDraft, pendingAbility, viewerPlayerId])
+
+  const cancelAbilityCostDraft = () => {
+    if (abilityCostDraft?.trigger === 'passive') {
+      dispatch({
+        kind: 'skip-end-phase-skill',
+        playerId: viewerPlayerId,
+        sourceInstanceId: abilityCostDraft.card.instanceId,
+      }, `已略過${abilityCostDraft.card.name}的回合結束效果。`)
+    }
+    setAbilityCostDraft(null)
   }
 
   const beginCookieSkill = (
@@ -1107,9 +1212,12 @@ export function useOnlinePendingEffect(params: {
           selectedTrashBattleCookieIds:
             abilityCostDraft.selectedTrashBattleCookieIds,
           selectedBattleToHandIds: abilityCostDraft.selectedBattleToHandIds,
+          selectedTrashCookieToBreakAreaIds: abilityCostDraft.selectedTrashCookieToBreakAreaIds,
+          selectedHandToBreakAreaIds: abilityCostDraft.selectedHandToBreakAreaIds,
           chooseOneModes: abilityCostDraft.chooseOneModes,
           skillActivated: false,
-          optional: false,
+          optional: abilityCostDraft.trigger === 'passive' || abilityCostDraft.trigger === 'on-play',
+          endPhase: abilityCostDraft.trigger === 'passive',
           triggerLabel:
             abilityCostDraft.sourceKind === 'item'
               ? '使用物品'
@@ -1117,6 +1225,8 @@ export function useOnlinePendingEffect(params: {
                 ? '啟動場景'
                 : abilityCostDraft.trigger === 'on-play'
                   ? 'OnPlay 登場觸發'
+                  : abilityCostDraft.trigger === 'passive'
+                    ? '回合結束效果'
                   : 'Activate 主動發動',
           sourceKind: abilityCostDraft.sourceKind,
         }
@@ -1142,7 +1252,7 @@ export function useOnlinePendingEffect(params: {
               } satisfies CardSkill)
             : ({
                 trigger:
-                  pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate',
+                  pendingAbility?.trigger === 'passive' ? 'passive' : pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate',
                 oncePerTurn: false,
                 yourTurn: true,
                 restSource: false,
@@ -1152,7 +1262,8 @@ export function useOnlinePendingEffect(params: {
               } satisfies CardSkill),
           trigger: attackEffectActive
             ? 'activate'
-            : (pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate'),
+            : (pendingAbility?.trigger === 'passive' ? 'passive' : pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate'),
+          endPhase: !attackEffectActive && pendingAbility?.trigger === 'passive',
           effects: attackEffectActive
             ? (attackBattle?.attackEffects ?? [])
             : (pendingAbility?.effects ?? []),
@@ -1166,6 +1277,8 @@ export function useOnlinePendingEffect(params: {
           selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
           selectedBattleToHandIds: [],
+          selectedTrashCookieToBreakAreaIds: [],
+          selectedHandToBreakAreaIds: [],
           skillActivated: true,
           optional: false,
           triggerLabel: attackEffectActive
@@ -1176,6 +1289,8 @@ export function useOnlinePendingEffect(params: {
                 ? '啟動場景'
                 : pendingAbility?.trigger === 'on-play'
                   ? 'OnPlay 登場觸發'
+                  : pendingAbility?.trigger === 'passive'
+                    ? '回合結束效果'
                   : 'Activate 主動發動',
           sourceKind: attackEffectActive
             ? 'attack'
@@ -1210,6 +1325,8 @@ export function useOnlinePendingEffect(params: {
   return {
     currentEffect: selectionEffect,
     effectConditionMet: displayedEffectConditionMet,
+    effectSelectionError,
+    effectSelectionValid: effectSelectionError === null,
     candidateCards,
     restSupportAndDamageSupportCandidates,
     restSupportAndDamageTargetCandidates,
@@ -1260,8 +1377,17 @@ export function useOnlinePendingEffect(params: {
     ),
     draftBattleCookieToHandCost,
     toggleDraftBattleCookieToHand,
+    draftTrashCookieToBreakAreaCandidates,
+    draftTrashCookieToBreakAreaCost,
+    selectedDraftTrashCookieToBreakAreaIds: new Set(abilityCostDraft?.selectedTrashCookieToBreakAreaIds ?? []),
+    toggleDraftTrashCookieToBreakArea,
+    draftHandToBreakAreaCandidates,
+    draftHandToBreakAreaCost,
+    selectedDraftHandToBreakAreaIds: new Set(abilityCostDraft?.selectedHandToBreakAreaIds ?? []),
+    toggleDraftHandToBreakArea,
+    draftRequiresPaymentBeforeTargets,
     abilityCostDraft,
-    cancelAbilityCostDraft: () => setAbilityCostDraft(null),
+    cancelAbilityCostDraft,
     // 與本地 usePendingEffect 對齊的欄位名,讓 EffectPanel/BattleResponseModals/
     // DamageEffectModals/PendingDecisionModals 能原樣重用。
     pendingEffect: pendingEffectView,

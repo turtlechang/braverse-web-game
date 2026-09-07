@@ -12,6 +12,7 @@ import type {
   PlayerId,
   TurnPhase,
 } from './types'
+import type { AiActionType, AiDecisionReason, AiLevel } from './ai/types'
 
 export const BATTLE_REPLAY_FORMAT = 'braverse-battle-replay' as const
 export const BATTLE_REPLAY_VERSION = 1 as const
@@ -24,6 +25,53 @@ export type BattleReplayLimitation =
   | 'missing-initial-state'
   | 'online-public-view'
 
+export type BattleReplaySource =
+  | 'production'
+  | 'test-state'
+  | 'benchmark'
+  | 'unknown'
+
+export type BattleReplaySampleQuality = 'behavioral' | 'snapshot' | 'invalid'
+
+export type BattleReplayTrainingExclusion =
+  | 'no-actions'
+  | 'command-count-mismatch'
+  | 'test-state'
+  | 'unknown-source'
+  | 'online-public-view'
+  | 'inexact-replay'
+  | 'incomplete-match'
+
+export interface BattleReplayTrainingAssessment {
+  eligible: boolean
+  exclusionReasons: BattleReplayTrainingExclusion[]
+}
+
+export interface BattleReplayAiAgent {
+  aiLevel: AiLevel
+  strategyVersion: string
+  strategyCommit: string | null
+}
+
+export interface BattleReplayAiDecision {
+  commandLogId: number | null
+  playerId: PlayerId
+  action: AiActionType
+  description: string
+  /** AI 公開決策理由；strategyMemory 永不寫入 replay。 */
+  reason?: Omit<AiDecisionReason, 'strategyMemory'>
+}
+
+export interface BattleReplayAiMetadata {
+  agents: Partial<Record<PlayerId, BattleReplayAiAgent>>
+  decisions: BattleReplayAiDecision[]
+}
+
+export interface BattleReplayQualityAssessment {
+  sampleQuality: BattleReplaySampleQuality
+  training: BattleReplayTrainingAssessment
+}
+
 export interface BattleReplayExportV1 {
   format: typeof BATTLE_REPLAY_FORMAT
   version: typeof BATTLE_REPLAY_VERSION
@@ -31,6 +79,12 @@ export interface BattleReplayExportV1 {
   mode: BattleReplayMode
   visibility: BattleReplayVisibility
   viewerId: PlayerId
+  /** Origin label used to keep synthetic fixtures out of AI datasets. */
+  source: BattleReplaySource
+  /** A snapshot has no actions; a behavioral sample contains an action stream. */
+  sampleQuality: BattleReplaySampleQuality
+  /** Deterministic dataset gate derived from the exported evidence. */
+  training: BattleReplayTrainingAssessment
   decks: { playerOne: string; playerTwo: string }
   seed: number | null
   /** Typed commands are the machine-facing replay input. */
@@ -52,6 +106,8 @@ export interface BattleReplayExportV1 {
     exact: boolean
     limitation: BattleReplayLimitation
   }
+  /** Offline-only AI decision trace; omitted from online public exports. */
+  ai?: BattleReplayAiMetadata
 }
 
 export interface BuildBattleReplayExportOptions {
@@ -61,8 +117,12 @@ export interface BuildBattleReplayExportOptions {
   decks: { playerOne: string; playerTwo: string }
   seed?: number | null
   initialState?: GameState | null
+  /** Defaults to production for online exports and unknown for offline callers. */
+  source?: Exclude<BattleReplaySource, 'unknown'>
   /** Supply a fixed clock in tests; production uses the current time. */
   now?: () => Date
+  /** Offline-only AI level/version/reason trace. */
+  ai?: BattleReplayAiMetadata
 }
 
 const stripCommandLog = (state: GameState): GameState => {
@@ -141,10 +201,71 @@ const redactOnlineCommandLog = (
     }
   })
 
+export const assessBattleReplay = (
+  artifact: Pick<
+    BattleReplayExportV1,
+    | 'mode'
+    | 'visibility'
+    | 'source'
+    | 'commands'
+    | 'commandLog'
+    | 'outcome'
+    | 'replay'
+  >,
+): BattleReplayQualityAssessment => {
+  const hasCommands = artifact.commands.length > 0
+  const hasCommandLog = artifact.commandLog.length > 0
+  const hasMatchingActionStreams =
+    artifact.commands.length === artifact.commandLog.length
+  const sampleQuality: BattleReplaySampleQuality =
+    !hasCommands && !hasCommandLog
+      ? 'snapshot'
+      : hasCommands && hasCommandLog && hasMatchingActionStreams
+        ? 'behavioral'
+        : 'invalid'
+
+  const exclusionReasons: BattleReplayTrainingExclusion[] = []
+  if (!hasCommands && !hasCommandLog) {
+    exclusionReasons.push('no-actions')
+  }
+  if (!hasMatchingActionStreams) {
+    exclusionReasons.push('command-count-mismatch')
+  }
+  if (artifact.source === 'test-state') {
+    exclusionReasons.push('test-state')
+  }
+  if (artifact.source === 'unknown') {
+    exclusionReasons.push('unknown-source')
+  }
+  if (
+    artifact.mode === 'online' ||
+    artifact.visibility !== 'full' ||
+    artifact.replay.limitation === 'online-public-view'
+  ) {
+    exclusionReasons.push('online-public-view')
+  }
+  if (!artifact.replay.available || !artifact.replay.exact) {
+    exclusionReasons.push('inexact-replay')
+  }
+  if (artifact.outcome.status !== 'finished' || artifact.outcome.result === null) {
+    exclusionReasons.push('incomplete-match')
+  }
+
+  return {
+    sampleQuality,
+    training: {
+      eligible: exclusionReasons.length === 0,
+      exclusionReasons,
+    },
+  }
+}
+
 export const buildBattleReplayExport = (
   options: BuildBattleReplayExportOptions,
 ): BattleReplayExportV1 => {
   const { state, mode, viewerId } = options
+  const source: BattleReplaySource =
+    options.source ?? (mode === 'online' ? 'production' : 'unknown')
   const visibility: BattleReplayVisibility = mode === 'online' ? 'public' : 'full'
   const publicState =
     mode === 'online' ? maskGameStateForViewer(state, viewerId) : state
@@ -171,6 +292,27 @@ export const buildBattleReplayExport = (
           ? 'unseeded-shuffle'
           : 'none'
 
+  const replay = {
+    available: initialState !== null,
+    exact: initialState !== null && replayLimitation === 'none',
+    limitation: replayLimitation,
+  }
+  const outcome = {
+    status: state.status,
+    result: state.result,
+    turnNumber: state.turnNumber,
+    phase: state.phase,
+  }
+  const quality = assessBattleReplay({
+    mode,
+    visibility,
+    source,
+    commands,
+    commandLog,
+    outcome,
+    replay,
+  })
+
   return {
     format: BATTLE_REPLAY_FORMAT,
     version: BATTLE_REPLAY_VERSION,
@@ -178,23 +320,18 @@ export const buildBattleReplayExport = (
     mode,
     visibility,
     viewerId,
+    source,
+    sampleQuality: quality.sampleQuality,
+    training: quality.training,
     decks: options.decks,
     seed: options.seed ?? null,
     commands,
     commandLog,
     initialState,
     finalState: stripCommandLog(publicState),
-    outcome: {
-      status: state.status,
-      result: state.result,
-      turnNumber: state.turnNumber,
-      phase: state.phase,
-    },
-    replay: {
-      available: initialState !== null,
-      exact: initialState !== null && replayLimitation === 'none',
-      limitation: replayLimitation,
-    },
+    outcome,
+    replay,
+    ...(mode === 'offline' && options.ai ? { ai: options.ai } : {}),
   }
 }
 
@@ -220,6 +357,77 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isPlayerId = (value: unknown): value is PlayerId =>
   value === 'player-one' || value === 'player-two'
+
+const isBattleReplaySource = (value: unknown): value is BattleReplaySource =>
+  value === 'production' ||
+  value === 'test-state' ||
+  value === 'benchmark' ||
+  value === 'unknown'
+
+const AI_ACTION_TYPES: readonly AiActionType[] = [
+  'idle',
+  'refresh',
+  'replace-cookie',
+  'skip-replacement',
+  'advance-phase',
+  'place-support',
+  'deploy-cookie',
+  'activate-skill',
+  'play-item',
+  'play-stage',
+  'activate-stage',
+  'attack',
+  'play-trap',
+  'play-blocker',
+  'play-attack-response',
+  'resolve-damage',
+  'resolve-attack-effect',
+  'resolve-flip',
+  'resolve-faint',
+  'resolve-after-damage',
+  'resolve-effect-order',
+  'resolve-inspect-deck',
+  'resolve-reveal-top-deck',
+  'resolve-optional-cost-attack',
+  'resolve-stage-trigger',
+  'error',
+]
+
+const isAiActionType = (value: unknown): value is AiActionType =>
+  typeof value === 'string' && AI_ACTION_TYPES.includes(value as AiActionType)
+
+const isAiMetadata = (value: unknown): value is BattleReplayAiMetadata => {
+  if (!isRecord(value) || !isRecord(value.agents) || !Array.isArray(value.decisions)) {
+    return false
+  }
+  for (const [playerId, agent] of Object.entries(value.agents)) {
+    if (!isPlayerId(playerId) || !isRecord(agent)) return false
+    if (
+      typeof agent.aiLevel !== 'number' ||
+      !Number.isInteger(agent.aiLevel) ||
+      agent.aiLevel < 1 ||
+      agent.aiLevel > 5 ||
+      typeof agent.strategyVersion !== 'string' ||
+      agent.strategyVersion.length === 0 ||
+      (agent.strategyCommit !== null && typeof agent.strategyCommit !== 'string')
+    ) {
+      return false
+    }
+  }
+  return value.decisions.every((decision) => {
+    if (!isRecord(decision)) return false
+    if (
+      !isPlayerId(decision.playerId) ||
+      !isAiActionType(decision.action) ||
+      typeof decision.description !== 'string' ||
+      (decision.commandLogId !== null && !Number.isInteger(decision.commandLogId))
+    ) {
+      return false
+    }
+    if (decision.reason === undefined) return true
+    return isRecord(decision.reason) && !('strategyMemory' in decision.reason)
+  })
+}
 
 export class BattleReplayParseError extends Error {}
 
@@ -252,6 +460,13 @@ export const parseBattleReplayExport = (json: string): BattleReplayExportV1 => {
   if (!isPlayerId(parsed.viewerId)) {
     throw new BattleReplayParseError('AI 覆盤檔缺少合法 viewerId 欄位。')
   }
+  let source: BattleReplaySource = 'unknown'
+  if (parsed.source !== undefined) {
+    if (!isBattleReplaySource(parsed.source)) {
+      throw new BattleReplayParseError('AI 覆盤檔含有無法辨識的 source。')
+    }
+    source = parsed.source
+  }
   if (!Array.isArray(parsed.commands)) {
     throw new BattleReplayParseError('AI 覆盤檔缺少 commands 陣列。')
   }
@@ -270,6 +485,31 @@ export const parseBattleReplayExport = (json: string): BattleReplayExportV1 => {
   if (!isRecord(parsed.outcome) || !isRecord(parsed.replay)) {
     throw new BattleReplayParseError('AI 覆盤檔缺少 outcome 或 replay 摘要。')
   }
+  if (parsed.ai !== undefined) {
+    if (parsed.mode === 'online' || !isAiMetadata(parsed.ai)) {
+      throw new BattleReplayParseError('AI 覆盤檔的 ai metadata 格式無效。')
+    }
+  }
 
-  return parsed as unknown as BattleReplayExportV1
+  const artifact = parsed as unknown as BattleReplayExportV1
+  const quality = assessBattleReplay({
+    mode: artifact.mode,
+    visibility: artifact.visibility,
+    source,
+    commands: artifact.commands,
+    commandLog: artifact.commandLog,
+    outcome: artifact.outcome,
+    replay: artifact.replay,
+  })
+
+  // Recompute derived quality metadata so an imported file cannot claim to be
+  // training-ready by editing sampleQuality or training directly. Legacy v1
+  // files without source metadata remain parseable but are conservatively
+  // classified as unknown-source.
+  return {
+    ...artifact,
+    source,
+    sampleQuality: quality.sampleQuality,
+    training: quality.training,
+  }
 }

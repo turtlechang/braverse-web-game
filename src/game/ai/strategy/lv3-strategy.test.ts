@@ -166,6 +166,43 @@ describe('G3 ActionScoreBreakdown', () => {
     expect(compareActionScoreBreakdowns(attack, setup)).toBeGreaterThan(0)
   })
 
+  it('規則層提供公開修正後的宣告傷害時，會正確標記擊倒與分數', () => {
+    const before = view()
+    before.self.battleArea = [{
+      card: cookie('buffed-attacker'),
+      hpCount: 3,
+      rested: false,
+    }]
+    before.opponent.battleArea = [{
+      card: cookie('target'),
+      hpCount: 3,
+      rested: false,
+    }]
+
+    const attack = scoreAction({
+      identity: {
+        kind: 'attack',
+        sourceInstanceId: 'buffed-attacker',
+        targetInstanceId: 'target',
+      },
+      beforeView: before,
+      afterView: before,
+      postActionBoardScore: 0,
+      deckProfile: profile,
+      tacticalPlan: noPlan,
+      sourceCapabilities: [],
+      knownDeckFactCount: 0,
+      legalAttackCountBefore: 1,
+      legalAttackCountAfter: 0,
+      publicAttackDamage: 3,
+    })
+
+    expect(attack.calibrated.publicLethal).toBe(true)
+    expect(attack.contributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'public-attack', amount: 200 }),
+    ]))
+  })
+
   it('未知效果與未知牌庫前提會得到保守扣分並出現在 breakdown', () => {
     const scored = scoreAction({
       identity: { kind: 'activate-skill', sourceInstanceId: 'unknown-source' },

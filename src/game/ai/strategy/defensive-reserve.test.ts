@@ -44,7 +44,7 @@ describe('Lv.5 防守資源保留評估', () => {
       },
     }
 
-    const result = assessLv5DefensiveReserve(before, after, attackCommand)
+    const result = assessLv5DefensiveReserve(before, after, attackCommand, createBattleState())
 
     expect(result.reason).toBe('trap-in-hand')
     expect(result.activeSupportBefore).toBe(1)
@@ -63,7 +63,7 @@ describe('Lv.5 防守資源保留評估', () => {
     const result = assessLv5DefensiveReserve(before, before, {
       kind: 'advance-phase',
       playerId: 'player-two',
-    })
+    }, createBattleState())
 
     expect(result.reason).toBe('trap-in-hand')
     expect(result.reserveRequired).toBe(1)
@@ -72,7 +72,7 @@ describe('Lv.5 防守資源保留評估', () => {
 
   it('沒有公開防守或下一步能量需求時不增加保留分數', () => {
     const view = createPlayerView(createBattleState(), 'player-two')
-    const result = assessLv5DefensiveReserve(view, view, attackCommand)
+    const result = assessLv5DefensiveReserve(view, view, attackCommand, createBattleState())
 
     expect(result.reason).toBe('none')
     expect(result.reserveRequired).toBe(0)
@@ -97,7 +97,7 @@ describe('Lv.5 防守資源保留評估', () => {
       },
     }
 
-    const result = assessLv5DefensiveReserve(noSupport, noSupport, attackCommand)
+    const result = assessLv5DefensiveReserve(noSupport, noSupport, attackCommand, createBattleState())
 
     expect(result.reason).toBe('none')
     expect(result.adjustment).toBe(0)
@@ -146,7 +146,7 @@ describe('Lv.5 防守資源保留評估', () => {
       },
     }
 
-    const result = assessLv5DefensiveReserve(before, after, attackCommand)
+    const result = assessLv5DefensiveReserve(before, after, attackCommand, createBattleState())
 
     expect(result.reason).toBe('blocker-ready')
     expect(result.shortage).toBe(1)
@@ -189,7 +189,7 @@ describe('Lv.5 防守資源保留評估', () => {
       },
     }
 
-    const result = assessLv5DefensiveReserve(before, after, attackCommand)
+    const result = assessLv5DefensiveReserve(before, after, attackCommand, createBattleState())
 
     expect(result.reason).toBe('on-play-energy')
     expect(result.reserveRequired).toBe(1)
@@ -221,5 +221,101 @@ describe('Lv.5 防守資源保留評估', () => {
         expect.objectContaining({ id: 'defensive-reserve', amount: 42 }),
       ]),
     )
+  })
+  it('支援階段結束不會獲得保留加分，避免跳過放支援', () => {
+    const view = createPlayerView(createBattleState(), 'player-two')
+    const before = {
+      ...view,
+      hand: [...view.hand, trap()],
+    }
+    const supportPhaseState = {
+      ...createBattleState(),
+      phase: 'support' as const,
+    }
+
+    const result = assessLv5DefensiveReserve(before, before, {
+      kind: 'advance-phase',
+      playerId: 'player-two',
+    }, supportPhaseState)
+
+    expect(result.reason).toBe('trap-in-hand')
+    expect(result.adjustment).toBe(0)
+  })
+
+  it('OnPlay 能量需求不會在結束主要階段時獲得加分', () => {
+    const view = createPlayerView(createBattleState(), 'player-two')
+    const onPlayCookie: GameCard = {
+      id: 'fixture-on-play',
+      instanceId: 'fixture-on-play',
+      name: 'fixture on-play',
+      type: 'cookie',
+      level: 2,
+      hp: 3,
+      attack: 2,
+      attackCost: 1,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 } },
+        effects: [],
+        text: 'On Play',
+      },
+    }
+    const before = {
+      ...view,
+      hand: [...view.hand, onPlayCookie],
+    }
+
+    const result = assessLv5DefensiveReserve(before, before, {
+      kind: 'advance-phase',
+      playerId: 'player-two',
+    }, createBattleState())
+
+    expect(result.reason).toBe('on-play-energy')
+    expect(result.adjustment).toBe(0)
+  })
+
+  it('攻擊短缺懲罰為每張短缺 -24，不再壓過一般攻擊價值', () => {
+    const view = createPlayerView(createBattleState(), 'player-two')
+    const before = {
+      ...view,
+      hand: [...view.hand, trap()],
+    }
+    const after = {
+      ...before,
+      self: {
+        ...before.self,
+        supportArea: before.self.supportArea.map((support) => ({
+          ...support,
+          rested: true,
+        })),
+      },
+    }
+
+    const result = assessLv5DefensiveReserve(before, after, attackCommand, createBattleState())
+
+    expect(result.reason).toBe('trap-in-hand')
+    expect(result.shortage).toBe(1)
+    expect(result.adjustment).toBe(-24)
+  })
+
+  it('對手有可攻擊餅乾時，不會把手牌唯一陷阱放入支援區', () => {
+    const state = createBattleState()
+    const onlyTrap = trap()
+    state.players['player-two'].hand.push(onlyTrap)
+    const view = createPlayerView(state, 'player-two')
+
+    const result = assessLv5DefensiveReserve(view, view, {
+      kind: 'place-support',
+      playerId: 'player-two',
+      instanceId: onlyTrap.instanceId,
+    }, state)
+
+    expect(result.reason).toBe('trap-retention')
+    expect(result.reserveRequired).toBe(1)
+    expect(result.adjustment).toBe(-72)
+    expect(result.detail).toContain('唯一防守陷阱')
   })
 })

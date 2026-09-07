@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   executeCardEffect,
+  getEffectSelectionCandidates,
   finalizePendingReplacements,
   type CardEffect,
   type EffectContext,
@@ -293,6 +294,69 @@ describe('field-to-trash', () => {
         (c) => c.instanceId === 'opp-any',
       ),
     ).toBe(true)
+  })
+
+  it('automatically moves the source Cookie for a source-only effect', () => {
+    const source = createBattleCookie('source-only', 1, 2, 'red')
+    const other = createBattleCookie('other-cookie', 1, 2, 'red')
+    const state = createTestGameState([source, other], [])
+    const context: EffectContext = {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+    }
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+
+    const resolved = executeCardEffect(state, context, effect, [])
+    expect(resolved.players['player-one'].battleArea.map((c) => c.card.instanceId)).toEqual([
+      other.card.instanceId,
+    ])
+    expect(resolved.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: source.card.instanceId }),
+        ...source.hpCards,
+      ]),
+    )
+  })
+
+  it('rejects another Cookie as a source-only field target', () => {
+    const source = createBattleCookie('source-only', 1, 2, 'red')
+    const other = createBattleCookie('other-cookie', 1, 2, 'red')
+    const state = createTestGameState([source, other], [])
+    const context: EffectContext = {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+    }
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+
+    expect(() =>
+      executeCardEffect(state, context, effect, [other.card.instanceId]),
+    ).toThrow('合法目標')
+  })
+
+  it('exposes only the source Cookie to source-only candidate helpers', () => {
+    const source = createBattleCookie('source-only', 1, 2, 'red')
+    const other = createBattleCookie('other-cookie', 1, 2, 'red')
+    const state = createTestGameState([source, other], [])
+    const context: EffectContext = {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+    }
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, context, effect).map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual([source.card.instanceId])
   })
 
   it('rejects selecting more targets than the effect allows', () => {

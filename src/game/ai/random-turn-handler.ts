@@ -45,11 +45,13 @@ export const commandActionTypes: Record<
   'advance-phase': 'advance-phase',
   'place-support': 'place-support',
   'deploy-cookie': 'deploy-cookie',
+  'play-extra-deck-cookie': 'deploy-cookie',
   attack: 'attack',
   'declare-attack': 'attack',
   'activate-skill': 'activate-skill',
   'begin-activate-skill': 'activate-skill',
   'skip-on-play': 'idle',
+  'skip-end-phase-skill': 'idle',
   'play-item': 'play-item',
   'begin-play-item': 'play-item',
   'play-stage': 'play-stage',
@@ -75,6 +77,7 @@ const findCardName = (state: GameState, instanceId: string): string => {
     const player = state.players[playerId]
     const found =
       player.hand.find((card) => card.instanceId === instanceId) ??
+      player.extraDeck?.find((card) => card.instanceId === instanceId) ??
       player.battleArea.find(
         (cookie) => cookie.card.instanceId === instanceId,
       )?.card
@@ -96,6 +99,8 @@ export const describeCommand = (
       return `${name}將${findCardName(state, command.instanceId)}配置到支援區。`
     case 'deploy-cookie':
       return `${name}讓${findCardName(state, command.instanceId)}登場。`
+    case 'play-extra-deck-cookie':
+      return `${name}從 EXTRA Deck 讓${findCardName(state, command.instanceId)}登場。`
     case 'attack':
       return `${name}以${findCardName(state, command.attackerInstanceId)}攻擊${findCardName(state, command.targetInstanceId)}。`
     case 'play-stage':

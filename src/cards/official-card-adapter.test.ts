@@ -62,6 +62,14 @@ const createOfficialCard = (
 })
 
 describe('official text parser', () => {
+  it.each([null, 'null'])('recovers missing card color %s from structured energyType, including MIX attacks', (color) => {
+    for (const energyType of ['YELLOW', 'YELLOW MIX']) {
+      const converted = convertOfficialCardToGameCard(createOfficialCard({ color, energyType }))
+      expect(converted).toMatchObject({ status: 'converted', gameCard: { cardColor: 'yellow', energyColor: 'yellow' } })
+    }
+    const explicit = convertOfficialCardToGameCard(createOfficialCard({ color: 'RED', energyType: 'YELLOW' }))
+    expect(explicit).toMatchObject({ status: 'converted', gameCard: { cardColor: 'red', energyColor: 'red' } })
+  })
   it('parses colored and neutral costs plus attack damage', () => {
     const parsed = parseOfficialCardText(
       '<{R}{R}{N}{K}> Perfect Deduction {da} 3',
@@ -103,6 +111,91 @@ describe('official text parser', () => {
 })
 
 describe('official card adapter', () => {
+  it('normalizes BS8-083@2 merged skill and attack fields without changing the source record', () => {
+    const source = createOfficialCard({
+      cardNumber: 'BS8-083@2',
+      baseCardNumber: 'BS8-083',
+      variant: '2',
+      name: 'Frost Queen Cookie',
+      type: 'cookie',
+      officialType: 'COOKIE',
+      energyType: 'BLUE',
+      color: 'BLUE',
+      level: 3,
+      hp: 4,
+      skill: { name: null, text: null },
+      attackText:
+        '{sk} Freezing Aura\n\n【On Play】 <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.\n\n<{B}{B}{B}> I will freeze your very breath! {da} 3\nThen, you can draw cards from your deck until there are 3 cards in your hand.',
+    })
+
+    const normalized = normalizeOfficialCardRecord(source)
+    expect(source.skill.text).toBeNull()
+    expect(normalized.skill.text).toBe(
+      '{ap} <{B}> Select up to 1 of your opponent\'s Cookies. That Cookie is not set as active during your opponent\'s next Active Phase.',
+    )
+    expect(normalized.attackText).toContain('<{B}{B}{B}>')
+
+    const converted = convertOfficialCardToGameCard(source)
+    expect(converted).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        skill: {
+          trigger: 'on-play',
+          oncePerTurn: false,
+          cost: { energy: { blue: 1 } },
+          effects: [{
+            kind: 'prevent-cookie-active-next-phase',
+            target: { side: 'opponent', min: 0, max: 1 },
+          }],
+        },
+      },
+    })
+  })
+
+  it('normalizes BS8-032@2 merged skill and attack fields without changing the source record', () => {
+    const source = createOfficialCard({
+      cardNumber: 'BS8-032@2',
+      baseCardNumber: 'BS8-032',
+      variant: '2',
+      name: 'Burnt Cheese Cookie',
+      type: 'cookie',
+      officialType: 'COOKIE',
+      energyType: 'YELLOW',
+      color: 'YELLOW',
+      level: 1,
+      hp: 2,
+      skill: { name: null, text: null },
+      attackText:
+        '{sk} Constant Vigilance\n\n【Activate】 【Once Per Turn】 If there is a Cookie in your break area, <place this Cookie and a Cookie that is LV.2 or above from your hand into your break area.> Draw up to 2 cards from your deck. Then, play up to 1 [Golden Cheese Cookie] from your break area.\n\n<{Y}{Y}> Wrath of the Golden Earth {da} 2',
+    })
+
+    const normalized = normalizeOfficialCardRecord(source)
+    expect(source.skill.text).toBeNull()
+    expect(normalized.skill).toEqual({
+      name: '{sk} Constant Vigilance',
+      text: '{mob} {t1} If there is a Cookie in your break area, <place this Cookie and a Cookie that is LV.2 or above from your hand into your break area.> Draw up to 2 cards from your deck. Then, play up to 1 [Golden Cheese Cookie] from your break area.',
+    })
+    expect(normalized.attackText).toBe('<{Y}{Y}> Wrath of the Golden Earth {da} 2')
+
+    const converted = convertOfficialCardToGameCard(source)
+    expect(converted).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        skill: {
+          trigger: 'activate',
+          oncePerTurn: true,
+        },
+      },
+    })
+    expect(converted.status === 'converted' && converted.gameCard.type === 'cookie'
+      ? converted.gameCard.skill?.effects
+      : undefined).toContainEqual({
+      kind: 'break-to-battle',
+      amount: 1,
+      cardName: 'Golden Cheese Cookie',
+    })
+  })
+
   it('normalizes the valid BS7 attack-damage syntax without accepting malformed source data', () => {
     const cards = officialBS7Candidates.cards as OfficialCardRecord[]
     const nutmegTiger = cards.find((card) => card.cardNumber === 'BS7-001')
@@ -553,8 +646,8 @@ describe('official card adapter', () => {
     })
     // 修復前這兩個欄位是 undefined，CardDetailModal 的 FLIP 段落因此不會渲染。
     expect(result.gameCard.effectText).toContain('gains +1 HP')
-    // 「gains +1 HP」統一以 attachedHpBonus 承載（附著期間連續 +1），
-    // 翻開發動時由 resolveFlip 轉成牌庫頂補 1 張 HP 卡。
+    // attachedHpBonus保留既有資料欄位；翻開並支付後由resolveFlip補1張HP，
+    // 未翻開時不提供持續加成。
     expect(result.gameCard.effects).toEqual([])
   })
 

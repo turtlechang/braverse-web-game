@@ -1,5 +1,5 @@
 import type { AttackCommand, PlayerActionCommand } from '../commands'
-import { getEffectiveAttack } from '../effects'
+import { getAttackDamageAgainst, getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
@@ -41,6 +41,10 @@ import {
   type OpponentResponseEstimate,
 } from './strategy/opponent-response'
 import { assessLv5DefensiveReserve } from './strategy/defensive-reserve'
+import {
+  assessLv5EndgameSurvival,
+  type EndgameSurvivalAssessment,
+} from './strategy/endgame-survival'
 import { scoreIntentContinuity } from './strategy/session'
 import {
   forecastOpponentEndgame,
@@ -397,6 +401,13 @@ const commandCandidate = (
         : getLegalTurnCommands(nextState, playerId).filter(
           (candidate) => candidate.kind === 'attack',
         ).length,
+      publicAttackDamage: command.kind === 'attack'
+        ? getAttackDamageAgainst(
+          state,
+          command.attackerInstanceId,
+          command.targetInstanceId,
+        )
+        : undefined,
     })
   } catch {
     return null
@@ -783,6 +794,7 @@ interface Lv4RootCandidate {
   telemetry: ReturnType<typeof createLv4SearchTelemetry>
   opponentResponse: OpponentResponseEstimate
   opponentEndgame: OpponentEndgameForecast
+  endgameSurvival?: EndgameSurvivalAssessment
   tacticalPlan?: TacticalPlan
 }
 
@@ -888,6 +900,14 @@ export const handleAiTwoPlyTurnState = (
       return beamStepBonus(beforeState, afterState, nextPlayerId, command) +
         forecastOpponentEndgame(before, identity, effectiveDamage).score
     },
+    getPublicAttackDamage: (nextState, command) =>
+      command.kind === 'attack'
+        ? getAttackDamageAgainst(
+          nextState,
+          command.attackerInstanceId,
+          command.targetInstanceId,
+        )
+        : undefined,
     persistentIntentBonus: decisionLevel === 5
       ? (plan, _identity, depth) =>
           depth === 0
@@ -902,8 +922,12 @@ export const handleAiTwoPlyTurnState = (
       ? (view, identity) => evaluatePublicResponseMinimax(view, identity)
       : undefined,
     defensiveReserveAssessment: decisionLevel === 5
-      ? (before, after, command) =>
-          assessLv5DefensiveReserve(before, after, command)
+      ? (before, after, command, beforeState) =>
+          assessLv5DefensiveReserve(before, after, command, beforeState)
+      : undefined,
+    endgameSurvivalAssessment: decisionLevel === 5
+      ? (before, after, actionKind) =>
+          assessLv5EndgameSurvival(before, after, actionKind)
       : undefined,
     deploymentTempoBonus: decisionLevel === 5
       ? (beforeState, _afterState, nextPlayerId, command, tacticalPlan) => {
@@ -973,6 +997,7 @@ export const handleAiTwoPlyTurnState = (
             ? getEffectiveAttack(state, command.attackerInstanceId)
             : 0,
         ),
+        endgameSurvival: searchResult.firstStep.endgameSurvival,
         tacticalPlan: searchResult.firstStep.tacticalPlan,
       })
     } catch {
@@ -1016,13 +1041,32 @@ export const handleAiTwoPlyTurnState = (
           }
         : undefined,
     })
+    const identity = { kind, sourceInstanceId }
+    const endgameSurvival = decisionLevel === 5
+      ? assessLv5EndgameSurvival(beforeView, afterView, identity.kind)
+      : undefined
+    const endgameSurvivalAdjustment = endgameSurvival?.adjustment ?? 0
     let relativeScore =
       (evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId)) -
       (evaluatePlayerView(beforeView) + lv4RiskBonus(beforeView, playerId)) +
       selectLv4StrategicContribution(scored.breakdown) +
-      skillEffectBonus(state, decision.state, playerId)
+      skillEffectBonus(state, decision.state, playerId) +
+      endgameSurvivalAdjustment
     let telemetry = createLv4SearchTelemetry()
-    const identity = { kind, sourceInstanceId }
+    const actionScore = endgameSurvivalAdjustment === 0
+      ? scored.breakdown
+      : {
+          ...scored.breakdown,
+          total: scored.breakdown.total + endgameSurvivalAdjustment,
+          contributions: [
+            ...scored.breakdown.contributions,
+            {
+              id: 'endgame-survival' as const,
+              amount: endgameSurvivalAdjustment,
+              detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
+            },
+          ],
+        }
     const sourceCard = findVisibleSelfCard(beforeView, sourceInstanceId)
     const tacticalPlan = deriveTacticalPlan(
       rootContext,
@@ -1055,14 +1099,20 @@ export const handleAiTwoPlyTurnState = (
       relativeScore += continuation.relativeScore
     }
 
+    if (endgameSurvival) {
+      telemetry.endgameSurvivalEvaluations += 1
+      telemetry.endgameSurvivalAdjustment += endgameSurvival.adjustment
+    }
+
     candidates.push({
       decision,
       relativeScore,
-      tieBreakKey: scored.breakdown.tieBreakKey,
-      actionScore: scored.breakdown,
+      tieBreakKey: actionScore.tieBreakKey,
+      actionScore,
       telemetry,
       opponentResponse: evaluatePublicResponseMinimax(beforeView, { kind }),
       opponentEndgame: forecastOpponentEndgame(beforeView, identity, 0),
+      endgameSurvival,
       tacticalPlan,
     })
     return true
@@ -1134,6 +1184,7 @@ export const handleAiTwoPlyTurnState = (
       lv4Search: best.telemetry,
       opponentResponse: decisionLevel === 5 ? best.opponentResponse : undefined,
       opponentEndgame: decisionLevel === 5 ? best.opponentEndgame : undefined,
+      endgameSurvival: decisionLevel === 5 ? best.endgameSurvival : undefined,
       tacticalPlan: decisionLevel === 5 ? best.tacticalPlan : undefined,
       publicEvaluation: evaluatePlayerViewBreakdown(beforeView),
     },

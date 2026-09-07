@@ -1,4 +1,5 @@
 import { GameRuleError } from './errors'
+import { validateExtraDeck } from './extra-deck'
 import {
   defaultShuffle,
   drawCards,
@@ -26,6 +27,7 @@ const createPlayerState = (
       id: setup.id,
       name: setup.name,
       deck: shuffle(setup.deck),
+      extraDeck: [...(setup.extraDeck ?? [])],
       hand: [],
       battleArea: [],
       supportArea: [],
@@ -54,6 +56,13 @@ export const createGame = (
     throw new GameRuleError('先攻玩家 ID 無效。')
   }
 
+  for (const setup of [playerOne, playerTwo]) {
+    const extraDeckValidation = validateExtraDeck(setup.extraDeck ?? [])
+    if (!extraDeckValidation.isValid) {
+      throw new GameRuleError(extraDeckValidation.errors[0]!)
+    }
+  }
+
   const players = {
     [playerOne.id]: createPlayerState(playerOne, shuffle),
     [playerTwo.id]: createPlayerState(playerTwo, shuffle),
@@ -72,6 +81,7 @@ export const createGame = (
     status: 'setup',
     result: null,
     supportPlacedThisTurn: false,
+    extraDeckPlayUsedThisTurn: false,
     skillUsesThisTurn: [],
     nextBattleEntrySequence: 1,
     attackModifiers: [],
@@ -222,6 +232,8 @@ export const selectStartingCookie = (
         hpCards,
         rested: false,
         battleEntryId,
+        enteredFrom: 'hand',
+        enteredTurn: state.turnNumber,
       },
     ],
     startingCookieSelected: true,

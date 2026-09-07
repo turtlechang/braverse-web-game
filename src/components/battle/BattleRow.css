@@ -583,24 +583,24 @@
 .card-face.support-card {
   position: absolute;
   top: 50%;
-  left: calc(var(--support-index, 0) * 28px + 10px);
+  left: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 10px);
   flex: none;
   transform: translateY(-50%);
   transform-origin: center center;
 }
 
 .card-face.support-card.is-rested {
-  left: calc(var(--support-index, 0) * 28px + 20px);
+  left: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 20px);
   transform: translateY(-50%) rotate(90deg);
 }
 
 .top-field .card-face.support-card {
   left: auto;
-  right: calc(var(--support-index, 0) * 28px + 10px);
+  right: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 10px);
 }
 
 .top-field .card-face.support-card.is-rested {
-  right: calc(var(--support-index, 0) * 28px + 20px);
+  right: calc(var(--support-index, 0) * var(--support-spacing, 28px) + 20px);
   transform: translateY(-50%) rotate(-90deg);
 }
 
@@ -674,6 +674,12 @@
   font-weight: 800;
 }
 
+.extra-zone > .resource-summary {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+}
+
 .deck-zone > .resource-summary,
 .stage-zone > .resource-summary,
 .discard-zone.resource-summary {
@@ -691,6 +697,23 @@
 
 .resource-summary:active {
   transform: scale(0.98);
+}
+
+/* EXTRA readiness is an affordance only: BattleRow receives the result from
+ * canPlayExtraDeckCookie and never recreates individual card requirements. */
+.extra-zone > .resource-summary.is-extra-deck-ready {
+  border-color: rgba(255, 218, 100, 0.96);
+  background: linear-gradient(145deg, rgba(128, 77, 12, 0.74), rgba(9, 50, 101, 0.72));
+  box-shadow:
+    0 0 0 1px rgba(255, 239, 158, 0.2),
+    0 0 16px rgba(255, 191, 67, 0.56);
+}
+
+.extra-zone > .resource-summary.is-extra-deck-ready .extra-ready-hint {
+  color: #fff0ad;
+  font-size: 0.48rem;
+  letter-spacing: 0.025em;
+  text-shadow: 0 1px 5px rgba(106, 54, 0, 0.92);
 }
 
 .resource-summary span,
@@ -2023,6 +2046,53 @@
   }
 }
 
+.extra-deck-card-list {
+  display: grid;
+  gap: 6px;
+  max-height: 216px;
+  overflow-y: auto;
+}
+
+.extra-deck-card-entry {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid rgba(174, 220, 255, 0.28);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.extra-deck-card-entry .extra-deck-card-image {
+  width: 58px;
+  min-width: 58px;
+  grid-row: 1;
+}
+
+.extra-deck-card-details {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+
+.extra-deck-card-details > strong {
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.extra-deck-card-details > small {
+  color: rgba(224, 241, 255, 0.68);
+  font-size: 0.58rem;
+}
+
+.extra-deck-card-details .skill-action {
+  min-height: 24px;
+  padding-inline: 6px;
+  font-size: 0.6rem;
+}
+
 /* Rotated fan edges extend a few pixels beyond their untransformed box on
  * compact layouts. Lift the hand slightly so the visible card, not only its
  * parent dock, stays inside the canvas at 900x506 and smaller widths. */
@@ -2172,6 +2242,56 @@
   width: 70px;
   height: 100px;
   aspect-ratio: 0.7;
+}
+
+/* Skill/cost selections expose the complete card. Attack payment retains
+ * the overlapping support stack, with its spacing adjusted separately. */
+@container game-shell (min-width: 681px) {
+  .support-cards {
+    /* 52px keeps overlapping cards compact while exposing their centres,
+     * including when two adjacent payment previews are rotated. */
+    --support-spacing: 52px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@container game-shell (min-width: 681px) and (max-width: 1250px) {
+  .support-cards {
+    --support-spacing: 36px;
+  }
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) {
+  display: flex;
+  gap: 8px;
+  direction: ltr;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card-wrap {
+  position: relative;
+  flex: 0 0 108px;
+  height: 100%;
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+}
+
+:root[data-theme] .game-shell .support-cards:has(.support-card.is-targetable):not(.is-attack-payment) .support-card.is-rested {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* Only the phone layout shares its payment dock with the hand. Desktop and
+ * tablet layouts reserve separate hand space, so payment must not hide it. */
+@container game-shell (max-width: 680px) {
+  :root[data-theme] .game-shell .bottom-field:has(.support-card.is-targetable) .hand-fan.bottom-hand {
+    visibility: hidden;
+  }
 }
 
 /* Combat cards expand to each combat zone's inner height in the <900px

@@ -1,12 +1,17 @@
 import { randomInt } from 'node:crypto'
+import { createShuffle } from '../../src/game/helpers'
 import {
   GameRuleError,
   applyGameCommand,
-  createDeckFromCustomDeck,
+  createBs8CandidateStagingPlayerSetup,
+  createCustomDeckPlayerSetup,
   createGame,
   createSeededShuffle,
+  isBs8CandidateStagingDeck,
   maskGameStateForViewer,
-  validateCustomDeck,
+  validateBs8CandidateStagingDeck,
+  validateCustomDeckDefinition,
+  type Bs8CandidateStagingDeck,
   type CustomDeck,
   type GameCard,
   type GameCommand,
@@ -15,6 +20,7 @@ import {
 } from '../../src/game'
 import {
   isValidOnlinePlayerName,
+  isOnlineGameCommand,
   type PublicCardReference,
   type PublicIntent,
   type PublicIntentDraft,
@@ -27,14 +33,18 @@ import {
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 4
+const serverShuffle = createShuffle(() => randomInt(0x100000000) / 0x100000000)
 
 /** 公開決策提示的伺服器權威倒數；不直接替玩家自動選擇，只提供同步期限。 */
 export const PUBLIC_INTENT_DEADLINE_MS = 45_000
 
+export type RoomEnvironment = 'standard' | 'bs8-candidate-staging'
+export type RoomDeck = CustomDeck | Bs8CandidateStagingDeck
+
 export interface RoomSlot {
   playerId: PlayerId
   playerName: string
-  deck: CustomDeck
+  deck: RoomDeck
   send: (data: string) => void
 }
 
@@ -54,6 +64,8 @@ interface RoomOpeningState {
 
 export interface Room {
   code: string
+  /** Candidate rooms are explicitly partitioned from Standard rooms. */
+  environment: RoomEnvironment
   status: RoomStatus
   playerOne: RoomSlot
   playerTwo: RoomSlot | null
@@ -81,15 +93,27 @@ export class RoomStore {
     return code
   }
 
-  createRoom(
-    deck: CustomDeck,
-    send: (data: string) => void,
-    playerName = 'Player One',
-  ): Room {
-    const validation = validateCustomDeck(deck.entries)
+  private environmentFor(deck: RoomDeck): RoomEnvironment {
+    return isBs8CandidateStagingDeck(deck)
+      ? 'bs8-candidate-staging'
+      : 'standard'
+  }
+
+  private validateDeckForEnvironment(deck: RoomDeck): void {
+    const validation = isBs8CandidateStagingDeck(deck)
+      ? validateBs8CandidateStagingDeck(deck)
+      : validateCustomDeckDefinition(deck)
     if (!validation.isValid) {
       throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
     }
+  }
+
+  createRoom(
+    deck: RoomDeck,
+    send: (data: string) => void,
+    playerName = 'Player One',
+  ): Room {
+    this.validateDeckForEnvironment(deck)
     if (!isValidOnlinePlayerName(playerName)) {
       throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
     }
@@ -97,6 +121,7 @@ export class RoomStore {
     const code = this.generateCode()
     const room: Room = {
       code,
+      environment: this.environmentFor(deck),
       status: 'waiting',
       playerOne: {
         playerId: 'player-one',
@@ -120,9 +145,9 @@ export class RoomStore {
 
   joinRoom(
     code: string,
-    deck: CustomDeck,
+    deck: RoomDeck,
     send: (data: string) => void,
-    seed: number = Date.now(),
+    seed?: number,
     playerName = 'Player Two',
   ): Room {
     const room = this.rooms.get(code)
@@ -133,10 +158,14 @@ export class RoomStore {
       throw new RoomNotJoinableError('這個房間已經無法加入。')
     }
 
-    const validation = validateCustomDeck(deck.entries)
-    if (!validation.isValid) {
-      throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
+    if (this.environmentFor(deck) !== room.environment) {
+      throw new GameRuleError(
+        room.environment === 'bs8-candidate-staging'
+          ? '候選驗收房間只能加入同一種 BS8 候選驗收牌組。'
+          : 'Standard 房間不能加入 BS8 候選驗收牌組。',
+      )
     }
+    this.validateDeckForEnvironment(deck)
     if (!isValidOnlinePlayerName(playerName)) {
       throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
     }
@@ -148,7 +177,9 @@ export class RoomStore {
       send,
     }
     room.status = 'opening'
-    room.seed = seed
+    // An explicit seed is for deterministic server-side tests only. Public
+    // rooms use fresh cryptographic entropy, never a guessable timestamp.
+    room.seed = seed ?? null
     room.opening = {
       stage: 'rps',
       round: 1,
@@ -173,22 +204,30 @@ export class RoomStore {
   }
 
   private createOpeningGame(room: Room, firstPlayerId: PlayerId): void {
-    if (!room.playerTwo || room.seed === null || !room.opening) {
+    if (!room.playerTwo || !room.opening) {
       throw new GameRuleError('開局資料不完整。')
     }
 
-    const shuffle = createSeededShuffle(room.seed)
+    const shuffle = room.seed === null ? serverShuffle : createSeededShuffle(room.seed)
+    const toSetup = (slot: RoomSlot) => {
+      if (room.environment === 'bs8-candidate-staging') {
+        if (!isBs8CandidateStagingDeck(slot.deck)) {
+          throw new GameRuleError('候選驗收房間的牌組標記不一致。')
+        }
+        return {
+          ...createBs8CandidateStagingPlayerSetup(slot.deck, slot.playerId),
+          name: slot.playerName,
+        }
+      }
+      return {
+        ...createCustomDeckPlayerSetup(slot.deck, slot.playerId),
+        name: slot.playerName,
+      }
+    }
+
     room.state = createGame(
-      {
-        id: 'player-one',
-        name: room.playerOne.playerName,
-        deck: createDeckFromCustomDeck(room.playerOne.deck, 'player-one'),
-      },
-      {
-        id: 'player-two',
-        name: room.playerTwo.playerName,
-        deck: createDeckFromCustomDeck(room.playerTwo.deck, 'player-two'),
-      },
+      toSetup(room.playerOne),
+      toSetup(room.playerTwo),
       firstPlayerId,
       shuffle,
     )
@@ -277,7 +316,7 @@ export class RoomStore {
     room.state = applyGameCommand(state, {
       kind: replaceAll ? 'mulligan-opening-hand' : 'keep-opening-hand',
       playerId,
-    })
+    }, { shuffle: serverShuffle })
 
     if (!room.state.players[playerId].hand.some((card) => card.type === 'cookie')) {
       opening.stage = 'forced-mulligan'
@@ -308,7 +347,7 @@ export class RoomStore {
     room.state = applyGameCommand(state, {
       kind: 'force-mulligan-opening-hand',
       playerId,
-    })
+    }, { shuffle: serverShuffle })
     opening.stage = 'compensation'
     opening.actorId = opponentOf(playerId)
   }
@@ -442,7 +481,10 @@ export class RoomStore {
     if (command.playerId !== playerId) {
       throw new GameRuleError('指令的玩家與送出來源不符。')
     }
-    const nextState = applyGameCommand(room.state, command)
+    if (!isOnlineGameCommand(command)) {
+      throw new GameRuleError('線上對戰不允許此指令或欄位。')
+    }
+    const nextState = applyGameCommand(room.state, command, { shuffle: serverShuffle })
     room.state = nextState
     return nextState
   }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T13:23:18.916Z",
+  "generatedAt": "2026-09-04T15:36:48.429Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
   "sources": [
@@ -37,14 +37,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-001",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-002",
@@ -62,14 +61,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-002",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-003",
@@ -87,14 +85,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-003",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-007",
@@ -115,12 +112,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-007",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-008",
@@ -143,12 +147,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-008",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-009",
@@ -168,13 +179,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-009",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Stardust Cookie」；效果：if your break area LV. is higher than your opponent's, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-010",
@@ -195,12 +212,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-010",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-011",
@@ -221,7 +245,19 @@
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-011",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Strawberry Cookie」；效果：If this Cookie has fainted, take 1 card from your support area to your hand. Then, place 1 card from your hand in your support area as rested.",
+        "昏厥效果結果：效果已結算",
+        "昏厥效果來源：「Strawberry Cookie」；效果：If this Cookie has fainted, take 1 card from your support area to your hand. Then, place 1 card from your hand in your support area as rested.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-012",
@@ -248,12 +284,19 @@
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-012",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1、support-pay-2",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-012@1",
@@ -279,12 +322,19 @@
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-012",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1、support-pay-2",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-013",
@@ -302,14 +352,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-013",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-014",
@@ -327,14 +376,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-014",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-015",
@@ -364,13 +412,31 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-015",
+      "traceEntries": 5,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Muscle Cookie」；效果：Use this Cookie as {R} to deal 1 damage to 1 of your opponent's Cookies, then place 2 cards from the top of 1 of your Cookie's HP into the trash.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Muscle Cookie」；效果：Use this Cookie as {R} to deal 1 damage to 1 of your opponent's Cookies, then place 2 cards from the top of 1 of your Cookie's HP into the trash.",
+        "攻擊後代價：支付能量（橫置）：support-pay-0",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算",
+        "攻擊後效果來源：「Muscle Cookie」；效果：Use this Cookie as {R} to deal 1 damage to 1 of your opponent's Cookies, then place 2 cards from the top of 1 of your Cookie's HP into the trash.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Muscle Cookie」；效果：Use this Cookie as {R} to deal 1 damage to 1 of your opponent's Cookies, then place 2 cards from the top of 1 of your Cookie's HP into the trash.",
+        "攻擊後代價：支付能量（橫置）：support-pay-1",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算",
+        "效果目標：Muscle Cookie"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-016",
@@ -394,12 +460,21 @@
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-016",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：trash-cookie-2",
+        "選擇 0 個目標，此段可選效果未執行。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-017",
@@ -417,14 +492,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-017",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-018",
@@ -446,12 +520,19 @@
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-018",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-cookie-filler"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-019",
@@ -473,13 +554,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-019",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Hero Cookie」；效果：select up to 3 Cookies from your trash that do not have FLIP, return them to your deck, and shuffle it.",
+        "攻擊後效果目標：trash-cookie-1、trash-cookie-2、trash-item-1",
+        "攻擊後效果結果：執行 trash-to-deck"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-022",
@@ -496,8 +583,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-022",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Milky Way Cookie」",
+        "抽牌原因：「P-022 Milky Way Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-024",
@@ -516,7 +616,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-024",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Caramel Choux Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-025",
@@ -533,8 +642,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-025",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Marzipan Cookie 2」",
+        "抽牌原因：「P-025 Marzipan Cookie 2」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-026",
@@ -551,8 +673,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-026",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Marzipan Cookie 3」",
+        "抽牌原因：「P-026 Marzipan Cookie 3」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-027",
@@ -569,8 +704,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-027",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Marzipan Cookie 4」",
+        "抽牌原因：「P-027 Marzipan Cookie 4」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-028",
@@ -589,13 +737,36 @@
       "operations": [
         "action:hand",
         "action:hand",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "confirm:stage-placement",
+        "action:stage",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:hand",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-028",
+      "traceEntries": 4,
+      "commandKinds": [
+        "play-stage",
+        "begin-activate-stage",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付場景放置費用（橫置）：support-pay-0、support-pay-1",
+        "場景代價：將「Golden Cheese Warehouse」橫置。",
+        "支付能量（橫置）：support-pay-2",
+        "效果目標：hand-cookie-filler",
+        "效果目標：p028-break-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-029",
@@ -620,7 +791,19 @@
         "confirm:effect-panel:確認發動",
         "skip:replacement",
         "status:已選擇不補餅乾。"
-      ]
+      ],
+      "contractTraceCard": "P-029",
+      "traceEntries": 2,
+      "commandKinds": [
+        "play-trap",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "發動陷阱卡：「Ritual of Life」",
+        "支付能量（橫置）：support-pay-0、support-pay-1",
+        "效果目標：trash-cookie-2"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-030",
@@ -644,13 +827,23 @@
         "select:optional-cost",
         "confirm:optional-cost",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-030",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Sherbet Cookie」；效果：You can discard 1 card to deal 1 damage to 1 of your opponent's Cookies.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Sherbet Cookie」；效果：You can discard 1 card to deal 1 damage to 1 of your opponent's Cookies.",
+        "攻擊後代價：棄置手牌：hand-filler-0",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-031",
@@ -677,7 +870,19 @@
         "confirm:trap",
         "skip:replacement",
         "status:已選擇不補餅乾。"
-      ]
+      ],
+      "contractTraceCard": "P-031",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「The Heir's Betrayal」",
+        "支付能量（橫置）：support-pay-0、support-pay-1",
+        "選擇目標：opp-lv3",
+        "選擇目標（第 2 段）：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-031@1",
@@ -703,7 +908,19 @@
         "confirm:trap",
         "skip:replacement",
         "status:已選擇不補餅乾。"
-      ]
+      ],
+      "contractTraceCard": "P-031",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「The Heir's Betrayal」",
+        "支付能量（橫置）：support-pay-0、support-pay-1",
+        "選擇目標：opp-lv3",
+        "選擇目標（第 2 段）：opp-lv3"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-032",
@@ -722,13 +939,36 @@
       "operations": [
         "action:hand",
         "action:hand",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "confirm:stage-placement",
+        "action:stage",
+        "select:.effect-candidates-payment",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-032",
+      "traceEntries": 3,
+      "commandKinds": [
+        "play-stage",
+        "begin-activate-stage",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付場景放置費用（橫置）：support-pay-0、support-pay-1、support-pay-2、support-pay-3、support-pay-4",
+        "場景代價：將「Hall of Ancient Heroes」橫置。",
+        "支付能量（橫置）：support-pay-5、support-pay-6",
+        "效果目標：self-extra-1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-036@1",
@@ -752,7 +992,18 @@
         "confirm:trap",
         "skip:replacement",
         "status:已選擇不補餅乾。"
-      ]
+      ],
+      "contractTraceCard": "P-036",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「GingerBrave」",
+        "支付能量（橫置）：support-pay-0、support-pay-1、support-pay-2",
+        "效果結算：「trap-defender」受到 1 點傷害；「self-extra-1」受到 1 點傷害；「trap-attacker」受到 1 點傷害；「opp-lv3」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-040@1",
@@ -771,7 +1022,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-040",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Milky Way Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-041",
@@ -790,14 +1050,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-041",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Birthday Cake Cookie」；效果：if today is your birthday, during this turn, this Cookie gains +1 attack damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -819,13 +1083,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-041",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Birthday Cake Cookie」；效果：if today is your birthday, during this turn, this Cookie gains +1 attack damage.",
+            "攻擊後效果目標：Birthday Cake Cookie",
+            "攻擊後效果結果：使目標攻擊力 +1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-041",
@@ -842,7 +1112,17 @@
           "testState": "p-condition:P-041:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-041",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Birthday Cake Cookie」；效果：if today is your birthday, during this turn, this Cookie gains +1 attack damage.",
+            "攻擊後效果結果：條件不成立，效果未執行"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -865,12 +1145,18 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-042",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：Twizzly Gummy Cookie"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-043",
@@ -890,12 +1176,19 @@
         "action:hand",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-043",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "選擇 0 個目標，此段可選效果未執行。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-044",
@@ -916,12 +1209,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-044",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-045",
@@ -940,15 +1240,29 @@
       "operations": [
         "action:hand",
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
         "confirm:hand-discard",
         "confirm:effect-panel:確認發動",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "confirm:draw-up-to",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-045",
+      "traceEntries": 6,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect",
+        "resolve-opponent-hand-discard",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "效果來源：「Macaron Cookie」",
+        "已將 1 張手牌放到牌庫底。",
+        "抽牌原因：「P-045 Macaron Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-046",
@@ -970,12 +1284,19 @@
         "select:.effect-candidates-payment",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-046",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-050@1",
@@ -994,6 +1315,7 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "start:optional-cost-attack",
+        "confirm:optional-cost",
         "select:optional-cost",
         "confirm:optional-cost",
         "select:optional-cost",
@@ -1004,11 +1326,29 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-050",
+      "traceEntries": 4,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-optional-cost-attack",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Cream Ferret Cookie」；效果：Use this Cookie as {R}, discard 1 card, and deal 1 damage to 1 of your opponent Cookies.",
+        "攻擊後效果：等待玩家選擇支付代價或略過",
+        "攻擊後效果來源：「Cream Ferret Cookie」；效果：Use this Cookie as {R}, discard 1 card, and deal 1 damage to 1 of your opponent Cookies.",
+        "攻擊後代價：由「Cream Ferret Cookie」提供 紅1 能量",
+        "攻擊後代價：棄置手牌：hand-filler-0",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害",
+        "HP 費用：從「Cream Ferret Cookie」丟棄「P-050-source-hp-3」（物品）",
+        "攻擊力效果目標：Cream Ferret Cookie",
+        "效果結算：Cream Ferret Cookie 攻擊力 +1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-051",
@@ -1031,12 +1371,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-051",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-052",
@@ -1055,7 +1402,18 @@
       "operations": [
         "select:faint-target",
         "confirm:faint-response"
-      ]
+      ],
+      "contractTraceCard": "P-052",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Lemon Zest Cookie」；效果：When this Cookie faints and your break area is LV.5 or higher, select up to 1 of your opponent's LV.1 Cookies. Make that Cookie faint.",
+        "昏厥效果目標：opp-lv1",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-053",
@@ -1074,13 +1432,18 @@
       "operations": [
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-053",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Herb Cookie」；效果：執行 deck-to-support",
+        "攻擊後效果結果：執行 deck-to-support"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-054",
@@ -1101,12 +1464,21 @@
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-054",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "抽牌原因：「P-054 Blue Slushy Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-055",
@@ -1125,13 +1497,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-055",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-056",
@@ -1158,12 +1533,20 @@
         "skip:replacement",
         "status:已選擇不補餅乾。",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-056",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "HP 費用：從「Rye Cookie」丟棄「P-056-source-hp」（物品）",
+        "選擇 0 個目標，此段可選效果未執行。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-057",
@@ -1183,13 +1566,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-057",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-058",
@@ -1208,14 +1594,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-058",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1234,15 +1619,13 @@
           "status": "PASS",
           "auditStatus": "Effect flow settled",
           "operations": [
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-058",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         },
         "unmet": {
           "cardNumber": "P-058",
@@ -1259,7 +1642,12 @@
           "testState": "p-condition:P-058:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-058",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1281,13 +1669,19 @@
       "operations": [
         "action:next-phase",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "confirm:draw-up-to",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-059",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "抽牌原因：「P-059 Chamomile Cookie」技能觸發抽牌：支援區有 6 張啟動卡（需要至少 2 張）",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1307,14 +1701,19 @@
           "auditStatus": "Effect flow settled",
           "operations": [
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
+            "confirm:draw-up-to",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-059",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-draw-up-to"
+          ],
+          "steps": [
+            "抽牌原因：「P-059 Chamomile Cookie」技能觸發抽牌：支援區有 2 張啟動卡（需要至少 2 張）",
+            "抽牌結果：抽了 1 張牌"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-059",
@@ -1331,7 +1730,12 @@
           "testState": "p-condition:P-059:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-059",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1358,12 +1762,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-060",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0、hand-filler-1",
+        "效果目標：Rockstar Cookie"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-061",
@@ -1384,18 +1795,26 @@
         "select:.effect-candidates-target",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
-        "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "skip:replacement",
         "status:已選擇不補餅乾。",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-061",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Angel Cookie」；效果：<return 2 non-Cookie cards from your trash to your deck and shuffle it.> Place this Cookie in the trash.",
+        "攻擊後效果目標：trash-item-1、trash-purple-cost-0",
+        "攻擊後效果結果：執行 trash-to-deck",
+        "攻擊後效果來源：「Angel Cookie」；效果：<return 2 non-Cookie cards from your trash to your deck and shuffle it.> Place this Cookie in the trash.",
+        "攻擊後效果目標：「Angel Cookie」",
+        "攻擊後效果結果：執行 field-to-trash"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-063",
@@ -1412,8 +1831,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-063",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Shadow Milk Cookie」",
+        "抽牌原因：「P-063 Shadow Milk Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-064",
@@ -1432,14 +1864,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-064",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Croissant Cookie」；效果：if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies that is LV.2 or lower. That Cookie receives 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1461,13 +1897,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-064",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Croissant Cookie」；效果：if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies that is LV.2 or lower. That Cookie receives 1 damage.",
+            "攻擊後效果目標：opp-lv1",
+            "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-064",
@@ -1484,7 +1926,17 @@
           "testState": "p-condition:P-064:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-064",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Croissant Cookie」；效果：if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies that is LV.2 or lower. That Cookie receives 1 damage.",
+            "攻擊後效果結果：條件不成立，效果未執行"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -1505,14 +1957,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-065",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1532,14 +1983,13 @@
           "auditStatus": "Effect flow settled",
           "operations": [
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-065",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         },
         "unmet": {
           "cardNumber": "P-065",
@@ -1556,7 +2006,12 @@
           "testState": "p-condition:P-065:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-065",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1578,13 +2033,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-066",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-067",
@@ -1603,14 +2061,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-067",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1630,14 +2087,13 @@
           "auditStatus": "Effect flow settled",
           "operations": [
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-067",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         },
         "unmet": {
           "cardNumber": "P-067",
@@ -1654,7 +2110,12 @@
           "testState": "p-condition:P-067:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-067",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1677,13 +2138,21 @@
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-068",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Starfruit Cookie」；效果：if there are 5 cards or less in your hand, draw up to 2 cards from your deck.",
+        "攻擊後效果結果：抽至多 2 張牌",
+        "抽牌原因：「P-068 Starfruit Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-069",
@@ -1705,12 +2174,18 @@
         "confirm:effect-panel:確認發動",
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-069",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-070",
@@ -1728,14 +2203,13 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-070",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-071",
@@ -1752,19 +2226,14 @@
       "status": "PASS",
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
-        "action:skill",
-        "select:.effect-candidates-payment",
-        "confirm:effect-panel:下一步",
-        "confirm:effect-panel:確認發動",
-        "confirm:effect-panel:確認發動",
-        "confirm:draw-up-to",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-071",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1785,17 +2254,28 @@
             "action:skill",
             "select:.effect-candidates-payment",
             "confirm:effect-panel:下一步",
-            "select:.effect-candidates-target",
+            "select:.effect-candidates-cost-hand-to-break",
+            "confirm:effect-panel:確認發動",
             "confirm:effect-panel:確認發動",
             "confirm:effect-panel:確認發動",
             "confirm:draw-up-to",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-071",
+          "traceEntries": 4,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect",
+            "resolve-draw-up-to"
+          ],
+          "steps": [
+            "支付能量（橫置）：support-pay-0",
+            "技能代價：手牌餅乾放入休息區：P-071-hand-cookie",
+            "抽牌原因：「P-071 Sauna Egg Cookie」技能觸發抽牌",
+            "抽牌結果：抽了 2 張牌"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-071",
@@ -1811,7 +2291,12 @@
           "testState": "p-condition:P-071:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-071",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1835,12 +2320,19 @@
         "select:.effect-candidates-payment",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-072",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-073",
@@ -1858,17 +2350,29 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
         "confirm:hand-discard",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-073",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-opponent-hand-discard"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Snow Crystal Cookie」；效果：<discard 1 card.> Select up to 1 of your 【Arena】 Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "攻擊後效果結果：執行 discard-hand",
+        "效果來源：「Snow Crystal Cookie」",
+        "已棄置 1 張手牌至棄牌區：hand-filler-0。",
+        "攻擊後效果來源：「Snow Crystal Cookie」；效果：<discard 1 card.> Select up to 1 of your 【Arena】 Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "攻擊後效果目標：Snow Crystal Cookie",
+        "攻擊後效果結果：使目標攻擊力 +1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-074",
@@ -1886,14 +2390,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-074",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1918,7 +2421,20 @@
             "confirm:draw-up-to",
             "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-074",
+          "traceEntries": 3,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect",
+            "resolve-draw-up-to"
+          ],
+          "steps": [
+            "額外代價：棄置手牌：P-074-arena-hand-1、P-074-arena-hand-2",
+            "抽牌原因：「P-074 Sugar Globe Cookie」技能觸發抽牌",
+            "抽牌結果：抽了 2 張牌"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-074",
@@ -1934,7 +2450,12 @@
           "testState": "p-condition:P-074:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-074",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -1954,14 +2475,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-075",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Red Bean Cookie」；效果：if there are 15 cards or more in your trash, draw up to 1 card from your deck.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -1980,14 +2505,23 @@
           "auditStatus": "Effect flow settled",
           "operations": [
             "confirm:effect-panel:確認發動",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
+            "confirm:draw-up-to",
             "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-075",
+          "traceEntries": 2,
+          "commandKinds": [
+            "resolve-attack-effect",
+            "resolve-draw-up-to"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Red Bean Cookie」；效果：if there are 15 cards or more in your trash, draw up to 1 card from your deck.",
+            "攻擊後效果結果：抽至多 1 張牌",
+            "抽牌原因：「P-075 Red Bean Cookie」技能觸發抽牌",
+            "抽牌結果：抽了 1 張牌"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-075",
@@ -2003,7 +2537,17 @@
           "testState": "p-condition:P-075:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-075",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Red Bean Cookie」；效果：if there are 15 cards or more in your trash, draw up to 1 card from your deck.",
+            "攻擊後效果結果：條件不成立，效果未執行"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -2024,7 +2568,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-077",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Eternal Sugar Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-079",
@@ -2046,13 +2599,22 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-079",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Strawberry Shortcake Cookie」；效果：<place 1 card from the top of your other Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果目標：self-extra-1",
+        "攻擊後效果結果：從目標 HP 丟棄 1 張 HP 卡",
+        "攻擊後效果來源：「Strawberry Shortcake Cookie」；效果：<place 1 card from the top of your other Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-080",
@@ -2069,8 +2631,25 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:faint-response"
-      ]
+        "confirm:faint-response",
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "contractTraceCard": "P-080",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Tiny Cake Hound」；效果：【Your Turn】 When this Cookie faints, <place this Cookie from the break area into the trash.> Select up to 1 of your LV.1 Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "昏厥效果結果：效果已結算",
+        "昏厥效果來源：「Tiny Cake Hound」；效果：【Your Turn】 When this Cookie faints, <place this Cookie from the break area into the trash.> Select up to 1 of your LV.1 Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "昏厥效果目標：self-extra-1",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-081",
@@ -2089,7 +2668,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-081",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Fettuccine Cake Hound」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-082",
@@ -2114,7 +2702,19 @@
         "select:trap-step",
         "select:trap-step",
         "confirm:trap"
-      ]
+      ],
+      "contractTraceCard": "P-082",
+      "traceEntries": 1,
+      "commandKinds": [
+        "play-trap"
+      ],
+      "steps": [
+        "發動陷阱卡：「Sugar Gnome Cake Shop」",
+        "支付能量（橫置）：support-pay-0、support-pay-1",
+        "選擇目標：trap-defender",
+        "選擇目標（第 2 段）：trap-attacker"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-083",
@@ -2134,7 +2734,17 @@
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-083",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Dumpling Cake Hound」；效果：【Your Turn】 When this Cookie faints, <place this Cookie from the break area into the trash.> If there are 7 cards or more in your opponent's support area, rest up to 1 card in your opponent's support area.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-084",
@@ -2159,12 +2769,20 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-084",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-play-item",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：self-extra-1",
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-085",
@@ -2181,8 +2799,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-085",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Tropical Pop Cake Hound」",
+        "抽牌原因：「P-085 Tropical Pop Cake Hound」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-086",
@@ -2202,7 +2833,17 @@
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-086",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Black & White Cake Hound」；效果：【Your Turn】 When this Cookie faints, <place this Cookie from the break area into the trash.> If there are 6 cards or more in your opponent's hand, your opponent discards 1 card.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-092",
@@ -2221,7 +2862,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-092",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Pudding à la Mode Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-093",
@@ -2239,14 +2889,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-093",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2268,12 +2917,18 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-093",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "效果目標：opp-lv1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-093",
@@ -2289,7 +2944,12 @@
           "testState": "p-condition:P-093:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-093",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -2309,14 +2969,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-094",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Lemon Cookie」；效果：Use this Cookie as {Y} to deal 1 damage if your break area is LV.3 or lower.",
+        "攻擊後效果未生效：沒有合法目標或條件不成立"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2335,16 +2999,27 @@
           "auditStatus": "Effect flow settled",
           "operations": [
             "start:optional-cost-attack",
+            "confirm:optional-cost",
             "select:optional-cost",
             "confirm:optional-cost",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-094",
+          "traceEntries": 2,
+          "commandKinds": [
+            "resolve-attack-effect",
+            "resolve-optional-cost-attack"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Lemon Cookie」；效果：Use this Cookie as {Y} to deal 1 damage if your break area is LV.3 or lower.",
+            "攻擊後效果：等待玩家選擇支付代價或略過",
+            "攻擊後效果來源：「Lemon Cookie」；效果：Use this Cookie as {Y} to deal 1 damage if your break area is LV.3 or lower.",
+            "攻擊後代價：由「Lemon Cookie」提供 黃1 能量",
+            "攻擊後效果目標：opp-lv1",
+            "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-094",
@@ -2360,7 +3035,17 @@
           "testState": "p-condition:P-094:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-094",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Lemon Cookie」；效果：Use this Cookie as {Y} to deal 1 damage if your break area is LV.3 or lower.",
+            "攻擊後效果未生效：沒有合法目標或條件不成立"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -2380,14 +3065,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-095",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2408,12 +3092,16 @@
             "action:skill",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-095",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-095",
@@ -2429,7 +3117,12 @@
           "testState": "p-condition:P-095:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-095",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -2450,13 +3143,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-096",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-097",
@@ -2476,7 +3172,17 @@
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-097",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Cream Ferret Cookie」；效果：When this Cookie faints, <discard 1 Cookie that has FLIP from your hand.> Draw up to 2 cards from your deck.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-098",
@@ -2494,14 +3200,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-098",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2522,12 +3227,16 @@
             "action:skill",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-098",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-098",
@@ -2543,7 +3252,12 @@
           "testState": "p-condition:P-098:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-098",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -2562,8 +3276,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-099",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Bell Pepper Cookie」",
+        "抽牌原因：「P-099 Bell Pepper Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-100",
@@ -2582,7 +3309,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-100",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Icicle Yeti Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-101",
@@ -2601,14 +3337,27 @@
       "operations": [
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:hand-discard",
+        "confirm:hand-discard",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-101",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to",
+        "resolve-opponent-hand-discard"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Pond Dino Cookie」；效果：if there are 5 cards or less in your hand, draw up to 2 cards and place 1 card from your hand on the top of your deck.",
+        "攻擊後效果結果：抽至多 2 張牌，再棄置 1 張",
+        "抽牌原因：「P-101 Pond Dino Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌",
+        "效果來源：「Pond Dino Cookie」",
+        "已將 1 張手牌放到牌庫頂。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-102",
@@ -2627,13 +3376,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-102",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-103",
@@ -2652,14 +3404,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-103",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Blossom Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+        "攻擊後效果目標：未選擇目標（效果未生效）"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2681,13 +3437,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-103",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Blossom Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+            "攻擊後效果目標：P-103-arena-ally",
+            "攻擊後效果結果：執行 modify-attack-cost"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-103",
@@ -2704,7 +3466,17 @@
           "testState": "p-condition:P-103:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-103",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Blossom Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+            "攻擊後效果目標：未選擇目標（效果未生效）"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -2725,14 +3497,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-103",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Choco Drizzle Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+        "攻擊後效果目標：未選擇目標（效果未生效）"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2754,13 +3530,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-103",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Choco Drizzle Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+            "攻擊後效果目標：P-103@1-arena-ally",
+            "攻擊後效果結果：執行 modify-attack-cost"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-103@1",
@@ -2777,7 +3559,17 @@
           "testState": "p-condition:P-103@1:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-103",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Choco Drizzle Cookie」；效果：select up to 1 of your other 【Arena】 Cookies. During this turn, the attack cost of that Cookie is reduced by 1 {R}.",
+            "攻擊後效果目標：未選擇目標（效果未生效）"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -2802,13 +3594,22 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-104",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Buttercup Cookie」；效果：<return 1 card from your support area to your hand.> Deals 1 damage.",
+        "攻擊後效果目標：support-pay-0",
+        "攻擊後效果結果：將 1 張支援卡返回手牌",
+        "攻擊後效果來源：「Buttercup Cookie」；效果：<return 1 card from your support area to your hand.> Deals 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-104@1",
@@ -2831,13 +3632,22 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-104",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Green Tea Mousse Cookie」；效果：<return 1 card from your support area to your hand.> Deals 1 damage.",
+        "攻擊後效果目標：support-pay-0",
+        "攻擊後效果結果：將 1 張支援卡返回手牌",
+        "攻擊後效果來源：「Green Tea Mousse Cookie」；效果：<return 1 card from your support area to your hand.> Deals 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-105",
@@ -2857,14 +3667,27 @@
       "operations": [
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:hand-discard",
+        "confirm:hand-discard",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-105",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to",
+        "resolve-opponent-hand-discard"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Bubbles Cookie」；效果：draw 2 cards from your deck and place 1 card from your hand on the top or bottom of your deck.",
+        "攻擊後效果結果：抽至多 2 張牌，再棄置 1 張",
+        "抽牌原因：「P-105 Bubbles Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌",
+        "效果來源：「Bubbles Cookie」",
+        "已將 1 張手牌放到牌庫頂。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-105@1",
@@ -2884,14 +3707,27 @@
       "operations": [
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:hand-discard",
+        "confirm:hand-discard",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-105",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to",
+        "resolve-opponent-hand-discard"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Pudding à la Mode Cookie」；效果：draw 2 cards from your deck and place 1 card from your hand on the top or bottom of your deck.",
+        "攻擊後效果結果：抽至多 2 張牌，再棄置 1 張",
+        "抽牌原因：「P-105 Pudding à la Mode Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌",
+        "效果來源：「Pudding à la Mode Cookie」",
+        "已將 1 張手牌放到牌庫頂。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-106",
@@ -2909,14 +3745,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-106",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -2938,12 +3773,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-106",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "攻擊力效果目標：Shining Glitter Cookie",
+            "效果結算：Shining Glitter Cookie 攻擊力 +1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-106",
@@ -2959,7 +3801,12 @@
           "testState": "p-condition:P-106:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-106",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -2980,7 +3827,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-107",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Parfait Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-108",
@@ -3001,7 +3857,18 @@
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-108",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Pastel Meringue Cookie」；效果：When this Cookie faints, <discard 1 {R} 【Arena】 card from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+        "昏厥效果目標：faint-target",
+        "昏厥效果結果：「faint-target」受到 2 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-109",
@@ -3019,14 +3886,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-109",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3048,12 +3914,18 @@
             "select:.effect-candidates-payment",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-109",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "支付能量（橫置）：support-pay-0"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-109",
@@ -3069,7 +3941,12 @@
           "testState": "p-condition:P-109:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-109",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3089,14 +3966,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-110",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3118,12 +3994,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-110",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "攻擊力效果目標：Sour Belt Cookie",
+            "效果結算：Sour Belt Cookie 攻擊力 +2"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-110",
@@ -3139,7 +4022,12 @@
           "testState": "p-condition:P-110:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-110",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3165,13 +4053,27 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-111",
+      "traceEntries": 4,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "攻擊後效果來源：「GingerBrave」；效果：<place 1 【Arena】 Cookie from your hand into your break area.> Draw up to 2 cards from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果目標：hand-cookie-filler",
+        "攻擊後效果結果：執行 hand-to-break",
+        "攻擊後效果來源：「GingerBrave」；效果：<place 1 【Arena】 Cookie from your hand into your break area.> Draw up to 2 cards from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果結果：抽至多 2 張牌",
+        "抽牌原因：「P-111 GingerBrave」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌",
+        "攻擊後效果來源：「GingerBrave」；效果：<place 1 【Arena】 Cookie from your hand into your break area.> Draw up to 2 cards from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-112",
@@ -3190,7 +4092,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-112",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Adventurer Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-113",
@@ -3209,7 +4120,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-113",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Green Tea Mousse Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-114",
@@ -3226,15 +4146,23 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-114",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：opp-lv1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-115",
@@ -3255,12 +4183,18 @@
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-115",
+      "traceEntries": 3,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "選擇 0 個目標，此段可選效果未執行。"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-116",
@@ -3282,12 +4216,21 @@
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-116",
+      "traceEntries": 5,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "抽牌原因：「P-116 Mustard Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-117",
@@ -3310,13 +4253,22 @@
         "skip:replacement",
         "status:已選擇不補餅乾。",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-117",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Earl Grey Cookie」；效果：<place 1 other {B} 【Arena】 Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> This Cookie gains +1 HP.",
+        "攻擊後效果目標：self-extra-1",
+        "攻擊後效果結果：執行 field-to-deck-bottom",
+        "攻擊後效果來源：「Earl Grey Cookie」；效果：<place 1 other {B} 【Arena】 Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> This Cookie gains +1 HP.",
+        "攻擊後效果目標：「Earl Grey Cookie」",
+        "攻擊後效果結果：「Earl Grey Cookie」增加 1 點 HP"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-118",
@@ -3335,7 +4287,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-118",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Strawberry Stick Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-119",
@@ -3353,14 +4314,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-119",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3388,12 +4348,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-119",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "額外代價：棄牌區卡片洗回牌庫：P-119-arena-trash-1、P-119-arena-trash-2、P-119-arena-trash-3、P-119-arena-trash-4、P-119-arena-trash-5",
+            "效果目標：opp-lv1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-119",
@@ -3409,7 +4376,12 @@
           "testState": "p-condition:P-119:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-119",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3431,13 +4403,18 @@
       "operations": [
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-120",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Chocolate Bonbon Cookie」；效果：return up to 1 {P} 【Arena】 card from your trash to your hand.",
+        "攻擊後效果結果：執行 trash-to-hand"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-121",
@@ -3455,14 +4432,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-121",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3484,12 +4460,18 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-121",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "效果目標：opp-lv1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-121",
@@ -3505,7 +4487,12 @@
           "testState": "p-condition:P-121:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-121",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3530,12 +4517,21 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-124",
+      "traceEntries": 3,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-cookie-filler",
+        "回收結果：trash-cookie-2 從棄牌區返回手牌。",
+        "效果目標：trash-cookie-2"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-125",
@@ -3554,13 +4550,33 @@
       "operations": [
         "action:hand",
         "action:hand",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "select:stage-placement-payment",
+        "select:stage-placement-payment",
+        "confirm:stage-placement",
+        "action:stage",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-125",
+      "traceEntries": 4,
+      "commandKinds": [
+        "play-stage",
+        "begin-activate-stage",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "支付場景放置費用（橫置）：support-pay-0、support-pay-1",
+        "場景代價：將「0th & Broadway: Avenue of Deceit」橫置。",
+        "支付能量（橫置）：support-pay-2",
+        "抽牌原因：「P-125 0th & Broadway: Avenue of Deceit」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-127",
@@ -3582,13 +4598,22 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-127",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Schwarzwälder」；效果：<place 2 cards from the top of your LV.2 or higher Cookie's HP into the trash.> Deals 2 damage.",
+        "攻擊後效果目標：Schwarzwälder",
+        "攻擊後效果結果：從目標 HP 丟棄 2 張 HP 卡",
+        "攻擊後效果來源：「Schwarzwälder」；效果：<place 2 cards from the top of your LV.2 or higher Cookie's HP into the trash.> Deals 2 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 2 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-128",
@@ -3606,14 +4631,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-128",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3633,13 +4657,22 @@
           "operations": [
             "action:skill",
             "confirm:effect-panel:確認發動",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
+            "confirm:draw-up-to",
             "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-128",
+          "traceEntries": 3,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect",
+            "resolve-draw-up-to"
+          ],
+          "steps": [
+            "抽牌原因：「P-128 Butter Roll Cookie」技能觸發抽牌",
+            "抽牌結果：抽了 1 張牌"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-128",
@@ -3655,7 +4688,12 @@
           "testState": "p-condition:P-128:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-128",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3680,13 +4718,22 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-129",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Wedding Cake Cookie」；效果：<place 2 cards from the top of this Cookie's HP into the trash.> Deals 1 damage.",
+        "攻擊後效果目標：Wedding Cake Cookie",
+        "攻擊後效果結果：從目標 HP 丟棄 2 張 HP 卡",
+        "攻擊後效果來源：「Wedding Cake Cookie」；效果：<place 2 cards from the top of this Cookie's HP into the trash.> Deals 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-130",
@@ -3706,13 +4753,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-130",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Financier Cookie」；效果：對對手目標造成 1 點傷害",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-131",
@@ -3730,14 +4783,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-131",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3759,12 +4811,18 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-131",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "效果目標：Spinach Cookie"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-131",
@@ -3780,7 +4838,12 @@
           "testState": "p-condition:P-131:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-131",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -3805,12 +4868,18 @@
         "select:.effect-candidates-payment",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-132",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0、support-pay-1、support-pay-2"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-133",
@@ -3830,13 +4899,20 @@
         "action:skill",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
+        "action:hand",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-133",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "效果目標：self-extra-1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-134",
@@ -3854,14 +4930,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-134",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Blackberry Cookie」；效果：if there are 7 cards or more in your hand, deals 1 damage.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -3882,13 +4962,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-134",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Blackberry Cookie」；效果：if there are 7 cards or more in your hand, deals 1 damage.",
+            "攻擊後效果目標：opp-lv1",
+            "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-134",
@@ -3904,7 +4990,17 @@
           "testState": "p-condition:P-134:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-134",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Blackberry Cookie」；效果：if there are 7 cards or more in your hand, deals 1 damage.",
+            "攻擊後效果結果：條件不成立，效果未執行"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -3927,16 +5023,34 @@
         "confirm:effect-panel:確認並執行強制效果",
         "confirm:effect-panel:確認發動",
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
         "confirm:hand-discard",
         "action:skill",
         "select:.effect-candidates-hp-cost",
         "confirm:effect-panel:確認並執行強制效果",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-135",
+      "traceEntries": 6,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-opponent-hand-discard",
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Black Forest Cookie」；效果：<place 3 cards from the top of your deck into your trash.> Draw 1 card from your deck and discard 1 card.",
+        "攻擊後效果結果：將牌庫頂 3 張牌放入棄牌區",
+        "攻擊後效果來源：「Black Forest Cookie」；效果：<place 3 cards from the top of your deck into your trash.> Draw 1 card from your deck and discard 1 card.",
+        "攻擊後效果結果：抽 1 張牌",
+        "攻擊後效果來源：「Black Forest Cookie」；效果：<place 3 cards from the top of your deck into your trash.> Draw 1 card from your deck and discard 1 card.",
+        "攻擊後效果結果：執行 discard-hand",
+        "效果來源：「Black Forest Cookie」",
+        "已棄置 1 張手牌至棄牌區：hand-filler-0。",
+        "HP 費用：從「Black Forest Cookie」丟棄「P-135-source-hp-4」（物品）"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-136",
@@ -3953,10 +5067,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
+        "select:faint-target",
         "confirm:faint-response",
         "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-136",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-faint-effect"
+      ],
+      "steps": [
+        "昏厥效果來源：「Dark Choco Cookie」；效果：When this Cookie faints, <discard 1 card.> Return up to 1 {P} LV.3 Cookie from your trash to your hand.",
+        "昏厥效果結果：效果已結算"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-137",
@@ -3974,14 +5099,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-137",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -4003,12 +5127,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-137",
+          "traceEntries": 2,
+          "commandKinds": [
+            "begin-activate-skill",
+            "resolve-ability-effect"
+          ],
+          "steps": [
+            "攻擊力效果目標：Astronaut Cookie",
+            "效果結算：Astronaut Cookie 攻擊力 +1"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-137",
@@ -4024,7 +5155,12 @@
           "testState": "p-condition:P-137:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-137",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -4045,13 +5181,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-138",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-139",
@@ -4070,13 +5209,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-139",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-140",
@@ -4099,12 +5241,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-140",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "額外代價：棄置手牌：hand-filler-0",
+        "效果目標：Butter Pretzel Cookie"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-141",
@@ -4127,12 +5276,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-141",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "攻擊力效果目標：Taurus Cookie",
+        "效果結算：Taurus Cookie 攻擊力 +1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-142",
@@ -4150,14 +5306,18 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-142",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-attack-effect"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Cream Puff Cookie」；效果：if there are less cards in your support area than your opponent's support area, select up to 1 of your Cookies that has 3 or less HP remaining. That Cookie gains +1 HP.",
+        "攻擊後效果結果：條件不成立，效果未執行"
+      ],
+      "substantiveEffectEvidence": true,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -4178,13 +5338,19 @@
             "select:.effect-candidates-target",
             "confirm:effect-panel:確認發動",
             "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-142",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Cream Puff Cookie」；效果：if there are less cards in your support area than your opponent's support area, select up to 1 of your Cookies that has 3 or less HP remaining. That Cookie gains +1 HP.",
+            "攻擊後效果目標：Cream Puff Cookie",
+            "攻擊後效果結果：「Cream Puff Cookie」增加 1 點 HP"
+          ],
+          "substantiveEffectEvidence": true
         },
         "unmet": {
           "cardNumber": "P-142",
@@ -4200,7 +5366,17 @@
           "testState": "p-condition:P-142:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-142",
+          "traceEntries": 1,
+          "commandKinds": [
+            "resolve-attack-effect"
+          ],
+          "steps": [
+            "攻擊後效果來源：「Cream Puff Cookie」；效果：if there are less cards in your support area than your opponent's support area, select up to 1 of your Cookies that has 3 or less HP remaining. That Cookie gains +1 HP.",
+            "攻擊後效果結果：條件不成立，效果未執行"
+          ],
+          "substantiveEffectEvidence": true
         }
       }
     },
@@ -4221,17 +5397,29 @@
       "auditStatus": "Effect flow settled",
       "operations": [
         "confirm:effect-panel:確認發動",
+        "select:hand-discard",
         "confirm:hand-discard",
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-143",
+      "traceEntries": 3,
+      "commandKinds": [
+        "resolve-attack-effect",
+        "resolve-opponent-hand-discard"
+      ],
+      "steps": [
+        "攻擊後效果來源：「Iris Cookie」；效果：<discard 1 card.> Deals 1 damage.",
+        "攻擊後效果結果：執行 discard-hand",
+        "效果來源：「Iris Cookie」",
+        "已棄置 1 張手牌至棄牌區：hand-filler-0。",
+        "攻擊後效果來源：「Iris Cookie」；效果：<discard 1 card.> Deals 1 damage.",
+        "攻擊後效果目標：opp-lv1",
+        "攻擊後效果結果：「opp-lv1」受到 1 點傷害"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-144",
@@ -4253,12 +5441,22 @@
         "confirm:effect-panel:確認發動",
         "confirm:draw-up-to",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-144",
+      "traceEntries": 4,
+      "commandKinds": [
+        "deploy-cookie",
+        "begin-activate-skill",
+        "resolve-ability-effect",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "抽牌原因：「P-144 Elderberry Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 2 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-145",
@@ -4276,14 +5474,13 @@
       "auditStatus": "Dedicated condition A/B paths settled",
       "operations": [
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
       ],
+      "contractTraceCard": "P-145",
+      "traceEntries": 0,
+      "commandKinds": [],
+      "steps": [],
+      "substantiveEffectEvidence": false,
       "genericStatus": "PASS",
       "conditionPaths": {
         "met": {
@@ -4301,15 +5498,13 @@
           "status": "PASS",
           "auditStatus": "Effect flow settled",
           "operations": [
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
-            "action:next-phase",
             "action:next-phase"
-          ]
+          ],
+          "contractTraceCard": "P-145",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         },
         "unmet": {
           "cardNumber": "P-145",
@@ -4325,7 +5520,12 @@
           "testState": "p-condition:P-145:unmet",
           "status": "PASS",
           "auditStatus": "No-op or timing path settled",
-          "operations": []
+          "operations": [],
+          "contractTraceCard": "P-145",
+          "traceEntries": 0,
+          "commandKinds": [],
+          "steps": [],
+          "substantiveEffectEvidence": false
         }
       }
     },
@@ -4349,13 +5549,19 @@
         "select:.effect-candidates-target",
         "confirm:effect-panel:確認發動",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-146",
+      "traceEntries": 2,
+      "commandKinds": [
+        "begin-activate-skill",
+        "resolve-ability-effect"
+      ],
+      "steps": [
+        "支付能量（橫置）：support-pay-0",
+        "效果目標：trash-cookie-1"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-147",
@@ -4374,13 +5580,16 @@
       "operations": [
         "action:hand",
         "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
-        "action:next-phase",
         "action:next-phase"
-      ]
+      ],
+      "contractTraceCard": "P-147",
+      "traceEntries": 2,
+      "commandKinds": [
+        "deploy-cookie",
+        "skip-on-play"
+      ],
+      "steps": [],
+      "substantiveEffectEvidence": false
     },
     {
       "cardNumber": "P-151",
@@ -4397,8 +5606,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-151",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-151 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-152",
@@ -4415,8 +5637,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-152",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-152 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-153",
@@ -4433,8 +5668,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-153",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-153 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-154",
@@ -4451,8 +5699,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-154",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-154 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-155",
@@ -4469,8 +5730,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-155",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-155 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-156",
@@ -4487,8 +5761,21 @@
       "status": "PASS",
       "auditStatus": "Effect flow settled",
       "operations": [
-        "confirm:flip"
-      ]
+        "confirm:flip",
+        "confirm:draw-up-to"
+      ],
+      "contractTraceCard": "P-156",
+      "traceEntries": 2,
+      "commandKinds": [
+        "resolve-flip",
+        "resolve-draw-up-to"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Black Sapphire Cookie」",
+        "抽牌原因：「P-156 Black Sapphire Cookie」技能觸發抽牌",
+        "抽牌結果：抽了 1 張牌"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-157",
@@ -4507,7 +5794,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-157",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-158",
@@ -4526,7 +5822,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-158",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-159",
@@ -4545,7 +5850,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-159",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-160",
@@ -4564,7 +5878,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-160",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-161",
@@ -4583,7 +5906,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-161",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     },
     {
       "cardNumber": "P-162",
@@ -4602,7 +5934,16 @@
       "operations": [
         "select:flip-discard",
         "confirm:flip"
-      ]
+      ],
+      "contractTraceCard": "P-162",
+      "traceEntries": 1,
+      "commandKinds": [
+        "resolve-flip"
+      ],
+      "steps": [
+        "FLIP 效果結果：已發動「Candy Apple Cookie」"
+      ],
+      "substantiveEffectEvidence": true
     }
   ]
 }

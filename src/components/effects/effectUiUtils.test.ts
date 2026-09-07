@@ -1,7 +1,63 @@
 import { describe, expect, it } from 'vitest'
 import { describeEffect, describeEffectResult, getSkillLabels } from './effectUiUtils'
-import type { BreakToTrashEffect, TrashToBattleEffect } from '../../game'
+import type {
+  BreakToTrashEffect,
+  FieldToTrashEffect,
+  TrashToBattleEffect,
+} from '../../game'
 import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
+
+describe('hand-to-support selection instructions', () => {
+  it('explains optional green hand selection, deselection and rested placement', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true,
+      energyColor: 'green', rested: true }))
+      .toBe('點選 0～2 張綠色手牌，以休息狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
+  })
+  it('uses the printed color and count without offering zero for mandatory selection', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 1, energyColor: 'blue' }))
+      .toBe('點選 1 張藍色手牌，以活躍狀態放入支援區。再次點選可取消選取。')
+  })
+  it('preserves a keyword filter and does not invent a color restriction', () => {
+    expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true, keyword: 'arena' }))
+      .toBe('點選 0～2 張具有 [arena] 的手牌，以活躍狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
+  })
+})
+
+describe('damage-all recipient description', () => {
+  it('describes both players and the remaining HP threshold for ordered damage', () => {
+    expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'either', sequential: true,
+      minRemainingHp: 2, target: { side: 'either', min: 0, max: 4 } }))
+      .toBe('依點選順序，逐一對所有剩餘 HP 至少 2 的雙方餅乾造成 1 點傷害；每次傷害先處理 FLIP 與昏厥。')
+  })
+  it('preserves the source exclusion in BS8-005 attack text', () => {
+    expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'self', excludeSource: true }))
+      .toBe('來源以外的所有我方餅乾受到 1 傷害。')
+    expect(describeEffect({ kind: 'damage-all', amount: 1, side: 'opponent' }))
+      .toBe('所有對手餅乾受到 1 傷害。')
+  })
+})
+
+describe('optional gain-hp description', () => {
+  it('shows the exact effective HP filter and explicit zero choice', () => {
+    expect(describeEffect({ kind: 'gain-hp', amount: 1, target: {
+      side: 'self', min: 0, max: 1, minRemainingHp: 1, maxRemainingHp: 1,
+    } })).toBe('選擇最多 1 張剛好剩 1 HP 的我方餅乾，獲得 1 HP（可選 0 張）。')
+  })
+})
+
+describe('HP removal target instructions', () => {
+  it('asks for Cookies rather than suggesting the hidden HP cards can be selected', () => {
+    expect(describeEffect({ kind: 'hp-to-trash', amount: 2,
+      target: { side: 'opponent', min: 2, max: 2 } }))
+      .toBe('選擇對手 2 隻餅乾，將每隻 2 張 HP 卡放入棄牌區。')
+  })
+
+  it('explains the different amounts in target selection order', () => {
+    expect(describeEffect({ kind: 'hp-to-trash', amount: 2, amountByTargetIndex: [2, 1],
+      target: { side: 'opponent', min: 2, max: 2 } }))
+      .toBe('依點選順序選擇餅乾：第 1 隻移除 2 張 HP、第 2 隻移除 1 張 HP，將這些 HP 卡放入棄牌區。')
+  })
+})
 
 describe('getSkillLabels for end-phase effects', () => {
   it('does not present a queued end-phase effect as Activate', () => {
@@ -19,7 +75,38 @@ describe('getSkillLabels for end-phase effects', () => {
   })
 })
 
+describe('describeEffect for prevent-support-active-next-phase', () => {
+  it('describes BS8-042 as an optional opponent support choice for only the next Active Phase', () => {
+    const description = describeEffect({
+      kind: 'prevent-support-active-next-phase',
+      target: { side: 'opponent', min: 0, max: 1 },
+    })
+    expect(description).toBe('選擇至多 1 張對手支援卡；所選卡在對手下一個活躍階段不會設為活躍（不立即橫置）。')
+    expect(description).not.toContain('餅乾')
+    expect(description).not.toContain('永久')
+    expect(description).not.toContain('立即休息')
+  })
+
+  it('preserves a mandatory exact count and the self-side phase owner', () => {
+    expect(describeEffect({
+      kind: 'prevent-support-active-next-phase',
+      target: { side: 'self', min: 2, max: 2 },
+    })).toBe('選擇2 張我方支援卡；所選卡在我方下一個活躍階段不會設為活躍（不立即橫置）。')
+  })
+
+  it('preserves a positive selection minimum and each controller for both sides', () => {
+    expect(describeEffect({
+      kind: 'prevent-support-active-next-phase',
+      target: { side: 'either', min: 1, max: 2 },
+    })).toBe('選擇1～2 張雙方支援卡；所選卡在各自控制者下一個活躍階段不會設為活躍（不立即橫置）。')
+  })
+})
+
 describe('describeEffectResult for break-to-trash', () => {
+  it('describes same-level cost targets without an undefined printed level', () => {
+    expect(describeEffect({ kind: 'break-to-trash', max: 1, sameLevelAsPreviousEffectTarget: true })).toContain('同等級')
+    expect(describeEffect({ kind: 'break-to-trash', max: 1 })).not.toContain('undefined')
+  })
   const effect: BreakToTrashEffect = { kind: 'break-to-trash', max: 1, exactLevel: 1 }
 
   it('returns the no-target message when targetNames is empty', () => {
@@ -48,6 +135,14 @@ describe('describeEffectResult for optional trash-to-battle', () => {
     expect(describeEffectResult(effect, ['BS6-106-purple-hp2-trash-cookie'])).toBe(
       '棄牌區餅乾已登場。',
     )
+  })
+})
+
+describe('describeEffectResult for break-to-battle', () => {
+  it('distinguishes declining a revival from selecting a Cookie to enter battle', () => {
+    const effect = { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' } as const
+    expect(describeEffectResult(effect, [])).toBe('未選擇休息區餅乾，已略過登場。')
+    expect(describeEffectResult(effect, ['Golden Cheese Cookie'])).toBe('休息區餅乾已登場。')
   })
 })
 
@@ -107,6 +202,43 @@ describe('describeEffect for deck-to-trash', () => {
   })
 })
 
+describe('describeEffect for source-only field-to-trash', () => {
+  const effect: FieldToTrashEffect = {
+    kind: 'field-to-trash',
+    target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+  }
+
+  it('does not present the source Cookie as a player-selected Cookie or Stage', () => {
+    expect(describeEffect(effect)).toBe('將這張餅乾放入棄牌區。')
+    expect(describeEffect(effect)).not.toContain('選擇')
+    expect(describeEffect(effect)).not.toContain('場景')
+  })
+
+  it('describes the source movement without requiring a target id', () => {
+    expect(describeEffectResult(effect, [])).toBe('這張餅乾已放入棄牌區。')
+  })
+})
+
+describe('describeEffect for selectable field-to-trash', () => {
+  it('mentions Stage only when the effect explicitly allows Stage', () => {
+    const cookieOnly: FieldToTrashEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+    const cookieOrStage: FieldToTrashEffect = {
+      ...cookieOnly,
+      allowStage: true,
+    }
+
+    expect(describeEffect(cookieOnly)).toBe(
+      '選擇 1 張對手餅乾，放入棄牌區。',
+    )
+    expect(describeEffect(cookieOrStage)).toBe(
+      '選擇 1 張對手餅乾或場景，放入棄牌區。',
+    )
+  })
+})
+
 describe('describeEffectResult for deck-to-trash', () => {
   const effect: DeckToTrashEffect = {
     kind: 'deck-to-trash',
@@ -118,5 +250,22 @@ describe('describeEffectResult for deck-to-trash', () => {
     expect(describeEffectResult(effect, [])).toBe(
       '對手牌庫頂 5 張牌已放入棄牌區。',
     )
+  })
+})
+
+describe('battle-to-break source and destination descriptions', () => {
+  it('identifies mandatory source movement without losing other selectors', () => {
+    const effect = { kind: 'battle-to-break' as const, target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true } }
+    expect(describeEffect(effect)).toBe('將此餅乾放入休息區。')
+    expect(describeEffect({ ...effect, target: { side: 'opponent', min: 0, max: 1 } })).toBe('選擇 最多 1 張對手餅乾放入休息區。')
+    expect(describeEffectResult(effect, ['Habanero Cookie'])).toBe('Habanero Cookie 已放入休息區。')
+  })
+})
+
+describe('revealed hand card movement descriptions', () => {
+  it('distinguishes the pending fixed-card instruction from its resolved result', () => {
+    const effect = { kind: 'hand-to-break' as const, amount: 1, revealedCardOnly: true }
+    expect(describeEffect(effect)).toBe('將先前展示的同一張手牌放入休息區（不能改選）。')
+    expect(describeEffectResult(effect, [])).toBe('先前展示的同一張手牌已放入休息區。')
   })
 })

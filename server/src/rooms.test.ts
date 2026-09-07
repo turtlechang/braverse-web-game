@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { OFFICIAL_RED_STARTER_DECK, type CustomDeck } from '../../src/game'
+import {
+  BS8_CANDIDATE_STAGING_KIND,
+  OFFICIAL_RED_STARTER_DECK,
+  type Bs8CandidateStagingDeck,
+  type CustomDeck,
+} from '../../src/game'
 import {
   RoomStore,
+  maskedStateFor,
   openingSnapshotFor,
   publicIntentFor,
   publicIntentSequenceFor,
@@ -14,6 +20,14 @@ const createTestDeck = (id: string): CustomDeck => ({
   entries: OFFICIAL_RED_STARTER_DECK,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+})
+
+const createBs8CandidateStagingDeck = (id: string): Bs8CandidateStagingDeck => ({
+  ...createTestDeck(id),
+  candidateStaging: {
+    kind: BS8_CANDIDATE_STAGING_KIND,
+    extraDeckEntries: [{ cardNumber: 'BS8-005', count: 1 }],
+  },
 })
 
 const noop = () => {}
@@ -79,6 +93,116 @@ const completeOpening = (store: RoomStore, room: Room): Room => {
 }
 
 describe('RoomStore', () => {
+  it('materializes formal EXTRA in a standard room and masks it for the other player', () => {
+    const store = new RoomStore()
+    const one: CustomDeck = {
+      ...createTestDeck('formal-one'),
+      extraDeckEntries: [{ cardNumber: 'BS8-005', count: 2 }],
+    }
+    const two: CustomDeck = {
+      ...createTestDeck('formal-two'),
+      extraDeckEntries: [{ cardNumber: 'BS8-027', count: 1 }],
+    }
+    expect(one.entries.reduce((total, entry) => total + entry.count, 0)).toBe(60)
+    const created = store.createRoom(one, noop)
+    expect(created.environment).toBe('standard')
+    const room = store.joinRoom(created.code, two, noop, 1)
+    completeOpening(store, room)
+    expect(room.status).toBe('in-progress')
+    expect(room.state!.players['player-one'].extraDeck?.map((card) => card.id)).toEqual([
+      'BS8-005', 'BS8-005',
+    ])
+    expect(room.state!.players['player-two'].extraDeck?.map((card) => card.id)).toEqual(['BS8-027'])
+    const instanceIds = Object.values(room.state!.players).flatMap(
+      (player) => player.extraDeck?.map((card) => card.instanceId) ?? [],
+    )
+    expect(new Set(instanceIds).size).toBe(3)
+    for (const viewer of ['player-one', 'player-two'] as const) {
+      const opponent = viewer === 'player-one' ? 'player-two' : 'player-one'
+      const visible = maskedStateFor(room, viewer)!
+      expect(visible.players[viewer].extraDeck).toEqual(room.state!.players[viewer].extraDeck)
+      expect(visible.players[opponent].extraDeck).toEqual(
+        room.state!.players[opponent].extraDeck!.map((_, index) => ({
+          id: 'hidden-extra',
+          instanceId: `${opponent}-hidden-extra-${index}`,
+          name: '???',
+          type: 'extra',
+        })),
+      )
+    }
+  })
+
+  it.each([
+    { name: 'seven EXTRA cards', entries: [{ cardNumber: 'BS8-005', count: 4 }, { cardNumber: 'BS8-027', count: 3 }] },
+    { name: 'five copies of one EXTRA', entries: [{ cardNumber: 'BS8-005', count: 5 }] },
+    { name: 'two Standard limited EXTRA', entries: [{ cardNumber: 'BS8-069', count: 2 }] },
+    { name: 'a main-deck Cookie in EXTRA', entries: [{ cardNumber: 'BS8-009', count: 1 }] },
+  ])('rejects $name on both room creation and joining', ({ entries }) => {
+    const store = new RoomStore()
+    const invalid: CustomDeck = {
+      ...createTestDeck('invalid-extra'),
+      format: 'standard',
+      extraDeckEntries: entries,
+    }
+    expect(() => store.createRoom(invalid, noop)).toThrow()
+    const created = store.createRoom(createTestDeck('valid-host'), noop)
+    expect(() => store.joinRoom(created.code, invalid, noop, 1)).toThrow()
+    expect(created.playerTwo).toBeNull()
+    expect(created.status).toBe('waiting')
+  })
+
+  it('does not admit candidate decks to formal EXTRA rooms or silently merge both EXTRA formats', () => {
+    const store = new RoomStore()
+    const formal: CustomDeck = {
+      ...createTestDeck('formal'),
+      extraDeckEntries: [{ cardNumber: 'BS8-005', count: 1 }],
+    }
+    const room = store.createRoom(formal, noop)
+    expect(() => store.joinRoom(room.code, createBs8CandidateStagingDeck('candidate'), noop, 1)).toThrow(
+      'Standard 房間',
+    )
+    expect(() => store.createRoom({
+      ...createBs8CandidateStagingDeck('ambiguous'),
+      extraDeckEntries: formal.extraDeckEntries,
+    }, noop)).toThrow()
+  })
+
+  it('keeps an explicitly tagged BS8 candidate room separate and provides its private EXTRA cards only to the matching staging players', () => {
+    const store = new RoomStore()
+    const created = store.createRoom(createBs8CandidateStagingDeck('one'), noop)
+
+    expect(created.environment).toBe('bs8-candidate-staging')
+    expect(() => store.joinRoom(created.code, createTestDeck('standard'), noop, 1)).toThrow(
+      '候選驗收房間',
+    )
+
+    const room = store.joinRoom(
+      created.code,
+      createBs8CandidateStagingDeck('two'),
+      noop,
+      1,
+    )
+    beginOpeningGame(store, room)
+
+    expect(room.state?.players['player-one'].extraDeck).toMatchObject([
+      { id: 'BS8-005', instanceId: 'candidate-bs8:player-one:BS8-005:1' },
+    ])
+    expect(room.state?.players['player-two'].extraDeck).toMatchObject([
+      { id: 'BS8-005', instanceId: 'candidate-bs8:player-two:BS8-005:1' },
+    ])
+    expect(maskedStateFor(room, 'player-one')?.players['player-one'].extraDeck).toMatchObject([
+      { id: 'BS8-005', instanceId: 'candidate-bs8:player-one:BS8-005:1' },
+    ])
+    expect(maskedStateFor(room, 'player-one')?.players['player-two'].extraDeck).toEqual([
+      {
+        id: 'hidden-extra',
+        instanceId: 'player-two-hidden-extra-0',
+        name: '???',
+        type: 'extra',
+      },
+    ])
+  })
+
   it('公開意圖只解析公開區域，並以序號保護清除事件', () => {
     const store = new RoomStore()
     const created = store.createRoom(createTestDeck('one'), noop)

@@ -5,6 +5,7 @@ import {
 } from '../game/custom-deck'
 import type { CardPoolEntry } from '../game/card-pool'
 import {
+  compareCardNumbers,
   getAllCardPoolEntries,
   hasFlipAbility,
   normalizeCardNumber,
@@ -21,6 +22,8 @@ const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
   BS4: 'BS4-',
   BS5: 'BS5-',
   BS6: 'BS6-',
+  BS7: 'BS7-',
+  BS8: 'BS8-',
 }
 
 export const getCardAttackPower = (attackText: string | null): number | null =>
@@ -67,9 +70,21 @@ export interface DeckEditorDerived {
   deckValidation: ReturnType<typeof validateCustomDeck>
 }
 
-export function useDeckEditor(): DeckEditorState &
+/**
+ * Standard keeps the generated formal pool as its default. Candidate-only
+ * editors may inject an explicitly prepared pool; this hook never discovers
+ * candidate cards from a card number by itself.
+ */
+export interface UseDeckEditorOptions {
+  poolEntries?: readonly CardPoolEntry[]
+}
+
+export function useDeckEditor(
+  options: UseDeckEditorOptions = {},
+): DeckEditorState &
   DeckEditorActions &
   DeckEditorDerived {
+  const poolEntries = options.poolEntries ?? getAllCardPoolEntries()
   const [deckEntries, setDeckEntries] = useState<CustomDeckEntry[]>([])
   const [deckFormat, setDeckFormat] = useState<DeckFormat>(DEFAULT_DECK_FORMAT)
   const [deckName, setDeckName] = useState('我的牌組')
@@ -159,9 +174,7 @@ export function useDeckEditor(): DeckEditorState &
   }, [])
 
   const getFilteredPool = useCallback((): CardPoolEntry[] => {
-    const all = getAllCardPoolEntries()
-
-    return all.filter((entry) => {
+    return poolEntries.filter((entry) => {
       if (filterColor) {
         const entryColor = entry.color?.toLowerCase()
         const isWild = !entryColor || entryColor === 'wild'
@@ -229,7 +242,7 @@ export function useDeckEditor(): DeckEditorState &
         }
       }
       return true
-    })
+    }).sort((left, right) => compareCardNumbers(left.cardNumber, right.cardNumber))
   }, [
     searchText,
     filterColor,
@@ -240,6 +253,7 @@ export function useDeckEditor(): DeckEditorState &
     filterHp,
     filterAttackPower,
     filterEffect,
+    poolEntries,
   ])
 
   const getDeckTotalCount = useCallback((): number => {

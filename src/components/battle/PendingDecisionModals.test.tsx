@@ -3,7 +3,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { createDemoGame } from '../../game'
+import { applyGameCommand, createDemoGame } from '../../game'
+import { createCardCheckDemoState } from '../../game/demo'
 import type {
   BattleUiMatchLike,
   BattleUiPendingEffectLike,
@@ -81,6 +82,90 @@ describe('PendingDecisionModals online replacement ownership', () => {
 
     expect(container.querySelector('.decision-modal')).toBeNull()
     await act(() => root.unmount())
+  })
+})
+
+describe('BS8-029 optional draw decision', () => {
+  const createDrawView = (viewerPlayerId: 'player-one' | 'player-two') => {
+    const initial = createCardCheckDemoState('BS8-029@1')
+    const source = initial.players['player-one'].battleArea[0].card
+    const activated = applyGameCommand(initial, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    const game = applyGameCommand(activated, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(game.pendingDrawUpTo?.max).toBe(1)
+    const dispatch = vi.fn<BattleUiMatchLike['dispatch']>()
+    const match = {
+      game,
+      viewerPlayerId,
+      opponentId: viewerPlayerId === 'player-one' ? 'player-two' : 'player-one',
+      dispatch,
+    } as unknown as BattleUiMatchLike
+    const pending = {
+      pendingEffect: null,
+      faintActive: false,
+      afterDamageActive: false,
+      handleOnPlayTrigger: vi.fn(),
+    } satisfies BattleUiPendingEffectLike
+    return { game, match, pending, dispatch }
+  }
+
+  it.each([0, 1])('keeps the choice open until the owner confirms drawing %i', async (drawCount) => {
+    const { game, match, pending, dispatch } = createDrawView('player-one')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(<PendingDecisionModals match={match} pending={pending} />))
+      expect(dispatch).not.toHaveBeenCalled()
+      const options = container.querySelectorAll<HTMLButtonElement>('.draw-up-to-option')
+      expect(options).toHaveLength(2)
+      expect(options[0].textContent).toBe('不抽')
+      expect(options[1].textContent).toContain('抽 1 張')
+
+      await act(() => options[drawCount].click())
+      expect(dispatch).not.toHaveBeenCalled()
+      const confirm = container.querySelector<HTMLButtonElement>('.draw-up-to-actions button')!
+      expect(confirm.textContent).toBe(drawCount === 0 ? '略過抽牌' : '抽取 1 張牌')
+      await act(() => confirm.click())
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+        { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount },
+        drawCount === 0 ? '已選擇不抽牌。' : '已從牌庫抽取 1 張牌。',
+      )
+      const command = dispatch.mock.calls[0][0]
+      expect(Array.isArray(command)).toBe(false)
+      if (Array.isArray(command)) throw new Error('Expected one draw decision command')
+      const result = applyGameCommand(game, command)
+      expect(result.pendingDrawUpTo).toBeNull()
+      expect(result.players['player-one'].hand).toHaveLength(game.players['player-one'].hand.length + drawCount)
+      expect(result.players['player-one'].deck).toHaveLength(game.players['player-one'].deck.length - drawCount)
+    } finally {
+      await act(() => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not offer or automatically dispatch the opponent draw decision', async () => {
+    const { match, pending, dispatch } = createDrawView('player-two')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(<PendingDecisionModals match={match} pending={pending} />))
+      expect(container.querySelector('.draw-up-to-modal')).toBeNull()
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally {
+      await act(() => root.unmount())
+      container.remove()
+    }
   })
 })
 

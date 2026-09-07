@@ -9,6 +9,7 @@ import {
   simulateAiMatchDetailed,
   validateCustomDeck,
   type BuiltInDeckChoice,
+  type AiLevel,
 } from '../src/game/index'
 import type { Lv4SearchTelemetryAggregate } from '../src/game/ai/strategy/search-telemetry'
 
@@ -17,7 +18,11 @@ const GAMES_PER_REFERENCE = Number(
   process.env.BS7_GAMES_PER_REFERENCE ?? 10,
 )
 const MAX_ACTIONS = 2500
-const AI_LEVEL = 4
+const requestedAiLevel = Number(process.env.BS7_AI_LEVEL ?? 4)
+if (!Number.isInteger(requestedAiLevel) || requestedAiLevel < 1 || requestedAiLevel > 5) {
+  throw new Error('BS7_AI_LEVEL 必須介於 1..5。')
+}
+const AI_LEVEL = requestedAiLevel as AiLevel
 const OUTPUT_PATH = resolve(
   process.env.BS7_BENCHMARK_OUTPUT ??
     'data/decks/bs7-arena-vs-bs6-reference-report-250.json',
@@ -102,6 +107,23 @@ interface BehaviorAggregate {
   lv4Search: Lv4Aggregate
 }
 
+/** 僅歸屬於候選或 reference 控制玩家的決策 telemetry。 */
+interface PlayerBehaviorAggregate {
+  invalidActionCount: number
+  deadlockCount: number
+  skillUsageCount: number
+  r7TrapSkippedCount: number
+  legalAttackSkippedCount: number
+  lethalOpportunityCount: number
+  lethalConversionCount: number
+  directWinCount: number
+  endgameForecastCount: number
+  refreshForecastCount: number
+  emptyBattleForecastCount: number
+  lowQualityReplacementCount: number
+  lv4Search: Lv4Aggregate
+}
+
 interface MatchBucket {
   games: number
   wins: number
@@ -116,6 +138,8 @@ interface MatchBucket {
   reasons: Record<string, number>
   errors: string[]
   behavior: BehaviorAggregate
+  candidateBehavior: PlayerBehaviorAggregate
+  referenceBehavior: PlayerBehaviorAggregate
 }
 
 interface WinRateCi {
@@ -144,6 +168,8 @@ interface MatchSummary extends PositionSummary {
   reasons: Record<string, number>
   errors: string[]
   behavior: BehaviorSummary
+  candidateBehavior: PlayerBehaviorSummary
+  referenceBehavior: PlayerBehaviorSummary
 }
 
 interface BehaviorSummary {
@@ -157,6 +183,22 @@ interface BehaviorSummary {
   noDamageTurns: number
   noBoardChangeTurns: number
   consecutiveNoProgressMax: number
+  lv4Search: Omit<Lv4Aggregate, 'decisionTimes' | 'totalDecisionMs'>
+}
+
+interface PlayerBehaviorSummary {
+  invalidActionCount: number
+  deadlockCount: number
+  skillUsageCount: number
+  r7TrapSkippedCount: number
+  legalAttackSkippedCount: number
+  lethalOpportunityCount: number
+  lethalConversionCount: number
+  directWinCount: number
+  endgameForecastCount: number
+  refreshForecastCount: number
+  emptyBattleForecastCount: number
+  lowQualityReplacementCount: number
   lv4Search: Omit<Lv4Aggregate, 'decisionTimes' | 'totalDecisionMs'>
 }
 
@@ -198,6 +240,13 @@ const createLv4Aggregate = (): Lv4Aggregate => ({
   unsupportedEffectCount: 0,
   unknownInformationPenalty: 0,
   resourceReservationMisses: 0,
+  publicResponseEvaluations: 0,
+  publicResponseBranches: 0,
+  publicResponseMinPenalty: 0,
+  defensiveReserveEvaluations: 0,
+  defensiveReserveAdjustment: 0,
+  endgameSurvivalEvaluations: 0,
+  endgameSurvivalAdjustment: 0,
   setupSteps: 0,
   payoffSteps: 0,
   completedPayoffs: 0,
@@ -223,6 +272,22 @@ const createBehaviorAggregate = (): BehaviorAggregate => ({
   lv4Search: createLv4Aggregate(),
 })
 
+const createPlayerBehaviorAggregate = (): PlayerBehaviorAggregate => ({
+  invalidActionCount: 0,
+  deadlockCount: 0,
+  skillUsageCount: 0,
+  r7TrapSkippedCount: 0,
+  legalAttackSkippedCount: 0,
+  lethalOpportunityCount: 0,
+  lethalConversionCount: 0,
+  directWinCount: 0,
+  endgameForecastCount: 0,
+  refreshForecastCount: 0,
+  emptyBattleForecastCount: 0,
+  lowQualityReplacementCount: 0,
+  lv4Search: createLv4Aggregate(),
+})
+
 const createBucket = (): MatchBucket => ({
   games: 0,
   wins: 0,
@@ -237,6 +302,8 @@ const createBucket = (): MatchBucket => ({
   reasons: {},
   errors: [],
   behavior: createBehaviorAggregate(),
+  candidateBehavior: createPlayerBehaviorAggregate(),
+  referenceBehavior: createPlayerBehaviorAggregate(),
 })
 
 const addNumber = (
@@ -264,6 +331,13 @@ const addLv4Telemetry = (
     'unsupportedEffectCount',
     'unknownInformationPenalty',
     'resourceReservationMisses',
+    'publicResponseEvaluations',
+    'publicResponseBranches',
+    'publicResponseMinPenalty',
+    'defensiveReserveEvaluations',
+    'defensiveReserveAdjustment',
+    'endgameSurvivalEvaluations',
+    'endgameSurvivalAdjustment',
     'setupSteps',
     'payoffSteps',
     'completedPayoffs',
@@ -301,6 +375,31 @@ const addBehavior = (
   )
 }
 
+const addPlayerBehavior = (
+  target: PlayerBehaviorAggregate,
+  result: AiResult,
+  playerId: 'player-one' | 'player-two',
+): void => {
+  const behavior = result.behavior.byPlayer[playerId]
+  target.invalidActionCount += behavior.invalidActionCount
+  target.deadlockCount += behavior.deadlockCount
+  target.skillUsageCount += behavior.skillUsageCount
+  target.r7TrapSkippedCount += behavior.r7TrapSkippedCount
+  target.legalAttackSkippedCount += behavior.legalAttackSkippedCount
+  target.lethalOpportunityCount += behavior.lethalOpportunityCount
+  target.lethalConversionCount += behavior.lethalConversionCount
+  target.directWinCount += behavior.directWinCount
+  target.endgameForecastCount += behavior.endgameForecastCount
+  target.refreshForecastCount += behavior.refreshForecastCount
+  target.emptyBattleForecastCount += behavior.emptyBattleForecastCount
+  target.lowQualityReplacementCount += behavior.lowQualityReplacementCount
+  addLv4Telemetry(
+    target.lv4Search,
+    behavior.lv4Search,
+    result.lv4SearchTelemetryByPlayer[playerId].map((entry) => entry.elapsedMs),
+  )
+}
+
 const resultReason = (result: AiResult): string =>
   result.state.result?.reason ??
   result.error ??
@@ -319,6 +418,12 @@ const addResult = (
   bucket.totalSkillActivations += result.metrics.skillActivations
   bucket.totalRefreshes += result.metrics.refreshes
   addBehavior(bucket.behavior, result)
+  addPlayerBehavior(bucket.candidateBehavior, result, perspective)
+  addPlayerBehavior(
+    bucket.referenceBehavior,
+    result,
+    perspective === 'player-one' ? 'player-two' : 'player-one',
+  )
 
   const reason = resultReason(result)
   bucket.reasons[reason] = (bucket.reasons[reason] ?? 0) + 1
@@ -399,6 +504,13 @@ const summarizeLv4 = (
   unsupportedEffectCount: aggregate.unsupportedEffectCount,
   unknownInformationPenalty: aggregate.unknownInformationPenalty,
   resourceReservationMisses: aggregate.resourceReservationMisses,
+  publicResponseEvaluations: aggregate.publicResponseEvaluations,
+  publicResponseBranches: aggregate.publicResponseBranches,
+  publicResponseMinPenalty: aggregate.publicResponseMinPenalty,
+  defensiveReserveEvaluations: aggregate.defensiveReserveEvaluations,
+  defensiveReserveAdjustment: aggregate.defensiveReserveAdjustment,
+  endgameSurvivalEvaluations: aggregate.endgameSurvivalEvaluations,
+  endgameSurvivalAdjustment: aggregate.endgameSurvivalAdjustment,
   setupSteps: aggregate.setupSteps,
   payoffSteps: aggregate.payoffSteps,
   completedPayoffs: aggregate.completedPayoffs,
@@ -446,6 +558,36 @@ const summarizeBucket = (bucket: MatchBucket): MatchSummary => ({
     noBoardChangeTurns: bucket.behavior.noBoardChangeTurns,
     consecutiveNoProgressMax: bucket.behavior.consecutiveNoProgressMax,
     lv4Search: summarizeLv4(bucket.behavior.lv4Search),
+  },
+  candidateBehavior: {
+    invalidActionCount: bucket.candidateBehavior.invalidActionCount,
+    deadlockCount: bucket.candidateBehavior.deadlockCount,
+    skillUsageCount: bucket.candidateBehavior.skillUsageCount,
+    r7TrapSkippedCount: bucket.candidateBehavior.r7TrapSkippedCount,
+    legalAttackSkippedCount: bucket.candidateBehavior.legalAttackSkippedCount,
+    lethalOpportunityCount: bucket.candidateBehavior.lethalOpportunityCount,
+    lethalConversionCount: bucket.candidateBehavior.lethalConversionCount,
+    directWinCount: bucket.candidateBehavior.directWinCount,
+    endgameForecastCount: bucket.candidateBehavior.endgameForecastCount,
+    refreshForecastCount: bucket.candidateBehavior.refreshForecastCount,
+    emptyBattleForecastCount: bucket.candidateBehavior.emptyBattleForecastCount,
+    lowQualityReplacementCount: bucket.candidateBehavior.lowQualityReplacementCount,
+    lv4Search: summarizeLv4(bucket.candidateBehavior.lv4Search),
+  },
+  referenceBehavior: {
+    invalidActionCount: bucket.referenceBehavior.invalidActionCount,
+    deadlockCount: bucket.referenceBehavior.deadlockCount,
+    skillUsageCount: bucket.referenceBehavior.skillUsageCount,
+    r7TrapSkippedCount: bucket.referenceBehavior.r7TrapSkippedCount,
+    legalAttackSkippedCount: bucket.referenceBehavior.legalAttackSkippedCount,
+    lethalOpportunityCount: bucket.referenceBehavior.lethalOpportunityCount,
+    lethalConversionCount: bucket.referenceBehavior.lethalConversionCount,
+    directWinCount: bucket.referenceBehavior.directWinCount,
+    endgameForecastCount: bucket.referenceBehavior.endgameForecastCount,
+    refreshForecastCount: bucket.referenceBehavior.refreshForecastCount,
+    emptyBattleForecastCount: bucket.referenceBehavior.emptyBattleForecastCount,
+    lowQualityReplacementCount: bucket.referenceBehavior.lowQualityReplacementCount,
+    lv4Search: summarizeLv4(bucket.referenceBehavior.lv4Search),
   },
 })
 
@@ -721,7 +863,7 @@ const report = {
       (REFERENCES.length * GAMES_PER_REFERENCE) / 2,
     candidateSecondPlayerGamesPerColor:
       (REFERENCES.length * GAMES_PER_REFERENCE) / 2,
-    aiLevel: AI_LEVEL,
+      aiLevel: AI_LEVEL,
     maxActions: MAX_ACTIONS,
     seed: BENCHMARK_SEED,
   },

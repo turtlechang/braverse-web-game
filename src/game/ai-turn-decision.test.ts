@@ -67,7 +67,7 @@ describe('simple AI opponent', () => {
     )
   })
 
-  it('draws immediately, without a pending decision, after activating an optional FLIP draw', () => {
+  it('resolves the explicit draw decision after activating an optional FLIP draw', () => {
     const base = createFlipResponseDemoState()
     const playerId =
       base.pendingBattle?.damagePlayerId ??
@@ -93,8 +93,12 @@ describe('simple AI opponent', () => {
     const decision = takeAiStep(state, playerId)
 
     expect(decision.action).toBe('resolve-flip')
-    expect(decision.state.pendingDrawUpTo ?? null).toBeNull()
-    expect(decision.state.players['player-one'].hand).toHaveLength(
+    expect(decision.state.pendingDrawUpTo).toMatchObject({ playerId, max: 1 })
+    expect(decision.state.players['player-one'].hand).toHaveLength(handSizeBefore)
+    const drawn = takeAiStep(decision.state, playerId)
+    expect(drawn.description).toContain('從牌庫抽取 1 張牌')
+    expect(drawn.state.pendingDrawUpTo ?? null).toBeNull()
+    expect(drawn.state.players['player-one'].hand).toHaveLength(
       handSizeBefore + 1,
     )
   })

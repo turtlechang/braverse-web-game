@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { compilePendingDecisionDescriptor, getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
@@ -89,31 +88,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingDrawUpTo
       : null
 
-  const autoResolveDrawUpTo = pendingDrawUpTo?.max === 1
   const pendingStageTrigger = match.game.pendingStageTrigger
   const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
   const mustReplaceEmptyBattleArea =
     !match.game.pendingRefresh &&
     match.pendingPlayer?.battleArea.length === 0 &&
     match.pendingOptions.length > 0
-
-  useEffect(() => {
-    if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
-    const deckSize = match.game.players[match.viewerPlayerId].deck.length
-    const drawCount = Math.min(1, deckSize)
-    const reasonText = describeDrawUpToReason(match, pendingDrawUpTo)
-    match.dispatch(
-      {
-        kind: 'resolve-draw-up-to',
-        playerId: match.viewerPlayerId,
-        drawCount,
-      },
-      drawCount === 0
-        ? `${reasonText ?? '抽牌效果'}：已選擇不抽牌。`
-        : `${reasonText ?? '抽牌效果'}：已從牌庫抽取 ${drawCount} 張牌。`,
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoResolveDrawUpTo, pendingDrawUpTo?.sourceInstanceId])
 
   return (
     <>
@@ -256,7 +236,11 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             ? match.game.players[match.viewerPlayerId].hand.filter((card) =>
                 descriptorCandidates.has(card.instanceId),
               )
-            : match.game.players[match.viewerPlayerId].hand
+            : match.game.players[match.viewerPlayerId].hand.filter(
+                (card) =>
+                  handDiscard.energyColor === undefined ||
+                  card.energyColor === handDiscard.energyColor,
+              )
 
           return (
             <HandDiscardResponseModal
@@ -266,6 +250,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               hand={hand}
               requiredCount={handDiscard.count}
               atLeast={handDiscard.atLeast}
+              optional={handDiscard.optional}
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
               onToggleCard={(instanceId) =>
@@ -364,7 +349,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           )
         })()}
 
-      {pendingDrawUpTo && !autoResolveDrawUpTo && (() => {
+      {pendingDrawUpTo && (() => {
           const drawUpTo = pendingDrawUpTo
           const sourceCard = Object.values(match.game.players)
             .flatMap((p) => p.battleArea)
@@ -564,6 +549,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           pickCount={pendingInspect.pickCount}
           restDestination={pendingInspect.restDestination}
           pickDestination={pendingInspect.pickDestination}
+          pickSupportRested={pendingInspect.pickSupportRested}
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
           filterKeyword={pendingInspect.filterKeyword}
@@ -574,7 +560,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 ? '棄牌區'
                 : pendingInspect.restDestination === 'top'
                   ? '牌庫頂'
-                  : '牌庫底'
+                  : pendingInspect.restDestination === 'support-rested'
+                    ? '支援區（橫置）'
+                    : '牌庫底'
             match.dispatch(
               {
                 kind: 'resolve-inspect-deck',

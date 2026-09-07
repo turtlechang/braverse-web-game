@@ -65,7 +65,9 @@ describe('Lv.5 公開資訊對手回應模型', () => {
 
     expect(high.publicResponseEvidence).toBe(1)
     expect(high.responseLikelihood).toBeGreaterThan(low.responseLikelihood)
-    expect(high.expectedPenalty).toBeLessThan(low.expectedPenalty)
+    // 無活躍支援時 expectedPenalty 代表未知手牌 envelope（容量 0 → 0）；
+    // 公開能力證據的風險反映在最壞分支 worstCasePenalty。
+    expect(high.worstCasePenalty).toBeLessThan(low.worstCasePenalty)
     expect(estimateOpponentResponse(withEvidence, identity)).toEqual(high)
   })
 
@@ -111,5 +113,31 @@ describe('Lv.5 公開資訊對手回應模型', () => {
       ]),
     )
     expect(estimate.worstCaseKind).toBe('reserved-energy-threat')
+  })
+  it('對手有手牌但沒有活躍支援時，不建立未知支付容量的回應分支', () => {
+    const base = createPlayerView(createDemoGame(6), 'player-one')
+    const view: PlayerView = {
+      ...base,
+      opponent: {
+        ...base.opponent,
+        handCount: 5,
+        battleArea: [],
+        supportArea: [],
+        breakArea: [],
+        discardPile: [],
+        stage: null,
+      },
+    }
+    const estimate = estimateOpponentResponse(view, attackIdentity(view))
+
+    expect(estimate.activeSupportCount).toBe(0)
+    expect(estimate.hiddenHandEnergyCapacity).toBe(0)
+    expect(estimate.expectedPenalty).toBe(0)
+    expect(estimate.responseBranches).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'unknown-hand-envelope' }),
+      ]),
+    )
+    expect(estimate.worstCaseKind).toBe('no-response')
   })
 })

@@ -19,6 +19,9 @@ description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實�
 
 - 修改規則引擎、卡牌效果、費用、時機或勝負：先讀 `docs/game-rules.md`，再讀 [references/architecture-and-rules.md](references/architecture-and-rules.md)。
 - 修改官方卡牌匯入或文字解析：另讀 `docs/card-data-import.md` 與 `docs/card-effects.md`。
+- 修改官方文字轉接、條件解析或 strict contract：另讀
+  [references/official-text-contracts.md](references/official-text-contracts.md)，
+  依其中的 parser／exact map／fail-closed 與 A/B 驗收規範執行。
 - 修改 UI、版面或互動：另讀 `docs/official-ui-reference.md`，確認 UI 只呈現規則層結果。
 - 修改 AI 或完整對戰流程：讀 `src/game/ai.ts`、相關規則模組與瀏覽器驗證腳本。
 - 決定驗證層級：讀 `../braverse-workflow/references/verification-levels.md`。
@@ -41,7 +44,12 @@ description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實�
 4. 將官方資料格式留在 `src/cards/types.ts`，執行期核心型別留在 `src/game/types.ts`。
 5. 新增效果時先更新 `CardEffect` union，再調整轉接層、執行邏輯與測試。
 6. 共用既有能量選擇、文字解析、洗牌及事件推進函式，不在 UI 或其他模組複製規則。
-7. 修改規則邏輯時同步新增或更新對應 `.test.ts`；回歸測試要覆蓋真正根因。
+7. 重複且語意單一的官方句型集中在 generic parser；`Then`、多分支、動態費用
+   或官方裁決句型使用明確 exact map。不能把未辨識的必要條件靜默降級成
+   unconditional effect；安全無法表示時回傳 `unsupported` 或讓 contract 落到
+   `needs-review`。
+8. 修改規則邏輯時同步新增或更新對應 `.test.ts`；回歸測試要覆蓋真正根因，
+   條件／支付變更必須有規則層與正式 UI Browser 的 positive／blocked A/B。
 
 ## 5. 驗證
 
@@ -54,6 +62,11 @@ npm run build
 ```
 
 AI 或完整對戰行為改變時，另執行 `npm run test:ai:browser`。付款或 UI 互動改變時，先建置，再用瀏覽器驗證合法與不合法路徑。修正所有由本次變更造成的失敗，不以特製種子或硬編碼資料掩蓋問題。
+
+官方卡文條件、代價、目標或 `Then` 的轉接，除單元測試外，必須確認 strict
+contract 沒有遺失 runtime evidence；Browser 負向 fixture 要保留其他支付／目標
+資源，避免只測到「付不起」而沒有測到「條件不成立」。完整防漏流程見
+[official-text-contracts.md](references/official-text-contracts.md)。
 
 ## 6. 收尾
 

@@ -95,7 +95,7 @@ export const describePendingDecision = (
         schemaVersion: 1,
         ...source,
         decisionKind: decision.kind,
-        steps: [{ id: 'payment-1', kind: 'payment', required: false, candidateIds: ids, cost: decision.cost, commandKinds: ['resolve-optional-cost-attack'], label: '選擇支付代價或略過' }],
+        steps: [{ id: 'payment-1', kind: 'payment', required: decision.mandatory === true, candidateIds: ids, cost: decision.cost, commandKinds: ['resolve-optional-cost-attack'], label: decision.mandatory ? '支付攻擊後續代價' : '選擇支付代價或略過' }],
         actionKinds: ['resolve-optional-cost-attack'],
       }
     case 'effect-order':

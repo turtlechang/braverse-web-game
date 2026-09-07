@@ -9,7 +9,9 @@ import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
 import type { AiStrategyMemory } from '../game'
 import type { BuiltInDeckChoice, DeckChoice } from '../game'
+import type { BattleReplayAiDecision, BattleReplayAiMetadata } from '../game'
 import type { CustomDeck } from '../game/custom-deck'
+import { AI_STRATEGY_VERSION } from '../game'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -25,6 +27,7 @@ export function useAiTurn(params: {
   deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
   playerCustomDeck?: CustomDeck | null
   aiLevel?: AiLevel
+  strategyCommit?: string | null
   maxConsecutiveActions?: number
 }) {
   const {
@@ -39,6 +42,7 @@ export function useAiTurn(params: {
     deckConfig,
     playerCustomDeck,
     aiLevel = 4,
+    strategyCommit = null,
     maxConsecutiveActions = 200,
   } = params
 
@@ -48,10 +52,39 @@ export function useAiTurn(params: {
     useState<AiMatchResult[] | null>(null)
   const [pendingAiDecision, setPendingAiDecision] =
     useState<AiDecision | null>(null)
+  const [replayDecisions, setReplayDecisions] = useState<BattleReplayAiDecision[]>([])
   const aiThinkingTimerRef = useRef<number | null>(null)
   const aiActionTimerRef = useRef<number | null>(null)
   const consecutiveAiActionCountRef = useRef(0)
   const aiStrategyMemoryRef = useRef<AiStrategyMemory | null>(null)
+  const replayDecisionsRef = useRef<BattleReplayAiDecision[]>([])
+
+  const recordAiDecision = useCallback(
+    (decision: AiDecision, previousState: GameState) => {
+      const previousLogId = previousState.commandLog?.at(-1)?.id ?? null
+      const currentLogId = decision.state.commandLog?.at(-1)?.id ?? null
+      const reason = decision.reason
+        ? (() => {
+            const { strategyMemory, ...publicReason } = decision.reason!
+            void strategyMemory
+            return publicReason
+          })()
+        : undefined
+      const entry: BattleReplayAiDecision = {
+        commandLogId:
+          currentLogId !== null && currentLogId !== previousLogId
+            ? currentLogId
+            : null,
+        playerId: 'player-two',
+        action: decision.action,
+        description: decision.description,
+        ...(reason ? { reason } : {}),
+      }
+      replayDecisionsRef.current = [...replayDecisionsRef.current, entry]
+      setReplayDecisions(replayDecisionsRef.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!aiControlsCurrentState) {
@@ -108,6 +141,7 @@ export function useAiTurn(params: {
       if (decision.revealedCard) {
         // 實驗性：單張卡牌公開（如 FLIP）不再暫停等待玩家點擊確認，改由 toast 訊息帶出。
         setGame(decision.state)
+        recordAiDecision(decision, game)
         setMessage(`AI 公開 ${decision.revealedCard.name}：${decision.description}`)
         consecutiveAiActionCountRef.current += 1
         setAiActionCount((count) => count + 1)
@@ -115,6 +149,7 @@ export function useAiTurn(params: {
       }
 
       setGame(decision.state)
+      recordAiDecision(decision, game)
       setMessage(`AI：${decision.description}`)
       consecutiveAiActionCountRef.current += 1
       setAiActionCount((count) => count + 1)
@@ -142,6 +177,7 @@ export function useAiTurn(params: {
     maxConsecutiveActions,
     pendingEffect,
     pendingAiDecision,
+    recordAiDecision,
     showPause,
     setGame,
     setMessage,
@@ -164,16 +200,19 @@ export function useAiTurn(params: {
     setPendingAiDecision(null)
     consecutiveAiActionCountRef.current = 0
     aiStrategyMemoryRef.current = null
+    replayDecisionsRef.current = []
+    setReplayDecisions([])
   }, [])
 
   const confirmAiDecision = useCallback(() => {
     if (!pendingAiDecision) return
     setGame(pendingAiDecision.state)
+    recordAiDecision(pendingAiDecision, game)
     setMessage(`AI：${pendingAiDecision.description}`)
     consecutiveAiActionCountRef.current += 1
     setAiActionCount((count) => count + 1)
     setPendingAiDecision(null)
-  }, [pendingAiDecision, setGame, setMessage])
+  }, [game, pendingAiDecision, recordAiDecision, setGame, setMessage])
 
   const dismissSimulation = useCallback(() => {
     setSimulationResults(null)
@@ -188,5 +227,15 @@ export function useAiTurn(params: {
     resetAiCounts,
     dismissSimulation,
     runSimulation,
+    replayMetadata: {
+      agents: {
+        'player-two': {
+          aiLevel,
+          strategyVersion: AI_STRATEGY_VERSION,
+          strategyCommit,
+        },
+      },
+      decisions: replayDecisions,
+    } satisfies BattleReplayAiMetadata,
   } as const
 }

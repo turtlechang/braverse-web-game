@@ -179,7 +179,7 @@ const parseServerMessage = (data: unknown): ServerMessage | null => {
     case 'command-rejected':
       return typeof parsed.reason === 'string' ? (parsed as ServerMessage) : null
     case 'match-start':
-      return Number.isFinite(parsed.seed) &&
+      return (parsed.seed === null || Number.isFinite(parsed.seed)) &&
         isPlayerId(parsed.viewerId) &&
         isGameStateEnvelope(parsed.state)
         ? (parsed as ServerMessage)

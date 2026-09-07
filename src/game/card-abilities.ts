@@ -1,11 +1,14 @@
 import { GameRuleError } from './errors'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
+  executeCardEffect,
   getBreakCount,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getHandToBreakBySumCandidates,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
   isEffectConditionMet,
@@ -20,8 +23,10 @@ import {
 import {
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
+  validateBattleCookieCostSelection,
 } from './skills'
 import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
@@ -116,11 +121,11 @@ const canPayAbilityCost = (
   ).length
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
-  const availableSupportToHandCount = cost.supportToHandType
+  const availableSupportToHandCount = cost.supportToHandType || cost.supportToHandColor
     ? player.supportArea.filter(
         (support) =>
           !energyPaymentSet.has(support.card.instanceId) &&
-          support.card.type === cost.supportToHandType,
+          isSupportToHandCostCandidate(cost, support),
       ).length
     : remainingSupportCount
 
@@ -131,6 +136,8 @@ const canPayAbilityCost = (
   ).length
 
   return (
+    (!cost.stageSourceToTrash ||
+      player.stage?.card.instanceId === sourceInstanceId) &&
     remainingSupportCount >= supportCost &&
     availableSupportToHandCount >= (cost.supportToHand ?? 0) &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
@@ -163,6 +170,12 @@ const payAbilityCost = (
   }
 
   const player = state.players[playerId]
+  if (
+    cost.stageSourceToTrash &&
+    player.stage?.card.instanceId !== options.sourceInstanceId
+  ) {
+    throw new GameRuleError('來源場景卡不在場景區中。')
+  }
   const supportToTrashIds = [...new Set(options.supportToTrashIds ?? [])]
   const supportToHandIds = [...new Set(options.supportToHandIds ?? [])]
   const discardHandIds = [...new Set(options.discardHandIds ?? [])]
@@ -226,13 +239,15 @@ const payAbilityCost = (
   if (selectedSupportToHand.length !== supportToHandIds.length) {
     throw new GameRuleError('選擇的支援區回手費用不合法。')
   }
-  if (cost.supportToHandType) {
+  if (cost.supportToHandType || cost.supportToHandColor) {
     const invalidSupport = selectedSupportToHand.find(
-      (support) => support.card.type !== cost.supportToHandType,
+      (support) => !isSupportToHandCostCandidate(cost, support),
     )
     if (invalidSupport) {
       throw new GameRuleError(
-        `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
+        cost.supportToHandColor
+          ? `支援區回手費用必須選擇 ${cost.supportToHandColor} 能量顏色的卡牌。`
+          : `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
       )
     }
   }
@@ -261,6 +276,12 @@ const payAbilityCost = (
       throw new GameRuleError(
         `棄手牌費用必須選擇 ${cost.discardHandType} 類型的手牌。`,
       )
+    }
+  }
+  if (cost.discardHandNonCookie) {
+    const invalidDiscard = discardedHandCards.find((card) => card.type === 'cookie')
+    if (invalidDiscard) {
+      throw new GameRuleError('棄手牌費用必須選擇非 Cookie 卡牌。')
     }
   }
   if (cost.hpToTrash && hpToTrashTargetIds.length !== 1) {
@@ -295,7 +316,11 @@ const payAbilityCost = (
       ...player.discardPile,
       ...selectedSupportToTrash.map((support) => support.card),
       ...discardedHandCards,
+      ...(cost.stageSourceToTrash && player.stage
+        ? [player.stage.card]
+        : []),
     ],
+    ...(cost.stageSourceToTrash ? { stage: null } : {}),
   }
 
   let departedCount = 0
@@ -366,10 +391,13 @@ const payAbilityCost = (
     }
   }
 
+  const faintCostCookies = cost.trashBattleCookie?.faint
+    ? validateBattleCookieCostSelection(updatedPlayer, cost, options.trashBattleCookieIds ?? [], options.sourceInstanceId)
+    : []
   const trashBattleCookiePayment = payTrashBattleCookieCost(
     updatedPlayer,
-    cost,
-    options.trashBattleCookieIds ?? [],
+    cost.trashBattleCookie?.faint ? { ...cost, trashBattleCookie: undefined } : cost,
+    cost.trashBattleCookie?.faint ? [] : options.trashBattleCookieIds ?? [],
     options.sourceInstanceId,
   )
   updatedPlayer = trashBattleCookiePayment.player
@@ -391,13 +419,21 @@ const payAbilityCost = (
     })
   }
 
-  return departedCount > 0
-    ? recordCookieDepartures(
+  if (departedCount > 0) {
+    nextState = recordCookieDepartures(
         clearDepartedCookieModifiers(nextState),
         playerId,
         departedCount,
       )
-    : nextState
+  }
+  if (faintCostCookies.length > 0) {
+    nextState = executeCardEffect(nextState, {
+      sourcePlayerId: playerId,
+      sourceInstanceId: options.sourceInstanceId ?? '',
+    }, { kind: 'make-faint', target: { side: 'self', min: faintCostCookies.length, max: faintCostCookies.length } },
+    faintCostCookies.map(cookie => cookie.card.instanceId))
+  }
+  return nextState
 }
 
 export const getItemAbility = (card: GameCard): CardAbility | null =>
@@ -449,6 +485,19 @@ const hasUsableEffect = (
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId,
+  }
+
+  const mandatoryRevealEffects = ability.effects.filter(
+    (effect): effect is Extract<CardEffect, { kind: 'reveal-hand' }> =>
+      effect.kind === 'reveal-hand' && effect.selectCard === true,
+  )
+  if (
+    mandatoryRevealEffects.some(
+      (effect) =>
+        getEffectSelectionCandidates(state, context, effect).length < effect.amount,
+    )
+  ) {
+    return false
   }
 
   return ability.effects.some((effect) => {
@@ -519,7 +568,9 @@ const hasUsableEffect = (
       return getSupportToBattleCandidates(state, context, effect).length > 0
     }
     if (effect.kind === 'break-to-hand-by-level-sum') {
-      return getBreakToHandBySumCandidates(state, context, effect).length > 0
+      return effect.cardCount === undefined
+        ? getBreakToHandBySumCandidates(state, context, effect).length > 0
+        : findBreakToHandBySumSelection(state, context, effect) !== null
     }
     if (effect.kind === 'hand-to-break-by-level-sum') {
       return getHandToBreakBySumCandidates(state, context, effect).length > 0
@@ -586,6 +637,12 @@ export const playItem = (
   }
   if (discardHandIds.includes(instanceId)) {
     throw new GameRuleError('物品卡本身不能作為自己的棄手牌費用。')
+  }
+
+  const revealCost = ability.effects[0]
+  if (revealCost?.kind === 'reveal-hand' && revealCost.asCost &&
+    getEffectSelectionCandidates(state, { sourcePlayerId: playerId, sourceInstanceId: instanceId }, revealCost).length < revealCost.amount) {
+    throw new GameRuleError('無法支付展示代價：手牌沒有符合等級條件的餅乾。')
   }
 
   const cost = getEffectiveCardAbilityCost(state, playerId, ability)
@@ -711,14 +768,17 @@ export const activateStage = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    sourceInstanceId: stage.card.instanceId,
   })
   const paidPlayer = paidState.players[playerId]
   const activatedState = updatePlayer(paidState, {
     ...paidPlayer,
-    stage: {
-      ...stage,
-      rested: ability.restSource ? true : stage.rested,
-    },
+    stage: ability.cost.stageSourceToTrash
+      ? null
+      : {
+          ...stage,
+          rested: ability.restSource ? true : stage.rested,
+        },
   })
 
   return ability.specialVictory &&

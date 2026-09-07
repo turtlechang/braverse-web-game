@@ -65,11 +65,11 @@ export class ConnectionManager {
   }
 
   private sendMatchStart(room: Room): void {
-    if (!room.state || room.seed === null) return
+    if (!room.state) return
     for (const playerId of ['player-one', 'player-two'] as const) {
       this.sendToSlot(room, playerId, {
         type: 'match-start',
-        seed: room.seed,
+        seed: null,
         viewerId: playerId,
         state: maskedStateFor(room, playerId)!,
       })

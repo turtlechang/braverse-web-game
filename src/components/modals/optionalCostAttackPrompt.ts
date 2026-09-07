@@ -9,6 +9,7 @@ import {
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   isEffectConditionMet,
+  isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
   selectEnergyPayment,
@@ -22,8 +23,14 @@ import { energyColorLabel } from '../gameUiLabels'
 
 export interface OptionalCostAttackPromptData {
   sourceCard?: GameCard
+  /** 來源餅乾可直接提供的能量；這是付款流程中的固定候選，不是支援區卡。 */
+  sourceEnergy?: EnergyCost
   sourceCardName: string
   effectText: string
+  /** `ability` 代表技能 Then 的可選效果，而非攻擊後續效果。 */
+  resolution?: 'attack' | 'ability'
+  /** 僅供明確規定不能略過的代價；一般 Then 代價維持可選。 */
+  mandatory: boolean
   discardHandCost: number
   discardHandCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCost: number
@@ -93,14 +100,26 @@ const getUnmetConditionWarning = (
  */
 const describeCost = (
   remainingEnergy: EnergyCost,
+  sourceEnergy: EnergyCost | undefined,
   discardHandCost: number,
   supportToHandCost: number,
   hpToTrashCost: number,
   hpToHandCost: number,
   selfToBreakAreaCost: boolean,
+  selfToDeckBottomCost: boolean,
   trashToDeckCost: number,
 ): string => {
   const parts: string[] = []
+
+  const sourceEnergyParts = (Object.keys(sourceEnergy ?? {}) as (keyof EnergyCost)[])
+    .filter((key) => (sourceEnergy?.[key] ?? 0) > 0)
+    .map(
+      (key) =>
+        `${sourceEnergy?.[key]} 點${energyColorLabel[key] ?? String(key)}能量`,
+    )
+  if (sourceEnergyParts.length > 0) {
+    parts.push(`使用此餅乾作為 ${sourceEnergyParts.join('、')}`)
+  }
 
   const energyParts = (Object.keys(remainingEnergy) as (keyof EnergyCost)[])
     .filter((key) => (remainingEnergy[key] ?? 0) > 0)
@@ -118,6 +137,7 @@ const describeCost = (
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
   if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
   if (selfToBreakAreaCost) parts.push('將此餅乾放入休息區')
+  if (selfToDeckBottomCost) parts.push('將此餅乾放到牌庫底')
   if (trashToDeckCost > 0) {
     parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
   }
@@ -187,16 +207,19 @@ export function getOptionalCostAttackPrompt(
 ): OptionalCostAttackPromptData | null {
   const pending = game.pendingOptionalCostAttack
   if (!pending || pending.playerId !== viewerPlayerId) return null
+  const isAbilityResolution = pending.resolution === 'ability'
 
   // A source-only battle-to-break effect is an automatic cost step (the
   // attacking Cookie itself), not the card the player is asked to choose.
   // Skip it so chained effects such as BS4-029 expose the following
   // break-to-battle candidate in the payment flow.
-  const targetedEffect = pending.effects.find(
-    (effect) =>
-      requiresEffectCardSelection(effect) &&
-      !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
-  )
+  const targetedEffect = isAbilityResolution
+    ? undefined
+    : pending.effects.find(
+        (effect) =>
+          requiresEffectCardSelection(effect) &&
+          !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
+      )
   const needsTarget = Boolean(targetedEffect)
   const targetSelectionState = getTargetSelectionState(
     game,
@@ -307,25 +330,25 @@ export function getOptionalCostAttackPrompt(
       ? `目前沒有足夠的可支付${Object.entries(energyCost)
           .filter(([, amount]) => (amount ?? 0) > 0)
           .map(([color]) => `${energyColorLabel[color] ?? color}`)
-          .join('、')}能量，無法執行攻擊後效果，請選擇「略過」。`
+          .join('、')}能量，無法執行${pending.resolution === 'ability' ? '技能 Then 效果' : '攻擊後效果'}，${pending.mandatory ? '此效果必須支付。' : '請選擇「略過」。'}`
       : null
+  const sourceCard = game.players[viewerPlayerId].battleArea.find(
+    (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+  )?.card
   const supportToHandCandidates =
     supportToHandCost === 0
       ? []
       : game.players[viewerPlayerId].supportArea
-          .filter(
-            (support) =>
-              pending.cost.supportToHandType === undefined ||
-              support.card.type === pending.cost.supportToHandType,
-          )
+          .filter((support) => isSupportToHandCostCandidate(pending.cost, support))
           .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
-    sourceCard: game.players[viewerPlayerId].battleArea.find(
-      (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
-    )?.card,
+    sourceCard,
+    sourceEnergy: pending.sourceEnergy,
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
+    resolution: pending.resolution,
+    mandatory: pending.mandatory === true,
     discardHandCost,
     discardHandCandidates,
     supportToHandCost,
@@ -338,11 +361,13 @@ export function getOptionalCostAttackPrompt(
     energyCostTotal,
     costText: describeCost(
       energyCost,
+      pending.sourceEnergy,
       discardHandCost,
       supportToHandCost,
       hpToTrashCost,
       hpToHandCost,
       pending.cost.selfToBreakArea === true,
+      pending.cost.selfToDeckBottom === true,
       trashToDeckCost,
     ),
     playerHand: game.players[viewerPlayerId].hand,

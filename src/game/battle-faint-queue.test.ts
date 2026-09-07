@@ -142,6 +142,36 @@ describe('faint effect queue', () => {
     expect(afterDamage.pendingFaintEffects![0].sourcePlayerId).toBe('player-one')
   })
 
+  it('attaches a Cookie faint source-energy payment only once per trigger', () => {
+    const state = createFaintState()
+    const faintEntry = state.players['player-one'].battleArea[0]
+    faintEntry.card = {
+      ...faintEntry.card,
+      skill: {
+        ...faintEntry.card.skill!,
+        sourceEnergy: { red: 1 },
+        effects: [
+          { kind: 'break-source-to-trash' },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    const afterDamage = resolveNextDamage(battleState)
+    expect(afterDamage.pendingFaintEffects).toHaveLength(2)
+    expect(afterDamage.pendingFaintEffects?.[0]).toMatchObject({
+      effect: { kind: 'break-source-to-trash' },
+      sourceEnergy: { red: 1 },
+    })
+    expect(afterDamage.pendingFaintEffects?.[1]).not.toHaveProperty('sourceEnergy')
+  })
+
   it('queues BS4-011 after its attack faints an opponent, resolving draw/discard before replacement', () => {
     const base = createFaintState()
     const attacker = base.players['player-two'].battleArea[0]
@@ -1011,6 +1041,44 @@ describe('faint effect queue', () => {
     expect(result.pendingFaintEffects!.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('attaches effect-damage faint source energy once for a multi-effect skill', () => {
+    const state = createFaintState()
+    const faintEntry = state.players['player-one'].battleArea[0]
+    faintEntry.card = {
+      ...faintEntry.card,
+      skill: {
+        ...faintEntry.card.skill!,
+        sourceEnergy: { red: 1 },
+        effects: [
+          { kind: 'break-source-to-trash' },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+
+    const result = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      ['faint-cookie'],
+    )
+
+    expect(result.pendingFaintEffects).toHaveLength(2)
+    expect(result.pendingFaintEffects?.[0]).toMatchObject({
+      effect: { kind: 'break-source-to-trash' },
+      sourceEnergy: { red: 1 },
+    })
+    expect(result.pendingFaintEffects?.[1]).not.toHaveProperty('sourceEnergy')
+  })
+
   it('does not queue a faint effect whose condition is false at faint time', () => {
     const state = createFaintState()
     const faintCookie = state.players['player-one'].battleArea[0]
@@ -1473,5 +1541,61 @@ describe('faint effect queue', () => {
         }),
       ).toThrowError('必須先處理待處理的決策。')
     })
+  })
+
+  it('BS8-051: resolves a support-to-battle faint effect', () => {
+    const effect = {
+      kind: 'support-to-battle' as const,
+      amount: 1,
+      optional: true,
+    }
+    const supportCookie = {
+      ...cookie('green-support'),
+      energyColor: 'green' as const,
+    }
+    const base = createFaintState()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          supportArea: [{ card: supportCookie, rested: false }],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'faint-cookie',
+          sourceCardName: 'Faint Cookie',
+          effect,
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+            sourceCardName: 'Faint Cookie',
+          },
+        },
+      ],
+    }
+
+    expect(getFaintEffectMinMax(state, effect)).toEqual({ min: 0, max: 1 })
+    expect(getFaintEffectCardCandidates(state).map((card) => card.instanceId)).toEqual([
+      'green-support',
+    ])
+
+    const skipped = resolveFaintEffect(state, [])
+    expect(skipped.pendingFaintEffects).toBeUndefined()
+    expect(skipped.players['player-one'].supportArea).toHaveLength(1)
+
+    const next = applyGameCommand(state, {
+      kind: 'resolve-faint-effect',
+      playerId: 'player-one',
+      targetIds: ['green-support'],
+    })
+    const played = next.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'green-support',
+    )
+    expect(played).toBeDefined()
+    expect(next.players['player-one'].supportArea).toHaveLength(0)
   })
 })

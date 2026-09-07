@@ -8,11 +8,15 @@ import {
   deleteCustomDeck,
   duplicateCustomDeck,
   loadCustomDecks,
-  validateCustomDeck,
+  validateCustomDeckDefinition,
   type CustomDeck,
 } from '../../game/custom-deck'
 import { parseTestStateConfig } from '../../game/demo'
-import type { AiLevel } from '../../game'
+import {
+  isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
+  type AiLevel,
+} from '../../game'
 import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
 import type { useAiTurn } from '../../hooks/useAiTurn'
@@ -76,6 +80,7 @@ export function MenuScreen({
   )
   const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [deckEditorMode, setDeckEditorMode] = useState<'standard' | 'bs8-candidate-staging'>('standard')
   const [showTestScenario, setShowTestScenario] = useState(false)
   const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
@@ -88,9 +93,9 @@ export function MenuScreen({
   const selectedDeckValidation = useMemo(
     () =>
       selectedCustomDeck
-        ? validateCustomDeck(selectedCustomDeck.entries, {
-            format: selectedCustomDeck.format,
-          })
+        ? isBs8CandidateStagingDeck(selectedCustomDeck)
+          ? validateBs8CandidateStagingDeck(selectedCustomDeck)
+          : validateCustomDeckDefinition(selectedCustomDeck)
         : null,
     [selectedCustomDeck],
   )
@@ -168,10 +173,21 @@ export function MenuScreen({
           onOpenTestScenario={() => setShowTestScenario(true)}
           onCreateDeck={() => {
             setEditingDeck(null)
+            setDeckEditorMode('standard')
+            setShowDeckEditor(true)
+          }}
+          onCreateBs8CandidateDeck={() => {
+            setEditingDeck(null)
+            setDeckEditorMode('bs8-candidate-staging')
             setShowDeckEditor(true)
           }}
           onEditDeck={(deck) => {
             setEditingDeck(deck)
+            setDeckEditorMode(
+              isBs8CandidateStagingDeck(deck)
+                ? 'bs8-candidate-staging'
+                : 'standard',
+            )
             setShowDeckEditor(true)
           }}
           onDuplicateDeck={(deck) => {
@@ -203,6 +219,7 @@ export function MenuScreen({
         <Suspense fallback={<PageLoadingFallback />}>
           <DeckEditorPage
             initialDeck={editingDeck ?? undefined}
+            mode={deckEditorMode}
             onSave={handleDeckEditorSave}
             onClose={() => {
               setShowDeckEditor(false)

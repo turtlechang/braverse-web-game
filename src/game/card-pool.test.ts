@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  compareCardNumbers,
   getAllCardPoolEntries,
   getCardPoolEntry,
   getCardPoolVariants,
@@ -45,6 +46,17 @@ describe('hasFlipAbility runtime consistency', () => {
 })
 
 describe('card-pool @ variant merging', () => {
+  it('orders formal card numbers from BS1-001 onward with variants after the base row', () => {
+    const all = getAllCardPoolEntries()
+    const numbers = all.map((entry) => entry.cardNumber)
+
+    expect(numbers[0]).toBe('BS1-001')
+    expect(compareCardNumbers('BS1-001', 'BS1-002')).toBeLessThan(0)
+    expect(compareCardNumbers('BS1-002', 'BS1-002@1')).toBeLessThan(0)
+    expect(compareCardNumbers('BS1-002@1', 'BS2-001')).toBeLessThan(0)
+    expect(compareCardNumbers('BS8-104', 'ST1-001')).toBeLessThan(0)
+  })
+
   it('returns separate base and @1 variant entries via getCardPoolEntry', () => {
     const baseEntry = getCardPoolEntry(BS2_031_BASE)
     const variantEntry = getCardPoolEntry(BS2_031_VARIANT)

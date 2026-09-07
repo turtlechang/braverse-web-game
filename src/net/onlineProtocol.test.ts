@@ -6,6 +6,38 @@ import {
 } from './onlineProtocol'
 
 describe('online protocol validation', () => {
+  it.each(['create-room', 'join-room'])('validates formal and candidate EXTRA payloads for %s', (type) => {
+    const baseDeck = {
+      id: 'extra-deck', name: 'EXTRA deck',
+      entries: [{ cardNumber: 'BS8-009', count: 1 }],
+      createdAt: '2026-09-07T00:00:00.000Z', updatedAt: '2026-09-07T00:00:00.000Z',
+    }
+    const extraDeckEntries = [{ cardNumber: 'BS8-005', count: 1 }]
+    const candidateStaging = { kind: 'bs8-candidate-staging', extraDeckEntries }
+    const accepts = (metadata: Record<string, unknown>) => isClientMessage({
+      type, code: 'ABCD', playerName: '玩家', deck: { ...baseDeck, ...metadata },
+    })
+    expect(accepts({})).toBe(true)
+    expect(accepts({ extraDeckEntries })).toBe(true)
+    expect(accepts({ extraDeckEntries: [] })).toBe(true)
+    expect(accepts({ candidateStaging })).toBe(true)
+    expect(accepts({ extraDeckEntries, candidateStaging })).toBe(false)
+    expect(accepts({ extraDeckEntries: [], candidateStaging })).toBe(false)
+
+    for (const invalidEntries of [
+      null, {}, [null], [{ cardNumber: '', count: 1 }],
+      [{ cardNumber: '  ', count: 1 }], [{ cardNumber: 5, count: 1 }],
+      ...[0, -1, 1.5, '1', NaN, Infinity].map((count) => [{ cardNumber: 'BS8-005', count }]),
+    ]) {
+      expect(accepts({ extraDeckEntries: invalidEntries })).toBe(false)
+      expect(accepts({ candidateStaging: { ...candidateStaging, extraDeckEntries: invalidEntries } })).toBe(false)
+      expect(accepts({ entries: invalidEntries })).toBe(false)
+    }
+    for (const invalidStaging of [null, [], {}, { kind: 'other', extraDeckEntries }]) {
+      expect(accepts({ candidateStaging: invalidStaging })).toBe(false)
+    }
+  })
+
   it('accepts a bounded player name and rejects blank or oversized names', () => {
     const deck = {
       id: 'deck',
@@ -126,6 +158,29 @@ describe('online protocol validation', () => {
           paymentIds: ['purple-support'],
           targetIds: ['attacker'],
           trashToDeckIds: ['trash-1', 2],
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it('accepts a well-formed EXTRA deployment command and rejects malformed ids', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-extra-deck-cookie',
+          playerId: 'player-one',
+          instanceId: 'bs8-avatar-extra',
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-extra-deck-cookie',
+          playerId: 'player-one',
+          instanceId: 42,
         },
       }),
     ).toBe(false)

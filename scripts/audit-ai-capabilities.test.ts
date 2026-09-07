@@ -29,10 +29,17 @@ describe('AI capability promotion audit', () => {
       generatedAt: '2026-08-22T00:00:00.000Z',
     })
     expect(report.cardCount).toBeGreaterThan(500)
-    expect(report.inventoryEntryCount).toBe(1_244)
-    expect(report.cardCount).toBe(967)
+    expect(report.inventoryEntryCount).toBe(1_400)
+    expect(report.cardCount).toBe(1_087)
     expect(report.comboCandidateCount).toBeGreaterThan(0)
     expect(report.conversionFailures).toEqual([])
-    expect(report.status).toBe('ready')
+    expect(report.unsupportedCardIds).toEqual([
+      'BS8-042',
+      'BS8-076',
+      'BS8-079',
+      'BS8-083',
+      'BS8-084',
+    ])
+    expect(report.status).toBe('conservative')
   })
 })

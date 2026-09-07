@@ -5,6 +5,7 @@ import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   getBreakToTrashCandidates,
+  findBreakToHandBySumSelection,
   getCookieOwnerId,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
@@ -30,7 +31,10 @@ import {
   getDiscardHandCostCandidates,
   getBattleCookieToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
+  getHandToBreakAreaCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
@@ -114,6 +118,18 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if ('target' in effect && effect.target?.countPerPlayer !== undefined) {
+    const selector = effect.target
+    return (['self', 'opponent'] as const).flatMap((side) =>
+      chooseEffectTargets(state, context, {
+        ...effect, target: { ...selector, side, countPerPlayer: undefined,
+          min: selector.countPerPlayer!, max: selector.countPerPlayer! },
+      } as CardEffect))
+  }
+  if (effect.kind === 'break-to-hand-by-level-sum') {
+    return findBreakToHandBySumSelection(state, context, effect) ?? []
+  }
+
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     return getEffectSelectionCandidates(state, context, effect)
       .slice(0, 1)
@@ -124,6 +140,7 @@ const chooseEffectTargets = (
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
     effect.kind === 'hand-to-break' ||
+    (effect.kind === 'reveal-hand' && effect.selectCard) ||
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
@@ -208,6 +225,12 @@ const chooseEffectTargets = (
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     const stageOnly = effect.stageOnly ?? false
+    if (effect.target.sourceOnly) {
+      const source = targetPlayer.battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )
+      return source ? [source.card.instanceId] : []
+    }
     if (stageOnly) {
       if (targetPlayer.stage) {
         return [targetPlayer.stage.card.instanceId]
@@ -294,16 +317,12 @@ const chooseEffectTargets = (
           )
         : undefined
   if (sequentialDamage?.target) {
-    const candidates = getEffectTargetCandidates(
+    const candidates = getEffectSelectionCandidates(
       state,
       context,
-      sequentialDamage.target,
-    ).filter(
-      (cookie) =>
-        !sequentialDamage.excludeSource ||
-        cookie.card.instanceId !== context.sourceInstanceId,
+      sequentialDamage,
     )
-    return candidates.map((cookie) => cookie.card.instanceId)
+    return candidates.map((card) => card.instanceId)
   }
 
   if (isEffectUntargeted(effect)) {
@@ -557,8 +576,7 @@ const chooseAbilityCostIds = (
     .filter(
       (support) =>
         !supportToTrashSet.has(support.card.instanceId) &&
-        (cost.supportToHandType === undefined ||
-          support.card.type === cost.supportToHandType),
+        isSupportToHandCostCandidate(cost, support),
     )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
@@ -953,8 +971,7 @@ const resolveAiSkill = (
     .filter(
       (support) =>
         !costSupportToTrashSet.has(support.card.instanceId) &&
-        (skill.cost.supportToHandType === undefined ||
-          support.card.type === skill.cost.supportToHandType),
+        isSupportToHandCostCandidate(skill.cost, support),
     )
     .map((support) => support.card.instanceId)
   const costSupportToHandIds = skill.cost.supportToHand
@@ -1080,6 +1097,13 @@ const resolveAiSkill = (
     }
   }
 
+  const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(skill.cost, player.discardPile)
+    .slice(0, skill.cost.trashCookieToBreakArea?.count ?? 0).map((card) => card.instanceId)
+  if (trashCookieToBreakAreaIds.length < (skill.cost.trashCookieToBreakArea?.count ?? 0)) return null
+  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(skill.cost, player.hand, source.card.instanceId)
+    .slice(0, skill.cost.handToBreakArea?.count ?? 0).map((card) => card.instanceId)
+  if (handToBreakAreaIds.length < (skill.cost.handToBreakArea?.count ?? 0)) return null
+
   const trashToDeckBottomCandidateIds = skill.cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
         .map((card) => card.instanceId)
@@ -1151,6 +1175,8 @@ const resolveAiSkill = (
         battleToHandIds,
         trashToDeckBottomIds,
         trashToDeckIds,
+        trashCookieToBreakAreaIds,
+        handToBreakAreaIds,
       }),
       action: 'activate-skill',
       description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
@@ -1174,6 +1200,10 @@ const resolveAiSkill = (
     hpToTrashTargetIds,
     costSupportToHandIds,
     battleToHandIds,
+    trashCookieToBreakAreaIds,
+    handToBreakAreaIds,
+    effects[0]?.kind === 'damage' && effects[0].selectionAsCost
+      ? universalChooseEffectTargets(state, context, effects[0]) : [],
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -1205,6 +1235,8 @@ const resolveAiSkill = (
         trashToDeckBottomIds,
         trashToDeckIds,
         effectTargets: sim.effectTargets,
+        trashCookieToBreakAreaIds,
+        handToBreakAreaIds,
         chooseOneModes: sim.chooseOneModes,
       },
       { shuffleSeed: effectShuffleSeed },
@@ -1322,7 +1354,8 @@ const universalChooseEffectTargets = (
     effect.kind === 'field-to-trash' ||
     effect.kind === 'field-to-deck-bottom' ||
     effect.kind === 'split-damage' ||
-    effect.kind === 'opponent-break-to-trash-then-battle-to-break'
+    effect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
+    effect.kind === 'break-to-hand-by-level-sum'
   ) {
     return legacyChooseEffectTargets(state, context, effect)
   }

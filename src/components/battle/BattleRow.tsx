@@ -1,8 +1,8 @@
 import { Layers3, Heart, Swords, Gem } from 'lucide-react'
 import {
-  canActivateCookieSkill,
   canActivateStage,
   canAttack,
+  canPlayExtraDeckCookie,
   canSpecialPlayCookie,
   canPlayItem,
   canPlayStage,
@@ -12,6 +12,7 @@ import {
   getEnergyCostTotal,
   getActingPlayerId,
   getForcedAttackTargetId,
+  getCookieSkillUnavailableReason,
   selectEnergyPayment,
   type GameState,
   type PlayerId,
@@ -21,7 +22,7 @@ import { computeOpponentFan } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
 import './BattleRow.css'
 
-export type BattleResourceKind = 'deck' | 'stage' | 'break'
+export type BattleResourceKind = 'deck' | 'stage' | 'break' | 'extra'
 export type PaymentLabel = '技能' | '物品' | '場景'
 
 export interface BattleRowProps {
@@ -64,6 +65,7 @@ export interface BattleRowProps {
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
+  onPlayExtraDeckCookie?: (instanceId: string) => void
   onSpecialPlayCookie?: (instanceId: string) => void
   onPlayItem?: (instanceId: string) => void
   onPlayStage?: (instanceId: string) => void
@@ -116,6 +118,7 @@ export function BattleRow({
   onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
+  onPlayExtraDeckCookie,
   onSpecialPlayCookie,
   onPlayItem,
   onPlayStage,
@@ -168,11 +171,14 @@ export function BattleRow({
   const breakLevel = getBreakAreaLevel(game, playerId)
   const breakLevelBand =
     breakLevel >= 10 ? 'critical' : breakLevel >= 8 ? 'danger' : breakLevel >= 6 ? 'caution' : 'safe'
+  // 攻擊能量選擇沿用原本的緊湊堆疊排版，不套用付款展開；其餘
+  // 技能／代價／陷阱付款維持展開以保留完整點擊區（U2）。
+  const isAttackPaymentActive = attackPaymentTargetIds.size > 0
   const supportZone = (
     <div className={`support-zone${selectedHandCardCanSupport ? ' is-legal-target' : ''}`}>
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
-      <div className="support-cards">
+      <div className={`support-cards${isAttackPaymentActive ? ' is-attack-payment' : ''}`}>
         {player.supportArea.map((support, supportIndex) => {
           const supportId = support.card.instanceId
           const canSelectSkillCost =
@@ -254,15 +260,85 @@ export function BattleRow({
       </div>
     </div>
   )
+  const extraDeck = player.extraDeck ?? []
+  // The rule layer remains the sole authority for EXTRA eligibility.  The
+  // resource dock only surfaces a reminder when its owner can actually use
+  // at least one card now (for BS8-005: two of their Cookies fainted this
+  // turn), rather than duplicating that condition in the UI.
+  const playableExtraDeckCardIds = new Set(
+    canOperate
+      ? extraDeck
+          .filter((card) =>
+            canPlayExtraDeckCookie(game, playerId, card.instanceId),
+          )
+          .map((card) => card.instanceId)
+      : [],
+  )
+  const hasPlayableExtraDeckCard = playableExtraDeckCardIds.size > 0
   const extraZone = (
-    <div
-      className="extra-zone"
-      role="group"
-      aria-label={`${player.name}額外區（預留）`}
-    >
-      <Layers3 aria-hidden="true" />
-      <strong>0 張</strong>
-      <span>額外區</span>
+    <div className="extra-zone resource-dock">
+      <button
+        className={`resource-summary${hasPlayableExtraDeckCard ? ' is-extra-deck-ready' : ''}`}
+        type="button"
+        aria-label={`${player.name} EXTRA Deck ${extraDeck.length} 張`}
+        aria-expanded={openResourceKind === 'extra'}
+        title={`EXTRA Deck ${extraDeck.length} 張${isOpponent ? '；內容為私密資訊' : ''}`}
+        data-extra-deck-ready={hasPlayableExtraDeckCard}
+        onClick={() => toggleResource('extra')}
+      >
+        <Layers3 aria-hidden="true" />
+        <strong>{extraDeck.length} 張</strong>
+        <span>EXTRA</span>
+        {hasPlayableExtraDeckCard && (
+          <span className="extra-ready-hint" aria-live="polite">
+            EXTRA 可登場
+          </span>
+        )}
+      </button>
+      {openResourceKind === 'extra' && (
+        <div
+          className="resource-popover extra-deck-popover"
+          role="dialog"
+          aria-label={`${player.name} EXTRA Deck`}
+        >
+          <span>{player.name} EXTRA Deck</span>
+          <strong>{extraDeck.length} 張</strong>
+          {isOpponent ? (
+            <small>對手的 EXTRA Deck 內容為私密資訊。</small>
+          ) : extraDeck.length === 0 ? (
+            <small>目前沒有 EXTRA 卡。</small>
+          ) : (
+            <div className="extra-deck-card-list">
+              {extraDeck.map((card) => {
+                const canPlay = playableExtraDeckCardIds.has(card.instanceId)
+                return (
+                  <div className="extra-deck-card-entry" key={card.instanceId}>
+                    <CardFace
+                      card={card}
+                      className="extra-deck-card-image"
+                    />
+                    <div className="extra-deck-card-details">
+                      <strong>{card.name}</strong>
+                      <small>{card.id}</small>
+                      {canPlay ? (
+                        <button
+                          className="skill-action"
+                          type="button"
+                          onClick={() => onPlayExtraDeckCookie?.(card.instanceId)}
+                        >
+                          從 EXTRA 登場
+                        </button>
+                      ) : (
+                        <small>目前無法登場</small>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 
@@ -344,28 +420,40 @@ export function BattleRow({
             {player.breakArea.length > 0 ? (
               <div className="resource-card-list">
                 {player.breakArea.map((card) => {
-                  // BS3-025 這類技能允許來源在休息區發動；一般休息區卡牌沒有
-                  // 這個按鈕。跟上面 .break-cards 那個常駐小格子重複算一次，
-                  // 是因為玩家很自然會先點「休息區摘要」看清楚卡牌內容，
-                  // 若這個彈出視窗沒有發動按鈕，玩家會以為技能無法發動
-                  // （即使旁邊常駐格子上其實有）。
-                  const canActivateFromBreakPopover =
+                  // Keep a declared Break skill discoverable when blocked;
+                  // its disabled state and explanation come from the rules layer.
+                  const showBreakSkillAction =
                     canOperate &&
-                    canActivateCookieSkill(game, playerId, card.instanceId, 'activate')
+                    !selectedAttackerId &&
+                    card.skill?.fromBreakArea &&
+                    card.skill.trigger === 'activate'
+                  const unavailableReason = showBreakSkillAction
+                    ? getCookieSkillUnavailableReason(game, playerId, card.instanceId, 'activate')
+                    : undefined
+                  const reasonId = `break-skill-reason-${card.instanceId}`
                   return (
                     <div className="resource-card-entry" key={card.instanceId}>
                       <button type="button" onClick={() => onInspectCard(card)}>
                         <CardFace card={card} className="resource-card" />
                         <small>{card.name}</small>
                       </button>
-                      {canActivateFromBreakPopover && (
-                        <button
-                          className="skill-action"
-                          type="button"
-                          onClick={() => onActivateSkill?.(card.instanceId)}
-                        >
-                          啟動技能
-                        </button>
+                      {showBreakSkillAction && (
+                        <>
+                          <button
+                            className="skill-action"
+                            type="button"
+                            disabled={unavailableReason !== undefined}
+                            aria-describedby={unavailableReason ? reasonId : undefined}
+                            onClick={() => onActivateSkill?.(card.instanceId)}
+                          >
+                            啟動技能
+                          </button>
+                          {unavailableReason && (
+                            <small id={reasonId} className="skill-unavailable-reason">
+                              {unavailableReason}
+                            </small>
+                          )}
+                        </>
                       )}
                     </div>
                   )
@@ -483,14 +571,18 @@ export function BattleRow({
                 cookie.card.instanceId !== forcedAttackTargetId
               const canSelectAttackTarget =
                 canTarget && !attackTargetRestricted
-              const canActivateSkill =
+              const showBattleSkillAction =
                 canOperate &&
-                canActivateCookieSkill(
-                  game,
-                  playerId,
-                  cookie.card.instanceId,
-                  'activate',
-                )
+                !selectedAttackerId &&
+                cookie.card.skill?.trigger === 'activate' &&
+                !cookie.card.skill.faint &&
+                !cookie.card.skill.afterDamage &&
+                !cookie.card.skill.endPhase &&
+                !cookie.card.skill.fromBreakArea
+              const skillUnavailableReason = showBattleSkillAction
+                ? getCookieSkillUnavailableReason(game, playerId, cookie.card.instanceId, 'activate')
+                : undefined
+              const skillReasonId = `battle-skill-reason-${cookie.card.instanceId}`
               const revealTargetId =
                 game.pendingBattle?.damageTargetInstanceId ??
                 game.pendingBattle?.targetInstanceId
@@ -579,7 +671,21 @@ export function BattleRow({
                     }
                   />
                   <div className="card-badges">
-                    <span className="badge-hp"><Heart size={12} aria-hidden="true" /> {cookie.hpCards.length}/{cookie.card.hp}</span>
+                    <span
+                      className="badge-hp"
+                      title={cookie.card.extraDeckOrigin === 'awakened'
+                        ? `目前 HP ${cookie.hpCards.length}；覺醒HP +${cookie.card.awakenHpBonus ?? 0} 是覺醒時增加的 HP，不是 HP 上限。`
+                        : undefined}
+                    >
+                      <Heart size={12} aria-hidden="true" />{' '}
+                      {cookie.card.extraDeckOrigin === 'awakened' ? (
+                        <strong>
+                          {cookie.hpCards.length}
+                          <br />
+                          <small>覺醒HP +{cookie.card.awakenHpBonus ?? 0}</small>
+                        </strong>
+                      ) : `${cookie.hpCards.length}/${cookie.card.hp}`}
+                    </span>
                     {(() => {
                       const attackInfo = getEffectiveAttackBreakdown(
                         game,
@@ -647,7 +753,7 @@ export function BattleRow({
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
                     </span>
                   )}
-                  {(showEnergyShortfallHint || canActivateSkill) && (
+                  {(showEnergyShortfallHint || showBattleSkillAction) && (
                     <div className="combat-action-stack">
                       {showEnergyShortfallHint && (
                         <span className="energy-shortfall-hint">
@@ -655,16 +761,25 @@ export function BattleRow({
                           目前可用 {availableEnergyCount}
                         </span>
                       )}
-                      {canActivateSkill && (
-                        <button
-                          className="skill-action"
-                          type="button"
-                          onClick={() =>
-                            onActivateSkill?.(cookie.card.instanceId)
-                          }
-                        >
-                          啟動技能
-                        </button>
+                      {showBattleSkillAction && (
+                        <>
+                          <button
+                            className="skill-action"
+                            type="button"
+                            disabled={skillUnavailableReason !== undefined}
+                            aria-describedby={skillUnavailableReason ? skillReasonId : undefined}
+                            onClick={() =>
+                              onActivateSkill?.(cookie.card.instanceId)
+                            }
+                          >
+                            啟動技能
+                          </button>
+                          {skillUnavailableReason && (
+                            <small id={skillReasonId} className="energy-shortfall-hint skill-unavailable-reason">
+                              {skillUnavailableReason}
+                            </small>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

@@ -1,9 +1,12 @@
 import { createCard } from './starter-deck'
+import { convertOfficialCardToExtraDeckCard } from '../cards/official-card-adapter'
 import { getCardPoolEntry } from './card-pool'
+import { validateExtraDeck } from './extra-deck'
 import type {
   CookieCard,
   CookieInBattle,
   EnergyColor,
+  ExtraDeckCard,
   GameCard,
   GameState,
   PlayerId,
@@ -26,6 +29,8 @@ export interface ScenarioSideConfig {
   hand?: string[]
   /** 牌庫頂端到尾端的指定卡號；未指定的尾端以測試填充卡補足。 */
   deck?: string[]
+  /** 候選 staging 測試用的獨立 EXTRA Deck 卡號；不會混入主牌組。 */
+  extraDeck?: string[]
   breakArea: string[]
   supportCount: number
   /** 支援區能量顏色；未指定或不足的張數以萬用能量補足。 */
@@ -60,6 +65,11 @@ const resolveCard = (
   const entry = getCardPoolEntry(trimmed)
   if (!entry) {
     errors.push(`找不到卡號「${trimmed}」。`)
+    return null
+  }
+
+  if (entry.type === 'extra') {
+    errors.push(`「${trimmed}」是 EXTRA 卡，請改填額外牌組欄位。`)
     return null
   }
 
@@ -243,6 +253,43 @@ const buildDeck = (
   ]
 }
 
+const buildExtraDeck = (
+  cardNumbers: string[] | undefined,
+  playerId: PlayerId,
+  errors: string[],
+): ExtraDeckCard[] => {
+  const cards: ExtraDeckCard[] = []
+
+  for (const [index, cardNumber] of (cardNumbers ?? []).entries()) {
+    const trimmed = cardNumber.trim()
+    if (!trimmed) continue
+
+    const entry = getCardPoolEntry(trimmed)
+    if (!entry) {
+      errors.push(`找不到額外牌組卡號「${trimmed}」。`)
+      continue
+    }
+
+    const conversion = convertOfficialCardToExtraDeckCard(
+      entry,
+      `scenario-${playerId}-${index + 1}`,
+    )
+    if (conversion.status !== 'converted') {
+      errors.push(`「${trimmed}」不是可放入額外牌組的 EXTRA 餅乾卡。`)
+      continue
+    }
+
+    cards.push({
+      ...conversion.extraDeckCard,
+      instanceId: `scenario-extra-${playerId}-${index + 1}`,
+    })
+  }
+
+  const validation = validateExtraDeck(cards)
+  errors.push(...validation.errors)
+  return cards
+}
+
 const buildBattleArea = (
   slots: ScenarioCookieSlot[],
   playerId: PlayerId,
@@ -344,6 +391,7 @@ const buildPlayerState = (
     id: playerId,
     name,
     deck: buildDeck(side.deck, playerId, errors),
+    extraDeck: buildExtraDeck(side.extraDeck, playerId, errors),
     hand,
     battleArea: buildBattleArea(side.battle, playerId, errors),
     supportArea: buildSupportArea(

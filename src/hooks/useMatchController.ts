@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
+import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -32,11 +32,11 @@ import {
   buildReplayIssueBundle,
   buildBattleReplayExport,
   getEnergyCostTotal,
+  isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   isEffectConditionMet,
   requiresTargetSelection,
-  selectEnergyPayment,
   getTrashToDeckCostCandidates,
   validateEnergyPayment,
   type BuiltInDeckChoice,
@@ -44,6 +44,11 @@ import {
 } from '../game'
 import {
   createAttackEffectDemoState,
+  createBs8076ActivePreventionDemoState,
+  createBs8084AttackRequirementDemoState,
+  createBs8011DoubleSkillDemoState,
+  createBs8011FaintContinuationDemoState,
+  createBs8ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
   createBlueActivateSkillDemoState,
@@ -57,6 +62,8 @@ import {
   createBs6031AttackAfterDemoState,
   createBs6079OnPlayDemoState,
   createBs6008TrapDemoState,
+  createBs8021TrapDemoState,
+  createBs8GreenConditionDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -174,6 +181,23 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'attack-effect') {
       return createAttackEffectDemoState()
     }
+    if (testStateConfig?.kind === 'bs8-extra-deck') {
+      return createBs8ExtraDeckDemoState(
+        testStateConfig.conditionMet,
+        testStateConfig.cardNumber,
+        testStateConfig.cardNumber,
+        testStateConfig.orderedTargets,
+      )
+    }
+    if (testStateConfig?.kind === 'bs8-011-double-skill') {
+      return createBs8011DoubleSkillDemoState()
+    }
+    if (testStateConfig?.kind === 'bs8-011-faint-continuation') {
+      return createBs8011FaintContinuationDemoState(testStateConfig.faint)
+    }
+    if (testStateConfig?.kind === 'bs8-076-active-prevention') {
+      return createBs8076ActivePreventionDemoState()
+    }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return createSupportToTrashSkillDemoState()
     }
@@ -202,10 +226,21 @@ export function useMatchController(params: {
       return createBlueSt4TrapDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'card-check') {
-      return createCardCheckDemoState(testStateConfig.cardNumber)
+      return createCardCheckDemoState(testStateConfig.cardNumber, {
+        preferSkillSurface: testStateConfig.preferSkillSurface,
+        sourceHpCount: testStateConfig.sourceHpCount,
+        faintSourceMoved: testStateConfig.faintSourceMoved,
+        normalAttack: testStateConfig.normalAttack,
+        bs8021Scenario: testStateConfig.bs8021Scenario,
+      })
+    }
+    if (testStateConfig?.kind === 'bs8-084-attack-discard') {
+      return createBs8084AttackRequirementDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'card-negative') {
-      return createCardNegativeDemoState(testStateConfig.cardNumber)
+      return createCardNegativeDemoState(testStateConfig.cardNumber, {
+        preferSkillSurface: testStateConfig.preferSkillSurface,
+      })
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
@@ -221,6 +256,15 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs6-008-trap') {
       return createBs6008TrapDemoState(testStateConfig.remainingHp)
+    }
+    if (testStateConfig?.kind === 'bs8-021-trap') {
+      return createBs8021TrapDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs8-green-condition') {
+      return createBs8GreenConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
     }
     if (testStateConfig?.kind === 'bs4-077-timekeeper-cost') {
       return createBs4077TimekeeperCostDemoState()
@@ -371,6 +415,22 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'attack-effect') {
       return '測試狀態：Wizard Cookie 攻擊後續效果。'
     }
+    if (testStateConfig?.kind === 'bs8-extra-deck') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 已滿足從 EXTRA Deck 登場條件。`
+        : `測試狀態：${testStateConfig.cardNumber} 尚未滿足從 EXTRA Deck 登場條件。`
+    }
+    if (testStateConfig?.kind === 'bs8-011-double-skill') {
+      return '測試狀態：兩張 BS8-011 各自可發動一次技能；先完成一個技能後再驗證另一張。'
+    }
+    if (testStateConfig?.kind === 'bs8-011-faint-continuation') {
+      return testStateConfig.faint
+        ? '測試狀態：BS8-011 先讓 BS8-018 昏厥，再完成 BS8-018 的支付／傷害後續，最後讓 BS1-006 受到第二段傷害。'
+        : '測試狀態：BS8-011 先讓 2 HP 的 BS8-018 受傷但不昏厥，再完成 BS1-006 的第二段傷害。'
+    }
+    if (testStateConfig?.kind === 'bs8-076-active-prevention') {
+      return '測試狀態：BS8-076 目標可選擇不棄，或恰好棄 2 張手牌恢復 active。'
+    }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return '測試狀態：ST3-002 支援卡代價技能。'
     }
@@ -405,7 +465,14 @@ export function useMatchController(params: {
         : '測試狀態：ST4-020 手牌不足，不能發動。'
     }
     if (testStateConfig?.kind === 'card-check') {
-      return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+      return testStateConfig.preferSkillSurface
+        ? `測試狀態：卡片技能 strict 檢查 ${testStateConfig.cardNumber}。`
+        : `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+    }
+    if (testStateConfig?.kind === 'bs8-084-attack-discard') {
+      return testStateConfig.payable
+        ? 'BS8-084 正向驗證：攻擊前必須棄置 1 張手牌。'
+        : 'BS8-084 反向驗證：沒有手牌時不得宣告攻擊。'
     }
     if (testStateConfig?.kind === 'bs6-010-movement') {
       return testStateConfig.blocked
@@ -431,6 +498,11 @@ export function useMatchController(params: {
       return testStateConfig.remainingHp === 4
         ? 'BS6-008 Sugar Swan 正向驗證：HP≤4，Tonic Spray 不可發動。'
         : 'BS6-008 Sugar Swan 反向驗證：HP=5，Tonic Spray 可進入回應。'
+    }
+    if (testStateConfig?.kind === 'bs8-021-trap') {
+      return testStateConfig.conditionMet
+        ? 'BS8-021 已裝載於 Burning Spice Cookie：休息區 LV.8，陷阱回應被禁止。'
+        : 'BS8-021 已裝載於 Burning Spice Cookie：休息區 LV.7，陷阱仍可發動。'
     }
     if (testStateConfig?.kind === 'bs3-061-condition') {
       return `BS3-061 Silverbell Cookie 昏厥測試：支援區 ${testStateConfig.conditionMet ? 6 : 5} 張，支付後條件${testStateConfig.conditionMet ? '成立' : '不成立'}。`
@@ -534,6 +606,7 @@ export function useMatchController(params: {
   const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
+  const [selectedBlockerPaymentIds, setSelectedBlockerPaymentIds] = useState<string[]>([])
   const [selectedAttackResponseId, setSelectedAttackResponseId] = useState<string | null>(null)
   const [selectedAttackResponseTrashToDeckIds, setSelectedAttackResponseTrashToDeckIds] =
     useState<string[]>([])
@@ -650,18 +723,20 @@ export function useMatchController(params: {
   )
 
   const buildBattleReplay = useCallback(
-    () =>
+    (ai?: BattleReplayAiMetadata) =>
       buildBattleReplayExport({
         state: game,
         mode: 'offline',
         viewerId: viewerPlayerId,
+        source: testStateConfig ? 'test-state' : 'production',
         decks: {
           playerOne: deckConfig.player,
           playerTwo: deckConfig.ai,
         },
         initialState: initialGameRef.current,
+        ai,
       }),
-    [game, deckConfig, viewerPlayerId],
+    [game, deckConfig, testStateConfig, viewerPlayerId],
   )
 
   useEffect(() => {
@@ -701,7 +776,15 @@ export function useMatchController(params: {
             player.battleArea.find(
               (cookie: CookieInBattle) =>
                 cookie.card.instanceId === pendingFaint.sourceInstanceId,
-            )?.card
+            )?.card ??
+            // BS8-013 moves its fainting source from Break to the discard pile
+            // before its optional trash-to-battle Then is offered. Keep the
+            // source card visible while that queued decision is still pending.
+            player.discardPile.find(
+              (card): card is CookieCard =>
+                card.type === 'cookie' &&
+                card.instanceId === pendingFaint.sourceInstanceId,
+            )
           if (found) return found
         }
         return null
@@ -764,8 +847,8 @@ export function useMatchController(params: {
             (support) =>
               !selectedFaintPaymentIds.includes(support.card.instanceId) &&
               !selectedFaintCostSupportIds.includes(support.card.instanceId) &&
-              (pendingFaint.cost?.supportToHandType === undefined ||
-                support.card.type === pendingFaint.cost.supportToHandType),
+              (!pendingFaint.cost ||
+                isSupportToHandCostCandidate(pendingFaint.cost, support)),
           )
           .map((support) => support.card)
       : []
@@ -887,7 +970,7 @@ export function useMatchController(params: {
     (card) => card.instanceId === selectedTrapId,
   )
   const trapCostOptions = selectedTrap?.trap
-    ? getTrapCostOptions(selectedTrap.trap)
+    ? getTrapCostOptions(selectedTrap.trap, game, viewerPlayerId)
     : []
   const selectedTrapCost =
     trapCostOptions[selectedTrapCostOptionIndex] ?? selectedTrap?.trap?.cost
@@ -1072,14 +1155,16 @@ export function useMatchController(params: {
           )
           if (candidates.length === 0) return []
           const limits = getEffectSelectionLimits(effect)
+          const ordered = effect.kind === 'damage-all' && effect.sequential === true
           return [
             {
               effectIndex,
               candidates,
               selectedTargetIds: selectedTrapEffectTargets[effectIndex] ?? [],
-              min: limits?.min ?? 0,
-              max: limits?.max ?? 1,
-              allowEmpty: (limits?.min ?? 0) === 0,
+              ordered,
+              min: ordered ? candidates.length : limits?.min ?? 0,
+              max: ordered ? candidates.length : limits?.max ?? 1,
+              allowEmpty: !ordered && (limits?.min ?? 0) === 0,
             },
           ]
         })
@@ -1271,12 +1356,50 @@ export function useMatchController(params: {
   const selectedBlocker = playerBlockerCandidates.find(
     (cookie) => cookie.card.instanceId === selectedBlockerId,
   )
-  const selectedBlockerPaymentIds = selectedBlocker?.card.skill
-    ? selectEnergyPayment(
-        selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost,
-        game.players[viewerPlayerId].supportArea,
-    ) ?? []
-    : []
+  const blockerEnergyCost = selectedBlocker?.card.skill
+    ? selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost
+    : {}
+  const blockerEnergyCostTotal = getEnergyCostTotal(blockerEnergyCost)
+  const blockerPaymentCandidates =
+    blockerEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea
+          .filter((support) => {
+            if (support.rested) return false
+            if (selectedBlockerPaymentIds.includes(support.card.instanceId)) {
+              return true
+            }
+            if (selectedBlockerPaymentIds.length >= blockerEnergyCostTotal) {
+              return false
+            }
+            return isEnergyColorCompatibleWithCost(
+              blockerEnergyCost,
+              support.card.energyColor,
+            )
+          })
+          .map((support) => support.card)
+      : []
+  const blockerPaymentValidation =
+    blockerEnergyCostTotal === 0
+      ? { valid: true, reason: '不需支付能量。' }
+      : validateEnergyPayment(
+          blockerEnergyCost,
+          game.players[viewerPlayerId].supportArea,
+          selectedBlockerPaymentIds,
+        )
+  const blockerPaymentValid = blockerPaymentValidation.valid
+  const toggleBlockerPayment = (instanceId: string) => {
+    if (blockerEnergyCostTotal === 0) return
+    setSelectedBlockerPaymentIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= blockerEnergyCostTotal) return current
+      if (!blockerPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
 
   const playerAttackResponseCandidates =
     game.pendingBattle?.stage === 'trap' &&
@@ -1393,8 +1516,9 @@ export function useMatchController(params: {
     // played. A trap Then effect may create a real pending decision first
     // (for example BS5-087's draw up to 2), so wait until that decision is
     // resolved. When the local attacker has a printed attack-after effect,
-    // advance only one formal damage command at a time; resolve-battle would
-    // also auto-pick/skip the later target and hide the human decision UI.
+    // or an effect-damage sequence, advance one damage command at a time;
+    // resolve-battle would auto-skip HP FLIPs/faint triggers or auto-pick a
+    // later target, hiding the decisions this fixture is meant to verify.
     // Production matches never use this shortcut.
     if (
       testStateConfig &&
@@ -1409,11 +1533,12 @@ export function useMatchController(params: {
           ) {
             return current
           }
-          const preserveHumanAttackEffect =
-            current.pendingBattle.attackerPlayerId === viewerPlayerId &&
-            current.pendingBattle.attackEffects.length > 0
+          const preserveHumanDamageDecisions =
+            Boolean(current.pendingBattle.effectDamageSequence) ||
+            (current.pendingBattle.attackerPlayerId === viewerPlayerId &&
+              current.pendingBattle.attackEffects.length > 0)
           return applyGameCommand(current, {
-            ...(preserveHumanAttackEffect
+            ...(preserveHumanDamageDecisions
               ? {
                   kind: 'resolve-next-damage' as const,
                   playerId:
@@ -1440,6 +1565,9 @@ export function useMatchController(params: {
       // 擋下拋錯，把整個 App 炸掉。
       battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
+      // 陷阱被卡牌效果禁止時，要先讓防守方看見原因並確認；不能悄悄
+      // 自動略過，否則線上對手只會誤以為手牌中的陷阱沒有被讀到。
+      battle.trapsDisabled ||
       // A nested decision owns the turn. It must reach its own UI before the
       // response window can be closed automatically.
       getPendingDecision(game) ||
@@ -1491,6 +1619,7 @@ export function useMatchController(params: {
           currentBattle?.stage !== 'trap' ||
           currentBattle.trapUsed ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
+          currentBattle.trapsDisabled ||
           getPendingDecision(current) ||
           getTrapCandidates(current, viewerPlayerId).length > 0 ||
           getBlockerCandidates(current, viewerPlayerId).length > 0 ||
@@ -1529,6 +1658,7 @@ export function useMatchController(params: {
       setSelectedOpponentDiscardIds([])
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
+      setSelectedBlockerPaymentIds([])
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
@@ -1559,6 +1689,7 @@ export function useMatchController(params: {
       setSelectedOpponentDiscardIds([])
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
+      setSelectedBlockerPaymentIds([])
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
@@ -1672,8 +1803,15 @@ export function useMatchController(params: {
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,
-    playerBlockerCandidates,
     selectedBlockerPaymentIds,
+    setSelectedBlockerPaymentIds,
+    blockerEnergyCost,
+    blockerEnergyCostTotal,
+    blockerPaymentCandidates,
+    blockerPaymentValid,
+    blockerPaymentValidationReason: blockerPaymentValidation.reason,
+    toggleBlockerPayment,
+    playerBlockerCandidates,
     pendingResponseMode,
     setPendingResponseMode,
     playerAttackResponseCandidates,

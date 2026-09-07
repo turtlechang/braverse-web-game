@@ -39,6 +39,33 @@ describe('validateCustomDeck', () => {
     expect(result.errors).toContain('牌組必須剛好 60 張，目前為 59 張')
   })
 
+  it.each([
+    ['BS8-005', 'standard'],
+    ['BS8-005@1', 'standard'],
+    ['BS8-005', 'open'],
+    ['BS8-005@1', 'open'],
+  ] as const)('rejects %s in a 60-card %s main deck at validation, import and construction', (cardNumber, format) => {
+    const entries = [
+      ...OFFICIAL_RED_STARTER_DECK.map((entry, index) =>
+        index === 0 ? { ...entry, count: entry.count - 1 } : entry,
+      ),
+      { cardNumber, count: 1 },
+    ]
+    const error = 'BS8-005 是 EXTRA 卡，不能放入主牌組'
+    const result = validateCustomDeck(entries, { format })
+    expect(result.isValid).toBe(false)
+    expect(result.stats.totalCards).toBe(60)
+    expect(result.errors).toEqual([error])
+
+    expect(importDeck(JSON.stringify({ name: 'EXTRA in main', entries, format })))
+      .toEqual({ deck: null, error })
+    const deck: CustomDeck = {
+      id: 'extra-in-main', name: 'EXTRA in main', entries, format,
+      createdAt: '2026-09-07T00:00:00.000Z', updatedAt: '2026-09-07T00:00:00.000Z',
+    }
+    expect(() => createDeckFromCustomDeck(deck, 'player-one')).toThrow(error)
+  })
+
   it('rejects more than four copies of the same card number', () => {
     const result = validateCustomDeck([
       { cardNumber: 'ST1-001', count: 5 },
@@ -320,6 +347,106 @@ describe('validateCustomDeck', () => {
     expect(result.deck?.entries).toEqual(
       entries.map(({ cardNumber, count }) => ({ cardNumber, count })),
     )
+  })
+
+  it('continues to import legacy deck JSON without an EXTRA payload', () => {
+    const result = importDeck(JSON.stringify({
+      name: 'legacy deck',
+      entries: OFFICIAL_RED_STARTER_DECK,
+    }))
+
+    expect(result.error).toBeNull()
+    expect(result.deck?.name).toBe('legacy deck')
+    expect(result.deck?.entries).toEqual(
+      OFFICIAL_RED_STARTER_DECK.map(({ cardNumber, count }) => ({
+        cardNumber,
+        count,
+      })),
+    )
+    expect(result.deck?.candidateStaging).toBeUndefined()
+  })
+
+  it('round-trips a candidate staging deck with its ordered six-card EXTRA deck', () => {
+    const deck: CustomDeck = {
+      id: 'candidate-export',
+      name: 'BS8 candidate export',
+      entries: OFFICIAL_RED_STARTER_DECK,
+      format: 'standard',
+      candidateStaging: {
+        kind: 'bs8-candidate-staging',
+        extraDeckEntries: [
+          { cardNumber: 'BS8-005', count: 2 },
+          { cardNumber: 'BS8-027', count: 1 },
+          { cardNumber: 'BS8-005', count: 2 },
+          { cardNumber: 'BS8-069', count: 1 },
+        ],
+      },
+      createdAt: '2026-08-30T00:00:00.000Z',
+      updatedAt: '2026-08-30T00:00:00.000Z',
+    }
+
+    const exported = JSON.parse(exportDeck(deck)) as {
+      candidateStaging?: CustomDeck['candidateStaging']
+    }
+    expect(exported.candidateStaging).toEqual(deck.candidateStaging)
+
+    const result = importDeck(exportDeck(deck), { allowCandidateStaging: true })
+    expect(result.error).toBeNull()
+    expect(result.deck?.entries).toEqual(
+      OFFICIAL_RED_STARTER_DECK.map(({ cardNumber, count }) => ({
+        cardNumber,
+        count,
+      })),
+    )
+    expect(result.deck?.candidateStaging).toEqual(deck.candidateStaging)
+  })
+
+  it('keeps candidate-only EXTRA JSON out of the Standard import path', () => {
+    const json = JSON.stringify({
+      name: 'candidate payload in Standard',
+      entries: OFFICIAL_RED_STARTER_DECK,
+      candidateStaging: {
+        kind: 'bs8-candidate-staging',
+        extraDeckEntries: [{ cardNumber: 'BS8-005', count: 1 }],
+      },
+    })
+
+    expect(importDeck(json)).toEqual({
+      deck: null,
+      error: 'BS8 候選驗收 EXTRA Deck 只能在候選驗收牌組編輯器匯入。',
+    })
+  })
+
+  it('rejects unsupported top-level EXTRA Deck payloads instead of dropping them in Standard', () => {
+    const json = JSON.stringify({
+      name: 'unsafe Standard extra',
+      entries: OFFICIAL_RED_STARTER_DECK,
+      extraDeck: [{ cardNumber: 'BS8-005', count: 1 }],
+    })
+
+    expect(importDeck(json)).toEqual({
+      deck: null,
+      error: '正式牌組 JSON 請使用 extraDeckEntries 卡號與數量，不支援 extraDeck 實體。',
+    })
+  })
+
+  it('enforces the six-slot limit before importing a candidate EXTRA deck', () => {
+    const json = JSON.stringify({
+      name: 'too many candidate extras',
+      entries: OFFICIAL_RED_STARTER_DECK,
+      candidateStaging: {
+        kind: 'bs8-candidate-staging',
+        extraDeckEntries: [
+          { cardNumber: 'BS8-005', count: 4 },
+          { cardNumber: 'BS8-027', count: 3 },
+        ],
+      },
+    })
+
+    expect(importDeck(json, { allowCandidateStaging: true })).toMatchObject({
+      deck: null,
+      error: 'EXTRA Deck 最多只能放入 6 張，目前為 7 張。',
+    })
   })
 })
 

@@ -24,10 +24,12 @@ export {
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
+  findBreakToHandBySumSelection,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getPairedTargetSelectionError,
   getBattleToBreakBlocker,
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
@@ -67,7 +69,25 @@ export {
   createStageUsageDemoState,
 } from './demo'
 export type { DeckConfig } from './demo'
-export { createSeededRandom, createSeededShuffle } from './helpers'
+export { createSeededRandom, createSeededShuffle, getCookieEffectiveHp } from './helpers'
+export {
+  EXTRA_DECK_MAX_CARDS,
+  EXTRA_DECK_MAX_COPIES_PER_CARD,
+  reorderExtraDeck,
+  validateExtraDeck,
+} from './extra-deck'
+export type { ExtraDeckValidationResult } from './extra-deck'
+export {
+  BS8_CANDIDATE_STAGING_KIND,
+  createBs8CandidateStagingPlayerSetup,
+  getBs8CandidateExtraDeckCardDefinitions,
+  isBs8CandidateStagingDeck,
+  validateBs8CandidateStagingDeck,
+} from './bs8-candidate-staging'
+export type {
+  Bs8CandidateStagingDeck,
+  Bs8CandidateStagingDeckValidation,
+} from './bs8-candidate-staging'
 export { getLegalTurnCommands } from './legal-actions'
 export { createPlayerView } from './player-view'
 export type {
@@ -78,6 +98,7 @@ export type {
 export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
+  getAttackEnergyCostForPlayer,
   getAttackEnergyCostForState,
   getEnergyCostTotal,
   getRemainingEnergyCost,
@@ -191,6 +212,8 @@ export type { CardPoolEntry } from './card-pool'
 export {
   createCustomDeckId,
   createDeckFromCustomDeck,
+  createCustomDeckPlayerSetup,
+  validateCustomDeckDefinition,
   deleteCustomDeck,
   duplicateCustomDeck,
   loadCustomDecks,
@@ -233,6 +256,7 @@ export {
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
+  getFaintSourceCostUnavailableReason,
   getFaintEffectMinMax,
   getAttackResponseSkillCandidates,
   getBlockerCandidates,
@@ -262,8 +286,10 @@ export type {
 } from './battle'
 export {
   canSpecialPlayCookie,
+  canPlayExtraDeckCookie,
   attackCookie,
   deployCookie,
+  playExtraDeckCookie,
   placeSupportCard,
   replaceDefeatedCookie,
   skipDefeatedCookieReplacement,
@@ -295,6 +321,7 @@ export { advancePhase, canAttack, processEndPhaseEffects, TURN_PHASES } from './
 export {
   activateCookieSkill,
   canActivateCookieSkill,
+  getCookieSkillUnavailableReason,
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
   getBattleCookieToHandCostCandidates,
@@ -305,6 +332,7 @@ export {
   getFaintTriggeredCost,
   getCookieSkillCost,
   getCookieSkillEffects,
+  isSupportToHandCostCandidate,
   hasCookieOnPlayEffects,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
@@ -313,6 +341,7 @@ export {
   payBattleCookieToHandCost,
   payHpToHandCost,
   getTrashCookieToBreakAreaCostCandidates,
+  getHandToBreakAreaCostCandidates,
   getTrashToDeckBottomCostCandidates,
   isSkillEffectConditionDeferredUntilCost,
   payTrashCookieToBreakAreaCost,
@@ -353,6 +382,7 @@ export type {
   CookieInBattle,
   DamageEffect,
   DamageReceivedModifier,
+  DiscardHandThenDrawSameEffect,
   DeckToSupportEffect,
   DefeatReason,
   DrawEffect,
@@ -366,6 +396,7 @@ export type {
   EffectTargetSelectorSide,
   EffectTargetSide,
   EnergyColor,
+  ExtraDeckCard,
   InspectDeckRestDestination,
   EnergyCost,
   BattleToBreakEffect,
@@ -416,6 +447,7 @@ export type {
   Shuffle,
   SkillTrigger,
   SupportCard,
+  StageAttackCostModifier,
   StageAbility,
   StageCard,
   SpecialVictoryCondition,
@@ -462,6 +494,7 @@ export type {
   ActivateStageCommand,
   AttackCommand,
   DeployCookieCommand,
+  PlayExtraDeckCookieCommand,
   DrawMulliganCompensationCommand,
   ForceMulliganOpeningHandCommand,
   KeepOpeningHandCommand,
@@ -498,6 +531,7 @@ export type {
   ReplayIssueBundleV1,
 } from './replay-issue-bundle'
 export {
+  assessBattleReplay,
   BATTLE_REPLAY_FORMAT,
   BATTLE_REPLAY_VERSION,
   buildBattleReplayExport,
@@ -507,10 +541,18 @@ export {
   serializeBattleReplayExport,
 } from './battle-replay'
 export type {
+  BattleReplayQualityAssessment,
   BattleReplayExportV1,
   BattleReplayLimitation,
   BattleReplayMode,
+  BattleReplaySampleQuality,
+  BattleReplaySource,
+  BattleReplayTrainingAssessment,
+  BattleReplayTrainingExclusion,
   BattleReplayVisibility,
+  BattleReplayAiAgent,
+  BattleReplayAiDecision,
+  BattleReplayAiMetadata,
   BuildBattleReplayExportOptions,
 } from './battle-replay'
 export type {
@@ -550,7 +592,12 @@ export { assessLv5DefensiveReserve } from './ai/strategy/defensive-reserve'
 export type {
   DefensiveReserveAssessment,
   DefensiveReserveReason,
+  OptionalCostDefenseAssessment,
 } from './ai/strategy/defensive-reserve'
+export { AI_STRATEGY_VERSION } from './ai/strategy/version'
+export type {
+  EndgameSurvivalAssessment,
+} from './ai/strategy/endgame-survival'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
   createCustomDeckMatch,

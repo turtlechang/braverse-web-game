@@ -7,6 +7,7 @@ import { createKnowledgeState } from './knowledge-state'
 import {
   advanceLv4Plan,
   searchLv4Commands,
+  selectLv4StrategicContribution,
   type Lv4SearchHooks,
   type Lv4PlanProgress,
 } from './lv4-search'
@@ -68,6 +69,105 @@ const makeThreeStepHooks = (): Lv4SearchHooks => {
 }
 
 describe('G4 Lv4 command search', () => {
+  it('明確防守保留時，不讓通用攻擊節奏扣分壓過保留理由', () => {
+    expect(selectLv4StrategicContribution({
+      scoreType: 'relative-action-score',
+      total: -28,
+      calibrated: {
+        terminalOutcome: 'none',
+        legalAttackCountBefore: 1,
+        legalAttackCountAfter: 0,
+        activeSupportBefore: 1,
+        activeSupportAfter: 1,
+        knownDeckFactCount: 0,
+        publicLethal: false,
+      },
+      contributions: [
+        { id: 'attack-tempo', amount: -70, detail: '仍有合法攻擊。' },
+        { id: 'defensive-reserve', amount: 42, detail: '保留唯一陷阱。' },
+      ],
+      unsupportedEffectKinds: [],
+      unknownInformationPenalty: 0,
+      tieBreakKey: 'advance-phase|||',
+    })).toBe(42)
+  })
+
+  it('將跳過合法攻擊的節奏扣分納入實際 command 排序', () => {
+    const state = createBattleState()
+    const stages = new WeakMap<GameState, number>()
+    const stateAt = (current: GameState) => stages.get(current) ?? 0
+    const advance: PlayerActionCommand = {
+      kind: 'advance-phase',
+      playerId,
+    }
+    const attack: PlayerActionCommand = {
+      kind: 'attack',
+      playerId,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    }
+
+    const result = searchLv4Commands(
+      state,
+      playerId,
+      createKnowledgeState(playerId),
+      {
+        getLegalCommands: (current) => stateAt(current) === 0
+          ? [advance, attack]
+          : [],
+        applyCommand: (current) => {
+          const next = { ...current }
+          stages.set(next, stateAt(current) + 1)
+          return next
+        },
+        createPlayerView,
+        scorePublicView: () => 0,
+        legacyStepBonus: () => 0,
+        getPublicAttackDamage: () => 1,
+        isTerminal: (current) => stateAt(current) > 0,
+      },
+      { beamWidth: 2, maxDepth: 1, maxNodes: 4, timeBudgetMs: 1000 },
+    )
+
+    expect(result.firstCommand).toEqual(attack)
+  })
+
+  it('採用規則層提供的公開宣告傷害，保留攻防修正後的擊倒訊號', () => {
+    const state = createBattleState()
+    state.players['player-two'].battleArea[0].card = {
+      ...state.players['player-two'].battleArea[0].card,
+      attack: 1,
+    }
+    const attack: PlayerActionCommand = {
+      kind: 'attack',
+      playerId,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    }
+    const result = searchLv4Commands(
+      state,
+      playerId,
+      createKnowledgeState(playerId),
+      {
+        getLegalCommands: () => [attack],
+        applyCommand: (current) => current,
+        createPlayerView,
+        scorePublicView: () => 0,
+        legacyStepBonus: () => 0,
+        getPublicAttackDamage: () => 3,
+        isTerminal: () => false,
+      },
+      { maxDepth: 1 },
+    )
+
+    expect(result.firstStep?.actionScore.calibrated.publicLethal).toBe(true)
+    expect(result.firstStep?.actionScore.contributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'public-attack', amount: 180 }),
+    ]))
+  })
+
   it('保留跨步 setup → payoff 計畫，且只有已先完成 setup 才給完成 bonus', () => {
     const afterSetup = advanceLv4Plan(emptyPlan, setupPlan)
     const lv5Setup = advanceLv4Plan(
@@ -159,6 +259,16 @@ describe('G4 Lv4 command search', () => {
         adjustment: -10,
         detail: 'fixture defensive reserve',
       }),
+      endgameSurvivalAssessment: () => ({
+        breakLevel: 6,
+        breakDistance: 4,
+        opponentThreatCount: 1,
+        defenseOptionsBefore: 1,
+        defenseOptionsAfter: 0,
+        defenseOptionsLost: 1,
+        adjustment: -18,
+        detail: 'fixture endgame survival',
+      }),
     }
 
     const result = searchLv4Commands(
@@ -173,6 +283,7 @@ describe('G4 Lv4 command search', () => {
       expect.arrayContaining([
         expect.objectContaining({ id: 'opponent-response-minimax', amount: -17 }),
         expect.objectContaining({ id: 'defensive-reserve', amount: -10 }),
+        expect.objectContaining({ id: 'endgame-survival', amount: -18 }),
       ]),
     )
     expect(result.telemetry).toMatchObject({
@@ -181,6 +292,8 @@ describe('G4 Lv4 command search', () => {
       publicResponseMinPenalty: -17,
       defensiveReserveEvaluations: 1,
       defensiveReserveAdjustment: -10,
+      endgameSurvivalEvaluations: 1,
+      endgameSurvivalAdjustment: -18,
     })
   })
 

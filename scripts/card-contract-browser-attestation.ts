@@ -83,11 +83,28 @@ const drainBlockerResponseModal = async (page: Page): Promise<boolean> => {
   const modal = page.locator('.blocker-response-modal')
   if ((await modal.count()) === 0) return false
 
-  const selected = modal.locator('.modal-card-options > button.is-selected')
-  if ((await selected.count()) === 0) {
-    const option = modal.locator('.modal-card-options > button').first()
+  const selectedBlocker = modal.locator('.blocker-candidates > button.is-selected')
+  if ((await selectedBlocker.count()) === 0) {
+    const option = modal.locator('.blocker-candidates > button').first()
     if ((await option.count()) > 0) {
       await option.click({ force: true })
+      await page.waitForTimeout(100)
+    }
+  }
+
+  const paymentProgress = await modal
+    .locator('.blocker-payment-section .faint-payment-cost')
+    .innerText()
+    .catch(() => '')
+  const progress = paymentProgress.match(/已選\s*(\d+)\s*[/／]\s*(\d+)/)
+  const selectedPaymentCount = Number(progress?.[1] ?? 0)
+  const requiredPaymentCount = Number(progress?.[2] ?? 0)
+  if (selectedPaymentCount < requiredPaymentCount) {
+    const payment = modal
+      .locator('.blocker-payment-candidates > button:not(.is-selected):not(:disabled)')
+      .first()
+    if ((await payment.count()) > 0) {
+      await payment.click({ force: true })
       await page.waitForTimeout(100)
     }
   }
@@ -156,6 +173,74 @@ const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
   }
 
   return true
+}
+
+/**
+ * 攻擊後代價不是 `.effect-panel`，不能只因建立 pending prompt 就把它當成
+ * 已結算的 Browser 證據。逐一依正式 modal 的導引步驟支付／選目標，並由
+ * 呼叫端要求 `resolve-optional-cost-attack` command trace。
+ */
+const drainOptionalCostAttackModal = async (page: Page): Promise<boolean> => {
+  // Local and online views render the same prompt embedded in EffectPanel;
+  // the standalone modal is retained for legacy/direct consumers. Cover both
+  // forms so a pending prompt cannot be mistaken for a settled effect.
+  const modal = page
+    .locator('.optional-cost-attack-modal, .optional-cost-attack-inline')
+    .first()
+  if ((await modal.count()) === 0) return false
+
+  const pay = modal
+    .locator('.modal-actions-decision button')
+    .filter({ hasText: /支付(?:代價)?|Pay/i })
+    .first()
+  if ((await pay.count()) > 0 && !(await pay.isDisabled().catch(() => true))) {
+    await pay.click({ force: true })
+    await page.waitForTimeout(140)
+    return true
+  }
+
+  const activeColumn = modal.locator('.optional-cost-col').first()
+  if ((await activeColumn.count()) > 0) {
+    const columnText = (await activeColumn.innerText().catch(() => '')) ?? ''
+    const selectedCount = await activeColumn
+      .locator('.modal-card-options button.is-selected')
+      .count()
+    const requiredMatch = columnText.match(/(?:選擇|將)\s*(\d+)\s*(?:張|個)/)
+    const requiredCount = /最多選擇/.test(columnText)
+      ? Math.min(1, Number(requiredMatch?.[1] ?? 0))
+      : Number(requiredMatch?.[1] ?? 0)
+    const candidate = activeColumn
+      .locator('.modal-card-options button:not(.is-selected):not([disabled])')
+      .first()
+    if (
+      selectedCount < requiredCount &&
+      (await candidate.count()) > 0 &&
+      !(await candidate.isDisabled().catch(() => true))
+    ) {
+      await candidate.click({ force: true })
+      await page.waitForTimeout(100)
+      return true
+    }
+  }
+
+  const confirm = modal.locator('.modal-actions-sticky button').last()
+  if ((await confirm.count()) > 0 && !(await confirm.isDisabled().catch(() => true))) {
+    await confirm.click({ force: true })
+    await page.waitForTimeout(160)
+    return true
+  }
+
+  const skip = modal
+    .locator('.modal-actions-decision button')
+    .filter({ hasText: /略過|Skip/i })
+    .first()
+  if ((await skip.count()) > 0 && !(await skip.isDisabled().catch(() => true))) {
+    await skip.click({ force: true })
+    await page.waitForTimeout(140)
+    return true
+  }
+
+  return false
 }
 
 const drainTrapResponseModal = async (page: Page): Promise<boolean> => {
@@ -476,12 +561,23 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
     }
   }
 
+  const sawOptionalCostAttack = (
+    await page.locator('.optional-cost-attack-modal, .optional-cost-attack-inline').count()
+  ) > 0
+  for (let round = 0; round < 16; round += 1) {
+    const handledOptionalCost = await drainOptionalCostAttackModal(page)
+    const handledEffect = await drainGenericEffectPanel(page)
+    if (!handledOptionalCost && !handledEffect) break
+  }
+
   const minimumTraceEntries = faintTraceCards.has(traceCardId) ? 1 : 1
   const trace = await waitForTrace(page, minimumTraceEntries)
   const attestation = attestCardContractActionTrace(trace, {
     requiredCommandKinds: faintTraceCards.has(traceCardId)
       ? ['resolve-faint-effect']
-      : [trace[0]?.commandKind ?? 'missing-effect-trace'],
+      : sawOptionalCostAttack
+        ? ['resolve-optional-cost-attack']
+        : [trace[0]?.commandKind ?? 'missing-effect-trace'],
   })
   const hasEffectEvidence = traceHasSubstantiveEffectEvidence(trace)
   const passed =

@@ -121,6 +121,15 @@ export interface BattleUiMatchLike {
   setSelectedBlockerId: (value: string | null) => void
   playerBlockerCandidates: CookieInBattle[]
   selectedBlockerPaymentIds: string[]
+  setSelectedBlockerPaymentIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  blockerEnergyCost: EnergyCost
+  blockerEnergyCostTotal: number
+  blockerPaymentCandidates: GameCard[]
+  blockerPaymentValid: boolean
+  blockerPaymentValidationReason?: string
+  toggleBlockerPayment: (instanceId: string) => void
   pendingResponseMode: 'trap' | 'blocker' | 'attack-response' | null
   setPendingResponseMode: (
     value: 'trap' | 'blocker' | 'attack-response' | null,
@@ -221,6 +230,8 @@ export interface BattleUiMatchLike {
 }
 
 export interface BattleUiTrapEffectTargetStep {
+  /** Select every candidate; click order is damage resolution order. */
+  ordered?: boolean
   effectIndex: number
   candidates: CookieInBattle[]
   selectedTargetIds: string[]

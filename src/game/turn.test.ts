@@ -491,10 +491,11 @@ describe('end phase effects', () => {
         rested: false,
       },
     ]
-    state.players['player-one'].deck = [item('draw-1')]
+    state.players['player-one'].deck = [item('draw-1'), item('draw-spare')]
 
     state = advancePhase(state)
 
+    expect(state.status).toBe('playing')
     expect(state.phase).toBe('active')
     expect(state.turnNumber).toBe(2)
     expect(state.activePlayerId).toBe('player-two')

@@ -230,6 +230,159 @@
   }
 }
 
+/* Narrow portrait hands need a scrollable row: the fixed desktop fan offsets
+ * place the first/last cards outside the viewport even with only five cards.
+ * Reserve the tray in the table layout so it also stays clear of supports. */
+@container game-shell (max-width: 680px) and (min-height: 501px) {
+  :root[data-theme] .game-shell .table-area {
+    height: calc(100% - var(--compact-phase-height) - var(--compact-toolbar-height) - 156px);
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand {
+    position: fixed;
+    inset: auto 4px 0;
+    width: calc(100% - 8px);
+    height: 152px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 6px 8px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:hover,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:focus-within,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    position: relative;
+    inset: auto;
+    flex: 0 0 92px;
+    transform: none;
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card {
+    width: 92px;
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-action,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-detail {
+    min-height: 32px;
+  }
+
+  /* Reuse the reserved hand space during attack payment, leaving both the
+   * support choices and opponent targets unobscured. */
+  :root[data-theme] .game-shell:has(.attack-payment-panel) .hand-fan.bottom-hand {
+    visibility: hidden;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel {
+    inset: auto 4px 4px;
+    width: calc(100% - 8px);
+    max-height: 148px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 6px 8px;
+    overflow-y: auto;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel > strong {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.75rem;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel .attack-cost-row {
+    padding: 3px 6px;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel small,
+  :root[data-theme] .game-shell .attack-payment-panel p {
+    margin: 0;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel p,
+  :root[data-theme] .game-shell .attack-payment-panel button {
+    grid-column: 1 / -1;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel button {
+    margin: 0;
+    min-height: 32px;
+  }
+
+  :root[data-theme] .game-shell .attack-payment-panel em {
+    /* The adjacent validationReason already instructs target selection. */
+    display: none;
+  }
+}
+
+/* 直式手機不能沿用桌面兩張餅乾之間的固定大間距；單卡左槽的位移也
+ * 使用同一個 gap，否則會一起移到休息區上方，攔截摘要與技能入口。 */
+@container game-shell (max-width: 680px) and (min-height: 401px) {
+  :root[data-theme] .game-shell .combat-slots {
+    --compact-combat-card-height: min(
+      max(0px, calc(100cqh - 18px)),
+      calc((100cqw - 32px) / 2)
+    );
+    /* A rested card is wider by 30% of its height. Reserve that rotation
+     * footprint between slots so both orientations remain inside the zone. */
+    --battle-card-gap: calc(var(--compact-combat-card-height) * 0.3 + 16px);
+    padding-inline: 8px;
+  }
+
+  :root[data-theme] .game-shell .combat-card-wrap {
+    --combat-card-height: var(--compact-combat-card-height);
+    flex-shrink: 0;
+  }
+
+  /* 手機兩側沒有桌面技能列的空間；操作與原因改收在各自卡槽內，
+   * 不讓左右槽的外側定位把文字推出畫面或蓋住休息區。 */
+  :root[data-theme] .game-shell .combat-card-wrap .combat-action-stack {
+    top: 24px;
+    right: auto;
+    left: 50%;
+    width: calc(var(--compact-combat-card-height) + 12px);
+    align-items: center;
+    gap: 3px;
+    transform: translateX(-50%);
+  }
+
+  /* 操作覆層上方保留獨立數值列，避免不可發動原因遮住HP／攻擊力。 */
+  :root[data-theme] .game-shell .combat-card-wrap:has(.combat-action-stack) .card-badges {
+    inset: 0 auto auto 50%;
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    width: calc(var(--compact-combat-card-height) + 12px);
+    transform: translateX(-50%);
+  }
+
+  :root[data-theme] .game-shell .combat-card-wrap:has(.combat-action-stack) .card-badges > span {
+    position: static;
+    transform: none;
+  }
+
+  :root[data-theme] .game-shell .combat-action-stack .skill-action:disabled {
+    /* 禁用提示保留可讀性，點擊仍交給其下方的餅乾選擇／攻擊。 */
+    pointer-events: none;
+  }
+
+  :root[data-theme] .game-shell .combat-action-stack:has(.skill-action:not(:disabled)) {
+    top: calc(100% - 20px);
+  }
+
+  :root[data-theme] .game-shell .combat-action-stack:has(.skill-action:not(:disabled)) > .energy-shortfall-hint {
+    position: absolute;
+    bottom: calc(100% + 3px);
+  }
+}
+
 /* 小型平板仍使用頂部階段列，但手牌也必須脫離兩側場地；否則 900px
  * 邊界會退回舊版「手牌壓在支援區」的配置。 */
 @container game-shell (min-width: 681px) and (max-width: 900px) and (min-height: 401px) {

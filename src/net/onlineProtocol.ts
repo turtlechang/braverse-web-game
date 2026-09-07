@@ -205,7 +205,7 @@ export type ServerMessage =
       opening: OnlineOpeningSnapshot
       state: GameState | null
     }
-  | { type: 'match-start'; seed: number; viewerId: PlayerId; state: GameState }
+  | { type: 'match-start'; seed: number | null; viewerId: PlayerId; state: GameState }
   | { type: 'state-update'; state: GameState; updatedBy?: PlayerId }
   | { type: 'opponent-attack-selection'; selection: AttackSelectionPreview }
   | {
@@ -373,19 +373,27 @@ export const isPublicIntent = (value: unknown): value is PublicIntent => {
   )
 }
 
+const isDeckEntries = (value: unknown): boolean =>
+  Array.isArray(value) && value.every((entry) =>
+    isRecord(entry) &&
+    typeof entry.cardNumber === 'string' && entry.cardNumber.trim().length > 0 &&
+    typeof entry.count === 'number' && Number.isInteger(entry.count) && entry.count > 0,
+  )
+
 const isCustomDeck = (value: unknown): value is CustomDeck =>
   isRecord(value) &&
   typeof value.id === 'string' &&
   typeof value.name === 'string' &&
   typeof value.createdAt === 'string' &&
   typeof value.updatedAt === 'string' &&
-  Array.isArray(value.entries) &&
-  value.entries.every(
-    (entry) =>
-      isRecord(entry) &&
-      typeof entry.cardNumber === 'string' &&
-      Number.isInteger(entry.count),
-  )
+  isDeckEntries(value.entries) &&
+  (value.extraDeckEntries === undefined || isDeckEntries(value.extraDeckEntries)) &&
+  (value.candidateStaging === undefined || (
+    isRecord(value.candidateStaging) &&
+    value.candidateStaging.kind === 'bs8-candidate-staging' &&
+    isDeckEntries(value.candidateStaging.extraDeckEntries) &&
+    !Object.prototype.hasOwnProperty.call(value, 'extraDeckEntries')
+  ))
 
 const commandShapes = {
   'resolve-faint-effect': {
@@ -429,10 +437,6 @@ const commandShapes = {
     requiredStrings: ['instanceId'],
     optionalStrings: ['specialPlayCookieInstanceId'],
   },
-  attack: {
-    requiredStrings: ['attackerInstanceId', 'targetInstanceId'],
-    requiredStringArrays: ['supportPaymentIds'],
-  },
   'declare-attack': {
     requiredStrings: ['attackerInstanceId', 'targetInstanceId'],
     requiredStringArrays: ['supportPaymentIds'],
@@ -465,9 +469,10 @@ const commandShapes = {
       'supportToHandIds',
       'targetIds',
     ],
-    enumFields: { trigger: ['activate', 'on-play'] },
+    enumFields: { trigger: ['activate', 'on-play', 'passive'] },
   },
   'skip-on-play': { requiredStrings: ['sourceInstanceId'] },
+  'skip-end-phase-skill': { requiredStrings: ['sourceInstanceId'] },
   'play-item': {
     requiredStrings: ['instanceId'],
     requiredStringArrays: ['paymentIds'],
@@ -496,6 +501,7 @@ const commandShapes = {
     requiredStrings: ['instanceId'],
     requiredStringArrays: ['paymentIds'],
   },
+  'play-extra-deck-cookie': { requiredStrings: ['instanceId'] },
   'activate-stage': {
     requiredStringArrays: ['paymentIds'],
     optionalStringArrays: [
@@ -527,7 +533,6 @@ const commandShapes = {
   'skip-replacement': {},
   'refresh-deck': {
     requiredStrings: ['cookieInstanceId'],
-    optionalNumbers: ['shuffleSeed'],
   },
   'play-trap': {
     requiredStrings: ['trapInstanceId'],
@@ -563,8 +568,7 @@ const commandShapes = {
   'resolve-attack-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-reveal-top-deck': { optionalStringArrays: ['targetIds'] },
   'resolve-next-damage': {},
-  'resolve-battle': {},
-} as const satisfies Record<GameCommand['kind'], CommandShape>
+} as const satisfies Record<Exclude<GameCommand['kind'], 'attack' | 'resolve-battle'>, CommandShape>
 
 const hasValidCommandShape = (
   command: UnknownRecord,
@@ -608,11 +612,16 @@ const hasValidCommandShape = (
   )
 }
 
-const isGameCommand = (value: unknown): value is GameCommand => {
+export const isOnlineGameCommand = (value: unknown): value is GameCommand => {
   if (!isRecord(value) || typeof value.kind !== 'string') return false
-  if (!(value.kind in commandShapes)) return false
+  if (!Object.hasOwn(commandShapes, value.kind)) return false
+  // A replay seed is an internal engine input, never a player's choice. Check
+  // the received keys so an unvalidated extra field cannot reach the engine.
+  if (value.kind === 'refresh-deck' && Object.keys(value).some(
+    (key) => !['kind', 'playerId', 'cookieInstanceId'].includes(key),
+  )) return false
 
-  const shape = commandShapes[value.kind as GameCommand['kind']]
+  const shape = commandShapes[value.kind as keyof typeof commandShapes]
   return hasValidCommandShape(value, shape)
 }
 
@@ -667,7 +676,7 @@ export const isClientMessage = (value: unknown): value is ClientMessage => {
     case 'submit-opening-action':
       return isOnlineOpeningAction(value.action)
     case 'submit-command':
-      return isGameCommand(value.command)
+      return isOnlineGameCommand(value.command)
     case 'update-attack-selection':
       return (
         isRecord(value.selection) &&

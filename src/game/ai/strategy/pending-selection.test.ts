@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { CardEffect, CookieCard, GameCard } from '../../types'
+import type { CardEffect, ChooseOneEffect, CookieCard, GameCard } from '../../types'
 import type { PlayerView } from '../../player-view'
+import { createBattleState } from '../../test-helpers/battle-helpers'
+import { chooseAiEffectMode } from '../choose-one-mode'
 import { createKnowledgeState } from './knowledge-state'
 import { createPendingSelectionStrategy } from './pending-selection'
 
@@ -66,6 +68,68 @@ const view = (): PlayerView => ({
 })
 
 describe('G5 pending selection strategy', () => {
+  it.each([3, 4, 5] as const)('Lv.%i 的可選張數模式優先取得非零收益', (level) => {
+    const selection = createPendingSelectionStrategy(
+      view(), createKnowledgeState('player-one'), level,
+    )
+    const factories: ((amount: number) => CardEffect)[] = [
+      (amount) => ({ kind: 'deck-to-support', amount, rested: true }),
+      (amount) => ({ kind: 'deck-to-trash', amount, side: 'self' }),
+      (lookCount) => ({
+        kind: 'inspect-deck', lookCount, pickCount: 1,
+        restDestination: 'bottom', optionalPick: true,
+      }),
+    ]
+    for (const makeEffect of factories) {
+      const effect: ChooseOneEffect = {
+        kind: 'choose-one',
+        modes: [0, 1, 2].map((amount) => ({
+          label: 'same label', effects: [makeEffect(amount)],
+        })),
+      }
+      expect(selection.preferredModeIndices(effect)).toEqual([2, 1, 0])
+    }
+  })
+
+  it('HP 移除模式計入每個目標的張數，且略過湊不齊最低目標數的模式', () => {
+    const selection = createPendingSelectionStrategy(
+      view(), createKnowledgeState('player-one'), 4,
+    )
+    const effect: ChooseOneEffect = {
+      kind: 'choose-one',
+      modes: [
+        { label: 'zero', effects: [] },
+        { label: 'single', effects: [{
+          kind: 'hp-to-trash', amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        }] },
+        { label: 'two small', effects: [{
+          kind: 'hp-to-trash', amount: 1,
+          target: { side: 'opponent', min: 2, max: 2 },
+        }] },
+        { label: 'distributed', effects: [{
+          kind: 'hp-to-trash', amount: 1, amountByTargetIndex: [2, 1],
+          target: { side: 'opponent', min: 2, max: 2 },
+        }] },
+      ],
+    }
+    const preferences = selection.preferredModeIndices(effect)
+    expect(preferences).toEqual([3, 1, 2, 0])
+    const state = createBattleState()
+    const context = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: 'attacker', sourceCardName: 'source',
+    }
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(1)
+    const opponent = state.players['player-one']
+    opponent.battleArea.push({
+      card: cookie('second-target'), hpCards: [item('second-hp')], rested: false,
+    })
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(3)
+    opponent.battleArea = []
+    expect(chooseAiEffectMode(state, context, effect, preferences)).toBe(0)
+  })
+
   it('以結構化效果及公開 HP 優先選擇可擊倒的傷害目標', () => {
     const selection = createPendingSelectionStrategy(
       view(),
@@ -123,6 +187,41 @@ describe('G5 pending selection strategy', () => {
       selection.orderCostIds(['high', 'low'], 1),
     )
     expect(selection.orderPaymentIds(['high', 'low'])).toEqual(['low', 'high'])
+  })
+
+  it('Lv.5 面對公開攻擊威脅時，支付順序把支援陷阱留到最後', () => {
+    const supportTrap: GameCard = {
+      id: 'support-trap',
+      instanceId: 'support-trap',
+      name: 'support trap',
+      type: 'trap',
+      trap: {
+        text: 'Trap',
+        cost: { energy: { red: 1 } },
+        effects: [],
+      },
+    }
+    const threatenedView: PlayerView = {
+      ...view(),
+      self: {
+        ...view().self,
+        supportArea: [
+          { card: supportTrap, rested: false },
+          { card: item('ordinary-payment'), rested: false },
+        ],
+      },
+    }
+
+    const selection = createPendingSelectionStrategy(
+      threatenedView,
+      createKnowledgeState('player-one'),
+      5,
+    )
+
+    expect(selection.orderPaymentIds([
+      'support-trap',
+      'ordinary-payment',
+    ])).toEqual(['ordinary-payment', 'support-trap'])
   })
 
   it('將可行的 choose-one 模式依結構化收益排序，並對同時效果提供穩定順序', () => {

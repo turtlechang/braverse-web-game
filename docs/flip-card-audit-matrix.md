@@ -1,5 +1,7 @@
 # FLIP 卡稽核矩陣
 
+> 2026-09-05 規則更正：本表的歷史「附著+HP」／`attachedHpBonus`標記僅表示FLIP翻開並支付後，替原附著餅乾補入實際HP卡，不是面朝下時的持續加成。共用HP計算已依官方v1.8修正；舊表的「效果通過」不能證明未翻開時的HP條件正確。最新證據與限制見[全面稽核R4](ui-ux-and-bs8-audit-2026-09-05.md)。
+
 > 產生：scripts/inventory-flip-cards.ts → data/flip-card-inventory.json → scripts/generate-flip-matrix.ts → 本表。稽核單位＝去除 @ 變體的基礎卡號（保留被 deck 計為 FLIP 的記錄）。
 
 ## 摘要（依系列）

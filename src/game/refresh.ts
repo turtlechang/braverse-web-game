@@ -7,6 +7,7 @@ import {
 } from './helpers'
 import { continuePendingReplacements } from './replacement'
 import { continueInspectDeckAfterRefresh } from './inspect-deck'
+import { executeDeckToTrash } from './effects/deck-to-trash'
 import type {
   CookieCard,
   GameState,
@@ -18,6 +19,10 @@ import { finishWithDefeat, resolveBasicVictory } from './victory'
 
 type PendingHpSetups = NonNullable<
   NonNullable<GameState['pendingRefresh']>['remainingHpSetup']
+>
+
+type PendingHpGains = NonNullable<
+  NonNullable<GameState['pendingRefresh']>['remainingHpGains']
 >
 
 export const getRefreshCandidates = (
@@ -51,6 +56,46 @@ const continuePendingHpGain = (
         : cookie,
     ),
   })
+}
+
+const continuePendingHpGains = (
+  state: GameState,
+  playerId: PlayerId,
+  pendingHpGains?: PendingHpGains,
+): { state: GameState; remainingHpGains: PendingHpGains } => {
+  let nextState = state
+  const remainingHpGains: PendingHpGains = []
+
+  for (let index = 0; index < (pendingHpGains?.length ?? 0); index += 1) {
+    const pendingHpGain = pendingHpGains![index]
+    const player = nextState.players[playerId]
+    const targetIndex = player.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === pendingHpGain.targetInstanceId,
+    )
+    if (targetIndex < 0) continue
+
+    const gainedCards = player.deck.slice(0, pendingHpGain.amount)
+    nextState = updatePlayer(nextState, {
+      ...player,
+      deck: player.deck.slice(gainedCards.length),
+      battleArea: player.battleArea.map((cookie, cookieIndex) =>
+        cookieIndex === targetIndex
+          ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
+          : cookie,
+      ),
+    })
+
+    const remainingAmount = pendingHpGain.amount - gainedCards.length
+    if (remainingAmount > 0) {
+      remainingHpGains.push(
+        { ...pendingHpGain, amount: remainingAmount },
+        ...pendingHpGains!.slice(index + 1),
+      )
+      break
+    }
+  }
+
+  return { state: nextState, remainingHpGains }
 }
 
 const continuePendingHpSetups = (
@@ -168,6 +213,10 @@ export const refreshDeck = (
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingHpGain
       : undefined
+  const pendingHpGains =
+    state.pendingRefresh?.playerId === playerId
+      ? state.pendingRefresh.remainingHpGains
+      : undefined
   const pendingHpSetups =
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingHpSetup
@@ -210,8 +259,27 @@ export const refreshDeck = (
     }
   }
 
-  const hpGainState = continuePendingHpGain(
+  const hpGainsResult = continuePendingHpGains(
     hpSetupState,
+    playerId,
+    pendingHpGains,
+  )
+  if (hpGainsResult.remainingHpGains.length > 0) {
+    if (getRefreshCandidates(hpGainsResult.state, playerId).length === 0) {
+      return finishWithDefeat(hpGainsResult.state, playerId, 'refresh-unavailable')
+    }
+    return {
+      ...hpGainsResult.state,
+      pendingRefresh: {
+        playerId,
+        remainingDraws: 0,
+        remainingHpGains: hpGainsResult.remainingHpGains,
+      },
+    }
+  }
+
+  const hpGainState = continuePendingHpGain(
+    hpGainsResult.state,
     playerId,
     pendingHpGain,
   )
@@ -248,5 +316,9 @@ export const refreshDeck = (
     ...hpGainState,
     pendingRefresh: null,
   })
+  const remainingMill = state.pendingRefresh?.remainingDeckToTrash
+  if (remainingMill) {
+    return continuePendingReplacements(executeDeckToTrash(refreshedState, remainingMill.context, remainingMill.effect, remainingMill.movedCards))
+  }
   return continuePendingReplacements(refreshedState)
 }

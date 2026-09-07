@@ -3,6 +3,7 @@ import {
   advanceBattleAfterTrap,
   advanceAttackEffect,
   beginAttack,
+  beginAttackAfterRequiredHandDiscard,
   finishBattle,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
@@ -36,6 +37,7 @@ import {
 } from './effects'
 import {
   attackCookie,
+  playExtraDeckCookie,
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
@@ -46,13 +48,15 @@ import {
   expandChooseOne,
   expandChooseOneSequence,
 } from './effects/choose-one'
-import { advancePhase } from './turn'
+import { advancePhase, resumeActivePhaseAfterCookieDiscard } from './turn'
 import {
   activateCookieSkill,
   findSkillSource,
   getCookieSkillEffects,
   getSkillUseKey,
   skipCookieOnPlay,
+  isPendingEndPhaseSkill,
+  skipEndPhaseSkill,
 } from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
@@ -109,6 +113,9 @@ export interface OpponentHandDiscardDecision {
   effectText: string
   count: number
   atLeast?: boolean
+  optional?: boolean
+  energyColor?: import('./types').EnergyColor
+  drawEqualDiscarded?: boolean
 }
 
 /** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
@@ -134,6 +141,7 @@ export interface InspectDeckDecision {
   revealedCardIds: string[]
   restDestination?: InspectDeckRestDestination
   pickDestination?: 'hand' | 'battle' | 'support'
+  pickSupportRested?: boolean
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
@@ -160,7 +168,9 @@ export interface OptionalCostAttackDecision {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  resolution?: 'attack' | 'ability'
   sourceEnergy?: EnergyCost
+  mandatory?: boolean
 }
 
 export interface DrawUpToDecision {
@@ -384,6 +394,13 @@ export interface DeployCookieCommand {
   specialPlayCookieInstanceId?: string
 }
 
+/** 從持有者自己的 EXTRA Deck 直接登場一張非 Awaken 型餅乾。 */
+export interface PlayExtraDeckCookieCommand {
+  kind: 'play-extra-deck-cookie'
+  playerId: PlayerId
+  instanceId: string
+}
+
 export interface AttackCommand {
   kind: 'attack'
   playerId: PlayerId
@@ -406,6 +423,8 @@ export interface DeclareAttackCommand {
 
 export interface ActivateSkillCommand {
   kind: 'activate-skill'
+  trashCookieToBreakAreaIds?: string[]
+  handToBreakAreaIds?: string[]
   playerId: PlayerId
   sourceInstanceId: string
   trigger: 'activate' | 'on-play'
@@ -432,9 +451,11 @@ export interface ActivateSkillCommand {
  */
 export interface BeginActivateSkillCommand {
   kind: 'begin-activate-skill'
+  trashCookieToBreakAreaIds?: string[]
+  handToBreakAreaIds?: string[]
   playerId: PlayerId
   sourceInstanceId: string
-  trigger: 'activate' | 'on-play'
+  trigger: 'activate' | 'on-play' | 'passive'
   paymentIds: string[]
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
@@ -455,6 +476,12 @@ export interface BeginActivateSkillCommand {
 
 export interface SkipOnPlayCommand {
   kind: 'skip-on-play'
+  playerId: PlayerId
+  sourceInstanceId: string
+}
+
+export interface SkipEndPhaseSkillCommand {
+  kind: 'skip-end-phase-skill'
   playerId: PlayerId
   sourceInstanceId: string
 }
@@ -639,11 +666,13 @@ export type PlayerActionCommand =
   | AdvancePhaseCommand
   | PlaceSupportCommand
   | DeployCookieCommand
+  | PlayExtraDeckCookieCommand
   | AttackCommand
   | DeclareAttackCommand
   | ActivateSkillCommand
   | BeginActivateSkillCommand
   | SkipOnPlayCommand
+  | SkipEndPhaseSkillCommand
   | PlayItemCommand
   | BeginPlayItemCommand
   | PlayStageCommand
@@ -861,6 +890,9 @@ export const getPendingDecision = (
       effectText: pending.effectText,
       count: pending.count,
       ...(pending.atLeast ? { atLeast: true } : {}),
+      ...(pending.optional ? { optional: true } : {}),
+      ...(pending.energyColor ? { energyColor: pending.energyColor } : {}),
+      ...(pending.drawEqualDiscarded ? { drawEqualDiscarded: true } : {}),
     }
   }
 
@@ -899,6 +931,7 @@ export const getPendingDecision = (
       revealedCardIds: pending.revealedCards.map((c) => c.instanceId),
       restDestination: pending.restDestination,
       pickDestination: pending.pickDestination,
+      pickSupportRested: pending.pickSupportRested,
       filterColor: pending.filterColor,
       filterType: pending.filterType,
       filterKeyword: pending.filterKeyword,
@@ -931,7 +964,9 @@ export const getPendingDecision = (
       cost: pending.cost,
       effects: pending.effects,
       effectText: pending.effectText,
+      resolution: pending.resolution,
       sourceEnergy: pending.sourceEnergy,
+      mandatory: pending.mandatory,
     }
   }
 
@@ -1129,11 +1164,28 @@ const applyPendingDecisionCommand = (
       })
     case 'resolve-opponent-hand-discard': {
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
+      const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
+      const activePhaseCookieInstanceId =
+        state.pendingOpponentHandDiscard?.activePhaseCookieInstanceId
       const resolved = resolveOpponentHandDiscard(
         state,
         command.playerId,
         command.cardIds,
       )
+      if (activePhaseCookieInstanceId) {
+        return resumeActivePhaseAfterCookieDiscard(
+          resolved,
+          command.playerId,
+          activePhaseCookieInstanceId,
+          command.cardIds.length > 0,
+        )
+      }
+      if (attackDeclaration) {
+        if (attackDeclaration.attackerPlayerId !== command.playerId) {
+          throw new GameRuleError('不是目前可繼續宣告攻擊的玩家。')
+        }
+        return beginAttackAfterRequiredHandDiscard(resolved, attackDeclaration)
+      }
       const activeBattle = resolved.pendingBattle
       if (
         activeBattle &&
@@ -1508,6 +1560,13 @@ const assertNoPendingDecision = (
   state: GameState,
   command: PlayerActionCommand,
 ) => {
+  if (state.pendingAbilityEffect?.awaitingActivation) {
+    if (!((command.kind === 'begin-activate-skill' && command.trigger === 'passive') ||
+      command.kind === 'skip-end-phase-skill') ||
+      !isPendingEndPhaseSkill(state, command.playerId, command.sourceInstanceId)) {
+      throw new GameRuleError('必須先決定是否發動並支付回合結束技能的代價。')
+    }
+  }
   const pending = getPendingDecision(state)
   if (!pending) return
 
@@ -1613,6 +1672,24 @@ const executeAbilityEffects = (
   sourceKind: 'skill' | 'item' | 'stage' = 'skill',
 ): GameState => {
   let nextState = state
+  // Linked HP Then clauses must use the same target snapshot and queue as
+  // interactive commands, including suspension for Refresh. Executing only
+  // the outer CardEffect silently drops the second HP gain in batch play.
+  if (effects.some((effect) => effect.kind === 'gain-hp' && effect.thenEffects?.length)) {
+    nextState = { ...state, pendingAbilityEffect: {
+      playerId: context.sourcePlayerId, sourcePlayerId: context.sourcePlayerId,
+      sourceInstanceId: context.sourceInstanceId, sourceCardName: context.sourceCardName,
+      sourceKind, effects: expandChooseOneSequence([...effects], chooseOneModes), effectIndex: 0,
+    } }
+    while (nextState.status === 'playing' && nextState.pendingAbilityEffect &&
+      !hasBlockingAbilityDecision(nextState) && !nextState.pendingDrawUpTo &&
+      !nextState.pendingOpponentHandDiscard && !nextState.pendingRevealTopDeck) {
+      const index = nextState.pendingAbilityEffect.effectIndex
+      nextState = resolvePendingAbilityEffect(nextState, context.sourcePlayerId, effectTargets?.[index] ?? [], { shuffle })
+      if (nextState.pendingAbilityEffect?.effectIndex === index) break
+    }
+    return nextState
+  }
   // 迴圈骨架必須與 ai/ability-effects.ts 的 simulateAbilityEffects 一致，
   // 包含「選擇一項」的就地展開，否則 effectTargets 的索引會對不上。
   let queue: CardEffect[] = [...effects]
@@ -1628,6 +1705,22 @@ const executeAbilityEffects = (
     }
     if (!isEffectConditionMet(nextState, context, effect)) continue
     if (hasNoLegalSelectableTargets(nextState, context, queue, index)) break
+    if (effect.kind === 'optional-cost-attack' && effect.resolution === 'ability') {
+      return openOptionalAbilityEffect(
+        nextState,
+        {
+          playerId: context.sourcePlayerId,
+          sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName: context.sourceCardName,
+          sourceKind,
+          effects: queue,
+          effectIndex: index,
+        },
+        index,
+        context,
+      )
+    }
     nextState = executeCardEffect(
       nextState,
       context,
@@ -1657,12 +1750,59 @@ const executeAbilityEffects = (
         },
       }
     }
-    if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    if (nextState.pendingRefresh || nextState.pendingOnPlay || nextState.pendingDrawUpTo) {
+      return index + 1 >= queue.length ? nextState : {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId: context.sourcePlayerId, sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId, sourceCardName: context.sourceCardName,
+          sourceKind, effects: queue, effectIndex: index + 1,
+        },
+      }
+    }
     if (hasNoEquipTarget(nextState, context, queue, index)) {
       index += 1
     }
   }
   return nextState
+}
+
+/**
+ * 建立技能 Then 的可選付款決策。這個 wrapper 故意保留在
+ * `pendingAbilityEffect` 的目前 index，付款後才會把巢狀 effects 插回同一條
+ * 效果佇列；因此略過時可以精確跳過整個 Then，而不是誤執行抽牌／傷害。
+ */
+const openOptionalAbilityEffect = (
+  state: GameState,
+  pending: NonNullable<GameState['pendingAbilityEffect']>,
+  effectIndex: number,
+  context: EffectContext,
+): GameState => {
+  const effect = pending.effects[effectIndex]
+  if (effect?.kind !== 'optional-cost-attack' || effect.resolution !== 'ability') {
+    return {
+      ...state,
+      pendingAbilityEffect: { ...pending, effectIndex },
+    }
+  }
+
+  const sourceCardName =
+    pending.sourceCardName ?? context.sourceCardName ?? 'Unknown'
+  return {
+    ...state,
+    pendingAbilityEffect: { ...pending, effectIndex },
+    pendingOptionalCostAttack: {
+      playerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName,
+      cost: effect.cost,
+      effects: effect.effects,
+      effectText: effect.effectText,
+      resolution: 'ability',
+      sourceEnergy: effect.sourceEnergy,
+      mandatory: effect.mandatory,
+    },
+  }
 }
 
 /**
@@ -1687,6 +1827,7 @@ const resolvePendingAbilityEffect = (
   if (!pending) {
     throw new GameRuleError('目前沒有待處理的效果。')
   }
+  if (pending.awaitingActivation) throw new GameRuleError('必須先支付技能代價。')
   if (pending.playerId !== playerId) {
     throw new GameRuleError('不是目前需要選擇效果目標的玩家。')
   }
@@ -1709,6 +1850,25 @@ const resolvePendingAbilityEffect = (
   const continueBattle = (candidate: GameState): GameState =>
     continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
+  // 技能 Then 的可選效果沿用 optional-cost-attack 的付款／決策通道，
+  // 但它不是攻擊後效果，不能交給 battle resolver。若前一步因 Refresh
+  // 暫停，這裡會在牌庫續補完成後再次被呼叫並建立決策。
+  if (
+    effect?.kind === 'optional-cost-attack' &&
+    effect.resolution === 'ability'
+  ) {
+    return openOptionalAbilityEffect(
+      state,
+      pending,
+      pending.effectIndex,
+      context,
+    )
+  }
+  if (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly &&
+    targetIds.length > 0 && (new Set(targetIds).size !== targetIds.length ||
+      targetIds.some((id) => !pending.previousEffectTargetIds?.includes(id)))) {
+    throw new GameRuleError('後續 HP 效果只能作用於先前選定的同一張餅乾。')
+  }
   const resolvedTargetIds =
     effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
       ? pending.previousEffectTargetIds ?? targetIds
@@ -1929,7 +2089,8 @@ const resolvePendingAbilityEffect = (
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-break' ||
     effect.kind === 'support-to-battle' ||
-    effect.kind === 'trash-to-battle'
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'gain-hp'
       ? effect.thenEffects
       : undefined
   const hasConditionalThen =
@@ -1956,10 +2117,20 @@ const resolvePendingAbilityEffect = (
           // 其他技能效果不會設定這個欄位。
         }
       : pendingWithConditionalThen
-  const pendingWithResolvedPreviousTarget =
-    effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
-      ? { ...pendingWithAttackHandToBreak, previousEffectTargetIds: undefined }
+  const nextEffect = pending.effects[pending.effectIndex + 1]
+  const pendingWithLinkedPreviousTarget =
+    nextEffect?.kind === 'break-to-trash' &&
+    nextEffect.sameLevelAsPreviousEffectTarget
+      ? {
+          ...pendingWithAttackHandToBreak,
+          previousEffectTargetIds: [...new Set(targetIds)],
+        }
       : pendingWithAttackHandToBreak
+  const pendingWithResolvedPreviousTarget =
+    (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly) ||
+    (effect.kind === 'break-to-trash' && effect.sameLevelAsPreviousEffectTarget)
+      ? { ...pendingWithLinkedPreviousTarget, previousEffectTargetIds: undefined }
+      : pendingWithLinkedPreviousTarget
   const resolvedWithAttackHandToBreak =
     pendingWithAttackHandToBreak !== pendingWithConditionalThen &&
     state.pendingBattle
@@ -1997,6 +2168,26 @@ const continueAbilityQueue = (
   }
   if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
+  }
+  const nextEffect = pending.effects[nextIndex]
+  if (
+    nextEffect?.kind === 'optional-cost-attack' &&
+    nextEffect.resolution === 'ability'
+  ) {
+    // Refresh／On Play 必須先完成；此時只保留 wrapper 的 effectIndex，
+    // 待下一次 resolvePendingAbilityEffect 再建立付款決策。
+    if (resolved.pendingRefresh || resolved.pendingOnPlay) {
+      return {
+        ...resolved,
+        pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
+      }
+    }
+    return openOptionalAbilityEffect(
+      resolved,
+      pending,
+      nextIndex,
+      context,
+    )
   }
   return {
     ...resolved,
@@ -2043,6 +2234,9 @@ const applyPlayerActionCommand = (
         command.instanceId,
         command.specialPlayCookieInstanceId,
       )
+    case 'play-extra-deck-cookie':
+      requireActivePlayer(state, command.playerId)
+      return playExtraDeckCookie(state, command.playerId, command.instanceId)
     case 'attack':
       requireActivePlayer(state, command.playerId)
       return attackCookie(
@@ -2080,6 +2274,9 @@ const applyPlayerActionCommand = (
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
         command.battleToHandIds ?? [],
+        command.trashCookieToBreakAreaIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        command.effectTargets?.[0] ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -2117,6 +2314,9 @@ const applyPlayerActionCommand = (
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
         command.battleToHandIds ?? [],
+        command.trashCookieToBreakAreaIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        command.targetIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -2158,6 +2358,8 @@ const applyPlayerActionCommand = (
     }
     case 'skip-on-play':
       return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)
+    case 'skip-end-phase-skill':
+      return skipEndPhaseSkill(state, command.playerId, command.sourceInstanceId)
     case 'play-item': {
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
@@ -2192,6 +2394,14 @@ const applyPlayerActionCommand = (
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
       )
+      const revealCost = card?.item?.effects[0]
+      if (revealCost?.kind === 'reveal-hand' && revealCost.asCost) {
+        // Validate the public reveal before paying; the existing first effect
+        // is resolved atomically below, never left as an unpaid choice.
+        executeCardEffect(state, {
+          sourcePlayerId: command.playerId, sourceInstanceId: command.instanceId,
+        }, revealCost, command.targetIds ?? [], options.shuffle)
+      }
       const played = playItem(
         state,
         command.playerId,
@@ -2330,6 +2540,21 @@ const applyPlayerActionCommand = (
     case 'resolve-choose-one': {
       const pending = state.pendingAbilityEffect
       if (!pending) {
+        const battle = state.pendingBattle
+        if (battle?.stage === 'attack-effect' &&
+            battle.attackEffects[battle.attackEffectIndex]?.kind === 'choose-one') {
+          if (battle.attackerPlayerId !== command.playerId) {
+            throw new GameRuleError('不是目前需要選擇項目的玩家。')
+          }
+          // 攻擊 Then 的佇列屬於 pendingBattle，不能只展開本機面板。
+          return {
+            ...state,
+            pendingBattle: {
+              ...battle,
+              attackEffects: expandChooseOne(battle.attackEffects, battle.attackEffectIndex, command.modeIndex),
+            },
+          }
+        }
         throw new GameRuleError('目前沒有待處理的效果。')
       }
       if (pending.playerId !== command.playerId) {

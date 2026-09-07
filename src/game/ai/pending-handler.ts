@@ -17,9 +17,11 @@ import {
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
 import {
+  canActivateCookieSkill,
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
 } from '../skills'
 import { chooseAiEffectMode } from './choose-one-mode'
@@ -30,7 +32,9 @@ import {
   type KnowledgeState,
 } from './strategy/knowledge-state'
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
+import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
+import { chooseAiStageCostIds } from './turn-handler'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -118,6 +122,34 @@ export const handleAiPendingDecision = (
         action: 'idle',
         description: `等待 ${state.players[pendingAbility.playerId].name} 處理卡牌效果。`,
       }
+    }
+    if (pendingAbility.awaitingActivation) {
+      const card = state.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card
+      const costs = card?.type === 'cookie' && card.skill &&
+        canActivateCookieSkill(state, playerId, card.instanceId, 'passive')
+        ? chooseAiStageCostIds(state, playerId, card.skill.cost, card.instanceId, universal)
+        : null
+      return withPendingReason({
+        state: applyGameCommand(state, costs ? {
+          kind: 'begin-activate-skill', playerId,
+          sourceInstanceId: pendingAbility.sourceInstanceId, trigger: 'passive',
+          paymentIds: costs.paymentIds,
+          costSupportToTrashIds: costs.supportToTrashIds,
+          supportToHandIds: costs.supportToHandIds,
+          discardHandIds: costs.discardHandIds,
+          hpToTrashTargetIds: costs.hpToTrashTargetIds,
+          trashBattleCookieIds: costs.trashBattleCookieIds,
+        } : {
+          kind: 'skip-end-phase-skill', playerId,
+          sourceInstanceId: pendingAbility.sourceInstanceId,
+        }),
+        action: costs ? 'activate-skill' : 'idle',
+        description: costs
+          ? `${state.players[playerId].name}支付${pendingAbility.sourceCardName ?? '餅乾'}的回合結束效果代價。`
+          : `${state.players[playerId].name}不發動${pendingAbility.sourceCardName ?? '餅乾'}的回合結束效果。`,
+      }, 'payment', pendingAbility.sourceInstanceId)
     }
     const effect = pendingAbility.effects[pendingAbility.effectIndex]
     const context: EffectContext = {
@@ -272,8 +304,7 @@ export const handleAiPendingDecision = (
     )
     const faintSupportToHandCandidates = faintSupportToTrashCandidates.filter(
       (support) =>
-        faintTriggeredCost?.supportToHandType === undefined ||
-        support.card.type === faintTriggeredCost.supportToHandType,
+        !faintTriggeredCost || isSupportToHandCostCandidate(faintTriggeredCost, support),
     )
     const canPayTriggeredCost =
       !faintTriggeredCost ||
@@ -440,13 +471,17 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇棄置手牌。`,
       }
     }
-    const hand = state.players[playerId].hand
+    const hand = state.players[playerId].hand.filter(
+      (card) =>
+        pendingDecision.energyColor === undefined ||
+        card.energyColor === pendingDecision.energyColor,
+    )
     const discardedCards = universal.enabled
       ? universal.orderCostIds(
           hand.map((card) => card.instanceId),
-          pendingDecision.count,
+          pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count,
         ).map((instanceId) => hand.find((card) => card.instanceId === instanceId)!)
-      : hand.slice(0, pendingDecision.count)
+      : hand.slice(0, pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count)
     const discardIds = discardedCards.map((card) => card.instanceId)
     return withPendingReason({
       state: applyGameCommand(state, {
@@ -456,7 +491,7 @@ export const handleAiPendingDecision = (
       }),
       action: 'idle',
       revealedCards: discardedCards,
-      description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
+      description: `${state.players[playerId].name}棄置 ${discardIds.length} 張手牌。`,
     }, 'discard', pendingDecision.sourceInstanceId)
   }
 
@@ -586,8 +621,7 @@ export const handleAiPendingDecision = (
       .filter(
         (support) =>
           !paymentIds?.includes(support.card.instanceId) &&
-          (pendingDecision.cost.supportToHandType === undefined ||
-            support.card.type === pendingDecision.cost.supportToHandType),
+          isSupportToHandCostCandidate(pendingDecision.cost, support),
       )
       .map((support) => support.card.instanceId)
     const supportToHandIds = universal.enabled
@@ -646,18 +680,39 @@ export const handleAiPendingDecision = (
       sourcePlayerId: playerId,
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
-    const sharedSelection = chooseSharedEffectTargets(
-      state,
-      context,
-      pendingDecision.effects,
-      universal,
-    )
+    const isAbilityResolution = pendingDecision.resolution === 'ability'
+    const sharedSelection = isAbilityResolution
+      ? { targetIds: [], valid: true }
+      : chooseSharedEffectTargets(
+          state,
+          context,
+          pendingDecision.effects,
+          universal,
+        )
     const targetIds = sharedSelection.targetIds ?? []
     const hasTarget = sharedSelection.valid
-    const targetedEffect = pendingDecision.effects.find((effect) =>
-      requiresEffectCardSelection(effect),
-    )
-    if (canPay && canPayHpToTrash && canPayHpToHand && canPayTrashToDeck && hasTarget) {
+    const targetedEffect = isAbilityResolution
+      ? undefined
+      : pendingDecision.effects.find((effect) =>
+          requiresEffectCardSelection(effect),
+        )
+    const optionalDefense = options.level === 5
+      ? assessLv5OptionalCostDefense(
+          state,
+          playerId,
+          pendingDecision,
+          paymentIds ?? [],
+          targetIds,
+        )
+      : undefined
+    const canResolveOptionalEffect =
+      canPay &&
+      canPayHpToTrash &&
+      canPayHpToHand &&
+      canPayTrashToDeck &&
+      hasTarget &&
+      !optionalDefense?.preserve
+    if (canResolveOptionalEffect) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
             hand.map((card) => card.instanceId),
@@ -666,7 +721,7 @@ export const handleAiPendingDecision = (
         : hand
             .slice(0, pendingDecision.cost.discardHand ?? 0)
             .map((card) => card.instanceId)
-      return withPendingReason({
+      const decision = withPendingReason({
         state: applyGameCommand(state, {
           kind: 'resolve-optional-cost-attack',
           playerId,
@@ -680,18 +735,42 @@ export const handleAiPendingDecision = (
           hpToHandIds,
         }),
         action: 'resolve-optional-cost-attack',
-        description: `${state.players[playerId].name}支付攻擊後續效果代價。`,
+        description: isAbilityResolution
+          ? `${state.players[playerId].name}支付技能 Then 代價。`
+          : `${state.players[playerId].name}支付攻擊後續效果代價。`,
       }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
+      return optionalDefense
+        ? {
+            ...decision,
+            reason: {
+              ...(decision.reason ?? { level: options.level ?? 2 }),
+              optionalCostDefense: optionalDefense,
+            },
+          }
+        : decision
     }
-    return withPendingReason({
+    const decision = withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-optional-cost-attack',
         playerId,
         action: 'skip',
       }),
       action: 'resolve-optional-cost-attack',
-      description: `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
+      description: isAbilityResolution
+        ? `${state.players[playerId].name}略過技能 Then 可選效果。`
+        : optionalDefense?.preserve
+          ? `${state.players[playerId].name}略過攻擊後續可選代價，保留唯一防守陷阱。`
+          : `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
     }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
+    return optionalDefense
+      ? {
+          ...decision,
+          reason: {
+            ...(decision.reason ?? { level: options.level ?? 2 }),
+            optionalCostDefense: optionalDefense,
+          },
+        }
+      : decision
   }
 
   if (

@@ -109,8 +109,11 @@ export const simulateAbilityEffects = (
         (thenEffect) =>
           thenEffect.kind === 'damage-all' && thenEffect.sequential === true,
       ) === true
+    // gain-hp is broadly classified as untargeted, but its explicit target
+    // variant still requires the shared chooser (for example BS8-049/050).
     const targetIds =
-      isEffectUntargeted(effect) && !usesCardSelection && !hasNestedTargetSelection
+      isEffectUntargeted(effect) && !requiresTargetSelection(effect) &&
+      !usesCardSelection && !hasNestedTargetSelection
       ? []
       : chooseEffectTargets(nextState, context, effect)
     if (!isTargetCountSufficient(effect, targetIds)) {
@@ -122,7 +125,7 @@ export const simulateAbilityEffects = (
     // 含 FLIP 的效果傷害會暫停在 battle/FLIP state machine，正式指令鏈
     // 必須先完成這段序列，不能讓模擬器繼續把後續效果當成同步結算。
     if (nextState.pendingBattle?.effectDamageSequence) break
-    if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    if (nextState.pendingRefresh || nextState.pendingOnPlay || nextState.pendingDrawUpTo) break
     const nextEffect = queue[index + 1]
     if (
       nextEffect?.kind === 'equip-source' &&

@@ -1,6 +1,7 @@
 import { getPendingDecision } from './commands'
 import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
+import { canPlayExtraDeckCookie } from './actions'
 import { getForcedAttackTargetId } from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
@@ -89,6 +90,16 @@ export const getLegalTurnCommands = (
   }
 
   if (state.phase === 'main') {
+    for (const card of player.extraDeck ?? []) {
+      if (canPlayExtraDeckCookie(state, playerId, card.instanceId)) {
+        commands.push({
+          kind: 'play-extra-deck-cookie',
+          playerId,
+          instanceId: card.instanceId,
+        })
+      }
+    }
+
     if (player.battleArea.length < 2) {
       for (const card of player.hand) {
         if (card.type === 'cookie') {

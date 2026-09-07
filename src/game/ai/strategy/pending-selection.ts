@@ -15,6 +15,7 @@ import {
   type Lv3StrategyContext,
   type TacticalPlan,
 } from './tactical-plans'
+import { hasLv5OpponentAttackThreat } from './defensive-reserve'
 
 /**
  * G5 的選擇種類。這些字串只描述規則層已開啟的決策窗口，不能作為卡牌／牌組
@@ -101,7 +102,9 @@ const EFFECT_VALUE: Partial<Record<CardEffect['kind'], number>> = {
   'support-to-battle': 18,
   'trash-to-battle': 19,
   'deck-to-support': 14,
+  'deck-to-trash': 4,
   'inspect-deck': 12,
+  'hp-to-trash': 30,
   'trash-to-hand': 14,
   'trash-to-support': 14,
   'redirect-attack': 20,
@@ -149,6 +152,19 @@ const isOpponentBattleCookie = (
 )
 
 const effectScore = (effect: CardEffect): number => {
+  // 可選數量以結構化張數區分收益，避免 0 張模式與完整效果同分。
+  // 只使用公開效果資料，不讀取尚未揭露的牌庫或 HP 卡面。
+  if (effect.kind === 'deck-to-support' || effect.kind === 'deck-to-trash') {
+    return (EFFECT_VALUE[effect.kind] ?? 4) * effect.amount
+  }
+  if (effect.kind === 'inspect-deck') {
+    return (EFFECT_VALUE[effect.kind] ?? 4) * effect.lookCount
+  }
+  if (effect.kind === 'hp-to-trash') {
+    const amount = effect.amountByTargetIndex?.reduce((total, value) => total + value, 0)
+      ?? effect.amount * effect.target.max
+    return (EFFECT_VALUE[effect.kind] ?? 4) * amount
+  }
   if (effect.kind === 'choose-one') {
     return Math.max(...effect.modes.map((mode) =>
       mode.effects.reduce((score, child) => score + effectScore(child), 0),
@@ -348,15 +364,27 @@ export const createPendingSelectionStrategy = (
       )
       const restedDelta = Number(Boolean(rightSupport?.rested)) -
         Number(Boolean(leftSupport?.rested))
-      return restedDelta || retention(left) - retention(right) || left.localeCompare(right)
+      if (restedDelta !== 0) return restedDelta
+      if (level === 5 && hasLv5OpponentAttackThreat(view)) {
+        const leftTrap = Number(leftSupport?.card.type === 'trap')
+        const rightTrap = Number(rightSupport?.card.type === 'trap')
+        if (leftTrap !== rightTrap) return leftTrap - rightTrap
+      }
+      return retention(left) - retention(right) || left.localeCompare(right)
     }),
-    selectEffectTargetIds: (effect, candidateIds, max) =>
-      [...candidateIds]
+    selectEffectTargetIds: (effect, candidateIds, max) => {
+      const ordered = [...candidateIds]
         .sort((left, right) =>
           targetScore(effect, right) - targetScore(effect, left) ||
           left.localeCompare(right),
         )
-        .slice(0, max),
+      const perPlayer = 'target' in effect ? effect.target?.countPerPlayer : undefined
+      if (perPlayer !== undefined) {
+        return [false, true].flatMap((opponent) => ordered.filter((id) =>
+          isOpponentBattleCookie(view, id) === opponent).slice(0, perPlayer))
+      }
+      return ordered.slice(0, max)
+    },
     selectRevealedCardIds: (revealedCards, candidateIds, max) => {
       const revealedById = new Map(revealedCards.map((card) => [card.instanceId, card]))
       return [...candidateIds]

@@ -8,6 +8,7 @@ import type { CookieCard, CookieInBattle, GameCard } from '../../game'
 import {
   AttackResponseModal,
   AttackResponseSkillModal,
+  BlockerResponseModal,
   CardDetailModal,
   DecisionModal,
   DiscardRevealModal,
@@ -670,6 +671,65 @@ describe('AttackResponseModal', () => {
   })
 })
 
+describe('BlockerResponseModal', () => {
+  it('exposes and requires the printed coloured energy payment', async () => {
+    const blocker = createBattleCookie(60)
+    const payment: GameCard = {
+      id: 'RED-SUPPORT-60',
+      instanceId: 'red-support-60',
+      name: '紅色支援能量 60',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const onTogglePayment = vi.fn()
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <BlockerResponseModal
+        blockerCards={[blocker]}
+        selectedBlockerId={blocker.card.instanceId}
+        paymentCost={{ red: 1 }}
+        paymentCostTotal={1}
+        paymentCandidates={[payment]}
+        selectedPaymentIds={[]}
+        paymentValid={false}
+        onTogglePayment={onTogglePayment}
+        onSelectBlocker={() => undefined}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('支付 Blocker 費用')
+    expect(container.textContent).toContain('紅色支援能量 60')
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(true)
+
+    await click(findButton(container, '紅色支援能量 60'))
+    expect(onTogglePayment).toHaveBeenCalledWith(payment.instanceId)
+
+    await act(() => root.render(
+      <BlockerResponseModal
+        blockerCards={[blocker]}
+        selectedBlockerId={blocker.card.instanceId}
+        paymentCost={{ red: 1 }}
+        paymentCostTotal={1}
+        paymentCandidates={[payment]}
+        selectedPaymentIds={[payment.instanceId]}
+        paymentValid
+        onTogglePayment={onTogglePayment}
+        onSelectBlocker={() => undefined}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(false)
+
+    await act(() => root.unmount())
+  })
+})
+
 describe('AttackResponseSkillModal', () => {
   it('requires every trash-to-deck cost card before enabling payment', async () => {
     const responseCookie: CookieInBattle = {
@@ -711,6 +771,20 @@ describe('AttackResponseSkillModal', () => {
 })
 
 describe('FaintEffectResponseModal', () => {
+  it('keeps the support-zone label when no Cookie is available', () => {
+    const markup = renderToStaticMarkup(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={1}
+        selectedTargetCount={0}
+        candidateLabel="自己的支援區餅乾"
+        onConfirm={() => undefined}
+      />,
+    )
+    expect(markup).toContain('可選擇最多 1 張自己的支援區餅乾')
+    expect(markup).not.toContain('對手餅乾')
+  })
   const aloeCard: CookieCard = {
     id: 'BS2-040',
     instanceId: 'test-aloe',

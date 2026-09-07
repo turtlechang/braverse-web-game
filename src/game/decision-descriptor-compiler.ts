@@ -11,6 +11,7 @@ import {
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckBottomCostCandidates,
@@ -261,9 +262,7 @@ const compileCostSteps = (
   const supportCost = (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
   if (supportCost > 0) {
     const candidates = getSupportEffectCandidates(state, context).filter(
-      (support) =>
-        cost.supportToHandType === undefined ||
-        support.card.type === cost.supportToHandType,
+      (support) => isSupportToHandCostCandidate(cost, support),
     )
     steps.push(costStep(
       `cost-${steps.length + 1}`,
@@ -620,7 +619,13 @@ export const compilePendingDecisionDescriptor = (
   if (decision.kind === 'opponent-hand-discard') {
     if (viewerPlayerId === decision.playerId) {
       const step = descriptor.steps[0]
-      step.candidateIds = cardIds(state.players[decision.playerId].hand)
+      step.candidateIds = cardIds(
+        state.players[decision.playerId].hand.filter(
+          (card) =>
+            decision.energyColor === undefined ||
+            card.energyColor === decision.energyColor,
+        ),
+      )
       step.candidateSource = 'private-hand'
     } else {
       blockers.push('private hand candidates are withheld from a non-owner view')

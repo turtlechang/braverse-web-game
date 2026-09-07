@@ -237,6 +237,7 @@ const validateCandidateDocument = (
         !gameCard.effects?.length &&
         !gameCard.skill &&
         !gameCard.flip &&
+        !gameCard.stageAbility?.staticAttackCostModifiers?.length &&
         // 場景卡的特殊勝利條件（如 BS3-121）本身就是效果，effects 刻意留空。
         !gameCard.stageAbility?.specialVictory
       ) {

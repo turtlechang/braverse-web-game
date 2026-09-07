@@ -2,8 +2,10 @@ import {
   activateStage,
   canActivateStage,
 } from '../card-abilities'
+import { canPlayExtraDeckCookie } from '../actions'
 import { applyGameCommand } from '../commands'
 import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
+import { materializeExtraDeckCookie } from '../extra-deck'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { hasPendingCardResolution } from '../pending'
@@ -13,6 +15,7 @@ import {
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
+  isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
 } from '../skills'
 import { createSeededShuffle } from '../helpers'
@@ -149,8 +152,7 @@ export const chooseAiStageCostIds = (
     .filter(
       (support) =>
         !supportToTrashSet.has(support.card.instanceId) &&
-        (cost.supportToHandType === undefined ||
-          support.card.type === cost.supportToHandType),
+        isSupportToHandCostCandidate(cost, support),
     )
     .map((support) => support.card.instanceId)
   const supportToHandIds = universal?.enabled
@@ -553,6 +555,51 @@ export const handleAiTurnState = (
               : `${player.name}讓${deployable.name}登場。`,
             effectSelections: onPlay?.effectSelections,
           }
+        }
+      }
+
+      // EXTRA Deck 與手牌不共用資訊區或牌組額度。當一般手牌沒有可取用的
+      // 部署時，依既有的通用 Cookie 評分選擇一張已通過規則層條件檢查的
+      // 直接登場 EXTRA；不以 BS8 卡號硬編碼策略。
+      const eligibleExtraCards = (player.extraDeck ?? []).filter((card) =>
+        canPlayExtraDeckCookie(state, playerId, card.instanceId),
+      )
+      const selectedExtraCookie = chooseBestCookieToDeploy(
+        eligibleExtraCards.map(materializeExtraDeckCookie),
+        profile,
+      )
+      const selectedExtraCard = selectedExtraCookie
+        ? eligibleExtraCards.find(
+            (card) => card.instanceId === selectedExtraCookie.instanceId,
+          )
+        : undefined
+      if (selectedExtraCard) {
+        const deployedState = applyGameCommand(state, {
+          kind: 'play-extra-deck-cookie',
+          playerId,
+          instanceId: selectedExtraCard.instanceId,
+        })
+        const deployed = deployedState.players[playerId].battleArea.find(
+          (cookie) => cookie.card.instanceId === selectedExtraCard.instanceId,
+        )
+        const onPlay = deployed
+          ? strategy.resolveSkill(deployedState, playerId, deployed, 'on-play')
+          : null
+        return {
+          state:
+            onPlay?.state ??
+            (deployedState.pendingOnPlay
+              ? applyGameCommand(deployedState, {
+                  kind: 'skip-on-play',
+                  playerId,
+                  sourceInstanceId: selectedExtraCard.instanceId,
+                })
+              : deployedState),
+          action: 'deploy-cookie',
+          description: onPlay
+            ? `${player.name}從 EXTRA Deck 讓${selectedExtraCard.name}登場並發動 OnPlay。`
+            : `${player.name}從 EXTRA Deck 讓${selectedExtraCard.name}登場。`,
+          effectSelections: onPlay?.effectSelections,
         }
       }
     }

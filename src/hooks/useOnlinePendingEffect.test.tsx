@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createItemUsageDemoState,
+  applyGameCommand,
   type GameState,
 } from '../game'
 import { createCardCheckDemoState } from '../game/demo'
@@ -14,8 +15,355 @@ import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it('BS8-067 resolves the online attack choice through the authoritative battle queue', async () => {
+    let game = createCardCheckDemoState('BS8-067')
+    const owner = game.players['player-one']
+    const source = owner.battleArea[0].card
+    const target = game.players['player-two'].battleArea[0].card
+    game = applyGameCommand(game, {
+      kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: source.instanceId,
+      targetInstanceId: target.instanceId,
+      supportPaymentIds: owner.supportArea.map(support => support.card.instanceId),
+    })
+    game = applyGameCommand(game, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let step = 0; game.pendingBattle?.stage === 'damage' && step < 10; step++) {
+      game = applyGameCommand(game, { kind: 'resolve-next-damage',
+        playerId: game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId })
+    }
+    expect(game.pendingBattle?.stage).toBe('attack-effect')
+    expect(game.pendingAbilityEffect).toBeFalsy()
+    const supportBefore = game.players['player-one'].supportArea.length
+    const deckBefore = game.players['player-one'].deck.length
+    const topCard = game.players['player-one'].deck[0]
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.currentEffect?.kind).toBe('choose-one')
+      await act(() => captured!.chooseEffectMode(1))
+      expect(dispatch).toHaveBeenLastCalledWith({ kind: 'resolve-choose-one', playerId: 'player-one', modeIndex: 1 }, expect.any(String))
+      expect(game.pendingBattle?.attackEffects[game.pendingBattle.attackEffectIndex]).toMatchObject({ kind: 'deck-to-support', amount: 1, rested: false })
+      expect(game.players['player-one'].supportArea).toHaveLength(supportBefore)
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.currentEffect).toMatchObject({ kind: 'deck-to-support', amount: 1 })
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenLastCalledWith({ kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] }, expect.any(String))
+      expect(dispatch).toHaveBeenCalledTimes(2)
+      expect(game.players['player-one'].supportArea).toHaveLength(supportBefore + 1)
+      expect(game.players['player-one'].supportArea.at(-1)).toEqual({ card: topCard, rested: false })
+      expect(game.players['player-one'].deck).toHaveLength(deckBefore - 1)
+      expect(game.pendingBattle).toBeFalsy()
+      expect(game.pendingAbilityEffect).toBeFalsy()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
+  it('BS8-022 submits a faint payment before selecting a newly discarded HP Cookie', async () => {
+    const initial = createCardCheckDemoState('BS8-022')
+    const owner = initial.players['player-one']
+    const item = owner.hand.find(card => card.id === 'BS8-022')!
+    const costCookie = owner.battleArea[0]
+    const hpCookie = costCookie.hpCards.find(card => card.id === 'BS8-016')!
+    expect(hpCookie).toBeDefined()
+    let game = initial
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginPlayItem(item))
+      expect(captured!.draftRequiresPaymentBeforeTargets).toBe(true)
+      await act(() => captured!.toggleTarget(owner.discardPile[0].instanceId))
+      expect(captured!.selectedTargetIds).toEqual([])
+      await act(() => captured!.toggleDraftPayment(owner.supportArea[0].card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).not.toHaveBeenCalled()
+      await act(() => captured!.toggleDraftTrashBattleCookie(costCookie.card.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(dispatch.mock.calls[0][0]).not.toHaveProperty('targetIds')
+      expect(game.players['player-one'].breakArea).toContainEqual(costCookie.card)
+      expect(game.players['player-one'].discardPile).toContainEqual(hpCookie)
+      await act(() => root.render(<TestHarness />))
+      expect(captured!.draftRequiresPaymentBeforeTargets).toBe(false)
+      expect(captured!.candidateCards).toContainEqual(hpCookie)
+      expect(captured!.candidateCards).not.toContainEqual(costCookie.card)
+      await act(() => captured!.toggleTarget(hpCookie.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(game.players['player-one'].hand).toContainEqual(hpCookie)
+      expect(game.players['player-one'].supportArea.filter(s => s.rested)).toHaveLength(1)
+      expect(game.pendingAbilityEffect).toBeFalsy()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
+  it.each([0, 1])('BS8-047 requires the real LV3 reveal cost, then summons %i and moves the same revealed card to Break', async (summonCount) => {
+    const initial = createCardCheckDemoState('BS8-047')
+    const owner = initial.players['player-one']
+    const source = owner.hand.find((card) => card.id === 'BS8-047')!
+    const revealed = owner.hand.find((card) => card.id === 'BS8-030')!
+    expect(revealed).toMatchObject({ id: 'BS8-030', type: 'cookie', level: 3 })
+    const golden = owner.breakArea.find((card) => card.name === 'Golden Cheese Cookie')!
+    const support = owner.supportArea.find((entry) => !entry.rested && entry.card.energyColor === 'yellow')!
+    let game = initial
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginPlayItem(source))
+    expect(captured!.currentEffect).toMatchObject({ kind: 'reveal-hand', asCost: true })
+    expect(captured!.candidateCards).toEqual([revealed])
+    await act(() => captured!.toggleDraftPayment(support.card.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).not.toHaveBeenCalled()
+    expect(game).toBe(initial)
+    await act(() => captured!.toggleTarget(source.instanceId))
+    expect(captured!.selectedTargetIds).toEqual([])
+    await act(() => captured!.toggleTarget(revealed.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenLastCalledWith(expect.objectContaining({
+      kind: 'begin-play-item', instanceId: source.instanceId,
+      paymentIds: [support.card.instanceId], targetIds: [revealed.instanceId],
+    }), expect.any(String))
+    expect(game.pendingAbilityEffect?.effectIndex).toBe(1)
+    expect(game.costRecord?.revealedHandCardInstanceIds).toEqual([revealed.instanceId])
+    expect(game.players['player-one'].hand).toContainEqual(revealed)
+    expect(game.players['player-one'].discardPile).toContainEqual(source)
+    expect(game.players['player-one'].supportArea.find((entry) => entry.card.instanceId === support.card.instanceId)?.rested).toBe(true)
+    await act(() => root.render(<TestHarness />))
+    expect(captured!.currentEffect?.kind).toBe('break-to-battle')
+    expect(captured!.candidateCards).toEqual([golden])
+    if (summonCount === 1) await act(() => captured!.toggleTarget(golden.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(game.pendingAbilityEffect?.effectIndex).toBe(2)
+    await act(() => root.render(<TestHarness />))
+    expect(captured!.currentEffect).toMatchObject({ kind: 'hand-to-break', revealedCardOnly: true })
+    // The Then step consumes the locked reveal; it must not offer a new choice.
+    expect(captured!.candidateCards).toEqual([])
+    await act(() => captured!.toggleTarget(revealed.instanceId))
+    expect(captured!.selectedTargetIds).toEqual([])
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'resolve-ability-effect', targetIds: [] }), expect.any(String))
+    expect(game.players['player-one'].hand).not.toContainEqual(revealed)
+    expect(game.players['player-one'].breakArea).toContainEqual(revealed)
+    expect(game.players['player-one'].battleArea.some((entry) => entry.card.instanceId === golden.instanceId)).toBe(summonCount === 1)
+    expect(game.players['player-one'].breakArea.some((card) => card.instanceId === golden.instanceId)).toBe(summonCount === 0)
+    expect(game.pendingAbilityEffect).toBeFalsy()
+    expect(dispatch).toHaveBeenCalledTimes(3)
+    await act(() => root.unmount())
+  })
+
+  it.each([0, 1])('BS8-042 offers both opponent supports and submits %i selected target', async (count) => {
+    vi.useFakeTimers()
+    const initial = createCardCheckDemoState('BS8-042')
+    const source = initial.players['player-one'].battleArea.find((entry) => entry.card.id === 'BS8-042')!.card
+    const targets = initial.players['player-two'].supportArea.map((support) => support.card.instanceId)
+    const ownSupport = initial.players['player-one'].supportArea[0].card.instanceId
+    let game = initial
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected a single command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(source, 'on-play'))
+    expect(targets).toHaveLength(2)
+    expect(captured!.candidateCards.map((card) => card.instanceId)).toEqual(targets)
+    await act(() => captured!.toggleTarget(ownSupport))
+    expect(captured!.selectedTargetIds).toEqual([])
+    if (count === 1) await act(() => captured!.toggleTarget(targets[0]))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'begin-activate-skill', sourceInstanceId: source.instanceId,
+      targetIds: targets.slice(0, count),
+    }), expect.any(String))
+    expect(game.preventSupportActiveNextPhase?.['player-two'] ?? []).toEqual(targets.slice(0, count))
+    expect(game.players['player-one'].supportArea).toEqual(initial.players['player-one'].supportArea)
+    expect(game.players['player-two'].supportArea.map((support) => support.rested)).toEqual([true, false])
+    expect(game.pendingOnPlay).toBeNull()
+    expect(game.pendingAbilityEffect).toBeFalsy()
+    await act(() => root.unmount())
+  })
+
+  it.each(['BS8-031', 'BS8-031@1'])('%s submits its legal trash cost before selecting the two Break effect targets', async (cardNumber) => {
+    vi.useFakeTimers()
+    const initial = createCardCheckDemoState(cardNumber)
+    const sourceCard = initial.players['player-one'].hand.find((card) => card.id === 'BS8-031')!
+    let game = applyGameCommand(initial, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: sourceCard.instanceId })
+    const player = game.players['player-one']
+    const costCard = player.discardPile.find((card) => card.id === 'BS8-030')!
+    const wrongLevelCard = player.discardPile.find((card) => card.instanceId !== costCard.instanceId)!
+    const targets = player.breakArea.map((card) => card.instanceId)
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(sourceCard, 'on-play'))
+    expect(captured!.draftTrashCookieToBreakAreaCandidates).toEqual([costCard])
+    expect(captured!.draftRequiresPaymentBeforeTargets).toBe(true)
+    await act(() => captured!.toggleDraftPayment(player.supportArea[0].card.instanceId))
+    await act(() => captured!.toggleDraftTrashCookieToBreakArea(wrongLevelCard.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(captured!.selectedDraftTrashCookieToBreakAreaIds.size).toBe(0)
+    expect(dispatch).not.toHaveBeenCalled()
+    await act(() => captured!.toggleDraftTrashCookieToBreakArea(costCard.instanceId))
+    await act(() => captured!.toggleTarget(targets[0]))
+    expect(captured!.selectedTargetIds).toEqual([])
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(dispatch).toHaveBeenLastCalledWith(expect.objectContaining({
+      kind: 'begin-activate-skill',
+      trashCookieToBreakAreaIds: [costCard.instanceId],
+    }), expect.any(String))
+    expect(dispatch.mock.calls[0][0]).not.toHaveProperty('targetIds')
+    expect(game.players['player-one'].breakArea).toContainEqual(costCard)
+    expect(game.players['player-one'].supportArea[0].rested).toBe(true)
+    expect(game.players['player-one'].hand).toHaveLength(player.hand.length)
+    await act(() => root.render(<TestHarness />))
+    expect(captured!.draftRequiresPaymentBeforeTargets).toBe(false)
+    expect(captured!.pendingEffect?.skillActivated).toBe(true)
+    expect(captured!.candidateCards.map((card) => card.instanceId)).toEqual([...targets, costCard.instanceId])
+    expect(captured!.effectSelectionError).toBe('必須選擇 2 張休息區餅乾。')
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    await act(() => captured!.toggleTarget(targets[0]))
+    expect(captured!.effectSelectionValid).toBe(false)
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    await act(() => captured!.toggleTarget(costCard.instanceId))
+    expect(captured!.effectSelectionError).toBe('選擇的餅乾等級總和不得超過 3。')
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    await act(() => captured!.toggleTarget(costCard.instanceId))
+    await act(() => captured!.toggleTarget(targets[1]))
+    expect(captured!.effectSelectionError).toBeNull()
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'resolve-ability-effect', targetIds: targets }), expect.any(String))
+    expect(game.players['player-one'].breakArea).toEqual([costCard])
+    expect(game.players['player-one'].hand).toHaveLength(player.hand.length + 2)
+    await act(() => root.unmount())
+  })
+
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it.each(['BS8-035', 'BS8-038'])('%s exposes only post-cost legal Break-to-trash candidates', async (cardNumber) => {
+    const initial = createCardCheckDemoState(cardNumber)
+    const source = initial.players['player-one'].hand.find((card) => card.id === cardNumber)!
+    const deployed = applyGameCommand(initial, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+    const owner = deployed.players['player-one']
+    const cost = cardNumber === 'BS8-035'
+      ? owner.discardPile.find((card) => card.type === 'cookie' && card.level === 2)!
+      : owner.hand.find((card) => card.type === 'cookie' && card.level === 3)!
+    let game = applyGameCommand(deployed, {
+      kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId,
+      trigger: 'on-play', paymentIds: [],
+      ...(cardNumber === 'BS8-035' ? { trashCookieToBreakAreaIds: [cost.instanceId] } : { handToBreakAreaIds: [cost.instanceId] }),
+    })
+    const level = cardNumber === 'BS8-035' ? 2 : 1
+    const expectedCandidates = game.players['player-one'].breakArea.filter((card) => card.level === level)
+    const illegal = game.players['player-one'].breakArea.find((card) => card.level !== level)!
+    const target = expectedCandidates[0]
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected a single command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    expect(expectedCandidates).toHaveLength(2)
+    expect(captured!.candidateCards).toEqual(expectedCandidates)
+    expect(captured!.effectSelectionValid).toBe(true)
+    await act(() => captured!.toggleTarget(illegal.instanceId))
+    expect(captured!.selectedTargetIds).toEqual([])
+    await act(() => captured!.toggleTarget(target.instanceId))
+    expect(captured!.selectedTargetIds).toEqual([target.instanceId])
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ kind: 'resolve-ability-effect', targetIds: [target.instanceId] }), expect.any(String))
+    expect(game.players['player-one'].discardPile).toContainEqual(target)
+    expect(game.players['player-one'].breakArea).toContainEqual(illegal)
+    await act(() => root.unmount())
+  })
+
+  it('uses core hand-to-Break candidates and submits that cost separately from discard costs', async () => {
+    vi.useFakeTimers()
+    const initial = createCardCheckDemoState('BS8-031')
+    const sourceCard = initial.players['player-one'].hand.find((card) => card.id === 'BS8-031')!
+    const deployed = applyGameCommand(initial, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: sourceCard.instanceId })
+    const original = deployed.players['player-one'].battleArea.find((cookie) => cookie.card.instanceId === sourceCard.instanceId)!
+    const costCard = deployed.players['player-one'].discardPile.find((card) => card.id === 'BS8-030')!
+    const wrongLevelCard = deployed.players['player-one'].discardPile.find((card) => card.instanceId !== costCard.instanceId)!
+    const source = { ...original.card, skill: { ...original.card.skill!, cost: { energy: {}, handToBreakArea: { count: 1, minLevel: 3, maxLevel: 3 } }, effects: [{ kind: 'draw' as const, amount: 1 }] } }
+    let game: GameState = { ...deployed, players: { ...deployed.players, 'player-one': {
+      ...deployed.players['player-one'], hand: [wrongLevelCard, costCard], discardPile: [],
+      battleArea: [{ ...original, card: source }],
+    } } }
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(source, 'on-play'))
+    expect(captured!.draftHandToBreakAreaCandidates).toEqual([costCard])
+    await act(() => captured!.toggleDraftHandToBreakArea(wrongLevelCard.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).not.toHaveBeenCalled()
+    await act(() => captured!.toggleDraftHandToBreakArea(costCard.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'begin-activate-skill', handToBreakAreaIds: [costCard.instanceId], discardHandIds: [],
+    }), expect.any(String))
+    expect(game.players['player-one'].hand).toEqual([wrongLevelCard])
+    expect(game.players['player-one'].breakArea).toContainEqual(costCard)
+    expect(game.players['player-one'].discardPile).toEqual([])
+    await act(() => root.unmount())
   })
 
   it('clears completed effect history after the pending effect resolves', async () => {

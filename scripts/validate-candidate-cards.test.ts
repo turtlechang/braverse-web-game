@@ -11,13 +11,14 @@ import { mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { generateCardPool } from './generate-card-pool'
 
 const PROJECT_ROOT = process.cwd()
-const CARDS_DIR = join(PROJECT_ROOT, 'data', 'cards')
+const REPO_CARDS_DIR = join(PROJECT_ROOT, 'data', 'cards')
 const VALIDATE_SCRIPT = join(PROJECT_ROOT, 'scripts', 'validate-candidate-cards.ts')
 const PROMOTE_SCRIPT = join(PROJECT_ROOT, 'scripts', 'promote-candidate-cards.ts')
-const GENERATED_POOL_PATH = join(
+const REPO_GENERATED_POOL_PATH = join(
   PROJECT_ROOT,
   'src',
   'game',
@@ -25,6 +26,16 @@ const GENERATED_POOL_PATH = join(
 )
 
 let candidatesDir = ''
+let fixtureRoot = ''
+let officialDir = ''
+let generatedPoolPath = ''
+let repositoryHashes: Record<string, string> = {}
+
+const hashRepositoryOutputs = (): Record<string, string> => Object.fromEntries(
+  [REPO_GENERATED_POOL_PATH, ...readdirSync(REPO_CARDS_DIR).sort()
+    .filter((file) => file.endsWith('.json')).map((file) => join(REPO_CARDS_DIR, file))]
+    .map((file) => [file, createHash('sha256').update(readFileSync(file)).digest('hex')]),
+)
 
 const createCandidateFile = (filename: string, data: unknown) => {
   if (!existsSync(candidatesDir)) {
@@ -41,13 +52,6 @@ const removeCandidateFile = (filename: string) => {
   const filePath = join(candidatesDir, filename)
   if (existsSync(filePath)) {
     rmSync(filePath, { force: true })
-  }
-}
-
-const removeOfficialFile = (filename: string) => {
-  const filePath = join(CARDS_DIR, filename)
-  if (existsSync(filePath)) {
-    rmSync(filePath)
   }
 }
 
@@ -79,11 +83,12 @@ const runValidate = () => {
   }
 }
 
-const runPromote = () => {
+const runPromote = (destination = officialDir) => {
   try {
     const output = execFileSync(
       'node',
-      [TSX_BIN, PROMOTE_SCRIPT, '--dir', candidatesDir],
+      [TSX_BIN, PROMOTE_SCRIPT, '--dir', candidatesDir,
+        '--official-dir', destination, '--registry-path', generatedPoolPath],
       {
         encoding: 'utf8',
         cwd: PROJECT_ROOT,
@@ -163,24 +168,16 @@ const VALID_FILE = {
   cards: [VALID_CARD],
 }
 
-let generatedPoolBackup: string | null = null
-
-const backupGeneratedPool = () => {
-  generatedPoolBackup = existsSync(GENERATED_POOL_PATH)
-    ? readFileSync(GENERATED_POOL_PATH, 'utf8')
-    : null
-}
-
-const restoreGeneratedPool = () => {
-  if (generatedPoolBackup !== null) {
-    writeFileSync(GENERATED_POOL_PATH, generatedPoolBackup, 'utf8')
-    generatedPoolBackup = null
-  }
-}
-
 describe.sequential('candidate card pipeline', () => {
   beforeAll(() => {
-    candidatesDir = mkdtempSync(join(tmpdir(), 'braverse-candidates-'))
+    repositoryHashes = hashRepositoryOutputs()
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'braverse-candidates-'))
+    candidatesDir = join(fixtureRoot, 'data', 'candidates')
+    officialDir = join(fixtureRoot, 'data', 'cards')
+    generatedPoolPath = join(fixtureRoot, 'src', 'game', 'generated-card-pool.ts')
+    mkdirSync(candidatesDir, { recursive: true })
+    mkdirSync(officialDir, { recursive: true })
+    mkdirSync(join(fixtureRoot, 'src', 'game'), { recursive: true })
   })
 
   beforeEach(() => {
@@ -202,8 +199,10 @@ describe.sequential('candidate card pipeline', () => {
   })
 
   afterAll(() => {
-    if (candidatesDir) {
-      rmSync(candidatesDir, { recursive: true, force: true })
+    try {
+      expect(hashRepositoryOutputs()).toEqual(repositoryHashes)
+    } finally {
+      if (fixtureRoot) rmSync(fixtureRoot, { recursive: true, force: true })
     }
   })
 
@@ -456,7 +455,7 @@ describe.sequential('candidate card pipeline', () => {
 
     it('rejects cardNumber that conflicts with official pool', () => {
       const existingCard = readFileSync(
-        join(CARDS_DIR, 'official-sample.en.json'),
+        join(REPO_CARDS_DIR, 'official-sample.en.json'),
         'utf8',
       )
       const parsed = JSON.parse(existingCard)
@@ -563,15 +562,30 @@ describe.sequential('candidate card pipeline', () => {
   })
 
   describe('promote:candidate', () => {
-    afterEach(async () => {
-      removeOfficialFile('candidate-promo-test.json')
-      removeOfficialFile('candidate-promo-visible.json')
-      restoreGeneratedPool()
-      const { generateCardPool } = await import(
-        './generate-card-pool.js'
-      )
-      generateCardPool()
+    beforeEach(() => {
+      for (const file of readdirSync(officialDir)) {
+        rmSync(join(officialDir, file))
+      }
+      for (const file of ['official-sample.en.json', 'official-starter-deck-green.en.json']) {
+        writeFileSync(join(officialDir, file), JSON.stringify(VALID_FILE), 'utf8')
+      }
+      generateCardPool(officialDir, generatedPoolPath)
     })
+
+    it.each(['--official-dir', '--registry-path'])(
+      'rejects an unpaired %s output override before promotion', (flag) => {
+        createCandidateFile('unpaired-output.json', VALID_FILE)
+        const registryBefore = readFileSync(generatedPoolPath, 'utf8')
+        expect(() => execFileSync('node', [
+          TSX_BIN, PROMOTE_SCRIPT, '--dir', candidatesDir, flag,
+          flag === '--official-dir' ? officialDir : generatedPoolPath,
+        ], { encoding: 'utf8', stdio: 'pipe', timeout: 30000 })).toThrow(
+          '--official-dir 與 --registry-path 必須一起提供有效路徑。',
+        )
+        expect(existsSync(join(candidatesDir, 'unpaired-output.json'))).toBe(true)
+        expect(readFileSync(generatedPoolPath, 'utf8')).toBe(registryBefore)
+      },
+    )
 
     it('rejects promote when candidate filename collides with official card', () => {
       createCandidateFile('official-sample.en.json', VALID_FILE)
@@ -613,7 +627,6 @@ describe.sequential('candidate card pipeline', () => {
     })
 
     it('promotes valid candidate to official cards', () => {
-      backupGeneratedPool()
       const promoFilename = 'candidate-promo-test.json'
       const promoCardId = 'CANDIDATE-PROMO-001'
       createCandidateFile(promoFilename, {
@@ -625,13 +638,11 @@ describe.sequential('candidate card pipeline', () => {
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain(promoFilename)
 
-      expect(existsSync(join(CARDS_DIR, promoFilename))).toBe(true)
+      expect(existsSync(join(officialDir, promoFilename))).toBe(true)
       expect(existsSync(join(candidatesDir, promoFilename))).toBe(false)
     })
 
-    it('promoted card is visible in card pool via generated registry', async () => {
-      backupGeneratedPool()
-
+    it('promoted card is visible in card pool via generated registry', () => {
       const promoFilename = 'candidate-promo-visible.json'
       const promoCardId = 'CANDIDATE-PROMO-VISIBLE-001'
 
@@ -644,18 +655,30 @@ describe.sequential('candidate card pipeline', () => {
       const promoResult = runPromote()
       expect(promoResult.exitCode).toBe(0)
 
-      // 以獨立 generator readback 固定測試邊界，避免 Vitest 其他 worker 的
-      // module cache 影響 card-pool import；promote 本身仍已在子程序執行 generator。
-      generateCardPool()
-      const poolContent = readFileSync(GENERATED_POOL_PATH, 'utf8')
+      // Read the subprocess output directly; a second generation could hide
+      // a broken promotion registry update.
+      const poolContent = readFileSync(generatedPoolPath, 'utf8')
       expect(poolContent).toContain(promoFilename)
       expect(poolContent).toContain('candidate_promo_visible_json')
 
       const promoJson = JSON.parse(
-        readFileSync(join(CARDS_DIR, promoFilename), 'utf8'),
+        readFileSync(join(officialDir, promoFilename), 'utf8'),
       )
       expect(promoJson.cards[0].cardNumber).toBe(promoCardId)
       expect(promoJson.cards[0].name).toBe('Test Candidate Cookie')
+    })
+
+    it('keeps candidates and restores the isolated registry when copying fails', () => {
+      createCandidateFile('copy-failure.json', VALID_FILE)
+      const registryBefore = readFileSync(generatedPoolPath, 'utf8')
+      const result = runPromote(join(fixtureRoot, 'missing-official-directory'))
+      expect(result.exitCode).toBe(1)
+      expect(result.errors).toContain('rollback')
+      expect(existsSync(join(candidatesDir, 'copy-failure.json'))).toBe(true)
+      expect(readFileSync(generatedPoolPath, 'utf8')).toBe(registryBefore)
+      expect(readdirSync(officialDir).sort()).toEqual([
+        'official-sample.en.json', 'official-starter-deck-green.en.json',
+      ])
     })
   })
 })

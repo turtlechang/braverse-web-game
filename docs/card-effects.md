@@ -13,13 +13,14 @@
 - `opponent-battle-to-trash`：將符合條件的對手戰鬥區餅乾移至棄牌區
 - `opponent-random-discard`：隨機選擇對手手牌棄置，但保留其餘手牌原順序
 - `deck-to-support`：從效果來源玩家牌庫頂取牌，直立即 rested=false 放入支援區，不需選擇目標；牌庫耗盡時進入 pending Refresh（remainingDraws=0）
-- `deck-to-trash`：將指定玩家牌庫頂的可用卡牌直接放入棄牌區；不是抽牌，因此不建立 Refresh
+- `deck-to-trash`：將指定玩家牌庫頂的卡牌直接放入棄牌區；牌庫耗盡時先建立 Refresh，保留已移動卡及尚未完成的數量後續接。
 - `gain-hp`：從牌庫頂增加實體 HP 卡；途中或完成時牌庫耗盡會先進入 Refresh，再繼續尚未補完的 HP
 - `prevent-knockout`：本次戰鬥中使指定餅乾 HP 不會降至 0
 - `support-to-trash`：將指定數量的支援區卡牌移至棄牌區
+- `trash-to-support`：預設選棄牌區餅乾；卡文明定「卡牌」時以 `cookieOnly: false` 允許其他類型，再共用顏色與數量限制。BS8-069 可選 0～1 張綠色卡，包含物品；UI 與引擎都允許選 0，略過登場效果須清除權威 OnPlay。
 - `optional-cost-attack`：攻擊傷害後可略過的追加效果；來源餅乾可先提供 `sourceEnergy`，其餘費用才由支援區支付
 - `target`：目標陣營、最少／最多數量與篩選條件
-- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword 等條件
+- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword，以及「本回合己方／對手餅乾曾昏厥」等條件
 - `duration`：本回合、對手下回合或永久
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw` 與 `deck-to-support`）。
@@ -41,7 +42,7 @@
 
 ## 語意驗證防線
 
-`npm run validate:cards` 除了確認卡牌可轉換，還會驗證 ability 不是空殼、技能標記、可選抽牌與來源橫置語意。對容易發生「已有 payload 但語意不完整」的卡牌，`scripts/lib/card-effect-validation.ts` 維護人工覆核的高風險契約，鎖定效果 kind、代價、條件、目標與複合效果數量。契約是回歸防線，不取代官方文字與完整流程測試。
+`npm run validate:cards` 除了確認卡牌可轉換，還會驗證 ability 不是空殼、技能標記、可選抽牌與來源橫置語意。對容易發生「已有 payload 但語意不完整」的卡牌，`scripts/lib/card-effect-validation.ts` 維護人工覆核的高風險契約，鎖定效果 kind、代價、條件、目標與複合效果數量。`src/cards/contracts/ledger.ts` 另會對規則層已有明確計數器的條件句（例如本回合 Cookie 昏厥）比對 runtime `EffectCondition`；只要條件證據遺失就落到 `needs-review`，不允許部分 payload 冒充完整支援。契約是回歸防線，不取代官方文字與完整流程測試。
 
 ## 已支援效果
 
@@ -62,7 +63,7 @@
 | 對手戰鬥區→棄牌區 | `opponent-battle-to-trash` | 移除符合條件的對手戰鬥區餅乾，屬非昏厥離場；可用 `min: 0` 表示「最多選 1 個」 |
 | 對手隨機棄牌 | `opponent-random-discard` | 透過注入式洗牌決定棄置卡，剩餘手牌維持原順序 |
 | 牌庫頂→支援區 | `deck-to-support` | 從牌庫頂取 N 張直立放入支援區（例：ST3-010 Aloe Cookie）；牌庫耗盡觸發 pending Refresh（remainingDraws=0）。僅接受等價於「Take N card(s) from the top your deck and place it/them in your support area as active」的文字 |
-| 牌庫頂→棄牌區 | `deck-to-trash` | 將己方或對手牌庫頂最多 N 張可用卡牌直接放入其棄牌區；此移動不是抽牌，不觸發 Refresh |
+| 牌庫頂→棄牌區 | `deck-to-trash` | 將己方或對手牌庫頂 N 張卡牌放入棄牌區；耗盡牌庫時由 Refresh 續接，最多 N 張的卡文另提供0–N數量選擇 |
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
 | 增加 HP | `gain-hp` | 從牌庫頂補入 HP 卡；牌庫耗盡時建立 pending Refresh，Refresh 後繼續剩餘數量 |
 | HP 下限保護 | `prevent-knockout` | 目前供 TRAP 使用，本次戰鬥保留至少 1 張 HP 卡。官方裁定（BS3-100 vs ST3-020）：這個保護擋的是「這次戰鬥中 HP 不會變 0」，不是只擋一般傷害——只要 `state.pendingBattle` 還在（戰鬥尚未結束）且目標在 `preventKnockoutTargetIds` 內，任何會讓 HP 卡歸零的移除都要擋下，包括攻擊後續效果的 `hp-to-trash`。`hp-to-trash` 執行器已對此加上檢查：保護生效且剩餘 HP 卡數 ≤ 欲移除數時直接不執行，回傳原狀態；不能算出 `removeCount=0` 後照舊呼叫 `slice(-removeCount)`——JS 的 `slice(-0)` 等同 `slice(0)`，會把整疊 HP 卡誤判成「被移除」，導致同一張卡同時留在 `hpCards` 又被複製進棄牌區 |
@@ -78,6 +79,7 @@
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
+| 本回合餅乾曾昏厥 | `cookies-fainted-this-turn-at-least` | 以 `GameState.cookiesFaintedThisTurn` 檢查指定陣營本回合昏厥張數；例如 BS8-010 沒有己方昏厥紀錄時，Activate 不可發動 |
 | 對手戰鬥區無 Blocker | `opponent-battle-area-has-no-blocker` | BS3-018 第二分支的條件；可選取該分支，但條件不成立時不造成傷害 |
 | 支援區 keyword 條件 | `support-keyword-at-least` | 檢查來源玩家支援區是否至少有指定數量的 keyword 卡，例如 `[Soul Jam]` |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |

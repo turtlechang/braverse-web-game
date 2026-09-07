@@ -7,6 +7,7 @@ import {
   canPlayStage,
   canSpecialPlayCookie,
   getEnergyCostTotal,
+  hasPendingCardResolution,
   getTrashBattleCookieCostCandidates,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -172,6 +173,7 @@ function App() {
     deckConfig: match.deckConfig,
     playerCustomDeck: match.selectedCustomDeck,
     aiLevel,
+    strategyCommit: import.meta.env.VITE_GIT_COMMIT ?? null,
   })
 
   const actionStatus = deriveActionStatus({
@@ -207,7 +209,7 @@ function App() {
   }
 
   const exportBattleReplay = (): boolean => {
-    const downloaded = downloadBattleReplay(match.buildBattleReplay())
+    const downloaded = downloadBattleReplay(match.buildBattleReplay(ai.replayMetadata))
     match.setMessage(
       downloaded ? 'AI 覆盤 JSON 已下載。' : '無法下載 AI 覆盤 JSON。',
     )
@@ -232,12 +234,7 @@ function App() {
   const phaseDisabled =
     match.game.status === 'finished' ||
     Boolean(match.game.pendingReplacement) ||
-    Boolean(match.game.pendingOnPlay) ||
-    Boolean(match.game.pendingRefresh) ||
-    Boolean(
-      match.game.pendingFaintEffects &&
-        match.game.pendingFaintEffects.length > 0,
-    ) ||
+    hasPendingCardResolution(match.game) ||
     Boolean(pending.pendingEffect)
 
   const currentJsxEffect = pending.currentEffect
@@ -355,11 +352,10 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    ((pe.sourceKind === 'cookie' && pe.trigger === 'on-play') ||
-      (pe.trigger === 'activate' &&
-        (pe.sourceKind === 'cookie' ||
-          pe.sourceKind === 'item' ||
-          pe.sourceKind === 'stage')))
+    pe.trigger === 'activate' &&
+    (pe.sourceKind === 'cookie' ||
+      pe.sourceKind === 'item' ||
+      pe.sourceKind === 'stage')
 
   const { activeSelectedHandCardId, setSelectedHandCardId } =
     useHandSelectionDismissal(playerHand, closeResourcePopover)
@@ -530,6 +526,28 @@ function App() {
           )
         },
       ),
+    onPlayExtraDeckCookie: (instanceId) =>
+      match.dispatch(
+        {
+          kind: 'play-extra-deck-cookie',
+          playerId: match.activePlayer.id,
+          instanceId,
+        },
+        'EXTRA 餅乾已登場並配置 HP。',
+        (nextGame) => {
+          if (nextGame.pendingRefresh) return
+          pending.beginCookieSkill(
+            nextGame,
+            nextGame.players[match.activePlayer.id].battleArea.find(
+              (cookie) => cookie.card.instanceId === instanceId,
+            )?.card,
+            match.activePlayer.id,
+            'on-play',
+            'OnPlay 登場觸發',
+            true,
+          )
+        },
+      ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
       setSpecialPlayCandidateId(null)
@@ -605,6 +623,7 @@ function App() {
 
       <MatchToolbar
         onReset={() => {
+          if (!window.confirm('重新開始會結束目前對局，尚未匯出的紀錄將會清除。確定重新開始？')) return
           resetGame(
             match.deckConfig,
             `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
@@ -707,6 +726,18 @@ function App() {
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
         effectConditionMet={pending.currentEffectConditionMet}
+        effectSelectionError={pending.effectSelectionError}
+        candidateLabels={Object.fromEntries(Object.values(match.game.players).flatMap((player) =>
+          player.battleArea.map((cookie, index) => [cookie.card.instanceId, `${player.name}・戰鬥區第 ${index + 1} 張`])))}
+        showTargetSelection={!pending.breakAreaCostSelectionPending}
+        trashCookieToBreakAreaCandidates={pending.skillTrashCookieToBreakAreaCandidates}
+        selectedTrashCookieToBreakAreaIds={pending.selectedSkillTrashCookieToBreakAreaIds}
+        onToggleTrashCookieToBreakArea={pending.toggleSkillTrashCookieToBreakArea}
+        trashCookieToBreakAreaCost={pending.trashCookieToBreakAreaCost}
+        handToBreakAreaCandidates={pending.skillHandToBreakAreaCandidates}
+        selectedHandToBreakAreaIds={pending.selectedSkillHandToBreakAreaIds}
+        onToggleHandToBreakArea={pending.toggleSkillHandToBreakArea}
+        handToBreakAreaCost={pending.handToBreakAreaCost}
         trashToDeckBottomCandidates={pending.skillTrashToDeckBottomCandidates}
         selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
         onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}
@@ -802,7 +833,9 @@ function App() {
                       playerId: match.viewerPlayerId,
                       action: 'skip',
                     },
-                    '已略過攻擊後續效果。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已略過Then 可選效果。'
+                      : '已略過攻擊後續效果。',
                   )
                 },
                 onPay: (
@@ -827,7 +860,9 @@ function App() {
                       trashToDeckIds,
                       hpToHandIds,
                     },
-                    '已支付攻擊後續效果費用。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已支付技能 Then 費用。'
+                      : '已支付攻擊後續效果費用。',
                   )
                 },
               }

@@ -454,7 +454,10 @@ describe('cookie-gained-hp-this-turn 條件（BS5-044）', () => {
     ]
     state.players['player-one'].battleArea = [
       {
-        card: cookie('ananas', 1, 2),
+        card: {
+          ...cookie('ananas', 1, 2),
+          name: 'Ananas Dragon Cookie',
+        },
         hpCards: [item('ananas-hp-1')],
         rested: false,
         battleEntryId: 'ananas:battle:1',

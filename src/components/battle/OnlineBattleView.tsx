@@ -5,6 +5,7 @@ import {
   canSpecialPlayCookie,
   canPlayStage,
   getEnergyCostTotal,
+  hasPendingCardResolution,
   getTrashBattleCookieCostCandidates,
   validateEnergyPayment,
 } from '../../game'
@@ -144,6 +145,7 @@ export function OnlineBattleView({
         state: game,
         mode: 'online',
         viewerId: viewerPlayerId,
+        source: 'production',
         decks: { playerOne: 'unknown', playerTwo: 'unknown' },
         seed,
       }),
@@ -328,11 +330,15 @@ export function OnlineBattleView({
         (cost.discardHand ?? 0) +
         (cost.supportToTrash ?? 0) +
         (cost.supportToHand ?? 0) +
-        (cost.trashBattleCookie?.count ?? 0)
+        (cost.trashBattleCookie?.count ?? 0) +
+        (cost.trashCookieToBreakArea?.count ?? 0) +
+        (cost.handToBreakArea?.count ?? 0)
       const selectedCostCount =
         pending.selectedDraftDiscardHandIds.size +
         pending.selectedDraftCostSupportIds.size +
-        pending.selectedDraftTrashBattleCookieIds.size
+        pending.selectedDraftTrashBattleCookieIds.size +
+        pending.selectedDraftTrashCookieToBreakAreaIds.size +
+        pending.selectedDraftHandToBreakAreaIds.size
 
       if (requiredPayment > 0 && !pending.draftPaymentValid) {
         return {
@@ -471,6 +477,8 @@ export function OnlineBattleView({
     pending.selectedDraftDiscardHandIds.size,
     pending.selectedDraftPaymentIds.size,
     pending.selectedDraftTrashBattleCookieIds.size,
+    pending.selectedDraftTrashCookieToBreakAreaIds.size,
+    pending.selectedDraftHandToBreakAreaIds.size,
     pendingBattle,
     viewerPlayerId,
     selectedDraftPaymentKey,
@@ -500,9 +508,7 @@ export function OnlineBattleView({
   const phaseDisabled =
     game.status !== 'playing' ||
     Boolean(game.pendingReplacement) ||
-    Boolean(game.pendingOnPlay) ||
-    Boolean(game.pendingRefresh) ||
-    Boolean(game.pendingFaintEffects && game.pendingFaintEffects.length > 0) ||
+    hasPendingCardResolution(game) ||
     Boolean(pending.pendingEffect)
 
   const opponentSourcePreviewCard =
@@ -616,6 +622,15 @@ export function OnlineBattleView({
           instanceId,
         },
         '新餅乾已登場並配置 HP。',
+      ),
+    onPlayExtraDeckCookie: (instanceId) =>
+      match.dispatch(
+        {
+          kind: 'play-extra-deck-cookie',
+          playerId: match.activePlayer.id,
+          instanceId,
+        },
+        'EXTRA 餅乾已登場並配置 HP。',
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
@@ -743,7 +758,18 @@ export function OnlineBattleView({
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
         effectConditionMet={pending.effectConditionMet}
+        effectSelectionError={pending.effectSelectionError}
+        candidateLabels={Object.fromEntries(Object.values(game.players).flatMap((player) =>
+          player.battleArea.map((cookie, index) => [cookie.card.instanceId, `${player.name}・戰鬥區第 ${index + 1} 張`])))}
         onSkip={() => {
+          if (pending.abilityCostDraft?.trigger === 'passive') {
+            pending.cancelAbilityCostDraft()
+            return
+          }
+          if (pending.abilityCostDraft?.trigger === 'on-play') {
+            pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)
+            return
+          }
           if (pending.pendingEffect?.sourceKind !== 'attack') return
           match.dispatch(
             {
@@ -785,15 +811,17 @@ export function OnlineBattleView({
         selectedBattleToHandIds={pending.selectedDraftBattleToHandIds}
         onToggleBattleToHand={pending.toggleDraftBattleCookieToHand}
         battleCookieToHandCost={pending.draftBattleCookieToHandCost}
-        showTargetSelection
-        showCancelSkill={Boolean(pending.abilityCostDraft)}
-        onCancel={() => {
-          if (pending.abilityCostDraft?.trigger === 'on-play') {
-            pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)
-          } else {
-            pending.cancelAbilityCostDraft()
-          }
-        }}
+        trashCookieToBreakAreaCandidates={pending.draftTrashCookieToBreakAreaCandidates}
+        selectedTrashCookieToBreakAreaIds={pending.selectedDraftTrashCookieToBreakAreaIds}
+        onToggleTrashCookieToBreakArea={pending.toggleDraftTrashCookieToBreakArea}
+        trashCookieToBreakAreaCost={pending.draftTrashCookieToBreakAreaCost}
+        handToBreakAreaCandidates={pending.draftHandToBreakAreaCandidates}
+        selectedHandToBreakAreaIds={pending.selectedDraftHandToBreakAreaIds}
+        onToggleHandToBreakArea={pending.toggleDraftHandToBreakArea}
+        handToBreakAreaCost={pending.draftHandToBreakAreaCost}
+        showTargetSelection={!pending.draftRequiresPaymentBeforeTargets}
+        showCancelSkill={pending.abilityCostDraft?.trigger === 'activate'}
+        onCancel={pending.cancelAbilityCostDraft}
         optionalCostAttack={
           optionalCostAttackPrompt
             ? {
@@ -805,7 +833,9 @@ export function OnlineBattleView({
                       playerId: viewerPlayerId,
                       action: 'skip',
                     },
-                    '已略過攻擊後續效果。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已略過Then 可選效果。'
+                      : '已略過攻擊後續效果。',
                   )
                 },
                 onPay: (
@@ -830,7 +860,9 @@ export function OnlineBattleView({
                       trashToDeckIds,
                       hpToHandIds,
                     },
-                    '已支付攻擊後續效果費用。',
+                    optionalCostAttackPrompt.resolution === 'ability'
+                      ? '已支付技能 Then 費用。'
+                      : '已支付攻擊後續效果費用。',
                   )
                 },
               }

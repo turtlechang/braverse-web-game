@@ -4,6 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CardEffect, CookieCard, EnergyColor, GameCard } from '../../game'
+import { createCardCheckDemoState } from '../../game/demo'
 import { EffectPanel } from './EffectPanel'
 import type { PendingEffect } from './effectUiTypes'
 
@@ -65,6 +66,26 @@ describe('BS6-039 compound target UI', () => {
 
     await act(() => root.unmount())
     container.remove()
+  })
+})
+
+describe('trash-to-support optional selection', () => {
+  it.each([true, false])('zero cards is enabled only when optional is %s', async (optional) => {
+    const effect: CardEffect = { kind: 'trash-to-support', amount: 1, optional }
+    const pending = createPendingEffect({ effects: [effect], skillActivated: true })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(
+        <EffectPanel pendingEffect={pending} currentEffect={effect} effectHistory={[]}
+          onConfirm={() => undefined} onSkip={() => undefined}
+          candidateCards={[createItemCard(69)]} onToggleCandidate={() => undefined} />,
+      ))
+      const confirm = container.querySelector('.effect-panel-primary-action') as HTMLButtonElement
+      expect(confirm.disabled).toBe(!optional)
+    } finally {
+      await act(() => root.unmount())
+    }
   })
 })
 
@@ -167,6 +188,87 @@ const createPendingEffect = (
   triggerLabel: '技能啟動',
   sourceKind: 'cookie',
   ...overrides,
+})
+
+describe('Break area selection costs', () => {
+  it.each(['trash', 'hand'] as const)('%s cost requires exactly the selected count and is not paid twice', async (zone) => {
+    const game = createCardCheckDemoState('BS8-031')
+    const cards = [
+      game.players['player-one'].hand.find((card) => card.id === 'BS8-031')!,
+      createCardCheckDemoState('BS8-026').players['player-one'].battleArea[0].card,
+    ]
+    const onToggle = vi.fn()
+    const onConfirm = vi.fn()
+    const onToggleTarget = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const effect: CardEffect = { kind: 'draw', amount: 1 }
+    const render = async (ids: string[], skillActivated = false) => {
+      const props = zone === 'trash'
+        ? {
+            trashCookieToBreakAreaCandidates: cards,
+            selectedTrashCookieToBreakAreaIds: new Set(ids),
+            onToggleTrashCookieToBreakArea: onToggle,
+            trashCookieToBreakAreaCost: 1,
+          }
+        : {
+            handToBreakAreaCandidates: cards,
+            selectedHandToBreakAreaIds: new Set(ids),
+            onToggleHandToBreakArea: onToggle,
+            handToBreakAreaCost: 1,
+          }
+      await act(() => root.render(
+        <EffectPanel
+          pendingEffect={createPendingEffect({
+            sourceCard: cards[0],
+            selectedTrashCookieToBreakAreaIds: zone === 'trash' ? ids : [],
+            selectedHandToBreakAreaIds: zone === 'hand' ? ids : [],
+            skillActivated,
+          })}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={onConfirm}
+          onSkip={() => undefined}
+          onToggleCandidate={onToggleTarget}
+          {...props}
+        />,
+      ))
+    }
+    const primary = () => container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    try {
+      await render([])
+      expect(container.textContent).toContain(zone === 'trash' ? '棄牌區 → 休息區（技能代價）' : '手牌 → 休息區（技能代價）')
+      expect(primary().disabled).toBe(true)
+      await act(() => primary().click())
+      expect(onConfirm).not.toHaveBeenCalled()
+      const candidates = container.querySelectorAll<HTMLButtonElement>(`.effect-candidates-cost-${zone}-to-break button`)
+      expect(candidates).toHaveLength(cards.length)
+      expect(candidates[0].textContent).toContain(cards[0].name)
+      expect(cards[0].imageUrl).toBeTruthy()
+      expect(candidates[0].querySelector('img')?.getAttribute('src')).toBe(cards[0].imageUrl)
+      await act(() => candidates[0].click())
+      expect(onToggle).toHaveBeenCalledExactlyOnceWith(cards[0].instanceId)
+      expect(onToggleTarget).not.toHaveBeenCalled()
+
+      await render(cards.slice(0, 2).map((card) => card.instanceId))
+      expect(primary().disabled).toBe(true)
+      await act(() => primary().click())
+      expect(onConfirm).not.toHaveBeenCalled()
+
+      await render([cards[0].instanceId])
+      expect(primary().disabled).toBe(false)
+      await act(() => primary().click())
+      expect(onConfirm).toHaveBeenCalledOnce()
+
+      await render([], true)
+      expect(container.querySelector('.effect-panel-extra-cost-col')).toBeNull()
+      expect(container.querySelector(`.effect-candidates-cost-${zone}-to-break`)).toBeNull()
+      expect(primary().disabled).toBe(false)
+      expect(onToggle).toHaveBeenCalledOnce()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
 })
 
 describe('EffectPanel', () => {
@@ -458,7 +560,83 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
-  it('allows skipping an attack follow-up effect', () => {
+  it.each([true, false])('does not offer skip for mandatory source HP recovery (condition met: %s)', (effectConditionMet) => {
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'source-hp-at-most', amount: 4 },
+    }
+    const pending = createPendingEffect({
+      skillActivated: true,
+      sourceKind: 'attack',
+      triggerLabel: '攻擊後續效果',
+      effects: [effect],
+    })
+    const onConfirm = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        effectConditionMet={effectConditionMet}
+        onConfirm={onConfirm}
+        onSkip={onSkip}
+      />,
+    ))
+
+    expect(container.querySelector('.skip-effect')).toBeNull()
+    expect(container.querySelector('.skill-labels')?.textContent).toBe('攻擊後續效果')
+    expect(container.querySelector('.skill-labels')?.textContent).not.toContain('Activate')
+    const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    expect(confirm.disabled).toBe(false)
+    act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledOnce()
+    expect(onSkip).not.toHaveBeenCalled()
+
+    act(() => root.unmount())
+  })
+
+  it('allows zero targets and skipping an up-to-one attack effect', () => {
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const pending = createPendingEffect({
+      skillActivated: true,
+      sourceKind: 'attack',
+      effects: [effect],
+    })
+    const onConfirm = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        candidateCards={[createCookieCard(1)]}
+        onConfirm={onConfirm}
+        onSkip={onSkip}
+      />,
+    ))
+
+    const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+    expect(confirm.disabled).toBe(false)
+    act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledOnce()
+    act(() => container.querySelector<HTMLButtonElement>('.skip-effect')!.click())
+    expect(onSkip).toHaveBeenCalledOnce()
+
+    act(() => root.unmount())
+  })
+
+  it('allows skipping an optional-cost attack follow-up effect', () => {
     const pending = createPendingEffect({
       skillActivated: true,
       sourceKind: 'attack',
@@ -605,6 +783,61 @@ describe('EffectPanel', () => {
     expect(container.querySelector('.effect-skip-label')?.textContent).toBe(
       '略過整個登場效果',
     )
+    expect(container.querySelector('.effect-skip-label')?.closest('button')?.textContent).toBe(
+      '略過整個登場效果',
+    )
+
+    act(() => root.unmount())
+  })
+
+  it('does not describe a separately resolved all-Cookies damage as Then', () => {
+    const selfDamage: CardEffect = {
+      kind: 'damage-all',
+      amount: 1,
+      side: 'self',
+    }
+    const opponentDamage: CardEffect = {
+      kind: 'damage-all',
+      amount: 1,
+      side: 'opponent',
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createCookieCard(24),
+        id: 'BS8-024',
+        name: 'Land of Fire & Ruin',
+        type: 'stage',
+      },
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: true,
+        cost: { energy: { red: 2 }, discardHand: 0 },
+        text: 'Rest this card. All Cookies receive 1 damage.',
+        effects: [selfDamage, opponentDamage],
+      },
+      effects: [selfDamage, opponentDamage],
+      effectIndex: 1,
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={opponentDamage}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-sequence-status')?.textContent).toContain(
+      '前一段效果已完成，現在處理下一段效果。',
+    )
+    expect(container.querySelector('.effect-sequence-status')?.textContent).not.toContain(
+      'Then 的後續效果',
+    )
 
     act(() => root.unmount())
   })
@@ -675,6 +908,62 @@ describe('EffectPanel', () => {
     expect(container.textContent).toContain('額外代價')
 
     await act(() => root.unmount())
+  })
+
+  it('labels an ability Then choice separately from an attack follow-up', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={null}
+        currentEffect={null}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        optionalCostAttack={{
+          sourceCardName: 'Cilantro Cobra Swordsman',
+          sourceCard: createCookieCard(99),
+          effectText: 'Then, <can be used as {R}.> Draw 1 card.',
+          resolution: 'ability',
+          discardHandCost: 0,
+          energyCostTotal: 1,
+          costText: '支付支援區 1 點紅色能量',
+          playerHand: [],
+          supportCandidates: [{
+            card: createSupportCard(100, 'red'),
+            instanceId: 'support-100',
+          }],
+          targetCandidates: [],
+          needsTarget: false,
+          targetMin: 0,
+          targetMax: 0,
+          targetLabel: '對手餅乾',
+          onSkip: () => undefined,
+          onPay: () => undefined,
+        }}
+      />,
+    ))
+
+    expect(container.textContent).toContain('Then 可選效果')
+    expect(container.textContent).not.toContain('完整技能文字')
+    expect(container.textContent).not.toContain('remaining HP is 1')
+    expect(container.textContent).toContain('Then,')
+    expect(container.textContent).toContain('支付支援區 1 點紅色能量')
+    expect(container.querySelector('.optional-source-energy-options')).toBeNull()
+
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>('.modal-actions-decision button:last-child')!
+        .click()
+    })
+    expect(container.textContent).toContain('選擇 1 張支援區能量卡作為代價')
+    const sourceEnergyOption = container.querySelector(
+      '.modal-card-options button',
+    )!
+    expect(sourceEnergyOption).toBeTruthy()
+    await act(() => (sourceEnergyOption as HTMLButtonElement).click())
+    expect(sourceEnergyOption.className).toContain('is-selected')
+    act(() => root.unmount())
   })
 
   it('labels a Cookie-only support return cost as a Cookie cost', async () => {
@@ -1472,5 +1761,58 @@ describe('EffectPanel', () => {
     ))
     expect(container.textContent).toContain('棄置 1 張 HP 卡')
     await act(() => root.unmount())
+  })
+
+  it('BS8-047：已展示的手牌移入休息區不再要求新的目標選擇', async () => {
+    const pending = createPendingEffect({
+      skillActivated: true,
+      effects: [{ kind: 'hand-to-break', amount: 1, revealedCardOnly: true }],
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={pending.effects[0]}
+        effectHistory={[]}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-panel-target-col')).toBeNull()
+    const confirm = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(confirm.disabled).toBe(false)
+    await act(() => confirm.click())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    await act(() => root.unmount())
+  })
+
+  it('explains an empty revival selection and still allows confirming zero targets', () => {
+    const effect: CardEffect = { kind: 'break-to-battle', amount: 1, maxLevel: 2 }
+    const pending = createPendingEffect({ skillActivated: true, effects: [effect] })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+    const render = (candidateCards: GameCard[]) => act(() => root.render(
+      <EffectPanel pendingEffect={pending} currentEffect={effect} effectHistory={[]}
+        candidateCards={candidateCards} onConfirm={onConfirm} onSkip={() => undefined} />,
+    ))
+    try {
+      render([])
+      expect(container.textContent).toContain('目前沒有可登場的休息區餅乾；直接確認即可選擇 0 張並繼續。')
+      const confirm = container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+      expect(confirm.disabled).toBe(false)
+      act(() => confirm.click())
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+      render([createCookieCard(98)])
+      expect(container.textContent).not.toContain('目前沒有可登場的休息區餅乾')
+    } finally {
+      act(() => root.unmount())
+    }
   })
 })

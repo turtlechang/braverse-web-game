@@ -68,12 +68,15 @@ try {
   })
 
   const results = []
-  for (const viewport of [
+  const viewports = process.env.BRAVERSE_DESKTOP_TABLET_ONLY === '1'
+    ? [{ width: 1366, height: 768 }, { width: 1164, height: 777 }]
+    : [
     { width: 1366, height: 768 },
     { width: 622, height: 1040 },
     { width: 390, height: 844 },
     { width: 280, height: 720 },
-  ]) {
+  ]
+  for (const viewport of viewports) {
     const page = await browser.newPage({ viewport })
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
@@ -104,6 +107,23 @@ try {
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'true')
     // Four original filters plus the LV／HP／攻擊力 filters.
     assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 7)
+    assert.equal(
+      await editor.locator('[aria-label="卡牌類型"] option[value="extra"]').count(),
+      1,
+      'Standard editor must expose the formal EXTRA card-type filter',
+    )
+    const standardType = editor.locator('[aria-label="卡牌類型"]')
+    await standardType.selectOption('extra')
+    const formalExtraCards = editor.locator('.deck-editor-page-pool-card-button')
+    assert.equal(await formalExtraCards.count(), 15)
+    await formalExtraCards.first().click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /1\s*\/\s*6/)
+    assert.equal((await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(), '0')
+    assert.equal(await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(), 0,
+      'Formal EXTRA must never be added to the main deck')
+    await editor.locator('.deck-editor-page-current-footer button').click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /0\s*\/\s*6/)
+    await standardType.selectOption('')
     const seriesSelect = editor.locator('[aria-label="卡牌系列"]')
     await seriesSelect.selectOption('BS6')
     const bs6PoolCards = editor.locator('.deck-editor-page-pool-card-button')
@@ -264,6 +284,57 @@ try {
       savedDecks[0].entries.reduce((total, entry) => total + entry.count, 0),
       60,
     )
+
+    // Candidate staging retains its separate five-card pool and EXTRA payload;
+    // neither editor may add EXTRA cards to the 60-card main deck.
+    if (viewport.width === 1366) {
+      const candidateEntryButton = page.locator('[data-testid="open-bs8-candidate-deck-editor"]')
+      await candidateEntryButton.waitFor({ state: 'visible' })
+      await candidateEntryButton.click()
+      const candidateEditor = page.locator('[data-testid="deck-editor-page"]')
+      await candidateEditor.waitFor({ state: 'visible' })
+      await candidateEditor.locator('[data-testid="deck-editor-filter-toggle"]').click()
+      const candidateType = candidateEditor.locator('[aria-label="卡牌類型"]')
+      await candidateType.selectOption('extra')
+      const candidateSearch = candidateEditor.locator('[data-testid="deck-editor-search"]')
+      await candidateSearch.fill('BS8-005')
+      assert.equal(await candidateEditor.locator('.deck-editor-page-pool-card-button').count(), 1)
+      assert.match(
+        (await candidateEditor.locator('.deck-editor-page-pool-card-button').getAttribute('title')) ?? '',
+        /^BS8-005\b/,
+      )
+      await candidateSearch.fill('')
+      const candidateCards = candidateEditor.locator('.deck-editor-page-pool-card-button')
+      assert.equal(await candidateCards.count(), 5)
+      const avatarCard = candidateEditor
+        .locator('.deck-editor-page-pool-card')
+        .filter({ hasText: 'BS8-005' })
+        .locator('.deck-editor-page-pool-card-button')
+      await avatarCard.click()
+      assert.match(
+        (await candidateEditor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '',
+        /1\s*\/\s*6/,
+      )
+      assert.equal(
+        await candidateEditor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(),
+        0,
+      )
+      assert.equal(
+        await candidateEditor.locator('.deck-editor-page-deck-grid > [data-testid="deck-editor-extra-deck"]').count(),
+        1,
+        'EXTRA deck must scroll with the main deck grid instead of being a fixed panel',
+      )
+      assert.equal(await candidateEditor.locator('[data-testid="deck-editor-extra-card-BS8-005"]').count(), 1)
+      assert.equal(
+        await candidateEditor.locator('[data-testid="deck-editor-extra-card-BS8-005"] .deck-editor-page-deck-card-face').count(),
+        1,
+      )
+      assert.equal(
+        await candidateEditor.locator('[data-testid="deck-editor-extra-card-BS8-005"] .deck-page-card-image, [data-testid="deck-editor-extra-card-BS8-005"] .deck-page-card-fallback').count(),
+        1,
+      )
+    }
+
     assert.equal(errors.length, 0, `${viewport.width}x${viewport.height}: ${errors.join('; ')}`)
     results.push({ viewport: `${viewport.width}x${viewport.height}`, ...metrics })
     } catch (error) {

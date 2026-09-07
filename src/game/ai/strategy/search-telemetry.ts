@@ -29,6 +29,8 @@ export interface Lv4SearchTelemetry {
   publicResponseMinPenalty: number
   defensiveReserveEvaluations: number
   defensiveReserveAdjustment: number
+  endgameSurvivalEvaluations: number
+  endgameSurvivalAdjustment: number
   plan: Lv4PlanTelemetry
 }
 
@@ -49,6 +51,8 @@ export interface Lv4SearchTelemetryAggregate {
   publicResponseMinPenalty: number
   defensiveReserveEvaluations: number
   defensiveReserveAdjustment: number
+  endgameSurvivalEvaluations: number
+  endgameSurvivalAdjustment: number
   setupSteps: number
   payoffSteps: number
   completedPayoffs: number
@@ -75,6 +79,8 @@ export const createLv4SearchTelemetry = (): Lv4SearchTelemetry => ({
   publicResponseMinPenalty: 0,
   defensiveReserveEvaluations: 0,
   defensiveReserveAdjustment: 0,
+  endgameSurvivalEvaluations: 0,
+  endgameSurvivalAdjustment: 0,
   plan: {
     setupSteps: 0,
     payoffSteps: 0,
@@ -109,6 +115,8 @@ export const aggregateLv4SearchTelemetry = (
     publicResponseMinPenalty: sum((entry) => entry.publicResponseMinPenalty),
     defensiveReserveEvaluations: sum((entry) => entry.defensiveReserveEvaluations),
     defensiveReserveAdjustment: sum((entry) => entry.defensiveReserveAdjustment),
+    endgameSurvivalEvaluations: sum((entry) => entry.endgameSurvivalEvaluations),
+    endgameSurvivalAdjustment: sum((entry) => entry.endgameSurvivalAdjustment),
     setupSteps,
     payoffSteps: sum((entry) => entry.plan.payoffSteps),
     completedPayoffs,

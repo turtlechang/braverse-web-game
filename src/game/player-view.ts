@@ -3,6 +3,7 @@ import type {
   AttackModifier,
   CookieCard,
   DamageReceivedModifier,
+  ExtraDeckCard,
   GameCard,
   GameResult,
   GameStatus,
@@ -32,6 +33,8 @@ export interface PlayerSideView {
   name: string
   handCount: number
   deckCount: number
+  /** Optional only for backwards-compatible serialized pre-BS8 views. */
+  extraDeckCount?: number
   battleArea: CookieInBattleView[]
   supportArea: SupportCard[]
   breakArea: CookieCard[]
@@ -46,6 +49,8 @@ export interface PlayerSideView {
 export interface PlayerView {
   viewerId: PlayerId
   hand: GameCard[]
+  /** EXTRA 卡尚未進入戰場前，僅持有者可讀取完整內容。 */
+  extraDeck?: ExtraDeckCard[]
   self: PlayerSideView
   opponent: PlayerSideView
   turnNumber: number
@@ -69,6 +74,7 @@ const toSideView = (
     name: player.name,
     handCount: player.hand.length,
     deckCount: player.deck.length,
+    extraDeckCount: player.extraDeck?.length ?? 0,
     battleArea: player.battleArea.map((cookie) => ({
       card: cookie.card,
       hpCount: cookie.hpCards.length,
@@ -90,6 +96,7 @@ export const createPlayerView = (
   return {
     viewerId,
     hand: state.players[viewerId].hand,
+    extraDeck: state.players[viewerId].extraDeck ?? [],
     self: toSideView(state, viewerId),
     opponent: toSideView(state, opponentId),
     turnNumber: state.turnNumber,

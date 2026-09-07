@@ -26,6 +26,10 @@ const fisherYatesShuffle = (
   return shuffled
 }
 
+/** Inject entropy without duplicating the Fisher-Yates algorithm. */
+export const createShuffle = (nextRandom: () => number): Shuffle =>
+  (cards) => fisherYatesShuffle(cards, nextRandom)
+
 export const defaultShuffle: Shuffle = (cards) =>
   fisherYatesShuffle(cards, Math.random)
 
@@ -43,7 +47,7 @@ export const createSeededRandom = (seed: number): (() => number) => {
 
 export const createSeededShuffle = (seed: number): Shuffle => {
   const nextRandom = createSeededRandom(seed)
-  return (cards) => fisherYatesShuffle(cards, nextRandom)
+  return createShuffle(nextRandom)
 }
 
 export const drawCards = (
@@ -67,18 +71,13 @@ export const getOpponentId = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
 
 /**
- * 餅乾的有效剩餘 HP：實際附著的 HP 卡張數＋附著卡提供的 HP 加成。
- * 「The Cookie with this card attached for HP gains +1 HP」類 FLIP 卡只要
- * 還附著在 HP，就額外 +1；卡被磨掉／移走時加成隨之消失（由內容推導，
- * 不需要額外的附著／移除鉤子）。所有「剩餘 HP」判定（目標篩選、條件、
- * 傷害結算）都應以這個函式為準。
+ * 剩餘 HP 是實際 HP 卡張數；遮罩狀態使用伺服器提供的公開值。
+ * 未翻開的 HP 屬於私密區域，FLIP 文字不能提前套用（官方 v1.8
+ * §2-6-2、§3-10-3、§10-1-2）。補 HP 的 FLIP 須翻開並支付代價後，
+ * 由 resolveFlip 加入實際 HP 卡，不能在這裡依私密卡文加算。
  */
 export const getCookieEffectiveHp = (cookie: CookieInBattle): number =>
-  cookie.hpCards.length +
-  cookie.hpCards.reduce(
-    (bonus, card) => bonus + (card.flip?.attachedHpBonus ?? 0),
-    0,
-  )
+  cookie.publicHp ?? cookie.hpCards.length
 
 export const updatePlayer = (
   state: GameState,

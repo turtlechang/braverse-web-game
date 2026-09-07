@@ -1280,9 +1280,17 @@
   }
 
   .card-detail-modal {
-    grid-template-columns: 130px 1fr;
+    min-width: 0;
+    max-height: calc(100dvh - 48px);
+    grid-template-columns: 130px minmax(0, 1fr);
     gap: 16px;
     padding: 22px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .card-detail-modal > div {
+    min-width: 0;
   }
 
   .deck-list-modal {
@@ -1308,6 +1316,27 @@
 
   .flip-card-page {
     gap: 6px;
+  }
+}
+
+/* A two-column detail view cannot fit card art and long names on phones.
+ * Keep the close control inside the viewport and let the rules scroll. */
+@media (max-width: 480px) {
+  .card-detail-modal {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 60px 16px 16px;
+  }
+
+  .card-detail-modal .detail-card {
+    justify-self: center;
+  }
+
+  .card-detail-modal h2 {
+    font-size: 1.15rem;
+  }
+
+  .card-detail-modal .card-detail-rules {
+    min-height: 0;
   }
 }
 

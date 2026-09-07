@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
 > **狀態：Lv.1–Lv.4 已實作完成；Lv.5 challenger 已進入實驗驗證，尚未通過對 Lv.4 的升格勝率門檻。**
-> **最後更新：2026-08-26（Lv.5 公開回應 Min 與防守資源保留）。**
+> **最後更新：2026-08-27（Lv.5 公開宣告傷害與同回合擊倒 telemetry）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -15,7 +15,7 @@
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
 | Lv.3 | 評估式 | 對每個合法候選輸出 `ActionScoreBreakdown`，以結構化能力、牌組 profile、已知資訊與公開局面一步評分 | +R5, R6b, R7, R8, R12–R15 | ✅ 完成 |
 | Lv.4 | 多步規劃 | 有限 beam command search（w=5, d=5, 240 nodes, 150ms）、R16 資源預留；timeout 回退 Lv.3 | +R9, R10, R11, R12–R16, lv4RiskBonus | ✅ 完成 |
-| Lv.5 | 高手對抗（實驗） | Lv.4 搜尋（w=6, d=6, 360 nodes, 180ms）＋公開記憶／回應 Min＋通用 ComboPlan＋終局洗傷與空場預測＋防守資源保留；timeout 回退 Lv.4 | +R17–R21 | 🧪 challenger；尚未升格 |
+| Lv.5 | 高手對抗（實驗） | Lv.4 搜尋（w=6, d=6, 360 nodes, 180ms）＋公開記憶／回應 Min＋通用 ComboPlan＋終局洗傷與空場預測＋防守資源保留、唯一 Trap 保留、可選支付防守、Break 6–9 生存評估，以及公開宣告傷害／同回合擊倒 telemetry；timeout 回退 Lv.4 | +R17–R22 | 🧪 challenger；尚未升格 |
 
 Lv.5 的「對手回應／終局預測」只使用公開手牌與牌庫張數、公開卡牌能力、
 棄牌區、Break 與戰鬥區 HP，不是讀取實際隱藏手牌，也不是完整 opponent
@@ -41,7 +41,7 @@ tree。公開回應 Min 會把「不回應、未知手牌 envelope、保留活�
 - Lv.4 vs Lv.3 > 75%：需審核是否過強
 - Lv.4 vs Lv.3 > 80%：暫停，必須降權或回滾
 
-## 規則系統（R1–R20）
+## 規則系統（R1–R22）
 
 | 規則 | 名稱 | 適用等級 | 狀態 |
 |---|---|---|---|
@@ -67,7 +67,8 @@ tree。公開回應 Min 會把「不回應、未知手牌 envelope、保留活�
 | R18 | 同一 ComboPlan 前置／收益配對與生命週期 | Lv.5 | 🧪 已接入；不同 plan 不得誤完成 |
 | R19 | Combo payoff 能量張數與顏色預留 | Lv.5 | 🧪 已接入；只採規則層與公開支援資訊 |
 | R20 | 對手牌庫耗盡、Refresh 洗傷與空場敗北預測 | Lv.5 | 🧪 已接入；隱藏手牌只做公開機率估計 |
-| R21 | 公開回應 Min 與防守資源保留 | Lv.5 | 🧪 已接入；依活躍支援、Trap／Blocker／OnPlay 公開需求調整 |
+| R21 | 公開回應 Min 與防守資源保留 | Lv.5 | 🧪 已接入；依活躍支援、Trap／Blocker／OnPlay 公開需求調整；公開威脅下保留唯一手牌 Trap，非致命可選支付不消耗唯一防守 Trap |
+| R22 | Break 6–9 終局生存評估 | Lv.5 | 🧪 已接入；只比較公開防守資源前後變化，Break 越高扣分越重 |
 
 ### R6c Deferred 理由
 
@@ -106,7 +107,11 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 | `AiStrategyMemory` | `ai/strategy/session.ts` | 每場持久保存合法 `KnowledgeState`、上一個 command 與 setup/payoff/tempo 意圖；forced pending 不覆蓋意圖 |
 | `estimateOpponentResponse` | `ai/strategy/opponent-response.ts` | 只從 `PlayerView` 的公開手牌張數與公開卡牌 capability 估計攻擊回應曝險 |
 | `evaluatePublicResponseMinimax` | `ai/strategy/opponent-response.ts` | 建立有限公開 Min 分支；對手活躍支援 × 公開手牌張數形成未知支付容量 envelope，不猜測隱藏卡面 |
-| `assessLv5DefensiveReserve` | `ai/strategy/defensive-reserve.ts` | 依己方可支付 Trap、Blocker、OnPlay／Stage／Item 能量與對手公開攻擊威脅，對耗盡支援的攻擊扣分、對保留資源的結束階段加分 |
+| `assessLv5DefensiveReserve` | `ai/strategy/defensive-reserve.ts` | 依己方可支付 Trap、Blocker、OnPlay／Stage／Item 能量與對手公開攻擊威脅，對耗盡支援的攻擊扣分、對保留資源的結束階段加分；唯一手牌 Trap 放入支援區會觸發 `trap-retention` |
+| `assessLv5OptionalCostDefense` | `ai/strategy/defensive-reserve.ts` | 可選攻擊後效果若消耗唯一公開防守 Trap，只有公開證明立即勝利時才允許支付，否則改為合法 skip |
+| `assessLv5EndgameSurvival` | `ai/strategy/endgame-survival.ts` | Break 6–9 且有公開攻擊威脅時，比較手牌 Trap、活躍支援 Trap 與 Blocker 的前後數量，輸出終局生存扣分與 telemetry |
+| public declaration damage | `ai/strategy/action-score.ts`、`evaluated-turn-handler.ts` | 已合法 attack command 由規則層供應公開宣告傷害，讓 ActionScore／replay reason 正確反映公開攻防修正、目標減傷與條件效果；不讀隱藏 HP 卡或對手手牌 |
+| delayed lethal telemetry | `ai-detailed-sim.ts` | 同回合先處理技能／物品、後續宣告原本公開可擊倒的目標時，計為已轉換，不再把正確的前置行動誤報為 missed lethal |
 | `ComboPlan` | `ai/strategy/combo-plan.ts` | 由 capability synergy edge 自動建立穩定 plan ID、前置／收益、付款與有效期；不使用系列或卡號特判 |
 | Combo lifecycle | `ai/strategy/tactical-plans.ts`、`session.ts` | Lv.5 以公開條件門檻、規則層下一步合法動作時機與同一 plan ID 確認 setup → payoff；跨步記錄 started／completed／abandoned |
 | `forecastOpponentEndgame` | `ai/strategy/endgame-forecast.ts` | 由公開牌庫／手牌張數、棄牌區最低 LV、Break 與最後一隻餅乾 HP 預判補位、Refresh 洗傷及無餅乾敗北 |
@@ -118,7 +123,18 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 放棄 0；它驗證相同 payoff 卡多條泛化邊時可回到已啟動的 plan。untouched
 holdout 601–602 沒有自然觸發 Combo 或 Refresh，只有 7 次打空戰鬥區的無補位
 風險預測；Refresh 洗傷與空場邊界另由 `endgame-corpus.test.ts` 的 deterministic
-fixture 覆蓋。這些 telemetry 不能單獨當成勝率提升證據。
+fixture 覆蓋。這些 telemetry 不能單獨當成勝率提升證據。2026-08-26 的 matched
+BS7 Arena 診斷批次為 250 場，本輪 112 勝、frozen baseline 109 勝，所有完成性與
+安全指標為 0；樣本仍不足以升格，詳細 replay 根因、分色結果與限制見
+[Lv.5 防守保留與終局生存迭代報告](ai/lv5-defense-retention-report-2026-08-26.md)。
+
+2026-08-27 以未見 seed `20260827` 先建立 250 場 BS7 Arena 基準，再用相同
+seed／矩陣比較公開宣告傷害與同回合擊倒 telemetry 修正；勝場維持 113／250、健康
+異常皆為 0。這確認資料修正沒有改變這批 Lv.5 對局選擇；擊倒轉換計數則不再把「先
+發動技能、同回合再攻擊」誤算為失誤。Arena 報表保留整局 `behavior`，並新增
+`candidateBehavior`／`referenceBehavior` 依實際控制玩家分拆決策指標。完整方法、分色數據與
+telemetry 歸屬邊界見
+[Lv.5 公開宣告傷害與 telemetry 校正](ai/lv5-public-damage-telemetry-report-2026-08-27.md)。
 
 ## 已知問題
 

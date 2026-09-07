@@ -6,9 +6,11 @@ import type {
   GameCard,
 } from '../../game'
 import {
+  convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
   normalizeOfficialCardRecord,
 } from '../official-card-adapter'
+import { materializeExtraDeckCookie } from '../../game/extra-deck'
 import { parseOfficialCardText } from '../official-text-parser'
 import type { OfficialCardRecord } from '../types'
 import type {
@@ -42,7 +44,7 @@ const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
     'effect',
   ],
   [
-    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|higher than|lower than|less than|more than)\b/i,
+    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|sum of\s+\d+\s+or\s+(?:lower|higher)|higher than|lower than|less than|more than)\b/i,
     'condition',
   ],
   [/\bselect\b/i, 'target'],
@@ -161,6 +163,7 @@ const selectorMatches = (
     'maxRemainingHp',
     'excludeSource',
     'sourceOnly',
+    'allMatching',
     'attackTargetOnly',
     'excludeAttackTarget',
     'restedOnly',
@@ -172,6 +175,8 @@ const selectorMatches = (
     'cardName',
     'costSelected',
     'noSkillOnly',
+    'sameLevelAsPreviousEffectTarget',
+    'countPerPlayer',
   ] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key]) {
       // LV.1 is the lower bound of the Cookie level domain.  A number of
@@ -252,6 +257,13 @@ const additionalRuntimeSelectorsForEffect = (
     ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
     ...(record.cookieOnly === true ? { cardType: 'cookie' as const } : {}),
     ...(record.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
+    ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(Array.isArray(record.cardNames) && record.cardNames.every((name) => typeof name === 'string')
+      ? { cardNames: record.cardNames as string[] }
+      : {}),
+    ...(record.sameLevelAsPreviousEffectTarget === true
+      ? { sameLevelAsPreviousEffectTarget: true }
+      : {}),
   }
   const fixed = (count: number): Partial<EffectTargetSelector> => ({
     ...movementFields,
@@ -284,6 +296,10 @@ const additionalRuntimeSelectorsForEffect = (
     case 'draw-up-to-then-discard':
       return record.handDestination === 'deck-top'
         ? [{ side: 'self', min: 1, max: 1 }]
+        : []
+    case 'break-to-hand-by-level-sum':
+      return typeof record.cardCount === 'number'
+        ? [{ side: 'self', min: record.cardCount, max: record.cardCount }]
         : []
     case 'opponent-break-to-trash-then-battle-to-break':
       // The first step chooses a Cookie from the opponent's break area; the
@@ -370,6 +386,26 @@ const runtimeSelectorForEffect = (
     ...(typeof record.keyword === 'string'
       ? { keyword: record.keyword as EffectTargetSelector['keyword'] }
       : {}),
+    ...(typeof record.cardName === 'string' ? { cardName: record.cardName } : {}),
+    ...(Array.isArray(record.cardNames) && record.cardNames.every((name) => typeof name === 'string')
+      ? { cardNames: record.cardNames as string[] }
+      : {}),
+    ...(record.sameLevelAsPreviousEffectTarget === true
+      ? { sameLevelAsPreviousEffectTarget: true }
+      : {}),
+  }
+  if (
+    record.kind === 'prevent-cookie-active-next-phase' &&
+    record.target &&
+    typeof record.target === 'object'
+  ) {
+    const target = record.target as Record<string, unknown>
+    return {
+      ...(target as Partial<EffectTargetSelector>),
+      ...(typeof target.exactLevel === 'number'
+        ? { minLevel: target.exactLevel, maxLevel: target.exactLevel }
+        : {}),
+    }
   }
   const movementKinds = new Set([
     'trash-to-battle',
@@ -515,6 +551,9 @@ const runtimeSelectorsForCost = (
       ...(typeof value.supportToHandType === 'string'
         ? { cardType: value.supportToHandType as EffectTargetSelector['cardType'] }
         : {}),
+      ...(typeof value.supportToHandColor === 'string'
+        ? { energyColor: value.supportToHandColor as EffectTargetSelector['energyColor'] }
+        : {}),
     })
   }
   const hpToTrash = value.hpToTrash
@@ -569,6 +608,9 @@ const runtimeSelectorsForCost = (
   if (trashCookie && typeof trashCookie === 'object') {
     const trash = trashCookie as Record<string, unknown>
     add(typeof trash.count === 'number' ? trash.count : 1, {
+      cardType: 'cookie',
+      ...(typeof trash.minLevel === 'number' ? { minLevel: trash.minLevel } : {}),
+      ...(typeof trash.maxLevel === 'number' ? { maxLevel: trash.maxLevel } : {}),
       ...(typeof trash.energyColor === 'string'
         ? { energyColor: trash.energyColor as EffectTargetSelector['energyColor'] }
         : {}),
@@ -592,6 +634,8 @@ const runtimeSelectorsForCost = (
     const hand = handToBreak as Record<string, unknown>
     add(typeof hand.count === 'number' ? hand.count : 1, {
       cardType: 'cookie',
+      ...(typeof hand.minLevel === 'number' ? { minLevel: hand.minLevel } : {}),
+      ...(typeof hand.maxLevel === 'number' ? { maxLevel: hand.maxLevel } : {}),
       ...(typeof hand.energyColor === 'string'
         ? { energyColor: hand.energyColor as EffectTargetSelector['energyColor'] }
         : {}),
@@ -631,8 +675,20 @@ const bracketClauses = (
     if (bracketTargetSelection.test(inner)) {
       continue
     }
+    // A bracketed "Select 1 Cookie from each player" is a selection cost
+    // (v1.8 §8-2). Target cardinality is recorded by `eachPlayerSelection`;
+    // this ledger does not prove cost timing or Then optionality. The runtime
+    // paired selector and command/browser regressions must verify those.
+    if (/^select\s+1\s+cookies?\s+from\s+each\s+player\.?$/i.test(inner)) {
+      continue
+    }
+    // EXTRA BS8-027 selects a specifically named Cookie from trash. It is a
+    // public target selection, never an unknown bracketed payment.
+    if (/^select\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+in\s+your\s+trash\.?$/i.test(inner)) {
+      continue
+    }
     const discard = inner.match(
-      /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
+      /discard\s+(?:(\d+)|an?)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:non-)?(?:cards?|cookies?|traps?|items?)/i,
     )
     const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
     const supportTrash = inner.match(
@@ -646,13 +702,16 @@ const bracketClauses = (
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
     const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
     const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
+    const selfAndHandBreak = /place\s+this\s+cookie\s+and\s+(?:a|\d+)\s+cookie(?:\s+that\s+is\s+LV\.\s*\d+\s+or\s+above)?\s+from\s+your\s+hand\s+into\s+your\s+break\s+area/i.test(inner)
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
     const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
     const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
     const restCookie = /rest\s+\d+\s+cookie\s+in\s+your\s+battle\s+area/i.test(inner)
     const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
     const fieldToDeckBottom = /\b(?:place|select)\b[\s\S]*\b(?:battle\s+area|stage\s+area)\b[\s\S]*\b(?:on|at|to)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
-    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
+    // 官方 BS8-078／082 省略了 "your"，但來源仍只能是自己這張 Cookie；
+    // 兩種措辭都必須綁到 AbilityCost.selfToDeckBottom 的成本證據。
+    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+(?:(?:your|the)\s+)?deck/i.test(inner)
     const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
@@ -660,8 +719,8 @@ const bracketClauses = (
     const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+your\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
-    const trashToBreak = /place\s+\d+\s+cookie.*from\s+your\s+trash\s+into\s+your\s+break\s+area/i.test(inner)
-    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
+    const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
+    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
     const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
       discard ||
@@ -671,6 +730,7 @@ const bracketClauses = (
       battleTrash ||
       selfTrash ||
       selfBreak ||
+      selfAndHandBreak ||
       battleFaint ||
       battleBreak ||
       handBreak ||
@@ -701,7 +761,9 @@ const bracketClauses = (
               ? 'battle-to-trash'
                 : selfTrash
                   ? 'self-to-trash'
-                : selfBreak
+                  : selfAndHandBreak
+                    ? 'self-to-break'
+                    : selfBreak
                   ? 'self-to-break'
                   : battleFaint
                     ? 'battle-to-break'
@@ -753,9 +815,16 @@ const bracketClauses = (
         hpToHand
       costs.push({
         kind,
-        amount: amountMatch ? Number(amountMatch[1]) : 1,
+        amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
+      if (selfAndHandBreak) {
+        costs.push({
+          kind: 'hand-to-break',
+          amount: 1,
+          clauseIds: [clauseId],
+        })
+      }
       continue
     }
     addClause(clauses, source, match[0], 'unsupported', start, end, 'unknown')
@@ -837,6 +906,58 @@ const targetClauses = (
       clauseIds: [clauseId],
     })
   }
+  // BS8-003 的「all your Cookies that have 4 or less HP」沒有 select
+  // 動詞，卻是必須完整結算的戰鬥區目標集合。以場上兩格上限表示 runtime
+  // selector 的 max，並保留 allMatching 讓 contract 不把它弱化成任選一張。
+  const allFriendlyHpGain =
+    /\ball\s+your\s+Cookies?\s+that\s+have\s+(\d+)\s+or\s+less\s+HP\s+gain\s+\+?\d+\s+HP\b/gi
+  for (const match of text.matchAll(allFriendlyHpGain)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: 1,
+        max: 2,
+        maxRemainingHp: Number(match[1]),
+        allMatching: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
+  // BS8-050 的「LV.3 Cookie that was played from your break area during this
+  // turn」沒有重複寫出 battle area，卻仍是場上 Cookie 的單一選擇。保留進場
+  // 來源與回合限制，避免 audit 把一般 LV.3 目標誤當成充分證據。
+  const currentTurnBreakEntrySelection =
+    /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(?:your\s+)?LV\.\s*(\d+)\s+Cookie\s+that\s+was\s+played\s+from\s+your\s+break\s+area\s+during\s+this\s+turn\b/gi
+  for (const match of text.matchAll(currentTurnBreakEntrySelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const level = Number(match[3])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        minLevel: level,
+        maxLevel: level,
+        enteredFrom: 'break',
+        enteredThisTurn: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
   const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:other\s+)?(?:cookies?|cards?)(?:\s+other\s+than\s+\[[^\]]+\])?\s+(?:from|in)\s+(your opponent's|opponent's|your|the|either player's)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
   for (const match of text.matchAll(zoneSelection)) {
     const start = match.index ?? 0
@@ -883,7 +1004,48 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
+  const namedTrashSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+in\s+your\s+trash\b/gi
+  for (const match of text.matchAll(namedTrashSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardName: match[3],
+      },
+      clauseIds: [clauseId],
+      zone: 'trash',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const namedAlternativeTrashReturn =
+    /\breturn\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+or\s+\[([^\]]+)\]\s+from\s+your\s+trash\b/gi
+  for (const match of text.matchAll(namedAlternativeTrashReturn)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardNames: [match[3], match[4]],
+      },
+      clauseIds: [clauseId],
+      zone: 'trash',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's|the)\s+battle\s+area\b/gi
   for (const match of text.matchAll(battleAreaSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -896,7 +1058,7 @@ const targetClauses = (
     const sideText = (match[4] ?? '').toLowerCase()
     const side = sideText.includes('opponent')
       ? 'opponent'
-      : sideText.includes('either')
+      : sideText.includes('either') || sideText === 'the'
         ? 'either'
         : 'self'
     const amount = Number(match[2])
@@ -1024,12 +1186,18 @@ const targetClauses = (
     if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
     const clauseId = `${source}-${clauses.length + 1}`
     addClause(clauses, source, match[0], 'target', start, end, 'pattern')
-    for (const side of ['self', 'opponent'] as const) {
+    const prefix = text.slice(0, start)
+    if (/<\s*$/i.test(prefix)) {
+      const optionalThenCost = /\bThen\s*,?\s*<\s*$/i.test(prefix)
       targets.push({
-        selector: { side, min: 1, max: 1 },
-        clauseIds: [clauseId],
-        zone: 'battle',
+        selector: { side: 'either', min: optionalThenCost ? 0 : 2, max: 2, countPerPlayer: 1 },
+        clauseIds: [clauseId], zone: 'battle',
       })
+    } else {
+      // Ordinary effect selections (e.g. P-082) are not declaration costs.
+      for (const side of ['self', 'opponent'] as const) {
+        targets.push({ selector: { side, min: 1, max: 1 }, clauseIds: [clauseId], zone: 'battle' })
+      }
     }
     structuredRanges.push({ start, end })
   }
@@ -1071,6 +1239,46 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
+  const sameLevelBreakToTrash = /\bplace\s+(up\s+to\s+)?(\d+)\s+cookie\s+with\s+the\s+same\s+LV\.\s+as\s+that\s+cookie\s+from\s+your\s+break\s+area\s+into\s+your\s+trash\b/gi
+  for (const match of text.matchAll(sameLevelBreakToTrash)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        sameLevelAsPreviousEffectTarget: true,
+      },
+      clauseIds: [clauseId],
+      zone: 'break',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const namedBreakPlay = /\bplay\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+from\s+your\s+break\s+area\b/gi
+  for (const match of text.matchAll(namedBreakPlay)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        cardName: match[3].trim(),
+      },
+      clauseIds: [clauseId],
+      zone: 'break',
+    })
+    structuredRanges.push({ start, end })
+  }
   // Any remaining Select / play-from-zone phrase is still a player choice.
   // Do not silently treat it as an untargeted effect when no safe selector
   // grammar exists; the contract must stop at needs-review instead.
@@ -1092,6 +1300,8 @@ const targetClauses = (
   const unresolvedZoneSelection = /\b(?:play|place|return|take|put)\s+(?:up\s+to\s+)?\d+\b[^.]*\b(?:from|in)\s+(?:your opponent's|opponent's|your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/gi
   for (const match of text.matchAll(unresolvedZoneSelection)) {
     const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
     // Do not treat a bracketed cost/movement as a player target.  Costs are
     // recorded by `bracketClauses`; this pass is only for effect targets.
     const before = text.slice(0, start)
@@ -1360,7 +1570,14 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
     attackEffects: card.type === 'cookie' ? card.attackEffects : undefined,
     flip: card.flip ? { cost: card.flip.cost, effects: card.flip.effects } : undefined,
     ability: card.item
-      ? { cost: card.item.cost, effects: card.item.effects }
+      ? {
+          cost: card.item.cost,
+          sourceEnergy: card.item.sourceEnergy,
+          // 這裡只保留物品啟動時立刻結算的效果，才能和 GameCard 根層的
+          // effect sequence 一一對照；裝備後攻擊效果仍由上方的全卡遞迴
+          // collectRuntime 收集，不得混成這次物品啟動的 Then 序列。
+          effects: card.item.effects,
+        }
       : card.stageAbility
         ? {
             cost: card.stageAbility.cost,
@@ -1396,6 +1613,60 @@ const flattenRuntimeEffects = (evidence: RuntimeCardEvidence): CardEffect[] => {
   visit(evidence.ability?.effects)
   return result
 }
+
+type TurnFaintConditionRequirement = {
+  side: 'self' | 'opponent'
+  count: number
+  label: 'friendly-cookie-fainted-this-turn' | 'opponent-cookie-fainted-this-turn'
+}
+
+/**
+ * 條件句不能只被 clause ledger 分類後就算完成：若 adapter 忘了把條件
+ * 寫進 runtime，舊版 shadow audit 仍可能因傷害／目標都存在而回報 verified。
+ * 這裡列出規則層已有明確計數器的「本回合 Cookie 昏厥」語句，讓 contract
+ * 對照實際 EffectCondition；未知或遺漏時至少會落到 needs-review。
+ */
+const requiredTurnFaintConditions = (
+  record: OfficialCardRecord,
+): TurnFaintConditionRequirement[] => {
+  if (record.type !== 'cookie') return []
+
+  const requirements = new Map<
+    string,
+    TurnFaintConditionRequirement
+  >()
+  const conditionPattern =
+    /(?:during\s+this\s+turn,\s*)?if\s+(?:(\d+)\s+or\s+more\s+of\s+)?(your\s+opponent['’]s|your)\s+Cookies?\s+(?:has\s+)?fainted(?:\s+(?:during\s+)?this\s+turn)?/gi
+
+  for (const text of Object.values(sourceSegments(record))) {
+    if (!text) continue
+    for (const match of text.matchAll(conditionPattern)) {
+      const side = /^your\s+opponent/i.test(match[2]) ? 'opponent' : 'self'
+      const count = match[1] ? Number(match[1]) : 1
+      const label = side === 'self'
+        ? 'friendly-cookie-fainted-this-turn'
+        : 'opponent-cookie-fainted-this-turn'
+      requirements.set(`${label}:${count}`, { side, count, label })
+    }
+  }
+
+  return [...requirements.values()]
+}
+
+const hasRuntimeTurnFaintCondition = (
+  evidence: RuntimeCardEvidence,
+  requirement: TurnFaintConditionRequirement,
+): boolean =>
+  flattenRuntimeEffects(evidence).some((effect) => {
+    const condition = (effect as CardEffect & { condition?: unknown }).condition
+    if (!condition || typeof condition !== 'object') return false
+    const candidate = condition as Record<string, unknown>
+    return (
+      candidate.kind === 'cookies-fainted-this-turn-at-least' &&
+      candidate.side === requirement.side &&
+      candidate.count === requirement.count
+    )
+  })
 
 const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
   // `attackEffects` is the runtime slot for the printed post-attack/Then
@@ -1548,6 +1819,12 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   if (/draw/.test(text)) kinds.push('draw', 'draw-up-to')
   if (/discard/.test(text)) kinds.push('discard-hand', 'opponent-discard-hand')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
+  if (/\bplace\s+(?:up\s+to\s+)?\d+\s+cookie\s+with\s+the\s+same\s+LV\.\s+as\s+that\s+cookie\s+from\s+your\s+break\s+area\s+into\s+your\s+trash\b/.test(text)) {
+    kinds.push('break-to-trash')
+  }
+  if (/\bplay\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+from\s+your\s+break\s+area\b/.test(text)) {
+    kinds.push('break-to-battle')
+  }
   if (/play|place|put|return|move|take/.test(text)) kinds.push('move')
   return [...new Set(kinds)]
 }
@@ -1630,6 +1907,11 @@ const buildContract = (
   }
   const blockers: string[] = []
   if (evidence.unsupportedReason) blockers.push(`runtime:${evidence.unsupportedReason}`)
+  for (const requirement of requiredTurnFaintConditions(record)) {
+    if (!hasRuntimeTurnFaintCondition(evidence, requirement)) {
+      blockers.push(`condition evidence missing: ${requirement.label}`)
+    }
+  }
   // A FLIP card is still rendered as a Cookie at runtime, so merely seeing
   // its normal attack fields is not evidence that its HP-attached text was
   // converted.  Require a FlipAbility whenever official FLIP text exists;
@@ -1684,7 +1966,12 @@ const buildContract = (
     costs,
     targets,
     steps,
-    status: blockers.length > 0 ? (evidence.unsupportedReason ? 'blocked' : 'needs-review') : 'verified',
+    status:
+      blockers.length > 0
+        ? evidence.unsupportedReason
+          ? 'blocked'
+          : 'needs-review'
+        : 'verified',
     blockers,
   }
 }
@@ -1697,11 +1984,27 @@ export const analyzeOfficialCardBehavior = (
   // BS4-080@2 欄位併寫、BS6 傷害 errata）發生在 adapter 內，若契約仍以
   // 原始記錄建立子句，這些已修正的來源就永遠找不到 runtime evidence。
   const normalized = normalizeOfficialCardRecord(record)
-  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(normalized) : null
-  const card = runtimeCard === undefined && conversion?.status === 'converted' ? conversion.gameCard : runtimeCard ?? null
+  const conversion = runtimeCard === undefined && normalized.type !== 'extra'
+    ? convertOfficialCardToGameCard(normalized)
+    : null
+  const extraConversion = runtimeCard === undefined && normalized.type === 'extra'
+    ? convertOfficialCardToExtraDeckCard(normalized)
+    : null
+  const card = runtimeCard === undefined
+    ? conversion?.status === 'converted'
+      ? conversion.gameCard
+      : extraConversion?.status === 'converted'
+        ? materializeExtraDeckCookie(extraConversion.extraDeckCard)
+        : null
+    : runtimeCard ?? null
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
-    unsupportedReason: conversion?.status === 'unsupported' ? conversion.reason : undefined,
+    unsupportedReason:
+      conversion?.status === 'unsupported'
+        ? conversion.reason
+        : extraConversion?.status === 'unsupported'
+          ? extraConversion.reason
+          : undefined,
   }
   const contract = buildContract(normalized, evidence)
   const runtime = {
@@ -1766,6 +2069,7 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'self-to-trash') {
       return (
         keys.has('selfToTrash') ||
+        keys.has('stageSourceToTrash') ||
         // The adapter represents a self-trash payment as the generic
         // battle-cookie trash key when the source is the attacking Cookie.
         keys.has('trashBattleCookie') ||

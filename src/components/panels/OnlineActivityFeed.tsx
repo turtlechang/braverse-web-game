@@ -173,6 +173,7 @@ export function OnlineActivityFeed({
           state: game,
           mode: 'online',
           viewerId: viewerPlayerId,
+          source: 'production',
           decks: { playerOne: 'unknown', playerTwo: 'unknown' },
           seed,
         }),

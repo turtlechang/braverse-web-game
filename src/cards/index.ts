@@ -1,6 +1,12 @@
 export {
+  convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
   convertOfficialCards,
+} from './official-card-adapter'
+export type {
+  ConvertedOfficialExtraDeckCard,
+  OfficialExtraDeckCardConversion,
+  UnsupportedOfficialExtraDeckCard,
 } from './official-card-adapter'
 export {
   convertOfficialCardEffects,

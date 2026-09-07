@@ -30,7 +30,7 @@ import {
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { generateCardPool, generatedPoolPath } from './generate-card-pool'
+import { generateCardPool, generatedPoolPath as defaultGeneratedPoolPath } from './generate-card-pool'
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const dirArgIndex = process.argv.indexOf('--dir')
@@ -38,7 +38,22 @@ const candidatesDir =
   dirArgIndex >= 0 && process.argv[dirArgIndex + 1]
     ? resolve(projectRoot, process.argv[dirArgIndex + 1])
     : join(projectRoot, 'data', 'candidates')
-const officialDir = join(projectRoot, 'data', 'cards')
+// Tests can isolate both outputs; never redirect just one side of promotion.
+const officialDirIndex = process.argv.indexOf('--official-dir')
+const registryIndex = process.argv.indexOf('--registry-path')
+if ((officialDirIndex >= 0 || registryIndex >= 0) &&
+    (officialDirIndex < 0 || registryIndex < 0 ||
+      !process.argv[officialDirIndex + 1] || process.argv[officialDirIndex + 1].startsWith('--') ||
+      !process.argv[registryIndex + 1] || process.argv[registryIndex + 1].startsWith('--'))) {
+  console.error('--official-dir 與 --registry-path 必須一起提供有效路徑。')
+  process.exit(1)
+}
+const officialDir = officialDirIndex >= 0
+  ? resolve(projectRoot, process.argv[officialDirIndex + 1])
+  : join(projectRoot, 'data', 'cards')
+const generatedPoolPath = registryIndex >= 0
+  ? resolve(projectRoot, process.argv[registryIndex + 1])
+  : defaultGeneratedPoolPath
 
 let candidateFiles: string[]
 try {
@@ -144,7 +159,7 @@ for (const file of candidateFiles) {
 
 // --- Phase 4: 重新生成卡池 registry ---
 try {
-  generateCardPool()
+  generateCardPool(officialDir, generatedPoolPath)
 } catch (error) {
   console.error(
     `✗ 重新生成卡池 registry 失敗：${(error as Error).message}`,

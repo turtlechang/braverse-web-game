@@ -19,6 +19,7 @@ interface SideFormState {
   battle: ScenarioCookieSlot[]
   hand: string
   deck: string
+  extraDeck: string
   breakArea: string
   supportCount: number
   supportCards: string
@@ -34,6 +35,7 @@ const createEmptySide = (): SideFormState => ({
   })),
   hand: '',
   deck: '',
+  extraDeck: '',
   breakArea: '',
   supportCount: 4,
   supportCards: '',
@@ -238,6 +240,23 @@ function SideEditor({
       </label>
 
       <label className="scenario-field-group">
+        <span className="scenario-field-label">
+          額外牌組（逗號分隔卡號；候選 staging，最多 6 張）
+        </span>
+        <input
+          type="text"
+          list="scenario-extra-card-options"
+          aria-label={`${title}額外牌組`}
+          data-testid={`scenario-${sideId}-extra-deck`}
+          placeholder="如 BS8-005,BS8-069"
+          value={side.extraDeck}
+          onChange={(event) =>
+            onChange({ ...side, extraDeck: event.target.value })
+          }
+        />
+      </label>
+
+      <label className="scenario-field-group">
         <span className="scenario-field-label">場景卡（卡號，留空=不放置）</span>
         <input
           type="text"
@@ -360,6 +379,7 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
         battle: player.battle,
         hand: parseBreakArea(player.hand),
         deck: parseBreakArea(player.deck),
+        extraDeck: parseBreakArea(player.extraDeck),
         breakArea: parseBreakArea(player.breakArea),
         supportCount: player.supportCount,
         supportCards: parseBreakArea(player.supportCards),
@@ -371,6 +391,7 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
         battle: ai.battle,
         hand: parseBreakArea(ai.hand),
         deck: parseBreakArea(ai.deck),
+        extraDeck: parseBreakArea(ai.extraDeck),
         breakArea: parseBreakArea(ai.breakArea),
         supportCount: ai.supportCount,
         supportCards: parseBreakArea(ai.supportCards),
@@ -398,7 +419,7 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
 
         <h2>測試對局設定</h2>
         <p className="scenario-intro">
-          以正式卡池卡號直接指定雙方戰鬥區、精確 HP 卡、手牌、支援區、場景與棄牌區，略過抽牌與猜拳流程，快速重現卡牌效果與攻擊後效果。
+          以正式卡池卡號直接指定雙方戰鬥區、精確 HP 卡、手牌、支援區、額外牌組、場景與棄牌區，略過抽牌與猜拳流程，快速重現卡牌效果與攻擊後效果。額外牌組只供候選 staging 測試，不會混入 Standard 牌組。
         </p>
 
         <section className="scenario-presets" aria-label="單卡測試案例">
@@ -427,11 +448,22 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
         </section>
 
         <datalist id="scenario-card-options">
-          {cardOptions.map((entry) => (
-            <option key={entry.cardNumber} value={entry.cardNumber}>
-              {entry.name}
-            </option>
-          ))}
+          {cardOptions
+            .filter((entry) => entry.type !== 'extra')
+            .map((entry) => (
+              <option key={entry.cardNumber} value={entry.cardNumber}>
+                {entry.name}
+              </option>
+            ))}
+        </datalist>
+        <datalist id="scenario-extra-card-options">
+          {cardOptions
+            .filter((entry) => entry.type === 'extra')
+            .map((entry) => (
+              <option key={entry.cardNumber} value={entry.cardNumber}>
+                {entry.name}
+              </option>
+            ))}
         </datalist>
 
         <div className="scenario-layout">

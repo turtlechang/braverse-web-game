@@ -19,6 +19,8 @@ export interface PendingEffect {
   selectedDiscardHandIds: string[]
   selectedHpToTrashTargetIds: string[]
   selectedTrashBattleCookieIds: string[]
+  selectedTrashCookieToBreakAreaIds?: string[]
+  selectedHandToBreakAreaIds?: string[]
   selectedBattleToHandIds?: string[]
   /** 未指定時視為空陣列；只有帶棄牌區代價的技能會用到。 */
   selectedTrashToDeckBottomIds?: string[]

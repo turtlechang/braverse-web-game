@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+- 🐛 BS8-011 確認發動面板競態修正（2026-09-04）：巢狀 BS8-018 昏厥→BS1-006 效果傷害結算不再覆寫或清除外層 `pendingAbilityEffect`；規則佇列與效果面板會保留 BS8-011 的第二段目標，並以 stale-panel 防護避免送出已結算指令。新增真實卡牌回歸測試，完整 Vitest 238 檔／3,831 項通過。
+- ✅ BS1-006／BS8-011／BS8-018 傷害後續與測試夾具校正（2026-09-03）：依 BS1-006 官方卡面，受到效果傷害後仍留在戰鬥區也會建立 `afterDamage` 佇列；BS8-011 的兩段目標改以 BS1-010 → BS1-006 串接驗證。BS8-018 `card:` 情境改用正式 BS1-007 目標卡並維持雙方戰鬥區最多兩張，移除會誤導驗收的 `faint-target` 合成餅乾。
+- ✅ Lv.5 公開宣告傷害與擊倒 telemetry 校正（2026-08-27）：已合法 attack command 的 ActionScore／replay reason 改採規則層公開宣告傷害，涵蓋公開攻防修正、目標減傷與條件效果；同回合先處理技能／物品、後續確實宣告同一公開擊倒時不再誤算為 missed lethal。策略版本更新為 `lv5-defense-retention-endgame-v2`；Arena 報表另分開候選與 reference 的決策 telemetry。以未見 seed `20260827` 的 250 場 BS7 Arena matched 回歸，勝場維持 113／250、所有健康異常為 0，屬資料品質與評分正確性改善，非升格證據。
+- ✅ Lv.5 防守保留與 AI provenance（2026-08-26）：根據離線 replay 修正公開攻擊威脅下唯一 Trap 過早放入支援區、非致命可選效果消耗唯一防守 Trap，以及 Break 6–9 終局生存評估；新增固定回歸夾具、search telemetry 與 250 場 matched BS7 Arena 診斷基準（112／250，相較 frozen baseline 109／250；健康異常全為 0，尚非升格證據）。離線 `braverse-battle-replay` 另記錄 AI 等級、策略版本／commit、command 對應與公開決策理由，線上維持省略。
+- ✅ 對戰紀錄 AI 資料品質門檻（2026-08-26）：`braverse-battle-replay` v1 新增 `source`、`sampleQuality` 與 `training` metadata；正式離線已完成對局才可標記為訓練樣本，`test-state`、零動作快照、未完成／非精確 replay 與線上公開遮罩資料會保留明確排除原因。舊 v1 檔案仍可解析，缺少來源時保守標記為 `unknown` 並重新計算資格。
+
 - ✅ BS1～BS6 與 P 卡全面稽核收尾（2026-08-20）：正式卡池 1,101／1,101 筆 Browser 路由載入；效果互動矩陣 BS1 81／81、BS2 86／86、BS3 166／166、BS4 158／158、BS5 143／143、BS6 基礎卡代表 97／97、P 卡 138／138，全記錄負向與無效果攻擊矩陣亦全數通過。修正 P-015 攻擊後可選代價多段續接、P-016 trash-to-break 候選、BS4-014／080 正規化、BS4-038 攻擊後效果及 Browser fixture／分類；BS6-036／042／043 與 BS5-109 專用正反驗收全綠。契約 strict gate 為 1,101 verified／0 needs-review／0 blocked；完整 Vitest 211 檔／3,401 項、typecheck、lint、build、bundle gate、AI 20／20、牌組編輯器 4 viewport 與本機雙瀏覽器好友房 smoke 通過。
 - ✅ FLIP 卡 runtime 與卡池稽核收尾（2026-08-18）：修正 P-099 欄位錯置、讓 `hasFlipAbility` 與 runtime `FlipAbility` 一致，並將附著期間 HP 加成統一為 `attachedHpBonus`；新增 114 張 FLIP 稽核矩陣與引擎回歸。完整 Vitest 208 檔／3,336 項、typecheck、lint、build、卡牌驗證、卡池檢查與 Browser smoke（AI 20／20、牌組 4 viewport、線上好友房）通過；BS2-042／P-047 空白 `flipText` 仍待官方來源確認。
 - ✅ 卡牌行為契約稽核歸零（2026-08-18）：`cards:audit:contracts` 目前 **verified=1,101、needs-review=0、blocked=0**（`source contains unclassified clause` 與 `target evidence unresolved` 此前已歸零）。最後 25 筆缺口分三群修正：**(1)** 16 筆 `payment evidence missing`＋3 筆 runtime energy evidence——契約 ledger 現在收集 `StageAbility.placementCost` 作為場景卡放置費用的能量證據（ST3-022／ST5-022／BS2-051／P-125 等）；**(2)** 9 筆 `cost evidence missing`——BS5-093／BS5-093@1 補 `trashToDeck { count: 3, energyColor: 'purple', excludeFlip, cookieOnly }` 技能代價（activate 流程原有支付機制會強制支付）、BS5-092／BS5-092@1 補 `trashToDeck { count: 3, nonCookieOnly }` 並把觸發改為 `opponent-attack` 回應（與 BS5-081 同族）：`playAttackResponseSkill` 支援洗回牌庫代價支付、效果排入 `pendingAbilityEffect` 在陷阱視窗內結算 `modify-attack`，`skipTrap` 改走 `advanceBattleAfterTrap` 讓略過陷阱也重算攻擊傷害；BS2-081 的 `stage-source-to-trash` 綁定 self-to-trash 代價；P-082 trap 的 `alternativeCosts`（`trashCookieToBreakArea`）綁定 trash-to-break；P-045 移除誤加的 `discardHand` 雙重代價，牌庫底付款由效果鏈第一段支付並以 `hand-to-deck-bottom` 證據別名綁定；**(3)** Then／once-per-turn／resolution order／timing 各 1 筆——BS4-080@2 異圖欄位併寫正規化（技能與攻擊拆分、保留異圖獨有的 Then 抽牌、補 `exactAttackEffects['BS4-080@2']`）、P-100 FLIP 文字誤併 attackText 正規化（回復 FlipAbility 棄牌代價與附著 HP +1）；契約建立改以 adapter 正規化後的來源為準，runtime 與契約消費同一份文字。新增 `payment-cost-regression.test.ts`（31 項，25 張卡全綁定）、`bs5-092-attack-response.test.ts`（4 項正反路徑）與 adapter-bs5 回歸 2 項；21 張修正卡（另補 4 張錨卡）以 Browser batch attestation 通過 effect trace（BS5-092／093 的對手指攻回應技能尚無人機 UI 入口，引擎層以 battle 回歸覆蓋，與既有 BS5-081 同一缺口）；完整 Vitest **208 檔／3,310 項**、lint、build、`validate:cards`、`check:card-pool` 通過。
@@ -145,7 +151,7 @@
 ## 2026-07-08
 
 - 🐛 陷阱 support-to-hand/hand-to-support 修正 — 修復 Bean 牌組陷阱卡造成卡住的 bug；AI 改進支援放置能量稀缺優先、攻擊選擇一擊擊殺優先；新增 6 組 BS2 對局分析文件。
-- 🔧 BS1-006 修正 — after-damage 觸發改為僅限戰鬥傷害，效果傷害不再觸發。
+- 🔧 BS1-006 修正（後於 2026-09-03 依官方卡面更正）— after-damage 觸發當時曾暫限戰鬥傷害；該暫定行為後來撤回，現以官方「受到傷害後仍留在戰鬥區」文字為準。
 - 🔧 BS1-037 修正 — 移除 sourceAsEnergy 費用減少、目標改選 HP 最多、新增 hand-to-support 效果型別與執行。
 
 ## 2026-07-07

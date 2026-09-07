@@ -180,7 +180,7 @@ try {
     { width: 768, height: 432 },
     { width: 625, height: 351 },
     { width: 600, height: 338 },
-  ]) {
+  ].filter(viewport => process.env.BRAVERSE_DESKTOP_TABLET_ONLY !== '1' || viewport.width > 680)) {
     await page.setViewportSize(viewport)
     const shortDesktopHoverProbe =
       viewport.width === 1024 && viewport.height === 576

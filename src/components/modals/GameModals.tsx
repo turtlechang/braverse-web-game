@@ -36,6 +36,7 @@ import {
   type GuidedPhaseId,
 } from '../effects/GuidedPhaseSteps'
 import './GameModals.css'
+import { useModalFocus } from '../../hooks/useModalFocus'
 
 const DeckEditorModal = lazy(async () => {
   const module = await import('./DeckEditorModal')
@@ -1241,7 +1242,9 @@ export function TrapResponseModal({
                     {trapEffectTargetSteps.map((targetStep, stepIndex) => (
                       <div className="trap-effect-target-step" key={targetStep.effectIndex}>
                         <span>
-                          第 {stepIndex + 1} 段目標（最多 {targetStep.max} 張）
+                          {targetStep.ordered
+                            ? `第 ${stepIndex + 1} 段傷害順序（依序選擇全部 ${targetStep.max} 張）`
+                            : `第 ${stepIndex + 1} 段目標（最多 ${targetStep.max} 張）`}
                         </span>
                         <div className="modal-card-options compact trap-target-options">
                           {targetStep.candidates.map((candidate) => {
@@ -1269,6 +1272,9 @@ export function TrapResponseModal({
                               >
                                 <CardFace card={candidate.card} selected={selected} />
                                 <span>{candidate.card.name}</span>
+                                {targetStep.ordered && selected && (
+                                  <small>第 {targetStep.selectedTargetIds.indexOf(candidate.card.instanceId) + 1} 張結算</small>
+                                )}
                                 {isAttacker && (
                                   <small className="attacker-badge">⚔ 攻擊中</small>
                                 )}
@@ -1277,7 +1283,7 @@ export function TrapResponseModal({
                           })}
                         </div>
                         <span>
-                          已選 {targetStep.selectedTargetIds.length}／最多 {targetStep.max}
+                          已選 {targetStep.selectedTargetIds.length}／{targetStep.ordered ? '全部' : '最多'} {targetStep.max}
                         </span>
                         {targetStep.allowEmpty && (
                           <button
@@ -1543,6 +1549,7 @@ export function AttackResponseModal({
 
 export interface FaintEffectResponseModalProps {
   card: GameCard
+  unavailableReason?: string | null
   minTargets: number
   maxTargets: number
   selectedTargetCount: number
@@ -1583,6 +1590,7 @@ export interface FaintEffectResponseModalProps {
 
 export function FaintEffectResponseModal({
   card,
+  unavailableReason = null,
   minTargets,
   maxTargets,
   selectedTargetCount,
@@ -1630,16 +1638,12 @@ export function FaintEffectResponseModal({
     selectedCostSupportIds.length === costSupportAmount &&
     selectedCostSupportToHandIds.length === costSupportToHandAmount
   const canConfirm =
-    selectedTargetCount >= minTargets && paymentReady && faintCostReady
+    !unavailableReason && selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
-    ? '此效果沒有目標選擇，確認後會繼續結算效果。'
-    : candidateCards.length > 0 || targetCandidateCards.length > 0
-      ? minTargets === 0
+    ? '此步驟不需選擇目標。確認後會結算此步驟；若後續需要選擇，會接著顯示提示。'
+    : minTargets === 0
         ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`
         : `必須選擇 ${minTargets} 張${candidateLabel}。`
-      : minTargets === 0
-        ? `可選擇最多 ${maxTargets} 個對手餅乾作為目標，也可以不選擇目標。`
-        : `必須選擇 ${minTargets} 個對手餅乾作為目標。`
   const confirmLabel = !hasTargetChoice
     ? '確認結算'
     : selectedTargetCount === 0
@@ -1694,7 +1698,7 @@ export function FaintEffectResponseModal({
           縮小
         </button>
         <span>昏厥效果</span>
-        <h2>{card.name} {optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
+        <h2>{card.name} {unavailableReason ? '無法發動昏厥效果' : optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
         <div className="faint-effect-card-detail">
           <CardFace card={card} />
           <div>
@@ -1855,9 +1859,9 @@ export function FaintEffectResponseModal({
           </div>
         )}
         <p className="faint-target-hint">
-          {optional
+          {unavailableReason ?? (optional
             ? '可以選擇發動或不發動；若發動，請先完成顯示的代價。'
-            : displayTargetHint}
+            : displayTargetHint)}
         </p>
         {selectedTargetName && (
           <div className="battle-response-summary">
@@ -1887,7 +1891,7 @@ export function FaintEffectResponseModal({
         <div className="modal-actions">
           {allowSkip && (
             <button type="button" onClick={onSkip}>
-              不發動
+              {unavailableReason ? '繼續' : '不發動'}
             </button>
           )}
           <button type="button" disabled={!canConfirm} onClick={onConfirm}>
@@ -1902,7 +1906,13 @@ export function FaintEffectResponseModal({
 export interface BlockerResponseModalProps {
   blockerCards: CookieInBattle[]
   selectedBlockerId: string | null
-  paymentCards: GameCard[]
+  paymentCost: EnergyCost
+  paymentCostTotal: number
+  paymentCandidates: GameCard[]
+  selectedPaymentIds: string[]
+  paymentValid: boolean
+  paymentValidationReason?: string
+  onTogglePayment: (instanceId: string) => void
   attackerCard?: GameCard | null
   attackTargetCard?: GameCard | null
   onSelectBlocker: (instanceId: string) => void
@@ -1915,7 +1925,13 @@ export interface BlockerResponseModalProps {
 export function BlockerResponseModal({
   blockerCards,
   selectedBlockerId,
-  paymentCards,
+  paymentCost,
+  paymentCostTotal,
+  paymentCandidates,
+  selectedPaymentIds,
+  paymentValid,
+  paymentValidationReason,
+  onTogglePayment,
   attackerCard,
   attackTargetCard,
   onSelectBlocker,
@@ -1924,6 +1940,8 @@ export function BlockerResponseModal({
   onBack,
 }: BlockerResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
+  const selectedPaymentIdSet = new Set(selectedPaymentIds)
+  const paymentReady = paymentCostTotal === 0 || paymentValid
 
   if (minimized) {
     return (
@@ -1982,7 +2000,7 @@ export function BlockerResponseModal({
           attackerCard={attackerCard}
           attackTargetCard={attackTargetCard}
         />
-        <div className="modal-card-options">
+        <div className="modal-card-options blocker-candidates">
           {blockerCards.map((cookie) => (
             <button
               type="button"
@@ -1997,12 +2015,41 @@ export function BlockerResponseModal({
             </button>
           ))}
         </div>
-        {selectedBlockerId && (
-          <div className="battle-response-summary">
-            <strong>付款支援卡</strong>
-            <span>
-              {paymentCards.map((card) => card.name).join('、') || '不需能量'}
-            </span>
+        {selectedBlockerId && paymentCostTotal > 0 && (
+          <div className="faint-payment-section blocker-payment-section">
+            <strong>支付 Blocker 費用</strong>
+            <div className="faint-payment-cost">
+              <EnergyCostIcons cost={paymentCost} />
+              <span>
+                已選 {selectedPaymentIds.length}/{paymentCostTotal} 張支援卡
+              </span>
+            </div>
+            {paymentCandidates.length > 0 ? (
+              <div className="modal-card-options compact blocker-payment-candidates">
+                {paymentCandidates.map((candidate) => {
+                  const selected = selectedPaymentIdSet.has(candidate.instanceId)
+                  return (
+                    <button
+                      type="button"
+                      key={candidate.instanceId}
+                      className={selected ? 'is-selected' : ''}
+                      aria-pressed={selected}
+                      onClick={() => onTogglePayment(candidate.instanceId)}
+                    >
+                      <CardFace card={candidate} selected={selected} />
+                      <span>{candidate.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <small>沒有可支付的活躍支援卡，無法使用此 Blocker。</small>
+            )}
+            {!paymentValid && selectedPaymentIds.length > 0 && (
+              <small className="blocker-payment-error">
+                {paymentValidationReason ?? '所選支援卡無法支付此費用。'}
+              </small>
+            )}
           </div>
         )}
         <div className="modal-actions">
@@ -2011,7 +2058,7 @@ export function BlockerResponseModal({
           </button>
           <button
             type="button"
-            disabled={!selectedBlockerId}
+            disabled={!selectedBlockerId || !paymentReady}
             onClick={onConfirm}
           >
             使用 Blocker
@@ -2231,6 +2278,7 @@ export function CardDetailModal({
   onInspectEquip,
   onClose,
 }: CardDetailModalProps) {
+  const modalRef = useModalFocus(onClose)
   const normalAttack = card.type === 'cookie' && card.attackText
     ? splitNormalAttackText(card.attackText)
     : null
@@ -2261,6 +2309,10 @@ export function CardDetailModal({
       <section
         className="card-detail-modal"
         role="dialog"
+        ref={modalRef}
+        aria-modal="true"
+        aria-label={`${card.name} 卡牌詳情`}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -2387,12 +2439,13 @@ export function PauseModal({
   onResume,
   onCopyIssueBundle,
 }: PauseModalProps) {
+  const modalRef = useModalFocus(onResume, '.match-toolbar-trigger')
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="pause-modal" role="dialog">
+      <section className="pause-modal" role="dialog" ref={modalRef} aria-modal="true" aria-label="遊戲已暫停" tabIndex={-1}>
         <Pause aria-hidden="true" />
         <span>對戰資訊</span>
         <h2>遊戲已暫停</h2>
@@ -2427,7 +2480,7 @@ export function PauseModal({
                 : '複製問題包'}
           </button>
         )}
-        <button type="button" onClick={onResume}>
+        <button type="button" onClick={onResume} data-modal-initial-focus>
           繼續對戰
         </button>
       </section>

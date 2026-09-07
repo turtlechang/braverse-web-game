@@ -23,6 +23,8 @@ export interface Lv3ActionCandidate<T> {
   postActionBoardScore: number
   legalAttackCountBefore: number
   legalAttackCountAfter: number
+  /** 已合法 attack command 的公開宣告傷害，供 action score 正確識別斬殺。 */
+  publicAttackDamage?: number
   tacticalPlanOptions?: TacticalPlanDerivationOptions
 }
 
@@ -89,6 +91,7 @@ export const scoreLv3ActionCandidate = <T>(
     ).length,
     legalAttackCountBefore: candidate.legalAttackCountBefore,
     legalAttackCountAfter: candidate.legalAttackCountAfter,
+    publicAttackDamage: candidate.publicAttackDamage,
   })
   return { candidate, breakdown }
 }

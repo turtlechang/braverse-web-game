@@ -1,11 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
+  createBs8011DoubleSkillDemoState,
+  createCardCheckDemoState,
+  createCardNegativeDemoState,
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
-import type { CardSkill, GameState, PendingBattle } from '../../game'
+import type { CardSkill, ExtraDeckCard, GameState, PendingBattle } from '../../game'
+import { applyGameCommand } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
@@ -130,7 +134,7 @@ describe('player hand fan pure functions', () => {
 })
 
 describe('BattleRow desktop interactions', () => {
-  it('places the reserved extra area below the player break area and mirrors it for the opponent', () => {
+  it('places the live EXTRA Deck count below the player break area and mirrors it for the opponent', () => {
     const bottomMarkup = renderToStaticMarkup(
       <BattleRow {...createProps({ position: 'bottom' })} />,
     )
@@ -139,14 +143,82 @@ describe('BattleRow desktop interactions', () => {
     )
 
     expect(bottomMarkup).toContain('class="side-zones"')
-    expect(bottomMarkup).toContain('class="extra-zone"')
-    expect(bottomMarkup).toContain('額外區（預留）')
+    expect(bottomMarkup).toContain('class="extra-zone resource-dock"')
+    expect(bottomMarkup).toContain('EXTRA Deck 0 張')
     expect(bottomMarkup.indexOf('class="break-zone')).toBeLessThan(
-      bottomMarkup.indexOf('class="extra-zone"'),
+      bottomMarkup.indexOf('class="extra-zone resource-dock"'),
     )
-    expect(topMarkup.indexOf('class="extra-zone"')).toBeLessThan(
+    expect(topMarkup.indexOf('class="extra-zone resource-dock"')).toBeLessThan(
       topMarkup.indexOf('class="break-zone'),
     )
+  })
+
+  it('shows only the owner their private EXTRA card names', () => {
+    const game = createItemUsageDemoState(true)
+    const extra: ExtraDeckCard = {
+      id: 'BS8-005',
+      instanceId: 'bs8-005-ui',
+      name: 'Avatar of Ruin Cookie',
+      type: 'extra',
+      imageUrl: '/cards/bs8-005.webp',
+    }
+    game.players['player-one'].extraDeck = [extra]
+
+    const ownerMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+          openResourceKind: 'extra',
+        })}
+      />,
+    )
+    const opponentMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'top',
+          openResourceKind: 'extra',
+        })}
+      />,
+    )
+
+    expect(ownerMarkup).toContain('Avatar of Ruin Cookie')
+    expect(ownerMarkup).toContain('class="card-face extra-deck-card-image"')
+    expect(ownerMarkup).toContain('src="/cards/bs8-005.webp"')
+    expect(opponentMarkup).toContain('對手的 EXTRA Deck 內容為私密資訊。')
+    expect(opponentMarkup).not.toContain('Avatar of Ruin Cookie')
+    expect(opponentMarkup).not.toContain('extra-deck-card-image')
+  })
+
+  it('highlights only a currently playable EXTRA Deck card from the BS8-005 A/B fixture', () => {
+    const playableMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: createCardCheckDemoState('BS8-005'),
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+    const blockedMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: createCardNegativeDemoState('BS8-005'),
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(playableMarkup).toContain('resource-summary is-extra-deck-ready')
+    expect(playableMarkup).toContain('data-extra-deck-ready="true"')
+    expect(playableMarkup).toContain('EXTRA 可登場')
+    expect(blockedMarkup).not.toContain('is-extra-deck-ready')
+    expect(blockedMarkup).toContain('data-extra-deck-ready="false"')
+    expect(blockedMarkup).not.toContain('EXTRA 可登場')
   })
 
   it('marks a single battle cookie so its zone label can avoid the card', () => {
@@ -219,6 +291,78 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('energy-shortfall-hint')
     expect(markup).toContain('skill-action')
     expect(markup).toContain('combat-card-wrap is-single-slot is-left-slot')
+  })
+
+  it('shows both BS8-011 skill actions and hides them during attack payment', () => {
+    const game = createBs8011DoubleSkillDemoState()
+    const player = game.players['player-one']
+    const readyMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(readyMarkup.match(/class="skill-action"/g)).toHaveLength(2)
+    expect(readyMarkup).toContain(
+      'data-card-instance-id="player-one-BS8-011-double-a"',
+    )
+    expect(readyMarkup).toContain(
+      'data-card-instance-id="player-one-BS8-011-double-b"',
+    )
+
+    const paymentMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+          selectedAttackerId: player.battleArea[0].card.instanceId,
+          interactionLocked: false,
+        })}
+      />,
+    )
+    expect(paymentMarkup.match(/class="skill-action"/g)).toBeNull()
+  })
+
+  it('keeps the BS8-028 battle action disabled with the missing Break-entry reason', () => {
+    const game = createCardNegativeDemoState('BS8-028@1')
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+    expect(markup).toMatch(/class="skill-action"[^>]*disabled=""/)
+    expect(markup).toContain('本回合尚未有我方餅乾從休息區登場。')
+    expect(markup).toContain('aria-describedby="battle-skill-reason-')
+  })
+
+  it('enables BS8-028 initially and shows the once-per-turn reason after the real command resolves', () => {
+    const game = createCardCheckDemoState('BS8-028@1')
+    const source = game.players['player-one'].battleArea[0].card
+    const ready = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+    expect(ready).toContain('class="skill-action"')
+    expect(ready).not.toMatch(/class="skill-action"[^>]*disabled=""/)
+    const pending = applyGameCommand(game, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    const resolved = applyGameCommand(pending, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    const used = renderToStaticMarkup(<BattleRow {...createProps({ game: resolved })} />)
+    expect(used).toMatch(/class="skill-action"[^>]*disabled=""/)
+    expect(used).toContain('此張餅乾本回合已使用過技能（每回合一次）。')
+  })
+
+  it.each(['BS8-037', 'BS8-018', 'BS8-061'])('does not add a battle Activate button for %s OnPlay/faint/passive effects', (cardNumber) => {
+    const game = createCardCheckDemoState(cardNumber)
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+    expect(markup).not.toContain('class="skill-action"')
   })
 
   it('highlights an opponent attack preview and rests its selected support', () => {
@@ -524,6 +668,35 @@ describe('BattleRow desktop interactions', () => {
 
     expect(markup).not.toContain('hand-card-actions')
     expect(markup).not.toContain('>放置<')
+  })
+
+  it.each([false, true])('shows the real BS8-027 Break action and its rules-layer reason (blocked: %s)', (blocked) => {
+    const game = blocked
+      ? createCardNegativeDemoState('BS8-027', { preferSkillSurface: true })
+      : createCardCheckDemoState('BS8-027', { preferSkillSurface: true })
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, openResourceKind: 'break' })} />,
+    )
+    expect(markup).toContain('啟動技能')
+    if (blocked) {
+      expect(markup).toMatch(/class="skill-action"[^>]*disabled=""/)
+      expect(markup).toContain('skill-unavailable-reason')
+      expect(markup).toContain('棄牌區沒有可選擇的「Golden Cheese Cookie」，無法支付選擇目標的代價。')
+      expect(markup).toContain('aria-describedby="break-skill-reason-')
+    } else {
+      expect(markup).not.toMatch(/class="skill-action"[^>]*disabled=""/)
+      expect(markup).not.toContain('skill-unavailable-reason')
+    }
+  })
+
+  it('does not add a Break skill action for ordinary Cookies without a Break skill', () => {
+    const game = createCardCheckDemoState('BS8-026')
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, openResourceKind: 'break' })} />,
+    )
+    expect(markup).toContain('break-popover')
+    expect(markup).not.toContain('啟動技能')
+    expect(markup).not.toContain('skill-unavailable-reason')
   })
 
   it('shows BS6-107 Machine Room activation after a trash Cookie was played', () => {
@@ -1094,6 +1267,35 @@ describe('equipped item badge', () => {
     )
 
     expect(markup).not.toContain('badge-equip')
+  })
+})
+
+describe('awakened Cookie HP display', () => {
+  it('shows current HP and the awakening bonus after the real EXTRA command, not 6/2', () => {
+    const initial = createCardCheckDemoState('BS8-027')
+    const extra = initial.players['player-one'].extraDeck![0]
+    const game = applyGameCommand(initial, {
+      kind: 'play-extra-deck-cookie',
+      playerId: 'player-one',
+      instanceId: extra.instanceId,
+    })
+    const awakened = game.players['player-one'].battleArea[0]
+    expect(awakened.hpCards).toHaveLength(6)
+    expect(awakened.card.extraDeckOrigin).toBe('awakened')
+    expect(awakened.card.awakenHpBonus).toBe(2)
+
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+    expect(markup).toContain('目前 HP 6；覺醒HP +2')
+    expect(markup).toContain('<strong>6<br/><small>覺醒HP +2</small></strong>')
+    expect(markup).not.toContain('6/2')
+  })
+
+  it('keeps ordinary Cookies on the existing current/printed HP display', () => {
+    const game = createCardCheckDemoState('BS8-026')
+    const cookie = game.players['player-one'].battleArea[0]
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+    expect(markup).toContain(`${cookie.hpCards.length}/${cookie.card.hp}`)
+    expect(markup).not.toContain('覺醒HP')
   })
 })
 

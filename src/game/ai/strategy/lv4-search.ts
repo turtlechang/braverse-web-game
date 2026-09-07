@@ -4,6 +4,7 @@ import type { GameState, PlayerId } from '../../types'
 import type { ActionIdentity, ActionScoreBreakdown } from './action-score'
 import type { OpponentResponseEstimate } from './opponent-response'
 import type { DefensiveReserveAssessment } from './defensive-reserve'
+import type { EndgameSurvivalAssessment } from './endgame-survival'
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
@@ -72,6 +73,14 @@ export interface Lv4SearchHooks {
     playerId: PlayerId,
     command: PlayerActionCommand,
   ) => number
+  /**
+   * 已合法 attack command 的公開宣告傷害。由規則層提供，避免 action
+   * score 遺漏公開攻防修正，並保持搜尋器不直接依賴規則引擎實作。
+   */
+  getPublicAttackDamage?: (
+    state: GameState,
+    command: PlayerActionCommand,
+  ) => number | undefined
   /** Lv.5 可在根節點延續上一個公開策略意圖；Lv.4 不提供此 hook。 */
   persistentIntentBonus?: (
     plan: TacticalPlan,
@@ -98,7 +107,14 @@ export interface Lv4SearchHooks {
     beforeView: PlayerView,
     afterView: PlayerView,
     command: PlayerActionCommand,
+    beforeState: GameState,
   ) => DefensiveReserveAssessment
+  /** Lv.5 的 Break 6–9 公開終局生存評估；Lv.4 對照組不提供此 hook。 */
+  endgameSurvivalAssessment?: (
+    beforeView: PlayerView,
+    afterView: PlayerView,
+    actionKind: string,
+  ) => EndgameSurvivalAssessment
   /**
    * 只有 Lv.5 使用「收益卡真實可動作」與同一 plan ID 的嚴格生命週期；
    * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
@@ -125,6 +141,7 @@ export interface Lv4SearchStep {
   relativeScore: number
   opponentResponse?: OpponentResponseEstimate
   defensiveReserve?: DefensiveReserveAssessment
+  endgameSurvival?: EndgameSurvivalAssessment
 }
 
 interface SearchNode {
@@ -191,19 +208,30 @@ const canSafelyExpand = (
 
 export const selectLv4StrategicContribution = (
   breakdown: ReturnType<typeof scoreLv3ActionCandidate>['breakdown'],
-): number => breakdown.contributions
+): number => {
+  // `attack-tempo` 是「沒有其他公開理由時不要白白結束主要階段」的預設。
+  // Lv.5 若已明確因唯一 Trap／Blocker 或可支付防守而給 advance 正向保留值，
+  // 則該保留判斷比泛用節奏規則更具體；不能讓 -70 把它完全壓過。
+  const hasDefensiveReserveOverride = breakdown.contributions.some(
+    (contribution) =>
+      contribution.id === 'defensive-reserve' && contribution.amount > 0,
+  )
+  return breakdown.contributions
   .filter((contribution) =>
+    (contribution.id === 'attack-tempo' && !hasDefensiveReserveOverride) ||
     contribution.id === 'tactical-payoff' ||
     contribution.id === 'tactical-setup' ||
     contribution.id === 'deployment-tempo' ||
     contribution.id === 'opponent-response-minimax' ||
     contribution.id === 'defensive-reserve' ||
+    contribution.id === 'endgame-survival' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'intent-continuity' ||
     contribution.id === 'unsupported-effect' ||
     contribution.id === 'unknown-information',
   )
   .reduce((total, contribution) => total + contribution.amount, 0)
+}
 
 export const advanceLv4Plan = (
   previous: Lv4PlanProgress,
@@ -300,6 +328,10 @@ const updateTelemetryForStep = (
   if (step.defensiveReserve) {
     telemetry.defensiveReserveEvaluations += 1
     telemetry.defensiveReserveAdjustment += step.defensiveReserve.adjustment
+  }
+  if (step.endgameSurvival) {
+    telemetry.endgameSurvivalEvaluations += 1
+    telemetry.endgameSurvivalAdjustment += step.endgameSurvival.adjustment
   }
   telemetry.plan = {
     setupSteps: Math.max(telemetry.plan.setupSteps, plan.setupSteps),
@@ -435,8 +467,15 @@ export const searchLv4Commands = (
             node.view,
             afterView,
             command,
+            node.state,
           )
           const defensiveReserveAdjustment = defensiveReserve?.adjustment ?? 0
+          const endgameSurvival = hooks.endgameSurvivalAssessment?.(
+            node.view,
+            afterView,
+            identity.kind,
+          )
+          const endgameSurvivalAdjustment = endgameSurvival?.adjustment ?? 0
           const context = createLv3ContextForView(node.view, knowledgeState)
           const scored = scoreLv3ActionCandidate(context, node.view, {
             value: command,
@@ -446,6 +485,7 @@ export const searchLv4Commands = (
             legalAttackCountBefore: reservation.legalAttackCount,
             legalAttackCountAfter: afterCommands
               .filter((candidate) => candidate.kind === 'attack').length,
+            publicAttackDamage: hooks.getPublicAttackDamage?.(node.state, command),
             tacticalPlanOptions,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
@@ -490,6 +530,13 @@ export const searchLv4Commands = (
                   id: 'defensive-reserve' as const,
                   amount: defensiveReserveAdjustment,
                   detail: defensiveReserve?.detail ?? '保留活躍支援供公開防守／下一步使用。',
+                }]),
+            ...(endgameSurvivalAdjustment === 0
+              ? []
+              : [{
+                  id: 'endgame-survival' as const,
+                  amount: endgameSurvivalAdjustment,
+                  detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
                 }]),
             ...(intentContinuity === 0
               ? []
@@ -551,6 +598,7 @@ export const searchLv4Commands = (
             relativeScore,
             opponentResponse,
             defensiveReserve,
+            endgameSurvival,
           }
           const canExpand = afterIsSafeToExpand
           if (!canExpand) telemetry.hiddenInformationStops += 1

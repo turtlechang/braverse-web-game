@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assessBattleReplay,
   applyGameCommand,
   buildBattleReplayExport,
   parseBattleReplayExport,
@@ -30,12 +31,35 @@ describe('BattleReplayExportV1', () => {
       viewerId: 'player-one',
       decks: { playerOne: 'fixture-one', playerTwo: 'fixture-two' },
       initialState,
+      source: 'production',
+      ai: {
+        agents: {
+          'player-two': {
+            aiLevel: 5,
+            strategyVersion: 'lv5-defense-retention-endgame-v2',
+            strategyCommit: 'abc123',
+          },
+        },
+        decisions: [{
+          commandLogId: 1,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'AI attack',
+          reason: { level: 5, chosenCommandKind: 'attack' },
+        }],
+      },
       now: fixedNow,
     })
 
     expect(artifact.format).toBe('braverse-battle-replay')
     expect(artifact.version).toBe(1)
     expect(artifact.exportedAt).toBe('2026-08-26T12:34:56.000Z')
+    expect(artifact.source).toBe('production')
+    expect(artifact.sampleQuality).toBe('behavioral')
+    expect(artifact.training).toEqual({
+      eligible: false,
+      exclusionReasons: ['incomplete-match'],
+    })
     expect(artifact.commands).toEqual([command])
     expect(artifact.commandLog).toHaveLength(1)
     expect(artifact.initialState?.commandLog).toBeUndefined()
@@ -44,6 +68,11 @@ describe('BattleReplayExportV1', () => {
       available: true,
       exact: true,
       limitation: 'none',
+    })
+    expect(artifact.ai?.agents['player-two']).toEqual({
+      aiLevel: 5,
+      strategyVersion: 'lv5-defense-retention-endgame-v2',
+      strategyCommit: 'abc123',
     })
 
     const replayed = replayBattleExport(artifact)
@@ -78,9 +107,15 @@ describe('BattleReplayExportV1', () => {
       viewerId: 'player-one',
       decks: { playerOne: 'fixture-one', playerTwo: 'fixture-two' },
       initialState: state,
+      source: 'production',
       now: fixedNow,
     })
 
+    expect(artifact.sampleQuality).toBe('behavioral')
+    expect(artifact.training).toEqual({
+      eligible: false,
+      exclusionReasons: ['inexact-replay', 'incomplete-match'],
+    })
     expect(artifact.replay).toEqual({
       available: true,
       exact: false,
@@ -97,11 +132,38 @@ describe('BattleReplayExportV1', () => {
       decks: { playerOne: 'unknown', playerTwo: 'unknown' },
       seed: 20260826,
       initialState: state,
+      ai: {
+        agents: {
+          'player-two': {
+            aiLevel: 5,
+            strategyVersion: 'should-not-leak',
+            strategyCommit: 'private-commit',
+          },
+        },
+        decisions: [{
+          commandLogId: null,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'should not leak',
+        }],
+      },
       now: fixedNow,
     })
 
     expect(artifact.visibility).toBe('public')
+    expect(artifact.source).toBe('production')
+    expect(artifact.sampleQuality).toBe('snapshot')
+    expect(artifact.training).toEqual({
+      eligible: false,
+      exclusionReasons: [
+        'no-actions',
+        'online-public-view',
+        'inexact-replay',
+        'incomplete-match',
+      ],
+    })
     expect(artifact.initialState).toBeNull()
+    expect(artifact.ai).toBeUndefined()
     expect(artifact.replay).toEqual({
       available: false,
       exact: false,
@@ -190,6 +252,120 @@ describe('BattleReplayExportV1', () => {
         }),
       ),
     ).toThrow('無法辨識的 command')
+
+    const invalidAi = {
+      format: 'braverse-battle-replay',
+      version: 1,
+      mode: 'offline',
+      visibility: 'full',
+      viewerId: 'player-one',
+      commands: [],
+      commandLog: [],
+      initialState: null,
+      finalState: {},
+      outcome: {},
+      replay: {},
+      ai: {
+        agents: {},
+        decisions: [{
+          commandLogId: null,
+          playerId: 'player-two',
+          action: 'attack',
+          description: 'invalid hidden memory',
+          reason: { level: 5, strategyMemory: {} },
+        }],
+      },
+    }
+    expect(() => parseBattleReplayExport(JSON.stringify(invalidAi))).toThrow(
+      'ai metadata 格式無效',
+    )
+  })
+
+  it('recomputes quality metadata for legacy and tampered envelopes', () => {
+    const initialState = createBattleState()
+    const command = {
+      kind: 'declare-attack' as const,
+      playerId: 'player-two' as const,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    }
+    const artifact = buildBattleReplayExport({
+      state: applyGameCommand(initialState, command),
+      mode: 'offline',
+      viewerId: 'player-one',
+      decks: { playerOne: 'fixture-one', playerTwo: 'fixture-two' },
+      initialState,
+      source: 'production',
+      now: fixedNow,
+    })
+    const legacy = JSON.parse(serializeBattleReplayExport(artifact)) as Record<
+      string,
+      unknown
+    >
+    delete legacy.source
+    delete legacy.sampleQuality
+    delete legacy.training
+
+    const restoredLegacy = parseBattleReplayExport(JSON.stringify(legacy))
+    expect(restoredLegacy.source).toBe('unknown')
+    expect(restoredLegacy.sampleQuality).toBe('behavioral')
+    expect(restoredLegacy.training).toEqual({
+      eligible: false,
+      exclusionReasons: ['unknown-source', 'incomplete-match'],
+    })
+
+    const tampered = {
+      ...artifact,
+      sampleQuality: 'snapshot' as const,
+      training: { eligible: true, exclusionReasons: [] },
+    }
+    const restoredTampered = parseBattleReplayExport(JSON.stringify(tampered))
+    expect(restoredTampered.sampleQuality).toBe('behavioral')
+    expect(restoredTampered.training).toEqual(artifact.training)
+  })
+
+  it('marks a finished exact production action stream as training-ready', () => {
+    const command = {
+      kind: 'advance-phase' as const,
+      playerId: 'player-one' as const,
+    }
+    const commandLog: CommandLogEntry = {
+      id: 1,
+      turnNumber: 1,
+      phase: 'main',
+      playerId: 'player-one',
+      commandKind: 'advance-phase',
+      payload: command,
+    }
+
+    expect(
+      assessBattleReplay({
+        mode: 'offline',
+        visibility: 'full',
+        source: 'production',
+        commands: [command],
+        commandLog: [commandLog],
+        outcome: {
+          status: 'finished',
+          result: {
+            winnerId: 'player-one',
+            loserId: 'player-two',
+            reason: 'break-level-limit',
+          },
+          turnNumber: 4,
+          phase: 'end',
+        },
+        replay: {
+          available: true,
+          exact: true,
+          limitation: 'none',
+        },
+      }),
+    ).toEqual({
+      sampleQuality: 'behavioral',
+      training: { eligible: true, exclusionReasons: [] },
+    })
   })
 
   it('does not mutate snapshots when stripping command logs', () => {
@@ -204,10 +380,16 @@ describe('BattleReplayExportV1', () => {
       viewerId: 'player-one',
       decks: { playerOne: 'fixture-one', playerTwo: 'fixture-two' },
       initialState: state,
+      source: 'test-state',
       now: fixedNow,
     })
 
     expect(state.commandLog).toEqual([])
+    expect(artifact.sampleQuality).toBe('snapshot')
+    expect(artifact.training).toEqual({
+      eligible: false,
+      exclusionReasons: ['no-actions', 'test-state', 'incomplete-match'],
+    })
     expect(artifact.finalState.commandLog).toBeUndefined()
     expect(artifact.initialState?.commandLog).toBeUndefined()
   })

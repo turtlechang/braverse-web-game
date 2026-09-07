@@ -7,6 +7,7 @@ import {
   getAttackDamageAgainst,
   getEffectiveAttack,
   getEffectiveAttackBreakdown,
+  getEffectSelectionCandidates,
   getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
   selectEffectTargets,
@@ -39,6 +40,50 @@ const reachEndOfTurn = (state: GameState): GameState => {
 }
 
 describe('card effect engine', () => {
+  it('only readies color-matching selectable support cards', () => {
+    const initial = createDemoGame()
+    const greenSupport = {
+      ...createSupport('green-support'),
+      energyColor: 'green' as const,
+    }
+    const redSupport = createSupport('red-support')
+    const state: GameState = {
+      ...initial,
+      players: {
+        ...initial.players,
+        'player-one': {
+          ...initial.players['player-one'],
+          supportArea: [
+            { card: greenSupport, rested: true },
+            { card: redSupport, rested: true },
+          ],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      energyColor: 'green',
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, context, effect).map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['green-support'])
+    expect(() =>
+      executeCardEffect(state, context, effect, ['red-support']),
+    ).toThrow('Invalid support target.')
+
+    const result = executeCardEffect(state, context, effect, ['green-support'])
+    expect(result.players['player-one'].supportArea).toEqual([
+      { card: greenSupport, rested: false },
+      { card: redSupport, rested: true },
+    ])
+  })
+
   it('validates target side, count, and remaining HP filters', () => {
     const state = createDemoGame()
     const opponent = state.players['player-two'].battleArea[0]
@@ -114,6 +159,36 @@ describe('card effect engine', () => {
       firstTarget.hpCards.length - 1,
       secondTarget.hpCards.length - 1,
     ])
+  })
+
+  it('counts a Cookie fainted by direct effect damage during the current turn', () => {
+    const initial = createDemoGame()
+    const target = initial.players['player-two'].battleArea[0]
+    const state: GameState = {
+      ...initial,
+      cookiesFaintedThisTurn: { 'player-one': 0, 'player-two': 0 },
+      players: {
+        ...initial.players,
+        'player-two': {
+          ...initial.players['player-two'],
+          battleArea: [{ ...target, hpCards: target.hpCards.slice(0, 1) }],
+        },
+      },
+    }
+
+    const fainted = executeCardEffect(
+      state,
+      context,
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [target.card.instanceId],
+    )
+
+    expect(fainted.players['player-two'].battleArea).toHaveLength(0)
+    expect(fainted.cookiesFaintedThisTurn?.['player-two']).toBe(1)
   })
 
   it('applies positive and negative attack modifiers with a zero floor', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   activateCookieSkill,
+  applyGameCommand,
   advancePhase,
   canActivateCookieSkill,
   canPayEnergyCost,
@@ -13,6 +14,7 @@ import {
   type GameState,
   type PlayerId,
 } from '.'
+import { createBs8011DoubleSkillDemoState } from './demo'
 
 const effect = {
   kind: 'damage' as const,
@@ -66,6 +68,47 @@ const withSkill = (
 }
 
 describe('cookie skill activation', () => {
+  it('tracks BS8-011 Once Per Turn usage per physical battle entry', () => {
+    const state = createBs8011DoubleSkillDemoState()
+    const player = state.players['player-one']
+    const first = player.battleArea[0]
+    const second = player.battleArea[1]
+    if (!first || !second) throw new Error('BS8-011 fixture must provide two sources')
+    const paymentId = player.supportArea[0]?.card.instanceId
+    if (!paymentId) throw new Error('BS8-011 fixture must provide an energy payment')
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', first.card.instanceId, 'activate'),
+    ).toBe(true)
+    expect(
+      canActivateCookieSkill(state, 'player-one', second.card.instanceId, 'activate'),
+    ).toBe(true)
+
+    const afterFirst = applyGameCommand(state, {
+      kind: 'begin-activate-skill', playerId: 'player-one',
+      sourceInstanceId: first.card.instanceId, trigger: 'activate', paymentIds: [paymentId],
+      targetIds: [first.card.instanceId, state.players['player-two'].battleArea[0].card.instanceId],
+    })
+
+    expect(afterFirst.skillUsesThisTurn).toContain(first.battleEntryId)
+    expect(
+      canActivateCookieSkill(
+        afterFirst,
+        'player-one',
+        first.card.instanceId,
+        'activate',
+      ),
+    ).toBe(false)
+    expect(
+      canActivateCookieSkill(
+        afterFirst,
+        'player-one',
+        second.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+  })
+
   it('only accepts an HP payment source with enough matching HP cards', () => {
     const redOneHp: GameCard = {
       id: 'red-one-hp',
@@ -238,6 +281,79 @@ describe('cookie skill activation', () => {
         ['support-item'],
       ),
     ).toThrow('支援區回手費用必須選擇 cookie。')
+  })
+
+  it('enforces the support-to-hand energy color for skill costs', () => {
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        supportToHand: 1,
+        supportToHandColor: 'green',
+      },
+      text: 'Return 1 green card from your support area to your hand.',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }
+    let state: GameState = {
+      ...withSkill(createDemoGame(), 'player-one', skill),
+      phase: 'main',
+      activePlayerId: 'player-one',
+    }
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    const redSupport = createSupport('support-red', 'red')
+    const greenSupport = createSupport('support-green', 'green')
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [redSupport, greenSupport],
+        },
+      },
+    }
+
+    expect(canActivateCookieSkill(state, 'player-one', sourceId, 'activate')).toBe(true)
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        [],
+        ['support-red'],
+      ),
+    ).toThrow('支援區回手費用必須選擇 green 能量顏色的卡牌。')
+
+    const next = activateCookieSkill(
+      state,
+      'player-one',
+      sourceId,
+      'activate',
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      [],
+      ['support-green'],
+    )
+    expect(next.players['player-one'].hand.map((card) => card.instanceId)).toContain(
+      'support-green',
+    )
   })
 
   it('pays colored costs first and neutral costs with any energy', () => {

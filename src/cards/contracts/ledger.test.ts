@@ -125,6 +125,88 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.errors).toContain('target evidence unresolved')
   })
 
+  it('accepts an explicit target on next-Active-Phase prevention', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Freeze',
+        text: "Select up to 1 of your opponent's LV.1 Cookies. That Cookie is not set as active during your opponent's next Active Phase.",
+      },
+    })
+    const runtime = makeCard({
+      effects: [{
+        kind: 'prevent-cookie-active-next-phase',
+        target: { side: 'opponent', min: 0, max: 1, minLevel: 1, maxLevel: 1 },
+      }],
+    })
+
+    expect(analyzeOfficialCardBehavior(source, runtime).checks.targetCovered).toBe(true)
+  })
+
+  it('binds an LV-qualified trash-to-break cost before a fixed bounded-sum return', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Inspect',
+        text: '【On Play】 <{Y}> <Place 1 LV.3 Cookie from your trash into your break area.> Select 2 Cookies in your break area with a total LV. sum of 3 or lower. Return those Cookies to your hand.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { yellow: 1 } },
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'trash-to-break', amount: 1, exactLevel: 3 },
+          {
+            kind: 'break-to-hand-by-level-sum',
+            targetSum: 3,
+            targetSumMode: 'at-most',
+            cardCount: 2,
+          },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.checks.targetCovered).toBe(true)
+  })
+
+  it('requires one declared pair for a bracketed selection cost and rejects unpartitioned targets', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Spice',
+        text: '【Activate】 【Once Per Turn】 <{R}> <Select 1 Cookie from each player.> Those Cookies receive 1 damage.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: true,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 } },
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'damage', amount: 1, selectionAsCost: true,
+            target: { side: 'either', min: 2, max: 2, countPerPlayer: 1 } },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.checks.targetCovered).toBe(true)
+    const effect = runtime.skill!.effects[0]
+    if (effect.kind !== 'damage') throw new Error('Expected paired damage')
+    effect.target.countPerPlayer = undefined
+    expect(analyzeOfficialCardBehavior(source, runtime).checks.targetCovered).toBe(false)
+  })
+
   it('requires an ordered runtime Then continuation', () => {
     const source = makeRecord({
       skill: {
@@ -209,6 +291,39 @@ describe('card behavior contract shadow ledger', () => {
     })
     const audit = analyzeOfficialCardBehavior(source, runtime)
     expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
+  it('treats an unqualified battle area selection as either player\'s battle area', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Battle target',
+        text: 'Select up to 1 Cookie in the battle area. That Cookie receives 1 damage.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'either', min: 0, max: 1 },
+          },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.targets[0]).toMatchObject({
+      selector: { side: 'either', min: 0, max: 1 },
+      zone: 'battle',
+    })
     expect(audit.errors).not.toContain('target evidence unresolved')
   })
 
@@ -334,6 +449,115 @@ describe('card behavior contract shadow ledger', () => {
     const audit = analyzeOfficialCardBehavior(source, runtime)
     expect(audit.contract.costs).toContainEqual(expect.objectContaining({ kind: 'self-to-trash' }))
     expect(audit.checks.costCovered).toBe(true)
+    expect(audit.contract.status).toBe('verified')
+  })
+
+  it('classifies a self-to-deck-bottom cost when the official text omits "your"', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Deck-bottom cost',
+        text: '【Activate】 <Place this Cookie on the bottom of the deck.> Draw up to 1 card from your deck.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0, selfToDeckBottom: true },
+        text: source.skill.text ?? '',
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.costs).toContainEqual(
+      expect.objectContaining({ kind: 'self-to-deck-bottom' }),
+    )
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.contract.status).toBe('verified')
+  })
+
+  it('binds a source-and-hand break cost and a named break-area play in order', () => {
+    const source = makeRecord({
+      cardNumber: 'BS8-032',
+      baseCardNumber: 'BS8-032',
+      skill: {
+        name: 'Constant Vigilance',
+        text: '【Activate】 【Once Per Turn】 If there is a Cookie in your break area, <place this Cookie and a Cookie that is LV.2 or above from your hand into your break area.> Draw up to 2 cards from your deck. Then, play up to 1 [Golden Cheese Cookie] from your break area.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: true,
+        yourTurn: false,
+        restSource: false,
+        cost: { selfToBreakArea: true, handToBreakArea: { count: 1, minLevel: 2 } },
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'draw-up-to', max: 2, condition: { kind: 'break-area-has-card', side: 'self' } },
+          { kind: 'break-to-battle', amount: 1, cardName: 'Golden Cheese Cookie' },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.costs.map((cost) => cost.kind)).toEqual([
+      'self-to-break',
+      'hand-to-break',
+    ])
+    expect(audit.contract.targets).toContainEqual(expect.objectContaining({
+      selector: { side: 'self', min: 0, max: 1, cardName: 'Golden Cheese Cookie' },
+      zone: 'break',
+    }))
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.contract.status).toBe('verified')
+  })
+
+  it('binds a break-area target to the level of the preceding trash-to-break card', () => {
+    const source = makeRecord({
+      cardNumber: 'BS8-035',
+      baseCardNumber: 'BS8-035',
+      skill: {
+        name: 'Fantastic Magic Show',
+        text: '【On Play】 <Place 1 Cookie from your trash into the break area.> Place up to 1 Cookie with the same LV. as that Cookie from your break area into your trash.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'trash-to-break', amount: 1 },
+          {
+            kind: 'break-to-trash',
+            max: 1,
+            sameLevelAsPreviousEffectTarget: true,
+          },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.targets).toContainEqual(expect.objectContaining({
+      selector: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        sameLevelAsPreviousEffectTarget: true,
+      },
+      zone: 'break',
+    }))
+    expect(audit.checks.targetCovered).toBe(true)
     expect(audit.contract.status).toBe('verified')
   })
 

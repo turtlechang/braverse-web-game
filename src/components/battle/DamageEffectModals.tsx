@@ -1,4 +1,5 @@
 import { FaintEffectResponseModal } from '../modals/GameModals'
+import { getFaintSourceCostUnavailableReason } from '../../game'
 import type {
   BattleUiMatchLike,
   BattleUiPendingEffectLike,
@@ -21,11 +22,13 @@ const toggleFaintTargetId = (
 }
 
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {
+  const faintSourceCostError = getFaintSourceCostUnavailableReason(match.game)
   return (
     <>
       {pending.faintActive && match.faintSourceCard && (
         <FaintEffectResponseModal
           card={match.faintSourceCard}
+          unavailableReason={faintSourceCostError}
           minTargets={match.faintMin}
           maxTargets={match.faintMax}
           selectedTargetCount={match.selectedFaintTargetIds.length}
@@ -72,6 +75,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           }
           onSelectCostSupportToHand={match.toggleFaintCostSupportToHand}
           allowSkip={
+            Boolean(faintSourceCostError) ||
             match.faintOptional ||
             match.faintEnergyCostTotal > 0 ||
             match.faintCostHandAmount > 0 ||
@@ -93,9 +97,9 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                 playerId: match.viewerPlayerId,
                 targetIds: [],
               },
-              match.faintOptional
+              faintSourceCostError ?? (match.faintOptional
                 ? `${match.faintSourceCard!.name}未發動昏厥效果。`
-                : `${match.faintSourceCard!.name}未支付昏厥效果費用，略過效果。`,
+                : `${match.faintSourceCard!.name}未支付昏厥效果費用，略過效果。`),
             )
           }}
           onConfirm={() => {
