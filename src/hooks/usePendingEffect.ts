@@ -880,6 +880,7 @@ export function usePendingEffect(params: {
         effects: pendingAbility.effects,
         effectIndex: pendingAbility.effectIndex,
         selectedTargetIds: [],
+        selectedTargetAmounts: [],
         selectedPaymentIds: [],
         selectedCostSupportToTrashIds: [],
         selectedDiscardHandIds: [],
@@ -946,6 +947,7 @@ export function usePendingEffect(params: {
                 effects: authoritative.effects,
                 effectIndex: authoritative.effectIndex,
                 selectedTargetIds: [],
+                selectedTargetAmounts: [],
                 selectedDiscardHandIds: [],
                 selectedHpToTrashTargetIds: [],
                 selectedTrashBattleCookieIds: [],
@@ -1013,6 +1015,7 @@ export function usePendingEffect(params: {
             effects: authoritative.effects,
             effectIndex: authoritative.effectIndex,
             selectedTargetIds: [],
+            selectedTargetAmounts: [],
             selectedDiscardHandIds: [],
             selectedHpToTrashTargetIds: [],
             selectedTrashBattleCookieIds: [],
@@ -1203,6 +1206,7 @@ export function usePendingEffect(params: {
       effects: availableEffects,
       effectIndex: 0,
       selectedTargetIds: [],
+      selectedTargetAmounts: [],
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
       selectedDiscardHandIds: [],
@@ -1280,6 +1284,7 @@ export function usePendingEffect(params: {
       effects,
       effectIndex: 0,
       selectedTargetIds: [],
+      selectedTargetAmounts: [],
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
       selectedDiscardHandIds: [],
@@ -1423,6 +1428,7 @@ export function usePendingEffect(params: {
         effects: battle.attackEffects,
         effectIndex: battle.attackEffectIndex,
         selectedTargetIds: [],
+        selectedTargetAmounts: [],
         selectedPaymentIds: [],
         selectedCostSupportToTrashIds: [],
         selectedDiscardHandIds: [],
@@ -1625,7 +1631,52 @@ export function usePendingEffect(params: {
         ? [...pendingEffect.selectedTargetIds, instanceId]
         : pendingEffect.selectedTargetIds
 
-    setPendingEffect({ ...pendingEffect, selectedTargetIds })
+    const isSelectableHpAmount =
+      currentEffect.kind === 'hp-to-trash' && currentEffect.selectableAmount
+    const selectedTargetAmounts = isSelectableHpAmount
+      ? isSelected
+        ? (pendingEffect.selectedTargetAmounts ?? []).filter(
+            (_, index) => pendingEffect.selectedTargetIds[index] !== instanceId,
+          )
+        : pendingEffect.selectedTargetIds.length < max
+          ? [
+              ...(pendingEffect.selectedTargetAmounts ?? []),
+              isSelectableHpAmount.max,
+            ]
+          : pendingEffect.selectedTargetAmounts ?? []
+      : []
+
+    setPendingEffect({
+      ...pendingEffect,
+      selectedTargetIds,
+      selectedTargetAmounts,
+    })
+  }
+
+  const setEffectTargetAmount = (instanceId: string, amount: number) => {
+    if (
+      breakAreaCostSelectionPending ||
+      !pendingEffect ||
+      !currentEffect ||
+      currentEffect.kind !== 'hp-to-trash' ||
+      !currentEffect.selectableAmount ||
+      !pendingEffect.selectedTargetIds.includes(instanceId) ||
+      !Number.isInteger(amount) ||
+      amount < currentEffect.selectableAmount.min ||
+      amount > currentEffect.selectableAmount.max
+    ) {
+      return
+    }
+
+    const targetIndex = pendingEffect.selectedTargetIds.indexOf(instanceId)
+    const selectedTargetAmounts = [
+      ...(pendingEffect.selectedTargetAmounts ?? []),
+    ]
+    while (selectedTargetAmounts.length < pendingEffect.selectedTargetIds.length) {
+      selectedTargetAmounts.push(currentEffect.selectableAmount.max)
+    }
+    selectedTargetAmounts[targetIndex] = amount
+    setPendingEffect({ ...pendingEffect, selectedTargetAmounts })
   }
 
   const toggleSkillPayment = (instanceId: string) => {
@@ -1913,6 +1964,7 @@ export function usePendingEffect(params: {
           ...pendingEffect,
           effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           skillActivated: true,
           selectedDiscardHandIds: [],
           selectedHpToTrashTargetIds: [],
@@ -1928,6 +1980,7 @@ export function usePendingEffect(params: {
               ...pendingEffect,
               effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
+              selectedTargetAmounts: [],
               selectedDiscardHandIds: [],
               selectedHpToTrashTargetIds: [],
               selectedTrashBattleCookieIds: [],
@@ -2167,6 +2220,7 @@ export function usePendingEffect(params: {
         setSuspendedEffect({
           ...pendingEffect,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           selectedPaymentIds: [],
           selectedCostSupportToTrashIds: [],
           selectedDiscardHandIds: [],
@@ -2191,6 +2245,7 @@ export function usePendingEffect(params: {
           effects: activatedGame.pendingAbilityEffect.effects,
           effectIndex: activatedGame.pendingAbilityEffect.effectIndex,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           selectedPaymentIds: [],
           selectedCostSupportToTrashIds: [],
           selectedDiscardHandIds: [],
@@ -2257,6 +2312,7 @@ export function usePendingEffect(params: {
         setPendingEffect({
           ...pendingEffect,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           selectedHpToTrashTargetIds: [],
           skillActivated: true,
           ...(revealedHpCard ? { revealedHpCard } : {}),
@@ -2266,10 +2322,19 @@ export function usePendingEffect(params: {
 
       const revealedWithPayment = !pendingEffect.skillActivated &&
         pendingEffect.sourceKind === 'item' && currentEffect.kind === 'reveal-hand' && currentEffect.asCost
+      const amountByTargetIndex =
+        currentEffect.kind === 'hp-to-trash' && currentEffect.selectableAmount
+          ? pendingEffect.selectedTargetIds.map(
+              (_, index) =>
+                pendingEffect.selectedTargetAmounts?.[index] ??
+                currentEffect.selectableAmount!.max,
+            )
+          : undefined
       const nextGame = revealedWithPayment ? activatedGame : applyGameCommand(activatedGame, {
         kind: 'resolve-ability-effect',
         playerId: pendingEffect.context.sourcePlayerId,
         targetIds: pendingEffect.selectedTargetIds,
+        ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
       })
       const conditionMetAfterCost = isEffectConditionMet(
         activatedGame,
@@ -2314,6 +2379,7 @@ export function usePendingEffect(params: {
         setPendingEffect({
           ...pendingEffect,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           selectedDiscardHandIds: [],
           selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
@@ -2401,6 +2467,7 @@ export function usePendingEffect(params: {
           effects: nextEffectQueue,
           effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
+          selectedTargetAmounts: [],
           selectedDiscardHandIds: [],
           selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
@@ -2439,6 +2506,7 @@ export function usePendingEffect(params: {
               effects: nextEffectQueue,
               effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
+              selectedTargetAmounts: [],
               selectedDiscardHandIds: [],
               selectedHpToTrashTargetIds: [],
               selectedTrashBattleCookieIds: [],
@@ -2510,6 +2578,7 @@ export function usePendingEffect(params: {
             effects: expanded,
             chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
             selectedTargetIds: [],
+            selectedTargetAmounts: [],
           },
     )
   }
@@ -2528,6 +2597,7 @@ export function usePendingEffect(params: {
     handleOnPlayTrigger,
     beginCardAbility,
     toggleEffectTarget,
+    setEffectTargetAmount,
     toggleSkillPayment,
     toggleSkillCostSupport,
     toggleSkillDiscardHand,

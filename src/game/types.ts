@@ -1573,6 +1573,15 @@ export interface HpToTrashEffect {
   amount: number
   /** Different amounts for the ordered targets, resolved as one effect. */
   amountByTargetIndex?: number[]
+  /**
+   * The player chooses the amount independently for each selected target.
+   * This is a UI hint; the authoritative per-target values travel with the
+   * resolve command as `amountByTargetIndex`.
+   */
+  selectableAmount?: {
+    min: number
+    max: number
+  }
   target: EffectTargetSelector
   condition?: EffectCondition
 }

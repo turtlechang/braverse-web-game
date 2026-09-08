@@ -364,6 +364,90 @@
   color: #ffe66e;
 }
 
+.effect-panel .effect-hp-amount-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  margin: 6px 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.effect-panel .effect-hp-amount-candidate {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.effect-panel .effect-hp-amount-candidate.is-selected {
+  border-color: #ffe66e;
+  background: rgba(255, 230, 110, 0.1);
+}
+
+.effect-panel .effect-hp-amount-card {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.effect-panel .effect-hp-amount-card .card-face {
+  width: 48px;
+  grid-row: span 2;
+}
+
+.effect-panel .effect-hp-amount-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+.effect-panel .effect-hp-amount-card small {
+  color: #ffe66e;
+  font-size: 0.68rem;
+}
+
+.effect-panel .effect-hp-amount-options {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.effect-panel .effect-hp-amount-options button {
+  flex: 1;
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  background: rgba(4, 34, 75, 0.72);
+  color: #d8e9fb;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.effect-panel .effect-hp-amount-options button:hover,
+.effect-panel .effect-hp-amount-options button.is-selected {
+  border-color: #ffe66e;
+  background: rgba(255, 230, 110, 0.16);
+  color: #ffe66e;
+}
+
 .effect-panel .effect-candidates-effect-target button {
   min-height: 42px;
   border-color: rgba(255, 255, 255, 0.2);

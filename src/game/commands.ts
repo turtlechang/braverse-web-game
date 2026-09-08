@@ -559,6 +559,8 @@ export interface ResolveAbilityEffectCommand {
   kind: 'resolve-ability-effect'
   playerId: PlayerId
   targetIds: string[]
+  /** 逐一對應 hp-to-trash 目標的 HP 移除數量。 */
+  amountByTargetIndex?: number[]
 }
 
 /**
@@ -1685,7 +1687,7 @@ const executeAbilityEffects = (
       !hasBlockingAbilityDecision(nextState) && !nextState.pendingDrawUpTo &&
       !nextState.pendingOpponentHandDiscard && !nextState.pendingRevealTopDeck) {
       const index = nextState.pendingAbilityEffect.effectIndex
-      nextState = resolvePendingAbilityEffect(nextState, context.sourcePlayerId, effectTargets?.[index] ?? [], { shuffle })
+      nextState = resolvePendingAbilityEffect(nextState, context.sourcePlayerId, effectTargets?.[index] ?? [], undefined, { shuffle })
       if (nextState.pendingAbilityEffect?.effectIndex === index) break
     }
     return nextState
@@ -1821,6 +1823,7 @@ const resolvePendingAbilityEffect = (
   state: GameState,
   playerId: PlayerId,
   targetIds: string[],
+  amountByTargetIndex: number[] | undefined,
   options: ApplyGameCommandOptions,
 ): GameState => {
   const pending = state.pendingAbilityEffect
@@ -1850,6 +1853,9 @@ const resolvePendingAbilityEffect = (
   const continueBattle = (candidate: GameState): GameState =>
     continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
+  if (amountByTargetIndex !== undefined && effect?.kind !== 'hp-to-trash') {
+    throw new GameRuleError('目前效果不接受逐目標 HP 數量。')
+  }
   // 技能 Then 的可選效果沿用 optional-cost-attack 的付款／決策通道，
   // 但它不是攻擊後效果，不能交給 battle resolver。若前一步因 Refresh
   // 暫停，這裡會在牌庫續補完成後再次被呼叫並建立決策。
@@ -2061,10 +2067,14 @@ const resolvePendingAbilityEffect = (
     }
   }
 
+  const resolvedEffect =
+    effect.kind === 'hp-to-trash' && amountByTargetIndex !== undefined
+      ? { ...effect, amountByTargetIndex }
+      : effect
   const resolved = executeCardEffect(
     state,
     context,
-    effect,
+    resolvedEffect,
     resolvedTargetIds,
     options.shuffle,
   )
@@ -2353,6 +2363,7 @@ const applyPlayerActionCommand = (
             pendingState,
             command.playerId,
             command.targetIds,
+            undefined,
             options,
           )
     }
@@ -2443,6 +2454,7 @@ const applyPlayerActionCommand = (
             pendingState,
             command.playerId,
             command.targetIds,
+            undefined,
             options,
           )
     }
@@ -2526,6 +2538,7 @@ const applyPlayerActionCommand = (
             pendingState,
             command.playerId,
             command.targetIds,
+            undefined,
             options,
           )
     }
@@ -2534,6 +2547,7 @@ const applyPlayerActionCommand = (
         state,
         command.playerId,
         command.targetIds,
+        command.amountByTargetIndex,
         options,
       )
     }

@@ -3115,11 +3115,16 @@ export const executeCardEffect = (
       selectedTargetIds,
     )
     const amounts = effect.amountByTargetIndex
+    const selectableMin = effect.selectableAmount?.min ?? 0
     if (
       !Number.isInteger(effect.amount) || effect.amount < 0 ||
       (amounts && (
         amounts.length !== targets.length ||
-        amounts.some((amount) => !Number.isInteger(amount) || amount < 0 || amount > effect.amount)
+        amounts.some((amount) =>
+          !Number.isInteger(amount) ||
+          amount < selectableMin ||
+          amount > effect.amount,
+        )
       ))
     ) {
       throw new GameRuleError('HP 移除數量必須符合每個已選目標的順序與上限。')

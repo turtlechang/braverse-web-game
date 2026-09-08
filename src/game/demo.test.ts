@@ -1331,6 +1331,17 @@ describe('createCardCheckDemoState', () => {
     },
   )
 
+  it('prepares BS8-076 with a rested opponent target and exactly two discard witnesses', () => {
+    const state = createCardCheckDemoState('BS8-076')
+    const target = state.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'opp-lv1',
+    )
+
+    expect(state.players['player-one'].battleArea.some((entry) => entry.card.id === 'BS8-076')).toBe(true)
+    expect(target?.rested).toBe(true)
+    expect(state.players['player-two'].hand).toHaveLength(2)
+  })
+
   it('keeps every opposing Cookie rested in generic trap fixtures', () => {
     const state = createCardCheckDemoState('BS6-085')
 

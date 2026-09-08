@@ -261,7 +261,8 @@ export function useOnlinePendingEffect(params: {
   const draftRequiresPaymentBeforeTargets = Boolean(
     abilityCostDraft?.ability.cost.trashCookieToBreakArea ||
     abilityCostDraft?.ability.cost.handToBreakArea ||
-    abilityCostDraft?.ability.cost.trashBattleCookie?.faint,
+    abilityCostDraft?.ability.cost.trashBattleCookie?.faint ||
+    (draftEffect?.kind === 'hp-to-trash' && draftEffect.selectableAmount),
   )
   const draftContext: EffectContext | null = abilityCostDraft
     ? {
@@ -287,9 +288,12 @@ export function useOnlinePendingEffect(params: {
   const [selectedTargetState, setSelectedTargetState] = useState<{
     key: string
     ids: string[]
-  }>({ key: effectKey, ids: [] })
+    amounts: number[]
+  }>({ key: effectKey, ids: [], amounts: [] })
   const selectedTargetIds =
     selectedTargetState.key === effectKey ? selectedTargetState.ids : []
+  const selectedTargetAmounts =
+    selectedTargetState.key === effectKey ? selectedTargetState.amounts : []
   const displayedEffectConditionMet =
     displayedEffect && displayedContext
       ? isEffectConditionMet(game, displayedContext, displayedEffect)
@@ -723,6 +727,7 @@ export function useOnlinePendingEffect(params: {
           return {
             key: effectKey,
             ids: current.filter((id) => id !== instanceId),
+            amounts: [],
           }
         }
 
@@ -736,14 +741,44 @@ export function useOnlinePendingEffect(params: {
           ? displayedEffect.supportAmount
           : displayedEffect.target.max
         if (selectedInGroup.length >= max) {
-          return { key: effectKey, ids: current }
+          return { key: effectKey, ids: current, amounts: [] }
         }
-        return { key: effectKey, ids: [...current, instanceId] }
+        return { key: effectKey, ids: [...current, instanceId], amounts: [] }
       })
       return
     }
 
     if (!candidateCards.some((card) => card.instanceId === instanceId)) return
+    const hpAmountSelection =
+      selectionEffect?.kind === 'hp-to-trash'
+        ? selectionEffect.selectableAmount
+        : undefined
+    if (hpAmountSelection) {
+      setSelectedTargetState((currentState) => {
+        const current =
+          currentState.key === effectKey ? currentState.ids : []
+        const amounts =
+          currentState.key === effectKey ? currentState.amounts : []
+        const selectedIndex = current.indexOf(instanceId)
+        if (selectedIndex >= 0) {
+          return {
+            key: effectKey,
+            ids: current.filter((id) => id !== instanceId),
+            amounts: amounts.filter((_, index) => index !== selectedIndex),
+          }
+        }
+        const max = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 1
+        if (current.length >= max) {
+          return { key: effectKey, ids: current, amounts }
+        }
+        return {
+          key: effectKey,
+          ids: [...current, instanceId],
+          amounts: [...amounts, hpAmountSelection.max],
+        }
+      })
+      return
+    }
     const max = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 1
     setSelectedTargetState((currentState) => {
       const current =
@@ -752,11 +787,39 @@ export function useOnlinePendingEffect(params: {
         return {
           key: effectKey,
           ids: current.filter((id) => id !== instanceId),
+          amounts: [],
         }
       }
-      if (max <= 1) return { key: effectKey, ids: [instanceId] }
-      if (current.length >= max) return { key: effectKey, ids: current }
-      return { key: effectKey, ids: [...current, instanceId] }
+      if (max <= 1) return { key: effectKey, ids: [instanceId], amounts: [] }
+      if (current.length >= max) return { key: effectKey, ids: current, amounts: [] }
+      return { key: effectKey, ids: [...current, instanceId], amounts: [] }
+    })
+  }
+
+  const setTargetAmount = (instanceId: string, amount: number) => {
+    const hpAmountSelection =
+      selectionEffect?.kind === 'hp-to-trash'
+        ? selectionEffect.selectableAmount
+        : undefined
+    if (
+      !hpAmountSelection ||
+      !selectedTargetIds.includes(instanceId) ||
+      !Number.isInteger(amount) ||
+      amount < hpAmountSelection.min ||
+      amount > hpAmountSelection.max
+    ) {
+      return
+    }
+    setSelectedTargetState((currentState) => {
+      if (currentState.key !== effectKey) return currentState
+      const targetIndex = currentState.ids.indexOf(instanceId)
+      if (targetIndex < 0) return currentState
+      const amounts = [...currentState.amounts]
+      while (amounts.length < currentState.ids.length) {
+        amounts.push(hpAmountSelection.max)
+      }
+      amounts[targetIndex] = amount
+      return { ...currentState, amounts }
     })
   }
 
@@ -894,11 +957,19 @@ export function useOnlinePendingEffect(params: {
         '已決定攻擊後續效果的目標。',
       )
     } else if (abilityActiveForViewer) {
+      const amountByTargetIndex =
+        selectionEffect?.kind === 'hp-to-trash' && selectionEffect.selectableAmount
+          ? selectedTargetIds.map(
+              (_, index) =>
+                selectedTargetAmounts[index] ?? selectionEffect.selectableAmount!.max,
+            )
+          : undefined
       dispatch(
         {
           kind: 'resolve-ability-effect',
           playerId: viewerPlayerId,
           targetIds: selectedTargetIds,
+          ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
         },
         '已決定效果目標。',
       )
@@ -1203,6 +1274,7 @@ export function useOnlinePendingEffect(params: {
           ),
           effectIndex: 0,
           selectedTargetIds,
+          selectedTargetAmounts,
           selectedPaymentIds: abilityCostDraft.selectedPaymentIds,
           selectedCostSupportToTrashIds:
             abilityCostDraft.selectedCostSupportToTrashIds,
@@ -1271,6 +1343,7 @@ export function useOnlinePendingEffect(params: {
             ? (attackBattle?.attackEffectIndex ?? 0)
             : (pendingAbility?.effectIndex ?? 0),
           selectedTargetIds,
+          selectedTargetAmounts,
           selectedPaymentIds: [],
           selectedCostSupportToTrashIds: [],
           selectedDiscardHandIds: [],
@@ -1331,7 +1404,9 @@ export function useOnlinePendingEffect(params: {
     restSupportAndDamageSupportCandidates,
     restSupportAndDamageTargetCandidates,
     selectedTargetIds,
+    selectedTargetAmounts,
     toggleTarget,
+    setTargetAmount,
     chooseEffectMode,
     confirmEffect,
     beginCookieSkill,

@@ -4709,12 +4709,20 @@ export const createCardCheckDemoState = (
       (_, index) => testSupportCard(`${cookieCard.id}-source-hp-${index + 1}`),
     )
     const attackOpponentBattleArea = opponentBattleArea.map((entry, index) =>
-      cookieCard.id === 'BS4-016' && index === 0
+      cookieCard.id === 'BS8-076' && index === 0
         ? {
             ...entry,
-            hpCards: [testSupportCard(`${cookieCard.id}-target-hp-1`)],
+            // BS8-076 selects an already-rested opponent Cookie.  Keeping
+            // this witness rested is required to prove that the next Active
+            // Phase is actually gated by the printed discard-2 choice.
+            rested: true,
           }
-        : entry,
+        : cookieCard.id === 'BS4-016' && index === 0
+          ? {
+              ...entry,
+              hpCards: [testSupportCard(`${cookieCard.id}-target-hp-1`)],
+            }
+          : entry,
     )
     const attackOwnBreakArea =
       cookieCard.id === 'BS4-023' || cookieCard.id === 'BS4-029'
@@ -4875,7 +4883,11 @@ export const createCardCheckDemoState = (
           ? [...trashFillers, ...attackArenaTrash]
           : trashFillers
     const attackOpponentHand =
-      cookieCard.id === 'BS7-089'
+      cookieCard.id === 'BS8-076'
+        ? Array.from({ length: 2 }, (_, index) =>
+            testSupportCard(`${cookieCard.id}-opponent-hand-${index + 1}`, 'blue'),
+          )
+      : cookieCard.id === 'BS7-089'
         ? Array.from({ length: 6 }, (_, index) =>
             testSupportCard(`${cookieCard.id}-opponent-hand-${index + 1}`, 'purple'),
           )

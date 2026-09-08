@@ -766,6 +766,7 @@ function App() {
           ...pending.trashToDeckCandidates,
         ]}
         onToggleCandidate={pending.toggleEffectTarget}
+        onSetTargetAmount={pending.setEffectTargetAmount}
         restSupportCandidates={
           pending.restSupportAndDamageSupportCandidates
         }

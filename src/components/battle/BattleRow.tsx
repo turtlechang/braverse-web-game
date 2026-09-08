@@ -174,11 +174,12 @@ export function BattleRow({
   // 攻擊能量選擇沿用原本的緊湊堆疊排版，不套用付款展開；其餘
   // 技能／代價／陷阱付款維持展開以保留完整點擊區（U2）。
   const isAttackPaymentActive = attackPaymentTargetIds.size > 0
+  const isSkillPaymentActive = skillPaymentTargetIds.size > 0
   const supportZone = (
     <div className={`support-zone${selectedHandCardCanSupport ? ' is-legal-target' : ''}`}>
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
-      <div className={`support-cards${isAttackPaymentActive ? ' is-attack-payment' : ''}`}>
+      <div className={`support-cards${isAttackPaymentActive ? ' is-attack-payment' : ''}${isSkillPaymentActive ? ' is-skill-payment' : ''}`}>
         {player.supportArea.map((support, supportIndex) => {
           const supportId = support.card.instanceId
           const canSelectSkillCost =

@@ -83,6 +83,8 @@ export interface EffectPanelProps {
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
   onChooseMode?: (modeIndex: number) => void
+  /** 設定 hp-to-trash 目前選定目標的個別 HP 移除數量。 */
+  onSetTargetAmount?: (instanceId: string, amount: number) => void
 }
 
 function CandidateButtons({
@@ -119,6 +121,82 @@ function CandidateButtons({
             {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
           </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function HpAmountCandidateButtons({
+  cards,
+  selectedIds,
+  selectedOrderIds,
+  selectedAmounts,
+  amountMin,
+  amountMax,
+  onToggle,
+  onSetAmount,
+}: {
+  cards: GameCard[]
+  selectedIds: Set<string>
+  selectedOrderIds?: string[]
+  selectedAmounts: number[]
+  amountMin: number
+  amountMax: number
+  onToggle?: (instanceId: string) => void
+  onSetAmount?: (instanceId: string, amount: number) => void
+}) {
+  if (cards.length === 0) return null
+
+  return (
+    <div className="effect-hp-amount-candidates">
+      {cards.map((card) => {
+        const selected = selectedIds.has(card.instanceId)
+        const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
+        const selectedAmount =
+          selectionOrder >= 0
+            ? (selectedAmounts[selectionOrder] ?? amountMax)
+            : null
+        return (
+          <div
+            className={`effect-hp-amount-candidate${selected ? ' is-selected' : ''}`}
+            key={card.instanceId}
+          >
+            <button
+              type="button"
+              className="effect-hp-amount-card"
+              onClick={() => onToggle?.(card.instanceId)}
+              aria-pressed={selected}
+            >
+              <CardFace card={card} selected={selected} />
+              <span>{card.name}</span>
+              {selectionOrder >= 0 && (
+                <small>第 {selectionOrder + 1} 隻</small>
+              )}
+            </button>
+            {selected && (
+              <div
+                className="effect-hp-amount-options"
+                role="group"
+                aria-label={`${card.name}移除 HP 張數`}
+              >
+                {Array.from(
+                  { length: amountMax - amountMin + 1 },
+                  (_, index) => amountMin + index,
+                ).map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    className={selectedAmount === amount ? 'is-selected' : ''}
+                    aria-pressed={selectedAmount === amount}
+                    onClick={() => onSetAmount?.(card.instanceId, amount)}
+                  >
+                    {amount} 張 HP
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )
       })}
     </div>
@@ -218,6 +296,7 @@ function EffectPanelContent({
   effectSelectionError = null,
   optionalCostAttack = null,
   onChooseMode,
+  onSetTargetAmount,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const attackTextSections =
@@ -354,6 +433,25 @@ function EffectPanelContent({
             : null
           : null
 
+  const hpAmountSelection =
+    currentEffect?.kind === 'hp-to-trash'
+      ? currentEffect.selectableAmount
+      : undefined
+  const selectedTargetAmounts = pendingEffect?.selectedTargetAmounts ?? []
+  const hpAmountsReady =
+    !hpAmountSelection ||
+    Boolean(
+      pendingEffect &&
+        pendingEffect.selectedTargetIds.every((_, index) => {
+          const amount = selectedTargetAmounts[index]
+          return (
+            Number.isInteger(amount) &&
+            amount >= hpAmountSelection.min &&
+            amount <= hpAmountSelection.max
+          )
+        }),
+    )
+
   const energyPaid = totalEnergyCost > 0
     ? energyPaymentValid === true
     : true
@@ -418,7 +516,7 @@ function EffectPanelContent({
     currentEffect?.kind === 'break-to-hand-by-level-sum' &&
     currentEffect.targetSumMode === 'at-most'
 
-  const targetReady = !effectSelectionError && (
+  const targetReady = !effectSelectionError && hpAmountsReady && (
     !showTargetSelection ||
     (isRestSupportAndDamageEffect
       ? Boolean(
@@ -1030,30 +1128,45 @@ function EffectPanelContent({
                   <span>
                     {currentEffect.kind === 'rest-support-and-damage'
                       ? `選擇最多 ${currentEffect.target.max} 個對手餅乾；將造成 ${selectedRestSupportIds.size} 點效果傷害。`
+                      : currentEffect.kind === 'hp-to-trash' && hpAmountSelection
+                        ? `選擇最多 ${currentEffect.target.max} 隻對手餅乾，並為每隻選擇移除 ${hpAmountSelection.min}～${hpAmountSelection.max} 張 HP。`
                       : describeEffect(currentEffect)}
                   </span>
                 </div>
-                <CandidateButtons
-                  cards={
-                    currentEffect.kind === 'rest-support-and-damage'
-                      ? damageTargetCandidates
-                      : candidateCards
-                  }
-                  selectedIds={
-                    currentEffect.kind === 'rest-support-and-damage'
-                      ? selectedDamageTargetIds
-                      : new Set(pendingEffect.selectedTargetIds)
-                  }
-                  selectedOrderIds={
-                    (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
-                    (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
-                      ? pendingEffect.selectedTargetIds
-                      : undefined
-                  }
-                  onToggle={onToggleCandidate}
-                  className="effect-candidates-target"
-                  labels={candidateLabels}
-                />
+                {hpAmountSelection ? (
+                  <HpAmountCandidateButtons
+                    cards={candidateCards}
+                    selectedIds={new Set(pendingEffect.selectedTargetIds)}
+                    selectedOrderIds={pendingEffect.selectedTargetIds}
+                    selectedAmounts={selectedTargetAmounts}
+                    amountMin={hpAmountSelection.min}
+                    amountMax={hpAmountSelection.max}
+                    onToggle={onToggleCandidate}
+                    onSetAmount={onSetTargetAmount}
+                  />
+                ) : (
+                  <CandidateButtons
+                    cards={
+                      currentEffect.kind === 'rest-support-and-damage'
+                        ? damageTargetCandidates
+                        : candidateCards
+                    }
+                    selectedIds={
+                      currentEffect.kind === 'rest-support-and-damage'
+                        ? selectedDamageTargetIds
+                        : new Set(pendingEffect.selectedTargetIds)
+                    }
+                    selectedOrderIds={
+                      (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
+                      (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
+                        ? pendingEffect.selectedTargetIds
+                        : undefined
+                    }
+                    onToggle={onToggleCandidate}
+                    className="effect-candidates-target"
+                    labels={candidateLabels}
+                  />
+                )}
                 {currentEffect.kind === 'break-to-battle' && candidateCards.length === 0 && (
                   <small role="status">
                     目前沒有可登場的休息區餅乾；直接確認即可選擇 0 張並繼續。
@@ -1065,6 +1178,12 @@ function EffectPanelContent({
                   <small>
                     已選等級總和 {selectedLevelSum}／
                     {isAtMostLevelSum ? '最多 ' : ''}{currentEffect.targetSum}
+                  </small>
+                ) : currentEffect.kind === 'hp-to-trash' && hpAmountSelection ? (
+                  <small>
+                    已選 {pendingEffect.selectedTargetIds.length}／
+                    {selectionLimits?.max ?? currentEffect.target.max} 隻；每隻移除{' '}
+                    {hpAmountSelection.min}～{hpAmountSelection.max} 張 HP
                   </small>
                 ) : currentEffect.kind === 'rest-support-and-damage' ? (
                   <small>

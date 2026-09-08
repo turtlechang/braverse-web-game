@@ -4473,10 +4473,14 @@ export const convertOfficialCardEffects = (
     ],
     // BS8-059 Mystic Flour Cookie：支付一點綠色能量、把兩張綠色支援卡回手
     // 後，只有自己戰鬥區沒有「另一張」Mystic Flour 時，才對每張對手
-    // Cookie 各自移除至多兩張 HP 卡。這是效果條件，不是啟動限制。
+    // Cookie 各自選擇移除 0～2 張 HP 卡。數量由 UI 逐隻選擇，不再把所有
+    // 組合硬編成六個 choose-one 模式。
     'BS8-059': [
       {
-        kind: 'choose-one',
+        kind: 'hp-to-trash',
+        amount: 2,
+        selectableAmount: { min: 1, max: 2 },
+        target: { side: 'opponent', min: 0, max: 2 },
         condition: {
           kind: 'battle-area-has-named-cookie',
           side: 'self',
@@ -4484,36 +4488,6 @@ export const convertOfficialCardEffects = (
           excludeSource: true,
           negate: true,
         },
-        modes: [
-          { label: '不移除 HP（每隻選擇 0 張）', effects: [{
-            kind: 'hp-to-trash', amount: 0,
-            target: { side: 'opponent', min: 0, max: 0 },
-            condition: { kind: 'battle-area-has-named-cookie', side: 'self',
-              name: 'Mystic Flour Cookie', excludeSource: true, negate: true },
-          }] },
-          ...[
-            { label: '選 1 隻，移除 1 張 HP', amount: 1, count: 1 },
-            { label: '選 1 隻，移除 2 張 HP', amount: 2, count: 1 },
-            { label: '選 2 隻，各移除 1 張 HP', amount: 1, count: 2 },
-            { label: '選 2 隻，第 1 隻移除 2 張、第 2 隻移除 1 張 HP', amount: 2, count: 2, amounts: [2, 1] },
-            { label: '選 2 隻，各移除 2 張 HP', amount: 2, count: 2 },
-          ].map(({ label, amount, count, amounts }) => ({
-            label,
-            effects: [{
-              kind: 'hp-to-trash' as const,
-              amount,
-              ...(amounts ? { amountByTargetIndex: amounts } : {}),
-              target: { side: 'opponent' as const, min: count, max: count },
-              condition: {
-                kind: 'battle-area-has-named-cookie' as const,
-                side: 'self' as const,
-                name: 'Mystic Flour Cookie',
-                excludeSource: true,
-                negate: true,
-              },
-            }],
-          })),
-        ],
       },
     ],
     // BS8-060 Peach Blossom Cookie：回手一張綠色支援卡後二選一；兩個模式

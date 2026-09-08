@@ -230,6 +230,7 @@ interface CommandShape {
   optionalStrings?: readonly string[]
   requiredStringMatrices?: readonly string[]
   optionalStringMatrices?: readonly string[]
+  optionalNumberArrays?: readonly string[]
   requiredNumbers?: readonly string[]
   optionalNumbers?: readonly string[]
   requiredBooleans?: readonly string[]
@@ -251,6 +252,9 @@ const isStringMatrix = (value: unknown): value is string[][] =>
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
+
+const isNumberArray = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every(isFiniteNumber)
 
 const publicTargetScopes: readonly PublicTargetScope[] = [
   'opponent-battle-cookie',
@@ -525,7 +529,10 @@ const commandShapes = {
       'targetIds',
     ],
   },
-  'resolve-ability-effect': { requiredStringArrays: ['targetIds'] },
+  'resolve-ability-effect': {
+    requiredStringArrays: ['targetIds'],
+    optionalNumberArrays: ['amountByTargetIndex'],
+  },
   'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
   'resolve-reorder-hp': { requiredStringArrays: ['orderedCardIds'] },
   'resolve-choose-one': { requiredNumbers: ['modeIndex'] },
@@ -595,6 +602,9 @@ const hasValidCommandShape = (
     ) &&
     (shape.optionalStringMatrices ?? []).every(
       (field) => command[field] === undefined || isStringMatrix(command[field]),
+    ) &&
+    (shape.optionalNumberArrays ?? []).every(
+      (field) => command[field] === undefined || isNumberArray(command[field]),
     ) &&
     (shape.requiredNumbers ?? []).every((field) => isFiniteNumber(command[field])) &&
     (shape.optionalNumbers ?? []).every(

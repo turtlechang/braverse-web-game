@@ -5585,7 +5585,10 @@ describe('BS8 candidate serial contract', () => {
       oncePerTurn: true,
       cost: { energy: { green: 1 }, supportToHand: 2, supportToHandColor: 'green' },
       effects: [{
-        kind: 'choose-one',
+        kind: 'hp-to-trash',
+        amount: 2,
+        selectableAmount: { min: 1, max: 2 },
+        target: { side: 'opponent', min: 0, max: 2 },
         condition: {
           kind: 'battle-area-has-named-cookie',
           side: 'self',
@@ -5593,24 +5596,6 @@ describe('BS8 candidate serial contract', () => {
           excludeSource: true,
           negate: true,
         },
-        modes: [
-          { amount: 0, count: 0 },
-          { amount: 1, count: 1 },
-          { amount: 2, count: 1 },
-          { amount: 1, count: 2 },
-          { amount: 2, count: 2, amountByTargetIndex: [2, 1] },
-          { amount: 2, count: 2 },
-        ].map(({ amount, count, amountByTargetIndex }) => ({
-          effects: [{
-            kind: 'hp-to-trash', amount,
-            ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
-            target: { side: 'opponent', min: count, max: count },
-            condition: {
-              kind: 'battle-area-has-named-cookie', side: 'self',
-              name: 'Mystic Flour Cookie', excludeSource: true, negate: true,
-            },
-          }],
-        })),
       }],
     })
   })

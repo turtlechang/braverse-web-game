@@ -782,6 +782,7 @@ export function OnlineBattleView({
         }}
         candidateCards={pending.candidateCards}
         onToggleCandidate={pending.toggleTarget}
+        onSetTargetAmount={pending.setTargetAmount}
         restSupportCandidates={
           pending.restSupportAndDamageSupportCandidates
         }
