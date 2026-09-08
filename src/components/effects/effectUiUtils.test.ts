@@ -172,6 +172,32 @@ describe('describeEffectResult for optional damage and support-to-battle', () =>
   })
 })
 
+describe('describeEffectResult for selectable set-active', () => {
+  it('does not claim a support card became active when the optional selection is empty', () => {
+    expect(describeEffectResult({
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    }, [])).toBe('未選擇疲勞支援卡，效果未生效。')
+  })
+
+  it('confirms the result when a selectable support card was chosen', () => {
+    expect(describeEffectResult({
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    }, ['support-pay-0'])).toBe('支援區卡已設為活躍。')
+  })
+
+  it('keeps automatic set-active effects successful without target names', () => {
+    expect(describeEffectResult({ kind: 'set-active', supportCount: 1 }, [])).toBe(
+      '支援區卡已設為活躍。',
+    )
+  })
+})
+
 describe('describeEffectResult for optional attack modification', () => {
   it('does not claim an attack modifier applied when no target was selected', () => {
     expect(

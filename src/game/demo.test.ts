@@ -3473,6 +3473,97 @@ describe('BS4 condition fixtures', () => {
     expect(negativeResolved.blockDisabledUntilTurn?.['player-two']).toBeUndefined()
   })
 
+  it('prepares BS8-053 with one rested green support and removes it on the negative route', () => {
+    const positive = createCardCheckDemoState('BS8-053')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-053',
+    )
+    const positiveRested = positive.players['player-one'].supportArea.filter(
+      (support) => support.rested,
+    )
+
+    expect(positiveRested).toHaveLength(1)
+    expect(positiveRested[0]?.card.energyColor).toBe('green')
+    expect(positive.players['player-one'].supportArea.filter(
+      (support) => !support.rested,
+    )).toHaveLength(5)
+
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const positiveEffect = positiveQueued.pendingAbilityEffect?.effects[0]
+    expect(positiveEffect).toMatchObject({
+      kind: 'set-active',
+      energyColor: 'green',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    })
+    expect(
+      getEffectSelectionCandidates(
+        positiveQueued,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: positiveSource!.instanceId,
+        },
+        positiveEffect!,
+      ).map((card) => card.instanceId),
+    ).toEqual([positiveRested[0]!.card.instanceId])
+
+    const negative = createCardNegativeDemoState('BS8-053')
+    expect(negative.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-053',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    expect(canActivateCookieSkill(
+      negativeDeployed,
+      'player-one',
+      negativeSource!.instanceId,
+      'on-play',
+    )).toBe(true)
+    const negativeQueued = applyGameCommand(negativeDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const negativeEffect = negativeQueued.pendingAbilityEffect?.effects[0]
+    expect(getEffectSelectionCandidates(
+      negativeQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: negativeSource!.instanceId,
+      },
+      negativeEffect!,
+    )).toHaveLength(0)
+    const negativeResolved = applyGameCommand(negativeQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(negativeResolved.pendingAbilityEffect).toBeUndefined()
+    expect(negativeResolved.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+  })
+
   it('keeps BS7-004 effect-damage condition and red payment on the real skill queue', () => {
     const positive = createCardCheckDemoState('BS7-004')
     const source = positive.players['player-one'].battleArea.find(

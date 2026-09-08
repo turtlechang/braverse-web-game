@@ -410,7 +410,11 @@ export const describeEffectResult = (
   if (effect.kind === 'opponent-battle-to-trash') return effect.destination === 'break' ? '對手餅乾已放入休息區。' : '對手餅乾已放入棄牌區。'
   if (effect.kind === 'make-faint') return `${names} 已昏厥。`
   if (effect.kind === 'place-source-to-support') return '已放入支援區。'
-  if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
+  if (effect.kind === 'set-active') {
+    return effect.selectable && targetNames.length === 0
+      ? '未選擇疲勞支援卡，效果未生效。'
+      : '支援區卡已設為活躍。'
+  }
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'
   if (effect.kind === 'optional-cost-attack') return '攻擊後續效果已處理。'
   if (effect.kind === 'damage') {

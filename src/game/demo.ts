@@ -5265,6 +5265,14 @@ export const createCardCheckDemoState = (
       const onPlayPlayerSupportArea =
         card.id === 'BS6-058'
           ? scenarioSupports('BS6-058-player-support', 2, 'green')
+          : card.id === 'BS8-053'
+            ? energySupports.map((c, index) => ({
+                card: c,
+                // BS8-053's On Play selects a rested green support card. Keep
+                // one legal target and the remaining payment-shaped supports
+                // active so the Browser fixture exercises the real selector.
+                rested: index === 0,
+              }))
           : card.id === 'BS7-045'
             ? [
                 ...energySupports.map((c) => ({ card: c, rested: false })),
@@ -5813,6 +5821,17 @@ export const createCardNegativeDemoState = (
     // Keep the faint trigger and an open battle slot, but no support Cookie.
     return updateDemoPlayer(state, 'player-one', {
       supportArea: [{ card: testSupportCard('BS8-051-negative-support-item', 'green'), rested: true }],
+    })
+  }
+  if (baseCardNumber === 'BS8-053') {
+    // BS8-053 has no payment cost. Its negative route must remove the only
+    // printed condition (a rested green support target), rather than turn all
+    // supports rested and accidentally make the effect succeed.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
     })
   }
   if (baseCardNumber === 'BS8-012' || baseCardNumber === 'BS8-013' || baseCardNumber === 'BS8-016') {
