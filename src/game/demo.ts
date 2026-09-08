@@ -3573,13 +3573,15 @@ export const createCardCheckDemoState = (
   // than accepting a generic filler. Keep the legal candidate data local to
   // the candidate Browser fixture so it never leaks into Standard decks.
   const bs8GoldenCheeseFixture = cardCheckOfficialCookie('BS8-026', 'BS8-golden-cheese-break')
-  const bs8BlueLevelTwoHandFixture = cardCheckFillerCookie(
-    'BS8-blue-lv2-hand',
-    2,
-    4,
-    0,
-    'blue',
-  ).cookie
+  const bs8BlueLevelTwoHandFixture = card.id === 'BS8-078'
+    ? cardCheckOfficialCookie('BS8-077', 'BS8-blue-lv2-hand')
+    : cardCheckFillerCookie(
+        'BS8-blue-lv2-hand',
+        2,
+        4,
+        0,
+        'blue',
+      ).cookie
   const bs8YellowLevelThreeHandFixture = cardCheckOfficialCookie('BS8-030', 'BS8-yellow-lv3-hand')
   // BS8-021 必須和真正的 Burning Spice Cookie 一起驗證：道具先對其他
   // Cookie 造成傷害，再可選擇裝載；之後攻擊時由裝備後效果檢查休息區 LV。
@@ -3755,6 +3757,8 @@ export const createCardCheckDemoState = (
       ? scenarioSupports('BS6-019-opponent-support', 3, 'red')
       : card.id === 'BS8-071'
         ? scenarioSupports('BS8-071-opponent-support', 2, 'green')
+      : card.id === 'BS8-072'
+        ? scenarioSupports('BS8-072-opponent-support', 3, 'green')
       : undefined
 
   // Own break area filler for break-area-level conditions (flip cards) and
@@ -3871,16 +3875,104 @@ export const createCardCheckDemoState = (
   })
 
   // The real game caps each side's battle area at 2 cookies.
-  const opponentBattleArea = [
-    cardCheckBattleEntry(
-      card.id === 'BS7-007'
-        ? { ...opp1.cookie, keywords: ['arena'] as ['arena'] }
-        : opp1.cookie,
-      opp1.hpCards,
-      1,
-    ),
-    cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 2),
-  ]
+  // BS8-075 is a static Stage whose modifier applies to either player's
+  // attacks. Keep both opponent battle entries on official Cookies so the
+  // Browser route exposes real card art/name/level/printed attack costs
+  // instead of hiding the check behind generic filler Cookies.
+  const createOfficialOpponentBattleEntry = (
+    cardNumber: string,
+    instanceId: string,
+    sequence: number,
+    rested = false,
+    remainingHp?: number,
+  ) => {
+    const cookie = cardCheckOfficialCookie(cardNumber, instanceId)
+    return cardCheckBattleEntry(
+      cookie,
+      Array.from({ length: remainingHp ?? cookie.hp }, (_, index) =>
+        testSupportCard(`${instanceId}-hp-${index + 1}`, cookie.energyColor),
+      ),
+      sequence,
+      rested,
+    )
+  }
+  const opponentBattleArea = card.id === 'BS8-075'
+    ? [
+        createOfficialOpponentBattleEntry(
+          'BS8-070',
+          'BS8-075-opponent-white-ghost',
+          1,
+        ),
+        createOfficialOpponentBattleEntry(
+          'BS8-083',
+          'BS8-075-opponent-frost-queen',
+          2,
+        ),
+      ]
+    : card.id === 'BS8-079'
+      ? [
+          // BS8-079's restriction is observable only when the selected
+          // Cookie is already rested. Use official Cookies on both sides of
+          // the level filter so the Browser route shows the real target art,
+          // name, and level instead of a synthetic `opp-lv1` placeholder.
+          createOfficialOpponentBattleEntry(
+            'BS8-070',
+            'BS8-079-opponent-white-ghost',
+            1,
+            true,
+          ),
+          createOfficialOpponentBattleEntry(
+            'BS8-083',
+            'BS8-079-opponent-frost-queen',
+            2,
+          ),
+        ]
+    : card.id === 'BS8-083'
+      ? [
+          // BS8-083 can target any opposing Cookie on play. Use official
+          // Cookies and start the LV.1 target rested so the next Active Phase
+          // restriction is observable in the Browser route, while the LV.2
+          // witness proves the selector is not accidentally level-filtered.
+          createOfficialOpponentBattleEntry(
+            'BS8-070',
+            'BS8-083-opponent-white-ghost',
+            1,
+            true,
+          ),
+        createOfficialOpponentBattleEntry(
+          'BS8-084',
+          'BS8-083-opponent-sherbet',
+          2,
+        ),
+      ]
+    : card.id === 'BS8-085'
+      ? [
+          // BS8-085 can faint only an opposing Cookie with exactly 1 HP
+          // remaining. Keep a real official LV.1 Cookie at that boundary and
+          // a real higher-HP Cookie as a visible non-target witness.
+          createOfficialOpponentBattleEntry(
+            'BS8-070',
+            'BS8-085-opponent-white-ghost',
+            1,
+            false,
+            1,
+          ),
+          createOfficialOpponentBattleEntry(
+            'BS8-084',
+            'BS8-085-opponent-sherbet',
+            2,
+          ),
+        ]
+    : [
+        cardCheckBattleEntry(
+          card.id === 'BS7-007'
+            ? { ...opp1.cookie, keywords: ['arena'] as ['arena'] }
+            : opp1.cookie,
+          opp1.hpCards,
+          1,
+        ),
+        cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 2),
+      ]
 
   // --- Non-cookie cards (item / trap / stage) --------------------------
   if (options.normalAttack) {
@@ -3893,6 +3985,7 @@ export const createCardCheckDemoState = (
       players: {
         'player-one': {
           ...state.players['player-one'],
+          ...(card.id === 'BS8-083' ? { hand: handFillers.slice(0, 2) } : {}),
           battleArea: [cardCheckBattleEntry(card, Array.from({ length: card.hp }, (_, index) =>
             testSupportCard(`${card.id}-attack-hp-${index + 1}`, payColor)), 4)],
           supportArea: energySupports.map(card => ({ card, rested: options.normalAttack === 'blocked' })),
@@ -3974,6 +4067,8 @@ export const createCardCheckDemoState = (
     const itemPlayerSupportArea =
       card.id === 'BS8-071'
         ? energySupports.slice(0, 1)
+        : card.id === 'BS8-072'
+          ? energySupports.slice(0, 2)
         : [...energySupports, ...supportCostCandidates]
     return {
       ...state,
@@ -3993,6 +4088,22 @@ export const createCardCheckDemoState = (
                 ),
                 cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
               ]
+            : card.id === 'BS8-071'
+              ? [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards.slice(0, 3), 4)]
+            : card.id === 'BS8-072'
+              ? (() => {
+                  const mysticFlour = cardCheckOfficialCookie(
+                    'BS8-059',
+                    'BS8-072-mystic-flour',
+                  )
+                  return [cardCheckBattleEntry(
+                    mysticFlour,
+                    Array.from({ length: mysticFlour.hp }, (_, index) =>
+                      testSupportCard(`BS8-072-mystic-flour-hp-${index + 1}`, 'green'),
+                    ),
+                    4,
+                  )]
+                })()
             : card.id === 'BS8-022'
               ? [
                   cardCheckBattleEntry(cardCheckOfficialCookie('BS8-020', 'BS8-022-cost-cookie'), [cardCheckOfficialCard('BS8-016', 'BS8-022-cost-hp-recovery'), selfExtra1.hpCards[1]], 4),
@@ -4144,6 +4255,8 @@ export const createCardCheckDemoState = (
     const stageOpponentSupportArea =
       card.id === 'BS6-064'
         ? scenarioSupports('BS6-064-opponent-support', 4, 'green')
+        : card.id === 'BS8-075'
+          ? scenarioSupports('BS8-075-opponent-support', 6, 'green')
         : undefined
     return {
       ...state,
@@ -4370,7 +4483,11 @@ export const createCardCheckDemoState = (
           // 建立成立分支，才能在支付後繼續進入牌庫頂放置效果。
           supportArea: (card.id === 'BS6-063'
             ? energySupports.slice(0, 5)
-            : energySupports
+            : card.id === 'BS8-074'
+              ? scenarioSupports('BS8-074-trap-support', 2, 'green').map(
+                  (support) => support.card,
+                )
+              : energySupports
           ).map((c) => ({ card: c, rested: false })),
           breakArea: trapBreakArea,
           discardPile: trapTrashFillers,
@@ -4403,6 +4520,9 @@ export const createCardCheckDemoState = (
                 ),
               ],
           stage: { card: opponentStage, rested: false },
+          supportArea: card.id === 'BS8-074'
+            ? scenarioSupports('BS8-074-opponent-support', 4, 'green')
+            : state.players['player-two'].supportArea,
           ...(card.id === 'BS7-108'
             ? {
                 breakArea: [
@@ -4558,7 +4678,9 @@ export const createCardCheckDemoState = (
           }
         : null
     const faintSupportArea =
-      card.id === 'BS8-051'
+      card.id === 'BS8-068'
+        ? scenarioSupports('BS8-068-player-support', 1, 'green')
+      : card.id === 'BS8-051'
         ? [{ card: cardCheckOfficialCookie('BS8-058', 'BS8-051-support-cookie'), rested: true }]
         : card.id === 'BS7-050'
         ? [
@@ -4631,6 +4753,9 @@ export const createCardCheckDemoState = (
           ...(opponentTrashForFaint.length > 0
             ? { discardPile: opponentTrashForFaint }
             : {}),
+          ...(card.id === 'BS8-068'
+            ? { supportArea: scenarioSupports('BS8-068-opponent-support', 2, 'green') }
+            : {}),
         },
       },
       pendingFaintEffects,
@@ -4647,7 +4772,7 @@ export const createCardCheckDemoState = (
     cookieCard.attackEffects &&
     cookieCard.attackEffects.length > 0 &&
     !options.preferSkillSurface &&
-    // BS3-113, BS6-031, BS6-072, BS6-074, BS6-079, and BS7-046 are card-check entries used to verify an
+    // BS3-113, BS6-031, BS6-072, BS6-074, BS6-079, BS7-046, and BS8-083 are card-check entries used to verify an
     // OnPlay skill. Their secondary attack effects must not hide the deploy
     // UI; dedicated attack fixtures still cover those later effects.
     cookieCard.id !== 'BS3-113' &&
@@ -4656,7 +4781,8 @@ export const createCardCheckDemoState = (
     cookieCard.id !== 'BS6-074' &&
     cookieCard.id !== 'BS6-079' &&
     cookieCard.id !== 'BS7-046' &&
-    cookieCard.id !== 'BS7-059'
+    cookieCard.id !== 'BS7-059' &&
+    cookieCard.id !== 'BS8-083'
   ) {
     const state = baseState()
     // BS6-018 needs the player to declare a real attack while its source is at
@@ -5277,6 +5403,8 @@ export const createCardCheckDemoState = (
       const onPlayPlayerSupportArea =
         card.id === 'BS6-058'
           ? scenarioSupports('BS6-058-player-support', 2, 'green')
+          : card.id === 'BS8-065'
+            ? scenarioSupports('BS8-065-player-support', 1, 'green', true)
           : card.id === 'BS8-053'
             ? energySupports.map((c, index) => ({
                 card: c,
@@ -5284,6 +5412,14 @@ export const createCardCheckDemoState = (
                 // one legal target and the remaining payment-shaped supports
                 // active so the Browser fixture exercises the real selector.
                 rested: index === 0,
+              }))
+          : card.id === 'BS8-064'
+            ? energySupports.map((c, index) => ({
+                card: c,
+                // BS8-064's On Play can ready up to two support cards. Keep
+                // exactly two rested targets so the positive Browser route
+                // can verify selecting 0, 1, or 2 actual support cards.
+                rested: index < 2,
               }))
           : card.id === 'BS7-045'
             ? [
@@ -5299,6 +5435,8 @@ export const createCardCheckDemoState = (
       const onPlayOpponentSupportArea =
         card.id === 'BS6-058'
           ? scenarioSupports('BS6-058-opponent-support', 4, 'green')
+          : card.id === 'BS8-065'
+            ? scenarioSupports('BS8-065-opponent-support', 2, 'green')
           : card.id === 'BS7-044'
             ? scenarioSupports('BS7-044-opponent-support', 3, 'green')
           : []
@@ -5846,6 +5984,76 @@ export const createCardNegativeDemoState = (
       })),
     })
   }
+  if (baseCardNumber === 'BS8-064') {
+    // BS8-064's negative route must remove its only printed condition: there
+    // must be no rested support card available to ready. Keep the normal
+    // On Play path and payment-shaped support area, but make every support
+    // active so the real target selector returns an empty set.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
+  if (baseCardNumber === 'BS8-065') {
+    // Keep two rested supports as legal target witnesses, but tie the player
+    // with the opponent's two-card support area so the printed count condition
+    // is false. This blocks the effect for the condition, not for targeting.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: scenarioSupports(
+        'BS8-065-negative-self-support',
+        2,
+        'green',
+        true,
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS8-068') {
+    // Keep the faint trigger and two active opponent supports, but tie the
+    // player's support count so Yugwa Cookie's printed gap condition is false.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: scenarioSupports(
+        'BS8-068-negative-self-support',
+        2,
+        'green',
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS8-071') {
+    // Keep the 3-HP target and green payment available, but tie the support
+    // counts so Peach Baos cannot be played for a misleading target path.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: scenarioSupports(
+        'BS8-071-negative-self-support',
+        2,
+        'green',
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS8-072') {
+    // Keep the real Mystic Flour Cookie and two green payment cards visible,
+    // but tie the support counts so Light of Apathy cannot reveal cards.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: scenarioSupports(
+        'BS8-072-negative-self-support',
+        3,
+        'green',
+      ),
+    })
+  }
+  if (baseCardNumber === 'BS8-074') {
+    // Keep an active green payment card while reducing the support-count gap
+    // to one. The trap remains selectable, but its conditional zero-cost
+    // option is no longer available, so Browser B must pay the printed {G}.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: scenarioSupports(
+        'BS8-074-negative-self-support',
+        3,
+        'green',
+      ),
+    })
+  }
   if (baseCardNumber === 'BS8-012' || baseCardNumber === 'BS8-013' || baseCardNumber === 'BS8-016') {
     // Simulate an earlier effect moving the queued source out of Break.
     // Keep the later skill pending so B tests its unavailable source cost.
@@ -6004,6 +6212,27 @@ export const createCardNegativeDemoState = (
       ),
       discardPile: negativeDiscardPile,
     })
+  }
+  if (baseCardNumber === 'BS8-085') {
+    // Keep Pinecone's two-card discard cost available, but remove every
+    // opposing Cookie with exactly 1 HP remaining.  The higher-HP witnesses
+    // remain on the board so Browser B proves the printed target filter,
+    // rather than failing because the opponent has no Cookies at all.
+    return updateDemoPlayer(
+      updateDemoPlayer(state, 'player-two', {
+        battleArea: state.players['player-two'].battleArea.map((entry) => ({
+          ...entry,
+          hpCards: Array.from({ length: entry.card.hp }, (_, index) =>
+            testSupportCard(
+              `${entry.card.instanceId}-negative-hp-${index + 1}`,
+              entry.card.energyColor,
+            ),
+          ),
+        })),
+      }),
+      'player-one',
+      { discardPile: negativeDiscardPile },
+    )
   }
   if (baseCardNumber === 'BS8-010') {
     // Red Velvet Cookie 的 Browser B 必須只移除「本回合己方曾昏厥」旗標，

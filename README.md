@@ -10,7 +10,11 @@
 
 2026-09-08 修正 BS8-053「Gim Cookie」的可重現測試局面：`card:` 正向路徑配置唯一疲勞綠色支援卡，`card-negative:` 路徑配置全數活躍支援卡；效果面板與效果紀錄在零合法目標時明確顯示未生效，並以規則回歸及 Chrome Browser A/B 實際操作確認。這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
 
-2026-09-08 完成 BS8-076 凍結目標的攻擊後／下一個 Active Phase 分支驗證，以及 BS8-059 Mystic Flour Cookie 的逐目標 HP 1／2 張選擇、支援區代價與線上 payload；技能支付時支援區維持一般能量排版。BS8-076 Browser 12／12、BS8-059 Browser 18／18（1907×863／1164×777）通過，完整 Vitest 292 檔／4,502 項與 build 通過；全域 lint 僅保留既有診斷檔的 3 項 unused 錯誤。
+2026-09-08 修正 BS8-074「White Flour Fog」的可重現陷阱局面：`card:` 以己方 2 張／對手 4 張支援卡驗證條件式免費支付，`card-negative:` 以 3 張／4 張保留印刷 `{G}` 支付；規則回歸與 Chrome Browser 正／負 A/B 均確認目標、付款、支援卡橫置及攻擊力 -1。這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
+
+2026-09-08 修正 BS8-085「Pinecone Cookie」的可重現目標局面：`card:` 使用正式 White Ghost Cookie 並保留 1 HP，另以正式 Sherbet Cookie 作高 HP 反例；`card-negative:` 保留對手餅乾但移除所有 1 HP 目標。規則回歸與 Chrome Browser 正／負 A/B 均確認棄 2 張手牌、只顯示合法 1 HP 目標及無目標時不昏厥。這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
+
+2026-09-08 完成 BS8-076 凍結目標的攻擊後／下一個 Active Phase 分支驗證，以及 BS8-059 Mystic Flour Cookie 的逐目標 HP 1／2 張選擇、支援區代價與線上 payload；技能支付時支援區維持一般能量排版。BS8-076 Browser 12／12、BS8-059 Browser 18／18（1907×863／1164×777）通過，完整 Vitest 292 檔／4,508 項與 build 通過；全域 lint 僅保留既有診斷檔的 3 項 unused 錯誤。
 
 2026-09-07 依桌機／平板優先範圍重查 BS8 全部125張基礎卡、171筆含異圖資料，逐張文字與runtime對照見 [本輪逐卡複核](docs/bs8-text-runtime-review-2026-09-07.md)，操作與驗證分層見 [桌機／平板稽查](docs/bs8-desktop-tablet-audit-2026-09-07.md)。已修復攻擊付款隱藏手牌、一般／攻擊支援卡間距、059／067／072／111「最多」數量、076可略過Then、005／009／021傷害順序、028／029基礎卡號遺失技能及083異圖多出的每回合一次標記；另補051／052真實候選、069綠色卡牌回收與略過、120零手牌邊界及promotion測試完整隔離。經確認後已開放正式EXTRA：Standard／Open編輯器、相容JSON、本機與標準好友房共用全牌組驗證和建構，15筆含異圖可放入獨立六張額外牌組。
 
@@ -119,11 +123,16 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 ## 目前進度
 
 - 工程工作流已完成規則／Skill 結構與引用檢查，以及四個新舊隔離案例；新版桌面任務已確認載入規則與子代理上限。案例保留失敗到通過證據，並如實揭露缺少外部素材的整合阻塞。用量對照有升有降，尚未證明穩定節省額度。
-- 2026-09-08 工作流提交前檢查：目前含既有未提交遊戲修改的工作樹通過完整 Vitest 292 檔／4,502 項及 build；BS8-076 Browser 12／12、BS8-059 Browser 18／18 均在 1907×863／1164×777 通過。全域 lint 仍有 `.tmp-probe-deploy.ts` 與 `scripts/diagnose-lv5-conservatism.ts` 共 3 項既有 unused 錯誤。
+- 2026-09-08 工作流提交前檢查：目前含既有未提交遊戲修改的工作樹通過完整 Vitest 292 檔／4,513 項及 build；BS8-074 Browser 4／4、BS8-076 Browser 12／12、BS8-059 Browser 18／18 均在 1907×863／1164×777 通過。全域 lint 仍有 `.tmp-probe-deploy.ts` 與 `scripts/diagnose-lv5-conservatism.ts` 共 3 項既有 unused 錯誤。
 
 - 2026-09-07：完成125張文字／runtime複核與雙尺寸局部操作稽查，171筆實圖／詳情各尺寸全部通過；正式15筆EXTRA已開放Standard／Open編輯器、JSON往返、本機及標準好友房。最新全套292檔／4,498項測試、build、scoped lint、AI種子1–20通過；全域lint仍有既有診斷檔3項unused錯誤。桌機／平板已從真實首頁匯入儲存，正常開局後069由不符條件到可登場，好友房雙方6張EXTRA真圖／私密遮罩也通過。詳見[本輪報告](docs/bs8-desktop-tablet-audit-2026-09-07.md)與[正式EXTRA方案及驗證](docs/bs8-formal-extra-plan-2026-09-07.md)，未宣稱125張全效果完整線上對局通過。
 
 - 2026-09-08：BS8-053 `card:`／`card-negative:` fixture 分別建立唯一疲勞綠色支援卡與全活躍支援卡；新增 demo／UI 文案回歸，相關 319 項測試、build、scoped lint 及 Chrome Browser 正向選取／負向零目標 A/B 通過。負向效果與紀錄均顯示「未選擇疲勞支援卡，效果未生效」，未宣稱正式多人或線上逐卡完成。
+- 2026-09-08：BS8-074 `card:`／`card-negative:` fixture 分別建立支援區差距 2 的免費陷阱與差距 1 的印刷 `{G}` 支付；新增規則回歸及 1907×863／1164×777 Chrome Browser 正／負 A/B，確認目標、付款、橫置與攻擊力修正。
+- 2026-09-08：BS8-078 fixture 改用正式 Kumiho Cookie；效果面板補上 `hand-to-battle` 目標選擇與可選 0 張回歸，Chrome Browser 實際選取後確認戰鬥區顯示 5 張 HP 卡；完整 Vitest 292 檔／4,510 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
+- 2026-09-08：BS8-079 `card:`／`card-negative:` fixture 改用正式 White Ghost Cookie（LV.1）與 Frost Queen Cookie（LV.3）；新增唯一合法目標、支付 2 張藍色手牌、放回牌庫及下一個 Active Phase 維持 rested 的回歸，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,511 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
+- 2026-09-08：BS8-083 `card:` fixture 讓 Frost Queen Cookie 保持在手牌並完成登場支付／任一正式目標；`card-attack:` 另驗證攻擊支付 3 張藍色支援卡及 Then 抽至手牌 3 張，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,512 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
+- 2026-09-08：BS8-085 `card:`／`card-negative:` fixture 改用正式 White Ghost Cookie（剩 1 HP）與 Sherbet Cookie（高 HP反例）；新增棄 2 張手牌、只列出 1 HP 合法目標及無合法目標不昏厥的規則回歸，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,513 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
 
 - BS8-020／021：補明確HP條件提示、修復RR傷害後漏收額外R即裝備；Then待結算時本機／線上均禁止推進階段，道具提示不再誤標技能。020共12條、021共36條桌面／手機Browser通過；本批全套282檔4,328項、build、scoped lint與AI20場通過；專卡完整多人仍未測。
 - BS8-018／019追加修復：來源代價失效仍傷害／回收、未棄手牌仍回收已修正；24項專卡回歸、兩卡共32條桌面／手機昏厥與攻擊路徑通過。另補001／008／012／013／015／016共36條普通攻擊路徑。全套4,304項、build、scoped lint與AI20場通過；逐卡完整對局仍未測。稽查工具現在拒絕指定卡號未實際納入的空跑。
@@ -268,6 +277,10 @@ BS8-076 的凍結／棄牌分支與 BS8-059 的逐目標 HP 選擇已納入本�
 
 BS8-053 的正向／負向 `test-state` 現已保留為可重現的目標候選與零合法目標回歸；後續仍需依全體 BS8 驗收範圍補正式牌組、多人與線上路徑，不以局部 fixture 證據取代完整對戰覆蓋。
 
+BS8-074 的正向／負向 `test-state` 現已保留為可重現的條件式陷阱減費與印刷費用回歸；後續仍需依全體 BS8 驗收範圍補正式牌組、多人與線上路徑，不以局部 fixture 證據取代完整對戰覆蓋。
+
+BS8-085 的正向／負向 `test-state` 現已保留為可重現的剩餘 1 HP 目標與高 HP 反例回歸；後續仍需依全體 BS8 驗收範圍補正式牌組、多人與線上路徑，不以局部 fixture 證據取代完整對戰覆蓋。
+
 依 [本輪全面稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 接續黃色BS8-051；先做桌機與平板，手機模式暫緩。黃色026–050已記錄本輪卡面與局部效果證據，專卡完整對局仍需補驗。023／024跨玩家順序已修，仍需擴充Refresh與專卡線上驗收；前序完整對局證據集中補齊，包含021完整裝備後攻擊Browser連鎖，不延後黃色初查。保留配對代價、昏厥來源代價及未翻開FLIP不影響HP的回歸。另需修復結束階段同時觸發排序、覆核舊系列付款文字差異，推進BS8全色／EXTRA完整對戰驗收。UI中期改善以新手直接開局、來源卡文連續顯示、付款與目標集中、平板身分與操作區可見為主。候選卡測試曾有Windows寫入失敗；2026-09-07已完成輸出隔離，完整套件通過。
 
 依 [BS8 綠色驗證紀錄](docs/bs8-green-validation-2026-09-05.md) 與 [BS8 黃色驗證紀錄](docs/bs8-yellow-validation-2026-09-04.md) 保留後續逐卡線上／正式完整對戰覆蓋範圍。先前AI Browser回歸通過；最新完整測試已通過，候選工具隔離修復與驗證以上方本輪紀錄為準。局部 test-state、靜態 contract 與本機 Browser 不等同全色逐卡完整線上對戰通過。
@@ -399,7 +412,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇及技能支付支援區排版，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |
+| 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇、BS8-078手牌登場目標與技能支付支援區排版、BS8-079正式LV.1目標與下一個Active Phase回歸、BS8-083手牌登場與獨立攻擊後Then路徑、BS8-085剩餘1 HP昏厥目標與高HP反例，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |
 | 2026-09-07 | 完成BS8全125張文字／runtime與桌機平板局部稽查、171筆實圖詳情；修復手牌／支援間距、候選／數量／Then／傷害順序／異圖與promotion測試隔離。4,498項測試通過，正式EXTRA編輯器／JSON／本機登場／標準好友房與私密遮罩已開放並驗證。 |
 | 2026-09-06 | BS8藍色076～100與紫色101～125逐卡語意核對及Browser流程完成；修復BS8-115／118漏掉的棄牌區張數條件並補回歸；BS8-069／090／104 EXTRA A/B通過，125列矩陣全數更新。攻擊能量支付維持緊湊堆疊排版。 |
 | 2026-09-05 | BS8綠色重驗及全專案UI/UX稽核，續查至黃色050並修復綠色059回手顏色限制；修復付款／昏厥代價、效果排序、線上資訊、FLIP、登場略過與空候選提示、棄牌來源及異圖資料。後續優先桌機／平板，手機暫緩；完整測試有候選卡工具寫入失敗，逐卡與完整對局界線見稽核報告。 |
