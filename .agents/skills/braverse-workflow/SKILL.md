@@ -21,6 +21,7 @@ description: 處理 Braverse 任務契約、實作推進、驗證選擇、Codex 
 
 ## 按條件載入
 
+- 卡牌轉換、卡圖核對或逐卡 Browser 驗收時，讀 [卡牌匯入稽核](../braverse-card-import-audit/SKILL.md)，並依其實體卡圖與獨立驗收方法建立預期；不得只以既有轉接輸出當答案。
 - 契約缺欄位、開新複雜任務或需要整理交接時，讀 [任務模板](references/task-template.md)；不強制建立檔案。
 - 只有確定有獨立且值得並行的子任務，才讀 [派工契約](references/delegation-template.md)；發生停滯時再讀其交接協定。
 - 長任務使用已有的任務報告或計畫入口，只記已完成、未完成、驗證證據、阻塞及下一步；不另建 STATE／PLAN。

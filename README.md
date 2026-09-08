@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-08 將依實體卡圖建立獨立預期、逐項負向案例、精確 Browser 結果與證據失效規則寫入 [卡牌稽核 Skill](.agents/skills/braverse-card-import-audit/SKILL.md)，供不同模型沿用相同驗收標準。
+
 2026-09-08 整理 Codex 工程工作流：以 `$braverse-workflow` 為日常入口，合併重複規則、明訂授權與驗證證據邊界，取消 OpenCode Go 備援；Braverse 子代理上限為 2，不含主代理。這是工作流改善，不代表遊戲功能通過新的品質驗收。
 
 2026-09-08 修正 BS8-053「Gim Cookie」的可重現測試局面：`card:` 正向路徑配置唯一疲勞綠色支援卡，`card-negative:` 路徑配置全數活躍支援卡；效果面板與效果紀錄在零合法目標時明確顯示未生效，並以規則回歸及 Chrome Browser A/B 實際操作確認。這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
@@ -121,6 +123,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- 卡牌稽核 Skill 已補上 [實體卡圖與獨立驗收方法](.agents/skills/braverse-card-import-audit/references/physical-card-verification.md)，並串接工作流、官方轉接與逐卡矩陣入口；這是驗證流程更新，尚未量測跨模型正確率提升。
 
 - 工程工作流已完成規則／Skill 結構與引用檢查，以及四個新舊隔離案例；新版桌面任務已確認載入規則與子代理上限。案例保留失敗到通過證據，並如實揭露缺少外部素材的整合阻塞。用量對照有升有降，尚未證明穩定節省額度。
 - 2026-09-08 工作流提交前檢查：目前含既有未提交遊戲修改的工作樹通過完整 Vitest 292 檔／4,513 項及 build；BS8-074 Browser 4／4、BS8-076 Browser 12／12、BS8-059 Browser 18／18 均在 1907×863／1164×777 通過。全域 lint 仍有 `.tmp-probe-deploy.ts` 與 `scripts/diagnose-lv5-conservatism.ts` 共 3 項既有 unused 錯誤。
@@ -268,6 +272,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+後續逐卡任務依新版 Skill 留存卡圖、獨立預期、各限制負向案例與 UI 結算證據，分別追蹤初次缺陷及驗收後漏失，不以測試全綠推算卡牌正確率。
 
 日常沿用 `$braverse-workflow` 與現行任務報告，依實際失敗證據調整流程；不新增重複追蹤系統，不因本次文字精簡降低遊戲測試或正式 Browser 驗收門檻。
 
