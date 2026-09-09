@@ -16,6 +16,7 @@ import type {
   EnergyCost,
   GameEndReason,
   GameCard,
+  CookieCard,
   PlayerId,
 } from '../../game'
 import type { BattleUiTrapEffectTargetStep } from '../../hooks/battleUiContracts'
@@ -433,6 +434,8 @@ export interface CardDetailModalProps {
   card: GameCard
   equippedCards?: GameCard[]
   onInspectEquip?: (card: GameCard) => void
+  awakenedUnderlay?: CookieCard[]
+  onInspectUnderlay?: (card: CookieCard) => void
   onClose: () => void
 }
 
@@ -2276,6 +2279,8 @@ export function CardDetailModal({
   card,
   equippedCards,
   onInspectEquip,
+  awakenedUnderlay,
+  onInspectUnderlay,
   onClose,
 }: CardDetailModalProps) {
   const modalRef = useModalFocus(onClose)

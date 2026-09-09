@@ -1044,6 +1044,44 @@ describe('DeckEditorModal', () => {
 })
 
 describe('CardDetailModal', () => {
+  it('shows the previous Cookie card under an Awakened Cookie', () => {
+    const underlay: CookieCard = {
+      id: 'BS8-103',
+      instanceId: 'underlay-bs8-103',
+      name: 'Dark Cacao Cookie',
+      type: 'cookie',
+      level: 3,
+      hp: 4,
+      attack: 3,
+      attackCost: 3,
+      imageUrl: '/dark-cacao-cookie.webp',
+    }
+    const awakened: CookieCard = {
+      ...underlay,
+      id: 'BS8-104',
+      instanceId: 'awakened-bs8-104',
+      name: 'Dark Cacao Cookie',
+      extraDeckOrigin: 'awakened',
+      awakenHpBonus: 2,
+    }
+
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={awakened}
+        awakenedUnderlay={[underlay]}
+        onInspectUnderlay={() => undefined}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('class="card-detail-underlay"')
+    expect(markup).toContain('覺醒前的餅乾')
+    expect(markup).toContain('查看覺醒前卡牌：Dark Cacao Cookie')
+    expect(markup).toContain('BS8-103')
+    expect(markup).toContain('/dark-cacao-cookie.webp')
+    expect(markup).toContain('此卡覆蓋在覺醒卡下方')
+  })
+
   it('shows skill text before the attack text', () => {
     const card: CookieCard = {
       id: 'ST1-008',

@@ -594,6 +594,10 @@ export function BattleRow({
                 revealTargetId === cookie.card.instanceId
                   ? game.pendingBattle.revealedHpCard
                   : null
+              const awakenedUnderlay =
+                cookie.card.extraDeckOrigin === 'awakened'
+                  ? cookie.awakenedUnderlay ?? []
+                  : []
               const isPendingAttackTarget =
                 game.pendingBattle?.targetInstanceId === cookie.card.instanceId
               const battleSlotClass =
@@ -671,6 +675,28 @@ export function BattleRow({
                           : () => onInspectCard(cookie.card)
                     }
                   />
+                  {awakenedUnderlay.length > 0 && (
+                    <div
+                      className="awakened-underlay-preview"
+                      aria-label={`覺醒前卡牌：${awakenedUnderlay
+                        .map((card) => card.name)
+                        .join('、')}`}
+                    >
+                      <span className="awakened-underlay-label">覺醒前</span>
+                      {awakenedUnderlay.map((underlay) => (
+                        <CardFace
+                          key={underlay.instanceId}
+                          card={underlay}
+                          className="awakened-underlay-card"
+                          ariaLabel={`查看覺醒前卡牌：${underlay.name}`}
+                          onClick={() => onInspectCard(underlay)}
+                        />
+                      ))}
+                      <small className="awakened-underlay-card-name">
+                        {awakenedUnderlay.map((card) => card.name).join('、')}
+                      </small>
+                    </div>
+                  )}
                   <div className="card-badges">
                     <span
                       className="badge-hp"

@@ -1297,6 +1297,31 @@ describe('awakened Cookie HP display', () => {
     expect(markup).toContain(`${cookie.hpCards.length}/${cookie.card.hp}`)
     expect(markup).not.toContain('覺醒HP')
   })
+
+  it.each(['BS8-027', 'BS8-104'] as const)(
+    'shows the previous Cookie card for every formal Awakened EXTRA route (%s)',
+    (cardNumber) => {
+      const initial = createCardCheckDemoState(cardNumber)
+      const extra = initial.players['player-one'].extraDeck?.[0]
+      expect(extra).toBeDefined()
+
+      const game = applyGameCommand(initial, {
+        kind: 'play-extra-deck-cookie',
+        playerId: 'player-one',
+        instanceId: extra!.instanceId,
+      })
+      const awakened = game.players['player-one'].battleArea[0]
+      const underlay = awakened.awakenedUnderlay?.[0]
+      expect(underlay).toBeDefined()
+
+      const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+      expect(markup).toContain('class="awakened-underlay-preview"')
+      expect(markup).toContain('class="awakened-underlay-label">覺醒前</span>')
+      expect(markup).toContain(`覺醒前卡牌：${underlay!.name}`)
+      expect(markup).toContain(`查看覺醒前卡牌：${underlay!.name}`)
+      expect(markup).toContain(`>${underlay!.name}</small>`)
+    },
+  )
 })
 
 describe('attack modifier tooltip', () => {

@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-09 補上 Awakened EXTRA 卡的底卡顯示：所有帶有 Awakened runtime underlay 的戰鬥區卡牌，現在會在目前卡面旁呈現覺醒前的真實卡圖與卡名，並可點擊查看底卡詳情；卡牌詳情也會列出底卡與卡號。BS8-027「Golden Cheese Cookie」與 BS8-104「Dark Cacao Cookie」的正向 Awaken 及 BS8-027 不成立條件已以 Chrome Browser 實際驗證；這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
+
 2026-09-08 將依實體卡圖建立獨立預期、逐項負向案例、精確 Browser 結果與證據失效規則寫入 [卡牌稽核 Skill](.agents/skills/braverse-card-import-audit/SKILL.md)，供不同模型沿用相同驗收標準。
 
 2026-09-08 整理 Codex 工程工作流：以 `$braverse-workflow` 為日常入口，合併重複規則、明訂授權與驗證證據邊界，取消 OpenCode Go 備援；Braverse 子代理上限為 2，不含主代理。這是工作流改善，不代表遊戲功能通過新的品質驗收。
@@ -137,6 +139,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - 2026-09-08：BS8-079 `card:`／`card-negative:` fixture 改用正式 White Ghost Cookie（LV.1）與 Frost Queen Cookie（LV.3）；新增唯一合法目標、支付 2 張藍色手牌、放回牌庫及下一個 Active Phase 維持 rested 的回歸，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,511 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
 - 2026-09-08：BS8-083 `card:` fixture 讓 Frost Queen Cookie 保持在手牌並完成登場支付／任一正式目標；`card-attack:` 另驗證攻擊支付 3 張藍色支援卡及 Then 抽至手牌 3 張，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,512 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
 - 2026-09-08：BS8-085 `card:`／`card-negative:` fixture 改用正式 White Ghost Cookie（剩 1 HP）與 Sherbet Cookie（高 HP反例）；新增棄 2 張手牌、只列出 1 HP 合法目標及無合法目標不昏厥的規則回歸，Chrome Browser 正／負路徑與完整 Vitest 292 檔／4,513 項、build、scoped lint 通過，未宣稱正式多人／線上逐卡完成。
+- 2026-09-09：BattleRow 與卡牌詳情共用 Awakened 的 `awakenedUnderlay`，BS8-027／BS8-104 均顯示覺醒前真實卡圖、卡名、卡號及可點擊詳情；正向 Awaken、負向登場封鎖與新 Chrome 頁面零警告通過。完整 Vitest 293 檔／4,542 項、build、修改檔 scoped lint 通過；全域 lint 仍只有既有未追蹤診斷檔的 3 個 unused 錯誤，正式多人／線上逐卡驗收未宣稱。
 
 - BS8-020／021：補明確HP條件提示、修復RR傷害後漏收額外R即裝備；Then待結算時本機／線上均禁止推進階段，道具提示不再誤標技能。020共12條、021共36條桌面／手機Browser通過；本批全套282檔4,328項、build、scoped lint與AI20場通過；專卡完整多人仍未測。
 - BS8-018／019追加修復：來源代價失效仍傷害／回收、未棄手牌仍回收已修正；24項專卡回歸、兩卡共32條桌面／手機昏厥與攻擊路徑通過。另補001／008／012／013／015／016共36條普通攻擊路徑。全套4,304項、build、scoped lint與AI20場通過；逐卡完整對局仍未測。稽查工具現在拒絕指定卡號未實際納入的空跑。
@@ -287,6 +290,8 @@ BS8-074 的正向／負向 `test-state` 現已保留為可重現的條件式陷�
 
 BS8-085 的正向／負向 `test-state` 現已保留為可重現的剩餘 1 HP 目標與高 HP 反例回歸；後續仍需依全體 BS8 驗收範圍補正式牌組、多人與線上路徑，不以局部 fixture 證據取代完整對戰覆蓋。
 
+Awakened EXTRA 的底卡顯示已以 BS8-027／BS8-104 的本機正向 Awaken、底卡詳情與 BS8-027 負向封鎖路徑確認；後續仍需在正式牌組、多人及線上公開資訊投影中覆核相同 underlay 顯示，localhost fixture 不取代完整對戰驗收。
+
 依 [本輪全面稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 接續黃色BS8-051；先做桌機與平板，手機模式暫緩。黃色026–050已記錄本輪卡面與局部效果證據，專卡完整對局仍需補驗。023／024跨玩家順序已修，仍需擴充Refresh與專卡線上驗收；前序完整對局證據集中補齊，包含021完整裝備後攻擊Browser連鎖，不延後黃色初查。保留配對代價、昏厥來源代價及未翻開FLIP不影響HP的回歸。另需修復結束階段同時觸發排序、覆核舊系列付款文字差異，推進BS8全色／EXTRA完整對戰驗收。UI中期改善以新手直接開局、來源卡文連續顯示、付款與目標集中、平板身分與操作區可見為主。候選卡測試曾有Windows寫入失敗；2026-09-07已完成輸出隔離，完整套件通過。
 
 依 [BS8 綠色驗證紀錄](docs/bs8-green-validation-2026-09-05.md) 與 [BS8 黃色驗證紀錄](docs/bs8-yellow-validation-2026-09-04.md) 保留後續逐卡線上／正式完整對戰覆蓋範圍。先前AI Browser回歸通過；最新完整測試已通過，候選工具隔離修復與驗證以上方本輪紀錄為準。局部 test-state、靜態 contract 與本機 Browser 不等同全色逐卡完整線上對戰通過。
@@ -418,6 +423,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-09 | 新增通用 Awakened 底卡實圖／卡名／卡號／詳情顯示，並以 BS8-027／BS8-104 正向及 BS8-027 負向 Browser 路徑驗證；保留正式牌組、多人與線上逐卡驗收邊界。 |
 | 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇、BS8-078手牌登場目標與技能支付支援區排版、BS8-079正式LV.1目標與下一個Active Phase回歸、BS8-083手牌登場與獨立攻擊後Then路徑、BS8-085剩餘1 HP昏厥目標與高HP反例，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |
 | 2026-09-07 | 完成BS8全125張文字／runtime與桌機平板局部稽查、171筆實圖詳情；修復手牌／支援間距、候選／數量／Then／傷害順序／異圖與promotion測試隔離。4,498項測試通過，正式EXTRA編輯器／JSON／本機登場／標準好友房與私密遮罩已開放並驗證。 |
 | 2026-09-06 | BS8藍色076～100與紫色101～125逐卡語意核對及Browser流程完成；修復BS8-115／118漏掉的棄牌區張數條件並補回歸；BS8-069／090／104 EXTRA A/B通過，125列矩陣全數更新。攻擊能量支付維持緊湊堆疊排版。 |

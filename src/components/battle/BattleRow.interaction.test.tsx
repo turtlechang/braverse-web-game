@@ -12,6 +12,55 @@ afterEach(() => {
 })
 
 describe('BattleRow battle cookie interactions', () => {
+  it('lets the player inspect the previous Cookie shown under an Awakened card', async () => {
+    const game = createBattleState()
+    const baseCookie = game.players['player-one'].battleArea[0].card
+    const awakenedCookie = {
+      ...baseCookie,
+      instanceId: 'awakened-cookie',
+      name: 'Awakened Cookie',
+      extraDeckOrigin: 'awakened' as const,
+      awakenHpBonus: 2,
+    }
+    game.players['player-one'].battleArea[0] = {
+      ...game.players['player-one'].battleArea[0],
+      card: awakenedCookie,
+      awakenedUnderlay: [baseCookie],
+    }
+    const onInspectCard = vi.fn()
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    const props: BattleRowProps = {
+      game,
+      playerId: 'player-one',
+      position: 'bottom',
+      selectedAttackerId: null,
+      effectTargetIds: new Set(),
+      breakEffectTargetIds: new Set(),
+      selectedEffectTargetIds: new Set(),
+      selectedSkillPaymentIds: new Set(),
+      selectedAttackPaymentIds: new Set(),
+      attackPaymentValid: true,
+      interactionLocked: false,
+      onInspectCard,
+      onInspectDiscard: vi.fn(),
+    }
+
+    await act(() => root.render(<BattleRow {...props} />))
+    const underlayButton = container.querySelector<HTMLButtonElement>(
+      `[aria-label="查看覺醒前卡牌：${baseCookie.name}"]`,
+    )
+    expect(underlayButton).not.toBeNull()
+
+    await act(() => underlayButton!.click())
+
+    expect(onInspectCard).toHaveBeenCalledWith(baseCookie)
+    await act(() => root.unmount())
+  })
+
   it('lets the active player choose an opponent target without highlighting that target as the attacker', async () => {
     const game = createBattleState()
     const onAttackTarget = vi.fn()

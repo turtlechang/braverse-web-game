@@ -320,6 +320,66 @@
   transform-origin: center;
 }
 
+/* Awakened cards keep the previous Cookie in the runtime underlay.  Show a
+ * compact, inspectable card face beside the current card so the stack is
+ * visible on the battlefield instead of only existing in hidden state. */
+.awakened-underlay-preview {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: clamp(42px, 52%, 72px);
+  pointer-events: auto;
+}
+
+.combat-card-wrap.is-single-slot .awakened-underlay-preview,
+.combat-card-wrap.is-left-slot:not(.is-single-slot) .awakened-underlay-preview {
+  right: auto;
+  left: calc(100% + 8px);
+}
+
+.combat-card-wrap.is-right-slot .awakened-underlay-preview {
+  right: calc(100% + 8px);
+  left: auto;
+}
+
+.awakened-underlay-label {
+  width: 100%;
+  padding: 2px 3px;
+  border: 1px solid rgba(255, 230, 110, 0.72);
+  border-radius: 4px;
+  background: rgba(34, 27, 4, 0.9);
+  color: #fff0a3;
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.awakened-underlay-preview .awakened-underlay-card {
+  width: 100%;
+  border-width: 1px;
+  border-color: rgba(255, 230, 110, 0.82);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.46), 0 0 10px rgba(255, 220, 91, 0.2);
+}
+
+.awakened-underlay-card-name {
+  width: 100%;
+  overflow: hidden;
+  color: #fff1b0;
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hp-card-stack {
   position: absolute;
   z-index: 2;
