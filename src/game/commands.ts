@@ -171,6 +171,7 @@ export interface OptionalCostAttackDecision {
   resolution?: 'attack' | 'ability'
   sourceEnergy?: EnergyCost
   mandatory?: boolean
+  extraDeckPlayInstanceId?: string
 }
 
 export interface DrawUpToDecision {
@@ -969,6 +970,7 @@ export const getPendingDecision = (
       resolution: pending.resolution,
       sourceEnergy: pending.sourceEnergy,
       mandatory: pending.mandatory,
+      extraDeckPlayInstanceId: pending.extraDeckPlayInstanceId,
     }
   }
 
@@ -1297,8 +1299,16 @@ const applyPendingDecisionCommand = (
         command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
         command.hpToHandIds ?? [],
       )
-    case 'resolve-draw-up-to':
-      return resolveDrawUpTo(state, command.playerId, command.drawCount)
+    case 'resolve-draw-up-to': {
+      // BS9-030 的 detached FLIP 會把攻擊後效果暫停在 draw-up-to。
+      // 抽牌確認後沿用與其他 battle continuation 相同的收尾入口，讓最後
+      // 一個攻擊後效果能呼叫 finishBattle，而不是留下越界的 effect index。
+      const continuation = state.pendingDrawUpTo?.battleContinuation
+      const resolved = resolveDrawUpTo(state, command.playerId, command.drawCount)
+      return continuation
+        ? continueBattleAfterPending(resolved, continuation)
+        : resolved
+    }
     case 'resolve-stage-trigger': {
       const pending = state.pendingStageTrigger
       if (!pending) throw new GameRuleError('沒有待處理的場景觸發。')
@@ -1870,13 +1880,15 @@ const resolvePendingAbilityEffect = (
       context,
     )
   }
-  if (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly &&
+  if ('target' in effect && effect.target?.previousEffectTargetOnly &&
     targetIds.length > 0 && (new Set(targetIds).size !== targetIds.length ||
       targetIds.some((id) => !pending.previousEffectTargetIds?.includes(id)))) {
     throw new GameRuleError('後續 HP 效果只能作用於先前選定的同一張餅乾。')
   }
+  const previousEffectTargetOnly =
+    'target' in effect && effect.target?.previousEffectTargetOnly === true
   const resolvedTargetIds =
-    effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly
+    previousEffectTargetOnly
       ? pending.previousEffectTargetIds ?? targetIds
       : targetIds
   if (!isEffectConditionMet(state, context, effect)) {
@@ -2100,7 +2112,8 @@ const resolvePendingAbilityEffect = (
     effect.kind === 'hand-to-break' ||
     effect.kind === 'support-to-battle' ||
     effect.kind === 'trash-to-battle' ||
-    effect.kind === 'gain-hp'
+    effect.kind === 'gain-hp' ||
+    effect.kind === 'hand-to-battle'
       ? effect.thenEffects
       : undefined
   const hasConditionalThen =
@@ -2137,7 +2150,7 @@ const resolvePendingAbilityEffect = (
         }
       : pendingWithAttackHandToBreak
   const pendingWithResolvedPreviousTarget =
-    (effect.kind === 'gain-hp' && effect.target?.previousEffectTargetOnly) ||
+    previousEffectTargetOnly ||
     (effect.kind === 'break-to-trash' && effect.sameLevelAsPreviousEffectTarget)
       ? { ...pendingWithLinkedPreviousTarget, previousEffectTargetIds: undefined }
       : pendingWithLinkedPreviousTarget

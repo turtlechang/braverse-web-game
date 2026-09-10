@@ -214,6 +214,37 @@ describe('describeEffectResult for optional attack modification', () => {
   })
 })
 
+describe('received-damage channel labels', () => {
+  const target = { side: 'self' as const, min: 1, max: 1 }
+
+  it('distinguishes effect-only and all-damage modifiers in the UI', () => {
+    expect(describeEffect({
+      kind: 'modify-damage-received',
+      amount: -2,
+      duration: 'this-turn',
+      damageType: 'effect',
+      target,
+    })).toContain('受到的效果傷害 -2')
+    expect(describeEffect({
+      kind: 'modify-damage-received',
+      amount: -3,
+      duration: 'this-turn',
+      damageType: 'all',
+      target,
+    })).toContain('受到的傷害 -3')
+  })
+
+  it('keeps the channel in the resolved result text', () => {
+    expect(describeEffectResult({
+      kind: 'modify-damage-received',
+      amount: -3,
+      duration: 'this-turn',
+      damageType: 'all',
+      target,
+    }, ['Melted Choco Cookie'])).toBe('Melted Choco Cookie 受到的傷害 -3。')
+  })
+})
+
 describe('describeEffect for deck-to-trash', () => {
   const effect: DeckToTrashEffect = {
     kind: 'deck-to-trash',

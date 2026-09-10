@@ -15,6 +15,7 @@ import {
   selectEnergyPayment,
   type CardEffect,
   type EnergyCost,
+  type ExtraDeckCard,
   type GameCard,
   type GameState,
   type PlayerId,
@@ -22,7 +23,7 @@ import {
 import { energyColorLabel } from '../gameUiLabels'
 
 export interface OptionalCostAttackPromptData {
-  sourceCard?: GameCard
+  sourceCard?: GameCard | ExtraDeckCard
   /** 來源餅乾可直接提供的能量；這是付款流程中的固定候選，不是支援區卡。 */
   sourceEnergy?: EnergyCost
   sourceCardName: string
@@ -334,7 +335,9 @@ export function getOptionalCostAttackPrompt(
       : null
   const sourceCard = game.players[viewerPlayerId].battleArea.find(
     (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
-  )?.card
+  )?.card ?? game.players[viewerPlayerId].extraDeck?.find(
+    (card) => card.instanceId === pending.sourceInstanceId,
+  )
   const supportToHandCandidates =
     supportToHandCost === 0
       ? []

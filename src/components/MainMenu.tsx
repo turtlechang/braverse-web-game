@@ -18,16 +18,6 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs7-green-arena', label: 'BS7 綠｜Arena' },
   { value: 'bs7-blue-arena', label: 'BS7 藍｜Arena' },
   { value: 'bs7-purple-arena', label: 'BS7 紫｜Arena' },
-  { value: 'bs6-red-standard', label: 'BS6 紅｜標準' },
-  { value: 'bs6-yellow-standard', label: 'BS6 黃｜標準' },
-  { value: 'bs6-green-standard', label: 'BS6 綠｜標準' },
-  { value: 'bs6-blue-standard', label: 'BS6 藍｜標準' },
-  { value: 'bs6-purple-standard', label: 'BS6 紫｜標準' },
-  { value: 'bs6-red-competitive', label: 'BS6 紅｜競技環境' },
-  { value: 'bs6-yellow-competitive', label: 'BS6 黃｜競技環境' },
-  { value: 'bs6-green-competitive', label: 'BS6 綠｜競技環境' },
-  { value: 'bs6-blue-competitive', label: 'BS6 藍｜競技環境' },
-  { value: 'bs6-purple-competitive', label: 'BS6 紫｜競技環境' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
@@ -52,7 +42,6 @@ interface MainMenuProps {
   onOpenOnlineMatch: () => void
   onOpenTestScenario: () => void
   onCreateDeck: () => void
-  onCreateBs8CandidateDeck?: () => void
   onEditDeck: (deck: CustomDeck) => void
   onDuplicateDeck: (deck: CustomDeck) => void
   onDeleteDeck: (deck: CustomDeck) => void
@@ -81,7 +70,6 @@ export function MainMenu({
   onOpenOnlineMatch,
   onOpenTestScenario,
   onCreateDeck,
-  onCreateBs8CandidateDeck,
   onEditDeck,
   onDuplicateDeck,
   onDeleteDeck,
@@ -371,16 +359,6 @@ export function MainMenu({
               <RefreshCw aria-hidden="true" />
               重新讀取
             </button>
-            {onCreateBs8CandidateDeck && (
-              <button
-                type="button"
-                data-testid="open-bs8-candidate-deck-editor"
-                onClick={onCreateBs8CandidateDeck}
-              >
-                <FlaskConical aria-hidden="true" />
-                BS8 候選 EXTRA 驗收
-              </button>
-            )}
           </nav>
         </details>
         <p className="main-menu-disclaimer">

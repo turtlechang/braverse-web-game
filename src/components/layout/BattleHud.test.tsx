@@ -27,7 +27,6 @@ describe('desktop battle HUD', () => {
     const markup = renderToStaticMarkup(
       <MatchToolbar
         onReset={() => undefined}
-        onViewDeck={() => undefined}
         onPause={() => undefined}
       />,
     )
@@ -44,7 +43,6 @@ describe('desktop battle HUD', () => {
     const markup = renderToStaticMarkup(
       <MatchToolbar
         onReset={() => undefined}
-        onViewDeck={() => undefined}
         onPause={() => undefined}
       />,
     )
@@ -61,7 +59,6 @@ describe('desktop battle HUD', () => {
         phaseLabel="主要階段"
         deckConfig={{ player: 'red', ai: 'green' }}
         aiActionCount={12}
-        onRunSimulation={() => undefined}
         onResume={() => undefined}
       />,
     )
@@ -69,6 +66,6 @@ describe('desktop battle HUD', () => {
     expect(markup).toContain('玩家 紅色')
     expect(markup).toContain('AI 綠色')
     expect(markup).toContain('AI 已執行 12 個動作')
-    expect(markup).toContain('執行 20 場 AI 驗證')
+    expect(markup).not.toContain('執行 20 場 AI 驗證')
   })
 })

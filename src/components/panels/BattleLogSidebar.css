@@ -396,13 +396,8 @@
 .battle-log-review-body {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-}
-
-.battle-log-review-body .command-log-filter-bar {
-  padding: 10px 26px;
-  background: rgba(1, 8, 28, 0.18);
 }
 
 .battle-log-review-tools {
@@ -480,7 +475,6 @@
 
   .battle-log-review-header,
   .battle-log-review-stats,
-  .battle-log-review-body .command-log-filter-bar,
   .battle-log-review-tools,
   .battle-log-review-body .battle-log-list,
   .battle-log-review-footer {

@@ -31,14 +31,7 @@ import { copyTextToClipboard } from '../copyTextToClipboard'
 import { downloadBattleReplay } from '../downloadBattleReplay'
 import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
-  CommandLogFilterBar,
-} from './CommandLogFilters'
-import {
-  emptyCommandLogFilters,
-  filterCommandLogEntries,
-  matchesCommandLogFilters,
   resolveEntryCategory,
-  type CommandLogFilterState,
 } from './commandLogFilterUtils'
 import { groupCommandLogEntries, type LogGroup } from './commandLogGrouping'
 import './OnlineActivityFeed.css'
@@ -135,9 +128,6 @@ export function OnlineActivityFeed({
   onExportReplay,
 }: OnlineActivityFeedProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [filters, setFilters] = useState<CommandLogFilterState>(
-    emptyCommandLogFilters,
-  )
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
@@ -189,24 +179,13 @@ export function OnlineActivityFeed({
     [game, viewerPlayerId],
   )
   const latestEvent = events.at(-1)
-  const filteredEntries = useMemo(
-    () => filterCommandLogEntries(game.commandLog ?? [], filters),
-    [filters, game.commandLog],
-  )
   const historyGroups = useMemo(
     () => groupCommandLogEntries(game.commandLog ?? []),
     [game.commandLog],
   )
-  const visibleHistoryGroups = useMemo(
-    () =>
-      historyGroups.filter((group) =>
-        group.entries.some((entry) => matchesCommandLogFilters(entry, filters)),
-      ),
-    [historyGroups, filters],
-  )
   const renderedHistoryGroups = useMemo(
-    () => [...visibleHistoryGroups].reverse(),
-    [visibleHistoryGroups],
+    () => [...historyGroups].reverse(),
+    [historyGroups],
   )
   const replacementPending = Boolean(game.pendingReplacement?.tasks[0])
   const peekMessage =
@@ -329,20 +308,10 @@ export function OnlineActivityFeed({
             </ol>
           </section>
 
-          <CommandLogFilterBar
-            entries={game.commandLog ?? []}
-            playerNames={{
-              'player-one': game.players['player-one'].name,
-              'player-two': game.players['player-two'].name,
-            }}
-            value={filters}
-            onChange={setFilters}
-          />
-
           <section className="online-activity-history">
             <div className="online-activity-history-header">
               <strong>
-                完整紀錄（{filteredEntries.length}/{game.commandLog?.length ?? 0}）
+                完整紀錄（{game.commandLog?.length ?? 0}）
               </strong>
               <div className="online-activity-history-actions">
                 <button
@@ -438,7 +407,7 @@ export function OnlineActivityFeed({
                 })
               ) : (
                 <li className="is-empty">
-                  {game.commandLog?.length ? '沒有符合篩選條件的紀錄。' : '尚無對戰紀錄。'}
+                  尚無對戰紀錄。
                 </li>
               )}
             </ol>

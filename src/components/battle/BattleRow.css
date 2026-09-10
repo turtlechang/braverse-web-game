@@ -293,7 +293,10 @@
 }
 
 .top-field .combat-slots {
-  align-items: flex-end;
+  /* The opponent's Cookie belongs at the far edge of its own battle zone,
+   * leaving the lower edge free for its HP dock and the shared center line. */
+  align-items: flex-start;
+  padding-top: 3px;
 }
 
 .top-field .combat-card-wrap {

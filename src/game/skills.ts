@@ -1377,6 +1377,25 @@ export const getCookieSkillUnavailableReason = (
     const { side, count } = unmetFaintCondition.condition
     return `本回合${side === 'opponent' ? '對手' : '我方'}餅乾昏厥數尚未達到 ${count} 張。`
   }
+  const unmetPreviousTurnFaintCondition = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
+    'condition' in effect &&
+    effect.condition?.kind === 'cookies-fainted-during-opponent-previous-turn-at-least' &&
+    !isEffectConditionMet(state, context, effect),
+  )
+  if (
+    unmetPreviousTurnFaintCondition &&
+    'condition' in unmetPreviousTurnFaintCondition &&
+    unmetPreviousTurnFaintCondition.condition?.kind ===
+      'cookies-fainted-during-opponent-previous-turn-at-least'
+  ) {
+    const { count, energyColor, minLevel, maxLevel } =
+      unmetPreviousTurnFaintCondition.condition
+    const colorLabel = energyColor ? `${energyColor} ` : ''
+    const levelLabel = minLevel === maxLevel && minLevel !== undefined
+      ? `LV.${minLevel} `
+      : ''
+    return `對手上一回合${colorLabel}${levelLabel}餅乾昏厥數尚未達到 ${count} 張。`
+  }
   const missingAnotherCookie = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
     'condition' in effect && effect.condition?.kind === 'battle-area-has-another-cookie' &&
     !isEffectConditionMet(state, context, effect),

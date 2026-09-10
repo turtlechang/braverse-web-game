@@ -118,6 +118,15 @@ const runScenario = async (browser, viewport, negative) => {
     result.targetNames = await targetButtons.evaluateAll((buttons) =>
       buttons.map((button) => button.innerText.trim()),
     )
+    const playerArea = page.getByRole('region', { name: '玩家場地' })
+    const attackedCookieHp = playerArea.locator(
+      '[aria-label="Lassi Guard Kulfi HP 卡 4 張"]',
+    )
+    assert.equal(
+      await attackedCookieHp.count(),
+      1,
+      'the attacked Cookie must already show one lost HP while its FLIP is pending',
+    )
     const modalScreenshotPath = resolve(
       outputDirectory,
       `bs9-001-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}-modal.png`,
@@ -136,8 +145,8 @@ const runScenario = async (browser, viewport, negative) => {
       await modal.waitFor({ state: 'hidden' })
     } else {
       assert.equal(result.targetCount, 2, 'positive route must expose two own Cookie targets')
-      // Select the second Cookie so the attack target remains a visible HP witness
-      // while the selected modifier is still carried through the battle command.
+      // Select Pomegranate so the attack target remains a visible HP witness
+      // while the selected modifier is carried through the battle command.
       await targetButtons.nth(1).click()
       result.actions.push('select-one-target')
       assert.equal(
@@ -153,6 +162,15 @@ const runScenario = async (browser, viewport, negative) => {
     }
 
     const trace = await waitForTrace(page)
+    const completedAttackedCookieHp = playerArea.locator(
+      '[aria-label="Lassi Guard Kulfi HP 卡 3 張"]',
+    )
+    await completedAttackedCookieHp.waitFor({ state: 'visible' })
+    assert.equal(
+      await completedAttackedCookieHp.count(),
+      1,
+      'BS1-007 second attack damage must resolve after the BS9-001 FLIP decision',
+    )
     result.trace = trace
     result.observedCommandKinds = [...new Set(trace.map((entry) => entry.commandKind))]
     const flipEntry = trace.find((entry) => entry.commandKind === 'resolve-flip')

@@ -352,6 +352,11 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}放回牌庫頂。`
   }
   if (effect.kind === 'transfer-hp' && t) {
+    if (effect.receiverTarget) {
+      return effect.direction === 'to-source'
+        ? `選擇供牌餅乾，再選擇另一張接收餅乾，將供牌餅乾最上方 ${effect.amount} 張 HP 卡移到接收餅乾（可略過）。`
+        : `選擇接收餅乾，將這張餅乾最上方 ${effect.amount} 張 HP 卡移過去（可略過）。`
+    }
     return effect.direction === 'to-source'
       ? `選擇 ${t.count}${t.target}，將其 ${effect.amount} 張 HP 卡移到這張餅乾上。`
       : `選擇 ${t.count}${t.target}，將這張餅乾的 ${effect.amount} 張 HP 卡移過去。`
@@ -360,7 +365,7 @@ export const describeEffect = (effect: CardEffect) => {
     const amount = effect.amount
     return effect.kind === 'modify-attack'
       ? `選擇 ${t.count}${t.target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-      : `選擇 ${t.count}${t.target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `選擇 ${t.count}${t.target}，受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${amount >= 0 ? '+' : ''}${amount}。`
   }
 
   return `效果已處理。`
@@ -495,7 +500,7 @@ export const describeEffectResult = (
     }
     return effect.kind === 'modify-attack'
       ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-      : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `${names} 受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${amount >= 0 ? '+' : ''}${amount}。`
   }
 
   return `效果已處理。`

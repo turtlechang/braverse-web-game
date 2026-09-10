@@ -24,7 +24,7 @@ describe('dismissible information dialog keyboard interaction', () => {
     }
     const root = createRoot(content)
     const resume = vi.fn()
-    await act(() => root.render(<PauseModal turnNumber={2} phaseLabel="主要階段" deckConfig={{ player: 'red', ai: 'red' }} aiActionCount={0} onRunSimulation={() => {}} onResume={resume} />))
+    await act(() => root.render(<PauseModal turnNumber={2} phaseLabel="主要階段" deckConfig={{ player: 'red', ai: 'red' }} aiActionCount={0} onResume={resume} />))
     const buttons = Array.from(content.querySelectorAll('button'))
     expect(document.activeElement?.textContent).toBe('繼續對戰')
     expect(trigger.inert).toBe(true)

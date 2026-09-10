@@ -7,7 +7,7 @@ import {
   createCardCheckDemoState,
   parseTestStateConfig,
 } from './demo'
-import { resolveFlip } from './battle'
+import { resolveFlip, resolveNextDamage } from './battle'
 import { executeCardEffect } from './effects'
 import { getAttackDamageAgainst } from './effects/combat'
 import { advancePhase } from './turn'
@@ -33,6 +33,11 @@ const activateForTarget = (
   activate: true,
   targetIds: [targetInstanceId],
 })
+
+const finishRemainingAttackDamage = (state: GameState): GameState =>
+  state.pendingBattle?.stage === 'damage'
+    ? resolveNextDamage(state)
+    : state
 
 const effectDamage = (
   state: GameState,
@@ -74,11 +79,25 @@ describe('BS9-001 Icicle Yeti Cookie', () => {
     const ownTargets = initial.players['player-one'].battleArea.map(
       (entry) => entry.card.instanceId,
     )
+    const opponentTarget = initial.players['player-two'].battleArea[0]?.card.instanceId
+    const revealedSourceId = initial.pendingBattle?.revealedHpCard?.instanceId
+    expect(opponentTarget).toBeDefined()
+    expect(revealedSourceId).toBeDefined()
     expect(ownTargets).toHaveLength(2)
+    const attackedTarget = initial.players['player-one'].battleArea[0]
+    expect(attackedTarget?.card.name).toBe('Lassi Guard Kulfi')
+    expect(attackedTarget?.hpCards).toHaveLength(attackedTarget.card.hp - 1)
 
     const selected = activateForTarget(initial, ownTargets[1])
+    expect(selected.pendingBattle?.remainingDamage).toBe(1)
+    expect(selected.players['player-one'].battleArea[0]?.hpCards).toHaveLength(
+      attackedTarget!.hpCards.length,
+    )
+    expect(selected.players['player-one'].battleArea[1]?.hpCards).toHaveLength(
+      initial.players['player-one'].battleArea[1]!.hpCards.length,
+    )
     expect(selected.damageReceivedModifiers).toContainEqual({
-      sourceInstanceId: 'player-one-BS9-001-1',
+      sourceInstanceId: revealedSourceId!,
       targetInstanceId: ownTargets[1],
       amount: -2,
       expiresAfterTurn: 2,
@@ -92,13 +111,17 @@ describe('BS9-001 Icicle Yeti Cookie', () => {
       targetIds: [],
     })
     expect(noTarget.damageReceivedModifiers).toEqual([])
+    const completedNoTarget = resolveNextDamage(noTarget)
+    expect(completedNoTarget.players['player-one'].battleArea[0]?.hpCards).toHaveLength(
+      attackedTarget!.hpCards.length - 1,
+    )
     expect(() => resolveFlip(initial, 'player-one', {
       activate: true,
       targetIds: ownTargets,
     })).toThrow()
     expect(() => resolveFlip(initial, 'player-one', {
       activate: true,
-      targetIds: ['flip-attacker'],
+      targetIds: [opponentTarget!],
     })).toThrow()
   })
 
@@ -106,8 +129,11 @@ describe('BS9-001 Icicle Yeti Cookie', () => {
     const initial = createCardCheckDemoState('BS9-001')
     const sourceId = initial.players['player-one'].battleArea[0].card.instanceId
     const targetId = initial.players['player-one'].battleArea[1].card.instanceId
+    const opponentAttackerId = initial.players['player-two'].battleArea[0]?.card.instanceId
+    expect(opponentAttackerId).toBeDefined()
+    const baselineAttackDamage = getAttackDamageAgainst(initial, opponentAttackerId!, targetId)
 
-    const activated = activateForTarget(initial, targetId)
+    const activated = finishRemainingAttackDamage(activateForTarget(initial, targetId))
     const targetHp = activated.players['player-one'].battleArea.find(
       (entry) => entry.card.instanceId === targetId,
     )!.hpCards.length
@@ -122,13 +148,13 @@ describe('BS9-001 Icicle Yeti Cookie', () => {
       (entry) => entry.card.instanceId === targetId,
     )!.hpCards.length).toBe(targetHp - 1)
 
-    expect(getAttackDamageAgainst(activated, 'flip-attacker', targetId)).toBe(1)
+    expect(getAttackDamageAgainst(activated, opponentAttackerId!, targetId)).toBe(baselineAttackDamage)
   })
 
   it('expires the selected Cookie modifier at the end of the current turn', () => {
     const initial = createCardCheckDemoState('BS9-001')
     const targetId = initial.players['player-one'].battleArea[1].card.instanceId
-    const activated = activateForTarget(initial, targetId)
+    const activated = finishRemainingAttackDamage(activateForTarget(initial, targetId))
     expect(activated.damageReceivedModifiers).toHaveLength(1)
 
     const nextTurn = advancePhase(advancePhase(activated))

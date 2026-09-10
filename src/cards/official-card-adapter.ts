@@ -94,6 +94,8 @@ const getEnergyColor = (
 type ExtraDeckPlaySpec = {
   mode: 'enter-battle' | 'awaken'
   requirement?: EffectCondition
+  /** Cost printed in the EXTRA clause, paid before the card enters battle. */
+  playCost?: AbilityCost
   onPlayEffects?: CardEffect[]
   onPlayCost?: AbilityCost
   awakenRequirement?: ExtraDeckCard['awakenRequirement']
@@ -109,6 +111,40 @@ type ExtraDeckPlaySpec = {
  * Awaken 疊放。因此只對已有官方文字與規則裁決的卡號建立精確映射。
  */
 const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
+  'BS9-030': {
+    mode: 'enter-battle',
+    playCost: {
+      energy: {},
+      discardHand: 3,
+      discardHandColor: 'yellow',
+      discardHandType: 'cookie',
+      discardHandHasFlip: true,
+    },
+    onPlayEffects: [
+      {
+        kind: 'break-to-trash',
+        max: 1,
+        exactLevel: 1,
+      },
+    ],
+  },
+  'BS9-010': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+      side: 'self',
+      count: 2,
+      energyColor: 'red',
+      minLevel: 1,
+      maxLevel: 1,
+    },
+    onPlayEffects: [{
+      kind: 'hand-to-hp',
+      target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+      optional: true,
+      handSide: 'opponent',
+    }],
+  },
   'BS8-005': {
     mode: 'enter-battle',
     requirement: {
@@ -635,6 +671,7 @@ export const convertOfficialCardToExtraDeckCard = (
     ...(parsedText.attack ? { attackEnergyCost: parsedText.attack.cost } : {}),
     ...(card.attackText ? { attackText: card.attackText } : {}),
     ...(attackEffects ? { attackEffects } : {}),
+    ...(spec.playCost ? { extraDeckPlayCost: spec.playCost } : {}),
     ...(spec.requirement ? { playRequirement: spec.requirement } : {}),
     ...(spec.awakenRequirement
       ? { awakenRequirement: spec.awakenRequirement }

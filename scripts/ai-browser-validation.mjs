@@ -248,6 +248,7 @@ try {
       const topCombatCard = document.querySelector(
         '.top-field .combat-card-wrap',
       )
+      const topCombatZone = document.querySelector('.top-field .combat-zone')
       const topRowMeta = document.querySelector('.top-field .row-meta')
       if (
         !(topSupportZone instanceof HTMLElement) ||
@@ -257,6 +258,7 @@ try {
         !(bottomBreakZone instanceof HTMLElement) ||
         !(bottomCombatCard instanceof HTMLElement) ||
         !(topCombatCard instanceof HTMLElement) ||
+        !(topCombatZone instanceof HTMLElement) ||
         !(topRowMeta instanceof HTMLElement)
       ) {
         throw new Error('找不到支援區、額外區、休息區、戰鬥卡或對手名稱牌')
@@ -268,6 +270,7 @@ try {
       const bottomBreakRect = bottomBreakZone.getBoundingClientRect()
       const bottomCombatCardRect = bottomCombatCard.getBoundingClientRect()
       const topCombatCardRect = topCombatCard.getBoundingClientRect()
+      const topCombatZoneRect = topCombatZone.getBoundingClientRect()
       const topRowMetaRect = topRowMeta.getBoundingClientRect()
       const phaseRail = document.querySelector('.phase-rail')
       const matchToolbar = document.querySelector('.match-toolbar')
@@ -459,11 +462,11 @@ try {
             bottom: bottomExtraRect.bottom,
           },
         },
-        // The opponent's card keeps a little more room from the middle so its
-        // HP dock remains inside the field; the player card stays on the
-        // original near-center threshold.
-        combatCardsNearCenter:
-          topFieldRect.bottom - topCombatCardRect.bottom < 56 &&
+        // The opponent Cookie is anchored to the upper edge of its battle
+        // zone; the player Cookie stays near the shared center line.
+        combatCardsAtOwningEdges:
+          topCombatCardRect.top - topCombatZoneRect.top <= 8 &&
+          topCombatCardRect.top >= topCombatZoneRect.top &&
           bottomCombatCardRect.top - bottomFieldRect.top < 40,
         // Nameplates are now corner-anchored (opponent near the field's own
         // top edge, player near its own bottom edge) rather than hugging the
@@ -649,8 +652,8 @@ try {
       )
     }
     assert.ok(
-      metrics.combatCardsNearCenter,
-      `${viewport.width}x${viewport.height} 的雙方戰鬥卡應靠近中央分隔列`,
+      metrics.combatCardsAtOwningEdges,
+      `${viewport.width}x${viewport.height} 的對手餅乾卡上緣應貼近對手戰鬥區上緣，玩家卡仍應靠近中央分隔列`,
     )
     assert.ok(
       metrics.topMetaNearFieldTop,

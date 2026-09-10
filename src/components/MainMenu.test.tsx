@@ -173,7 +173,7 @@ describe('MainMenu AI opponent options', () => {
 
   it('renders deck and level selectors with current values', async () => {
     const { container, root } = await renderMenu([validDeck], {}, {
-      aiDeckChoice: 'bs6-red-competitive',
+      aiDeckChoice: 'bs7-red-arena',
       aiLevel: 1,
     })
 
@@ -181,34 +181,20 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     expect(selects).toHaveLength(2)
-    expect(selects[0].value).toBe('bs6-red-competitive')
+    expect(selects[0].value).toBe('bs7-red-arena')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // 主選單只保留目前的 BS7／BS6 牌組；舊 BS3／BS4／BS5 選項不再出現。
+    // 主選單只保留目前的 BS7 Arena 牌組。
     const optionValues = [...selects[0].options].map((option) => option.value)
-    expect(optionValues).not.toContain('random')
-    expect(optionValues).not.toContain('bs2-purple')
-    expect(optionValues.filter((value) => value.startsWith('bs3-') || value.startsWith('bs4-') || value.startsWith('bs5-'))).toHaveLength(0)
-    expect(optionValues).toContain('bs6-red-standard')
-    expect(optionValues).toEqual(
-      expect.arrayContaining([
-        'bs7-red-arena',
-        'bs7-yellow-arena',
-        'bs7-green-arena',
-        'bs7-blue-arena',
-        'bs7-purple-arena',
-        'bs6-red-competitive',
-        'bs6-yellow-competitive',
-        'bs6-green-competitive',
-        'bs6-blue-competitive',
-        'bs6-purple-competitive',
-      ]),
-    )
+    expect(optionValues).toEqual([
+      'bs7-red-arena',
+      'bs7-yellow-arena',
+      'bs7-green-arena',
+      'bs7-blue-arena',
+      'bs7-purple-arena',
+    ])
     expect(container.textContent).toContain('BS7 紅｜Arena')
-    expect(container.textContent).toContain('BS6 紅｜競技環境')
-    expect(container.textContent).not.toContain('第三彈')
-    expect(container.textContent).not.toContain('BS4')
-    expect(container.textContent).not.toContain('BS5')
+    expect(container.textContent).not.toContain('BS6')
 
     await act(() => root.unmount())
   })
@@ -225,7 +211,7 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     await act(() => {
-      selects[0].value = 'bs6-purple-competitive'
+      selects[0].value = 'bs7-purple-arena'
       selects[0].dispatchEvent(new Event('change', { bubbles: true }))
     })
     await act(() => {
@@ -233,7 +219,7 @@ describe('MainMenu AI opponent options', () => {
       selects[1].dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    expect(onSelectAiDeck).toHaveBeenCalledWith('bs6-purple-competitive')
+    expect(onSelectAiDeck).toHaveBeenCalledWith('bs7-purple-arena')
     expect(onSelectAiLevel).toHaveBeenCalledWith(3)
 
     await act(() => root.unmount())

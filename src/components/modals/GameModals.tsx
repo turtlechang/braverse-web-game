@@ -2082,6 +2082,11 @@ export interface FlipResponseModalProps {
   onSkip: () => void
   chooseOneModes?: Extract<CardEffect, { kind: 'choose-one' }>['modes']
   targetCandidates?: GameCard[]
+  /** Explicit two-Cookie transfer: targetCandidates is the donor list and
+   * receiverTargetCandidates is the receiver list.  The submitted ids keep
+   * this same donor-first, receiver-second order. */
+  receiverTargetCandidates?: GameCard[]
+  targetPair?: boolean
   targetMin?: number
   targetMax?: number
 }
@@ -2098,6 +2103,8 @@ export function FlipResponseModal({
   onSkip,
   chooseOneModes,
   targetCandidates = [],
+  receiverTargetCandidates = [],
+  targetPair = false,
   targetMin = 0,
   targetMax = 1,
 }: FlipResponseModalProps) {
@@ -2110,8 +2117,9 @@ export function FlipResponseModal({
     pageIndex * FLIP_HAND_PAGE_SIZE,
     (pageIndex + 1) * FLIP_HAND_PAGE_SIZE,
   )
-  const targetSelectionReady =
-    selectedTargetIds.length >= targetMin && selectedTargetIds.length <= targetMax
+  const targetSelectionReady = targetPair
+    ? selectedTargetIds.length === 0 || selectedTargetIds.length === 2
+    : selectedTargetIds.length >= targetMin && selectedTargetIds.length <= targetMax
 
   if (minimized) {
     return (
@@ -2169,26 +2177,30 @@ export function FlipResponseModal({
         )}
         {targetCandidates.length > 0 && (
           <div className="flip-choice-section">
-            <strong>
-              選擇目標{targetMin === 0 ? '（可不選）' : ''}
-            </strong>
-            <div className="flip-choice-options" role="group" aria-label="FLIP 效果目標">
+            <strong>{targetPair ? '選擇供牌餅乾（可不選）' : `選擇目標${targetMin === 0 ? '（可不選）' : ''}`}</strong>
+            <div className="flip-choice-options" role="group" aria-label={targetPair ? 'FLIP 效果供牌目標' : 'FLIP 效果目標'}>
               {targetCandidates.map((target) => {
-                const selected = selectedTargetIds.includes(target.instanceId)
+                const selected = selectedTargetIds[0] === target.instanceId
                 return (
                   <button
                     type="button"
                     className={selected ? 'is-selected' : ''}
                     aria-pressed={selected}
+                    disabled={targetPair && selectedTargetIds[1] === target.instanceId}
                     key={target.instanceId}
                     onClick={() => {
-                      setSelectedTargetIds((current) =>
-                        selected
+                      setSelectedTargetIds((current) => {
+                        if (targetPair) {
+                          return selected
+                            ? []
+                            : [target.instanceId, ...(current[1] ? [current[1]] : [])]
+                        }
+                        return selected
                           ? current.filter((id) => id !== target.instanceId)
                           : current.length < targetMax
                             ? [...current, target.instanceId]
-                            : current,
-                      )
+                            : current
+                      })
                     }}
                   >
                     <CardFace card={target} />
@@ -2197,6 +2209,35 @@ export function FlipResponseModal({
                 )
               })}
             </div>
+            {targetPair && receiverTargetCandidates.length > 0 && (
+              <>
+                <strong>選擇接收餅乾</strong>
+                <div className="flip-choice-options" role="group" aria-label="FLIP 效果接收目標">
+                  {receiverTargetCandidates.map((target) => {
+                    const selected = selectedTargetIds[1] === target.instanceId
+                    const donorSelected = selectedTargetIds[0] === target.instanceId
+                    return (
+                      <button
+                        type="button"
+                        className={selected ? 'is-selected' : ''}
+                        aria-pressed={selected}
+                        disabled={donorSelected}
+                        key={target.instanceId}
+                        onClick={() => {
+                          setSelectedTargetIds((current) => {
+                            if (selected) return current.slice(0, 1)
+                            return current[0] ? [current[0], target.instanceId] : current
+                          })
+                        }}
+                      >
+                        <CardFace card={target} />
+                        <span>{target.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
         {discardCount > 0 && (
@@ -2337,6 +2378,38 @@ export function CardDetailModal({
               ? `LV ${card.level} · HP ${card.hp} · 攻擊 ${card.attack} · 費用 ${card.attackCost}`
               : `卡牌類型：${card.type.toUpperCase()}`}
           </p>
+          {awakenedUnderlay && awakenedUnderlay.length > 0 && (
+            <section
+              className="card-detail-underlay"
+              aria-label="覺醒前卡牌"
+            >
+              <strong>覺醒前的餅乾</strong>
+              <div className="card-detail-underlay-list">
+                {awakenedUnderlay.map((underlay) => (
+                  <div
+                    className="card-detail-underlay-entry"
+                    key={underlay.instanceId}
+                  >
+                    <CardFace
+                      card={underlay}
+                      className="underlay-detail-card"
+                      ariaLabel={`查看覺醒前卡牌：${underlay.name}`}
+                      onClick={
+                        onInspectUnderlay
+                          ? () => onInspectUnderlay(underlay)
+                          : undefined
+                      }
+                    />
+                    <div>
+                      <strong>{underlay.name}</strong>
+                      <small>{underlay.id}</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <small>此卡覆蓋在覺醒卡下方，昏厥時會一併進入棄牌區。</small>
+            </section>
+          )}
           <div
             className={`card-detail-rules ${
               ruleSectionCount === 1 ? 'single-rule' : ''
@@ -2429,7 +2502,6 @@ export interface PauseModalProps {
   phaseLabel: string
   deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
   aiActionCount: number
-  onRunSimulation: () => void
   onResume: () => void
   /** 複製 ReplayIssueBundleV1 JSON 到剪貼簿；resolve 為是否成功。 */
   onCopyIssueBundle?: () => Promise<boolean>
@@ -2440,7 +2512,6 @@ export function PauseModal({
   phaseLabel,
   deckConfig,
   aiActionCount,
-  onRunSimulation,
   onResume,
   onCopyIssueBundle,
 }: PauseModalProps) {
@@ -2461,13 +2532,6 @@ export function PauseModal({
           <span>AI {deckChoiceLabel[deckConfig.ai]}</span>
         </div>
         <small>AI 已執行 {aiActionCount} 個動作</small>
-        <button
-          className="pause-simulation-button"
-          type="button"
-          onClick={onRunSimulation}
-        >
-          執行 20 場 AI 驗證
-        </button>
         {onCopyIssueBundle && (
           <button
             className="pause-simulation-button"

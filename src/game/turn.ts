@@ -177,6 +177,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
       [activationState.activePlayerId]: 0,
       [getOpponentId(activationState.activePlayerId)]: 0,
     } as Record<PlayerId, number>,
+    cookiesFaintedThisTurnDetails: {},
     supportCardsTrashedThisTurn: {},
     arenaCookiesPlacedInBreakThisTurn: {},
     itemsActivatedThisTurn: {},
@@ -499,6 +500,12 @@ export const advancePhase = (state: GameState): GameState => {
       }
       return {
         ...endPhaseState,
+        // Snapshot the turn that just ended before Active Phase clears the
+        // current counters.  The next active player can then evaluate
+        // "during your opponent's previous turn" conditions against the
+        // matching owner and card colour/level.
+        cookiesFaintedDuringOpponentPreviousTurn:
+          endPhaseState.cookiesFaintedThisTurnDetails ?? {},
         attackModifiers: endPhaseState.attackModifiers.filter(
           (modifier) =>
             modifier.expiresAfterTurn === null ||

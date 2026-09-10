@@ -196,7 +196,20 @@ const resolveDamageOutcome = (
   const faintedState =
     departedCookies.length === 0
       ? updatedState
-      : { ...updatedState, cookiesFaintedThisTurn: faintedCookiesThisTurn }
+      : {
+          ...updatedState,
+          cookiesFaintedThisTurn: faintedCookiesThisTurn,
+          cookiesFaintedThisTurnDetails: {
+            ...(updatedState.cookiesFaintedThisTurnDetails ?? {}),
+            [damagedPlayerId]: [
+              ...(updatedState.cookiesFaintedThisTurnDetails?.[damagedPlayerId] ?? []),
+              ...departedCookies.map((cookie) => ({
+                energyColor: cookie.energyColor,
+                level: cookie.level,
+              })),
+            ],
+          },
+        }
 
   let faintState = faintedState
   for (const cookie of departedCookies) {
@@ -1271,7 +1284,10 @@ export const executeCardEffect = (
       }
       return state
     }
-    const player = state.players[context.sourcePlayerId]
+    const handOwnerId = effect.handSide === 'opponent'
+      ? getOpponentId(context.sourcePlayerId)
+      : context.sourcePlayerId
+    const player = state.players[handOwnerId]
     const selectedId = selectedTargetIds[0]
     const selected = player.hand.find((card) => card.instanceId === selectedId)
     const targetId = effect.target.sourceOnly
@@ -1289,19 +1305,28 @@ export const executeCardEffect = (
     if (!targetPlayer.battleArea.some((cookie) => cookie.card.instanceId === targetId)) {
       throw new GameRuleError('Invalid HP target.')
     }
-    return updatePlayer(state, {
+    let nextState = updatePlayer(state, {
       ...player,
       hand: player.hand.filter((card) => card.instanceId !== selectedId),
-      ...(targetPlayerId === context.sourcePlayerId
-        ? {
-            battleArea: player.battleArea.map((cookie) =>
-              cookie.card.instanceId === targetId
-                ? { ...cookie, hpCards: [...cookie.hpCards, selected] }
-                : cookie,
-            ),
-          }
-        : {}),
     })
+    const targetPlayerAfterHand = nextState.players[targetPlayerId]
+    nextState = updatePlayer(nextState, {
+      ...targetPlayerAfterHand,
+      battleArea: targetPlayerAfterHand.battleArea.map((cookie) =>
+        cookie.card.instanceId === targetId
+          ? { ...cookie, hpCards: [...cookie.hpCards, selected] }
+          : cookie,
+      ),
+    })
+    if (handOwnerId === targetPlayerId) return nextState
+    const existing = nextState.foreignHpCardInstanceIds?.[targetId] ?? []
+    return {
+      ...nextState,
+      foreignHpCardInstanceIds: {
+        ...(nextState.foreignHpCardInstanceIds ?? {}),
+        [targetId]: [...new Set([...existing, selected.instanceId])],
+      },
+    }
   }
 
   if (effect.kind === 'hp-to-hand') {
@@ -1380,27 +1405,53 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'transfer-hp') {
-    // HP 卡最終會回到卡主的棄牌區，跨玩家搬移會弄錯歸屬，因此只支援我方之間。
-    if (effect.target.side !== 'self') {
-      throw new GameRuleError('transfer-hp 只支援我方餅乾之間搬移 HP 卡。')
+    // A Trap may steal an opponent Cookie's HP onto an explicitly selected
+    // Cookie of its owner's side.  In that form selectedTargetIds carries the
+    // donor first and the receiver second; the legacy form still uses the
+    // effect source Cookie as its receiver.
+    if (effect.receiverTarget) {
+      const uniqueIds = [...new Set(selectedTargetIds)]
+      if (uniqueIds.length !== selectedTargetIds.length) {
+        throw new GameRuleError('HP 搬移不能重複選擇同一張餅乾。')
+      }
+      if (uniqueIds.length !== 0 && uniqueIds.length !== 2) {
+        throw new GameRuleError('HP 搬移必須同時選擇供牌與接收牌，不能只選一張。')
+      }
     }
+    const donorTargetIds = effect.receiverTarget
+      ? selectedTargetIds.slice(0, 1)
+      : selectedTargetIds
     const targets = selectEffectTargets(
       state,
       context,
       effect.target,
-      selectedTargetIds,
+      donorTargetIds,
     )
     if (targets.length === 0) return { ...state }
-    const playerId = context.sourcePlayerId
-    const player = state.players[playerId]
-    const source = player.battleArea.find(
+    const target = targets[0]
+    const sourceOwnerId = getCookieOwnerId(state, context.sourceInstanceId)
+    const sourcePlayer = sourceOwnerId ? state.players[sourceOwnerId] : undefined
+    const source = sourcePlayer?.battleArea.find(
       (cookie) => cookie.card.instanceId === context.sourceInstanceId,
     )
-    if (!source) return { ...state }
-    const target = targets[0]
-    const donor = effect.direction === 'to-source' ? target : source
-    const receiver = effect.direction === 'to-source' ? source : target
-    if (donor.card.instanceId === receiver.card.instanceId) return { ...state }
+    const explicitReceiver = effect.receiverTarget
+      ? selectEffectTargets(
+          state,
+          context,
+          effect.receiverTarget,
+          selectedTargetIds.slice(1, 2),
+        )[0]
+      : undefined
+    if (!source && !explicitReceiver) return { ...state }
+    const donor = effect.direction === 'to-source'
+      ? target
+      : (source ?? explicitReceiver!)
+    const receiver = effect.direction === 'to-source'
+      ? (explicitReceiver ?? source!)
+      : target
+    if (donor.card.instanceId === receiver.card.instanceId) {
+      throw new GameRuleError('HP 搬移的供牌與接收牌必須是不同餅乾。')
+    }
     const moved = donor.hpCards.slice(-effect.amount)
     if (moved.length === 0) return { ...state }
     const donorRemaining = donor.hpCards.slice(
@@ -1408,24 +1459,54 @@ export const executeCardEffect = (
       donor.hpCards.length - moved.length,
     )
     const donorFaints = donorRemaining.length === 0
-    const updated = updatePlayer(state, {
-      ...player,
-      battleArea: player.battleArea.flatMap((cookie) => {
-        if (cookie.card.instanceId === donor.card.instanceId) {
-          return donorFaints ? [] : [{ ...cookie, hpCards: donorRemaining }]
-        }
-        if (cookie.card.instanceId === receiver.card.instanceId) {
-          return [{ ...cookie, hpCards: [...cookie.hpCards, ...moved] }]
-        }
-        return [cookie]
-      }),
-      breakArea: donorFaints
-        ? [...player.breakArea, donor.card]
-        : player.breakArea,
-    })
+    const donorOwnerId = getCookieOwnerId(state, donor.card.instanceId)
+    const receiverOwnerId = getCookieOwnerId(state, receiver.card.instanceId)
+    if (!donorOwnerId || !receiverOwnerId) return { ...state }
+    let updated = state
+    const updateOwner = (ownerId: PlayerId): void => {
+      const owner = updated.players[ownerId]
+      updated = updatePlayer(updated, {
+        ...owner,
+        battleArea: owner.battleArea.flatMap((cookie) => {
+          if (cookie.card.instanceId === donor.card.instanceId) {
+            return donorFaints ? [] : [{ ...cookie, hpCards: donorRemaining }]
+          }
+          if (cookie.card.instanceId === receiver.card.instanceId) {
+            return [{ ...cookie, hpCards: [...cookie.hpCards, ...moved] }]
+          }
+          return [cookie]
+        }),
+        breakArea:
+          donorFaints && ownerId === donorOwnerId
+            ? [...owner.breakArea, donor.card]
+            : owner.breakArea,
+      })
+    }
+    updateOwner(donorOwnerId)
+    if (receiverOwnerId !== donorOwnerId) updateOwner(receiverOwnerId)
+    const movedIds = new Set(moved.map((card) => card.instanceId))
+    const foreignHp = Object.fromEntries(
+      Object.entries(updated.foreignHpCardInstanceIds ?? {}).map(([cookieId, ids]) => [
+        cookieId,
+        ids.filter((id) => !movedIds.has(id)),
+      ]),
+    ) as Record<string, string[]>
+    if (donorOwnerId !== receiverOwnerId) {
+      foreignHp[receiver.card.instanceId] = [
+        ...new Set([
+          ...(foreignHp[receiver.card.instanceId] ?? []),
+          ...movedIds,
+        ]),
+      ]
+    }
+    updated = { ...updated, foreignHpCardInstanceIds: foreignHp }
     return donorFaints
-      ? resolveDamageOutcome(updated, playerId, 1, [donor.card])
+      ? resolveDamageOutcome(updated, donorOwnerId, 1, [donor.card])
       : updated
+  }
+
+  if (effect.kind === 'prevent-opponent-damage') {
+    return { ...state }
   }
 
   if (effect.kind === 'set-cookie-active') {

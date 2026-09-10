@@ -5637,6 +5637,26 @@ describe('BS8 candidate serial contract', () => {
     })
   })
 
+  it('maps BS8-098 Warmth of the Snowfield with the translated optional draw Then', () => {
+    expect(convertOfficialTrapAbility(findBs8Candidate('BS8-098'))).toMatchObject({
+      cost: { energy: { blue: 2 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -2, duration: 'this-turn' },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: { blue: 1 }, discardHand: 0 },
+          effectText: '接著，你可以支付 1 點藍色支援能量；若支付，且自己的手牌為 2 張或更少，則從牌庫抽最多 3 張牌。',
+          effects: [{
+            kind: 'draw-up-to',
+            max: 3,
+            condition: { kind: 'hand-count-at-most', count: 2 },
+          }],
+        },
+      ],
+    })
+  })
+
   it('maps BS8 yellow break-area progression with printed level bounds and ordering', () => {
     expect(convertOfficialCookieSkill(findBs8Candidate('BS8-038'))).toMatchObject({
       trigger: 'on-play',

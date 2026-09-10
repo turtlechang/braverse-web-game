@@ -4,6 +4,7 @@ import type {
   CardKeyword,
   EnergyColor,
   EnergyCost,
+  ExtraDeckCard,
   GameCard,
   InspectDeckRestDestination,
   PendingEffectOrderItem,
@@ -676,7 +677,7 @@ export function ReorderHpModal({
 
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
-  sourceCard?: GameCard
+  sourceCard?: GameCard | ExtraDeckCard
   /** 來源餅乾可以直接提供的能量；在能量步驟以固定來源說明呈現。 */
   sourceEnergy?: EnergyCost
   effectText: string

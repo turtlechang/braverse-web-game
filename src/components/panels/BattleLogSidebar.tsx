@@ -17,13 +17,7 @@ import type { CommandLogEntry, LogCategory, LogStepDetail, PlayerId } from '../.
 import { CardFace } from '../cards/CardVisuals'
 import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
-  CommandLogFilterBar,
-} from './CommandLogFilters'
-import {
-  emptyCommandLogFilters,
-  matchesCommandLogFilters,
   resolveEntryCategory,
-  type CommandLogFilterState,
 } from './commandLogFilterUtils'
 import { groupCommandLogEntries, type LogGroup } from './commandLogGrouping'
 import './BattleLogSidebar.css'
@@ -72,24 +66,14 @@ function BattleLogViewer({
   playerNames,
   showReviewControls = false,
 }: BattleLogViewerProps) {
-  const [filters, setFilters] = useState<CommandLogFilterState>(
-    emptyCommandLogFilters,
-  )
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(
     () => new Set(),
   )
 
   const groups = useMemo(() => groupCommandLogEntries(entries), [entries])
-  const visibleGroups = useMemo(
-    () =>
-      groups.filter((group) =>
-        group.entries.some((entry) => matchesCommandLogFilters(entry, filters)),
-      ),
-    [groups, filters],
-  )
   const renderedGroups = useMemo(
-    () => [...visibleGroups].reverse(),
-    [visibleGroups],
+    () => [...groups].reverse(),
+    [groups],
   )
 
   const toggleGroup = (groupId: number) => {
@@ -108,13 +92,13 @@ function BattleLogViewer({
     <>
       {showReviewControls && (
         <div className="battle-log-review-tools" data-testid="battle-log-review-tools">
-          <span>{visibleGroups.length} 組紀錄</span>
+          <span>{groups.length} 組紀錄</span>
           <div>
             <button
               type="button"
               data-testid="battle-log-review-expand-all"
               onClick={() =>
-                setExpandedGroupIds(new Set(visibleGroups.map((group) => group.groupId)))
+                setExpandedGroupIds(new Set(groups.map((group) => group.groupId)))
               }
             >
               全部展開
@@ -129,16 +113,10 @@ function BattleLogViewer({
           </div>
         </div>
       )}
-      <CommandLogFilterBar
-        entries={entries}
-        playerNames={playerNames}
-        value={filters}
-        onChange={setFilters}
-      />
       <ol className="battle-log-list">
         {renderedGroups.length === 0 && (
           <li className="battle-log-empty">
-            {entries.length === 0 ? '尚無對戰紀錄。' : '沒有符合篩選條件的紀錄。'}
+            尚無對戰紀錄。
           </li>
         )}
         {renderedGroups.map((group, index) => {

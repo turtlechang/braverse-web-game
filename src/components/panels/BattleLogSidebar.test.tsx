@@ -280,21 +280,17 @@ describe('BattleLogSidebar', () => {
     expect(button.className).not.toContain('is-expandable')
   })
 
-  it('filters groups by category, keeping a group visible if any member entry matches', async () => {
+  it('always renders every group without filter controls', async () => {
     const entries = [...attackGroup, trapEntry, supportEntry]
     const { container, root } = render()
     await act(() => root.render(<BattleLogSidebar entries={entries} />))
     await click(container.querySelector('[data-testid="battle-log-toggle"]'))
 
-    const activateChip = [...container.querySelectorAll('.command-log-category-chips button')].find(
-      (button) => button.textContent === '陷阱／道具／技能',
-    )
-    await click(activateChip ?? null)
-
     const visibleSummaries = [...container.querySelectorAll('.battle-log-entry p')].map(
       (p) => p.textContent,
     )
-    expect(visibleSummaries).toEqual(['AI 對手 設置了陷阱卡「Chocolate Altar of the Fallen」'])
+    expect(visibleSummaries).toHaveLength(3)
+    expect(container.querySelector('[data-testid="command-log-filters"]')).toBeNull()
   })
 
   it('shows a turn divider with each player break level when the turn changes', async () => {

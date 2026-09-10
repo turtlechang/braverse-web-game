@@ -165,7 +165,10 @@ const applyDamageReceivedModifier = (
 const isDamageType = (
   modifier: Pick<ModifyDamageReceivedEffect, 'damageType'>,
   damageType: 'attack' | 'effect',
-): boolean => (modifier.damageType ?? 'attack') === damageType
+): boolean => {
+  const modifierType = modifier.damageType ?? 'attack'
+  return modifierType === 'all' || modifierType === damageType
+}
 
 const applyStoredDamageReceivedModifiers = (
   state: GameState,
@@ -200,6 +203,24 @@ const applyPassiveDamageReceivedModifiers = (
     !target ||
     (skill?.trigger !== 'passive' && skill?.trigger !== 'block')
   ) {
+    // BS9-018 applies from a Cookie's passive to every Cookie its owner
+    // controls.  It is checked here rather than stored as per-target state so
+    // that the protection follows the Hero while it remains in battle.
+    if (!owner || !target) return damage
+  }
+
+  const heroProtectsOwner = owner.battleArea.some((cookie) => {
+    const cookieSkill = cookie.card.skill
+    if (cookieSkill?.trigger !== 'passive') return false
+    if (cookieSkill.yourTurn && state.activePlayerId !== owner.id) return false
+    return [
+      ...(cookieSkill.effects ?? []),
+      ...(cookieSkill.passiveEffects ?? []),
+    ].some((effect) => effect.kind === 'prevent-opponent-damage')
+  })
+  if (heroProtectsOwner && state.activePlayerId === owner.id) return 0
+
+  if (!skill || (skill.trigger !== 'passive' && skill.trigger !== 'block')) {
     return damage
   }
 
@@ -437,18 +458,14 @@ export const getAttackDamageAgainst = (
   const defender = defenderOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === targetInstanceId,
   )
-  const damageAfterDefenderModifiers =
-    !defender ||
-    !defenderOwner ||
-    (defender.card.skill?.trigger !== 'passive' &&
-      defender.card.skill?.trigger !== 'block')
-      ? modifiedDamage
-      : applyPassiveDamageReceivedModifiers(
-          state,
-          targetInstanceId,
-          modifiedDamage,
-          'attack',
-        )
+  const damageAfterDefenderModifiers = defender && defenderOwner
+    ? applyPassiveDamageReceivedModifiers(
+        state,
+        targetInstanceId,
+        modifiedDamage,
+        'attack',
+      )
+    : modifiedDamage
 
   const attackerOwner = Object.values(state.players).find((player) =>
     player.battleArea.some(

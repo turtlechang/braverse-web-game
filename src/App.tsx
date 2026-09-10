@@ -629,7 +629,6 @@ function App() {
             `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
           )
         }}
-        onViewDeck={() => dialogs.openDeckList('player')}
         onPause={dialogs.openPause}
       />
 

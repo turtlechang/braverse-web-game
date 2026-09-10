@@ -516,6 +516,9 @@ export const selectEffectTargets = (
   }
 
   const candidates = getEffectTargetCandidates(state, context, selector)
+  if (selector.allMatching && uniqueIds.length !== candidates.length) {
+    throw new GameRuleError('此效果必須選擇所有符合條件的餅乾。')
+  }
   const selectedTargets = uniqueIds.map((instanceId) =>
     candidates.find((cookie) => cookie.card.instanceId === instanceId),
   )
@@ -558,7 +561,7 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'modify-all-effect-damage' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-then-draw-same' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'draw-up-to-break-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break' | 'deferred-end-of-turn' | 'opponent-rests-support' | 'hp-to-trash-all' | 'break-source-to-trash' | 'reveal-hand' | 'disable-traps'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'modify-all-effect-damage' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-then-draw-same' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'draw-up-to-break-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break' | 'deferred-end-of-turn' | 'opponent-rests-support' | 'hp-to-trash-all' | 'break-source-to-trash' | 'reveal-hand' | 'disable-traps' | 'prevent-opponent-damage'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -579,6 +582,7 @@ export const isEffectUntargeted = (
   effect.kind === 'hand-to-deck-and-draw' ||
   effect.kind === 'disable-block' ||
   effect.kind === 'disable-traps' ||
+  effect.kind === 'prevent-opponent-damage' ||
   effect.kind === 'draw-up-to' ||
   effect.kind === 'draw-until-hand-equals-opponent' ||
   effect.kind === 'set-active' ||
@@ -743,6 +747,15 @@ export const getEffectSelectionLimits = (
       return { min: effect.optional ? 0 : 1, max: 1 }
     }
     return { min: effect.optional ? 0 : 1, max: 1 }
+  }
+  if (effect.kind === 'transfer-hp' && effect.receiverTarget) {
+    // Explicit receiver effects (for example BS9-029 FLIP) are one ordered
+    // pair: donor first, receiver second. The printed "up to 1" permits
+    // declining the whole transfer, but never a partial pair.
+    return {
+      min: 0,
+      max: Math.min(2, effect.target.max + effect.receiverTarget.max),
+    }
   }
   if (effect.kind === 'cycle-hp') {
     // 兩階段（BS4-030）：第一階段只選 1 個目標餅乾；手牌放回是第二階段
@@ -946,7 +959,10 @@ export const getEffectSelectionCandidates = (
   }
   if (effect.kind === 'hand-to-hp') {
     if (!effect.selectTarget) {
-      return state.players[context.sourcePlayerId].hand.filter(
+      const handOwnerId = effect.handSide === 'opponent'
+        ? getOpponentId(context.sourcePlayerId)
+        : context.sourcePlayerId
+      return state.players[handOwnerId].hand.filter(
         (card) =>
           effect.energyColor === undefined || card.energyColor === effect.energyColor,
       )
@@ -1650,7 +1666,32 @@ export const isEffectConditionMet = (
       condition.side === 'self'
         ? context.sourcePlayerId
         : getOpponentId(context.sourcePlayerId)
+    if (
+      condition.energyColor !== undefined ||
+      condition.minLevel !== undefined ||
+      condition.maxLevel !== undefined
+    ) {
+      const records = state.cookiesFaintedThisTurnDetails?.[playerId] ?? []
+      return records.filter((record) =>
+        (condition.energyColor === undefined || record.energyColor === condition.energyColor) &&
+        (condition.minLevel === undefined || record.level >= condition.minLevel) &&
+        (condition.maxLevel === undefined || record.level <= condition.maxLevel),
+      ).length >= condition.count
+    }
     return (state.cookiesFaintedThisTurn?.[playerId] ?? 0) >= condition.count
+  }
+
+  if (condition?.kind === 'cookies-fainted-during-opponent-previous-turn-at-least') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    const records = state.cookiesFaintedDuringOpponentPreviousTurn?.[playerId] ?? []
+    return records.filter((record) =>
+      (condition.energyColor === undefined || record.energyColor === condition.energyColor) &&
+      (condition.minLevel === undefined || record.level >= condition.minLevel) &&
+      (condition.maxLevel === undefined || record.level <= condition.maxLevel),
+    ).length >= condition.count
   }
 
   if (condition?.kind === 'support-cards-trashed-this-turn-at-least') {
@@ -1955,6 +1996,14 @@ export const isEffectConditionMet = (
     )
   }
 
+  if (condition?.kind === 'battle-area-cookie-count') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    return state.players[playerId].battleArea.length === condition.count
+  }
+
   if (condition?.kind === 'battle-area-has-another-cookie') {
     const playerId =
       condition.side === 'self'
@@ -1963,6 +2012,19 @@ export const isEffectConditionMet = (
     return state.players[playerId].battleArea.some(
       (cookie) => cookie.card.instanceId !== context.sourceInstanceId,
     )
+  }
+
+  if (condition?.kind === 'cookie-has-opponent-hp') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    return state.players[playerId].battleArea.some((cookie) => {
+      const foreignIds = new Set(
+        state.foreignHpCardInstanceIds?.[cookie.card.instanceId] ?? [],
+      )
+      return cookie.hpCards.some((card) => foreignIds.has(card.instanceId))
+    })
   }
 
   if (condition?.kind === 'battle-area-has-color') {

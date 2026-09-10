@@ -3,8 +3,10 @@ import { findCardIndex, updatePlayer } from './helpers'
 import {
   isExtraDeckPlayRequirementMet,
   materializeExtraDeckCookie,
+  materializeExtraDeckCookieAfterEntryCost,
+  resolveExtraDeckExhaustion as resolveDeckExhaustion,
 } from './extra-deck'
-import { getRefreshCandidates } from './refresh'
+import { selectEnergyPayment } from './energy'
 import type { GameState } from './types'
 import { finishWithDefeat } from './victory'
 import { beginAttack, resolveBattleAutomatically } from './battle'
@@ -18,6 +20,7 @@ import {
 } from './replacement'
 import {
   canPayTrashBattleCookieCost,
+  getDiscardHandCostCandidates,
   hasCookieOnPlayEffects,
   payTrashBattleCookieCost,
 } from './skills'
@@ -59,31 +62,6 @@ const assertActiveGame = (state: GameState) => {
 
   if (state.pendingStageTrigger) {
     throw new GameRuleError('必須先處理場景觸發效果。')
-  }
-}
-
-const resolveDeckExhaustion = (
-  state: GameState,
-  playerId: GameState['activePlayerId'],
-  remainingHpSetup?: { targetInstanceId: string; amount: number },
-): GameState => {
-  if (state.players[playerId].deck.length > 0) {
-    return state
-  }
-
-  if (getRefreshCandidates(state, playerId).length === 0) {
-    return finishWithDefeat(state, playerId, 'refresh-unavailable')
-  }
-
-  return {
-    ...state,
-    pendingRefresh: {
-      playerId,
-      remainingDraws: 0,
-      ...(remainingHpSetup && remainingHpSetup.amount > 0
-        ? { remainingHpSetup: [remainingHpSetup] }
-        : {}),
-    },
   }
 }
 
@@ -331,127 +309,62 @@ export const canPlayExtraDeckCookie = (
   try {
     const card = getExtraDeckCardForPlay(state, playerId, instanceId)
     materializeExtraDeckCookie(card)
+    const cost = card.extraDeckPlayCost
+    if (cost) {
+      if (
+        getDiscardHandCostCandidates(
+          cost,
+          state.players[playerId].hand,
+          card.instanceId,
+        ).length < (cost.discardHand ?? 0)
+      ) {
+        return false
+      }
+      if (!selectEnergyPayment(cost.energy ?? {}, state.players[playerId].supportArea)) {
+        return false
+      }
+    }
     return true
   } catch {
     return false
   }
 }
 
+/**
+ * `entryCostPaid` 只由攻擊／技能待處理決策的規則解算器使用；一般玩家指令
+ * 會先建立付款決策，不能以額外參數跳過卡面代價。
+ */
 export const playExtraDeckCookie = (
   state: GameState,
   playerId: GameState['activePlayerId'],
   instanceId: string,
+  entryCostPaid = false,
 ): GameState => {
   const extraDeckCard = getExtraDeckCardForPlay(state, playerId, instanceId)
-  const deploymentCard = materializeExtraDeckCookie(extraDeckCard)
-  const player = state.players[playerId]
-  const isAwaken = deploymentCard.extraDeckOrigin === 'awakened'
-
-  if (isAwaken) {
-    const target = getAwakenTarget(state, playerId, extraDeckCard)
-    if (!target) {
-      throw new GameRuleError('尚未符合此 Awakened 餅乾的覆蓋目標條件。')
+  if (extraDeckCard.extraDeckPlayCost && !entryCostPaid) {
+    if (!canPlayExtraDeckCookie(state, playerId, instanceId)) {
+      throw new GameRuleError('目前沒有足夠資源支付此 EXTRA 餅乾的登場代價。')
     }
-
-    const hpBonus = deploymentCard.awakenHpBonus
-    if (!hpBonus || hpBonus < 1) {
-      throw new GameRuleError('Awakened 餅乾缺少 HP+N 資料。')
+    return {
+      ...state,
+      pendingOptionalCostAttack: {
+        playerId,
+        sourceInstanceId: extraDeckCard.instanceId,
+        sourceCardName: extraDeckCard.name,
+        cost: extraDeckCard.extraDeckPlayCost,
+        effects: [],
+        effectText: extraDeckCard.effectText ?? 'EXTRA 登場代價',
+        resolution: 'ability',
+        mandatory: true,
+        extraDeckPlayInstanceId: extraDeckCard.instanceId,
+      },
     }
-
-    const availableHpCards = player.deck.slice(0, hpBonus)
-    const replacedBattleArea = player.battleArea.map((cookie) =>
-      cookie.card.instanceId === target.card.instanceId
-        ? {
-            card: deploymentCard,
-            hpCards: [...cookie.hpCards, ...availableHpCards],
-            rested: false,
-            battleEntryId:
-              `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
-            enteredFrom: 'extra-deck' as const,
-            enteredTurn: state.turnNumber,
-            awakenedUnderlay: [
-              target.card,
-              ...(target.awakenedUnderlay ?? []),
-            ],
-            ...(target.equippedCards?.length
-              ? { equippedCards: target.equippedCards }
-              : {}),
-          }
-        : cookie,
-    )
-    const updatedState = clearDepartedCookieModifiers(
-      updatePlayer(state, {
-        ...player,
-        deck: player.deck.slice(hpBonus),
-        extraDeck: (player.extraDeck ?? []).filter(
-          (candidate) => candidate.instanceId !== instanceId,
-        ),
-        battleArea: replacedBattleArea,
-      }),
-    )
-
-    return resolveDeckExhaustion(
-      {
-        ...updatedState,
-        extraDeckPlayUsedThisTurn: true,
-        nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
-        pendingOnPlay:
-          hasCookieOnPlayEffects(deploymentCard)
-            ? {
-                playerId,
-                sourceInstanceId: deploymentCard.instanceId,
-                origin: 'extra-deck',
-              }
-            : null,
-      },
-      playerId,
-      {
-        targetInstanceId: deploymentCard.instanceId,
-        amount: hpBonus - availableHpCards.length,
-      },
-    )
   }
 
-  const availableHpCards = player.deck.slice(0, deploymentCard.hp)
-  const updatedState = updatePlayer(state, {
-    ...player,
-    deck: player.deck.slice(deploymentCard.hp),
-    extraDeck: (player.extraDeck ?? []).filter(
-      (candidate) => candidate.instanceId !== instanceId,
-    ),
-    battleArea: [
-      ...player.battleArea,
-      {
-        card: deploymentCard,
-        hpCards: availableHpCards,
-        rested: false,
-        battleEntryId:
-          `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
-        enteredFrom: 'extra-deck',
-        enteredTurn: state.turnNumber,
-      },
-    ],
-  })
-
-  return resolveDeckExhaustion(
-    {
-      ...updatedState,
-      extraDeckPlayUsedThisTurn: true,
-      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
-      pendingOnPlay:
-        hasCookieOnPlayEffects(deploymentCard)
-          ? {
-              playerId,
-              sourceInstanceId: deploymentCard.instanceId,
-              origin: 'extra-deck',
-            }
-          : null,
-    },
+  return materializeExtraDeckCookieAfterEntryCost(
+    state,
     playerId,
-    {
-      targetInstanceId: deploymentCard.instanceId,
-      amount: deploymentCard.hp - availableHpCards.length,
-    },
+    instanceId,
   )
 }
 

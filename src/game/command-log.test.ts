@@ -1015,6 +1015,46 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('describes an all-channel received-damage modifier without narrowing it to attacks', () => {
+    const base = createBattleState()
+    const effect: CardEffect = {
+      kind: 'modify-damage-received',
+      amount: -3,
+      duration: 'this-turn',
+      damageType: 'all',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = { ...previous, pendingBattle: null }
+    const command = {
+      kind: 'resolve-attack-effect' as const,
+      playerId: 'player-two' as const,
+      targetIds: ['attacker'],
+    }
+
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：使目標受到的傷害 -3',
+      '攻擊後效果目標：attacker',
+      '攻擊後效果結果：使目標受到的傷害 -3',
+    ])
+  })
+
   it('records an unmet attack-effect condition as a no-op', () => {
     const base = createBattleState()
     const effect: CardEffect = {

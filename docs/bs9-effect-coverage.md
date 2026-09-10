@@ -2,20 +2,18 @@
 
 由 cards:analyze:bs9-candidate 產生。這是靜態盤點，所有卡的 Browser 驗收仍未完成；strict verified 不是卡圖語意驗收。
 
-基礎卡 118；主效果待轉接 50；額外能力待轉接 50；攻擊 Then 0/16 已轉接。
-
-BS9-001／`@1`／`@2` 的 strict adapter 已轉為 `modify-damage-received`（effect channel、this-turn、己方 0～1 目標），並以 5 項規則回歸及 `test:bs9-001:browser` 的 4／4 候選 Browser 路徑驗證。Browser 證據只涵蓋 localhost `test-state` 正向選 1 目標／發動與負向略過 FLIP；基本版與 `@2` 卡圖仍待目視，候選不代表可 promote。
+基礎卡 118；主效果待轉接 43；額外能力待轉接 43；攻擊 Then 2/16 已轉接。
 
 | strict 狀態 | 筆數 |
 | --- | ---: |
-| verified | 67 |
-| needs-review | 118 |
+| verified | 82 |
+| needs-review | 103 |
 
 | 卡號 | strict 狀態 | 缺口 |
 | --- | --- | --- |
-| BS9-001 | verified | adapter／規則／Browser 局部已驗證；基本版卡圖與正式牌組／線上仍待 |
-| BS9-001@1 | verified | adapter／規則／Browser 局部已驗證；異圖卡面與正式牌組／線上仍待 |
-| BS9-001@2 | verified | adapter／規則已驗證；異圖卡面與 Browser／正式牌組／線上仍待 |
+| BS9-001 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-001@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-001@2 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-002 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-002@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-003 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
@@ -24,32 +22,32 @@ BS9-001／`@1`／`@2` 的 strict adapter 已轉為 `modify-damage-received`（ef
 | BS9-004@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-005 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-005@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-006 | needs-review | condition evidence missing: friendly-cookie-fainted-this-turn; timing marker has no runtime ability; timing evidence missing |
-| BS9-006@1 | needs-review | condition evidence missing: friendly-cookie-fainted-this-turn; timing marker has no runtime ability; timing evidence missing |
+| BS9-006 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-006@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-007 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-007@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-008 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-009 | needs-review | condition evidence missing: opponent-cookie-fainted-this-turn; timing marker has no runtime ability; timing evidence missing |
-| BS9-010 | needs-review | Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; payment evidence missing; target evidence unresolved; resolution order evidence missing; timing evidence missing |
-| BS9-010@1 | needs-review | Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; payment evidence missing; target evidence unresolved; resolution order evidence missing; timing evidence missing |
+| BS9-009 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-010 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-010@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-011 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-012 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-012@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-013 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-014 | needs-review | source contains unclassified clause; timing marker has no runtime ability; cost evidence missing; target evidence unresolved; timing evidence missing |
-| BS9-014@1 | needs-review | source contains unclassified clause; timing marker has no runtime ability; cost evidence missing; target evidence unresolved; timing evidence missing |
-| BS9-014@2 | needs-review | source contains unclassified clause; timing marker has no runtime ability; cost evidence missing; target evidence unresolved; timing evidence missing |
-| BS9-015 | needs-review | Then clause has no runtime thenEffects evidence; target evidence unresolved; resolution order evidence missing |
-| BS9-015@1 | needs-review | Then clause has no runtime thenEffects evidence; target evidence unresolved; resolution order evidence missing |
+| BS9-014 | needs-review | source contains unclassified clause; cost evidence missing |
+| BS9-014@1 | needs-review | source contains unclassified clause; cost evidence missing |
+| BS9-014@2 | needs-review | source contains unclassified clause; cost evidence missing |
+| BS9-015 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-015@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-016 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-017 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-017@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-018 | needs-review | your-turn marker missing runtime flag; timing evidence missing |
-| BS9-019 | needs-review | payment clause has no runtime energy evidence; Then clause has no runtime thenEffects evidence; payment evidence missing; target evidence unresolved; resolution order evidence missing |
-| BS9-020 | needs-review | payment clause has no runtime energy evidence; payment evidence missing |
-| BS9-021 | needs-review | source contains unclassified clause; payment clause has no runtime energy evidence; payment evidence missing; target evidence unresolved |
+| BS9-018 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-019 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-020 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-021 | needs-review | source contains unclassified clause |
 | BS9-022 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-023 | needs-review | payment clause has no runtime energy evidence; timing marker has no runtime ability; payment evidence missing; cost evidence missing; target evidence unresolved; timing evidence missing |
+| BS9-023 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-024 | needs-review | source contains unclassified clause; cost evidence missing |
 | BS9-024@1 | needs-review | source contains unclassified clause; cost evidence missing |
 | BS9-025 | needs-review | FLIP text has no runtime flip ability; cost evidence missing; target evidence unresolved |
@@ -57,13 +55,13 @@ BS9-001／`@1`／`@2` 的 strict adapter 已轉為 `modify-damage-received`（ef
 | BS9-026 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-026@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-026@2 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-027 | needs-review | source contains unclassified clause; Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; once-per-turn marker missing runtime flag; resolution order evidence missing; timing evidence missing |
-| BS9-027@1 | needs-review | source contains unclassified clause; Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; once-per-turn marker missing runtime flag; resolution order evidence missing; timing evidence missing |
+| BS9-027 | needs-review | source contains unclassified clause |
+| BS9-027@1 | needs-review | source contains unclassified clause |
 | BS9-028 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
-| BS9-029 | needs-review | FLIP text has no runtime flip ability |
-| BS9-029@1 | needs-review | FLIP text has no runtime flip ability |
-| BS9-030 | needs-review | Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; cost evidence missing; resolution order evidence missing; timing evidence missing |
-| BS9-030@1 | needs-review | Then clause has no runtime thenEffects evidence; timing marker has no runtime ability; cost evidence missing; resolution order evidence missing; timing evidence missing |
+| BS9-029 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-029@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-030 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
+| BS9-030@1 | verified | 靜態未報錯；待獨立卡圖與 Browser 驗收 |
 | BS9-031 | needs-review | FLIP text has no runtime flip ability; Then clause has no runtime thenEffects evidence; cost evidence missing; resolution order evidence missing |
 | BS9-031@1 | needs-review | FLIP text has no runtime flip ability; Then clause has no runtime thenEffects evidence; cost evidence missing; resolution order evidence missing |
 | BS9-031@2 | needs-review | FLIP text has no runtime flip ability; Then clause has no runtime thenEffects evidence; cost evidence missing; resolution order evidence missing |
@@ -208,30 +206,30 @@ BS9-001／`@1`／`@2` 的 strict adapter 已轉為 `modify-damage-received`（ef
 | BS9-003 | supported | converted | not-applicable |
 | BS9-004 | no-effect-text | not-applicable | not-applicable |
 | BS9-005 | supported | converted | not-applicable |
-| BS9-006 | unsupported-effect-text | pending | not-applicable |
+| BS9-006 | supported | converted | not-applicable |
 | BS9-007 | supported | converted | not-applicable |
 | BS9-008 | no-effect-text | not-applicable | not-applicable |
-| BS9-009 | unsupported-effect-text | pending | not-applicable |
+| BS9-009 | supported | converted | not-applicable |
 | BS9-010 | unsupported-effect-text | pending | not-applicable |
 | BS9-011 | supported | converted | not-applicable |
 | BS9-012 | supported | converted | not-applicable |
 | BS9-013 | no-effect-text | not-applicable | not-applicable |
-| BS9-014 | unsupported-effect-text | pending | not-applicable |
-| BS9-015 | unsupported-effect-text | pending | not-applicable |
+| BS9-014 | supported | converted | not-applicable |
+| BS9-015 | supported | converted | not-applicable |
 | BS9-016 | supported | converted | not-applicable |
-| BS9-017 | supported | converted | pending |
-| BS9-018 | unsupported-effect-text | pending | not-applicable |
+| BS9-017 | supported | converted | converted |
+| BS9-018 | supported | converted | not-applicable |
 | BS9-019 | no-effect-text | not-applicable | not-applicable |
 | BS9-020 | no-effect-text | not-applicable | not-applicable |
 | BS9-021 | no-effect-text | not-applicable | not-applicable |
 | BS9-022 | no-effect-text | not-applicable | not-applicable |
 | BS9-023 | no-effect-text | not-applicable | not-applicable |
-| BS9-024 | supported | converted | pending |
+| BS9-024 | supported | converted | converted |
 | BS9-025 | unsupported-effect-text | pending | not-applicable |
 | BS9-026 | supported | converted | not-applicable |
-| BS9-027 | unsupported-effect-text | pending | not-applicable |
+| BS9-027 | supported | converted | not-applicable |
 | BS9-028 | no-effect-text | not-applicable | not-applicable |
-| BS9-029 | unsupported-effect-text | pending | not-applicable |
+| BS9-029 | supported | converted | not-applicable |
 | BS9-030 | unsupported-effect-text | pending | not-applicable |
 | BS9-031 | unsupported-effect-text | pending | not-applicable |
 | BS9-032 | unsupported-effect-text | pending | not-applicable |

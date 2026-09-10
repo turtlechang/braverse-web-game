@@ -1583,6 +1583,63 @@ describe('FlipResponseModal', () => {
     expect(markup).toContain('your deck')
     expect(markup).toContain('opponent&#x27;s deck')
   })
+
+  it('requires an ordered donor and receiver pair for transfer FLIP effects', async () => {
+    const flipCard: CookieCard = {
+      id: 'BS9-029',
+      instanceId: 'pair-flip',
+      name: 'Caramel Choux Cookie',
+      type: 'cookie',
+      officialType: 'flip',
+      level: 1,
+      hp: 1,
+      attack: 2,
+      attackCost: 2,
+      flip: {
+        text: 'Add up to 1 HP card from one Cookie to another Cookie.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'transfer-hp',
+          amount: 1,
+          direction: 'to-source',
+          target: { side: 'self', min: 0, max: 1 },
+          receiverTarget: { side: 'self', min: 0, max: 1 },
+        }],
+      },
+    }
+    const donor = { ...createBattleCookie(1).card, name: '供牌餅乾' }
+    const receiver = { ...createBattleCookie(2).card, name: '接收餅乾' }
+    const onActivate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FlipResponseModal
+        card={flipCard}
+        hand={[]}
+        discardCount={0}
+        selectedDiscardIds={[]}
+        onToggleDiscard={() => undefined}
+        onActivate={onActivate}
+        onSkip={() => undefined}
+        targetCandidates={[donor]}
+        receiverTargetCandidates={[receiver]}
+        targetPair
+        targetMin={0}
+        targetMax={2}
+      />,
+    ))
+
+    const activate = () => findButton(container, '發動 FLIP') as HTMLButtonElement
+    expect(activate().disabled).toBe(false)
+    await click(container.querySelector('[aria-label="FLIP 效果供牌目標"] button') as HTMLButtonElement)
+    expect(activate().disabled).toBe(true)
+    await click(container.querySelector('[aria-label="FLIP 效果接收目標"] button') as HTMLButtonElement)
+    expect(activate().disabled).toBe(false)
+    await click(activate())
+    expect(onActivate).toHaveBeenCalledWith(undefined, [donor.instanceId, receiver.instanceId])
+
+    await act(() => root.unmount())
+  })
 })
 
 describe('ResultModal', () => {
@@ -1660,7 +1717,6 @@ describe('PauseModal', () => {
     phaseLabel: '主要階段',
     deckConfig: { player: 'red', ai: 'red' } as const,
     aiActionCount: 5,
-    onRunSimulation: () => undefined,
     onResume: () => undefined,
   }
 

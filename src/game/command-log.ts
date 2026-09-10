@@ -1,5 +1,6 @@
 import { getCookieEffectiveHp, getOpponentId } from './helpers'
 import { getForcedAttackTargetId, getFaintSourceCostUnavailableReason } from './battle'
+import { materializeExtraDeckCookie } from './extra-deck'
 import {
   getEnergyCostTotal,
   getRemainingEnergyCost,
@@ -27,7 +28,7 @@ import type {
 const playerName = (state: GameState, playerId: PlayerId): string =>
   state.players[playerId]?.name ?? playerId
 
-/** 在雙方手牌／牌庫／休息區／棄牌區／戰鬥區（含 HP 卡）／支援區／場景區裡找一張卡。 */
+/** 在雙方手牌／牌庫／休息區／棄牌區／戰鬥區（含 HP 卡）／支援區／場景區／EXTRA 區裡找一張卡。 */
 const findCard = (state: GameState, instanceId: string): GameCard | undefined => {
   for (const playerId of Object.keys(state.players) as PlayerId[]) {
     const player = state.players[playerId]
@@ -46,6 +47,17 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
     }
     if (player.stage?.card.instanceId === instanceId) {
       return player.stage.card
+    }
+    const extraCard = player.extraDeck?.find(
+      (card) => card.instanceId === instanceId,
+    )
+    if (extraCard) {
+      try {
+        return materializeExtraDeckCookie(extraCard)
+      } catch {
+        // Incomplete legacy EXTRA snapshots still produce a command log; keep
+        // the card association absent rather than inventing runtime fields.
+      }
     }
   }
   return undefined
@@ -769,7 +781,7 @@ const describeAttackEffectAction = (effect: CardEffect): string => {
     case 'modify-attack':
       return `使目標攻擊力 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-damage-received':
-      return `使目標受到的攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
+      return `使目標受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-attack-by-break-count':
       return '依休息區張數修改目標攻擊力'
     case 'break-to-battle':
@@ -2295,7 +2307,10 @@ export const resolveLogCard = (
     case 'replace-cookie':
       return findCard(previous, command.instanceId)
     case 'play-extra-deck-cookie':
-      return findCard(next, command.instanceId)
+      // A paid EXTRA entry is still pending in `previous.extraDeck`; after a
+      // cost prompt it may already be materialized in the battle area.  Check
+      // both states so the public trace retains the source card either way.
+      return findCard(previous, command.instanceId) ?? findCard(next, command.instanceId)
     case 'refresh-deck':
       return findCard(previous, command.cookieInstanceId)
     case 'attack':
@@ -2340,11 +2355,28 @@ export const resolveLogCard = (
     case 'resolve-next-damage':
       return resolveRevealedDamageCard(previous, next, command.playerId)
     case 'resolve-flip':
+      // BS9-030 activates a discarded Cookie's FLIP as part of the attacker's
+      // Then effect.  Attribute that nested decision to the attacking source
+      // so the BS9-030 contract trace proves the complete causal chain while
+      // preserving ordinary HP FLIP entries' revealed-card association.
+      if (
+        previous.pendingBattle?.detachedFlip &&
+        previous.pendingBattle.attackerInstanceId
+      ) {
+        return findCard(previous, previous.pendingBattle.attackerInstanceId)
+      }
       return previous.pendingBattle?.revealedHpCard ?? undefined
-    case 'resolve-draw-up-to':
-      return previous.pendingDrawUpTo
-        ? findCard(previous, previous.pendingDrawUpTo.sourceInstanceId)
-        : undefined
+    case 'resolve-draw-up-to': {
+      const pending = previous.pendingDrawUpTo
+      if (!pending) return undefined
+      if (
+        pending.battleContinuation === 'attack-effect' &&
+        previous.pendingBattle?.attackerInstanceId
+      ) {
+        return findCard(previous, previous.pendingBattle.attackerInstanceId)
+      }
+      return findCard(previous, pending.sourceInstanceId)
+    }
     case 'resolve-opponent-hand-discard': {
       const sourceId = previous.pendingOpponentHandDiscard?.sourceInstanceId
       return sourceId ? findCard(previous, sourceId) ?? findCard(next, sourceId) : undefined

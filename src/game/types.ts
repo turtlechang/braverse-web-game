@@ -215,6 +215,8 @@ export interface ExtraDeckCard {
   attackEnergyCost?: EnergyCost
   attackText?: string
   attackEffects?: CardEffect[]
+  /** 卡面「EXTRA」登場前必須支付的手牌／能量代價。 */
+  extraDeckPlayCost?: AbilityCost
   /** Awakened 卡面上的 HP+N；不等同於一般登場所需的完整 HP。 */
   awakenHpBonus?: number
   /** 卡面要求的登場前置條件；未填表示沒有額外條件。 */
@@ -494,10 +496,33 @@ export interface OpponentHandCountAtLeastCondition {
   count: number
 }
 
+/** 只保留跨回合條件需要的昏厥餅乾特徵，避免把離場卡牌整張存進 GameState。 */
+export interface FaintedCookieRecord {
+  energyColor?: EnergyColor | 'wild'
+  level: number
+}
+
 export interface CookiesFaintedThisTurnAtLeastCondition {
   kind: 'cookies-fainted-this-turn-at-least'
   side: EffectTargetSide
   count: number
+  energyColor?: EnergyColor
+  minLevel?: number
+  maxLevel?: number
+}
+
+/**
+ * 最近一個對手回合中符合條件而昏厥的己方餅乾張數（BS9-002）。
+ * 這個條件和本回合計數分開，避免在 Active Phase 重置目前回合資料時
+ * 把「對手上一回合」的證據一併清掉。
+ */
+export interface CookiesFaintedDuringOpponentPreviousTurnCondition {
+  kind: 'cookies-fainted-during-opponent-previous-turn-at-least'
+  side: EffectTargetSide
+  count: number
+  energyColor?: EnergyColor
+  minLevel?: number
+  maxLevel?: number
 }
 
 export interface SupportCardsTrashedThisTurnAtLeastCondition {
@@ -693,6 +718,19 @@ export interface BattleAreaCountAtMostCondition {
   count: number
 }
 
+/** 戰鬥區餅乾張數恰好等於門檻（BS9-012）。 */
+export interface BattleAreaCookieCountCondition {
+  kind: 'battle-area-cookie-count'
+  side: EffectTargetSide
+  count: number
+}
+
+/** 來源玩家戰鬥區是否有附著對手持有的 HP 卡（BS9-022／023）。 */
+export interface CookieHasOpponentHpCondition {
+  kind: 'cookie-has-opponent-hp'
+  side: EffectTargetSide
+}
+
 /** 雙方戰鬥區合計有至少指定數量的休息餅乾（BS8-099）。 */
 export interface BattleAreaRestedCookieCountAtLeastCondition {
   kind: 'battle-area-rested-cookie-count-at-least'
@@ -727,6 +765,7 @@ export type EffectCondition =
   | SupportCountLessThanOpponentCondition
   | OpponentHandCountAtLeastCondition
   | CookiesFaintedThisTurnAtLeastCondition
+  | CookiesFaintedDuringOpponentPreviousTurnCondition
   | SupportCardsTrashedThisTurnAtLeastCondition
   | ItemActivatedThisTurnCondition
   | ArenaCookiePlacedInBreakThisTurnCondition
@@ -757,6 +796,8 @@ export type EffectCondition =
   | LastHpTrashCardNonCookieCondition
   | BattleAreaRemainingHpCountAtLeastCondition
   | BattleAreaCountAtMostCondition
+  | BattleAreaCookieCountCondition
+  | CookieHasOpponentHpCondition
   | BattleAreaRestedCookieCountAtLeastCondition
   | SourceHpReducedThisTurnCondition
   | ArenaCookieDealtEffectDamageThisTurnCondition
@@ -885,7 +926,7 @@ export interface ModifyDamageReceivedEffect {
   duration: EffectDuration
   target: EffectTargetSelector
   /** Damage channel affected by this modifier. Legacy effects default to attack damage. */
-  damageType?: 'attack' | 'effect'
+  damageType?: 'attack' | 'effect' | 'all'
   condition?: EffectCondition
   minimumDamage?: number
   setDamageTo?: number
@@ -1042,6 +1083,11 @@ export interface PreventOpponentBattleMovementEffect {
   kind: 'prevent-opponent-battle-movement'
 }
 
+/** Your Cookies take no damage from your opponent while this passive is active (BS9-018). */
+export interface PreventOpponentDamageEffect {
+  kind: 'prevent-opponent-damage'
+}
+
 export interface PreventEffectDamageEffect {
   kind: 'prevent-effect-damage'
   duration: 'until-source-next-turn'
@@ -1184,6 +1230,8 @@ export interface HandToBattleEffect {
   optional?: boolean
   /** 登場後額外補入的 HP 卡數。 */
   gainHp?: number
+  /** 登場成功後接續結算的效果（例如 BS9-015）。 */
+  thenEffects?: CardEffect[]
   condition?: EffectCondition
 }
 
@@ -1326,6 +1374,8 @@ export interface HandToHpEffect {
   optional?: boolean
   /** When true, select the hand card and the destination Cookie together. */
   selectTarget?: boolean
+  /** 取牌來源；未指定時沿用來源玩家手牌。 */
+  handSide?: 'self' | 'opponent'
 }
 
 export interface HpToHandEffect {
@@ -1352,6 +1402,12 @@ export interface TransferHpEffect {
   amount: number
   direction: 'to-source' | 'from-source'
   target: EffectTargetSelector
+  /**
+   * Optional explicit receiving Cookie for effects whose source is not a
+   * Cookie (for example a Trap that steals an opponent Cookie's HP).  When
+   * omitted, the historical source Cookie remains the receiver.
+   */
+  receiverTarget?: EffectTargetSelector
   condition?: EffectCondition
 }
 
@@ -1766,6 +1822,11 @@ export interface DeferredEndOfTurnEffect {
   condition?: EffectCondition
 }
 
+/** 攻擊後棄置的 FLIP Cookie 仍可立即發動其 FLIP 效果（BS9-030）。 */
+export interface ActivateDiscardedFlipEffect {
+  kind: 'activate-discarded-flip'
+}
+
 /**
  * 官方文字的「your opponent selects N active card(s) from their support
  * area. Rest that card.」（BS5-065）。選擇權在對手：由對手的支援區
@@ -1817,6 +1878,7 @@ export type CardEffect =
   | DisableBlockEffect
   | DisableTrapEffect
   | PreventOpponentBattleMovementEffect
+  | PreventOpponentDamageEffect
   | PreventEffectDamageEffect
   | ViewHpEffect
   | ReorderHpEffect
@@ -1889,6 +1951,7 @@ export type CardEffect =
   | MakeFaintEffect
   | RestCookieEffect
   | DeferredEndOfTurnEffect
+  | ActivateDiscardedFlipEffect
   | OpponentRestsSupportEffect
   | OpponentBreakToTrashThenBattleToBreakEffect
 
@@ -2176,7 +2239,7 @@ export interface DamageReceivedModifier {
   amount: number
   expiresAfterTurn: number | null
   /** Damage channel affected by this modifier. Legacy modifiers default to attack damage. */
-  damageType?: 'attack' | 'effect'
+  damageType?: 'attack' | 'effect' | 'all'
   /** Modifier is active only while the target's remaining HP is at most this value. */
   maxTargetRemainingHp?: number
   minimumDamage?: number
@@ -2478,9 +2541,21 @@ export interface GameState {
     afterEffects?: CardEffect[]
     afterEffectContext?: EffectContext
     afterEffectsRequireDraw?: boolean
+    /**
+     * 抽牌決策完成後要接續的戰鬥流程。BS9-030 的 detached FLIP
+     * 可能在攻擊後效果佇列中開啟 draw-up-to；抽牌確認後必須回到同一條
+     * attack-effect 佇列，而不是留下已超出索引的 PendingBattle。
+     */
+    battleContinuation?: BattleContinuation
   } | null
   effectDamagePreventedUntilTurn?: Record<string, number>
   cookiesFaintedThisTurn?: Record<PlayerId, number>
+  /** 本回合昏厥餅乾的顏色／等級快照，供跨回合條件使用。 */
+  cookiesFaintedThisTurnDetails?: Partial<Record<PlayerId, FaintedCookieRecord[]>>
+  /** 最近結束的對手回合中昏厥餅乾快照（BS9-002）。 */
+  cookiesFaintedDuringOpponentPreviousTurn?: Partial<Record<PlayerId, FaintedCookieRecord[]>>
+  /** 來源餅乾 instanceId 對應其 HP 堆中由對手持有的卡片 instanceIds。 */
+  foreignHpCardInstanceIds?: Record<string, string[]>
   supportCardsTrashedThisTurn?: Partial<Record<PlayerId, number>>
   arenaCookiesPlacedInBreakThisTurn?: Partial<Record<PlayerId, number>>
   itemsActivatedThisTurn?: Partial<Record<PlayerId, number>>
@@ -2608,6 +2683,8 @@ export interface GameState {
     resolution?: 'attack' | 'ability'
     sourceEnergy?: EnergyCost
     mandatory?: boolean
+    /** EXTRA 登場前代價結算後要接續實體化的卡片 instance。 */
+    extraDeckPlayInstanceId?: string
   } | null
   /**
    * 延後到目標控制者下一個 Active Phase 的「棄手牌才可 active」標記。
@@ -2761,6 +2838,8 @@ export interface PendingBattle {
   lastHandToBreakIds?: string[]
   damagePlayerId?: PlayerId
   damageTargetInstanceId?: string
+  /** 攻擊後棄置手牌中的 FLIP Cookie，等待其獨立 FLIP 決策（BS9-030）。 */
+  detachedFlip?: boolean
   suspendedAttackDamage?: number
   damagedInstanceIds?: string[]
   delayedTrap?: {

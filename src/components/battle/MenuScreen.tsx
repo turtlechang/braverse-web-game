@@ -84,7 +84,7 @@ export function MenuScreen({
   const [showTestScenario, setShowTestScenario] = useState(false)
   const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
-  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs6-red-competitive')
+  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs7-red-arena')
 
   const selectedCustomDeck = useMemo(
     () => savedDecks.find((deck) => deck.id === selectedDeckId) ?? null,
@@ -174,11 +174,6 @@ export function MenuScreen({
           onCreateDeck={() => {
             setEditingDeck(null)
             setDeckEditorMode('standard')
-            setShowDeckEditor(true)
-          }}
-          onCreateBs8CandidateDeck={() => {
-            setEditingDeck(null)
-            setDeckEditorMode('bs8-candidate-staging')
             setShowDeckEditor(true)
           }}
           onEditDeck={(deck) => {

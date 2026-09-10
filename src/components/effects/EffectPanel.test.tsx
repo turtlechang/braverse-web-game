@@ -272,6 +272,74 @@ describe('Break area selection costs', () => {
 })
 
 describe('EffectPanel', () => {
+  it('shows hand-to-battle candidates and keeps the optional zero-target path', async () => {
+    const initial = createCardCheckDemoState('BS8-078')
+    const source = initial.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-078',
+    )!
+    const candidate = initial.players['player-one'].hand.find(
+      (card) => card.instanceId === 'BS8-blue-lv2-hand',
+    )!
+    const effect: CardEffect = {
+      kind: 'hand-to-battle',
+      amount: 1,
+      energyColor: 'blue',
+      minLevel: 2,
+      optional: true,
+      gainHp: 1,
+    }
+    const onConfirm = vi.fn()
+    const onToggleCandidate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const render = async (selectedTargetIds: string[] = []) => {
+      await act(() =>
+        root.render(
+          <EffectPanel
+            pendingEffect={createPendingEffect({
+              sourceCard: source.card,
+              effects: [effect],
+              selectedTargetIds,
+              skillActivated: true,
+            })}
+            currentEffect={effect}
+            effectHistory={[]}
+            onConfirm={onConfirm}
+            onSkip={() => undefined}
+            candidateCards={[candidate]}
+            onToggleCandidate={onToggleCandidate}
+          />,
+        ),
+      )
+    }
+
+    try {
+      await render()
+      expect(container.textContent).toContain('目標')
+      expect(container.textContent).toContain('Kumiho Cookie')
+      expect(
+        (container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false)
+
+      await act(() =>
+        (container.querySelector(
+          '.effect-candidates-target button',
+        ) as HTMLButtonElement).click(),
+      )
+      expect(onToggleCandidate).toHaveBeenCalledOnce()
+      expect(onToggleCandidate).toHaveBeenCalledWith(candidate.instanceId)
+
+      await render([candidate.instanceId])
+      await act(() =>
+        (container.querySelector('.effect-panel-primary-action') as HTMLButtonElement).click(),
+      )
+      expect(onConfirm).toHaveBeenCalledOnce()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it('allows confirmation when a mandatory card-selection effect has no legal candidates', async () => {
     const onConfirm = vi.fn()
     const effect: CardEffect = {

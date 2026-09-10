@@ -161,6 +161,37 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     }
   }
 
+  // BS9-002（以及同系列的 EXTRA／物品條件）檢查「對手上一回合」中
+  // 特定顏色與等級的己方餅乾是否昏厥。這和本回合計數器是不同時間窗，
+  // 不能降級成 cookies-fainted-this-turn-at-least。
+  const previousOpponentTurnFaintMatch = text.match(
+    /if\s+your\s+(?:\{([RYGBPKN])\}\s+)?LV\.(\d+)\s+Cookies?\s+fainted\s+during\s+your\s+opponent['’]s\s+previous\s+turn/i,
+  )
+  if (previousOpponentTurnFaintMatch) {
+    const colorToken = previousOpponentTurnFaintMatch[1]?.toUpperCase()
+    const energyColor = colorToken === 'R'
+      ? 'red'
+      : colorToken === 'Y'
+        ? 'yellow'
+        : colorToken === 'G'
+          ? 'green'
+          : colorToken === 'B'
+            ? 'blue'
+            : colorToken === 'P'
+              ? 'purple'
+              : colorToken === 'K'
+                ? 'black'
+                : undefined
+    return {
+      kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+      side: 'self',
+      count: 1,
+      ...(energyColor ? { energyColor } : {}),
+      minLevel: Number(previousOpponentTurnFaintMatch[2]),
+      maxLevel: Number(previousOpponentTurnFaintMatch[2]),
+    }
+  }
+
   // 官方卡文會把「本回合曾昏厥」寫在效果句前（例如 BS8-010：
   // "During this turn, if your Cookie fainted, ..."），也可能省略
   // "During this turn" 而只保留 "if ... fainted this turn"。這是規則層
@@ -4759,6 +4790,229 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
       },
     ],
+    // BS9-002 Princess Cookie：只有己方紅色 LV.1 餅乾在對手上一回合昏厥時，
+    // 才能在本回合讓這張來源卡攻擊傷害 +1。
+    'BS9-002': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+          side: 'self',
+          count: 1,
+          energyColor: 'red',
+          minLevel: 1,
+          maxLevel: 1,
+        },
+      },
+    ],
+    // BS9-003 Strawberry Cookie：登場後可選己方餅乾，讓其本回合攻擊傷害 +1。
+    'BS9-003': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    // BS9-006 Melted Choco Cookie：「takes -3 damage」未限定攻擊或效果傷害，
+    // 因此明確標記 all，避免沿用舊版未指定時的 attack-only 相容預設。
+    'BS9-006': [
+      {
+        kind: 'modify-damage-received',
+        amount: -3,
+        duration: 'this-turn',
+        damageType: 'all',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'cookies-fainted-this-turn-at-least',
+          side: 'self',
+          count: 2,
+        },
+      },
+    ],
+    // BS9-009 Birthday Cake Cookie：本回合曾有對手餅乾昏厥時抽至多一張。
+    'BS9-009': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'cookies-fainted-this-turn-at-least',
+          side: 'opponent',
+          count: 1,
+        },
+      },
+    ],
+    // BS9-011 Devil Cookie：本回合己方至少兩張紅色 LV.1 餅乾昏厥後，
+    // 登場時可對對手一張餅乾造成 1 傷害。
+    'BS9-011': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'cookies-fainted-this-turn-at-least',
+          side: 'self',
+          count: 2,
+          energyColor: 'red',
+          minLevel: 1,
+          maxLevel: 1,
+        },
+      },
+    ],
+    // BS9-012 Knight Cookie：對手回合結束時，若我方戰鬥區恰有兩張餅乾，
+    // 來源自己受到 3 傷害。
+    'BS9-012': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'battle-area-cookie-count', side: 'self', count: 2 },
+      },
+    ],
+    // BS9-014 Candy Apple Cookie：支付自身以外餅乾的 2 張 HP 後，
+    // 將對手餅乾最上方 1 張 HP 搬到來源卡底部。
+    'BS9-014': [
+      {
+        kind: 'transfer-hp',
+        amount: 1,
+        direction: 'to-source',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS9-015 Parfait Cookie：昏厥時從手牌登場至多一張，若實際登場，
+    // 再把該張餅乾最上方 HP 回到手牌。
+    'BS9-015': [
+      {
+        kind: 'hand-to-battle',
+        amount: 1,
+        optional: true,
+        thenEffects: [
+          {
+            kind: 'hp-to-hand',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 1,
+              max: 1,
+              previousEffectTargetOnly: true,
+            },
+          },
+        ],
+      },
+    ],
+    // BS9-016 Pizza Cookie：登場時若已有另一張 Pizza Cookie，自己本回合
+    // 攻擊傷害 +1。
+    'BS9-016': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Pizza Cookie',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS9-017 Hollyberry Cookie：Activate 的 +2 只在另一張 Ancient
+    // Cookie 仍位於己方戰鬥區時成立；來源自身的 Ancient 關鍵字不能滿足
+    // 「another」條件。
+    'BS9-017': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'battle-area-has-keyword',
+          side: 'self',
+          keyword: 'ancient',
+          excludeSource: true,
+        },
+      },
+    ],
+    // BS9-018 Hero Cookie：你的回合中，對手造成的所有傷害均被防止。
+    'BS9-018': [{ kind: 'prevent-opponent-damage' }],
+    // BS9-019 Juicy Stamina Jellies：同一張己方餅乾先加攻擊，再加 1 HP。
+    'BS9-019': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        thenEffects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              previousEffectTargetOnly: true,
+            },
+          },
+        ],
+      },
+    ],
+    // BS9-020 Fateful Cookie Cutter：對手上一回合昏厥過己方紅色 LV.1
+    // 餅乾後，抽最多兩張，再棄一張。
+    'BS9-020': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 2,
+        discardCount: 1,
+        condition: {
+          kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+          side: 'self',
+          count: 1,
+          energyColor: 'red',
+          minLevel: 1,
+          maxLevel: 1,
+        },
+      },
+    ],
+    // BS9-024 Golden Cheese Cookie：來源剩餘 HP 至多 4，且己方戰鬥區有
+    // 另一張 Ancient Cookie 時，來源補 1 HP。兩個條件必須同時成立，不能
+    // 讓通用 parser 只保留其中一個。
+    'BS9-024': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'source-hp-at-most', amount: 4 },
+            {
+              kind: 'battle-area-has-keyword',
+              side: 'self',
+              keyword: 'ancient',
+              excludeSource: true,
+            },
+          ],
+        },
+      },
+    ],
+    // BS9-027 Vampire Cookie：先把至多一張手牌放到來源 HP 頂端，再讓
+    // 來源受到 1 點傷害。這裡保留兩個效果的順序，讓前段可選 0 張時仍
+    // 正確進入後段傷害。
+    'BS9-027': [
+      {
+        kind: 'hand-to-hp',
+        target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+        optional: true,
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
   }
   const exactEffects =
     exactStarterEffects[card.cardNumber] ??
@@ -5408,7 +5662,12 @@ export const convertOfficialItemAbility = (
       discardHandColor: 'purple',
       discardHandNonCookie: true,
     },
-  }
+  'BS9-019': { energy: { red: 2 }, discardHand: 0 },
+  'BS9-020': { energy: { red: 1 }, discardHand: 0 },
+  // BS9-027 Vampire Cookie：技能本身沒有額外印刷代價；手牌置入 HP
+  // 是效果，不是 cost，避免 generic parser 將它誤當成棄牌代價。
+  'BS9-027': { energy: {}, discardHand: 0 },
+}
   const exactEquippedAttackEffects: Partial<Record<string, CardEffect[]>> = {
     'BS8-021': [
       {
@@ -5569,6 +5828,17 @@ export const convertOfficialStageAbility = (
     // BS8-100 Snowfall Lantern Tree：棄置張數決定 Then 的強制抽牌張數；
     // 場景自身進垃圾桶是啟動代價，見 exactStageCosts。
     'BS8-100': [{ kind: 'discard-hand-then-draw-same', energyColor: 'blue' }],
+    // BS9-023 Atelier of Lies：只有己方餅乾承載對手持有的 HP 卡時，
+    // 啟動後可讓最多兩張己方餅乾本回合攻擊傷害 +1。
+    'BS9-023': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 2 },
+        condition: { kind: 'cookie-has-opponent-hp', side: 'self' },
+      },
+    ],
     // === BS2 場景卡 ===
     'BS2-051': [
       {
@@ -6030,6 +6300,7 @@ export const convertOfficialStageAbility = (
       discardHand: 0,
       stageSourceToTrash: true,
     },
+    'BS9-023': { energy: { red: 1 }, discardHand: 0 },
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
     'BS3-024': {
@@ -6204,6 +6475,79 @@ export const convertOfficialAttackEffects = (
     // 在 CardEffect，避免 UI／AI 以卡號或攻擊文字重複判定。
     'BS8-010': [
       { kind: 'make-faint', target: { side: 'self', min: 0, max: 1 } },
+    ],
+    // BS9-010 Shadow Milk Cookie：攻擊後可將對手餅乾最上方 1 張 HP
+    // 搬到來源 EXTRA 餅乾的 HP；來源卡本身作為額外中性支付能量。
+    'BS9-010': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { neutral: 1 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'transfer-hp',
+            amount: 1,
+            direction: 'to-source',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        effectText:
+          'Then, <can be used as {N}.> Select up to 1 of your opponent\'s Cookies. Add 1 card from the top of that Cookie\'s HP to this Cookie\'s HP.',
+      },
+    ],
+    // BS9-024 Golden Cheese Cookie：攻擊後可支付「將自身最上方 1 張 HP
+    // 回手」的代價，再對原本被攻擊的 Cookie 造成 1 傷害。HP 回手是可略過
+    // 的 Then 代價，不能降成沒有代價的固定傷害。
+    'BS9-024': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { hpToHand: { amount: 1, sourceOnly: true } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+        effectText:
+          "Then, <return 1 card from the top of this Cookie's HP to your hand.> Deals 1 damage.",
+      },
+    ],
+    // BS9-030 Shadow Milk Cookie：攻擊後可棄置 1 張手牌中的 FLIP Cookie，
+    // 再立即開啟該張卡的 FLIP 效果。來源卡已離開手牌後仍以獨立的攻擊後
+    // 決策保存，不能把它誤當成一般 HP 翻牌。
+    'BS9-030': [
+      {
+        kind: 'optional-cost-attack',
+        cost: {
+          energy: {},
+          discardHand: 1,
+          discardHandType: 'cookie',
+          discardHandHasFlip: true,
+        },
+        effects: [{ kind: 'activate-discarded-flip' }],
+        effectText:
+          'Then, <discard 1 Cookie that has FLIP from your hand.> Activate the discarded card\'s FLIP effect.',
+        mandatory: false,
+      },
+    ],
+    // BS9-017 Hollyberry Cookie：攻擊後直到對手回合結束，己方 Ancient
+    // 餅乾原本會受 3 點以上傷害時改為 2 點。
+    'BS9-017': [
+      {
+        kind: 'modify-damage-received',
+        amount: 0,
+        duration: 'opponent-next-turn',
+        damageType: 'all',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 4,
+          keyword: 'ancient',
+          allMatching: true,
+        },
+        minimumDamage: 3,
+        setDamageTo: 2,
+      },
     ],
     'BS8-026': [
       {
@@ -8186,6 +8530,35 @@ export const convertOfficialFlipAbility = (
         },
       ],
     },
+    // BS9-029 Caramel Choux Cookie：FLIP 卡本身只提供效果文字，實際搬移
+    // 必須由玩家依序選「供牌」再選「接收牌」。兩個 target selector 都是
+    // 己方 Cookie，且各要求一張，resolver 會拒絕同一張重複選取。
+    'BS9-029': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [
+        {
+          kind: 'transfer-hp',
+          amount: 1,
+          direction: 'to-source',
+          // 「最多 1 張」可以整段略過；供牌與接收牌必須成對選取，
+          // 因此每個 selector 都允許 0～1，resolver 再禁止只提交其中一張。
+          target: { side: 'self', min: 0, max: 1 },
+          receiverTarget: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+    // BS9-005 Macaron Cookie：支付一張手牌後，讓附著餅乾增加一張 HP。
+    // 附著對象由 FLIP 結算器依實際 HP 堆處理，不能把來源卡自身當成目標。
+    'BS9-005': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS9-007 Cherry Blossom Cookie：沒有額外代價，翻開後抽至多一張。
+    'BS9-007': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
     'P-024': {
       cost: { energy: {}, discardHand: 1 },
       effects: [
@@ -8977,7 +9350,7 @@ export const convertOfficialTrapAbility = (
           resolution: 'ability',
           cost: { energy: { blue: 1 }, discardHand: 0 },
           effectText:
-            'Then, <can be used as {B}.> If there are 2 cards or less in your hand, draw up to 3 cards from your deck.',
+            '接著，你可以支付 1 點藍色支援能量；若支付，且自己的手牌為 2 張或更少，則從牌庫抽最多 3 張牌。',
           effects: [{
             kind: 'draw-up-to',
             max: 3,
@@ -9636,6 +10009,37 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    // BS9-021 Stolen Light of Truth：將對手餅乾最上方 HP 搬到己方餅乾。
+    'BS9-021': {
+      cost: { energy: { red: 3 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'transfer-hp',
+          amount: 1,
+          direction: 'to-source',
+          target: { side: 'opponent', min: 0, max: 1 },
+          receiverTarget: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+    // BS9-022 Paper Puppet Troupe：先讓對手一張餅乾本回合攻擊 -1；
+    // 若己方已有對手持有的 HP 卡，再抽最多一張。
+    'BS9-022': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'cookie-has-opponent-hp', side: 'self' },
+        },
+      ],
+    },
   }
 
   const exactTrap =
@@ -9716,6 +10120,13 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   },
   'BS8-119': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
   'BS8-120': { energy: {}, discardHand: 1 },
+  // BS9-014 Candy Apple Cookie：On Play 代價是從自己「其他」Cookie
+  // 的 HP 頂端移除 2 張，不能用來源卡自身支付。
+  'BS9-014': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 2, excludeSource: true },
+  },
   // BS8-107 的官方英文使用大寫「Item」；generic cost parser 僅接受其既有
   // 小寫句型，故在此保留實際的紫色物品棄牌成本，不能降成零成本。
   'BS8-107': {

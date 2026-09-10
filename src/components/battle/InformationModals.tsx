@@ -116,10 +116,6 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
           phaseLabel={phaseLabels[match.game.phase]}
           deckConfig={match.deckConfig}
           aiActionCount={ai.aiActionCount}
-          onRunSimulation={() => {
-            dialogs.closePause()
-            ai.runSimulation()
-          }}
           onResume={dialogs.closePause}
           onCopyIssueBundle={() =>
             copyTextToClipboard(

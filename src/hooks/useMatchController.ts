@@ -91,6 +91,7 @@ import {
   createBs5ItemConditionDemoState,
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
+  createBs9ActualDamageDemoState,
   createBs6ConditionDemoState,
   createCardNegativeDemoState,
   createP082TrapDemoState,
@@ -192,6 +193,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs9-candidate') {
       return createBs9CandidatePreviewDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-damage') {
+      return createBs9ActualDamageDemoState(
         testStateConfig.cardNumber,
         testStateConfig.negative,
       )
@@ -1226,12 +1233,15 @@ export function useMatchController(params: {
     !hasPerEffectSelfTargetSelection &&
     (selectedTrap?.trap?.effects.some(
       (effect) =>
-        (effect.kind === 'damage' ||
+        ((effect.kind === 'damage' ||
           effect.kind === 'gain-hp' ||
           effect.kind === 'hp-to-hand') &&
-        'target' in effect &&
-        effect.target?.side === 'self' &&
-        (effect.target.min ?? 0) > 0,
+          'target' in effect &&
+          effect.target?.side === 'self' &&
+          (effect.target.min ?? 0) > 0) ||
+        (effect.kind === 'transfer-hp' &&
+          effect.receiverTarget?.side === 'self' &&
+          (effect.receiverTarget.min ?? 0) > 0),
     ) ?? false)
   const selectedTrapSelfTargets = selectedTrapSelfTarget
     ? [selectedTrapSelfTarget]

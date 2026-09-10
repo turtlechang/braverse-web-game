@@ -78,6 +78,23 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
   const flipTargetLimits = flipTargetEffect
     ? getEffectSelectionLimits(flipTargetEffect)
     : null
+  const flipReceiverTargetSelector =
+    flipTargetEffect?.kind === 'transfer-hp' && flipTargetEffect.receiverTarget
+      ? flipTargetEffect.receiverTarget
+      : null
+  const flipReceiverTargetCandidates =
+    flipReceiverTargetSelector && flipTargetContext
+      ? getEffectTargetCandidates(
+          match.game,
+          flipTargetContext,
+          flipReceiverTargetSelector,
+        ).map((candidate) => candidate.card)
+      : []
+  const flipTargetPair = Boolean(
+    flipTargetEffect?.kind === 'transfer-hp' &&
+      flipTargetEffect.receiverTarget &&
+      flipReceiverTargetCandidates.length > 0,
+  )
 
   return (
     <>
@@ -531,8 +548,10 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             selectedDiscardIds={match.selectedFlipDiscardIds}
             chooseOneModes={flipChooseOneEffect?.modes}
             targetCandidates={flipTargetCandidates}
+            receiverTargetCandidates={flipReceiverTargetCandidates}
+            targetPair={flipTargetPair}
             targetMin={flipTargetLimits?.min ?? 0}
-            targetMax={flipTargetLimits?.max ?? 1}
+            targetMax={flipTargetPair ? 2 : (flipTargetLimits?.max ?? 1)}
             onToggleDiscard={(instanceId) =>
               match.setSelectedFlipDiscardIds((current) =>
                 current.includes(instanceId)

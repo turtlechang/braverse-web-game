@@ -405,9 +405,9 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('reserves lower-edge space for the opponent HP dock and widens two-cookie spacing', () => {
+  it('anchors opponent Cookies to the upper edge of their battle zone and widens two-cookie spacing', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.combat-card-wrap\s*\{[^}]*margin-bottom:\s*clamp\(2px, 0\.35vh, 3px\)[^}]*}/,
+      /\.top-field \.combat-slots\s*\{[^}]*align-items:\s*flex-start[^}]*padding-top:\s*3px[^}]*}/,
     )
     expect(normalizedCss).toMatch(
       /\.combat-slots\s*\{[^}]*--battle-card-gap:\s*clamp\(166px, 14vw, 196px\)[^}]*gap:\s*var\(--battle-card-gap\)[^}]*}/,

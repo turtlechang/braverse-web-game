@@ -1,5 +1,10 @@
 import { GameRuleError } from './errors'
 import { isEffectConditionMet } from './effects/targeting'
+import { updatePlayer } from './helpers'
+import { getRefreshCandidates } from './refresh'
+import { clearDepartedCookieModifiers } from './replacement'
+import { hasCookieOnPlayEffects } from './skills'
+import { finishWithDefeat } from './victory'
 import type {
   CookieCard,
   CookieInBattle,
@@ -63,6 +68,172 @@ export const materializeExtraDeckCookie = (
       card.extraDeckPlayMode === 'awaken' || card.type === 'awakened'
         ? 'awakened'
         : 'extra',
+  }
+}
+
+/**
+ * EXTRA 登場後的共用狀態轉換。這個函式刻意放在 EXTRA 模組，讓一般玩家
+ * 指令與「先支付 EXTRA 代價、再實體化」的待處理決策共用同一條規則路徑，
+ * 避免付款後複製一份可分歧的登場／Awaken 邏輯。
+ */
+export const materializeExtraDeckCookieAfterEntryCost = (
+  state: GameState,
+  playerId: PlayerId,
+  instanceId: string,
+): GameState => {
+  const player = state.players[playerId]
+  const extraDeckCard = (player.extraDeck ?? []).find(
+    (candidate) => candidate.instanceId === instanceId,
+  )
+  if (!extraDeckCard) {
+    throw new GameRuleError('找不到要從 EXTRA Deck 登場的餅乾。')
+  }
+
+  const deploymentCard = materializeExtraDeckCookie(extraDeckCard)
+  const isAwaken = deploymentCard.extraDeckOrigin === 'awakened'
+  const getAwakenTarget = () => {
+    const requirement = extraDeckCard.awakenRequirement
+    if (!requirement) return undefined
+    return player.battleArea.find(
+      (target) =>
+        target.card.extraDeckOrigin !== 'awakened' &&
+        target.card.name === requirement.targetName &&
+        target.enteredFrom === requirement.playedFrom &&
+        target.enteredTurn === state.turnNumber,
+    )
+  }
+
+  if (isAwaken) {
+    const target = getAwakenTarget()
+    if (!target) {
+      throw new GameRuleError('尚未符合此 Awakened 餅乾的覆蓋目標條件。')
+    }
+
+    const hpBonus = deploymentCard.awakenHpBonus
+    if (!hpBonus || hpBonus < 1) {
+      throw new GameRuleError('Awakened 餅乾缺少 HP+N 資料。')
+    }
+
+    const availableHpCards = player.deck.slice(0, hpBonus)
+    const replacedBattleArea = player.battleArea.map((cookie) =>
+      cookie.card.instanceId === target.card.instanceId
+        ? {
+            card: deploymentCard,
+            hpCards: [...cookie.hpCards, ...availableHpCards],
+            rested: false,
+            battleEntryId:
+              `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
+            enteredFrom: 'extra-deck' as const,
+            enteredTurn: state.turnNumber,
+            awakenedUnderlay: [
+              target.card,
+              ...(target.awakenedUnderlay ?? []),
+            ],
+            ...(target.equippedCards?.length
+              ? { equippedCards: target.equippedCards }
+              : {}),
+          }
+        : cookie,
+    )
+    const updatedState = clearDepartedCookieModifiers(
+      updatePlayer(state, {
+        ...player,
+        deck: player.deck.slice(hpBonus),
+        extraDeck: (player.extraDeck ?? []).filter(
+          (candidate) => candidate.instanceId !== instanceId,
+        ),
+        battleArea: replacedBattleArea,
+      }),
+    )
+
+    return resolveExtraDeckExhaustion(
+      {
+        ...updatedState,
+        extraDeckPlayUsedThisTurn: true,
+        nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+        pendingOnPlay:
+          hasCookieOnPlayEffects(deploymentCard)
+            ? {
+                playerId,
+                sourceInstanceId: deploymentCard.instanceId,
+                origin: 'extra-deck',
+              }
+            : null,
+      },
+      playerId,
+      {
+        targetInstanceId: deploymentCard.instanceId,
+        amount: hpBonus - availableHpCards.length,
+      },
+    )
+  }
+
+  const availableHpCards = player.deck.slice(0, deploymentCard.hp)
+  const updatedState = updatePlayer(state, {
+    ...player,
+    deck: player.deck.slice(deploymentCard.hp),
+    extraDeck: (player.extraDeck ?? []).filter(
+      (candidate) => candidate.instanceId !== instanceId,
+    ),
+    battleArea: [
+      ...player.battleArea,
+      {
+        card: deploymentCard,
+        hpCards: availableHpCards,
+        rested: false,
+        battleEntryId:
+          `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,
+        enteredFrom: 'extra-deck',
+        enteredTurn: state.turnNumber,
+      },
+    ],
+  })
+
+  return resolveExtraDeckExhaustion(
+    {
+      ...updatedState,
+      extraDeckPlayUsedThisTurn: true,
+      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+      pendingOnPlay:
+        hasCookieOnPlayEffects(deploymentCard)
+          ? {
+              playerId,
+              sourceInstanceId: deploymentCard.instanceId,
+              origin: 'extra-deck',
+            }
+          : null,
+    },
+    playerId,
+    {
+      targetInstanceId: deploymentCard.instanceId,
+      amount: deploymentCard.hp - availableHpCards.length,
+    },
+  )
+}
+
+/** 牌庫耗盡時沿用一般抽牌／登場流程的 Refresh 裁決。 */
+export const resolveExtraDeckExhaustion = (
+  state: GameState,
+  playerId: PlayerId,
+  remainingHpSetup?: { targetInstanceId: string; amount: number },
+): GameState => {
+  if (state.players[playerId].deck.length > 0) {
+    return state
+  }
+
+  if (getRefreshCandidates(state, playerId).length === 0) {
+    return finishWithDefeat(state, playerId, 'refresh-unavailable')
+  }
+
+  return {
+    ...state,
+    pendingRefresh: {
+      playerId,
+      remainingDraws: 0,
+      ...(remainingHpSetup && remainingHpSetup.amount > 0
+        ? { remainingHpSetup: [remainingHpSetup] }
+        : {}),
+    },
   }
 }
 

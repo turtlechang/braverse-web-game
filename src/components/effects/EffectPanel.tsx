@@ -380,6 +380,8 @@ function EffectPanelContent({
               : { min: currentEffect.optional ? 0 : 1, max: 1 }
           : currentEffect?.kind === 'cycle-hp'
             ? { min: 0, max: 2 }
+          : currentEffect?.kind === 'hand-to-battle'
+            ? { min: currentEffect.optional ? 0 : currentEffect.amount, max: currentEffect.amount }
           : currentEffect?.kind === 'rest-support-and-damage'
             ? currentEffect.target
             : currentEffect?.kind === 'set-active' && currentEffect.selectable
@@ -426,7 +428,6 @@ function EffectPanelContent({
         currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
         currentEffect.kind !== 'disable-block' &&
-        currentEffect.kind !== 'hand-to-battle' &&
         currentEffect.kind !== 'flip-to-support'
           ? 'target' in currentEffect
             ? currentEffect.target
