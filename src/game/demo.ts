@@ -24,6 +24,7 @@ import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import bs9CandidateDocument from '../../data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -193,10 +194,24 @@ export const BS8_GREEN_CONDITION_CARD_NUMBERS = [
 export type Bs8GreenConditionCardNumber =
   (typeof BS8_GREEN_CONDITION_CARD_NUMBERS)[number]
 
+/** BS9 cards currently admitted to the isolated development preview. */
+export const BS9_CANDIDATE_CARD_NUMBERS = [
+  'BS9-001',
+  'BS9-001@1',
+  'BS9-001@2',
+] as const
+export type Bs9CandidateCardNumber =
+  (typeof BS9_CANDIDATE_CARD_NUMBERS)[number]
+
 const isBs8ExtraDeckCardNumber = (
   value: string,
 ): value is Bs8ExtraDeckCardNumber =>
   (BS8_EXTRA_DECK_CARD_NUMBERS as readonly string[]).includes(value)
+
+const isBs9CandidateCardNumber = (
+  value: string,
+): value is Bs9CandidateCardNumber =>
+  (BS9_CANDIDATE_CARD_NUMBERS as readonly string[]).includes(value)
 
 const isListedCardNumber = <T extends readonly string[]>(
   values: T,
@@ -226,6 +241,11 @@ export const parseTestStateConfig = (
       cardNumber: Bs8ExtraDeckCardNumber
       conditionMet: boolean
       orderedTargets?: boolean
+    }
+  | {
+      kind: 'bs9-candidate'
+      cardNumber: Bs9CandidateCardNumber
+      negative: boolean
     }
   | { kind: 'bs8-011-double-skill' }
   | { kind: 'bs8-011-faint-continuation'; faint: boolean }
@@ -405,6 +425,18 @@ export const parseTestStateConfig = (
   }
   if (testState === 'attack-effect') {
     return { kind: 'attack-effect' }
+  }
+  if (testState?.startsWith('bs9-card-negative:')) {
+    const cardNumber = testState.slice('bs9-card-negative:'.length).trim()
+    if (isBs9CandidateCardNumber(cardNumber)) {
+      return { kind: 'bs9-candidate', cardNumber, negative: true }
+    }
+  }
+  if (testState?.startsWith('bs9-card:')) {
+    const cardNumber = testState.slice('bs9-card:'.length).trim()
+    if (isBs9CandidateCardNumber(cardNumber)) {
+      return { kind: 'bs9-candidate', cardNumber, negative: false }
+    }
   }
   if (testState === 'bs8-extra-deck:met') {
     return { kind: 'bs8-extra-deck', cardNumber: 'BS8-005', conditionMet: true }
@@ -3250,6 +3282,29 @@ const getBs8CandidateTestCard = (cardNumber: string): GameCard | null => {
   const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
   if (conversion.status !== 'converted') {
     throw new Error(`BS8 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
+/**
+ * BS9 remains inventory-only.  This loader is deliberately restricted to the
+ * first audited card and is reachable only from the localhost candidate
+ * preview route; it never contributes to the generated Standard card pool.
+ */
+const getBs9CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  if (!isBs9CandidateCardNumber(trimmed)) return null
+  const records = bs9CandidateDocument.cards as OfficialCardRecord[]
+  const source = records.find((record) => record.cardNumber === trimmed) ??
+    records.find((record) => record.baseCardNumber === trimmed)
+  if (!source) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS9 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
   }
   return {
     ...conversion.gameCard,
@@ -7538,6 +7593,19 @@ export const createCardNegativeDemoState = (
     discardPile: negativeDiscardPile,
   })
 }
+
+/**
+ * Isolated BS9 candidate preview.  The positive and negative routes share the
+ * same real candidate card and GameState surface; the negative route exercises
+ * the explicit skip branch through the existing card-check fixture, so the
+ * candidate never enters a production deck or online room.
+ */
+export const createBs9CandidatePreviewDemoState = (
+  cardNumber: Bs9CandidateCardNumber,
+  negative = false,
+): GameState => negative
+  ? createCardNegativeDemoState(cardNumber)
+  : createCardCheckDemoState(cardNumber)
 
 /**
  * Local Browser A/B fixture for BS6-079's OnPlay movement target.

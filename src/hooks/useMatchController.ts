@@ -85,6 +85,7 @@ import {
   createBs3SilverbellConditionDemoState,
   createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
+  createBs9CandidatePreviewDemoState,
   createBs5FaintDemoState,
   createBs5TrapDemoState,
   createBs5ItemConditionDemoState,
@@ -187,6 +188,12 @@ export function useMatchController(params: {
         testStateConfig.cardNumber,
         testStateConfig.cardNumber,
         testStateConfig.orderedTargets,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-candidate') {
+      return createBs9CandidatePreviewDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
       )
     }
     if (testStateConfig?.kind === 'bs8-011-double-skill') {

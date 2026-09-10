@@ -8172,6 +8172,20 @@ export const convertOfficialFlipAbility = (
   }
 
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost; attachedHpBonus?: number }>> = {
+    // BS9-001 Icicle Yeti Cookie: the selected Cookie receives less effect
+    // damage for the rest of this turn.  Keep this separate from the attack
+    // damage modifiers used by cards such as BS7-097.
+    'BS9-001': {
+      effects: [
+        {
+          kind: 'modify-damage-received',
+          amount: -2,
+          duration: 'this-turn',
+          damageType: 'effect',
+          target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
     'P-024': {
       cost: { energy: {}, discardHand: 1 },
       effects: [

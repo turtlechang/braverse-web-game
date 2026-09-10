@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-10 BS9 候選工作完成首張最小核心：官方英文資料 185 筆／118 個基礎卡號維持隔離，BS9-001 的 `modify-damage-received` FLIP、回合到期、adapter／strict contract、5 項規則回歸，以及桌機／平板 4／4 Browser 正／負路徑已通過；完整 Vitest 為 295 檔／4,551 項。基本版與 `@2` 卡圖仍待目視，候選不進正式卡池、不 promote；詳見 [BS9 進度與下一批方案](docs/bs9-progress-2026-09-10.md)。
+
 2026-09-09 補上 Awakened EXTRA 卡的底卡顯示：所有帶有 Awakened runtime underlay 的戰鬥區卡牌，現在會在目前卡面旁呈現覺醒前的真實卡圖與卡名，並可點擊查看底卡詳情；卡牌詳情也會列出底卡與卡號。BS8-027「Golden Cheese Cookie」與 BS8-104「Dark Cacao Cookie」的正向 Awaken 及 BS8-027 不成立條件已以 Chrome Browser 實際驗證；這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
 
 2026-09-08 將依實體卡圖建立獨立預期、逐項負向案例、精確 Browser 結果與證據失效規則寫入 [卡牌稽核 Skill](.agents/skills/braverse-card-import-audit/SKILL.md)，供不同模型沿用相同驗收標準。
@@ -125,6 +127,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+BS9 維持 inventory：主效果待轉接 50 張、一般卡攻擊 Then 0／16、strict 118 筆 needs-review；BS9-001 三筆 strict 已 verified，候選 Browser 4／4（1907×863／1164×777）通過。完整 Vitest 為 295 檔／4,551 項；這些是候選與局部驗證數，不代表正式牌組、多人或線上逐卡完成。
 
 - 卡牌稽核 Skill 已補上 [實體卡圖與獨立驗收方法](.agents/skills/braverse-card-import-audit/references/physical-card-verification.md)，並串接工作流、官方轉接與逐卡矩陣入口；這是驗證流程更新，尚未量測跨模型正確率提升。
 
@@ -276,6 +280,8 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
+BS9-001 的隔離預覽、效果傷害修正與桌機／平板候選 Browser A/B 已完成；下一步先補基本版／`@2` 卡圖與普通攻擊 RR 支付驗收，再逐卡完成其餘 BS9 的卡圖、支付／目標與 Browser A/B；本輪不 promote。
+
 後續逐卡任務依新版 Skill 留存卡圖、獨立預期、各限制負向案例與 UI 結算證據，分別追蹤初次缺陷及驗收後漏失，不以測試全綠推算卡牌正確率。
 
 日常沿用 `$braverse-workflow` 與現行任務報告，依實際失敗證據調整流程；不新增重複追蹤系統，不因本次文字精簡降低遊戲測試或正式 Browser 驗收門檻。
@@ -423,6 +429,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-10 | 完成 BS9 inventory 185 筆／118 個基礎卡號盤點，以及 BS9-001 效果減傷核心、adapter／規則回歸、完整 Vitest 295 檔／4,551 項與桌機／平板 4／4 候選 Browser 正／負驗收；基本版／@2 卡圖與正式逐卡 gate 仍待。 |
 | 2026-09-09 | 新增通用 Awakened 底卡實圖／卡名／卡號／詳情顯示，並以 BS8-027／BS8-104 正向及 BS8-027 負向 Browser 路徑驗證；保留正式牌組、多人與線上逐卡驗收邊界。 |
 | 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇、BS8-078手牌登場目標與技能支付支援區排版、BS8-079正式LV.1目標與下一個Active Phase回歸、BS8-083手牌登場與獨立攻擊後Then路徑、BS8-085剩餘1 HP昏厥目標與高HP反例，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |
 | 2026-09-07 | 完成BS8全125張文字／runtime與桌機平板局部稽查、171筆實圖詳情；修復手牌／支援間距、候選／數量／Then／傷害順序／異圖與promotion測試隔離。4,498項測試通過，正式EXTRA編輯器／JSON／本機登場／標準好友房與私密遮罩已開放並驗證。 |

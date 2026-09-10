@@ -616,7 +616,7 @@ export const executeCardEffect = (
         : getOpponentId(context.sourcePlayerId)
     const targetPlayer = state.players[targetPlayerId]
     const previousBattleAreaCount = targetPlayer.battleArea.length
-    const damageAmount = getEffectDamageAmount(state, context, effect.amount)
+    const baseDamageAmount = getEffectDamageAmount(state, context, effect.amount)
     // 官方裁定：即使不「選擇」目標的全場效果，仍屬對手效果，不能影響 BS3-115 保護餅乾。
     // BS3-082：prevent-effect-damage 保護的餅乾也不受效果傷害。
     const targets = targetPlayer.battleArea.filter(
@@ -642,7 +642,9 @@ export const executeCardEffect = (
         throw new GameRuleError('Select every legal damage target exactly once, in resolution order.')
       }
       const orderedTargets = selectedIds.map(instanceId => ({
-        playerId: getCookieOwnerId(state, instanceId)!, instanceId, damage: damageAmount,
+        playerId: getCookieOwnerId(state, instanceId)!,
+        instanceId,
+        damage: getEffectDamageAmount(state, context, effect.amount, instanceId),
       }))
       return beginEffectDamageSequence(state, context, orderedTargets, true) ?? state
     }
@@ -651,7 +653,12 @@ export const executeCardEffect = (
     const effectDamageTargets: EffectDamageTarget[] = targets.map((target) => ({
       playerId: targetPlayerId,
       instanceId: target.card.instanceId,
-      damage: damageAmount,
+      damage: getEffectDamageAmount(
+        state,
+        context,
+        effect.amount,
+        target.card.instanceId,
+      ),
     }))
     const pendingEffectDamage = beginEffectDamageSequence(
       state,
@@ -662,7 +669,13 @@ export const executeCardEffect = (
 
     const damagedPlayer = targets.reduce(
       (player, target) =>
-        damagePlayerCookie(player, target.card.instanceId, damageAmount),
+        damagePlayerCookie(
+          player,
+          target.card.instanceId,
+          effectDamageTargets.find(
+            (entry) => entry.instanceId === target.card.instanceId,
+          )?.damage ?? baseDamageAmount,
+        ),
       targetPlayer,
     )
     const departedCount =
@@ -685,16 +698,16 @@ export const executeCardEffect = (
         },
       },
       targetPlayerId,
-      targets
-        .filter(() => damageAmount > 0)
-        .map((target) => target.card.instanceId),
+      effectDamageTargets
+        .filter(({ damage }) => damage > 0)
+        .map(({ instanceId }) => instanceId),
     )
     const sourceCookie = state.players[context.sourcePlayerId].battleArea.find(
       (cookie) => cookie.card.instanceId === context.sourceInstanceId,
     )
     if (
       sourceCookie?.card.keywords?.includes('arena') &&
-      damageAmount > 0
+      effectDamageTargets.some(({ damage }) => damage > 0)
     ) {
       damageState = {
         ...damageState,
@@ -1724,15 +1737,16 @@ export const executeCardEffect = (
       return nextState
     }
 
-    const amount = getEffectDamageAmount(
-      nextState,
-      context,
-      selectedSupports.length,
-    )
     const currentTarget = nextState.players[targetPlayerId].battleArea.find(
       (cookie) => cookie.card.instanceId === selectedTargets[0].card.instanceId,
     )
     if (!currentTarget) return nextState
+    const amount = getEffectDamageAmount(
+      nextState,
+      context,
+      selectedSupports.length,
+      currentTarget.card.instanceId,
+    )
     if (isEffectDamagePrevented(nextState, currentTarget, targetPlayerId)) {
       return nextState
     }
@@ -3776,7 +3790,8 @@ export const executeCardEffect = (
               getBreakAreaLevel(state, context.sourcePlayerId) -
               getBreakAreaLevel(state, getOpponentId(context.sourcePlayerId)),
             )
-    const amount = getEffectDamageAmount(state, context, baseAmount)
+    const getDamageAmount = (targetInstanceId: string): number =>
+      getEffectDamageAmount(state, context, baseAmount, targetInstanceId)
 
     if (effect.target.side === 'either') {
       if (effect.kind !== 'damage') {
@@ -3790,7 +3805,11 @@ export const executeCardEffect = (
         (target) => {
           const ownerId = getCookieOwnerId(state, target.card.instanceId)
           return ownerId
-            ? [{ playerId: ownerId, instanceId: target.card.instanceId, damage: amount }]
+            ? [{
+                playerId: ownerId,
+                instanceId: target.card.instanceId,
+                damage: getDamageAmount(target.card.instanceId),
+              }]
             : []
         },
       )
@@ -3811,7 +3830,11 @@ export const executeCardEffect = (
           damageState.players[ownerId].battleArea.length
         const damagedPlayer = ownedTargets.reduce(
           (player, target) =>
-            damagePlayerCookie(player, target.card.instanceId, amount),
+            damagePlayerCookie(
+              player,
+              target.card.instanceId,
+              getDamageAmount(target.card.instanceId),
+            ),
           damageState.players[ownerId],
         )
         const departedCount =
@@ -3834,7 +3857,9 @@ export const executeCardEffect = (
               },
             },
             ownerId,
-            ownedTargets.map((target) => target.card.instanceId),
+            ownedTargets
+              .filter((target) => getDamageAmount(target.card.instanceId) > 0)
+              .map((target) => target.card.instanceId),
           ),
           ownerId,
           departedCount,
@@ -3850,7 +3875,9 @@ export const executeCardEffect = (
         damageState.players[context.sourcePlayerId].battleArea.some(
           (cookie) => cookie.card.instanceId === context.sourceInstanceId,
         ) &&
-        amount > 0
+        protectedTargets.some(
+          (target) => getDamageAmount(target.card.instanceId) > 0,
+        )
       ) {
         const sourceCookie = damageState.players[context.sourcePlayerId].battleArea.find(
           (cookie) => cookie.card.instanceId === context.sourceInstanceId,
@@ -3880,7 +3907,7 @@ export const executeCardEffect = (
       (target) => ({
         playerId: targetPlayerId,
         instanceId: target.card.instanceId,
-        damage: amount,
+        damage: getDamageAmount(target.card.instanceId),
       }),
     )
     const pendingEffectDamage = beginEffectDamageSequence(
@@ -3892,7 +3919,11 @@ export const executeCardEffect = (
 
     const damagedPlayer = protectedTargets.reduce(
       (player, target) =>
-        damagePlayerCookie(player, target.card.instanceId, amount),
+        damagePlayerCookie(
+          player,
+          target.card.instanceId,
+          getDamageAmount(target.card.instanceId),
+        ),
       state.players[targetPlayerId],
     )
 
@@ -3913,7 +3944,9 @@ export const executeCardEffect = (
         },
         },
         targetPlayerId,
-        protectedTargets.map((target) => target.card.instanceId),
+        protectedTargets
+          .filter((target) => getDamageAmount(target.card.instanceId) > 0)
+          .map((target) => target.card.instanceId),
       ),
       targetPlayerId,
       departedCount,
@@ -3944,8 +3977,22 @@ export const executeCardEffect = (
         : undefined,
     ] as const
     const amounts = [
-      getEffectDamageAmount(state, context, effect.primaryAmount),
-      getEffectDamageAmount(state, context, effect.secondaryAmount),
+      targets[0]
+        ? getEffectDamageAmount(
+            state,
+            context,
+            effect.primaryAmount,
+            targets[0].card.instanceId,
+          )
+        : 0,
+      targets[1]
+        ? getEffectDamageAmount(
+            state,
+            context,
+            effect.secondaryAmount,
+            targets[1].card.instanceId,
+          )
+        : 0,
     ] as const
     const appliedList = appliedTargets.flatMap((target, index) =>
       target ? [{ target, amount: amounts[index] }] : [],
@@ -4104,6 +4151,9 @@ export const executeCardEffect = (
       effect.kind === 'modify-damage-received'
         ? effect.setDamageTo
         : undefined,
+    ...(effect.kind === 'modify-damage-received' && effect.damageType
+      ? { damageType: effect.damageType }
+      : {}),
   }))
 
   if (effect.kind === 'modify-attack-cost') {
@@ -4172,6 +4222,7 @@ export const executeCardEffect = (
             chainedState,
             context,
             thenEffect.amount,
+            chainedTarget.card.instanceId,
           )
           const queuedFlipDamage = beginEffectDamageSequence(
             chainedState,

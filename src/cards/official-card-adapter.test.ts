@@ -361,6 +361,37 @@ describe('official card adapter', () => {
         attackCost: 2,
         attackEnergyCost: { red: 2 },
         attackText: '<{R}{R}> Pointy Icicle {da} 2',
+        effectText:
+          'Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.',
+        effects: [
+          {
+            kind: 'modify-damage-received',
+            amount: -2,
+            duration: 'this-turn',
+            damageType: 'effect',
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        flip: {
+          text:
+            'Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.',
+          cost: {
+            energy: {},
+            discardHand: 0,
+            discardHandColor: undefined,
+            discardHandType: undefined,
+            supportToTrash: undefined,
+          },
+          effects: [
+            {
+              kind: 'modify-damage-received',
+              amount: -2,
+              duration: 'this-turn',
+              damageType: 'effect',
+              target: { side: 'self', min: 0, max: 1 },
+            },
+          ],
+        },
       })
       expect(result.source.imageUrl).toMatch(/^https:/)
       expect(result.parsedText.flip?.raw).toContain('effect damage')

@@ -884,6 +884,8 @@ export interface ModifyDamageReceivedEffect {
   amount: number
   duration: EffectDuration
   target: EffectTargetSelector
+  /** Damage channel affected by this modifier. Legacy effects default to attack damage. */
+  damageType?: 'attack' | 'effect'
   condition?: EffectCondition
   minimumDamage?: number
   setDamageTo?: number
@@ -2173,6 +2175,8 @@ export interface DamageReceivedModifier {
   targetInstanceId: string
   amount: number
   expiresAfterTurn: number | null
+  /** Damage channel affected by this modifier. Legacy modifiers default to attack damage. */
+  damageType?: 'attack' | 'effect'
   /** Modifier is active only while the target's remaining HP is at most this value. */
   maxTargetRemainingHp?: number
   minimumDamage?: number
