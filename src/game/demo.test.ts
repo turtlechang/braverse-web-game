@@ -367,6 +367,97 @@ describe('parseTestStateConfig', () => {
     expect(state.players['player-one'].hand).toHaveLength(before.hand.length + 1)
   })
 
+  it('keeps BS8-111/113/114/117 negative fixtures below their printed boundaries', () => {
+    for (const [cardNumber, threshold] of [
+      ['BS8-111', undefined],
+      ['BS8-114', 30],
+      ['BS8-117', 15],
+    ] as const) {
+      const positive = createCardCheckDemoState(cardNumber, { preferSkillSurface: true })
+      const negative = createCardNegativeDemoState(cardNumber, { preferSkillSurface: true })
+      const positiveSource = positive.players['player-one'].hand.find(
+        (card) => card.id === cardNumber,
+      )!
+      const negativeSource = negative.players['player-one'].hand.find(
+        (card) => card.id === cardNumber,
+      )!
+
+      if (threshold !== undefined) {
+        expect(positive.players['player-one'].discardPile).toHaveLength(threshold)
+        expect(negative.players['player-one'].discardPile).toHaveLength(threshold - 1)
+      }
+      expect(negative.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+
+      const positiveDeployed = applyGameCommand(positive, {
+        kind: 'deploy-cookie',
+        playerId: 'player-one',
+        instanceId: positiveSource.instanceId,
+      })
+      expect(canActivateCookieSkill(
+        positiveDeployed,
+        'player-one',
+        positiveSource.instanceId,
+        'on-play',
+      )).toBe(true)
+
+      const negativeDeployed = applyGameCommand(negative, {
+        kind: 'deploy-cookie',
+        playerId: 'player-one',
+        instanceId: negativeSource.instanceId,
+      })
+      expect(canActivateCookieSkill(
+        negativeDeployed,
+        'player-one',
+        negativeSource.instanceId,
+        'on-play',
+      )).toBe(false)
+      const beforeNegative = structuredClone(negativeDeployed)
+      expect(() => applyGameCommand(negativeDeployed, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: negativeSource.instanceId,
+        trigger: 'on-play',
+        paymentIds: [],
+      })).toThrow()
+      expect(negativeDeployed).toEqual(beforeNegative)
+    }
+
+    const positive113 = createCardCheckDemoState('BS8-113', { preferSkillSurface: true })
+    const negative113 = createCardNegativeDemoState('BS8-113', { preferSkillSurface: true })
+    const positiveSource113 = positive113.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-113',
+    )!.card
+    const negativeSource113 = negative113.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-113',
+    )!.card
+    expect(positive113.players['player-one'].discardPile).toHaveLength(15)
+    expect(negative113.players['player-one'].discardPile).toHaveLength(14)
+    expect(negative113.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === negativeSource113.instanceId,
+    )?.rested).toBe(true)
+    expect(canActivateCookieSkill(
+      positive113,
+      'player-one',
+      positiveSource113.instanceId,
+      'activate',
+    )).toBe(true)
+    expect(canActivateCookieSkill(
+      negative113,
+      'player-one',
+      negativeSource113.instanceId,
+      'activate',
+    )).toBe(false)
+    const beforeNegative113 = structuredClone(negative113)
+    expect(() => applyGameCommand(negative113, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource113.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })).toThrow()
+    expect(negative113).toEqual(beforeNegative113)
+  })
+
   it('BS8-115 skill fixtures use the five/six trash boundary and resolve a real OnPlay', () => {
     for (const positive of [true, false]) {
       const initial = positive

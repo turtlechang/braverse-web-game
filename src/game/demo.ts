@@ -6019,6 +6019,49 @@ export const createCardNegativeDemoState = (
   if (baseCardNumber === 'BS8-118') {
     return updateDemoPlayer(state, 'player-one', { discardPile: player.discardPile.slice(0, 14) })
   }
+  if (baseCardNumber === 'BS8-111') {
+    // Onion Cookie's OnPlay effect still needs its printed discard-one-hand
+    // cost. Keep only the source in hand so deploying it reaches the real
+    // OnPlay surface, but the negative route cannot pay that cost afterward.
+    const source = player.hand.find((card) => card.id === baseCardNumber)
+    if (!source) throw new Error('BS8-111 negative fixture requires its source in hand')
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [source],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
+  if (baseCardNumber === 'BS8-113') {
+    // Knight Cookie's Activate is gated by at least fifteen cards in its own
+    // trash. Keep the rested source and all payment witnesses, but trim the
+    // trash to fourteen so B is blocked by the printed condition.
+    return updateDemoPlayer(state, 'player-one', {
+      discardPile: player.discardPile.slice(0, 14),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
+  if (baseCardNumber === 'BS8-114' || baseCardNumber === 'BS8-117') {
+    // These OnPlay effects use the same threshold boundary as the positive
+    // fixture (30 for Old Milk Villager, 15 for Healer Cookie 1). Preserve
+    // the deployable source in hand, but leave the trash just below its
+    // printed threshold so Browser B cannot enter the effect flow.
+    const source = player.hand.find((card) => card.id === baseCardNumber)
+    if (!source) throw new Error(`${baseCardNumber} negative fixture requires its source in hand`)
+    const threshold = baseCardNumber === 'BS8-114' ? 30 : 15
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [source, ...player.hand.filter((card) => card.instanceId !== source.instanceId)],
+      discardPile: player.discardPile.slice(0, threshold - 1),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
   if (baseCardNumber === 'BS8-052') {
     return updateDemoPlayer(state, 'player-two', { supportArea: state.players['player-two'].supportArea.slice(0, 1) })
   }
