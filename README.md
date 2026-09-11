@@ -12,6 +12,8 @@
 
 2026-09-10 完成 BS9-030「Shadow Milk Cookie」第四批候選局部驗收：EXTRA 登場前棄置 3 張黃色 FLIP Cookie、On Play LV.1 目標、普通攻擊 3 黃色能量，以及攻擊後棄置 BS9-026 並發動其 FLIP 抽牌的完整續接均已接入 exact adapter、規則／command trace 與實際 UI。正向／負向在 1907×863／1164×777 共 4／4 通過；候選維持 inventory 隔離，不等同正式牌組／多人／線上逐卡完成，詳見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md)。
 
+2026-09-11 依實體卡圖補齊 BS8-121「Black Concoction」、BS8-122「Milk Cart」與 BS8-125「The Days of Resolution and Dignity」的正式卡牌 fixture：BS8-121／122 使用正式紫色 Item、錯色 Item、錯類型 Cookie 與實際抽牌卡，BS8-125 使用正式 Stage、舊 Stage、Dark Cacao Cookie、紫色支付卡及 15／13 張真實棄牌區卡。規則回歸與 Chrome `test-state` 正／負 A/B 均通過，確認紫色 Item 條件、抽牌上限、場景放置後攻擊費用 3→2 與 15 張門檻不成立時維持 3；這仍是局部驗證，不等同正式牌組、多人或線上逐卡覆蓋。
+
 2026-09-09 修正 BS8-095「Herb Cookie」與 BS8-098「Warmth of the Snowfield」的可重現驗證局面：前者保留可棄手牌並以無手牌負向路徑驗證昏厥代價；後者將 Then 翻成「接著，你可以支付 1 點藍色支援能量；若支付，且自己的手牌為 2 張或更少，則從牌庫抽最多 3 張牌」，並保留手牌條件成立／不成立的陷阱後續。規則回歸與 Chrome Browser 正／負 A/B 通過；這仍屬 localhost `test-state` 局部驗證，不等同正式多人／線上逐卡覆蓋。
 
 同日補正 BS8-100「Snowfall Lantern Tree」與 BS8-119「Crunchy Chip Cookie」的可重現卡牌局面：BS8-100 改用正式 Tiger Lily Cookie、Herb Cookie、Warm Wind Flower、White Flour Fog 作為真實手牌，並以正／負 Browser 路徑驗證藍色支付、來源移至棄牌、只選藍色手牌及等量抽牌；BS8-119 則以正式 BS8-103「Dark Cacao Cookie」作為棄牌區候選，透過另一張正式卡的實際技能鏈驗證來源支付後進棄牌、Dark Cacao 從棄牌區進入戰鬥區並觸發 OnPlay，再完成紫色支付與雙目標 HP 棄牌。這些是 localhost `test-state` 局部驗證，不等同正式牌組、多人或線上逐卡覆蓋。
@@ -159,6 +161,7 @@ BS9 維持 inventory：主效果待轉接 43 張（31 張已轉接、44 張無�
 - 2026-09-09：BattleRow 與卡牌詳情共用 Awakened 的 `awakenedUnderlay`，BS8-027／BS8-104 均顯示覺醒前真實卡圖、卡名、卡號及可點擊詳情；正向 Awaken、負向登場封鎖與新 Chrome 頁面零警告通過。完整 Vitest 293 檔／4,542 項、build、修改檔 scoped lint 通過；全域 lint 仍只有既有未追蹤診斷檔的 3 個 unused 錯誤，正式多人／線上逐卡驗收未宣稱。
 - 2026-09-10：BS8-107 `card:`／`card-negative:` fixture 改用四張正式 BS8 手牌，保留紫色 Item 合法候選與錯色／錯類型反例；Chrome 實際驗證代價、目標、HP 棄置及缺少紫色 Item 的阻擋，局部 test-state 不等同正式多人／線上逐卡完成。另完成 BS9-010～023 候選第二批 8 項規則／adapter 回歸與 28／28（1164×777）Browser 正／負路徑，並將 BS9-001～023 fixture 統一改用官方實體卡牌記錄；正式牌組／多人／線上逐卡 gate 仍待。
 - 2026-09-10：BS8-111／113／114／117 負向 fixture 分別驗證棄 1 手牌與 15／30／15 張棄牌門檻；連同 BS8-107 在桌機／平板共 10 個 strict ability A/B 報告通過。另完成 BS9-001～009 第一批 adapter／規則／文案回歸與 36／36 候選 Browser 正／負路徑（1907×863／1164×777）。完整 Vitest、build、scoped lint 與全域 lint 結果及正式牌組／多人／線上逐卡邊界見 BS9 進度報告。
+- 2026-09-11：BS8-121／122／125 fixture 改用正式卡圖與卡名建立正／負 A/B：BS8-121 驗證紫色 Item 磨牌條件，BS8-122 驗證紫色非 Cookie 手牌代價與抽最多 2 張，BS8-125 驗證正式 Stage／Dark Cacao／支付及 15 張棄牌門檻。相關 4 檔／355 項 targeted tests、完整 Vitest 298 檔／4,586 項、build、修改檔 scoped lint 與 Chrome Browser 路徑通過；全域 lint 仍受既有未追蹤探針的 3 項錯誤阻擋，局部 `test-state` 不等同正式牌組／多人／線上逐卡完成。
 
 - BS8-020／021：補明確HP條件提示、修復RR傷害後漏收額外R即裝備；Then待結算時本機／線上均禁止推進階段，道具提示不再誤標技能。020共12條、021共36條桌面／手機Browser通過；本批全套282檔4,328項、build、scoped lint與AI20場通過；專卡完整多人仍未測。
 - BS8-018／019追加修復：來源代價失效仍傷害／回收、未棄手牌仍回收已修正；24項專卡回歸、兩卡共32條桌面／手機昏厥與攻擊路徑通過。另補001／008／012／013／015／016共36條普通攻擊路徑。全套4,304項、build、scoped lint與AI20場通過；逐卡完整對局仍未測。稽查工具現在拒絕指定卡號未實際納入的空跑。
@@ -319,6 +322,8 @@ BS8-100 的正向／負向 `test-state` 現已保留正式卡牌手牌、藍色�
 
 BS8-107 的正向／負向 `test-state` 現已保留正式 Black Concoction／Milk Cart 紫色 Item 代價候選，以及 Warm Wind Flower／Blackberry Cookie 的錯色／錯類型反例；後續仍需依全體 BS8 驗收範圍補正式牌組、多人與線上路徑。
 
+BS8-121／122／125 的正向／負向 `test-state` 現已保留正式紫色 Item、錯色／錯類型手牌、正式 Stage／Dark Cacao、實際紫色支付卡與 15／13 張真實棄牌區證據；Chrome 已確認條件成立與阻擋、來源／代價移動、抽牌及動態攻擊費用。上述仍是局部 fixture，後續需補正式牌組、多人與線上逐卡路徑。
+
 依 [本輪全面稽核報告](docs/ui-ux-and-bs8-audit-2026-09-05.md) 接續黃色BS8-051；先做桌機與平板，手機模式暫緩。黃色026–050已記錄本輪卡面與局部效果證據，專卡完整對局仍需補驗。023／024跨玩家順序已修，仍需擴充Refresh與專卡線上驗收；前序完整對局證據集中補齊，包含021完整裝備後攻擊Browser連鎖，不延後黃色初查。保留配對代價、昏厥來源代價及未翻開FLIP不影響HP的回歸。另需修復結束階段同時觸發排序、覆核舊系列付款文字差異，推進BS8全色／EXTRA完整對戰驗收。UI中期改善以新手直接開局、來源卡文連續顯示、付款與目標集中、平板身分與操作區可見為主。候選卡測試曾有Windows寫入失敗；2026-09-07已完成輸出隔離，完整套件通過。
 
 依 [BS8 綠色驗證紀錄](docs/bs8-green-validation-2026-09-05.md) 與 [BS8 黃色驗證紀錄](docs/bs8-yellow-validation-2026-09-04.md) 保留後續逐卡線上／正式完整對戰覆蓋範圍。先前AI Browser回歸通過；最新完整測試已通過，候選工具隔離修復與驗證以上方本輪紀錄為準。局部 test-state、靜態 contract 與本機 Browser 不等同全色逐卡完整線上對戰通過。
@@ -450,6 +455,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-11 | BS8-121／122／125 依實體卡圖補上正式卡牌正／負 fixture，Chrome `test-state` 驗證紫色 Item 條件、手牌代價／抽牌與 Stage 的 Dark Cacao 攻擊費用 3→2／15 張門檻阻擋；298 檔／4,586 項完整 Vitest、build、scoped lint 通過，全域 lint 保留既有未追蹤探針錯誤，正式牌組／多人／線上逐卡仍待。 |
 | 2026-09-10 | BS8-107 card-check fixture 改用正式 BS8 手牌，並以 Chrome 驗證紫色 Item 代價選擇、對手 HP 棄置及缺少合法代價的負向阻擋；BS8-111／113／114／117 補上條件／代價負向 fixture，桌機／平板 strict ability A/B 共10份報告通過。另完成 BS9-001～030 候選 adapter／規則／文案回歸與官方實體卡牌 fixture：第一批 36／36、第二批 28／28、第三批 28／28、BS9-030 第四批 4／4 Browser 正／負路徑；補上 BS9-006 同回合實際攻擊傷害正／負續接（2／2 對 1／2），完整 Vitest／build 與 scoped lint 通過；BS9-025 保留 review-only／fail-closed，BS9-030 及其他候選仍未進正式牌組，正式牌組／多人／線上逐卡 gate 仍待。 |
 | 2026-09-09 | 修正BS8-095昏厥棄手牌代價與BS8-098陷阱Then可選藍色支付／手牌條件的可重現fixture；補上BS8-100正式卡牌手牌／藍色篩選與BS8-119→BS8-103棄牌區登場鏈；新增通用Awakened底卡實圖／卡名／詳情顯示，驗證BS8-027／104正向與BS8-027負向路徑。完成規則回歸、build、scoped lint及Chrome Browser正／負路徑，保留正式牌組／多人／線上逐卡驗收邊界。 |
 | 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇、BS8-078手牌登場目標與技能支付支援區排版、BS8-079正式LV.1目標與下一個Active Phase回歸、BS8-083手牌登場與獨立攻擊後Then路徑、BS8-085剩餘1 HP昏厥目標與高HP反例，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |

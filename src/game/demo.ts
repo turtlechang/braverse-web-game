@@ -4913,6 +4913,14 @@ export const createCardCheckDemoState = (
           ]
         : card.id === 'BS8-047'
           ? [card, bs8YellowLevelThreeHandFixture, ...handFillers]
+          : card.id === 'BS8-122'
+            ? [
+                card,
+                cardCheckOfficialCard('BS8-121', 'BS8-122-hand-black-concoction'),
+                cardCheckOfficialCard('BS8-046', 'BS8-122-hand-yellow-item'),
+                cardCheckOfficialCookie('BS8-105', 'BS8-122-hand-purple-cookie'),
+                cardCheckOfficialCard('BS8-097', 'BS8-122-hand-blue-item'),
+              ]
           : card.id === 'BS8-096' || card.id === 'BS8-097'
             // Item conditions are checked before the card leaves the hand.
             // Keep the total at two, so this Browser fixture exercises the
@@ -4948,7 +4956,24 @@ export const createCardCheckDemoState = (
           arenaSupportCookie('BS7-063-deck-arena', 1, 'green'),
           ...deckFiller('p1').slice(1),
         ]
-      : deckFiller('p1')
+      : card.id === 'BS8-121'
+        ? [
+            // Black Concoction's condition is about the cards milled by this
+            // effect. Use formal cards at the visible top of the deck so the
+            // Browser discard modal can prove the purple Item match instead
+            // of only showing synthetic `p1-deck-*` Items.
+            cardCheckOfficialCard('BS8-122', 'BS8-121-deck-purple-item'),
+            cardCheckOfficialCard('BS8-046', 'BS8-121-deck-yellow-item'),
+            cardCheckOfficialCard('BS8-097', 'BS8-121-deck-blue-item'),
+            ...deckFiller('p1').slice(3),
+          ]
+        : card.id === 'BS8-122'
+          ? [
+              cardCheckOfficialCard('BS8-097', 'BS8-122-deck-blue-item'),
+              cardCheckOfficialCard('BS8-046', 'BS8-122-deck-yellow-item'),
+              ...deckFiller('p1').slice(2),
+            ]
+        : deckFiller('p1')
     const itemDiscardPile = card.id === 'BS8-022'
       ? ['BS8-002', 'BS8-013', 'BS8-015', 'BS8-053', 'BS8-021'].map(number =>
           cardCheckOfficialCard(number, `BS8-022-trash-${number}`))
@@ -5093,13 +5118,7 @@ export const createCardCheckDemoState = (
     const stageBattleCookie = card.id === 'P-032'
       ? { ...selfExtra1.cookie, keywords: ['ancient'] as ['ancient'] }
       : card.id === 'BS8-125'
-        ? {
-            ...selfExtra1.cookie,
-            name: 'Dark Cacao Cookie',
-            energyColor: 'purple' as EnergyColor,
-            attackCost: 1,
-            attackEnergyCost: { purple: 1 },
-          }
+        ? cardCheckOfficialCookie('BS8-103@2', 'BS8-125-dark-cacao')
       : selfExtra1.cookie
     const stageHand = card.id === 'BS8-100'
       ? [
@@ -5111,6 +5130,13 @@ export const createCardCheckDemoState = (
         ]
       : card.id === 'P-028'
       ? [card, handCookieFiller, ...handFillers]
+      : card.id === 'BS8-125'
+        ? [
+            card,
+            cardCheckOfficialCard('BS8-046', 'BS8-125-hand-yellow-item'),
+            cardCheckOfficialCookie('BS8-105', 'BS8-125-hand-purple-cookie'),
+            cardCheckOfficialCard('BS8-097', 'BS8-125-hand-blue-item'),
+          ]
       : card.id === 'BS6-043'
         ? [card, handCookieFiller, ...handFillers]
         : card.id === 'BS7-086'
@@ -5131,7 +5157,18 @@ export const createCardCheckDemoState = (
           ...ownBreakArea,
         ]
       : ownBreakArea
-    const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
+    const oldStage: GameCard = card.id === 'BS8-125'
+      ? cardCheckOfficialCard('BS8-024', 'BS8-125-old-stage')
+      : { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
+    const bs8PhysicalStageTrash = card.id === 'BS8-125'
+      ? [
+          'BS8-021', 'BS8-022', 'BS8-023', 'BS8-024', 'BS8-037',
+          'BS8-046', 'BS8-059', 'BS8-070', 'BS8-071', 'BS8-072',
+          'BS8-083', 'BS8-084', 'BS8-096', 'BS8-097', 'BS8-103@2',
+        ].map((number, index) =>
+          cardCheckOfficialCard(number, `BS8-125-trash-${index + 1}`),
+        )
+      : []
     const stageDiscardPile = card.id === 'BS7-107'
       ? [
           ...trashFillers,
@@ -5144,6 +5181,8 @@ export const createCardCheckDemoState = (
             keywords: ['arena'] as ['arena'],
           },
         ]
+      : card.id === 'BS8-125'
+        ? bs8PhysicalStageTrash
       : trashFillers
     const state = baseState()
     const stageBattleFixture = card.id === 'BS6-021'
@@ -5166,7 +5205,14 @@ export const createCardCheckDemoState = (
     // card with no usable Activate path.  Keep enough active payment cards,
     // but mirror the real support-count condition for this card.
     const stagePlayerSupportArea =
-      card.id === 'BS6-064'
+      card.id === 'BS8-125'
+        ? ['BS8-121', 'BS8-122', 'BS8-121', 'BS8-122'].map((number, index) =>
+            ({
+              card: cardCheckOfficialCard(number, `BS8-125-support-${index + 1}`),
+              rested: false,
+            }),
+          )
+      : card.id === 'BS6-064'
         ? energySupports.slice(0, 2).map((c) => ({ card: c, rested: false }))
       : card.id === 'BS6-043'
           ? energySupports.map((c, index) => ({ card: c, rested: index < 2 }))
@@ -7191,6 +7237,58 @@ export const createCardNegativeDemoState = (
   if (baseCardNumber === 'BS8-120') {
     // The Activate cost is a hand discard, so resting support does not block it.
     return updateDemoPlayer(state, 'player-one', { hand: [] })
+  }
+  if (baseCardNumber === 'BS8-121') {
+    // Keep the purple payment active and change only the cards milled by this
+    // effect. The purple Cookie is a visible non-matching witness; the other
+    // two formal cards keep the three-card operation and public discard UI
+    // available while proving that a purple Item is required.
+    return updateDemoPlayer(state, 'player-one', {
+      deck: [
+        cardCheckOfficialCard('BS8-105', 'BS8-121-negative-deck-purple-cookie'),
+        cardCheckOfficialCard('BS8-046', 'BS8-121-negative-deck-yellow-item'),
+        cardCheckOfficialCard('BS8-070', 'BS8-121-negative-deck-green-cookie'),
+        ...state.players['player-one'].deck.slice(3),
+      ],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
+  if (baseCardNumber === 'BS8-122') {
+    // Keep the source Milk Cart deployable and the purple payment active, but
+    // expose only wrong-colour / wrong-type hand witnesses. The source itself
+    // must not be selectable as the printed purple non-Cookie discard cost.
+    const source = player.hand.find((card) => card.id === baseCardNumber)
+    if (!source) throw new Error('BS8-122 negative fixture requires its source in hand')
+    return updateDemoPlayer(state, 'player-one', {
+      hand: [
+        source,
+        cardCheckOfficialCard('BS8-046', 'BS8-122-negative-yellow-item'),
+        cardCheckOfficialCookie('BS8-105', 'BS8-122-negative-purple-cookie'),
+        cardCheckOfficialCard('BS8-097', 'BS8-122-negative-blue-item'),
+      ],
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
+  }
+  if (baseCardNumber === 'BS8-125') {
+    // Preserve the real stage, Dark Cacao Cookie, and purple placement
+    // payment, but cross only the printed 15-card trash threshold. After the
+    // stage is placed the attack cost must remain at its printed three purple
+    // energy rather than receiving the -1 purple modifier.
+    return updateDemoPlayer(state, 'player-one', {
+      // Replacing the existing stage also puts that old stage into the trash,
+      // so start at thirteen and arrive at fourteen after placement.
+      discardPile: player.discardPile.slice(0, 13),
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+    })
   }
   if (baseCardNumber === 'BS8-107') {
     // Keep real non-matching cards visible, but remove every purple Item so

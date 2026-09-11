@@ -2454,7 +2454,7 @@ describe('createCardCheckDemoState', () => {
     const cacao = createCardCheckDemoState('BS8-125')
     const cacaoSource = cacao.players['player-one'].battleArea[0]
     expect(cacaoSource?.card.name).toBe('Dark Cacao Cookie')
-    expect(cacaoSource?.card.attackEnergyCost).toEqual({ purple: 1 })
+    expect(cacaoSource?.card.attackEnergyCost).toEqual({ purple: 3 })
     expect(createCardNegativeDemoState('BS8-075').players['player-one'].supportArea)
       .toHaveLength(5)
     const cacaoNegative = createCardNegativeDemoState('BS8-125')
@@ -2476,7 +2476,7 @@ describe('createCardCheckDemoState', () => {
         afterStagePlacement,
         afterStagePlacement.players['player-one'].battleArea[0]!.card.instanceId,
       ),
-    ).toEqual({ purple: 1 })
+    ).toEqual({ purple: 3 })
   })
 
   it('sets the merged BS8 Cheesebird skill condition through a real break-entry teammate', () => {
@@ -6926,5 +6926,165 @@ describe('createBs3SpecialVictoryDemoState', () => {
     expect(condition).toBeDefined()
     expect(isSpecialVictoryConditionMet(state, 'player-one', condition!)).toBe(true)
     expect(canActivateStage(state, 'player-one')).toBe(true)
+  })
+})
+
+describe('BS8 physical card-check fixtures', () => {
+  it('uses formal cards for BS8-122 cost witnesses and draw cards', () => {
+    const positive = createCardCheckDemoState('BS8-122')
+    const player = positive.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-122')!
+    const discardCost = player.hand.find((card) => card.id === 'BS8-121')!
+
+    expect(source).toMatchObject({
+      id: 'BS8-122',
+      name: 'Milk Cart',
+      type: 'item',
+      energyColor: 'purple',
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.hand.map((card) => card.id)).toEqual([
+      'BS8-122', 'BS8-121', 'BS8-046', 'BS8-105', 'BS8-097',
+    ])
+    expect(player.deck.slice(0, 2).map((card) => card.id)).toEqual(['BS8-097', 'BS8-046'])
+    expect(canPlayItem(positive, 'player-one', source.instanceId)).toBe(true)
+
+    const begun = applyGameCommand(positive, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId],
+      discardHandIds: [discardCost.instanceId],
+    })
+    expect(begun.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-122', name: 'Milk Cart' }),
+        expect.objectContaining({ id: 'BS8-121', name: 'Black Concoction' }),
+      ]),
+    )
+
+    const awaitingDraw = applyGameCommand(begun, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(awaitingDraw.pendingDrawUpTo).toMatchObject({ max: 2 })
+    const drawn = resolveDrawUpTo(awaitingDraw, 'player-one', 2)
+    expect(drawn.players['player-one'].hand).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-097', name: 'Heartfelt Light' }),
+        expect.objectContaining({ id: 'BS8-046', name: 'Surprise! Lassi Jar' }),
+      ]),
+    )
+  })
+
+  it('keeps BS8-122 blocked with only formal wrong-colour or wrong-type hand witnesses', () => {
+    const negative = createCardNegativeDemoState('BS8-122')
+    const player = negative.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-122')!
+    const before = structuredClone(negative)
+
+    expect(player.hand.map((card) => card.id)).toEqual([
+      'BS8-122', 'BS8-046', 'BS8-105', 'BS8-097',
+    ])
+    expect(player.hand.slice(1)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-046', type: 'item', energyColor: 'yellow' }),
+        expect.objectContaining({ id: 'BS8-105', type: 'cookie', energyColor: 'purple' }),
+        expect.objectContaining({ id: 'BS8-097', type: 'item', energyColor: 'blue' }),
+      ]),
+    )
+    expect(canPlayItem(negative, 'player-one', source.instanceId)).toBe(false)
+    expect(() => applyGameCommand(negative, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId],
+      discardHandIds: [source.instanceId],
+    })).toThrow()
+    expect(negative).toEqual(before)
+  })
+
+  it('proves BS8-125 with a formal stage, Dark Cacao, placement payment, and 15 real trash cards', () => {
+    const positive = createCardCheckDemoState('BS8-125')
+    const player = positive.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-125')!
+    const darkCacao = player.battleArea.find((entry) => entry.card.id === 'BS8-103')!
+
+    expect(source).toMatchObject({
+      id: 'BS8-125',
+      name: 'The Days of Resolution and Dignity',
+      type: 'stage',
+      imageUrl: expect.stringContaining('https://'),
+      stageAbility: {
+        placementCost: { purple: 2 },
+        staticAttackCostModifiers: [{
+          operation: 'reduce',
+          energyCost: { purple: 1 },
+          appliesTo: 'stage-owner',
+          targetCardName: 'Dark Cacao Cookie',
+          condition: { kind: 'trash-count-at-least', count: 15, player: 'stage-owner' },
+        }],
+      },
+    })
+    expect(darkCacao.card).toMatchObject({
+      id: 'BS8-103',
+      name: 'Dark Cacao Cookie',
+      level: 2,
+      hp: 4,
+      attack: 3,
+      attackCost: 3,
+      attackEnergyCost: { purple: 3 },
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.stage?.card).toMatchObject({
+      id: 'BS8-024',
+      name: 'Land of Fire & Ruin',
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.supportArea.map((support) => support.card.id)).toEqual([
+      'BS8-121', 'BS8-122', 'BS8-121', 'BS8-122',
+    ])
+    expect(player.discardPile).toHaveLength(15)
+    expect(new Set(player.discardPile.map((card) => card.instanceId)).size).toBe(15)
+    expect(player.discardPile.every((card) => card.imageUrl)).toBe(true)
+    expect(getAttackEnergyCostForState(positive, darkCacao.card.instanceId)).toEqual({ purple: 3 })
+
+    const before = structuredClone(positive)
+    const placed = applyGameCommand(positive, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: player.supportArea.slice(0, 2).map((support) => support.card.instanceId),
+    })
+    expect(positive).toEqual(before)
+    expect(placed.players['player-one'].stage?.card).toEqual(source)
+    expect(placed.players['player-one'].discardPile).toHaveLength(16)
+    expect(placed.players['player-one'].supportArea.filter((support) => support.rested)).toHaveLength(2)
+    expect(getAttackEnergyCostForState(placed, darkCacao.card.instanceId)).toEqual({ purple: 2 })
+  })
+
+  it('keeps BS8-125 placement payable but leaves Dark Cacao at three purple when trash is below 15', () => {
+    const negative = createCardNegativeDemoState('BS8-125')
+    const player = negative.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-125')!
+    const darkCacao = player.battleArea.find((entry) => entry.card.id === 'BS8-103')!
+    const before = structuredClone(negative)
+
+    expect(player.discardPile).toHaveLength(13)
+    expect(player.discardPile.every((card) => card.imageUrl)).toBe(true)
+    expect(getAttackEnergyCostForState(negative, darkCacao.card.instanceId)).toEqual({ purple: 3 })
+
+    const placed = applyGameCommand(negative, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId, player.supportArea[1].card.instanceId],
+    })
+    expect(negative).toEqual(before)
+    expect(placed.players['player-one'].stage?.card).toEqual(source)
+    expect(placed.players['player-one'].discardPile).toHaveLength(14)
+    expect(placed.players['player-one'].supportArea.filter((support) => support.rested)).toHaveLength(2)
+    expect(getAttackEnergyCostForState(placed, darkCacao.card.instanceId)).toEqual({ purple: 3 })
   })
 })
