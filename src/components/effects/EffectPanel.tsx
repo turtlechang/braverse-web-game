@@ -106,7 +106,7 @@ function CandidateButtons({
 
   return (
     <div className={`effect-candidates ${className}`}>
-      {cards.map((card) => {
+      {cards.map((card, index) => {
         const selected = selectedIds.has(card.instanceId)
         const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
         return (
@@ -116,8 +116,8 @@ function CandidateButtons({
             key={card.instanceId}
             onClick={() => onToggle?.(card.instanceId)}
           >
-            <CardFace card={card} selected={selected} />
-            <span>{card.name}</span>
+            <CardFace card={card} selected={selected} concealed={card.id === 'hidden'} />
+            <span>{card.id === 'hidden' ? `對手手牌 ${index + 1}（未公開）` : card.name}</span>
             {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
           </button>

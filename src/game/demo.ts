@@ -1281,6 +1281,7 @@ function createBs9010ExtraDeckDemoState(
   const player = base.players['player-one']
   const opponent = base.players['player-two']
   const opponentHandCard = cardCheckOfficialCookie('BS8-002', 'bs9-010-opponent-hand')
+  const secondHandCard = cardCheckOfficialCookie('BS8-004', 'bs9-010-opponent-hand-2')
   return {
     ...base,
     extraDeckPlayUsedThisTurn: false,
@@ -1293,7 +1294,7 @@ function createBs9010ExtraDeckDemoState(
             { energyColor: 'red', level: 1 },
             { energyColor: 'red', level: 1 },
           ]
-        : [],
+        : [{ energyColor: 'red', level: 1 }],
       'player-two': [],
     },
     players: {
@@ -1301,10 +1302,15 @@ function createBs9010ExtraDeckDemoState(
       'player-one': {
         ...player,
         extraDeck: [extraCard],
+        // 普通攻擊用前兩張紅色支援；Then 留一張異色支援驗證任意能量。
+        supportArea: [
+          ...player.supportArea.slice(0, 2),
+          { card: cardCheckOfficialCard('BS8-046', 'bs9-010-neutral-support'), rested: false },
+        ],
       },
       'player-two': {
         ...opponent,
-        hand: [opponentHandCard],
+        hand: [opponentHandCard, secondHandCard],
       },
     },
   }

@@ -86,7 +86,18 @@ export const updatePlayer = (
   ...state,
   players: {
     ...state.players,
-    [player.id]: player,
+    [player.id]: player.battleArea.some((cookie) => cookie.faceUpHpCardInstanceIds?.length)
+      ? {
+          ...player,
+          battleArea: player.battleArea.map((cookie) => cookie.faceUpHpCardInstanceIds?.length
+            ? {
+                ...cookie,
+                faceUpHpCardInstanceIds: cookie.faceUpHpCardInstanceIds.filter((id) =>
+                  cookie.hpCards.some((card) => card.instanceId === id)),
+              }
+            : cookie),
+        }
+      : player,
   },
 })
 

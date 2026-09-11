@@ -143,6 +143,8 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
       target: { side: 'self', min: 0, max: 1, sourceOnly: true },
       optional: true,
       handSide: 'opponent',
+      hpPlacement: 'bottom',
+      faceUp: true,
     }],
   },
   'BS8-005': {

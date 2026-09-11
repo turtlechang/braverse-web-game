@@ -1,7 +1,7 @@
 import { getCookieEffectiveHp } from './helpers'
+import { createHiddenCard, maskCards } from './card-visibility'
 import type {
   ExtraDeckCard,
-  GameCard,
   GameState,
   PlayerId,
   PlayerState,
@@ -14,16 +14,6 @@ import type {
  * HP 重排決策僅對決策玩家開放已選定的卡堆，不能因此公開其他 HP。
  * 戰鬥區餅乾本體、支援區、破損區、棄牌區、場景區維持原樣(含真實 instanceId)。
  */
-
-const createHiddenCard = (label: string, index: number): GameCard => ({
-  id: 'hidden',
-  instanceId: `${label}-${index}`,
-  name: '???',
-  type: 'item',
-})
-
-const maskCards = (cards: GameCard[], label: string): GameCard[] =>
-  cards.map((_, index) => createHiddenCard(label, index))
 
 const createHiddenExtraCard = (label: string, index: number): ExtraDeckCard => ({
   id: 'hidden-extra',
@@ -57,10 +47,9 @@ const maskPlayerState = (
     hpCards: reorderTarget?.targetPlayerId === player.id &&
       reorderTarget.targetInstanceId === entry.card.instanceId
       ? entry.hpCards
-      : maskCards(
-          entry.hpCards,
-          `${player.id}-hidden-hp-${entry.card.instanceId}`,
-        ),
+      : entry.hpCards.map((card, index) => entry.faceUpHpCardInstanceIds?.includes(card.instanceId)
+          ? card
+          : createHiddenCard(`${player.id}-hidden-hp-${entry.card.instanceId}`, index)),
   })),
 })
 

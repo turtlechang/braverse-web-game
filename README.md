@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-11 修復 BS9-010「Shadow Milk Cookie」登場效果洩露對手手牌，以及登場／攻擊 Then 未依卡文正面朝上放到 HP 最下方的問題；同步修正公開 HP 卡圖、詳情、對戰紀錄與 EXTRA 條件阻擋提示。桌機／平板共 10 條候選操作路徑及官方卡圖載入通過，正式牌組／完整線上逐卡驗收仍待，詳見 [BS9 修復報告](docs/bs9-progress-2026-09-10.md)。
+
 2026-09-10 BS9 候選第一、二批 BS9-001～023 維持隔離轉接：官方英文資料 185 筆／118 個基礎卡號維持 inventory，26 張主效果已轉接、44 張無主效果文字、48 張待轉接；BS9-001～009 的 Browser 36／36 與 BS9-010～023 的 Browser 28／28 正／負路徑已通過，第二批另有 8 項規則／adapter 回歸。BS9-006 另以同回合實際 `declare-attack`／傷害結算續接確認正向 HP 2／2、負向 HP 1／2；一般 `card:` 路徑的下一回合攻擊不作為 -3 證據。BS9-001～023 的 card-check／Browser fixture 均以官方 BS8／BS9／Starter 實體卡牌記錄建立，並有回歸測試阻擋佔位符回流。完整 Vitest、正式牌組／多人／線上逐卡仍分層記錄；候選不進正式卡池、不 promote。詳見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md)。
 
 2026-09-10 完成 BS9-024～029 第三批候選局部驗收：BS9-024 技能／攻擊後 HP 回手、BS9-026 FLIP 抽牌、BS9-027 手牌置 HP 後傷害、BS9-029 有序 donor／receiver FLIP 已補 exact adapter、規則／UI 回歸；BS9-028 vanilla 登場 smoke 通過。`test:bs9-024-029:browser` 在 1907×863／1164×777 共 28／28 通過。BS9-025 仍因官方 FLIP 受益者／目標邊界未裁決而維持 review-only 與 fail-closed，候選不進正式卡池、不 promote；完整結果與正式牌組／多人／線上逐卡邊界見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md)。
@@ -141,6 +143,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- 2026-09-11 BS9-010：匿名對手手牌位置、正面 HP 最下方、Then 支援區 1 任意能量、0 目標／略過及 EXTRA 負向提示已修正；1907×863／1164×777 共 10／10 Browser 通過，實際 HP 4→5→6、對手 6→4→3，卡圖及公開紀錄皆驗證。規則／UI／RoomStore、完整 Vitest、build、scoped lint 與一般好友房驗證的最新結果及限制詳見 [BS9-010 修復驗證](docs/bs9-progress-2026-09-10.md#bs9-010-修復驗證)。候選仍未 promote。
 
 BS9 維持 inventory：主效果待轉接 43 張（31 張已轉接、44 張無主效果文字）、一般卡攻擊 Then 2／16、strict 82 verified／103 needs-review；BS9-001～030 已完成候選 adapter／規則局部驗證，Browser 第一批 4／4 加 32／32、第二批 28／28、第三批 28／28、第四批 BS9-030 4／4（第四批涵蓋 1907×863／1164×777）通過。BS9-025 仍為 review-only／fail-closed，BS9-030 及其他卡仍未進正式牌組。上述 BS9 card-check 與 Browser fixture 的牌面均取官方 BS8／BS9／Starter 實體卡牌記錄；完整 Vitest、正式牌組、多人與線上逐卡仍分層記錄，這些是候選與局部驗證數，不代表整套 BS9 完成。
 
@@ -297,6 +301,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+BS9-010 的隱藏手牌、HP 朝向／位置及付款已完成候選重驗；後續保留正式牌組與完整線上逐卡 gate。先前只檢查 HP 張數的通過紀錄不能取代此次語義驗證。
 
 BS9-001～030 候選局部驗收已完成；下一步補 BS9-001 `@2`、本批異圖與 BS9-024～030 的正式牌組／線上證據及普通攻擊支付驗收，再依卡圖與官方規則進入 BS9-031 起的卡牌。BS9-025 需先取得官方 FLIP 受益者／目標裁決；所有測試與 Browser fixture 維持使用官方／實體卡牌記錄。本輪候選不 promote。
 
@@ -455,7 +461,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-09-11 | BS8-121／122／125 依實體卡圖補上正式卡牌正／負 fixture，Chrome `test-state` 驗證紫色 Item 條件、手牌代價／抽牌與 Stage 的 Dark Cacao 攻擊費用 3→2／15 張門檻阻擋；298 檔／4,586 項完整 Vitest、build、scoped lint 通過，全域 lint 保留既有未追蹤探針錯誤，正式牌組／多人／線上逐卡仍待。 |
+| 2026-09-11 | 修復 BS9-010 隱藏手牌選擇與正面 HP 最下方，雙尺寸 10／10 候選 Browser 通過；BS8-121／122／125 補齊實卡正／負 fixture。各批完整測試及 lint 結果見任務報告，正式牌組／多人／線上逐卡仍待。 |
 | 2026-09-10 | BS8-107 card-check fixture 改用正式 BS8 手牌，並以 Chrome 驗證紫色 Item 代價選擇、對手 HP 棄置及缺少合法代價的負向阻擋；BS8-111／113／114／117 補上條件／代價負向 fixture，桌機／平板 strict ability A/B 共10份報告通過。另完成 BS9-001～030 候選 adapter／規則／文案回歸與官方實體卡牌 fixture：第一批 36／36、第二批 28／28、第三批 28／28、BS9-030 第四批 4／4 Browser 正／負路徑；補上 BS9-006 同回合實際攻擊傷害正／負續接（2／2 對 1／2），完整 Vitest／build 與 scoped lint 通過；BS9-025 保留 review-only／fail-closed，BS9-030 及其他候選仍未進正式牌組，正式牌組／多人／線上逐卡 gate 仍待。 |
 | 2026-09-09 | 修正BS8-095昏厥棄手牌代價與BS8-098陷阱Then可選藍色支付／手牌條件的可重現fixture；補上BS8-100正式卡牌手牌／藍色篩選與BS8-119→BS8-103棄牌區登場鏈；新增通用Awakened底卡實圖／卡名／詳情顯示，驗證BS8-027／104正向與BS8-027負向路徑。完成規則回歸、build、scoped lint及Chrome Browser正／負路徑，保留正式牌組／多人／線上逐卡驗收邊界。 |
 | 2026-09-08 | 修正BS8-053正向／負向test-state的疲勞綠色支援候選與零目標效果紀錄；完成BS8-076凍結分支、BS8-059逐目標HP選擇、BS8-078手牌登場目標與技能支付支援區排版、BS8-079正式LV.1目標與下一個Active Phase回歸、BS8-083手牌登場與獨立攻擊後Then路徑、BS8-085剩餘1 HP昏厥目標與高HP反例，並補上UI文案回歸與Chrome Browser A/B。整理Codex規則與Skills、取消OpenCode Go備援，完成隔離工作流驗證。 |

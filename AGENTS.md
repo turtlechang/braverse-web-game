@@ -70,6 +70,7 @@
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
 - 驗證決策時必讀 [驗證分級](.agents/skills/braverse-workflow/references/verification-levels.md)；目前進度及歷史測試結果依 `README.md` 所連結的任務報告核對，不預讀完整歷史清單。
+- BS9-010 的最新測試與雙尺寸 Browser 範圍見 [修復驗證](docs/bs9-progress-2026-09-10.md#bs9-010-修復驗證)；舊 HP 張數測試不涵蓋匿名選牌、正面朝上與最下方的語義。
 - AI 完整對戰驗證仍以固定種子範圍確認可正常結束，不得用特製種子或硬編碼起始卡掩蓋規則或 AI 問題。
 - 完整 `npm run test:ai:browser` 目前有既有 1920×1080 版面基線限制；修正版面前不得宣稱完整 Playwright 全綠。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。

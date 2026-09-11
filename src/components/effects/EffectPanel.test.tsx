@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CardEffect, CookieCard, EnergyColor, GameCard } from '../../game'
 import { createCardCheckDemoState } from '../../game/demo'
+import { applyGameCommand, getEffectSelectionCandidates } from '../../game'
 import { EffectPanel } from './EffectPanel'
 import type { PendingEffect } from './effectUiTypes'
 
@@ -265,6 +266,41 @@ describe('Break area selection costs', () => {
       expect(container.querySelector(`.effect-candidates-cost-${zone}-to-break`)).toBeNull()
       expect(primary().disabled).toBe(false)
       expect(onToggle).toHaveBeenCalledOnce()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+})
+
+describe('BS9-010 blind hand selector', () => {
+  it('shows anonymous card backs and submits a slot without disclosing hand identities', async () => {
+    let game = createCardCheckDemoState('BS9-010')
+    const sourceId = game.players['player-one'].extraDeck![0].instanceId
+    game = applyGameCommand(game, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: sourceId })
+    game = applyGameCommand(game, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: sourceId,
+      trigger: 'on-play', paymentIds: [] })
+    const effect = game.pendingAbilityEffect!.effects[0]
+    const candidates = getEffectSelectionCandidates(game, { sourcePlayerId: 'player-one', sourceInstanceId: sourceId }, effect)
+    const toggle = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(<EffectPanel pendingEffect={createPendingEffect({ effects: [effect], skillActivated: true })}
+        currentEffect={effect} effectHistory={[]} onConfirm={() => undefined} onSkip={() => undefined}
+        candidateCards={candidates} onToggleCandidate={toggle} />))
+      expect(container.textContent).toContain('對手手牌 1（未公開）')
+      expect(container.textContent).toContain('對手手牌 2（未公開）')
+      expect(container.textContent).toContain('最下方')
+      for (const card of game.players['player-two'].hand) {
+        expect(container.innerHTML).not.toContain(card.name)
+        expect(container.innerHTML).not.toContain(card.instanceId)
+        if (card.imageUrl) expect(container.innerHTML).not.toContain(card.imageUrl)
+      }
+      const buttons = container.querySelectorAll<HTMLButtonElement>('.effect-candidates-target button')
+      expect(buttons).toHaveLength(2)
+      await act(() => buttons[1].click())
+      expect(toggle).toHaveBeenCalledWith('player-two-hidden-hand-1')
+      expect(container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.disabled).toBe(false)
     } finally {
       await act(() => root.unmount())
     }

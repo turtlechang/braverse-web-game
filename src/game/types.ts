@@ -240,6 +240,8 @@ export interface ExtraDeckCard {
 export interface CookieInBattle {
   card: CookieCard
   hpCards: GameCard[]
+  /** 目前 HP 堆中正面朝上的卡；離開此 HP 堆即移除公開標記。 */
+  faceUpHpCardInstanceIds?: string[]
   /** Read-only online projection of effective HP; no hidden card or position is disclosed. */
   publicHp?: number
   rested: boolean
@@ -1376,6 +1378,9 @@ export interface HandToHpEffect {
   selectTarget?: boolean
   /** 取牌來源；未指定時沿用來源玩家手牌。 */
   handSide?: 'self' | 'opponent'
+  /** 未指定時沿用放在 HP 最上方、面朝下。 */
+  hpPlacement?: 'top' | 'bottom'
+  faceUp?: boolean
 }
 
 export interface HpToHandEffect {
@@ -1392,7 +1397,8 @@ export interface CycleHpEffect {
 }
 
 /**
- * 在來源餅乾與選定餅乾之間搬移 HP 卡。取牌與放牌都在 HP 頂端（`hpCards` 陣列尾端）。
+ * 在來源餅乾與選定餅乾之間搬移 HP 卡。取牌在 HP 頂端（`hpCards` 陣列尾端）。
+ * 放牌預設在頂端；卡文指定最下方時使用 hpPlacement: 'bottom'。
  * `to-source` 是把選定餅乾的 HP 移給來源（BS3-031），
  * `from-source` 則是把來源的 HP 移給選定餅乾（BS3-089）。
  * 供牌方 HP 歸零時照常昏厥。
@@ -1401,6 +1407,8 @@ export interface TransferHpEffect {
   kind: 'transfer-hp'
   amount: number
   direction: 'to-source' | 'from-source'
+  hpPlacement?: 'top' | 'bottom'
+  faceUp?: boolean
   target: EffectTargetSelector
   /**
    * Optional explicit receiving Cookie for effects whose source is not a

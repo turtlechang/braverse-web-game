@@ -3,6 +3,7 @@ import {
   canActivateStage,
   canAttack,
   canPlayExtraDeckCookie,
+  getExtraDeckCookieUnavailableReason,
   canSpecialPlayCookie,
   canPlayItem,
   canPlayStage,
@@ -330,7 +331,7 @@ export function BattleRow({
                           從 EXTRA 登場
                         </button>
                       ) : (
-                        <small>目前無法登場</small>
+                        <small>目前無法登場：{getExtraDeckCookieUnavailableReason(game, playerId, card.instanceId) ?? '請先完成目前的操作。'}</small>
                       )}
                     </div>
                   </div>
@@ -756,9 +757,11 @@ export function BattleRow({
                       <CardFace
                         card={hpCard}
                         className="hp-card"
-                        concealed
+                        concealed={!cookie.faceUpHpCardInstanceIds?.includes(hpCard.instanceId)}
                         key={hpCard.instanceId}
-                        onClick={() => onInspectCard(cookie.card)}
+                        onClick={() => onInspectCard(
+                          cookie.faceUpHpCardInstanceIds?.includes(hpCard.instanceId) ? hpCard : cookie.card,
+                        )}
                       />
                     ))}
                   </div>

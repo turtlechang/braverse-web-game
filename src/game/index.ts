@@ -287,6 +287,7 @@ export type {
 export {
   canSpecialPlayCookie,
   canPlayExtraDeckCookie,
+  getExtraDeckCookieUnavailableReason,
   attackCookie,
   deployCookie,
   playExtraDeckCookie,

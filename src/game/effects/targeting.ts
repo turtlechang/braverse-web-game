@@ -1,4 +1,5 @@
 import { GameRuleError } from '../errors'
+import { maskCards } from '../card-visibility'
 import { getCookieEffectiveHp, getOpponentId } from '../helpers'
 import type {
   BreakToTrashEffect,
@@ -962,6 +963,10 @@ export const getEffectSelectionCandidates = (
       const handOwnerId = effect.handSide === 'opponent'
         ? getOpponentId(context.sourcePlayerId)
         : context.sourcePlayerId
+      if (effect.handSide === 'opponent') {
+        // The effect permits choosing a hand position, not inspecting that hand.
+        return maskCards(state.players[handOwnerId].hand, `${handOwnerId}-hidden-hand`)
+      }
       return state.players[handOwnerId].hand.filter(
         (card) =>
           effect.energyColor === undefined || card.energyColor === effect.energyColor,

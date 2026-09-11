@@ -27,6 +27,23 @@
 
 ## 第二批 BS9-010～023（候選局部通過）
 
+### 2026-09-11 BS9-010 修復與重新驗證
+
+使用者回報 `?test-state=card:BS9-010` 無法正確驗證後，重新目視[官方基本版卡圖](https://cookierunbraverse.com/data/en_storage/MhIiu1Yhpzag7Phn8ZdSWg.webp)：Shadow Milk Cookie／黑影牛奶餅乾，紅色、LV.2、HP 4；EXTRA 要求對手上一回合己方至少 2 隻紅色 LV.1 餅乾昏厥。登場選對手 0～1 張手牌，選定後正面朝上放在來源 HP 最下方。普通攻擊支付 2 紅、造成 2 傷害；Then 可另付支援區 1 任意能量，選對手 0～1 隻餅乾，取其最上方 HP 正面朝上放到來源最下方。
+
+先前 28／28 Browser 與 HP 張數測試未檢查選擇前洩露手牌、HP 堆位置及正反面，不能用來證明這三項語義。本次先以 3 個失敗回歸重現，再修正如下：
+
+- 對手手牌候選使用匿名位置，不含真實卡名、卡號、instanceId 或 imageUrl；本機、masked state 與 RoomStore 共用位置解析。非法位置、真實手牌 ID、重複及超選均拒絕；可選 0 張不移動卡牌。
+- `hand-to-hp` 與 `transfer-hp` 以 `hpPlacement: 'bottom'`／`faceUp: true` 保留既有 HP 順序，使用公開 HP 標記讓雙方看到取得的卡圖；離開原 HP 堆即清除標記。一般 HP 搬移維持原有預設。
+- 登場面板改為「對手手牌／不查看牌面／正面朝上／最下方」；HP 可點擊實際公開卡詳情，對戰紀錄附取得的實際卡名、卡圖、位置與 HP 張數。EXTRA 負向入口顯示規則層的上一回合紅色 LV.1 昏厥條件原因。
+- 1907×863、1164×777 各執行完整正向、EXTRA 條件負向、On Play 選 0、Then 略過、Then 付款後選 0，共 10／10；所有點擊均經可操作 UI，無強制點擊或注入指令。正向 HP 為己方 4→5→6、對手 6→4→3，最下方依序為 Ninja Cookie、Cilantro Cobra Swordsman，原有 4 張 HP 仍朝下；付款總共橫置 2 紅與 1 任意色支援。
+- `node scripts/bs9-010-browser.mjs` 在有官方公開圖片網路存取的環境通過；腳本要求來源及公開 HP 卡圖完成載入，報告中全部卡圖均載入成功，無頁面錯誤。Chrome 使用者原始 localhost 路徑亦完成正／負實際操作與實圖目視。報告：[test-results/bs9-010/report.json](../test-results/bs9-010/report.json)；截圖：[平板正向](../test-results/bs9-010/positive-1164-PASS.png)、[桌機正向](../test-results/bs9-010/positive-1907-PASS.png)。
+- 規則／UI 與 RoomStore 回歸驗證匿名選擇、雙方公開範圍、最上方取牌／最下方放牌、標記離場後清理、合法 0、跳過、付款不足／疲勞支援／來源卡不可作能量、錯誤目標與 EXTRA 時機。RoomStore 使用隔離 fixture，並非正式 BS9 牌組入房。
+
+此修復仍為候選 `test-state` 驗證：僅 demo，尚未證明正式狀態已修改；BS9 未進正式卡池、未 promote，也未完成 BS9-010 正式牌組／完整線上對局。最新完整測試及環境結果見下方「BS9-010 修復驗證」。
+
+### 先前第二批紀錄
+
 本輪依官方英文卡文建立第二批 candidate fixture，補上 EXTRA、昏厥時間窗、HP 搬移、Ancient／同名條件、Your Turn 防護、Item／Trap／Stage 的支付與 Then 續接。`src/game/bs9-010-023.test.ts` 的 8 項規則／adapter／localhost route 回歸通過；`npm run test:bs9-010-023:browser` 在 1164×777 完成 14 張卡的正向／負向共 28／28 路徑，沒有頁面錯誤。BS9-001～023 的正／負 card-check fixture 牌區、HP、手牌、支援、棄牌與 EXTRA 卡均取自官方 BS8／BS9／Starter 記錄，並由實體卡牌回歸測試檢查卡號格式與佔位符遺漏。Browser 報告只涵蓋實際互動的 BS9-010／011／019／020／022／023；其餘卡號為候選真卡面掛載與正／負 fixture smoke，不能解讀成完整效果對局。
 
 | 卡號 | 本輪候選證據 |
@@ -124,3 +141,22 @@ BS9-001～030 已有候選局部證據；後續仍須依卡圖與官方規則逐
 - 新增 BS9 腳本／規則相關檔案的 scoped ESLint：exit 0；`git diff --check`：exit 0。
 - 全域 lint：exit 1，工作樹既有未追蹤 `.tmp-bs9-030-ui9.mjs` 有 1 項 parsing error，另有 `.tmp-probe-deploy.ts` 1 項與 `scripts/diagnose-lv5-conservatism.ts` 2 項 unused；本輪未修改這些無關檔案。
 - 環境：Windows PowerShell、Node 22.22.3；HEAD 419dd5f8e399c5ad2e1d0a36d728284e5fa61888，工作樹包含既有 App／adapter／UI 等未提交修改；本輪不 commit、不 push、不 promote。
+
+## BS9-010 修復驗證
+
+2026-09-11，Windows PowerShell／Node v22.22.3，cwd `C:\Users\WH3FTURTLE\Documents\braverse-web-game`，基底 HEAD `28a20a901dfccd17076fcaa4b3e0dfbe8ebbe140`。本輪修改限於 BS9-010 轉接、HP 朝向／位置與公開資訊、共用 EXTRA 原因提示、對應測試／Browser 腳本及文件；保留既有未追蹤檔案，沒有 commit、push 或 promote。
+
+| 檢查 | 結果與範圍 |
+| --- | --- |
+| 先失敗再修復 | 新增的匿名手牌、HP 最下方／正反面 3 個回歸先失敗，實作後通過；後續補齊邊界與 UI／伺服器整合 |
+| 完整 Vitest | 最終程式碼執行 `npm.cmd test -- --maxWorkers=1`，299 檔／4,612 項通過，exit 0，407.38 秒；輸出 `test-results/bs9-010-full-vitest.log` |
+| EXTRA 受影響回歸 | `npm.cmd test -- --maxWorkers=1 src/game/bs9-010-hp-placement.test.ts src/game/extra-deck.test.ts src/components/battle/BattleRow.test.tsx src/game/bs9-024-029.test.ts`，4 檔／117 項通過，exit 0 |
+| 規則與 RoomStore | `npm.cmd test -- --maxWorkers=1 src/game/bs9-010-hp-placement.test.ts server/src/rooms.test.ts`，2 檔／47 項通過，exit 0；包含匿名位置往返與雙方 HP 遮罩 |
+| Browser | build 後執行 `node scripts/bs9-010-browser.mjs`，雙尺寸 10／10 通過，exit 0；來源／公開 HP 的官方卡圖、公開對戰紀錄、HP 點擊詳情、正／負與 0／略過皆驗證。報告位於 `test-results/bs9-010/report.json` |
+| build／server typecheck | `npm.cmd run build`、`npm.cmd run server:typecheck` 均 exit 0；build 保留既有 bundle size 警告。規則與 UI 最終程式碼建置後，僅追加測試／Browser 檢查與文件，故沿用此 build |
+| 本次檔案 lint | 對所有修改的 TS／TSX、新增 `card-visibility.ts`、專卡測試與 Browser 腳本執行 ESLint，exit 0，無警告 |
+| 全域 lint | `npm.cmd run lint` exit 1；既有未追蹤 `.tmp-bs9-030-ui9.mjs` 1 項 parsing error、`.tmp-probe-deploy.ts` 1 項及 `scripts/diagnose-lv5-conservatism.ts` 2 項 unused，未修改或排除這些檔案 |
+| 一般好友房 Browser | 原 `npm.cmd run test:online:match:browser` exit 1，停在第 393 行已不存在的 `command-log-filters`。核對現行 `OnlineActivityFeed` 後，在忽略的測試副本只將此定位改成 `.online-activity-history-header`，其餘斷言不變；`node test-results/bs9-010-online-match-current.mjs` exit 0，通過建房／開局、支援→主要同步、攻擊預覽／支付、完整紀錄、卡牌詳情、非法指令拒絕與斷線提示。原腳本未修改；此結果不是 BS9-010 正式線上逐卡驗收 |
+| 最終差異 | `git diff --check` exit 0；stage 為空，既有未追蹤檔案維持未納入 |
+
+完整輸出保存於 `test-results/bs9-010-*.log`；所有產物均未 stage。候選 BS9-010 仍未進正式牌組／正式卡池，完整正式線上對局與其他異圖的獨立驗收不在本次通過宣稱內。

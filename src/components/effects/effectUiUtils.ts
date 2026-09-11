@@ -337,6 +337,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}，取回最上方 HP 後可放回 1 張手牌。`
   }
   if (effect.kind === 'hand-to-hp' && t) {
+    if (effect.handSide === 'opponent') {
+      return `選擇${effect.optional ? '最多 ' : ''}1 張對手手牌（不查看牌面），${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP ${effect.hpPlacement === 'bottom' ? '最下方' : '最上方'}。`
+    }
     return `選擇 ${t.count}${t.target}，將 1 張手牌當作 HP 卡。`
   }
   if (effect.kind === 'hp-to-hand' && t) {
@@ -352,6 +355,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}放回牌庫頂。`
   }
   if (effect.kind === 'transfer-hp' && t) {
+    if (effect.direction === 'to-source' && effect.hpPlacement === 'bottom' && !effect.receiverTarget) {
+      return `選擇 ${t.count}${t.target}，將其最上方 ${effect.amount} 張 HP 卡${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP 最下方。`
+    }
     if (effect.receiverTarget) {
       return effect.direction === 'to-source'
         ? `選擇供牌餅乾，再選擇另一張接收餅乾，將供牌餅乾最上方 ${effect.amount} 張 HP 卡移到接收餅乾（可略過）。`
@@ -484,7 +490,13 @@ export const describeEffectResult = (
   if (effect.kind === 'battle-to-break') return `${names} 已放入休息區。`
   if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
   if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`
+  if (effect.kind === 'hand-to-hp' && effect.handSide === 'opponent') {
+    return targetNames.length > 0
+      ? `已將選定的對手手牌${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP ${effect.hpPlacement === 'bottom' ? '最下方' : '最上方'}。`
+      : '未選擇對手手牌，HP 未改變。'
+  }
   if (effect.kind === 'transfer-hp') {
+    if (targetNames.length === 0) return '未選擇 HP 移動目標，HP 未改變。'
     return effect.direction === 'to-source'
       ? `已從 ${names} 移走 ${effect.amount} 張 HP 卡。`
       : `已將 ${effect.amount} 張 HP 卡移給 ${names}。`

@@ -120,6 +120,9 @@ export const materializeExtraDeckCookieAfterEntryCost = (
         ? {
             card: deploymentCard,
             hpCards: [...cookie.hpCards, ...availableHpCards],
+            ...(cookie.faceUpHpCardInstanceIds
+              ? { faceUpHpCardInstanceIds: cookie.faceUpHpCardInstanceIds }
+              : {}),
             rested: false,
             battleEntryId:
               `${deploymentCard.instanceId}:battle:${state.nextBattleEntrySequence}`,

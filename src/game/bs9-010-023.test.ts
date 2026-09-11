@@ -226,7 +226,7 @@ describe('BS9-010～023 second RED candidate batch', () => {
     const hand = state.players['player-two'].hand[0]!
     state = applyGameCommand(state, {
       kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: extra.instanceId,
-      trigger: 'on-play', paymentIds: [], effectTargets: [[hand.instanceId]],
+      trigger: 'on-play', paymentIds: [], effectTargets: [['player-two-hidden-hand-0']],
     })
     expect(state.foreignHpCardInstanceIds?.[extra.instanceId]).toContain(hand.instanceId)
 

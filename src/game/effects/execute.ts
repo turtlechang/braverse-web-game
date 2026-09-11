@@ -1,5 +1,6 @@
 import { collectAfterDamageEffectsFromIds } from '../afterDamage'
 import { GameRuleError } from '../errors'
+import { hiddenHandSlotId } from '../card-visibility'
 import {
   defaultShuffle,
   drawCards,
@@ -1288,13 +1289,18 @@ export const executeCardEffect = (
       ? getOpponentId(context.sourcePlayerId)
       : context.sourcePlayerId
     const player = state.players[handOwnerId]
+    if (selectedTargetIds.length === 0 && effect.optional) return state
+    if (selectedTargetIds.length !== 1) throw new GameRuleError('必須選擇 1 張手牌。')
     const selectedId = selectedTargetIds[0]
-    const selected = player.hand.find((card) => card.instanceId === selectedId)
+    const selected = player.hand.find((card, index) =>
+      effect.handSide === 'opponent'
+        ? hiddenHandSlotId(handOwnerId, index) === selectedId
+        : card.instanceId === selectedId,
+    )
     const targetId = effect.target.sourceOnly
       ? context.sourceInstanceId
       : state.pendingBattle?.targetInstanceId
     if (!selected || !targetId) {
-      if (effect.optional) return { ...state }
       throw new GameRuleError('Invalid hand target.')
     }
     if (effect.energyColor !== undefined && selected.energyColor !== effect.energyColor) {
@@ -1307,14 +1313,22 @@ export const executeCardEffect = (
     }
     let nextState = updatePlayer(state, {
       ...player,
-      hand: player.hand.filter((card) => card.instanceId !== selectedId),
+      hand: player.hand.filter((card) => card.instanceId !== selected.instanceId),
     })
     const targetPlayerAfterHand = nextState.players[targetPlayerId]
     nextState = updatePlayer(nextState, {
       ...targetPlayerAfterHand,
       battleArea: targetPlayerAfterHand.battleArea.map((cookie) =>
         cookie.card.instanceId === targetId
-          ? { ...cookie, hpCards: [...cookie.hpCards, selected] }
+          ? {
+              ...cookie,
+              hpCards: effect.hpPlacement === 'bottom'
+                ? [selected, ...cookie.hpCards]
+                : [...cookie.hpCards, selected],
+              ...(effect.faceUp ? { faceUpHpCardInstanceIds: [
+                ...(cookie.faceUpHpCardInstanceIds ?? []), selected.instanceId,
+              ] } : {}),
+            }
           : cookie,
       ),
     })
@@ -1472,7 +1486,15 @@ export const executeCardEffect = (
             return donorFaints ? [] : [{ ...cookie, hpCards: donorRemaining }]
           }
           if (cookie.card.instanceId === receiver.card.instanceId) {
-            return [{ ...cookie, hpCards: [...cookie.hpCards, ...moved] }]
+            return [{
+              ...cookie,
+              hpCards: effect.hpPlacement === 'bottom'
+                ? [...moved, ...cookie.hpCards]
+                : [...cookie.hpCards, ...moved],
+              ...(effect.faceUp ? { faceUpHpCardInstanceIds: [
+                ...(cookie.faceUpHpCardInstanceIds ?? []), ...moved.map((card) => card.instanceId),
+              ] } : {}),
+            }]
           }
           return [cookie]
         }),

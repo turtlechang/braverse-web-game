@@ -1557,7 +1557,32 @@ const describeChooseOneSteps = (chooseOneModes: number[] | undefined): LogStepDe
  * 其餘 kind（例如互動式的 begin-* 系列，步驟本來就分散在多筆各自的 log entry 裡）
  * 回傳 undefined，UI 端改用同一個 groupId 底下其他 entry 的 summary/card 當步驟。
  */
+/** Only newly attached, explicitly face-up HP may add card art to the public log. */
 export const describeCommandSteps = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): LogStepDetail[] | undefined => {
+  const steps = describeCommandCoreSteps(previous, next, command)
+  const placements = Object.values(next.players).flatMap((player) =>
+    player.battleArea.flatMap((cookie) => {
+      const before = previous.players[player.id].battleArea.find(
+        (entry) => entry.card.instanceId === cookie.card.instanceId,
+      )
+      return cookie.hpCards.flatMap((card, index) => {
+        if (!cookie.faceUpHpCardInstanceIds?.includes(card.instanceId) ||
+          before?.hpCards.some((entry) => entry.instanceId === card.instanceId)) return []
+        return [{
+          text: `HP 放置：將「${card.name}」正面朝上放到「${cookie.card.name}」HP ${index === 0 ? '最下方' : '最上方'}（目前 ${cookie.hpCards.length} 張）。`,
+          cards: [card, cookie.card],
+        }]
+      })
+    }),
+  )
+  return placements.length > 0 ? [...(steps ?? []), ...placements] : steps
+}
+
+const describeCommandCoreSteps = (
   previous: GameState,
   next: GameState,
   command: GameCommand,

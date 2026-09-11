@@ -6477,7 +6477,7 @@ export const convertOfficialAttackEffects = (
       { kind: 'make-faint', target: { side: 'self', min: 0, max: 1 } },
     ],
     // BS9-010 Shadow Milk Cookie：攻擊後可將對手餅乾最上方 1 張 HP
-    // 搬到來源 EXTRA 餅乾的 HP；來源卡本身作為額外中性支付能量。
+    // 正面朝上放到來源 EXTRA 餅乾 HP 最下方；另付支援區 1 任意能量。
     'BS9-010': [
       {
         kind: 'optional-cost-attack',
@@ -6487,11 +6487,13 @@ export const convertOfficialAttackEffects = (
             kind: 'transfer-hp',
             amount: 1,
             direction: 'to-source',
+            hpPlacement: 'bottom',
+            faceUp: true,
             target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
         effectText:
-          'Then, <can be used as {N}.> Select up to 1 of your opponent\'s Cookies. Add 1 card from the top of that Cookie\'s HP to this Cookie\'s HP.',
+          'Then, <can be used as {N}.> Select up to 1 of your opponent\'s Cookies. Add 1 card from the top of that Cookie\'s HP face-up to the bottom of this Cookie\'s HP.',
       },
     ],
     // BS9-024 Golden Cheese Cookie：攻擊後可支付「將自身最上方 1 張 HP

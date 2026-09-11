@@ -263,6 +263,14 @@ const getExtraDeckCardForPlay = (
   }
 
   if (!isExtraDeckPlayRequirementMet(state, playerId, card)) {
+    const requirement = card.playRequirement
+    if (requirement?.kind === 'cookies-fainted-during-opponent-previous-turn-at-least') {
+      const colorLabels = { red: '紅色', yellow: '黃色', green: '綠色', blue: '藍色', purple: '紫色', black: '黑色', pure: 'PURE' }
+      const color = requirement.energyColor ? `${colorLabels[requirement.energyColor]} ` : ''
+      const level = requirement.minLevel === requirement.maxLevel && requirement.minLevel !== undefined
+        ? `LV.${requirement.minLevel} ` : ''
+      throw new GameRuleError(`對手上一回合${requirement.side === 'self' ? '我方' : '對手'}${color}${level}餅乾昏厥數尚未達到 ${requirement.count} 張。`)
+    }
     throw new GameRuleError('尚未符合此 EXTRA 餅乾的登場條件。')
   }
 
@@ -305,7 +313,14 @@ export const canPlayExtraDeckCookie = (
   state: GameState,
   playerId: GameState['activePlayerId'],
   instanceId: string,
-): boolean => {
+): boolean => getExtraDeckCookieUnavailableReason(state, playerId, instanceId) === null
+
+/** 與實際 EXTRA 登場共用檢查，讓 UI 呈現規則層的阻擋原因。 */
+export const getExtraDeckCookieUnavailableReason = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  instanceId: string,
+): string | null => {
   try {
     const card = getExtraDeckCardForPlay(state, playerId, instanceId)
     materializeExtraDeckCookie(card)
@@ -318,15 +333,15 @@ export const canPlayExtraDeckCookie = (
           card.instanceId,
         ).length < (cost.discardHand ?? 0)
       ) {
-        return false
+        return `沒有足夠的合格手牌支付 EXTRA 登場代價（需要 ${cost.discardHand} 張）。`
       }
       if (!selectEnergyPayment(cost.energy ?? {}, state.players[playerId].supportArea)) {
-        return false
+        return '支援區沒有足夠能量支付 EXTRA 登場代價。'
       }
     }
-    return true
-  } catch {
-    return false
+    return null
+  } catch (error) {
+    return error instanceof GameRuleError ? error.message : '目前無法從 EXTRA 登場。'
   }
 }
 

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { createCardCheckDemoState } from '../../src/game/demo'
+import { getEffectSelectionCandidates } from '../../src/game'
 import {
   BS8_CANDIDATE_STAGING_KIND,
   OFFICIAL_RED_STARTER_DECK,
@@ -93,6 +95,35 @@ const completeOpening = (store: RoomStore, room: Room): Room => {
 }
 
 describe('RoomStore', () => {
+  it('resolves a blind hand slot and broadcasts only face-up HP in a BS9-010 fixture', () => {
+    const store = new RoomStore()
+    const room = store.createRoom(createTestDeck('bs9-010-fixture'), noop)
+    // Isolated server integration fixture, not admission of BS9 to a formal deck.
+    room.status = 'in-progress'
+    room.state = createCardCheckDemoState('BS9-010')
+    const sourceId = room.state.players['player-one'].extraDeck![0].instanceId
+    const chosen = room.state.players['player-two'].hand[1]
+    const unchosen = room.state.players['player-two'].hand[0]
+    store.applyCommand(room, 'player-one', { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: sourceId })
+    store.applyCommand(room, 'player-one', { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: sourceId,
+      trigger: 'on-play', paymentIds: [] })
+    const visible = maskedStateFor(room, 'player-one')!
+    const choices = getEffectSelectionCandidates(visible, { sourcePlayerId: 'player-one', sourceInstanceId: sourceId },
+      visible.pendingAbilityEffect!.effects[0])
+    expect(choices.map((card) => card.id)).toEqual(['hidden', 'hidden'])
+    store.applyCommand(room, 'player-one', { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [choices[1].instanceId] })
+    for (const viewer of ['player-one', 'player-two'] as const) {
+      const snapshot = maskedStateFor(room, viewer)!
+      const cookie = snapshot.players['player-one'].battleArea.find((entry) => entry.card.instanceId === sourceId)!
+      expect(cookie.hpCards[0]).toEqual(chosen)
+      expect(cookie.hpCards.slice(1).every((card) => card.id === 'hidden')).toBe(true)
+      expect(JSON.stringify(snapshot.commandLog)).toContain(JSON.stringify(chosen.instanceId))
+      expect(JSON.stringify(snapshot.commandLog)).not.toContain(JSON.stringify(unchosen.instanceId))
+      expect(JSON.stringify(snapshot.commandLog)).not.toContain(unchosen.name)
+    }
+    expect(maskedStateFor(room, 'player-one')!.players['player-two'].hand[0].id).toBe('hidden')
+  })
+
   it('materializes formal EXTRA in a standard room and masks it for the other player', () => {
     const store = new RoomStore()
     const one: CustomDeck = {
