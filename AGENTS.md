@@ -17,7 +17,7 @@
 
 ## 工作入口與導航
 
-日常使用 `$braverse-workflow`；遊戲功能、規則、UI 或 AI 實作另依 `develop-braverse`。這些是專項流程，不取代使用者授權或平台限制。
+依任務選用專項 Skill：需要工作流、專案指令、驗證分級或提交收尾時使用 `$braverse-workflow`；實作遊戲規則、卡牌、UI 或 AI 時使用 `develop-braverse`。Skill 只提供相關指引，不擴張使用者授權。
 
 | 範圍 | 可信入口 |
 |---|---|
@@ -69,7 +69,8 @@
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-- 驗證決策時必讀 [驗證分級](.agents/skills/braverse-workflow/references/verification-levels.md)；目前進度及歷史測試結果依 `README.md` 所連結的任務報告核對，不預讀完整歷史清單。
+- 需要選擇驗證層級時，查 [驗證分級](.agents/skills/braverse-workflow/references/verification-levels.md)；目前進度及歷史測試結果依 `README.md` 所連結的任務報告核對，不預讀完整歷史清單。
+- 本機單元測試、lint 與 build 屬任務內驗證；需要時直接執行，修正本次變更造成的失敗並重跑，不必逐次詢問。會改變遠端／正式狀態的命令仍依授權邊界。
 - BS9-010 的最新測試與雙尺寸 Browser 範圍見 [修復驗證](docs/bs9-progress-2026-09-10.md#bs9-010-修復驗證)；舊 HP 張數測試不涵蓋匿名選牌、正面朝上與最下方的語義。
 - AI 完整對戰驗證仍以固定種子範圍確認可正常結束，不得用特製種子或硬編碼起始卡掩蓋規則或 AI 問題。
 - 完整 `npm run test:ai:browser` 目前有既有 1920×1080 版面基線限制；修正版面前不得宣稱完整 Playwright 全綠。
@@ -133,7 +134,7 @@
 
 ## 規則文件參考
 
-**修改規則引擎前，必須先閱讀 `docs/game-rules.md`。**
+修改規則引擎、效果或費用時，查閱 `docs/game-rules.md`。
 
 - 文件內每條規則標有 **[已確認]** / **[暫定]** / **[待確認]**。
 - `[暫定]` 的實作為第一版原型折衷，後續可能調整。
@@ -146,21 +147,21 @@
 
 ## Git 與提交流程
 
-- 開始時讀取 `git status --short --branch`。唯讀稽核不執行 fetch／pull；任務需要遠端同步且已授權時才 fetch，工作樹乾淨才可 `git pull --ff-only`。
+- 開始儲存庫工作時讀取 `git status --short --branch`。唯讀稽核不執行 fetch／pull；任務需要遠端同步且已授權時才 fetch，工作樹乾淨才可 `git pull --ff-only`。
 - 保留使用者既有修改與未追蹤檔案；不得擅自還原、覆蓋或納入提交。未明確要求不 commit、push、建立或合併 PR。
 - 提交前分析完整差異，排除無關檔案、建置產物、測試報告與密鑰。
 - 每當完成一項功能或使用者要求 commit 時，先更新 `README.md` 的「開發背景」、「目前進度」與「下一步計畫」。
 - `README.md` 的「更新日誌」固定使用「日期 / 概要」Markdown 表格；同日期可合併為一列，概要保持精簡，不寫詳細實作清單。
-- 提交前至少執行 `npm test`、`npm run lint`、`npm run build`；AI 或完整對戰行為有變更時，另執行 `npm run test:ai:browser`。Windows 可使用相同 npm scripts 的 `npm.cmd` 形式。
+- 準備提交時至少執行 `npm test`、`npm run lint`、`npm run build`；AI 或完整對戰行為有變更時，另執行 `npm run test:ai:browser`。Windows 可使用相同 npm scripts 的 `npm.cmd` 形式。
 - 準備 stage／commit 時必讀 [提交前檢查](.agents/skills/braverse-workflow/references/pre-commit-review.md)。
 
 ## Codex 主線與協作
 
 Codex 是預設主線，負責需求分析、實作、驗證、修正與交付。已授權範圍內直接完成；使用者限定唯讀、規劃或批准清單時，遵守該門檻。
 
-日常預設單一主代理；需要獨立並行工作時，先讀 [派工契約](.agents/skills/braverse-workflow/references/delegation-template.md)。使用者、平台與執行設定的限制均須遵守；不因模型標籤停工，也不由文件自動切換模型、供應商或推理設定。核心規則、FSM、AI、線上同步與高風險整合仍由主代理掌握上下文及最終驗證。
+預設由主代理整合需求、實作、驗證與交付；只有獨立且值得並行的子任務才讀 [派工契約](.agents/skills/braverse-workflow/references/delegation-template.md)。核心規則、FSM、AI、線上同步與高風險整合由主代理掌握最終驗證。
 
-**OpenCode Go 備援已取消**：不再派工、呼叫 wrapper、做服務 preflight 或向其傳送專案資料。舊 `.agents/skills/develop-braverse/references/delegation.md`、`.agents/skills/develop-braverse/references/opencode-go-sandbox.md` 與既有 wrapper 僅為保留的歷史材料，不構成啟用入口；本次不修改供應商、帳號或認證設定。
+不使用已取消的 OpenCode Go 備援，也不由文件自動切換模型、供應商或推理設定。
 
 ## 禁止提交
 

@@ -1,6 +1,6 @@
 ---
 name: develop-braverse
-description: 實作或修復 Braverse 遊戲規則、卡牌轉接、React UI 與 AI，依正式規格及回歸證據驗收。純工作流文件調整使用 braverse-workflow；不套用到其他專案。
+description: 實作或修復 Braverse 規則、卡牌、React UI 或 AI；依相關規格與受影響流程驗證，純工作流文件調整用 braverse-workflow。
 ---
 
 # Braverse 開發流程
@@ -9,7 +9,7 @@ description: 實作或修復 Braverse 遊戲規則、卡牌轉接、React UI 與
 
 ## 1. 啟動工作
 
-沿用 `braverse-workflow` 已確認的契約及目前證據，依根目錄 Git 邊界讀取狀態；不重做尚未失效的探索。定位相關公開 API、資料流與測試後，開始最小充分修改。
+沿用 `braverse-workflow` 已確認的契約及目前證據，確認 Git 狀態；不重做尚未失效的探索。只定位本次相關公開 API、資料流與測試，直接開始最小充分修改。
 
 ## 2. 依任務載入依據
 
@@ -22,7 +22,7 @@ description: 實作或修復 Braverse 遊戲規則、卡牌轉接、React UI 與
 - 修改 AI 或完整對戰流程：讀 `src/game/ai.ts`、相關規則模組與瀏覽器驗證腳本。
 - 決定驗證層級：讀 `../braverse-workflow/references/verification-levels.md`。
 - 準備文件或 Git 收尾：讀 [references/verification-and-git.md](references/verification-and-git.md)。
-- 確定需要獨立 Codex 子代理：讀 [派工契約](../braverse-workflow/references/delegation-template.md)。OpenCode Go 備援已取消，不載入其舊 references 或執行 wrapper。
+- 確定需要獨立 Codex 子代理：讀 [派工契約](../braverse-workflow/references/delegation-template.md)。
 
 ## 3. 查核規則
 
@@ -49,7 +49,7 @@ description: 實作或修復 Braverse 遊戲規則、卡牌轉接、React UI 與
 
 ## 5. 驗證
 
-必讀 [驗證分級](../braverse-workflow/references/verification-levels.md)，依變更類型完成必要測試與正式 Browser 驗收；提交最低門檻維持根目錄 AGENTS 的要求。
+依變更類型選擇必要測試與正式 Browser 驗收；提交最低門檻維持根目錄 AGENTS 的要求。
 
 官方卡文條件、代價、目標或 `Then` 的轉接，除單元測試外，必須確認 strict
 contract 沒有遺失 runtime evidence；Browser 負向 fixture 要保留其他支付／目標

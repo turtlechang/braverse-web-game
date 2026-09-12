@@ -1,6 +1,6 @@
 ---
 name: braverse-card-import-audit
-description: 依實體卡圖逐字比對 Braverse 卡牌轉換，建立獨立效果預期，驗證支付、代價、目標、時機與實際瀏覽器 UI。用於系列匯入、效果轉接／修復、逐卡稽核及候選 promote；不以 JSON、trace 或測試通過代替卡圖與操作驗收。
+description: 逐卡依實體卡圖驗證 Braverse 匯入、效果轉接、支付、目標、時機與 Browser UI；用於系列匯入或逐卡稽核。
 ---
 
 # Braverse 卡牌匯入與 Chrome 效果稽核
@@ -13,7 +13,7 @@ description: 依實體卡圖逐字比對 Braverse 卡牌轉換，建立獨立效
 
 把「官方資料轉換」和「實際遊戲行為」串成可追溯的驗收流程。完成條件不是只有 JSON 通過 schema，也不是只有卡牌詳情能顯示；每張納入範圍的基礎卡都要有資料路由證據，以及依卡面文字驗證過的互動結果。
 
-- 先讀根目錄 `AGENTS.md`，再讀 `docs/game-rules.md`、`docs/card-data-import.md`、`docs/card-effects.md`、`docs/official-ui-reference.md`。
+- 以根目錄 `AGENTS.md` 為邊界，按目前範圍查閱 `docs/game-rules.md`、`docs/card-data-import.md`、`docs/card-effects.md`、`docs/official-ui-reference.md`；不預讀無關文件。
 - 每筆 `cardNumber`／`@` 變體先各自比對實體卡圖；確認文字、數值、標記與效果相同後才可共用語意案例，仍保留每筆卡圖、載入與路由證據。不得只因基本卡號相同就假定異圖文字相同。
 - 明確區分「瀏覽器載入 smoke test」和「逐卡效果驗證」；前者通過不得宣稱後者完成。
 - 規則文件標記 `[待確認]` 的行為不得自行猜測；記為阻塞／待官方確認並保留原文與依據。
@@ -22,7 +22,7 @@ description: 依實體卡圖逐字比對 Braverse 卡牌轉換，建立獨立效
 
 ## 先建立任務契約
 
-開始前記錄以下欄位，缺少會影響範圍的資訊才向使用者提問；否則依儲存庫現況合理推進：
+開始前先確認以下會影響範圍的欄位；缺少會影響成果或授權的資訊才向使用者提問，否則依儲存庫現況合理推進：
 
 - 系列／彈別、資料來源 URL、要納入的顏色（預設紅／綠／藍／紫）、卡號範圍與是否包含異圖變體。
 - 目標階段：只匯入候選、完成 adapter／規則轉接、promote 正式卡池，或包含 Chrome 效果驗證。

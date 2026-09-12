@@ -1,4 +1,4 @@
 interface:
   display_name: "Braverse 卡牌匯入稽核"
-  short_description: "逐卡驗證文本解析、契約、UI A/B 與公開效果紀錄"
-  default_prompt: "使用 $braverse-card-import-audit 逐卡完成文本解析、契約稽核、test-state、Browser A/B 與公開 trace，單卡通過後才進入下一張。"
+  short_description: "逐卡核對 Braverse 卡圖、效果轉接與 Browser UI 驗收"
+  default_prompt: "使用 $braverse-card-import-audit 依卡圖核對轉接、規則與 Browser UI。"

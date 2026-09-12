@@ -1,4 +1,4 @@
 interface:
   display_name: "Braverse Workflow"
-  short_description: "Braverse 任務模板、驗證分級、模型路由與提交檢查"
-  default_prompt: "使用 $braverse-workflow 分類 Braverse 任務、選擇 Codex 模型與驗證層級，並準備必要的平行協作。"
+  short_description: "Braverse 任務工作流、驗證分級與提交前檢查指引"
+  default_prompt: "使用 $braverse-workflow 依任務範圍選擇必要驗證並完成收尾。"
