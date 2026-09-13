@@ -1,0 +1,25 @@
+{
+  "name": "BS9 紫｜Mill Control",
+  "entries": [
+    { "cardNumber": "BS9-097", "count": 4 },
+    { "cardNumber": "BS9-098", "count": 4 },
+    { "cardNumber": "BS9-099", "count": 4 },
+    { "cardNumber": "BS9-100", "count": 4 },
+    { "cardNumber": "BS9-101", "count": 4 },
+    { "cardNumber": "BS9-103", "count": 4 },
+    { "cardNumber": "BS9-104", "count": 4 },
+    { "cardNumber": "BS9-105", "count": 4 },
+    { "cardNumber": "BS9-109", "count": 4 },
+    { "cardNumber": "BS9-110", "count": 4 },
+    { "cardNumber": "BS9-112", "count": 4 },
+    { "cardNumber": "BS9-113", "count": 4 },
+    { "cardNumber": "BS9-114", "count": 4 },
+    { "cardNumber": "BS9-115", "count": 4 },
+    { "cardNumber": "BS9-116", "count": 2 },
+    { "cardNumber": "BS9-117", "count": 2 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS9-102", "count": 4 }
+  ],
+  "format": "standard"
+}

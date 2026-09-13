@@ -24,6 +24,7 @@ export type RuleId =
   | 'R15'
   | 'R16'
   | 'R17'
+  | 'R18'
 
 // ============================================================================
 // 規則描述
@@ -171,6 +172,13 @@ export const RULE_DEFINITIONS: Record<RuleId, RuleDefinition> = {
     priority: 'HIGH',
     module: 'strategy/opponent-response.ts',
   },
+  R18: {
+    id: 'R18',
+    name: 'BS9 賽事經驗先驗',
+    description: '只以公開己方 BS9 卡片／動作樣本提供有界權重，細化既有 Lv.5 候選排序。',
+    priority: 'MEDIUM',
+    module: 'strategy/tournament-experience.ts',
+  },
 }
 
 // ============================================================================
@@ -216,7 +224,7 @@ export const LV5_PROFILE: RuleProfile = {
   level: 5,
   name: '高手對抗',
   description: '延續 Lv.4 多步規劃，加入跨步公開資訊記憶與對手回應期望。',
-  rules: [...LV4_PROFILE.rules, 'R17'],
+  rules: [...LV4_PROFILE.rules, 'R17', 'R18'],
 }
 
 // ============================================================================

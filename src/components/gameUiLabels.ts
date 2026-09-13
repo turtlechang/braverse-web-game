@@ -88,6 +88,11 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs7-green-arena': 'BS7 綠色｜Arena',
   'bs7-blue-arena': 'BS7 藍色｜Arena',
   'bs7-purple-arena': 'BS7 紫色｜Arena',
+  'bs9-red-truth': 'BS9 紅色｜Truth Aggro',
+  'bs9-yellow-prophecy': 'BS9 黃色｜Prophecy Control',
+  'bs9-green-support': 'BS9 綠色｜Support Engine',
+  'bs9-blue-deceit': 'BS9 藍色｜Deceit Tempo',
+  'bs9-purple-mill': 'BS9 紫色｜Mill Control',
   custom: '自訂',
 }
 

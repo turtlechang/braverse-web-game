@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { createDemoGame, type GameState } from '../game'
+import { AI_STRATEGY_VERSION, createDemoGame, type GameState } from '../game'
 import { useAiTurn } from './useAiTurn'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -85,7 +85,7 @@ describe('useAiTurn', () => {
     expect(captured!.aiActionCount).toBe(1)
     expect(captured!.replayMetadata.agents['player-two']).toMatchObject({
       aiLevel: 4,
-      strategyVersion: 'lv5-defense-retention-endgame-v2',
+      strategyVersion: AI_STRATEGY_VERSION,
       strategyCommit: null,
     })
     expect(captured!.replayMetadata.decisions).toHaveLength(1)

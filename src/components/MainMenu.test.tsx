@@ -184,9 +184,14 @@ describe('MainMenu AI opponent options', () => {
     expect(selects[0].value).toBe('bs7-red-arena')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // 主選單只保留目前的 BS7 Arena 牌組。
+    // 主選單保留 BS9 五色牌組與既有 BS7 Arena 牌組。
     const optionValues = [...selects[0].options].map((option) => option.value)
     expect(optionValues).toEqual([
+      'bs9-red-truth',
+      'bs9-yellow-prophecy',
+      'bs9-green-support',
+      'bs9-blue-deceit',
+      'bs9-purple-mill',
       'bs7-red-arena',
       'bs7-yellow-arena',
       'bs7-green-arena',

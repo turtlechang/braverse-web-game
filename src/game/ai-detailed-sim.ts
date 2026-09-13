@@ -4,6 +4,7 @@ import { getAttackDamageAgainst } from './effects'
 import type { AttackCommand } from './commands'
 import { calculateReplacementBaseScore } from './ai/bs2MatchupProfiles'
 import { takeAiStep } from './ai'
+import { createPlayerView } from './player-view'
 import { resetR10Counters, getR10Counters } from './ai/evaluated-turn-handler'
 import {
   aggregateLv4SearchTelemetry,
@@ -23,9 +24,11 @@ import type {
   BehaviorMetrics,
   PlayerBehaviorMetrics,
   AiLevel,
+  AiDecision,
 } from './ai/types'
 import type { GameState, PendingBattle, PlayerId } from './types'
 import type { AiStrategyMemory } from './ai/strategy/session'
+import type { AiDecisionProfile } from './ai/strategy/tournament-experience'
 
 const countBreakLevel = (state: GameState, playerId: PlayerId): number =>
   state.players[playerId].breakArea.reduce((sum, c) => sum + c.level, 0)
@@ -93,6 +96,66 @@ const createPlayerBehaviorAccumulator = (): PlayerBehaviorAccumulator => ({
   lv4SearchTelemetry: [],
   pendingStrategyTelemetry: [],
 })
+
+const createDecisionProfile = (): AiDecisionProfile => ({
+  totalDecisions: 0,
+  byAction: {},
+  byCardAction: {},
+})
+
+const sourceCardIdFromDecision = (
+  state: GameState,
+  nextState: GameState,
+  playerId: PlayerId,
+  decision: AiDecision,
+): string | undefined => {
+  const pendingSource = decision.reason?.pendingStrategy?.sourceCardId
+  if (pendingSource) return pendingSource
+
+  const tieBreakKey = decision.reason?.actionScore?.tieBreakKey
+  const sourceInstanceId = tieBreakKey?.split('|')[1]
+  if (sourceInstanceId) {
+    const view = createPlayerView(state, playerId)
+    const source = [
+      ...view.hand,
+      ...(view.extraDeck ?? []),
+      ...view.self.battleArea.map((cookie) => cookie.card),
+      ...view.self.supportArea.map((support) => support.card),
+      ...view.self.breakArea,
+      ...view.self.discardPile,
+      ...(view.self.stage ? [view.self.stage.card] : []),
+    ].find((card) => card.instanceId === sourceInstanceId)
+    if (source) return source.id
+  }
+
+  // Replacement is a forced-flow decision and has no action-score tie-break
+  // key.  The newly entered Cookie is still public in the post-command state.
+  const previousIds = new Set(
+    state.players[playerId].battleArea.map((cookie) => cookie.card.instanceId),
+  )
+  const replacement = nextState.players[playerId].battleArea.find(
+    (cookie) => !previousIds.has(cookie.card.instanceId),
+  )
+  return replacement?.card.id
+}
+
+const recordDecisionProfile = (
+  profiles: Record<PlayerId, AiDecisionProfile>,
+  state: GameState,
+  nextState: GameState,
+  playerId: PlayerId,
+  decision: AiDecision,
+): void => {
+  const profile = profiles[playerId]
+  const action = decision.reason?.chosenCommandKind ?? decision.action
+  profile.totalDecisions += 1
+  profile.byAction[action] = (profile.byAction[action] ?? 0) + 1
+  const cardId = sourceCardIdFromDecision(state, nextState, playerId, decision)
+  if (!cardId) return
+  const cardActions = profile.byCardAction[cardId] ?? {}
+  cardActions[action] = (cardActions[action] ?? 0) + 1
+  profile.byCardAction[cardId] = cardActions
+}
 
 const summarizePlayerBehavior = (
   counters: PlayerBehaviorAccumulator,
@@ -360,7 +423,11 @@ const computeBehaviorMetrics = (
 export const simulateAiMatchDetailed = (
   initialState: GameState,
   maxActions = 500,
-  options: { levels?: Partial<Record<PlayerId, AiLevel>>; seed?: number } = {},
+  options: {
+    levels?: Partial<Record<PlayerId, AiLevel>>
+    seed?: number
+    experienceProfile?: import('./ai/strategy/tournament-experience').AiTournamentExperienceProfile | null
+  } = {},
 ): AiDetailedResult => {
   let state = initialState
   const logs: string[] = []
@@ -403,6 +470,10 @@ export const simulateAiMatchDetailed = (
     'player-two': createPlayerBehaviorAccumulator(),
   }
   const strategyMemories: Partial<Record<PlayerId, AiStrategyMemory>> = {}
+  const decisionProfileByPlayer: Record<PlayerId, AiDecisionProfile> = {
+    'player-one': createDecisionProfile(),
+    'player-two': createDecisionProfile(),
+  }
 
   resetR10Counters()
 
@@ -423,7 +494,15 @@ export const simulateAiMatchDetailed = (
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
       memory: strategyMemories[controller],
+      experienceProfile: options.experienceProfile,
     })
+    recordDecisionProfile(
+      decisionProfileByPlayer,
+      prevState,
+      decision.state,
+      controller,
+      decision,
+    )
     if (decision.reason?.strategyMemory) {
       strategyMemories[controller] = decision.reason.strategyMemory
     }
@@ -659,5 +738,6 @@ export const simulateAiMatchDetailed = (
       'player-one': playerBehavior['player-one'].pendingStrategyTelemetry,
       'player-two': playerBehavior['player-two'].pendingStrategyTelemetry,
     },
+    decisionProfileByPlayer,
   }
 }

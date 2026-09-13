@@ -1,0 +1,24 @@
+{
+  "name": "BS9 藍｜Deceit Tempo",
+  "entries": [
+    { "cardNumber": "BS9-071", "count": 4 },
+    { "cardNumber": "BS9-072", "count": 4 },
+    { "cardNumber": "BS9-073", "count": 4 },
+    { "cardNumber": "BS9-074", "count": 4 },
+    { "cardNumber": "BS9-075", "count": 4 },
+    { "cardNumber": "BS9-077", "count": 4 },
+    { "cardNumber": "BS9-078", "count": 4 },
+    { "cardNumber": "BS9-080", "count": 4 },
+    { "cardNumber": "BS9-082", "count": 4 },
+    { "cardNumber": "BS9-083", "count": 4 },
+    { "cardNumber": "BS9-084", "count": 4 },
+    { "cardNumber": "BS9-085", "count": 4 },
+    { "cardNumber": "BS9-086", "count": 4 },
+    { "cardNumber": "BS9-087", "count": 4 },
+    { "cardNumber": "BS9-089", "count": 4 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS9-088", "count": 4 }
+  ],
+  "format": "standard"
+}

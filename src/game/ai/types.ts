@@ -16,6 +16,10 @@ import type {
   Lv4SearchTelemetry,
   Lv4SearchTelemetryAggregate,
 } from './strategy/search-telemetry'
+import type {
+  AiDecisionProfile,
+  AiTournamentExperienceProfile,
+} from './strategy/tournament-experience'
 
 export type AiLevel = 1 | 2 | 3 | 4 | 5
 
@@ -31,6 +35,11 @@ export interface AiStepOptions {
   knowledgeState?: KnowledgeState
   /** 同一場對局由上一個 AiDecisionReason 回傳的公開資訊策略記憶。 */
   memory?: AiStrategyMemory
+  /**
+   * 只在 Lv.5 套用的 BS9 賽事經驗；null 明確停用，供 baseline／holdout
+   * 對照使用。經驗本身只包含公開己方卡片／動作的有界權重。
+   */
+  experienceProfile?: AiTournamentExperienceProfile | null
 }
 
 export interface AiDecisionReason {
@@ -59,6 +68,7 @@ export interface AiDecisionReason {
 export interface SimulateAiMatchOptions {
   levels?: Partial<Record<PlayerId, AiLevel>>
   seed?: number
+  experienceProfile?: AiTournamentExperienceProfile | null
 }
 
 export type AiActionType =
@@ -260,4 +270,6 @@ export interface AiDetailedResult {
   pendingStrategyTelemetry: readonly PendingStrategyTelemetry[]
   /** 與 `pendingStrategyTelemetry` 相同資料，依實際控制玩家分開。 */
   pendingStrategyTelemetryByPlayer: Record<PlayerId, readonly PendingStrategyTelemetry[]>
+  /** 依實際控制玩家彙總的公開卡片／動作決策樣本，供賽事訓練使用。 */
+  decisionProfileByPlayer: Record<PlayerId, AiDecisionProfile>
 }

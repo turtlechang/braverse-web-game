@@ -51,8 +51,20 @@ import type { AiDecision, AiLevel } from './types'
  * 規則必須等本次戰鬥收尾後才能結算；補位任務若已排入，仍要等這條效果鏈
  * 完成後才可執行。AI 在 pendingBattle 期間仍不得搶先結算（規則層會拒絕）。
  */
-const hasBlockingAbilityPending = (state: GameState): boolean =>
-  Boolean(
+const hasBlockingAbilityPending = (state: GameState): boolean => {
+  // 昏厥觸發的 Then 可能在攻擊後傷害序列建立前就已排入佇列。若序列
+  // 已完成目前目標且沒有下一個目標，這個延續效果必須先交給其控制者；
+  // 否則 battle handler 會無限重送 resolve-next-damage，而 pending ability
+  // 永遠拿不到控制權。其他仍有目標的序列與外層 ability continuation
+  // 仍維持原本的阻擋順序。
+  const canResolveCompletedFaintContinuation = Boolean(
+    state.pendingBattle?.effectDamageSequence?.continuation === 'attack-effect' &&
+      state.pendingBattle.effectDamageSequence.afterCurrentDamageResolved &&
+      state.pendingBattle.effectDamageSequence.remainingTargetInstanceIds.length === 0 &&
+      state.pendingAbilityEffect?.isFaintEffectContinuation,
+  )
+
+  return Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
       hasActiveEffectOrder(state) ||
@@ -69,13 +81,15 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
       state.pendingStageTrigger ||
       // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
       // 不能在中途搶先執行同一條 pendingAbilityEffect。
-      state.pendingBattle?.effectDamageSequence ||
+      (state.pendingBattle?.effectDamageSequence &&
+        !canResolveCompletedFaintContinuation) ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       state.pendingAbilityEffect?.pendingReorderHp ||
       (state.pendingBattle &&
         state.pendingAbilityEffect?.trigger === 'attacker-faint'),
   )
+}
 
 export interface AiPendingDecisionOptions {
   level?: AiLevel
@@ -118,6 +132,13 @@ export const handleAiPendingDecision = (
   const pendingAbility = state.pendingAbilityEffect
   if (pendingAbility && !hasBlockingAbilityPending(state)) {
     if (pendingAbility.playerId !== playerId) {
+      // 攻擊後效果屬於攻擊者，必須先由 battle handler 結算；被擊倒餅乾
+      // 的延遲效果可能同時掛在防守者身上，不能用「等待效果持有者」的
+      // idle 決策遮住這個更高優先級的戰鬥階段。
+      if (
+        state.pendingBattle?.stage === 'attack-effect' &&
+        state.pendingBattle.attackerPlayerId === playerId
+      ) return null
       return {
         state,
         action: 'idle',
@@ -640,6 +661,12 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
+    const discardHandAmount = pendingDecision.cost.discardHand ?? 0
+    const discardHandCandidateIds = getDiscardHandCostCandidates(
+      pendingDecision.cost,
+      hand,
+      pendingDecision.sourceInstanceId,
+    ).map((card) => card.instanceId)
     const effectiveEnergyCost = getRemainingEnergyCost(
       pendingDecision.cost.energy ?? pendingDecision.cost,
       pendingDecision.sourceEnergy,
@@ -682,7 +709,7 @@ export const handleAiPendingDecision = (
       ? universal.orderCostIds(supportToHandCandidateIds, supportToHandAmount)
       : supportToHandCandidateIds.slice(0, supportToHandAmount)
     const canPay =
-      hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
+      discardHandCandidateIds.length >= discardHandAmount &&
       Boolean(paymentIds) &&
       supportToTrashIds.length >= supportToTrashAmount &&
       supportToHandIds.length >= supportToHandAmount
@@ -770,12 +797,10 @@ export const handleAiPendingDecision = (
     if (canResolveOptionalEffect) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
-            hand.map((card) => card.instanceId),
-            pendingDecision.cost.discardHand ?? 0,
+            discardHandCandidateIds,
+            discardHandAmount,
           )
-        : hand
-            .slice(0, pendingDecision.cost.discardHand ?? 0)
-            .map((card) => card.instanceId)
+        : discardHandCandidateIds.slice(0, discardHandAmount)
       const decision = withPendingReason({
         state: applyGameCommand(state, {
           kind: 'resolve-optional-cost-attack',

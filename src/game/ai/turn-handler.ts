@@ -31,6 +31,7 @@ import type {
 } from '../types'
 import type { KnowledgeState } from './strategy/knowledge-state'
 import type { AiStrategyMemory } from './strategy/session'
+import type { AiTournamentExperienceProfile } from './strategy/tournament-experience'
 import type { PendingSelectionStrategy } from './strategy/pending-selection'
 import type { AiDecision, AiLevel } from './types'
 import {
@@ -51,6 +52,8 @@ export interface AiTurnStrategy {
   shuffleSeed?: number
   knowledgeState?: KnowledgeState
   strategyMemory?: AiStrategyMemory
+  /** Lv.5 only: bounded public-information prior learned from BS9 matches. */
+  tournamentExperienceProfile?: AiTournamentExperienceProfile | null
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,

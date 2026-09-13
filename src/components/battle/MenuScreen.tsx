@@ -84,7 +84,7 @@ export function MenuScreen({
   const [showTestScenario, setShowTestScenario] = useState(false)
   const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
-  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs7-red-arena')
+  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs9-red-truth')
 
   const selectedCustomDeck = useMemo(
     () => savedDecks.find((deck) => deck.id === selectedDeckId) ?? null,

@@ -93,6 +93,9 @@ import {
   scoreAttackTarget,
 } from './ai/bs2MatchupProfiles'
 import { isRuleEnabled } from './ai/rule-profiles'
+import {
+  DEFAULT_LV5_TOURNAMENT_EXPERIENCE_PROFILE,
+} from './ai/strategy/tournament-experience'
 
 export type {
   AiActionType,
@@ -106,6 +109,12 @@ export type {
   SimulateAiMatchOptions,
 } from './ai/types'
 export type { AiStrategyMemory, AiTacticalIntent } from './ai/strategy/session'
+export type {
+  AiDecisionProfile,
+  AiTournamentExperienceProfile,
+  TournamentExperienceAdjustment,
+  TournamentExperienceSource,
+} from './ai/strategy/tournament-experience'
 
 export const selectAiEnergyPayment = (
   skill: CardSkill,
@@ -720,6 +729,21 @@ const resolveAiCardAbility = (
 ): AiDecision | null => {
   const ability = card.item
   if (!ability) return null
+  const revealCost = ability.effects[0]
+  if (
+    revealCost?.kind === 'reveal-hand' &&
+    revealCost.asCost &&
+    getEffectSelectionCandidates(
+      state,
+      { sourcePlayerId: playerId, sourceInstanceId: card.instanceId },
+      revealCost,
+    ).length < revealCost.amount
+  ) {
+    // Reveal-hand costs are checked by playItem as an atomic pre-payment rule.
+    // Return no candidate here as well, so Lv.5's fallback path does not try an
+    // item whose public reveal requirement cannot be paid.
+    return null
+  }
   const universal = createUniversalPendingStrategy(
     state,
     playerId,
@@ -1644,6 +1668,11 @@ export const takeAiStep = (
     aiTurnStrategy.shuffleSeed = shuffleSeed
     aiTurnStrategy.currentLevel = level
     aiTurnStrategy.conservativeDeployment = level === 5
+    aiTurnStrategy.tournamentExperienceProfile = level === 5
+      ? options.experienceProfile === null
+        ? null
+        : options.experienceProfile ?? DEFAULT_LV5_TOURNAMENT_EXPERIENCE_PROFILE
+      : null
     // 外部只能提供以 PlayerView／合法事件建立的 KnowledgeState；同局可
     // 明確傳回上一個 memory，不同對局則由 caller 重置，避免全域串局。
     aiTurnStrategy.knowledgeState = options.memory?.observerId === playerId
@@ -1804,6 +1833,7 @@ export const simulateAiMatch = (
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
       memory: strategyMemories[controller],
+      experienceProfile: options.experienceProfile,
     })
     if (decision.reason?.strategyMemory) {
       strategyMemories[controller] = decision.reason.strategyMemory

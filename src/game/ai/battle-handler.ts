@@ -20,6 +20,7 @@ import {
 import { expandChooseOne } from '../effects/choose-one'
 import { selectEnergyPayment } from '../energy'
 import {
+  getDiscardHandCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckCostCandidates,
@@ -52,6 +53,38 @@ const chooseAttackEffectTargets = (
   const context: EffectContext = {
     sourcePlayerId: playerId,
     sourceInstanceId: battle.attackerInstanceId,
+  }
+
+  // 攻擊後續也可能直接選支援區／棄牌區／手牌的卡。這些效果沒有一般
+  // Cookie target selector，不能把空的戰鬥目標陣列交給 executeCardEffect。
+  // 與 pending ability 共用同一組合法候選與數量限制。
+  const usesCardSelection =
+    effect.kind === 'break-to-battle' ||
+    effect.kind === 'support-to-battle' ||
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'trash-to-support' ||
+    effect.kind === 'trash-to-hand' ||
+    effect.kind === 'equipped-to-hp' ||
+    effect.kind === 'support-to-trash' ||
+    effect.kind === 'hand-to-support' ||
+    effect.kind === 'break-to-hand-by-level-sum' ||
+    effect.kind === 'prevent-support-active-next-phase' ||
+    (effect.kind === 'reveal-hand' && effect.selectCard) ||
+    (effect.kind === 'set-active' && effect.selectable) ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'hand-to-battle' ||
+    effect.kind === 'opponent-trash-to-break' ||
+    effect.kind === 'trash-to-break'
+  if (usesCardSelection) {
+    const limits = getEffectSelectionLimits(effect)
+    const candidates = getEffectSelectionCandidates(state, context, effect)
+    if (!limits) return []
+    const count = Math.min(limits.max, candidates.length)
+    if (count < limits.min) return []
+    const candidateIds = candidates.map((card) => card.instanceId)
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, count)
+      : candidateIds.slice(0, count)
   }
 
   // These attack follow-ups select cards outside the battle area (Stage,
@@ -388,6 +421,71 @@ const handCardDiscardValue = (card: GameCard): number => {
   return effects.reduce((sum, effect) => sum + (EFFECT_VALUE_MAP[effect.kind] ?? 5), 0)
 }
 
+const selectTrapEffectTargets = (
+  state: GameState,
+  playerId: PlayerId,
+  trapInstanceId: string,
+  effect: CardEffect,
+  universal: PendingSelectionStrategy,
+): string[] => {
+  if (
+    effect.kind === 'support-to-trash' ||
+    effect.kind === 'support-to-hand' ||
+    effect.kind === 'hand-to-support'
+  ) {
+    // These effects have dedicated fields in PlayTrapOptions and are handled
+    // before the trap effect queue is entered.
+    return []
+  }
+
+  const cardSelection =
+    effect.kind === 'break-to-battle' ||
+    effect.kind === 'support-to-battle' ||
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'trash-to-support' ||
+    effect.kind === 'trash-to-hand' ||
+    effect.kind === 'equipped-to-hp' ||
+    effect.kind === 'break-to-hand-by-level-sum' ||
+    effect.kind === 'trash-to-deck' ||
+    effect.kind === 'prevent-support-active-next-phase' ||
+    (effect.kind === 'reveal-hand' && effect.selectCard) ||
+    (effect.kind === 'set-active' && effect.selectable) ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'hand-to-battle' ||
+    effect.kind === 'opponent-trash-to-break' ||
+    effect.kind === 'trash-to-break'
+  if (cardSelection) {
+    const limits = getEffectSelectionLimits(effect)
+    const candidates = getEffectSelectionCandidates(
+      state,
+      { sourcePlayerId: playerId, sourceInstanceId: trapInstanceId },
+      effect,
+    )
+    if (!limits) return []
+    const count = Math.min(limits.max, candidates.length)
+    if (count < limits.min) return []
+    const candidateIds = candidates.map((card) => card.instanceId)
+    return universal.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, count)
+      : candidateIds.slice(0, count)
+  }
+
+  if (!('target' in effect) || !effect.target) return []
+  const candidates = getEffectTargetCandidatesForEffect(
+    state,
+    { sourcePlayerId: playerId, sourceInstanceId: trapInstanceId },
+    effect,
+  )
+  const count = effect.kind === 'damage-all' && effect.sequential
+    ? candidates.length
+    : Math.min(effect.target.max, candidates.length)
+  if (count < effect.target.min) return []
+  const candidateIds = candidates.map((cookie) => cookie.card.instanceId)
+  return universal.enabled
+    ? universal.selectEffectTargetIds(effect, candidateIds, count)
+    : candidateIds.slice(0, count)
+}
+
 export const handleAiPendingBattle = (
   state: GameState,
   playerId: PlayerId,
@@ -432,6 +530,29 @@ export const handleAiPendingBattle = (
     battle.attackerPlayerId === playerId
   ) {
     const effect = battle.attackEffects[battle.attackEffectIndex]
+    if (effect?.kind === 'choose-one') {
+      const context: EffectContext = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+      }
+      const modeIndex = chooseAiEffectMode(
+        state,
+        context,
+        effect,
+        universal.enabled
+          ? universal.preferredModeIndices(effect, battle.attackerInstanceId)
+          : [],
+      )
+      return withBattlePendingReason({
+        state: applyGameCommand(state, {
+          kind: 'resolve-choose-one',
+          playerId,
+          modeIndex,
+        }),
+        action: 'resolve-attack-effect',
+        description: `${state.players[playerId].name}選擇攻擊後續效果模式。`,
+      }, 'choose-one', battle.attackerInstanceId, effect)
+    }
     const targetIds = chooseAttackEffectTargets(
       state,
       playerId,
@@ -474,10 +595,18 @@ export const handleAiPendingBattle = (
     // R7: Lv.3+ 優先棄「捨得丟」的卡（手牌品質最低的），而不是照手牌
     // 順序砍前 N 張——後者等於把要不要丟到關鍵卡交給手牌排列運氣。
     const discardCandidates = useR7
-      ? [...state.players[playerId].hand].sort(
+      ? getDiscardHandCostCandidates(
+          revealed?.flip?.cost ?? {},
+          state.players[playerId].hand,
+          revealed?.instanceId,
+        ).sort(
           (a, b) => handCardDiscardValue(a) - handCardDiscardValue(b),
         )
-      : state.players[playerId].hand
+      : getDiscardHandCostCandidates(
+          revealed?.flip?.cost ?? {},
+          state.players[playerId].hand,
+          revealed?.instanceId,
+        )
     const discardHandIds = universal.enabled
       ? universal.orderCostIds(
           discardCandidates.map((card) => card.instanceId),
@@ -527,6 +656,90 @@ export const handleAiPendingBattle = (
           universal,
         )
       : { valid: true as const }
+    let effectTargetIds: string[] | undefined
+    let thenTargetIds: string[] | undefined
+    const chainedSupportToHand = expandedFlipEffects.find(
+      (candidate): candidate is Extract<CardEffect, { kind: 'support-to-hand' }> =>
+        candidate.kind === 'support-to-hand' &&
+        candidate.thenEffects?.some(
+          (thenEffect) =>
+            thenEffect.kind === 'hand-to-support' &&
+            thenEffect.sameAmountAsPreviousEffect,
+        ) === true,
+    )
+    if (chainedSupportToHand) {
+      // BS9-053 has two independent selections: first return N supports,
+      // then place the same N green hand cards. Choose the first selection
+      // only when the post-return hand can satisfy the second one.
+      const supportCandidates = getEffectSelectionCandidates(
+        state,
+        flipContext,
+        chainedSupportToHand,
+      )
+      const supportCandidateIds = supportCandidates.map((card) => card.instanceId)
+      const selectionLimits = getEffectSelectionLimits(chainedSupportToHand)
+      const thenTemplate = chainedSupportToHand.thenEffects?.find(
+        (thenEffect) =>
+          thenEffect.kind === 'hand-to-support' &&
+          thenEffect.sameAmountAsPreviousEffect,
+      )
+      if (selectionLimits && thenTemplate?.kind === 'hand-to-support') {
+        const minimum = selectionLimits.min
+        const maximum = Math.min(selectionLimits.max, supportCandidateIds.length)
+        for (let count = maximum; count >= minimum; count -= 1) {
+          const selectedSupportIds = universal.enabled
+            ? universal.selectEffectTargetIds(
+                chainedSupportToHand,
+                supportCandidateIds,
+                count,
+              )
+            : supportCandidateIds.slice(0, count)
+          const selectedSupportSet = new Set(selectedSupportIds)
+          const returnedCards = state.players[playerId].supportArea
+            .filter((support) => selectedSupportSet.has(support.card.instanceId))
+            .map((support) => support.card)
+          if (returnedCards.length !== count) continue
+          const stateAfterReturn: GameState = {
+            ...state,
+            players: {
+              ...state.players,
+              [playerId]: {
+                ...state.players[playerId],
+                supportArea: state.players[playerId].supportArea.filter(
+                  (support) => !selectedSupportSet.has(support.card.instanceId),
+                ),
+                hand: [...state.players[playerId].hand, ...returnedCards],
+              },
+            },
+          }
+          const resolvedThen = {
+            ...thenTemplate,
+            amount: count,
+            sameAmountAsPreviousEffect: undefined,
+          }
+          const handCandidates = getEffectSelectionCandidates(
+            stateAfterReturn,
+            flipContext,
+            resolvedThen,
+          )
+          if (handCandidates.length < count) continue
+          const handCandidateIds = handCandidates.map((card) => card.instanceId)
+          const selectedHandIds = universal.enabled
+            ? universal.selectEffectTargetIds(resolvedThen, handCandidateIds, count)
+            : handCandidateIds.slice(0, count)
+          if (selectedHandIds.length !== count) continue
+          effectTargetIds = selectedSupportIds
+          thenTargetIds = selectedHandIds
+          break
+        }
+        if (effectTargetIds === undefined) {
+          // The effect is optional; selecting zero is the only legal way to
+          // resolve it when no same-sized replacement set exists.
+          effectTargetIds = []
+          thenTargetIds = []
+        }
+      }
+    }
     const canActivate = hasActivatableEffect &&
       discardHandIds.length === discardCount &&
       sharedSelection.valid
@@ -536,9 +749,11 @@ export const handleAiPendingBattle = (
         kind: 'resolve-flip',
         playerId,
         activate: canActivate,
-        discardHandIds,
+        discardHandIds: canActivate ? discardHandIds : [],
         chooseOneModeIndex,
         targetIds,
+        effectTargetIds,
+        thenTargetIds,
       }),
       action: 'resolve-flip',
       revealedCard: revealed ?? undefined,
@@ -790,14 +1005,11 @@ export const handleAiPendingBattle = (
             )
           : handToSupportCandidateIds.slice(0, handToSupportEffect.amount)
         : []
-      const discardHandColor = paidCost.discardHandColor
-      const discardHandCandidateIds = state.players[playerId].hand
-        .filter(
-          (card) =>
-            card.instanceId !== trapCard.instanceId &&
-            (!discardHandColor || card.energyColor === discardHandColor),
-        )
-        .map((card) => card.instanceId)
+      const discardHandCandidateIds = getDiscardHandCostCandidates(
+        paidCost,
+        state.players[playerId].hand,
+        trapCard.instanceId,
+      ).map((card) => card.instanceId)
       const discardHandIds = universal.enabled
         ? universal.orderCostIds(
             discardHandCandidateIds,
@@ -892,6 +1104,40 @@ export const handleAiPendingBattle = (
           : trashToDeckCandidateIds.slice(0, trashToDeckEffect.max)
         : []
 
+      // 多段陷阱的每個選擇效果各自建立目標欄位。沒有這層時，AI 為第一段
+      // modify-attack 選出的對手 Cookie 會被沿用到後段 trash-to-hand／
+      // set-active，造成「不在合法範圍」或「Invalid support target」。
+      const hasIndependentTrapSelection = trapCard.trap.effects.some(
+        (effect) =>
+          effect.kind === 'break-to-battle' ||
+          effect.kind === 'support-to-battle' ||
+          effect.kind === 'trash-to-battle' ||
+          effect.kind === 'trash-to-support' ||
+          effect.kind === 'trash-to-hand' ||
+          effect.kind === 'equipped-to-hp' ||
+          effect.kind === 'hand-to-support' ||
+          effect.kind === 'break-to-hand-by-level-sum' ||
+          effect.kind === 'trash-to-deck' ||
+          effect.kind === 'prevent-support-active-next-phase' ||
+          (effect.kind === 'reveal-hand' && effect.selectCard) ||
+          (effect.kind === 'set-active' && effect.selectable) ||
+          effect.kind === 'rest-support' ||
+          effect.kind === 'hand-to-battle' ||
+          effect.kind === 'opponent-trash-to-break' ||
+          effect.kind === 'trash-to-break',
+      )
+      const effectTargets = hasIndependentTrapSelection
+        ? trapCard.trap.effects.map((effect) =>
+            selectTrapEffectTargets(
+              state,
+              playerId,
+              trapCard.instanceId,
+              effect,
+              universal,
+            ),
+          )
+        : undefined
+
       if (
         supportTrashEffect?.kind === 'support-to-trash' &&
         supportTrashIds.length < supportTrashEffect.amount
@@ -922,6 +1168,7 @@ export const handleAiPendingBattle = (
           costOptionIndex: playableCost.index,
           paymentIds,
           targetIds,
+          effectTargets,
           selfTargetIds,
           supportTrashIds,
           supportToHandIds,

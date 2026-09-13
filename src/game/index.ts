@@ -172,6 +172,16 @@ export {
   createAiPresetBs7PurpleArenaDeck,
   createAiPresetBs7RedArenaDeck,
   createAiPresetBs7YellowArenaDeck,
+  createAiPresetBs9BlueDeceitDeck,
+  createAiPresetBs9BlueExtraDeck,
+  createAiPresetBs9GreenSupportDeck,
+  createAiPresetBs9GreenExtraDeck,
+  createAiPresetBs9PurpleMillDeck,
+  createAiPresetBs9PurpleExtraDeck,
+  createAiPresetBs9RedTruthDeck,
+  createAiPresetBs9RedExtraDeck,
+  createAiPresetBs9YellowProphecyDeck,
+  createAiPresetBs9YellowExtraDeck,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
@@ -184,7 +194,10 @@ export {
   BS6_AI_PRESET_DECK_CHOICES,
   BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES,
   BS7_ARENA_AI_PRESET_DECK_CHOICES,
+  BS9_AI_PRESET_DECK_CHOICES,
+  BS9_EXTRA_DECK_RECIPES,
   DECK_CREATORS,
+  EXTRA_DECK_CREATORS,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_DECK_RECIPES,
   OFFICIAL_GREEN_STARTER_DECK,
@@ -192,6 +205,7 @@ export {
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_STARTER_DECK_RED,
   OFFICIAL_YELLOW_STARTER_DECK,
+  createExtraDeckForChoice,
 } from './starter-deck'
 export type {
   AiPresetDeckChoice,
@@ -201,6 +215,7 @@ export type {
   Bs6AiPresetDeckChoice,
   Bs6CompetitiveAiPresetDeckChoice,
   Bs7ArenaAiPresetDeckChoice,
+  Bs9AiPresetDeckChoice,
   BuiltInDeckChoice,
   DeckChoice,
   StarterDeckChoice,
@@ -585,6 +600,20 @@ export type {
   EndInfo,
   BehaviorMetrics,
 } from './ai/types'
+export {
+  DEFAULT_LV5_TOURNAMENT_EXPERIENCE_PROFILE,
+  createAiTournamentExperienceAccumulator,
+  finalizeAiTournamentExperience,
+  recordAiTournamentMatchExperience,
+  scoreTournamentExperience,
+} from './ai/strategy/tournament-experience'
+export type {
+  AiDecisionProfile,
+  AiTournamentExperienceAccumulator,
+  AiTournamentExperienceProfile,
+  TournamentExperienceAdjustment,
+  TournamentExperienceSource,
+} from './ai/strategy/tournament-experience'
 export {
   evaluatePlayerView,
   evaluatePlayerViewBreakdown,

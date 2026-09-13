@@ -6,7 +6,9 @@
 
 ## 開發背景
 
-2026-09-13 **BS9 正式牌池與端到端收尾**：官方卡表與 Ver.1.8 未提供 BS9-025 專卡裁決；依使用者確認，FLIP 卡依正常規則進入 Trash、棄置 1 張手牌、+1 HP 預設給原附著 Cookie，且在持有者自己的回合可改選另一隻己方 Cookie（不轉移 FLIP 卡本身）。BS9 全 185 筆正式記錄已移入 `data/cards/`，候選 JSON 為 0；strict contract **185／185 verified、0 needs-review、0 blocked**。所有 BS9 專用 Browser 命令均 exit 0，合計執行 **864 lanes（含重疊的專卡加強矩陣）**，覆蓋雙尺寸正／負互動與官方卡圖載入；BS9-025 專用 **8／8** 通過。正式牌組編輯器四種視窗、雙瀏覽器好友房同步、線上 modal RWD（桌機／280px）均通過；`validate:cards`（17 檔／1,600 種卡號／1,574 張轉換）、`check:card-pool`、build 與完整 Vitest **319 檔／4,769 項**通過。全域 lint 仍受 4 個既有無關暫存／診斷檔錯誤阻塞，完整 AI Browser 仍受舊腳本等待已移除的「執行 20 場 AI 驗證」按鈕阻塞；兩者不屬 BS9 正式牌池驗收。詳見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md#2026-09-13-bs9-正式牌池端到端收尾)。
+2026-09-13 **BS9 五色主牌組／EXTRA 與 Lv.5 賽事訓練完成**：建立紅、黃、綠、藍、紫五份純色 BS9 牌組，每份 60 張主牌並附同色 BS9 EXTRA ×4；以正式 `extraDeckEntries` 接入牌組、1024 人／10 輪 Swiss、Top 8／Top 4／冠軍淘汰賽與 Lv.5 AI。固定種子賽事完成 5,120／5,120 場、0 卡死，冠軍為藍色 `#201`；公開決策資料形成 5,120 場經驗 profile，獨立 holdout 兩組各 1,024 場皆完成，訓練版相對基準勝出 365 場、基準勝出 0 場。完整報告見 [BS9 Lv.5 1024 人賽事報告](docs/bs9-lv5-1024-report.md)。
+
+2026-09-13 **BS9 正式牌池與端到端收尾**：官方卡表與 Ver.1.8 未提供 BS9-025 專卡裁決；依使用者確認，FLIP 卡依正常規則進入 Trash、棄置 1 張手牌、+1 HP 預設給原附著 Cookie，且在持有者自己的回合可改選另一隻己方 Cookie（不轉移 FLIP 卡本身）。BS9 全 185 筆正式記錄已移入 `data/cards/`，候選 JSON 為 0；strict contract **185／185 verified、0 needs-review、0 blocked**。所有 BS9 專用 Browser 命令均 exit 0，合計執行 **864 lanes（含重疊的專卡加強矩陣）**，覆蓋雙尺寸正／負互動與官方卡圖載入；BS9-025 專用 **8／8** 通過。正式牌組編輯器四種視窗、雙瀏覽器好友房同步、線上 modal RWD（桌機／280px）均通過；`validate:cards`（17 檔／1,600 種卡號／1,574 張轉換）、`check:card-pool`、build 與完整 Vitest **322 檔／4,780 項**通過。全域 lint 仍受 4 個既有無關暫存／診斷檔錯誤阻塞，完整 AI Browser 仍受舊腳本等待已移除的「執行 20 場 AI 驗證」按鈕阻塞；兩者不屬 BS9 正式牌池驗收。詳見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md#2026-09-13-bs9-正式牌池端到端收尾)。
 
 （採用 BS9-025 前的歷史快照）2026-09-13 BS9-071～118 完成候選隔離 exact adapter、runtime hardening 與嚴格 Browser 驗收：依 76 筆官方實體卡圖（含異圖）建立獨立契約，補上 Refresh continuation、Shadow Milk discard provenance、陷阱 HP 目標／Then、檢視牌庫與牌庫移動回歸；新版 1907×863／1164×777 正／負矩陣 **352／352 全數通過**，含 210 條 command trace、152 條 substantive settlement、**352 條官方影像成功載入**與 176 條負向證據。BS9-071～118 strict contract **76／76 verified**；全檔為 183 verified／2 needs-review／0 blocked（兩筆均為 BS9-025），候選仍維持 inventory，尚未 promote，正式 registry 仍無 BS9。完整 Vitest **319 檔／4,757 項**、build、server typecheck 通過；全域 lint 僅剩 4 個既有無關診斷檔錯誤。正式牌組／多人／線上逐卡驗收與 BS9-025 官方裁決仍待。詳見 [BS9 驗證紀錄](docs/bs9-progress-2026-09-10.md#第十四批-bs9-071118候選全範圍通過)。
 
@@ -170,7 +172,9 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
-- 2026-09-13 **BS9-025／`@1` 採用語義與 promotion**：依使用者確認採用「FLIP 進 Trash、棄 1 張手牌、原附著 Cookie +1 HP；持有者自己的回合可改選另一隻己方 Cookie，FLIP 卡不轉移」的專案規則。兩筆 exact adapter／runtime／UI／contract 均已完成；strict **185／185 verified、0／0／0**，專用 Browser（U/P × 1907×863／1164×777 × 正／負）**8／8** 通過。`promote:candidate` 已成功移入正式 `data/cards/`，`validate:cards` 17 檔／1,600 種卡號／1,574 張成功轉換，完整 Vitest **319／4,769**、build 通過；正式 registry 已納入 BS9，未 commit／push。終端整批影像 gate 仍受外部網路限制，Chrome host 已驗證兩張 exact 圖檔載入。
+- 2026-09-13 **BS9 五色牌組、同色 EXTRA 與 Lv.5 1024 人賽事**：紅／黃／綠／藍／紫各有 60 張 BS9 主牌，並分別配置 BS9-010／030／055／088／102 ×4 的同色 EXTRA Deck；1024 名參賽者依 205／205／205／205／204 分色生成，正式 `GameState.players[].extraDeck`、合法 EXTRA 攻擊、AI 決策與賽事報告均已接通。10 輪 Swiss **5,120／5,120、0 stuck**；冠軍／四強為藍色 `#201`、`#157`、`#163`、`#170`，八強另含 `#036`、`#106`、`#110`、`#096`。公開資訊訓練 profile 收錄 5,120 場決勝資料；固定 holdout baseline／trained 各 **1,024／1,024** 完成且 0 stuck，trained 相對 baseline 為 **365 勝／0 敗／659 同勝者**。完整產物見 [roster](data/decks/bs9-lv5-1024-roster.json)、[賽事報告](data/decks/bs9-lv5-1024-report.json)、[報告 Markdown](docs/bs9-lv5-1024-report.md)、[Lv.5 經驗 profile](data/ai/bs9-lv5-experience.json)。
+
+- 2026-09-13 **BS9-025／`@1` 採用語義與 promotion**：依使用者確認採用「FLIP 進 Trash、棄 1 張手牌、原附著 Cookie +1 HP；持有者自己的回合可改選另一隻己方 Cookie，FLIP 卡不轉移」的專案規則。兩筆 exact adapter／runtime／UI／contract 均已完成；strict **185／185 verified、0／0／0**，專用 Browser（U/P × 1907×863／1164×777 × 正／負）**8／8** 通過。`promote:candidate` 已成功移入正式 `data/cards/`，`validate:cards` 17 檔／1,600 種卡號／1,574 張成功轉換；目前完整 Vitest **322 檔／4,780 項**、build 通過；正式 registry 已納入 BS9，本次變更尚未 push。終端整批影像 gate 仍受外部網路限制，Chrome host 已驗證兩張 exact 圖檔載入。
 
 - 2026-09-13 BS9-071～118 runtime hardening：在既有 BS9-017 驗證之上，補上抽牌耗盡後 Refresh continuation、Shadow Milk discard provenance、陷阱 HP 目標／Then 與牌庫檢視／移牌回歸；新增 runtime／UI／online 回歸，並修正好友房 Browser 腳本對已移除 `command-log-filters` selector 的等待。`test:online:browser` 桌機／280px **2／2**、`test:online:match:browser` 開房／同步／攻擊預覽／支付／拒絕／斷線情境通過；完整 Vitest 最新為 **319 檔／4,757 tests** 通過，build／server typecheck 通過。新版 071～118 嚴格 Browser 矩陣為 **352／352**（1907×863／1164×777），含 210 條 command trace、152 條 substantive settlement、**352 條官方影像載入**與 176 條負向證據；全域 lint 仍有既有未追蹤檔的 4 個錯誤，候選 test-state 與共用線上 gate 不代表正式牌組／雙瀏覽器逐卡驗收。
 
@@ -360,7 +364,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-BS9-025 的候選資料／契約層與正式 promotion 已完成；後續仍需在可載入官方影像的環境重跑 BS9-024～029 整批 Browser image gate，並補正式牌組／必要線上逐卡驗收。未收到其他明確指令前不執行 commit 或 push。
+BS9 五色主牌組與同色 EXTRA、1024 人 Swiss／淘汰賽及 Lv.5 公開資訊經驗訓練已完成；後續仍需在可載入官方影像的環境補正式牌組逐卡／雙瀏覽器完整對戰驗收，並以更多固定種子與真人盲測持續校準強度。完整 AI Browser 仍受舊腳本等待已移除的「執行 20 場 AI 驗證」按鈕阻塞；本次 commit 完成後，未收到其他明確指令前不執行 push。
 
 BS9-017／018 已完成候選固定目標與對手實際受擊／防止重驗，BS9-018 另有實際攻擊→BS1-002 Kumiho FLIP 的雙目標 A/B；正式牌組與雙瀏覽器逐卡驗收仍待，候選不 promote。
 
@@ -523,6 +527,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-13 | 完成 BS9 紅／黃／綠／藍／紫五份 60 張主牌與同色 BS9 EXTRA ×4，生成 1024 人／10 輪 Swiss，完成 Top 8／Top 4／冠軍淘汰賽；公開決策訓練 Lv.5 profile，holdout 訓練版相對基準 365 勝／0 敗／659 同勝者，報告與牌組產物已留存。 |
 | 2026-09-13 | BS9-025 基礎版／`@1` 依使用者確認採用 FLIP 進 Trash、棄 1 手牌、原附著 Cookie +1 HP，持有者自己的回合可改選另一隻己方 Cookie（不轉移 FLIP 卡）；接入 exact adapter／runtime／UI／contract，strict 185／185 verified，專用 Browser 8／8；依授權正式移入 `data/cards/`，`validate:cards` 17 檔／1,600 種卡號／1,574 張成功轉換，完整 Vitest 319／4,769、build 通過。終端整批 image gate 受官方影像網路限制，未 commit／push。 |
 | 2026-09-13 | （BS9-025 採用前快照）BS9 coverage analyzer 接入 EXTRA Deck 專用 adapter，5 張 EXTRA 由 pending 修正為 converted；全候選 coverage 更新為 73 supported／44 no-effect／1 pending，071～118 runtime hardening 後完整 Vitest 為 319 檔／4,757 項通過；修正好友房 Browser 腳本的 stale `command-log-filters` selector，線上 modal 2／2 與好友房同步 gate 通過；新版 Browser 嚴格矩陣 352／352（官方影像 352／352、負向證據 176／176），全候選 185 筆聚合為 852／852 lanes 通過、exact image loaded 848／852（018 負向隱藏手牌 4 條不適用）；新增全候選 evidence audit 與 BS9-068 對手攻擊 4／3→3／2 的實際 state witness；官方 English／Asia／韓文原始 JSON 與圖檔 metadata 仍未補足 BS9-025 選定後動作，台灣版 Ver.1.8 §3-10／§8-3-4／§10-1-2／§11-1 亦未定義選定後操作，FAQ／公告查無專卡裁決，採用語義前維持 strict needs-review。 |
 | 2026-09-12 | BS9-025 基礎版與 `@1` 異圖由官方卡表再次確認相同未完句 FLIP 原文；FAQ／公告查無專卡裁決，故保留卡圖 URL 綁定的 review-only 詳情與正／負 Browser fail-closed 路徑，納入 BS9-024～029 的雙尺寸共 56／56；全檔 strict 維持 183 verified／2 needs-review／0 blocked，候選仍為 inventory、未 promote。 |

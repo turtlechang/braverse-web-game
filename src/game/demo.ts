@@ -17,6 +17,7 @@ import {
   createOfficialYellowStarterDeck,
   type BuiltInDeckChoice,
   DECK_CREATORS,
+  EXTRA_DECK_CREATORS,
   type DeckChoice,
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
@@ -1125,6 +1126,7 @@ export const createDemoSetupGame = (
           id: 'player-one' as const,
           name: '玩家',
           deck: DECK_CREATORS[builtInPlayerChoice]('player-one'),
+          extraDeck: EXTRA_DECK_CREATORS[builtInPlayerChoice]('player-one'),
         }
 
   return createGame(
@@ -1133,6 +1135,7 @@ export const createDemoSetupGame = (
       id: 'player-two',
       name: 'AI 對手',
       deck: DECK_CREATORS[aiChoice]('player-two'),
+      extraDeck: EXTRA_DECK_CREATORS[aiChoice]('player-two'),
     },
     firstPlayerId,
     shuffle,

@@ -5,6 +5,7 @@ import type { ActionIdentity, ActionScoreBreakdown } from './action-score'
 import type { OpponentResponseEstimate } from './opponent-response'
 import type { DefensiveReserveAssessment } from './defensive-reserve'
 import type { EndgameSurvivalAssessment } from './endgame-survival'
+import type { TournamentExperienceAdjustment } from './tournament-experience'
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
@@ -115,6 +116,11 @@ export interface Lv4SearchHooks {
     afterView: PlayerView,
     actionKind: string,
   ) => EndgameSurvivalAssessment
+  /** Lv.5 only: bounded prior learned from public BS9 tournament decisions. */
+  tournamentExperienceBonus?: (
+    view: PlayerView,
+    identity: ActionIdentity,
+  ) => TournamentExperienceAdjustment
   /**
    * 只有 Lv.5 使用「收益卡真實可動作」與同一 plan ID 的嚴格生命週期；
    * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
@@ -142,6 +148,7 @@ export interface Lv4SearchStep {
   opponentResponse?: OpponentResponseEstimate
   defensiveReserve?: DefensiveReserveAssessment
   endgameSurvival?: EndgameSurvivalAssessment
+  tournamentExperience?: TournamentExperienceAdjustment
 }
 
 interface SearchNode {
@@ -186,6 +193,7 @@ const sourceCardId = (
   if (!sourceInstanceId) return undefined
   return [
     ...view.hand,
+    ...(view.extraDeck ?? []),
     ...view.self.battleArea.map((cookie) => cookie.card),
     ...view.self.supportArea.map((support) => support.card),
     ...view.self.breakArea,
@@ -226,6 +234,7 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'defensive-reserve' ||
     contribution.id === 'endgame-survival' ||
     contribution.id === 'strategy-profile' ||
+    contribution.id === 'tournament-experience' ||
     contribution.id === 'intent-continuity' ||
     contribution.id === 'unsupported-effect' ||
     contribution.id === 'unknown-information',
@@ -458,6 +467,10 @@ export const searchLv4Commands = (
               }
             : undefined
           const identity = actionIdentityFromCommand(command)
+          const tournamentExperience = hooks.tournamentExperienceBonus?.(
+            node.view,
+            identity,
+          )
           const opponentResponse = hooks.opponentResponseMinimax?.(
             node.view,
             identity,
@@ -538,6 +551,13 @@ export const searchLv4Commands = (
                   amount: endgameSurvivalAdjustment,
                   detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
                 }]),
+            ...(tournamentExperience && tournamentExperience.amount !== 0
+              ? [{
+                  id: 'tournament-experience' as const,
+                  amount: tournamentExperience.amount,
+                  detail: tournamentExperience.detail,
+                }]
+              : []),
             ...(intentContinuity === 0
               ? []
               : [{
@@ -599,6 +619,7 @@ export const searchLv4Commands = (
             opponentResponse,
             defensiveReserve,
             endgameSurvival,
+            tournamentExperience,
           }
           const canExpand = afterIsSafeToExpand
           if (!canExpand) telemetry.hiddenInformationStops += 1

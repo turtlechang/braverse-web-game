@@ -115,15 +115,35 @@ export const hasActivatableFlipEffect = (
 ): boolean =>
   (flip.attachedHpBonus ?? 0) > 0 ||
   flip.effects.some(
-    (effect) =>
-      isEffectConditionMet(state, context, effect) &&
-      (effect.kind !== 'gain-hp' ||
+    (effect) => {
+      if (!isEffectConditionMet(state, context, effect)) return false
+      if (
+        effect.kind === 'transfer-hp' &&
+        effect.receiverTarget
+      ) {
+        // Explicit receiver transfers are an ordered donor/receiver pair.
+        // A single Cookie is not a legal pair, so do not open a FLIP prompt
+        // that can only fail with a partial-selection error.
+        const donors = getEffectTargetCandidates(state, context, effect.target)
+        const receivers = getEffectTargetCandidates(
+          state,
+          context,
+          effect.receiverTarget,
+        )
+        return donors.some((donor) =>
+          receivers.some(
+            (receiver) => receiver.card.instanceId !== donor.card.instanceId,
+          ),
+        )
+      }
+      return effect.kind !== 'gain-hp' ||
         isAttachedFlipGainHpTargetEligible(
           state,
           context,
           effect,
           attachedCookieInstanceId,
-        )),
+        )
+    },
   )
 
 const markCookieHpReducedThisTurn = (
@@ -5358,10 +5378,18 @@ export const resolveFaintEffect = (
           sourceInstanceId: faint.context.sourceInstanceId,
           sourceCardName: faint.sourceCardName,
           sourceKind: 'skill',
+          isFaintEffectContinuation: true,
           effects: faint.effect.thenEffects,
           effectIndex: 0,
           previousEffectTargetIds: [...new Set(targetIds)],
-          battleContinuation: 'finish',
+          // If the original battle is still open, keep its current stage.
+          // This Then may have been created before an attacker's
+          // choose-one/post-attack effect is resolved; calling finish here
+          // would silently skip that effect. The battle handler resumes
+          // naturally after the pending queue is cleared.
+          ...(nextState.pendingBattle
+            ? {}
+            : { battleContinuation: 'finish' as const }),
         },
       }
     }

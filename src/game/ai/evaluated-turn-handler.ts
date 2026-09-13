@@ -7,6 +7,7 @@ import { hasBlockingPending } from '../pending'
 import type { PlayerView } from '../player-view'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
+import type { ActionScoreBreakdown } from './strategy/action-score'
 import {
   applyChosenTurnCommand,
   commandActionTypes,
@@ -46,6 +47,7 @@ import {
   type EndgameSurvivalAssessment,
 } from './strategy/endgame-survival'
 import { scoreIntentContinuity } from './strategy/session'
+import { scoreTournamentExperience } from './strategy/tournament-experience'
 import {
   forecastOpponentEndgame,
   type OpponentEndgameForecast,
@@ -929,6 +931,14 @@ export const handleAiTwoPlyTurnState = (
       ? (before, after, actionKind) =>
           assessLv5EndgameSurvival(before, after, actionKind)
       : undefined,
+    tournamentExperienceBonus: decisionLevel === 5
+      ? (view, identity) =>
+          scoreTournamentExperience(
+            strategy.tournamentExperienceProfile,
+            view,
+            identity,
+          )
+      : undefined,
     deploymentTempoBonus: decisionLevel === 5
       ? (beforeState, _afterState, nextPlayerId, command, tacticalPlan) => {
           if (command.kind !== 'deploy-cookie' || !command.instanceId) return 0
@@ -1024,9 +1034,10 @@ export const handleAiTwoPlyTurnState = (
           ? [{ cardId: source.id, actionKind: commandIdentity.kind }]
           : []
       })
+    const identity = { kind, sourceInstanceId }
     const scored = scoreLv3ActionCandidate(rootContext, beforeView, {
       value: decision,
-      identity: { kind, sourceInstanceId },
+      identity,
       afterView,
       postActionBoardScore:
         evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId),
@@ -1041,32 +1052,53 @@ export const handleAiTwoPlyTurnState = (
           }
         : undefined,
     })
-    const identity = { kind, sourceInstanceId }
     const endgameSurvival = decisionLevel === 5
       ? assessLv5EndgameSurvival(beforeView, afterView, identity.kind)
       : undefined
     const endgameSurvivalAdjustment = endgameSurvival?.adjustment ?? 0
-    let relativeScore =
-      (evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId)) -
-      (evaluatePlayerView(beforeView) + lv4RiskBonus(beforeView, playerId)) +
-      selectLv4StrategicContribution(scored.breakdown) +
-      skillEffectBonus(state, decision.state, playerId) +
-      endgameSurvivalAdjustment
-    let telemetry = createLv4SearchTelemetry()
-    const actionScore = endgameSurvivalAdjustment === 0
+    const tournamentExperience = decisionLevel === 5
+      ? scoreTournamentExperience(
+          strategy.tournamentExperienceProfile,
+          beforeView,
+          identity,
+        )
+      : undefined
+    const extraContributions: ActionScoreBreakdown['contributions'][number][] = [
+      ...(endgameSurvivalAdjustment === 0
+        ? []
+        : [{
+            id: 'endgame-survival' as const,
+            amount: endgameSurvivalAdjustment,
+            detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
+          }]),
+      ...(tournamentExperience && tournamentExperience.amount !== 0
+        ? [{
+            id: 'tournament-experience' as const,
+            amount: tournamentExperience.amount,
+            detail: tournamentExperience.detail,
+          }]
+        : []),
+    ]
+    const extraTotal = extraContributions.reduce(
+      (total, contribution) => total + contribution.amount,
+      0,
+    )
+    const actionScore = extraTotal === 0
       ? scored.breakdown
       : {
           ...scored.breakdown,
-          total: scored.breakdown.total + endgameSurvivalAdjustment,
+          total: scored.breakdown.total + extraTotal,
           contributions: [
             ...scored.breakdown.contributions,
-            {
-              id: 'endgame-survival' as const,
-              amount: endgameSurvivalAdjustment,
-              detail: endgameSurvival?.detail ?? 'Break 6–9 終局生存保留修正。',
-            },
+            ...extraContributions,
           ],
         }
+    let relativeScore =
+      (evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId)) -
+      (evaluatePlayerView(beforeView) + lv4RiskBonus(beforeView, playerId)) +
+      selectLv4StrategicContribution(actionScore) +
+      skillEffectBonus(state, decision.state, playerId)
+    let telemetry = createLv4SearchTelemetry()
     const sourceCard = findVisibleSelfCard(beforeView, sourceInstanceId)
     const tacticalPlan = deriveTacticalPlan(
       rootContext,

@@ -1,5 +1,5 @@
 import { getCardPoolEntry } from './card-pool'
-import { createCustomDeckFromRoster } from './tournament-deck'
+import { createCustomDeckPlayerSetup } from './custom-deck'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -9,6 +9,7 @@ import { createSeededRandom, createSeededShuffle } from './helpers'
 import { simulateAiMatchDetailed } from './ai-detailed-sim'
 import type { CustomDeck } from './custom-deck'
 import type { AiDetailedResult } from './ai/types'
+import type { AiTournamentExperienceProfile } from './ai/strategy/tournament-experience'
 import type { GameState, PlayerId } from './types'
 
 export type TournamentColor = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
@@ -18,9 +19,13 @@ export interface SwissRosterDeck extends CustomDeck {
   seedChoice?: string
   generation?: number
   profile?: {
-    bs6Cards: number
-    bs5Cards: number
-    legacyCards: number
+    bs6Cards?: number
+    bs5Cards?: number
+    legacyCards?: number
+    bs9Cards?: number
+    uniqueCards?: number
+    flipCards?: number
+    [series: string]: number | undefined
   }
 }
 export interface SwissTournamentProgress {
@@ -61,6 +66,7 @@ export interface SwissStanding {
   buchholz: number
   stuckMatches: number
   entries?: SwissRosterDeck['entries']
+  extraDeckEntries?: SwissRosterDeck['extraDeckEntries']
 }
 
 export interface SwissColorSummary {
@@ -132,6 +138,8 @@ export interface SwissTournamentOptions {
     record: SwissMatchRecord
     result: AiDetailedResult | null
   }) => void | Promise<void>
+  /** Lv.5 only; null explicitly runs a no-experience baseline. */
+  experienceProfile?: AiTournamentExperienceProfile | null
 }
 
 const COLORS: TournamentColor[] = [
@@ -174,16 +182,8 @@ export const createCustomDeckMatch = (
 ): GameState => {
   const stateShuffle = createSeededShuffle(seed)
   const initialState = createGame(
-    {
-      id: 'player-one',
-      name: playerOneDeck.name,
-      deck: createCustomDeckFromRoster(playerOneDeck, 'player-one'),
-    },
-    {
-      id: 'player-two',
-      name: playerTwoDeck.name,
-      deck: createCustomDeckFromRoster(playerTwoDeck, 'player-two'),
-    },
+    createCustomDeckPlayerSetup(playerOneDeck, 'player-one'),
+    createCustomDeckPlayerSetup(playerTwoDeck, 'player-two'),
     firstPlayerId,
     stateShuffle,
   )
@@ -283,6 +283,9 @@ const toStanding = (
   buchholz: standing.buchholz,
   stuckMatches: standing.stuckMatches,
   ...(includeEntries ? { entries: standing.deck.entries } : {}),
+  ...(includeEntries && standing.deck.extraDeckEntries
+    ? { extraDeckEntries: standing.deck.extraDeckEntries }
+    : {}),
 })
 
 const buildColorSummaries = (
@@ -323,7 +326,7 @@ const buildColorSummaries = (
       .map(([cardNumber, stats]) => ({
         cardNumber,
         name: stats.name,
-        series: cardNumber.match(/^BS[1-6]/)?.[0] ?? 'other',
+        series: cardNumber.match(/^(?:BS\d+|ST\d+|P)-/)?.[0]?.slice(0, -1) ?? 'other',
         appearances: stats.appearances,
         copies: stats.copies,
         averageCopies: stats.copies / Math.max(1, stats.appearances),
@@ -396,6 +399,7 @@ export const runSwissTournament = async (
               'player-two': aiLevel,
             },
             seed: matchSeed,
+            experienceProfile: options.experienceProfile,
           },
         )
       } catch (caught) {

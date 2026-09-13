@@ -1,0 +1,26 @@
+{
+  "name": "BS9 黃｜Prophecy Control",
+  "entries": [
+    { "cardNumber": "BS9-027", "count": 4 },
+    { "cardNumber": "BS9-028", "count": 4 },
+    { "cardNumber": "BS9-031", "count": 4 },
+    { "cardNumber": "BS9-033", "count": 4 },
+    { "cardNumber": "BS9-034", "count": 4 },
+    { "cardNumber": "BS9-035", "count": 4 },
+    { "cardNumber": "BS9-036", "count": 4 },
+    { "cardNumber": "BS9-037", "count": 4 },
+    { "cardNumber": "BS9-038", "count": 4 },
+    { "cardNumber": "BS9-039", "count": 4 },
+    { "cardNumber": "BS9-040", "count": 4 },
+    { "cardNumber": "BS9-041", "count": 4 },
+    { "cardNumber": "BS9-042", "count": 4 },
+    { "cardNumber": "BS9-044", "count": 2 },
+    { "cardNumber": "BS9-045", "count": 2 },
+    { "cardNumber": "BS9-046", "count": 2 },
+    { "cardNumber": "BS9-047", "count": 2 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS9-030", "count": 4 }
+  ],
+  "format": "standard"
+}

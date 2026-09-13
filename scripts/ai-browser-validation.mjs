@@ -1453,7 +1453,9 @@ try {
     )
 
     // Select a hand card
-    const handCards = discardModal.locator('.modal-card-options > button')
+    const handCards = discardModal.locator(
+      '.hand-discard-options > .hand-discard-card-option > button',
+    )
     const handCount = await handCards.count()
     assert.ok(handCount >= 1, `對手棄牌視窗應有至少 1 張手牌可選，實際 ${handCount}`)
     await handCards.first().click()
