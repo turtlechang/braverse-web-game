@@ -1,7 +1,7 @@
-# BS9 A Game of Truth and Deceit 候選盤點
+# BS9 A Game of Truth and Deceit 卡牌盤點
 
 來源：[官方英文卡表](https://cookierunbraverse.com/data/json/cardList_en.json)。抓取時間：2026-09-09T16:56:35.085Z。
-由 cards:analyze:bs9-candidate 產生；原始文字保留於 data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json，inventory 不代表可 promote。
+由 cards:analyze:bs9-candidate 產生；資料狀態：已 promote 至正式卡池；原始文字保留於 data/cards/official-a-game-of-truth-and-deceit-bs9.en.json。此靜態盤點不取代逐卡卡圖與 Browser 驗收，也不會自行執行 promote。
 
 共 185 筆、118 個基礎卡號；67 筆變體。
 

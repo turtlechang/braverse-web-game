@@ -932,6 +932,55 @@
   line-height: 1.6;
 }
 
+.hand-discard-card-option {
+  min-width: 112px;
+  flex: 0 0 112px;
+  display: grid;
+  gap: 4px;
+}
+
+.hand-discard-card-option > button:first-child {
+  min-width: 112px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #a5adba;
+  border-radius: 5px;
+  background: #fff;
+  color: #132038;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hand-discard-card-option > button:first-child.is-selected {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.hand-discard-placement {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.hand-discard-placement button {
+  padding: 4px 2px;
+  border: 1px solid rgba(113, 233, 255, 0.5);
+  border-radius: 4px;
+  background: rgba(3, 20, 53, 0.75);
+  color: #d9f5ff;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.hand-discard-placement button.is-selected {
+  border-color: #fff17c;
+  background: rgba(80, 74, 18, 0.9);
+  color: #fff17c;
+}
+
 .card-detail-underlay {
   margin: 12px 0 16px;
   padding: 10px;

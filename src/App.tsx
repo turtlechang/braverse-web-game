@@ -724,6 +724,7 @@ function App() {
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        chooseOneModePlayable={pending.chooseOneModePlayable}
         effectConditionMet={pending.currentEffectConditionMet}
         effectSelectionError={pending.effectSelectionError}
         candidateLabels={Object.fromEntries(Object.values(match.game.players).flatMap((player) =>
@@ -846,6 +847,7 @@ function App() {
                   hpToTrashIds,
                   trashToDeckIds,
                   hpToHandIds,
+                  supportToTrashIds = [],
                 ) => {
                   match.dispatch(
                     {
@@ -859,6 +861,7 @@ function App() {
                       hpToTrashIds,
                       trashToDeckIds,
                       hpToHandIds,
+                      supportToTrashIds,
                     },
                     optionalCostAttackPrompt.resolution === 'ability'
                       ? '已支付技能 Then 費用。'

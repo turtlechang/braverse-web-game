@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { shouldShowAttackResponseChooser } from './battleResponseSelectors'
+import {
+  buildTrapEffectTargetSubmission,
+  shouldShowAttackResponseChooser,
+} from './battleResponseSelectors'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 
 const pendingTrap = {
@@ -45,5 +48,21 @@ describe('shouldShowAttackResponseChooser', () => {
         attackResponseCount: 0,
       }),
     ).toBe(false)
+  })
+})
+
+describe('buildTrapEffectTargetSubmission', () => {
+  it('does not invent an empty selection for a later card-selection Then', () => {
+    expect(buildTrapEffectTargetSubmission(
+      [{ effectIndex: 0 }],
+      [['attacker'], []],
+    )).toEqual([['attacker']])
+  })
+
+  it('keeps each rendered per-effect target selection aligned to its effect index', () => {
+    expect(buildTrapEffectTargetSubmission(
+      [{ effectIndex: 0 }, { effectIndex: 1 }],
+      [['first'], ['second']],
+    )).toEqual([['first'], ['second']])
   })
 })

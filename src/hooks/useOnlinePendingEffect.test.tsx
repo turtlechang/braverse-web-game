@@ -15,6 +15,166 @@ import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it('leaves the shared modal in charge while BS9-079 waits for an Extra Deck choice', async () => {
+    let game = createCardCheckDemoState('BS9-079', { normalAttack: 'payable' })
+    game = applyGameCommand(game, {
+      kind: 'resolve-attack-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(game.pendingExtraDeckAttack?.candidateIds).toHaveLength(1)
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+
+    function Harness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      expect(captured!.currentEffect).toMatchObject({
+        kind: 'activate-extra-deck-attack',
+      })
+      expect(captured!.pendingEffect).toBeNull()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
+  it('exposes a targeted FLIP continuation during an effect-damage sequence', async () => {
+    const base = createCardCheckDemoState('BS9-032')
+    const target = base.players['player-one'].battleArea[0]
+    const game: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'outer-effect-source',
+        targetInstanceId: target.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'damage',
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        effectDamageSequence: {
+          remainingTargetInstanceIds: [],
+          damage: 1,
+          continuation: 'ability-effect',
+          afterCurrentDamageResolved: true,
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'flip-source',
+        sourceCardName: 'Yoga Cookie',
+        sourceKind: 'flip',
+        effects: [{
+          kind: 'set-cookie-active',
+          target: { side: 'self', min: 0, max: 1, restedOnly: true },
+        }],
+        effectIndex: 0,
+      },
+    }
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function Harness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      expect(captured!.currentEffect).toMatchObject({ kind: 'set-cookie-active' })
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
+  it('BS9-017 confirms every Ancient recipient without manual target selection', async () => {
+    let game = createCardCheckDemoState('BS9-017')
+    const expectedIds = game.players['player-one'].battleArea.map(cookie => cookie.card.instanceId)
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function Harness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      expect(captured!.selectedTargetIds).toEqual(expectedIds)
+      await act(() => captured!.toggleTarget(expectedIds[0]))
+      expect(captured!.selectedTargetIds).toEqual(expectedIds)
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenLastCalledWith({ kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: expectedIds }, expect.any(String))
+      expect(game.damageReceivedModifiers).toHaveLength(2)
+      expect(game.pendingBattle).toBeFalsy()
+    } finally { await act(() => root.unmount()) }
+  })
+
+  it('BS9-043 keeps the opponent equipped Soul Jam in the paid Item target flow', async () => {
+    let game = createCardCheckDemoState('BS9-043')
+    const item = game.players['player-one'].hand.find((card) => card.id === 'BS9-043')!
+    const payment = game.players['player-one'].supportArea[0]!.card
+    const soulJam = game.players['player-two'].battleArea[0]!.equippedCards?.[0]
+    if (!soulJam) throw new Error('Missing fixture equipped Soul Jam')
+    const dispatch = vi.fn<DispatchGameCommand>((command) => {
+      if (Array.isArray(command)) throw new Error('Expected one authoritative command')
+      game = applyGameCommand(game, command)
+    })
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function Harness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      await act(() => captured!.beginPlayItem(item))
+      expect(captured!.abilityCostDraft?.card.instanceId).toBe(item.instanceId)
+      expect(captured!.candidateCards.map((card) => card.instanceId)).toEqual([soulJam.instanceId])
+      await act(() => captured!.toggleDraftPayment(payment.instanceId))
+      await act(() => captured!.toggleTarget(soulJam.instanceId))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenLastCalledWith(expect.objectContaining({
+        kind: 'begin-play-item',
+        instanceId: item.instanceId,
+        paymentIds: [payment.instanceId],
+        targetIds: [soulJam.instanceId],
+      }), expect.any(String))
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it('BS8-067 resolves the online attack choice through the authoritative battle queue', async () => {
     let game = createCardCheckDemoState('BS8-067')
     const owner = game.players['player-one']

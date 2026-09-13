@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import bs9Candidates from '../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json' with { type: 'json' }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(import.meta.url)
@@ -59,6 +60,10 @@ const recordBrowserErrors = (page) => {
     if (message.type() !== 'error') return
     const location = message.location()
     if (location.url?.endsWith('/favicon.ico')) return
+    if (
+      location.url?.includes('cookierunbraverse.com/data/en_storage/') &&
+      /ERR_NETWORK_ACCESS_DENIED|Failed to load resource/i.test(message.text())
+    ) return
     errors.push(`console: ${message.text()} (${location.url || 'unknown URL'})`)
   })
   return errors
@@ -77,28 +82,68 @@ const waitForTrace = async (page) => {
   return readTrace(page)
 }
 
-const runScenario = async (browser, viewport, negative) => {
+const candidateRecord = (cardNumber) => {
+  const record = bs9Candidates.cards.find((candidate) => candidate.cardNumber === cardNumber)
+  if (!record) throw new Error(`Missing BS9 candidate ${cardNumber}`)
+  return record
+}
+
+const assertPhysicalCardImage = async (locator, record, exactImageRequested) => {
+  await locator.waitFor({ state: 'visible' })
+  const exactImage = locator.locator(`img[src="${record.imageUrl}"]`).first()
+  await exactImage.waitFor({ state: 'visible' })
+  await exactImage.evaluate((node) => {
+    if (node instanceof HTMLImageElement && (!node.complete || node.naturalWidth === 0)) {
+      return new Promise((resolvePromise, rejectPromise) => {
+        node.addEventListener('load', () => resolvePromise(), { once: true })
+        node.addEventListener('error', () => rejectPromise(new Error('official image failed to load')), { once: true })
+      })
+    }
+    return undefined
+  })
+  const alts = await locator.locator('img').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('alt'))).catch(() => [])
+  assert.ok(alts.includes(record.name), `${record.cardNumber} must render its named official card face`)
+  const exactImageRendered = await exactImage.count() > 0
+  const exactImageLoaded = await exactImage.evaluate((node) => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0)
+  assert.equal(exactImageRendered, true, `${record.cardNumber} must render its exact official image URL`)
+  assert.equal(exactImageLoaded, true, `${record.cardNumber} official image must be loaded, not merely requested`)
+  return { exactImageRendered, exactImageLoaded, exactImageRequested }
+}
+
+const runScenario = async (browser, viewport, cardNumber, negative) => {
   const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7_000)
   const errors = recordBrowserErrors(page)
-  const route = negative ? 'bs9-card-negative:BS9-001@1' : 'bs9-card:BS9-001'
+  const record = candidateRecord(cardNumber)
+  let exactImageRequested = false
+  page.on('request', (request) => {
+    if (request.url() === record.imageUrl) exactImageRequested = true
+  })
+  const route = `${negative ? 'bs9-card-negative' : 'bs9-card'}:${cardNumber}`
   const result = {
+    card: cardNumber,
     viewport,
     negative,
     route,
+    expectedImageUrl: record.imageUrl,
     targetCount: 0,
     actions: [],
   }
 
   try {
     await page.goto(
-      `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=BS9-001`,
+      `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=${cardNumber.replace(/@\d+$/, '')}`,
       { waitUntil: 'domcontentloaded' },
     )
     await page.locator('.game-shell').waitFor({ state: 'visible' })
 
     const modal = page.locator('.flip-response-modal[role="alertdialog"]')
     await modal.waitFor({ state: 'visible' })
+    result.imageEvidence = await assertPhysicalCardImage(
+      modal.locator('.flip-reveal-card'),
+      record,
+      exactImageRequested,
+    )
     assert.match(
       await modal.locator('h2').innerText(),
       /Icicle Yeti Cookie FLIP/,
@@ -129,7 +174,7 @@ const runScenario = async (browser, viewport, negative) => {
     )
     const modalScreenshotPath = resolve(
       outputDirectory,
-      `bs9-001-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}-modal.png`,
+      `bs9-001-${cardNumber.replace('@', '-at-')}-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}-modal.png`,
     )
     await page.screenshot({ path: modalScreenshotPath, fullPage: true })
     result.modalScreenshot = modalScreenshotPath
@@ -171,8 +216,17 @@ const runScenario = async (browser, viewport, negative) => {
       1,
       'BS1-007 second attack damage must resolve after the BS9-001 FLIP decision',
     )
+    result.effectWitness = {
+      kind: 'optional-target-selection-and-attack-continuation',
+      selectedTarget: negative ? null : result.targetNames[1] ?? null,
+      attackTargetHpBefore: 4,
+      attackTargetHpAfter: 3,
+      attackDamageContinued: true,
+    }
     result.trace = trace
     result.observedCommandKinds = [...new Set(trace.map((entry) => entry.commandKind))]
+    result.finalPendingSurfaces = await page.locator('[role="alertdialog"]:visible').count()
+    assert.equal(result.finalPendingSurfaces, 0, 'Browser route must settle without a pending dialog')
     const flipEntry = trace.find((entry) => entry.commandKind === 'resolve-flip')
     assert.ok(flipEntry, 'public contract trace must include resolve-flip')
     if (negative) {
@@ -189,10 +243,13 @@ const runScenario = async (browser, viewport, negative) => {
       )
     }
     result.errors = errors
+    result.exactImageRequested = exactImageRequested
+    result.exactImageRendered = result.imageEvidence?.exactImageRendered ?? false
+    result.exactImageLoaded = result.imageEvidence?.exactImageLoaded ?? false
     assert.equal(errors.length, 0, `browser errors: ${errors.join('; ')}`)
     const screenshotPath = resolve(
       outputDirectory,
-      `bs9-001-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}.png`,
+      `bs9-001-${cardNumber.replace('@', '-at-')}-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}.png`,
     )
     await page.screenshot({ path: screenshotPath, fullPage: true })
     result.screenshot = screenshotPath
@@ -204,7 +261,7 @@ const runScenario = async (browser, viewport, negative) => {
     await page.screenshot({
       path: resolve(
         outputDirectory,
-        `bs9-001-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}.png`,
+        `bs9-001-${cardNumber.replace('@', '-at-')}-${negative ? 'negative' : 'positive'}-${viewport.width}x${viewport.height}.png`,
       ),
       fullPage: true,
     }).catch(() => {})
@@ -226,14 +283,16 @@ try {
     { width: 1907, height: 863 },
     { width: 1164, height: 777 },
   ]) {
-    for (const negative of [false, true]) {
-      const result = await runScenario(browser, viewport, negative)
-      results.push(result)
-      console.log(
-        `${result.status} ${result.route} ${viewport.width}x${viewport.height}`,
-        `targets=${result.targetCount}`,
-        result.error ?? '',
-      )
+    for (const cardNumber of ['BS9-001', 'BS9-001@1', 'BS9-001@2']) {
+      for (const negative of [false, true]) {
+        const result = await runScenario(browser, viewport, cardNumber, negative)
+        results.push(result)
+        console.log(
+          `${result.status} ${result.route} ${viewport.width}x${viewport.height}`,
+          `targets=${result.targetCount}`,
+          result.error ?? '',
+        )
+      }
     }
   }
 } finally {

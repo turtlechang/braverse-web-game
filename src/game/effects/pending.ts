@@ -10,6 +10,7 @@ export const resolveOpponentHandDiscard = (
   state: GameState,
   playerId: PlayerId,
   selectedCardIds: string[],
+  placementByCardId?: Record<string, 'top' | 'bottom'>,
 ): GameState => {
   const pending = state.pendingOpponentHandDiscard
   if (!pending) {
@@ -40,6 +41,21 @@ export const resolveOpponentHandDiscard = (
   if (uniqueIds.length !== selectedCardIds.length) {
     throw new GameRuleError('不能重複選擇同一張手牌。')
   }
+  const selectedSet = new Set(uniqueIds)
+
+  if (pending.destination === 'deck-top-or-bottom') {
+    const placement = placementByCardId ?? {}
+    const placementKeys = Object.keys(placement)
+    if (
+      placementKeys.length !== uniqueIds.length ||
+      placementKeys.some((id) => !selectedSet.has(id)) ||
+      uniqueIds.some((id) => placement[id] !== 'top' && placement[id] !== 'bottom')
+    ) {
+      throw new GameRuleError('每張選定手牌都必須指定放到牌庫頂或牌庫底。')
+    }
+  } else if (placementByCardId && Object.keys(placementByCardId).length > 0) {
+    throw new GameRuleError('目前的棄牌效果不接受牌庫頂／底分流。')
+  }
 
   for (const instanceId of uniqueIds) {
     const candidate = player.hand.find((card) => card.instanceId === instanceId)
@@ -49,9 +65,14 @@ export const resolveOpponentHandDiscard = (
     if (pending.energyColor && candidate.energyColor !== pending.energyColor) {
       throw new GameRuleError(`只能選擇 ${pending.energyColor} 能量顏色的手牌。`)
     }
+    if (pending.cookieOnly && candidate.type !== 'cookie') {
+      throw new GameRuleError('只能選擇 Cookie 手牌。')
+    }
+    if (pending.hasFlip && !candidate.flip) {
+      throw new GameRuleError('只能選擇具有 FLIP 的手牌。')
+    }
   }
 
-  const selectedSet = new Set(uniqueIds)
   // uniqueIds 的順序就是玩家的選擇順序，放回牌庫頂時必須沿用。
   const selectedCards = uniqueIds.map(
     (id) => player.hand.find((card) => card.instanceId === id)!,
@@ -72,6 +93,16 @@ export const resolveOpponentHandDiscard = (
             hand: remainingHand,
             deck: [...player.deck, ...selectedCards],
           }
+        : pending.destination === 'deck-top-or-bottom'
+          ? {
+              ...player,
+              hand: remainingHand,
+              deck: [
+                ...selectedCards.filter((card) => placementByCardId?.[card.instanceId] === 'top'),
+                ...player.deck,
+                ...selectedCards.filter((card) => placementByCardId?.[card.instanceId] === 'bottom'),
+              ],
+            }
         : {
             ...player,
             hand: remainingHand,
@@ -87,10 +118,38 @@ export const resolveOpponentHandDiscard = (
     pendingOpponentHandDiscard: null,
   })
 
-  if (!pending.drawEqualDiscarded || selectedCards.length === 0) return resolved
+  // BS9-106～108：這三張 Chess Piece Cookie 只有在「自己的 Shadow Milk」
+  // 效果把它們從手牌送進棄牌區時觸發。先把實際被選中的實體與其效果排入
+  // 延遲佇列，由 commands 在目前效果鏈可安全切換時建立標準
+  // pendingAbilityEffect，避免把對手代棄或非 Shadow Milk 的棄牌誤算進來。
+  const shadowMilkTriggers =
+    pending.sourcePlayerId === playerId &&
+    /shadow\s+milk\s+cookie/i.test(pending.sourceCardName)
+      ? selectedCards.flatMap((card) =>
+          (card.skill?.effects ?? [])
+            .filter((effect) => effect.kind === 'shadow-milk-discard-trigger')
+            .map((effect) => ({
+              playerId,
+              sourceInstanceId: card.instanceId,
+              sourceCardName: card.name,
+              effects: effect.effects,
+            })),
+        )
+      : []
+  const withShadowMilkTriggers = shadowMilkTriggers.length > 0
+    ? {
+        ...resolved,
+        pendingShadowMilkDiscardTriggers: [
+          ...(resolved.pendingShadowMilkDiscardTriggers ?? []),
+          ...shadowMilkTriggers,
+        ],
+      }
+    : resolved
+
+  if (!pending.drawEqualDiscarded || selectedCards.length === 0) return withShadowMilkTriggers
 
   return executeCardEffect(
-    resolved,
+    withShadowMilkTriggers,
     {
       sourcePlayerId: pending.sourcePlayerId,
       sourceInstanceId: pending.sourceInstanceId,

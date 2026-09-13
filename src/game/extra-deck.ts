@@ -25,6 +25,20 @@ export interface ExtraDeckValidationResult {
 }
 
 /**
+ * Return the currently eligible EXTRA cards for a named attack-effect reveal.
+ * The caller snapshots the returned instanceIds when opening the decision;
+ * this helper deliberately does not choose a card.
+ */
+export const getExtraDeckAttackCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+  cardName: string,
+): ExtraDeckCard[] =>
+  (state.players[playerId].extraDeck ?? []).filter(
+    (card) => card.name === cardName && (card.attackEffects?.length ?? 0) > 0,
+  )
+
+/**
  * 將 EXTRA Deck 的私有卡片實體化為可在戰鬥區運作的 Cookie。
  *
  * 實體化後仍保留 `extraDeckOrigin`，因此離場後不能被一般的手牌／休息區／

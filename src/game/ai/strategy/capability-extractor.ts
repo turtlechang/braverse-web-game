@@ -281,6 +281,8 @@ const extractEffect = (
     case 'disable-flip':
     case 'disable-block':
     case 'disable-traps':
+    case 'prevent-opponent-damage':
+    case 'prevent-opponent-hp-gain':
     case 'prevent-opponent-battle-movement':
     case 'prevent-effect-damage':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'control', {

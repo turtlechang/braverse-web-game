@@ -64,6 +64,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
       state.pendingInspectDeck ||
       state.pendingRevealTopDeck ||
       state.pendingOptionalCostAttack ||
+      state.pendingExtraDeckAttack ||
       state.pendingDrawUpTo ||
       state.pendingStageTrigger ||
       // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
@@ -209,6 +210,35 @@ export const handleAiPendingDecision = (
       action: 'idle',
       description: `${state.players[playerId].name}結算${pendingAbility.sourceCardName ?? '卡牌'}的效果。`,
     }, 'effect-target', pendingAbility.sourceInstanceId, effect)
+  }
+
+  if (pendingDecision?.kind === 'extra-deck-attack') {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇 EXTRA 攻擊效果。`,
+      }
+    }
+    const selectedId = pendingDecision.candidateIds
+      .slice()
+      .sort((left, right) => left.localeCompare(right))[0]
+    return withPendingReason({
+      state: applyGameCommand(state, selectedId
+        ? {
+            kind: 'resolve-extra-deck-attack',
+            playerId,
+            extraDeckInstanceId: selectedId,
+          }
+        : {
+            kind: 'resolve-extra-deck-attack',
+            playerId,
+          }),
+      action: 'resolve-extra-deck-attack',
+      description: selectedId
+        ? `${state.players[playerId].name}選擇 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`
+        : `${state.players[playerId].name}略過 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`,
+    }, 'extra-deck-attack', pendingDecision.sourceInstanceId)
   }
 
   if (pendingDecision?.kind === 'effect-order') {
@@ -473,8 +503,10 @@ export const handleAiPendingDecision = (
     }
     const hand = state.players[playerId].hand.filter(
       (card) =>
-        pendingDecision.energyColor === undefined ||
-        card.energyColor === pendingDecision.energyColor,
+        (pendingDecision.energyColor === undefined ||
+          card.energyColor === pendingDecision.energyColor) &&
+        (!pendingDecision.cookieOnly || card.type === 'cookie') &&
+        (!pendingDecision.hasFlip || Boolean(card.flip)),
     )
     const discardedCards = universal.enabled
       ? universal.orderCostIds(
@@ -483,11 +515,15 @@ export const handleAiPendingDecision = (
         ).map((instanceId) => hand.find((card) => card.instanceId === instanceId)!)
       : hand.slice(0, pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count)
     const discardIds = discardedCards.map((card) => card.instanceId)
+    const placementByCardId = pendingDecision.destination === 'deck-top-or-bottom'
+      ? Object.fromEntries(discardIds.map((id) => [id, 'top' as const]))
+      : undefined
     return withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-opponent-hand-discard',
         playerId,
         cardIds: discardIds,
+        ...(placementByCardId ? { placementByCardId } : {}),
       }),
       action: 'idle',
       revealedCards: discardedCards,
@@ -616,11 +652,29 @@ export const handleAiPendingDecision = (
           )!)
       : supports
     const paymentIds = selectEnergyPayment(effectiveEnergyCost, orderedSupports)
+    const supportToTrashAmount = pendingDecision.cost.supportToTrash ?? 0
+    const supportToTrashCandidateIds = state.players[playerId].supportArea
+      .filter(
+        (support) =>
+          !paymentIds?.includes(support.card.instanceId) &&
+          (pendingDecision.cost.supportToTrashKeyword === undefined ||
+            support.card.keywords?.includes(
+              pendingDecision.cost.supportToTrashKeyword,
+            )),
+      )
+      .map((support) => support.card.instanceId)
+    const supportToTrashIds = universal.enabled
+      ? universal.orderCostIds(
+          supportToTrashCandidateIds,
+          supportToTrashAmount,
+        )
+      : supportToTrashCandidateIds.slice(0, supportToTrashAmount)
     const supportToHandAmount = pendingDecision.cost.supportToHand ?? 0
     const supportToHandCandidateIds = state.players[playerId].supportArea
       .filter(
         (support) =>
           !paymentIds?.includes(support.card.instanceId) &&
+          !supportToTrashIds.includes(support.card.instanceId) &&
           isSupportToHandCostCandidate(pendingDecision.cost, support),
       )
       .map((support) => support.card.instanceId)
@@ -630,6 +684,7 @@ export const handleAiPendingDecision = (
     const canPay =
       hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
       Boolean(paymentIds) &&
+      supportToTrashIds.length >= supportToTrashAmount &&
       supportToHandIds.length >= supportToHandAmount
     const hpToTrashCandidateIds = pendingDecision.cost.hpToTrash
       ? getHpToTrashCostCandidates(
@@ -730,6 +785,7 @@ export const handleAiPendingDecision = (
           targetIds,
           paymentIds: paymentIds ?? [],
           supportToHandIds,
+          supportToTrashIds,
           hpToTrashIds,
           trashToDeckIds,
           hpToHandIds,

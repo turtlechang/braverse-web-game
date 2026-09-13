@@ -7087,4 +7087,62 @@ describe('BS8 physical card-check fixtures', () => {
     expect(placed.players['player-one'].supportArea.filter((support) => support.rested)).toHaveLength(2)
     expect(getAttackEnergyCostForState(placed, darkCacao.card.instanceId)).toEqual({ purple: 3 })
   })
+
+  it.each(['BS9-086', 'BS9-086@1'])(
+    'uses the printed Once Per Turn boundary for the BS9-086 negative fixture (%s)',
+    (cardNumber) => {
+      const positive = createCardCheckDemoState(cardNumber)
+      const negative = createCardNegativeDemoState(cardNumber)
+      const positiveEntry = positive.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS9-086',
+      )
+      const negativeEntry = negative.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS9-086',
+      )
+
+      expect(positiveEntry).toBeDefined()
+      expect(negativeEntry).toBeDefined()
+      if (!positiveEntry || !negativeEntry) return
+
+      expect(positiveEntry.card.skill).toMatchObject({
+        trigger: 'activate',
+        oncePerTurn: true,
+      })
+      expect(canActivateCookieSkill(
+        positive,
+        'player-one',
+        positiveEntry.card.instanceId,
+        'activate',
+      )).toBe(true)
+      expect(negative.skillUsesThisTurn).toContain(
+        negativeEntry.battleEntryId ?? negativeEntry.card.instanceId,
+      )
+      expect(canActivateCookieSkill(
+        negative,
+        'player-one',
+        negativeEntry.card.instanceId,
+        'activate',
+      )).toBe(false)
+
+      const before = structuredClone(negative)
+      expect(() => applyGameCommand(negative, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: negativeEntry.card.instanceId,
+        trigger: 'activate',
+        paymentIds: [],
+      })).toThrow()
+      expect(negative).toEqual(before)
+    },
+  )
+
+  it.each(['BS9-072', 'BS9-073', 'BS9-074', 'BS9-103', 'BS9-105', 'BS9-109'])('keeps the no-Then blocked attack fixture before declaration (%s)', (cardNumber) => {
+      const state = createCardNegativeDemoState(cardNumber, { normalAttack: 'blocked' })
+      const player = state.players['player-one']
+      const entry = player.battleArea.find((battleEntry) => battleEntry.card.id === cardNumber)
+
+      expect(entry).toMatchObject({ card: { id: cardNumber }, rested: true })
+      expect(state.pendingBattle).toBeNull()
+      expect(player.supportArea.every(({ rested }) => rested)).toBe(true)
+    })
 })

@@ -1562,6 +1562,12 @@ const pendingSelectionForState = (
   if (state.pendingReplacement?.tasks[0]?.playerId === playerId) {
     return { kind: 'replacement' }
   }
+  if (state.pendingExtraDeckAttack) {
+    return {
+      kind: 'extra-deck-attack',
+      sourceInstanceId: state.pendingExtraDeckAttack.sourceInstanceId,
+    }
+  }
   if (state.pendingBattle) {
     if (state.pendingBattle.stage === 'flip') {
       return {

@@ -1,4 +1,10 @@
-import type { AbilityCost, CardEffect, CardKeyword, EnergyCost } from '../game'
+import type {
+  AbilityCost,
+  CardEffect,
+  CardKeyword,
+  EnergyCost,
+  EffectTargetSelector,
+} from '../game'
 
 const opponent = (max = 1) => ({ side: 'opponent' as const, min: 0, max })
 const self = (max = 1) => ({ side: 'self' as const, min: 0, max })
@@ -470,7 +476,12 @@ export const P_EXACT_ATTACK_EFFECTS: Partial<Record<string, CardEffect[]>> = {
 }
 
 export const P_EXACT_FLIP_EFFECTS: Partial<
-  Record<string, { effects: CardEffect[]; cost?: AbilityCost; attachedHpBonus?: number }>
+  Record<string, {
+    effects: CardEffect[]
+    cost?: AbilityCost
+    attachedHpBonus?: number
+    attachedHpAlternateTarget?: EffectTargetSelector
+  }>
 > = {
   'P-040': { cost: { discardHand: 1 }, effects: [], attachedHpBonus: 1 },
   'P-047': { effects: [] },

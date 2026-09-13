@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
-import bs9Candidates from '../../data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json'
+import bs9Candidates from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import {
   createBs9CandidatePreviewDemoState,
   createCardCheckDemoState,

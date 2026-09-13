@@ -713,18 +713,25 @@ export const handleAiPendingBattle = (
       )
       const trapSelfTargetEffect = trapCard.trap.effects.find(
         (effect) =>
-          'target' in effect && effect.target?.side === 'self',
+          ('target' in effect && effect.target?.side === 'self') ||
+          (effect.kind === 'transfer-hp' && effect.receiverTarget?.side === 'self'),
       )
+      const trapSelfTargetSelector =
+        trapSelfTargetEffect?.kind === 'transfer-hp' && trapSelfTargetEffect.receiverTarget
+          ? trapSelfTargetEffect.receiverTarget
+          : trapSelfTargetEffect && 'target' in trapSelfTargetEffect
+            ? trapSelfTargetEffect.target
+            : undefined
       const selfTargetIds = universal.enabled
-        ? trapSelfTargetEffect && 'target' in trapSelfTargetEffect && trapSelfTargetEffect.target
+        ? trapSelfTargetEffect && trapSelfTargetSelector
           ? (() => {
               const candidateIds = selfTargetCandidates.map((target) => target.card.instanceId)
               const selected = universal.selectEffectTargetIds(
                 trapSelfTargetEffect,
                 candidateIds,
-                Math.min(trapSelfTargetEffect.target.max, candidateIds.length),
+                Math.min(trapSelfTargetSelector.max, candidateIds.length),
               )
-              return selected.length >= trapSelfTargetEffect.target.min ? selected : []
+              return selected.length >= trapSelfTargetSelector.min ? selected : []
             })()
           : []
         : selfTargetCandidates.length > 0

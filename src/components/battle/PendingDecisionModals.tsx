@@ -9,6 +9,7 @@ import {
   PlaceHandHpModal,
   ReorderHpModal,
   EffectOrderModal,
+  ExtraDeckAttackModal,
 } from '../modals/GameModals'
 import type {
   BattleUiMatchLike,
@@ -88,6 +89,24 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingDrawUpTo
       : null
 
+  const pendingExtraDeckAttack =
+    match.game.pendingExtraDeckAttack &&
+    match.game.pendingExtraDeckAttack.playerId === match.viewerPlayerId &&
+    !pending.pendingEffect &&
+    !pendingEffectOrder
+      ? match.game.pendingExtraDeckAttack
+      : null
+  const extraDeckAttackCandidateIds =
+    pendingExtraDeckAttack &&
+    decisionDescriptor?.decisionKind === 'extra-deck-attack'
+      ? new Set(decisionDescriptor.steps[0]?.candidateIds ?? [])
+      : new Set(pendingExtraDeckAttack?.candidateIds ?? [])
+  const extraDeckAttackCandidates = pendingExtraDeckAttack
+    ? (match.game.players[match.viewerPlayerId].extraDeck ?? []).filter((card) =>
+        extraDeckAttackCandidateIds.has(card.instanceId),
+      )
+    : []
+
   const pendingStageTrigger = match.game.pendingStageTrigger
   const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
   const mustReplaceEmptyBattleArea =
@@ -97,6 +116,38 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
 
   return (
     <>
+      {pendingExtraDeckAttack && (
+        <ExtraDeckAttackModal
+          sourceCardName={pendingExtraDeckAttack.sourceCardName}
+          cardName={pendingExtraDeckAttack.cardName}
+          candidates={extraDeckAttackCandidates}
+          optional={pendingExtraDeckAttack.optional}
+          onSelect={(extraDeckInstanceId) => {
+            const selectedCard = extraDeckAttackCandidates.find(
+              (card) => card.instanceId === extraDeckInstanceId,
+            )
+            match.dispatch(
+              {
+                kind: 'resolve-extra-deck-attack',
+                playerId: match.viewerPlayerId,
+                extraDeckInstanceId,
+              },
+              `已選擇「${selectedCard?.name ?? pendingExtraDeckAttack.cardName}」的攻擊效果。`,
+            )
+          }}
+          onSkip={() => {
+            if (!pendingExtraDeckAttack.optional) return
+            match.dispatch(
+              {
+                kind: 'resolve-extra-deck-attack',
+                playerId: match.viewerPlayerId,
+              },
+              '已略過額外牌組攻擊效果。',
+            )
+          }}
+        />
+      )}
+
       {match.game.pendingAbilityEffect?.pendingReorderHp &&
         match.game.pendingAbilityEffect.playerId === match.viewerPlayerId &&
         !pending.pendingEffect && (() => {
@@ -238,8 +289,10 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               )
             : match.game.players[match.viewerPlayerId].hand.filter(
                 (card) =>
-                  handDiscard.energyColor === undefined ||
-                  card.energyColor === handDiscard.energyColor,
+                  (handDiscard.energyColor === undefined ||
+                    card.energyColor === handDiscard.energyColor) &&
+                  (!handDiscard.cookieOnly || card.type === 'cookie') &&
+                  (!handDiscard.hasFlip || Boolean(card.flip)),
               )
 
           return (
@@ -251,25 +304,44 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               requiredCount={handDiscard.count}
               atLeast={handDiscard.atLeast}
               optional={handDiscard.optional}
+              destination={handDiscard.destination}
+              placementByCardId={match.selectedOpponentDiscardPlacementById ?? {}}
+              onSetPlacement={(instanceId, placement) =>
+                match.setSelectedOpponentDiscardPlacementById?.((current) => ({
+                  ...current,
+                  [instanceId]: placement,
+                }))
+              }
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
-              onToggleCard={(instanceId) =>
-                match.setSelectedOpponentDiscardIds((current) =>
-                  current.includes(instanceId)
-                    ? current.filter((id) => id !== instanceId)
-                    : (handDiscard.atLeast || current.length < handDiscard.count)
-                      ? [...current, instanceId]
-                      : current,
-                )
-              }
+              onToggleCard={(instanceId) => {
+                match.setSelectedOpponentDiscardIds((current) => {
+                  if (current.includes(instanceId)) {
+                    match.setSelectedOpponentDiscardPlacementById?.((placements) => {
+                      const next = { ...placements }
+                      delete next[instanceId]
+                      return next
+                    })
+                    return current.filter((id) => id !== instanceId)
+                  }
+                  return handDiscard.atLeast || current.length < handDiscard.count
+                    ? [...current, instanceId]
+                    : current
+                })
+              }}
               onConfirm={() => {
                 const ids = match.selectedOpponentDiscardIds
                 match.setSelectedOpponentDiscardIds([])
+                const placementByCardId = match.selectedOpponentDiscardPlacementById ?? {}
+                match.setSelectedOpponentDiscardPlacementById?.({})
                 match.dispatch(
                   {
                     kind: 'resolve-opponent-hand-discard',
                     playerId: match.viewerPlayerId,
                     cardIds: ids,
+                    ...(handDiscard.destination === 'deck-top-or-bottom'
+                      ? { placementByCardId }
+                      : {}),
                   },
                   `已棄置 ${ids.length} 張手牌。`,
                 )

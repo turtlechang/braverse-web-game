@@ -452,6 +452,31 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.contract.status).toBe('verified')
   })
 
+  it('splits a combined source-and-support trash cost for BS9-059', () => {
+    const source = makeRecord({
+      cardNumber: 'BS9-059',
+      baseCardNumber: 'BS9-059',
+      attackText: '<{G}{G}> Cozy Barrier {da} 2\r\nThen, <place this Cookie and 2 cards from your support area into your trash.> Draw up to 2 cards from your deck.',
+    })
+    const runtime = makeCard({
+      id: 'BS9-059',
+      attackEnergyCost: { green: 2 },
+      attackEffects: [{
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToTrash: true, supportToTrash: 2 },
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+        effectText: 'Place this Cookie and 2 cards from your support area into your trash.',
+      }],
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.costs.map((cost) => cost.kind)).toEqual([
+      'self-to-trash',
+      'support-to-trash',
+    ])
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.contract.status).toBe('verified')
+  })
+
   it('classifies a self-to-deck-bottom cost when the official text omits "your"', () => {
     const source = makeRecord({
       skill: {
@@ -605,6 +630,67 @@ describe('card behavior contract shadow ledger', () => {
     ])
   })
 
+  it('classifies alternate HP ownership and placement wording used by BS9', () => {
+    const source = makeRecord({
+      cardNumber: 'BS9-014',
+      baseCardNumber: 'BS9-014',
+      skill: {
+        name: 'Candy Apple Cookie',
+        text: "【On Play】 <Place 2 cards from the top of your other Cookie's HP into your trash.> Select up to 1 of your opponent's Cookies. Add 1 card from the top of that Cookie's HP face-up to the bottom of this Cookie's HP.",
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { hpToTrash: { amount: 2, excludeSource: true } },
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'transfer-hp',
+          amount: 1,
+          direction: 'to-source',
+          hpPlacement: 'bottom',
+          faceUp: true,
+          target: { side: 'opponent', min: 0, max: 1 },
+          receiverTarget: { side: 'self', min: 1, max: 1 },
+        }],
+      },
+    }))
+    expect(audit.contract.costs).toContainEqual(expect.objectContaining({ kind: 'hp-to-trash', amount: 2 }))
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+    expect(audit.errors).not.toContain('cost evidence missing')
+  })
+
+  it('classifies Add movement clauses as executable effects', () => {
+    const source = makeRecord({
+      cardNumber: 'BS9-027',
+      baseCardNumber: 'BS9-027',
+      skill: {
+        name: 'Dough Vampirism',
+        text: '【Activate】 【Once Per Turn】 Add up to 1 card from your hand to the top of this Cookie\'s HP. Then, this Cookie receives 1 damage.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: true,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [
+          { kind: 'hand-to-hp', optional: true, target: { side: 'self', min: 0, max: 1, sourceOnly: true } },
+          { kind: 'damage', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true } },
+        ],
+      },
+    }))
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
   it('treats raw single-letter energy exports as payment evidence', () => {
     const source = makeRecord({
       skill: {
@@ -617,5 +703,80 @@ describe('card behavior contract shadow ledger', () => {
       expect.objectContaining({ kind: 'energy', energy: { red: 1 } }),
     )
     expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+  })
+
+  it('requires a concrete runtime effect for card-effect HP-gain prevention', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'HP lock',
+        text: '【Activate】 During this turn, your opponent cannot add HP to Cookies via card effects.',
+      },
+    })
+    const missing = analyzeOfficialCardBehavior(source, makeCard())
+    expect(missing.errors).toContain('opponent HP-gain prevention has no runtime effect')
+
+    const covered = analyzeOfficialCardBehavior(source, makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [{ kind: 'prevent-opponent-hp-gain' }],
+      },
+    }))
+    expect(covered.errors).not.toContain('opponent HP-gain prevention has no runtime effect')
+    expect(covered.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('requires every printed yellow FLIP Cookie recovery filter', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Recovery',
+        text: 'When this Cookie faints, return up to 2 {Y} Cookies that have FLIP from your trash to your hand.',
+      },
+    })
+    const runtimeSkill = (hasFlip: boolean) => ({
+      trigger: 'passive' as const,
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {},
+      text: source.skill.text ?? '',
+      faint: true,
+      effects: [{
+        kind: 'trash-to-hand' as const,
+        max: 2,
+        energyColor: 'yellow' as const,
+        cookieOnly: true,
+        hasFlip,
+      }],
+    })
+    expect(analyzeOfficialCardBehavior(source, makeCard({ skill: runtimeSkill(false) })).errors)
+      .toContain('yellow FLIP Cookie trash recovery lacks exact runtime filters')
+    expect(analyzeOfficialCardBehavior(source, makeCard({ skill: runtimeSkill(true) })).errors)
+      .not.toContain('yellow FLIP Cookie trash recovery lacks exact runtime filters')
+  })
+
+  it('binds an opponent equipped Soul Jam selector to the equipped-card runtime domain', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Heart Stained With Lies',
+        text: "Select up to 1 of your opponent's Equipped [Soul Jam]. Place that card on top of the Equipped Cookie's HP.",
+      },
+    })
+    const covered = makeCard({
+      effects: [{
+        kind: 'equipped-to-hp', side: 'opponent', max: 1, keyword: 'soul-jam', faceUp: true,
+      }],
+    })
+    const missingKeyword = makeCard({
+      effects: [{ kind: 'equipped-to-hp', side: 'opponent', max: 1, faceUp: true }],
+    })
+
+    expect(analyzeOfficialCardBehavior(source, covered).checks.targetCovered).toBe(true)
+    expect(analyzeOfficialCardBehavior(source, missingKeyword).errors)
+      .toContain('target evidence unresolved')
   })
 })

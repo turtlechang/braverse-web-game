@@ -83,6 +83,19 @@ describe('deriveInteractionLocked', () => {
       },
     },
     {
+      name: 'pendingExtraDeckAttack',
+      field: 'pendingExtraDeckAttack',
+      value: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'x',
+        sourceCardName: 'Card',
+        cardName: 'Card',
+        candidateIds: ['extra-1'],
+        optional: true,
+      },
+    },
+    {
       name: 'pendingDrawUpTo',
       field: 'pendingDrawUpTo',
       value: {

@@ -44,6 +44,44 @@ describe('useOnlineMatchController', () => {
     await act(() => root.unmount())
   })
 
+  it('does not advance damage while a targeted FLIP continuation is pending', async () => {
+    vi.useFakeTimers()
+    const base = skipTrap(declareAttack(createBattleState()), 'player-one')
+    const game = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one' as const,
+        sourcePlayerId: 'player-one' as const,
+        sourceInstanceId: 'flip-source',
+        sourceCardName: 'Yoga Cookie',
+        sourceKind: 'flip' as const,
+        effects: [{
+          kind: 'set-cookie-active' as const,
+          target: { side: 'self' as const, min: 0, max: 1, restedOnly: true },
+        }],
+        effectIndex: 0,
+      },
+    }
+    const sendCommand = vi.fn<(command: GameCommand) => void>()
+
+    function TestHarness() {
+      useOnlineMatchController({
+        game,
+        viewerPlayerId: 'player-one',
+        sendCommand,
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.advanceTimersByTime(500))
+
+    expect(sendCommand).not.toHaveBeenCalled()
+    await act(() => root.unmount())
+  })
+
   it('exposes legal online BS2-079 payment and trash-to-deck selections', async () => {
     const trap: GameCard = {
       id: 'BS2-079',

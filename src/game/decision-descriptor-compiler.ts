@@ -535,10 +535,16 @@ export const compilePendingDecisionDescriptor = (
   decision: PendingDecision | null = getPendingDecision(state),
   options: DecisionDescriptorCompileOptions = {},
 ): CompiledDecisionDescriptor | null => {
-  const descriptor = describePendingDecision(decision, options.candidateIds ?? [])
-  if (!descriptor || !decision) return null
-
+  if (!decision) return null
   const viewerPlayerId = options.viewerPlayerId ?? decision.playerId
+  const candidateIds = options.candidateIds ?? (
+    decision.kind === 'extra-deck-attack' && viewerPlayerId === decision.playerId
+      ? decision.candidateIds
+      : []
+  )
+  const descriptor = describePendingDecision(decision, candidateIds)
+  if (!descriptor) return null
+
   const blockers: string[] = []
 
   if (decision.kind === 'optional-cost-attack') {
@@ -622,8 +628,10 @@ export const compilePendingDecisionDescriptor = (
       step.candidateIds = cardIds(
         state.players[decision.playerId].hand.filter(
           (card) =>
-            decision.energyColor === undefined ||
-            card.energyColor === decision.energyColor,
+            (decision.energyColor === undefined ||
+              card.energyColor === decision.energyColor) &&
+            (!decision.cookieOnly || card.type === 'cookie') &&
+            (!decision.hasFlip || Boolean(card.flip)),
         ),
       )
       step.candidateSource = 'private-hand'

@@ -28,7 +28,8 @@ import {
   getTrapCostOptions,
   getTrapTargetCandidates,
   getEffectTargetCandidatesForEffect,
-  getEffectSelectionLimits,
+  getEffectSelectionCandidates,
+  getEffectTargetSelectionLimits,
   getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
@@ -40,6 +41,7 @@ import {
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   isEffectConditionMet,
+  requiresEffectCardSelection,
   requiresTargetSelection,
   validateEnergyPayment,
 } from '../game'
@@ -124,6 +126,8 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedOpponentDiscardPlacementById, setSelectedOpponentDiscardPlacementById] =
+    useState<Record<string, 'top' | 'bottom'>>({})
   const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
     useState<string[]>([])
   const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
@@ -207,6 +211,9 @@ export function useOnlineMatchController(params: {
   useEffect(() => {
     const battle = game.pendingBattle
     if (battle?.stage === 'damage') {
+      // A targeted FLIP continuation owns the decision before the surrounding
+      // damage sequence may advance (for example BS9-032 after its draw).
+      if (game.pendingAbilityEffect) return
       const damagePlayerId = battle.damagePlayerId ?? battle.defenderPlayerId
       if (damagePlayerId !== viewerPlayerId) return
 
@@ -619,18 +626,28 @@ export function useOnlineMatchController(params: {
     selectedTrap?.trap && trapEffectTargetContext
       ? selectedTrap.trap.effects.flatMap((effect, effectIndex) => {
           if (
-            !requiresTargetSelection(effect) ||
+            (!requiresTargetSelection(effect) && !requiresEffectCardSelection(effect)) ||
             !isEffectConditionMet(game, trapEffectTargetContext, effect)
           ) {
             return []
           }
-          const candidates = getEffectTargetCandidatesForEffect(
-            game,
-            trapEffectTargetContext,
-            effect,
-          )
+          const candidates = requiresTargetSelection(effect)
+            ? getEffectTargetCandidatesForEffect(
+                game,
+                trapEffectTargetContext,
+                effect,
+              )
+            : getEffectSelectionCandidates(
+                game,
+                trapEffectTargetContext,
+                effect,
+              ).map((card) => ({
+                card,
+                hpCards: [],
+                rested: false,
+              }))
           if (candidates.length === 0) return []
-          const limits = getEffectSelectionLimits(effect)
+          const limits = getEffectTargetSelectionLimits(effect)
           const ordered = effect.kind === 'damage-all' && effect.sequential === true
           return [
             {
@@ -1106,6 +1123,8 @@ export function useOnlineMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    selectedOpponentDiscardPlacementById,
+    setSelectedOpponentDiscardPlacementById,
     // Opponent rest support (BS5-065 Petrification)
     selectedOpponentRestSupportIds,
     setSelectedOpponentRestSupportIds,

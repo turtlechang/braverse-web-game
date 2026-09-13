@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import bs9Candidates from '../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json' with { type: 'json' }
 
 /**
  * BS9-030 的實卡 A/B Browser 驗證：
@@ -12,7 +13,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
  * - 負向：只保留 2 張合格手牌，確認 EXTRA 入口由規則層停用。
  *
  * 兩條路徑都使用 localhost 的 card-check fixture；卡牌仍保留官方資料與
- * imageUrl，網路受限時 CardFace 會顯示同名 fallback，不把測試降成只查文字。
+ * imageUrl。Browser gate 只接受 exact official image 已實際載入，不能以
+ * fallback 或「只曾發出 request」取代實體卡圖證據。
  */
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(import.meta.url)
@@ -40,6 +42,11 @@ const outputDirectory = resolve(root, 'output/playwright')
 mkdirSync(outputDirectory, { recursive: true })
 
 const wait = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms))
+const recordBy = (cardNumber) => {
+  const record = bs9Candidates.cards.find((candidate) => candidate.cardNumber === cardNumber)
+  if (!record) throw new Error(`Missing BS9 candidate ${cardNumber}`)
+  return record
+}
 
 const recordBrowserErrors = (page) => {
   const errors = []
@@ -67,12 +74,69 @@ const assertTraceKind = (trace, kind, message) => {
   assert.ok(trace.some((entry) => entry.commandKind === kind), message)
 }
 
+const assertPhysicalCardImage = async (locator, record, imageRequested) => {
+  await locator.waitFor({ state: 'visible' })
+  const exactImage = locator.locator(`img[src="${record.imageUrl}"]`).first()
+  await exactImage.waitFor({ state: 'visible' })
+  await exactImage.evaluate((node) => {
+    if (!(node instanceof HTMLImageElement)) {
+      throw new Error('official card image locator did not resolve to an img')
+    }
+    if (node.complete && node.naturalWidth > 0) return undefined
+    return new Promise((resolvePromise, rejectPromise) => {
+      const timeout = window.setTimeout(() => {
+        cleanup()
+        rejectPromise(new Error('official image load timed out'))
+      }, 10_000)
+      const cleanup = () => {
+        window.clearTimeout(timeout)
+        node.removeEventListener('load', onLoad)
+        node.removeEventListener('error', onError)
+      }
+      const onLoad = () => {
+        cleanup()
+        if (node.naturalWidth > 0) resolvePromise()
+        else rejectPromise(new Error('official image loaded with zero naturalWidth'))
+      }
+      const onError = () => {
+        cleanup()
+        rejectPromise(new Error('official image failed to load'))
+      }
+      node.addEventListener('load', onLoad, { once: true })
+      node.addEventListener('error', onError, { once: true })
+    })
+  })
+  const alts = await locator.locator('img').evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute('alt')),
+  )
+  assert.ok(alts.includes(record.name), `${record.cardNumber} must render its named official card face`)
+  const exactImageRendered = (await exactImage.count()) > 0
+  const exactImageLoaded = await exactImage.evaluate(
+    (node) => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0,
+  )
+  const exactImageRequested =
+    typeof imageRequested === 'function' ? imageRequested() : imageRequested
+  assert.equal(exactImageRendered, true, `${record.cardNumber} must render its exact official image URL`)
+  assert.equal(exactImageLoaded, true, `${record.cardNumber} official image must be loaded, not merely requested`)
+  return { exactImageRendered, exactImageLoaded, exactImageRequested }
+}
+
+const captureFinalState = async (page, result) => {
+  result.trace = await readTrace(page).catch(() => [])
+  result.traceCommandKinds = [...new Set(result.trace.map((entry) => entry.commandKind).filter(Boolean))]
+  result.finalPendingSurfaces = await page
+    .locator('[role="alertdialog"]:visible')
+    .count()
+    .catch(() => null)
+  return result.trace
+}
+
 const waitForGame = async (page) => {
   await page.locator('.game-shell').waitFor({ state: 'visible' })
   await page.waitForTimeout(250)
 }
 
-const openExtraEntry = async (page, ready) => {
+const openExtraEntry = async (page, ready, record, imageRequested) => {
   const extraDock = page.getByLabel('玩家 EXTRA Deck 1 張')
   await extraDock.waitFor({ state: 'visible' })
   assert.equal(
@@ -88,12 +152,8 @@ const openExtraEntry = async (page, ready) => {
   assert.match(await entry.innerText(), /Shadow Milk Cookie/)
   const image = entry.locator('.extra-deck-card-image')
   assert.equal(await image.count(), 1)
-  assert.ok(
-    (await image.locator('img').count()) === 1 ||
-      (await image.locator('.card-fallback').count()) === 1,
-    'BS9-030 EXTRA entry should render official art or its named visual fallback',
-  )
-  return { dialog, entry, extraDock }
+  const imageEvidence = await assertPhysicalCardImage(image, record, imageRequested)
+  return { dialog, entry, extraDock, imageEvidence }
 }
 
 const payEntryCost = async (page, entry) => {
@@ -181,19 +241,30 @@ const resolveDetachedFlip = async (page, panel) => {
   assert.equal(await page.locator('[role="alertdialog"]:visible').count(), 0)
 }
 
-const runPositive = async (browser, viewport) => {
+const runPositive = async (browser, viewport, cardNumber) => {
   const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
+  const requestedImages = new Set()
+  page.on('request', (request) => {
+    if (request.resourceType() === 'image') requestedImages.add(request.url())
+  })
   const errors = recordBrowserErrors(page)
-  const route = 'card:BS9-030'
-  const result = { route, viewport, status: 'FAIL', actions: [] }
+  const route = `card:${cardNumber}`
+  const result = { route, cardNumber, viewport, status: 'FAIL', actions: [] }
   try {
     await page.goto(
       `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=BS9-030`,
       { waitUntil: 'domcontentloaded' },
     )
     await waitForGame(page)
-    const { dialog, entry } = await openExtraEntry(page, true)
+    const record = recordBy(cardNumber)
+    const { dialog, entry, imageEvidence } = await openExtraEntry(
+      page,
+      true,
+      record,
+      () => requestedImages.has(record.imageUrl),
+    )
+    result.imageEvidence = imageEvidence
     result.actions.push('inspect-extra-entry')
     await payEntryCost(page, entry)
     result.actions.push('pay-extra-entry-cost')
@@ -215,12 +286,17 @@ const runPositive = async (browser, viewport) => {
     assertTraceKind(trace, 'resolve-draw-up-to', '正向路徑應留下 FLIP 抽牌決策')
     assert.equal(await page.getByLabel('玩家 EXTRA Deck 0 張').count(), 1)
     assert.equal(await page.locator('[role="alertdialog"]:visible').count(), 0)
+    await captureFinalState(page, result)
+    assert.equal(result.finalPendingSurfaces, 0, 'Browser route must settle without a pending dialog')
+    result.expectedImageUrl = record.imageUrl
+    result.exactImageRequested = result.imageEvidence.exactImageRequested
+    result.exactImageRendered = result.imageEvidence.exactImageRendered
+    result.exactImageLoaded = result.imageEvidence.exactImageLoaded
     assert.deepEqual(errors, [], `BS9-030 positive browser errors: ${errors.join('; ')}`)
     result.status = 'PASS'
-    result.trace = trace
     result.screenshot = resolve(
       outputDirectory,
-      `bs9-030-positive-${viewport.width}x${viewport.height}.png`,
+      `bs9-030-${cardNumber}-positive-${viewport.width}x${viewport.height}.png`,
     )
     await page.screenshot({ path: result.screenshot, fullPage: true })
     // Keep the dialog reference live until after the screenshot so a failed
@@ -229,10 +305,10 @@ const runPositive = async (browser, viewport) => {
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error)
     result.body = (await page.locator('body').innerText().catch(() => '')).slice(0, 7000)
-    result.trace = await readTrace(page).catch(() => [])
+    await captureFinalState(page, result)
     result.screenshot = resolve(
       outputDirectory,
-      `bs9-030-positive-${viewport.width}x${viewport.height}-failed.png`,
+      `bs9-030-${cardNumber}-positive-${viewport.width}x${viewport.height}-failed.png`,
     )
     await page.screenshot({ path: result.screenshot, fullPage: true }).catch(() => {})
   } finally {
@@ -241,18 +317,29 @@ const runPositive = async (browser, viewport) => {
   return result
 }
 
-const runNegative = async (browser, viewport) => {
+const runNegative = async (browser, viewport, cardNumber) => {
   const page = await browser.newPage({ viewport })
   page.setDefaultTimeout(7000)
+  const requestedImages = new Set()
+  page.on('request', (request) => {
+    if (request.resourceType() === 'image') requestedImages.add(request.url())
+  })
   const errors = recordBrowserErrors(page)
-  const route = 'card-negative:BS9-030'
-  const result = { route, viewport, status: 'FAIL', actions: [] }
+  const route = `card-negative:${cardNumber}`
+  const result = { route, cardNumber, viewport, status: 'FAIL', actions: [] }
   try {
-    await page.goto(`${baseUrl}/?test-state=${encodeURIComponent(route)}`, {
+    await page.goto(`${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=BS9-030`, {
       waitUntil: 'domcontentloaded',
     })
     await waitForGame(page)
-    const { entry } = await openExtraEntry(page, false)
+    const record = recordBy(cardNumber)
+    const { entry, imageEvidence } = await openExtraEntry(
+      page,
+      false,
+      record,
+      () => requestedImages.has(record.imageUrl),
+    )
+    result.imageEvidence = imageEvidence
     result.actions.push('inspect-extra-entry')
     assert.equal(
       await entry.getByRole('button', { name: '從 EXTRA 登場' }).count(),
@@ -267,21 +354,26 @@ const runNegative = async (browser, viewport) => {
       false,
       '負向路徑不應送出 EXTRA 登場命令',
     )
+    await captureFinalState(page, result)
+    assert.equal(result.finalPendingSurfaces, 0, 'Browser route must settle without a pending dialog')
+    result.expectedImageUrl = record.imageUrl
+    result.exactImageRequested = result.imageEvidence.exactImageRequested
+    result.exactImageRendered = result.imageEvidence.exactImageRendered
+    result.exactImageLoaded = result.imageEvidence.exactImageLoaded
     assert.deepEqual(errors, [], `BS9-030 negative browser errors: ${errors.join('; ')}`)
     result.status = 'PASS'
-    result.trace = trace
     result.screenshot = resolve(
       outputDirectory,
-      `bs9-030-negative-${viewport.width}x${viewport.height}.png`,
+      `bs9-030-${cardNumber}-negative-${viewport.width}x${viewport.height}.png`,
     )
     await page.screenshot({ path: result.screenshot, fullPage: true })
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error)
     result.body = (await page.locator('body').innerText().catch(() => '')).slice(0, 7000)
-    result.trace = await readTrace(page).catch(() => [])
+    await captureFinalState(page, result)
     result.screenshot = resolve(
       outputDirectory,
-      `bs9-030-negative-${viewport.width}x${viewport.height}-failed.png`,
+      `bs9-030-${cardNumber}-negative-${viewport.width}x${viewport.height}-failed.png`,
     )
     await page.screenshot({ path: result.screenshot, fullPage: true }).catch(() => {})
   } finally {
@@ -311,6 +403,10 @@ const waitForPreview = async () => {
 }
 
 const results = []
+const cardNumbers = bs9Candidates.cards
+  .filter((record) => record.baseCardNumber === 'BS9-030')
+  .map((record) => record.cardNumber)
+if (cardNumbers.length === 0) throw new Error('Missing BS9-030 candidate records')
 let browser
 try {
   await waitForPreview()
@@ -322,8 +418,10 @@ try {
     { width: 1907, height: 863 },
     { width: 1164, height: 777 },
   ]) {
-    results.push(await runPositive(browser, viewport))
-    results.push(await runNegative(browser, viewport))
+    for (const cardNumber of cardNumbers) {
+      results.push(await runPositive(browser, viewport, cardNumber))
+      results.push(await runNegative(browser, viewport, cardNumber))
+    }
   }
 } finally {
   await browser?.close()
@@ -336,6 +434,9 @@ const report = {
   scope: 'BS9-030 real EXTRA entry, On Play, attack Then detached FLIP, and readiness A/B.',
   total: results.length,
   passed: results.filter((result) => result.status === 'PASS').length,
+  imageLoadedLanes: results.filter((result) => result.status === 'PASS' && result.exactImageLoaded).length,
+  traceLanes: results.filter((result) => result.status === 'PASS' && result.traceCommandKinds?.length > 0).length,
+  settledLanes: results.filter((result) => result.status === 'PASS' && result.finalPendingSurfaces === 0).length,
   failed: results.filter((result) => result.status !== 'PASS'),
   results,
 }

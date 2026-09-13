@@ -3,8 +3,9 @@ import {
   convertOfficialCardToGameCard,
 } from '../cards/official-card-adapter'
 import { buildCardContractActionTrace } from '../cards/contracts/action-trace'
+import { analyzeOfficialCardBehavior } from '../cards/contracts/ledger'
 import type { OfficialCardRecord } from '../cards/types'
-import bs9Candidates from '../../data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json'
+import bs9Candidates from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import {
   createCardCheckDemoState,
   createCardNegativeDemoState,
@@ -36,7 +37,7 @@ const battle = (state: GameState, cardId: string, playerId: 'player-one' | 'play
 }
 
 describe('BS9-024～029 yellow candidate batch', () => {
-  it('converts every reviewed card and keeps Mala Sauce fail-closed', () => {
+  it('converts every reviewed card and adopts the BS9-025 recipient ruling', () => {
     expect(candidate('BS9-024').skill).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
@@ -81,7 +82,38 @@ describe('BS9-024～029 yellow candidate batch', () => {
         receiverTarget: { side: 'self', min: 0, max: 1 },
       }],
     })
-    expect(candidate('BS9-025').flip).toBeUndefined()
+    for (const cardNumber of ['BS9-025', 'BS9-025@1'] as const) {
+      const source = records.find((card) => card.cardNumber === cardNumber)!
+      const converted = convertOfficialCardToGameCard(source, 'review')
+      expect(converted.status, cardNumber).toBe('converted')
+      if (converted.status !== 'converted') continue
+      expect(converted.source.cardNumber).toBe(cardNumber)
+      expect(converted.source.imageUrl).toMatch(/^https:\/\/cookierunbraverse\.com\/data\/en_storage\/.+\.webp$/)
+      expect(converted.gameCard.flip, cardNumber).toMatchObject({
+        cost: { energy: {}, discardHand: 1 },
+        effects: [],
+        attachedHpBonus: 1,
+        attachedHpAlternateTarget: {
+          side: 'self', min: 0, max: 1, excludeSource: true,
+        },
+      })
+
+      const audit = analyzeOfficialCardBehavior(source)
+      expect(audit.contract.costs.some(
+        (cost) => cost.kind === 'discard-hand' && cost.amount === 1,
+      ), cardNumber).toBe(true)
+      expect(audit.contract.targets.some((target) =>
+        target.unresolved === undefined &&
+        target.selector.side === 'self' &&
+        target.selector.min === 0 &&
+        target.selector.max === 1 &&
+        target.selector.excludeSource === true,
+      ), cardNumber).toBe(true)
+      expect(audit.checks.costCovered, cardNumber).toBe(true)
+      expect(audit.checks.targetCovered, cardNumber).toBe(true)
+      expect(audit.errors, cardNumber).toEqual([])
+      expect(audit.contract.status, cardNumber).toBe('verified')
+    }
 
     for (const cardNumber of [
       'BS9-024@1', 'BS9-025@1', 'BS9-026@1', 'BS9-026@2',
@@ -91,6 +123,68 @@ describe('BS9-024～029 yellow candidate batch', () => {
         records.find((card) => card.cardNumber === cardNumber)!,
         'variant',
       ).status, cardNumber).toBe('converted')
+    }
+  })
+
+  it('resolves BS9-025 as attached HP with an own-turn alternate recipient', () => {
+    for (const cardNumber of ['BS9-025', 'BS9-025@1'] as const) {
+      const initial = createCardCheckDemoState(cardNumber)
+      const host = battle(initial, 'BS8-030')
+      const alternate = battle(initial, 'BS8-014')
+      const payment = initial.players['player-one'].hand[0]!
+
+      const defaultResolved = resolveFlip(initial, 'player-one', {
+        activate: true,
+        discardHandIds: [payment.instanceId],
+      })
+      expect(battle(defaultResolved, 'BS8-030').hpCards).toHaveLength(2)
+      expect(battle(defaultResolved, 'BS8-014').hpCards).toHaveLength(4)
+      expect(defaultResolved.players['player-one'].discardPile).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ instanceId: payment.instanceId }),
+          expect.objectContaining({ id: 'BS9-025' }),
+        ]),
+      )
+
+      const redirected = resolveFlip(createCardCheckDemoState(cardNumber), 'player-one', {
+        activate: true,
+        discardHandIds: [payment.instanceId],
+        targetIds: [alternate.card.instanceId],
+      })
+      expect(battle(redirected, 'BS8-030').hpCards).toHaveLength(1)
+      expect(battle(redirected, 'BS8-014').hpCards).toHaveLength(5)
+      expect(redirected.players['player-one'].discardPile).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'BS9-025' })]),
+      )
+
+      const outsideOwnTurn = {
+        ...createCardCheckDemoState(cardNumber),
+        activePlayerId: 'player-two' as const,
+      }
+      const outsideResolved = resolveFlip(outsideOwnTurn, 'player-one', {
+        activate: true,
+        discardHandIds: [payment.instanceId],
+      })
+      expect(battle(outsideResolved, 'BS8-030').hpCards).toHaveLength(2)
+      expect(battle(outsideResolved, 'BS8-014').hpCards).toHaveLength(4)
+      expect(() => resolveFlip(outsideOwnTurn, 'player-one', {
+        activate: true,
+        discardHandIds: [payment.instanceId],
+        targetIds: [alternate.card.instanceId],
+      })).toThrow('只能在自己的回合選擇另一隻餅乾')
+
+      expect(() => resolveFlip(initial, 'player-one', {
+        activate: true,
+        discardHandIds: [payment.instanceId],
+        targetIds: [host.card.instanceId],
+      })).toThrow('不是合法的 HP 目標')
+
+      const negative = createCardNegativeDemoState(cardNumber)
+      expect(negative.players['player-one'].hand).toHaveLength(0)
+      expect(() => resolveFlip(negative, 'player-one', { activate: true })).toThrow(
+        'Must discard exactly 1 cards for FLIP activation.',
+      )
+      expect(negative.pendingBattle?.stage).toBe('flip')
     }
   })
 
@@ -396,11 +490,19 @@ describe('BS9-024～029 yellow candidate batch', () => {
     )
   })
 
-  it('keeps the unresolved Mala Sauce route visible and candidate-only', () => {
+  it('keeps the adopted Mala Sauce FLIP route visible with its real targets', () => {
     const state = createCardCheckDemoState('BS9-025')
-    expect(state.players['player-one'].hand).toContainEqual(
-      expect.objectContaining({ id: 'BS9-025', name: 'Mala Sauce Cookie' }),
-    )
+    expect(state.pendingBattle).toMatchObject({ stage: 'flip' })
+    expect(state.pendingBattle?.revealedHpCard).toMatchObject({
+      id: 'BS9-025',
+      name: 'Mala Sauce Cookie',
+    })
+    expect(state.pendingBattle?.revealedHpCard?.flip).toMatchObject({
+      attachedHpBonus: 1,
+      attachedHpAlternateTarget: { side: 'self', min: 0, max: 1, excludeSource: true },
+    })
+    const variantState = createCardCheckDemoState('BS9-025@1')
+    expect(variantState.pendingBattle?.revealedHpCard).toMatchObject({ id: 'BS9-025' })
     expect(parseTestStateConfig('?test-state=bs9-card:BS9-029', 'localhost')).toEqual({
       kind: 'bs9-candidate', cardNumber: 'BS9-029', negative: false,
     })

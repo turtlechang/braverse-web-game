@@ -47,6 +47,7 @@ import {
   asChooseOneEffect,
   expandChooseOne,
   expandChooseOneSequence,
+  isChooseOneModePlayable,
 } from './effects/choose-one'
 import { advancePhase, resumeActivePhaseAfterCookieDiscard } from './turn'
 import {
@@ -58,7 +59,12 @@ import {
   isPendingEndPhaseSkill,
   skipEndPhaseSkill,
 } from './skills'
-import { activateStage, playItem, playStage } from './card-abilities'
+import {
+  activateStage,
+  getStageActivationSource,
+  playItem,
+  playStage,
+} from './card-abilities'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
@@ -115,7 +121,10 @@ export interface OpponentHandDiscardDecision {
   atLeast?: boolean
   optional?: boolean
   energyColor?: import('./types').EnergyColor
+  cookieOnly?: boolean
+  hasFlip?: boolean
   drawEqualDiscarded?: boolean
+  destination?: 'trash' | 'deck-top' | 'deck-bottom' | 'deck-top-or-bottom'
 }
 
 /** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
@@ -211,6 +220,17 @@ export interface EffectOrderDecision {
   items: PendingEffectOrderItem[]
 }
 
+export interface ExtraDeckAttackDecision {
+  kind: 'extra-deck-attack'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  cardName: string
+  candidateIds: string[]
+  optional: boolean
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
@@ -222,6 +242,7 @@ export type PendingDecision =
   | StageTriggerDecision
   | AfterDamageEffectDecision
   | EffectOrderDecision
+  | ExtraDeckAttackDecision
   | PlaceHandHpDecision
   | ReorderHpDecision
 
@@ -260,6 +281,8 @@ export interface ResolveOpponentHandDiscardCommand {
   kind: 'resolve-opponent-hand-discard'
   playerId: PlayerId
   cardIds: string[]
+  /** BS9-085：每張選定手牌各自放牌庫頂或牌庫底。 */
+  placementByCardId?: Record<string, 'top' | 'bottom'>
 }
 
 export interface ResolveOpponentRestSupportCommand {
@@ -281,6 +304,13 @@ export interface ResolveRevealTopDeckCommand {
   targetIds?: string[]
 }
 
+/** BS9-079：選擇要 reveal/activate 的同名 EXTRA 卡；省略 ID 代表略過。 */
+export interface ResolveExtraDeckAttackCommand {
+  kind: 'resolve-extra-deck-attack'
+  playerId: PlayerId
+  extraDeckInstanceId?: string
+}
+
 export interface ResolveOptionalCostAttackCommand {
   kind: 'resolve-optional-cost-attack'
   playerId: PlayerId
@@ -288,6 +318,8 @@ export interface ResolveOptionalCostAttackCommand {
   discardCardIds?: string[]
   targetIds?: string[]
   paymentIds?: string[]
+  /** 將支援區卡牌送入棄牌區作為攻擊後／技能 Then 代價。 */
+  supportToTrashIds?: string[]
   /** 支援區回手代價（例如 BS6-044／BS6-061）。 */
   supportToHandIds?: string[]
   /** 支付 HP 代價時選擇的戰鬥區餅乾（例如 BS6-003）。 */
@@ -343,6 +375,7 @@ export type PendingDecisionCommand =
   | ResolveOpponentRestSupportCommand
   | ResolveInspectDeckCommand
   | ResolveRevealTopDeckCommand
+  | ResolveExtraDeckAttackCommand
   | ResolveOptionalCostAttackCommand
   | ResolveDrawUpToCommand
   | ResolveStageTriggerCommand
@@ -642,6 +675,12 @@ export interface ResolveFlipCommand {
   discardHandIds?: string[]
   chooseOneModeIndex?: number
   targetIds?: string[]
+  /** Card-selection ids for a non-targeted FLIP effect (for example
+   * support-to-hand). Kept separate from battle target ids so a composite
+   * FLIP can submit both the first and its Then selection. */
+  effectTargetIds?: string[]
+  /** Selection ids for the first effect's nested Then clause. */
+  thenTargetIds?: string[]
 }
 
 export interface ResolveAttackEffectCommand {
@@ -804,6 +843,20 @@ export const getPendingDecision = (
     return null
   }
 
+  if (state.pendingExtraDeckAttack) {
+    const pending = state.pendingExtraDeckAttack
+    return {
+      kind: 'extra-deck-attack',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      cardName: pending.cardName,
+      candidateIds: [...pending.candidateIds],
+      optional: pending.optional,
+    }
+  }
+
   // cycle-hp（BS4-030）第二階段：第一階段結算後停在這裡等玩家放回手牌。
   const pendingAbility = state.pendingAbilityEffect
   const pendingReorderHp = pendingAbility?.pendingReorderHp
@@ -895,7 +948,10 @@ export const getPendingDecision = (
       ...(pending.atLeast ? { atLeast: true } : {}),
       ...(pending.optional ? { optional: true } : {}),
       ...(pending.energyColor ? { energyColor: pending.energyColor } : {}),
+      ...(pending.cookieOnly ? { cookieOnly: true } : {}),
+      ...(pending.hasFlip ? { hasFlip: true } : {}),
       ...(pending.drawEqualDiscarded ? { drawEqualDiscarded: true } : {}),
+      ...(pending.destination ? { destination: pending.destination } : {}),
     }
   }
 
@@ -1024,6 +1080,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-opponent-rest-support': 'opponent-rest-support',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-reveal-top-deck': 'reveal-top-deck',
+  'resolve-extra-deck-attack': 'extra-deck-attack',
   'resolve-optional-cost-attack': 'optional-cost-attack',
   'resolve-draw-up-to': 'draw-up-to',
   'resolve-stage-trigger': 'stage-trigger',
@@ -1052,6 +1109,49 @@ const continueBattleAfterPending = (
   if (continuation === 'finish') return finishBattle(state)
   if (continuation === 'after-trap') return advanceBattleAfterTrap(state)
   return advanceAttackEffect(state, state.pendingBattle)
+}
+
+/**
+ * 把 BS9-106～108 的「由 Shadow Milk 將手牌送入棄牌區」觸發，接回標準
+ * pendingAbilityEffect 佇列。觸發不能直接同步執行：Chess Piece Strawberry
+ * 會開啟 draw-up-to，而 Wizard／GingerBrave 會再開目標選擇；保留佇列才能
+ * 讓本地、AI 與線上序列化共用同一條效果通道。
+ */
+const beginNextShadowMilkDiscardTrigger = (
+  state: GameState,
+  battleContinuation?: BattleContinuation,
+): GameState => {
+  if (
+    state.pendingAbilityEffect ||
+    state.pendingDrawUpTo ||
+    state.pendingOpponentHandDiscard ||
+    state.pendingRevealTopDeck ||
+    state.pendingRefresh ||
+    state.pendingOnPlay
+  ) {
+    return state
+  }
+  const queue = state.pendingShadowMilkDiscardTriggers ?? []
+  const next = queue[0]
+  if (!next) {
+    return state.pendingShadowMilkDiscardTriggers
+      ? { ...state, pendingShadowMilkDiscardTriggers: undefined }
+      : state
+  }
+  return {
+    ...state,
+    pendingShadowMilkDiscardTriggers: queue.length > 1 ? queue.slice(1) : undefined,
+    pendingAbilityEffect: {
+      playerId: next.playerId,
+      sourcePlayerId: next.playerId,
+      sourceInstanceId: next.sourceInstanceId,
+      sourceCardName: next.sourceCardName,
+      sourceKind: 'skill',
+      effects: next.effects,
+      effectIndex: 0,
+      ...(battleContinuation ? { battleContinuation } : {}),
+    },
+  }
 }
 
 export const appendCommandLogEntry = (
@@ -1171,11 +1271,24 @@ const applyPendingDecisionCommand = (
       const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
       const activePhaseCookieInstanceId =
         state.pendingOpponentHandDiscard?.activePhaseCookieInstanceId
-      const resolved = resolveOpponentHandDiscard(
+      let resolved = resolveOpponentHandDiscard(
         state,
         command.playerId,
         command.cardIds,
+        command.placementByCardId,
       )
+      const triggerContinuation =
+        state.pendingBattle?.stage === 'attack-effect'
+          ? ('attack-effect' as const)
+          : undefined
+      const startedTrigger = beginNextShadowMilkDiscardTrigger(
+        resolved,
+        triggerContinuation,
+      )
+      if (startedTrigger.pendingAbilityEffect && !resolved.pendingAbilityEffect) {
+        return startedTrigger
+      }
+      resolved = startedTrigger
       if (activePhaseCookieInstanceId) {
         return resumeActivePhaseAfterCookieDiscard(
           resolved,
@@ -1217,7 +1330,7 @@ const applyPendingDecisionCommand = (
       const nextState: GameState = { ...state, pendingRevealTopDeck: null }
       const continueBattle = (candidate: GameState): GameState =>
         continueBattleAfterPending(candidate, pending.battleContinuation)
-      if (!pending.matched || pending.nestedEffects.length === 0) {
+      if (pending.nestedEffects.length === 0) {
         return continueBattle(nextState)
       }
       // 巢狀效果可能在傷害結算後就失去合法目標——BS3-076 的追加傷害鎖定
@@ -1291,13 +1404,71 @@ const applyPendingDecisionCommand = (
       }
       return continueBattle(resolved)
     }
+    case 'resolve-extra-deck-attack': {
+      const pending = state.pendingExtraDeckAttack
+      if (!pending || pending.playerId !== command.playerId) {
+        throw new GameRuleError('目前沒有待處理的 EXTRA 攻擊效果選擇。')
+      }
+      const selectedId = command.extraDeckInstanceId
+      if (selectedId === undefined) {
+        if (!pending.optional) {
+          throw new GameRuleError('此 EXTRA 攻擊效果必須選擇一張卡。')
+        }
+        return continueBattleAfterPending(
+          { ...state, pendingExtraDeckAttack: null },
+          pending.battleContinuation,
+        )
+      }
+
+      if (!pending.candidateIds.includes(selectedId)) {
+        throw new GameRuleError('選擇的 EXTRA 卡不在此次效果的合法候選中。')
+      }
+      const player = state.players[pending.sourcePlayerId]
+      const selected = player.extraDeck?.find(
+        (card) => card.instanceId === selectedId,
+      )
+      const attackEffects = selected?.attackEffects
+      if (
+        !selected ||
+        selected.name !== pending.cardName ||
+        !attackEffects ||
+        attackEffects.length === 0
+      ) {
+        throw new GameRuleError('選擇的 EXTRA 卡已不存在或沒有可發動的攻擊效果。')
+      }
+      if (
+        pending.battleContinuation === 'attack-effect' &&
+        (!state.pendingBattle ||
+          state.pendingBattle.stage !== 'attack-effect' ||
+          state.pendingBattle.attackerPlayerId !== pending.sourcePlayerId)
+      ) {
+        throw new GameRuleError('目前的攻擊效果已不在可接續的戰鬥流程中。')
+      }
+
+      return {
+        ...state,
+        pendingExtraDeckAttack: null,
+        pendingAbilityEffect: {
+          playerId: pending.playerId,
+          sourcePlayerId: pending.sourcePlayerId,
+          sourceInstanceId: selected.instanceId,
+          sourceCardName: selected.name,
+          sourceKind: 'skill',
+          effects: attackEffects,
+          effectIndex: 0,
+          ...(pending.battleContinuation
+            ? { battleContinuation: pending.battleContinuation }
+            : {}),
+        },
+      }
+    }
     case 'resolve-optional-cost-attack':
       return resolveOptionalCostAttack(
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
         command.paymentIds ?? [], command.supportToHandIds ?? [],
         command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
-        command.hpToHandIds ?? [],
+        command.hpToHandIds ?? [], command.supportToTrashIds ?? [],
       )
     case 'resolve-draw-up-to': {
       // BS9-030 的 detached FLIP 會把攻擊後效果暫停在 draw-up-to。
@@ -1813,6 +1984,7 @@ const openOptionalAbilityEffect = (
       resolution: 'ability',
       sourceEnergy: effect.sourceEnergy,
       mandatory: effect.mandatory,
+      payBeforeCondition: effect.payBeforeCondition,
     },
   }
 }
@@ -2065,9 +2237,12 @@ const resolvePendingAbilityEffect = (
       resolved.players[pending.sourcePlayerId].battleArea.some(
         (cookie) => cookie.card.instanceId === selectedTargets[0],
       )
+    const hpPlacementPrevented =
+      effect.kind === 'hand-to-hp' &&
+      Boolean(state.preventHpGainThisTurn?.[pending.sourcePlayerId])
     // 第一階段未選目標（或 cycle-hp 目標昏厥離場）：技能直接結束，不進入
     // 第二階段。
-    if (!targetSurvived) {
+    if (!targetSurvived || hpPlacementPrevented) {
       return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
     }
     return {
@@ -2090,7 +2265,11 @@ const resolvePendingAbilityEffect = (
     resolvedTargetIds,
     options.shuffle,
   )
-  if (resolved.pendingBattle?.effectDamageSequence) {
+  if (
+    resolved.pendingBattle?.effectDamageSequence &&
+    resolved.pendingBattle.effectDamageSequence !==
+      state.pendingBattle?.effectDamageSequence
+  ) {
     return {
       ...resolved,
       pendingBattle: {
@@ -2113,11 +2292,25 @@ const resolvePendingAbilityEffect = (
     effect.kind === 'support-to-battle' ||
     effect.kind === 'trash-to-battle' ||
     effect.kind === 'gain-hp' ||
-    effect.kind === 'hand-to-battle'
+    effect.kind === 'hand-to-battle' ||
+    effect.kind === 'support-to-hand'
       ? effect.thenEffects
       : undefined
   const hasConditionalThen =
     Boolean(conditionalThenEffects) && new Set(targetIds).size > 0
+  const resolvedConditionalThenEffects =
+    hasConditionalThen && effect.kind === 'support-to-hand'
+      ? (conditionalThenEffects ?? []).map((thenEffect) =>
+          thenEffect.kind === 'hand-to-support' &&
+          thenEffect.sameAmountAsPreviousEffect
+            ? {
+                ...thenEffect,
+                amount: new Set(targetIds).size,
+                sameAmountAsPreviousEffect: undefined,
+              }
+            : thenEffect,
+        )
+      : conditionalThenEffects
   const pendingWithConditionalThen =
     hasConditionalThen
       ? {
@@ -2125,7 +2318,7 @@ const resolvePendingAbilityEffect = (
           previousEffectTargetIds: [...new Set(targetIds)],
           effects: [
             ...pending.effects.slice(0, pending.effectIndex + 1),
-            ...(conditionalThenEffects ?? []),
+            ...(resolvedConditionalThenEffects ?? []),
             ...pending.effects.slice(pending.effectIndex + 1),
           ],
         }
@@ -2187,7 +2380,13 @@ const continueAbilityQueue = (
 ): GameState => {
   const nextIndex = pending.effectIndex + advance
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
-    return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
+    const withoutPending = { ...resolved, pendingAbilityEffect: undefined }
+    const nextTrigger = beginNextShadowMilkDiscardTrigger(
+      withoutPending,
+      pending.battleContinuation,
+    )
+    if (nextTrigger.pendingAbilityEffect) return nextTrigger
+    return continueBattle(nextTrigger)
   }
   if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
@@ -2479,7 +2678,7 @@ const applyPlayerActionCommand = (
         command.paymentIds,
       )
     case 'activate-stage': {
-      const stage = state.players[command.playerId].stage
+      const stageSource = getStageActivationSource(state, command.playerId)
       const activated = activateStage(
         state,
         command.playerId,
@@ -2492,13 +2691,13 @@ const applyPlayerActionCommand = (
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
-        sourceInstanceId: stage?.card.instanceId ?? '',
-        sourceCardName: stage?.card.name,
+        sourceInstanceId: stageSource?.stage.card.instanceId ?? '',
+        sourceCardName: stageSource?.stage.card.name,
       }
       return executeAbilityEffects(
         activated,
         context,
-        stage?.card.stageAbility?.effects ?? [],
+        stageSource?.ability.effects ?? [],
         command.effectTargets,
         options.shuffle,
         command.chooseOneModes,
@@ -2506,7 +2705,7 @@ const applyPlayerActionCommand = (
       )
     }
     case 'begin-activate-stage': {
-      const stage = state.players[command.playerId].stage
+      const stageSource = getStageActivationSource(state, command.playerId)
       const activated = activateStage(
         state,
         command.playerId,
@@ -2519,14 +2718,14 @@ const applyPlayerActionCommand = (
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
-        sourceInstanceId: stage?.card.instanceId ?? '',
-        sourceCardName: stage?.card.name,
+        sourceInstanceId: stageSource?.stage.card.instanceId ?? '',
+        sourceCardName: stageSource?.stage.card.name,
       }
       const effects = expandChooseOneSequence(
         filterActiveEffects(
           activated,
           context,
-          stage?.card.stageAbility?.effects ?? [],
+          stageSource?.ability.effects ?? [],
         ),
         command.chooseOneModes,
       )
@@ -2538,8 +2737,8 @@ const applyPlayerActionCommand = (
         pendingAbilityEffect: {
           playerId: command.playerId,
           sourcePlayerId: command.playerId,
-          sourceInstanceId: stage?.card.instanceId ?? '',
-          sourceCardName: stage?.card.name,
+          sourceInstanceId: stageSource?.stage.card.instanceId ?? '',
+          sourceCardName: stageSource?.stage.card.name,
           sourceKind: 'stage',
           effects,
           effectIndex: 0,
@@ -2573,6 +2772,16 @@ const applyPlayerActionCommand = (
           if (battle.attackerPlayerId !== command.playerId) {
             throw new GameRuleError('不是目前需要選擇項目的玩家。')
           }
+          const effect = battle.attackEffects[battle.attackEffectIndex]
+          const mode = effect.kind === 'choose-one'
+            ? effect.modes[command.modeIndex]
+            : undefined
+          if (!mode || !isChooseOneModePlayable(state, {
+            sourcePlayerId: battle.attackerPlayerId,
+            sourceInstanceId: battle.attackerInstanceId,
+          }, mode.effects)) {
+            throw new GameRuleError('目前無法執行所選的項目。')
+          }
           // 攻擊 Then 的佇列屬於 pendingBattle，不能只展開本機面板。
           return {
             ...state,
@@ -2586,6 +2795,17 @@ const applyPlayerActionCommand = (
       }
       if (pending.playerId !== command.playerId) {
         throw new GameRuleError('不是目前需要選擇項目的玩家。')
+      }
+      const effect = pending.effects[pending.effectIndex]
+      const mode = effect?.kind === 'choose-one'
+        ? effect.modes[command.modeIndex]
+        : undefined
+      if (!mode || !isChooseOneModePlayable(state, {
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }, mode.effects)) {
+        throw new GameRuleError('目前無法執行所選的項目。')
       }
       const expandedEffects = expandChooseOne(
         pending.effects,
@@ -2662,6 +2882,8 @@ const applyPlayerActionCommand = (
         discardHandIds: command.discardHandIds,
         chooseOneModeIndex: command.chooseOneModeIndex,
         targetIds: command.targetIds,
+        effectTargetIds: command.effectTargetIds,
+        thenTargetIds: command.thenTargetIds,
       })
     case 'resolve-attack-effect':
       return resolveAttackEffect(state, command.playerId, command.targetIds)

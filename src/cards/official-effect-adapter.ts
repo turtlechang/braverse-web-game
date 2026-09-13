@@ -4879,6 +4879,8 @@ export const convertOfficialCardEffects = (
         kind: 'transfer-hp',
         amount: 1,
         direction: 'to-source',
+        hpPlacement: 'bottom',
+        faceUp: true,
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
@@ -5013,6 +5015,385 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
       },
     ],
+    // BS9-040 Cauliflower Cookie：展示牌庫頂不會移動牌；只有該牌同時是
+    // Cookie 且具有 runtime FLIP 時，才在確認展示後提供 0～1 抽牌決策。
+    // 不能只檢查 type: cookie，否則會把沒有 FLIP 的 Cookie 誤判為匹配。
+    'BS9-040': [
+      {
+        kind: 'reveal-top-deck',
+        match: { type: 'cookie', hasFlip: true },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    ],
+    // BS9-033 GingerBrave：支付黃色能量並從手牌棄置一張具有 FLIP 的卡後，
+    // 以支付後的手牌張數檢查「6 張以下」，再由玩家選擇抽 0～2 張。
+    // 發動與每回合一次標記由共用 skill parser 保留；精確支付限制見
+    // exactCookieSkillCosts。
+    'BS9-033': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+    ],
+    // BS9-034 Fortune Teller Cookie：支付登場能量後，可選擇對手至多一張
+    // Cookie，檢視並完整重排該張卡目前的 HP。
+    'BS9-034': [
+      {
+        kind: 'reorder-hp',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS9-035 Truthless Recluse：本回合阻止對手透過卡牌效果增加 HP。
+    'BS9-035': [{ kind: 'prevent-opponent-hp-gain' }],
+    // BS9-036 Bookseller：回合結束時必須從當下可執行的分支中選一項；
+    // 兩項都是效果，不是括號內的啟動代價。
+    'BS9-036': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '從手牌棄置 1 張具有 FLIP 的 Cookie',
+            effects: [{
+              kind: 'discard-hand',
+              count: 1,
+              cookieOnly: true,
+              hasFlip: true,
+            }],
+          },
+          {
+            label: '將這張 Cookie 最上方 1 張 HP 放入棄牌區',
+            effects: [{
+              kind: 'hp-to-trash',
+              amount: 1,
+              target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            }],
+          },
+        ],
+      },
+    ],
+    // BS9-037 Apple Faerie Cookie：昏厥後可從自己的棄牌區回收至多兩張
+    // 同時符合黃色、Cookie 與 runtime FLIP 的卡牌。
+    'BS9-037': [{
+      kind: 'trash-to-hand',
+      max: 2,
+      energyColor: 'yellow',
+      cookieOnly: true,
+      hasFlip: true,
+    }],
+    // BS9-038 Chess Choco Cookie：另一張同名 Cookie 已在己方戰鬥區時，
+    // 登場後讓己方當下全部 Cookie 各增加 1 HP。
+    'BS9-038': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 2, allMatching: true },
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Chess Choco Cookie',
+        excludeSource: true,
+      },
+    }],
+    // BS9-043 Heart Stained With Lies：僅在自己的休息區已達 LV.4 時，
+    // 才能把對手已裝備的 [Soul Jam] 放回原裝備餅乾 HP 的最上方；
+    // 裝備卡原本可見，因此依卡面維持正面朝上。
+    'BS9-043': [{
+      kind: 'equipped-to-hp',
+      side: 'opponent',
+      max: 1,
+      keyword: 'soul-jam',
+      faceUp: true,
+      condition: { kind: 'break-level-at-least', level: 4 },
+    }],
+    // BS9-044 Shadow Milk Cookie Doll：回收數量、顏色、Cookie 與 runtime
+    // FLIP 限制都必須同時保留，不能以卡名或候選資料簡化。
+    'BS9-044': [{
+      kind: 'trash-to-hand',
+      max: 3,
+      energyColor: 'yellow',
+      cookieOnly: true,
+      hasFlip: true,
+    }],
+    // BS9-049 Fig Cookie：昏厥時讓對手至多一張 LV.1 Cookie 進入其
+    // 自己的支援區並橫置；目標擁有者不是來源玩家。
+    'BS9-049': [{
+      kind: 'battle-to-support',
+      target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      rested: true,
+    }],
+    // BS9-050 Wind Archer Cookie：Crow Storm 只有在本回合己方至少有
+    // 兩張支援區卡進入棄牌區後才可啟動；滿足條件時由玩家選擇最多一張
+    // 休息中的支援卡重置。這是 Activate 的技能效果，不是靜態被動。
+    'BS9-050': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: {
+        kind: 'support-cards-trashed-this-turn-at-least',
+        count: 2,
+      },
+    }],
+    // BS9-052 Ring Candy Cookie：支援區至少七張時，來源 Cookie 本回合
+    // 攻擊傷害 +1。條件屬於技能效果，不能只留下通用的 modify-attack。
+    'BS9-052': [{
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'persistent',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'support-count-at-least', count: 7 },
+    }],
+    // BS9-054 Mercurial Knight Cookie：支付兩張支援卡後，讓己方至多
+    // 一張 Cookie 本回合攻擊傷害 +1。
+    'BS9-054': [{
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'this-turn',
+      target: { side: 'self', min: 0, max: 1 },
+    }],
+    // BS9-060 Elder Faerie Cookie：支付兩張支援卡，將至多兩張支援卡
+    // 設為活躍；選擇 0 張仍是合法的 up to 效果。
+    'BS9-060': [{
+      kind: 'set-active',
+      supportCount: 2,
+      selectable: true,
+      optional: true,
+    }],
+    // BS9-061 Silverbell Cookie：本回合至少有兩張支援卡進入棄牌區後，
+    // 將牌庫頂至多一張以休息狀態放入支援區。
+    'BS9-061': [{
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: true,
+      condition: { kind: 'support-cards-trashed-this-turn-at-least', count: 2 },
+    }],
+    // BS9-063 Cookiemals：條件成立後以自身進棄牌區為代價，抽最多兩張
+    // 再棄一張；兩段效果必須保留順序。
+    'BS9-063': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'support-cards-trashed-this-turn-at-least', count: 2 },
+      },
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'support-cards-trashed-this-turn-at-least', count: 2 },
+      },
+    ],
+    // BS9-065 Pure Vanilla Cookie：另一張 Ancient 在己方戰鬥區時，將
+    // 至多一張支援卡設為活躍。
+    'BS9-065': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: {
+        kind: 'battle-area-has-keyword',
+        side: 'self',
+        keyword: 'ancient',
+        excludeSource: true,
+      },
+    }],
+    // BS9-077 Black Raisin Cookie：On Play 先抽 1，再從手牌選 1 張放牌庫頂。
+    // draw-up-to-then-discard preserves the draw decision and the subsequent
+    // hand-to-deck-top selection in one ordered effect.
+    'BS9-077': [{
+      kind: 'draw-up-to-then-discard',
+      max: 1,
+      discardCount: 1,
+      handDestination: 'deck-top',
+    }],
+    // BS9-078 White Lily Cookie：另一張 Ancient 在場時，對手 LV.1 Cookie
+    // 可選擇 0～1 張送牌庫底。
+    'BS9-078': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      condition: {
+        kind: 'battle-area-has-keyword',
+        side: 'self',
+        keyword: 'ancient',
+        excludeSource: true,
+      },
+    }],
+    // BS9-080 Cinnamon Cookie：支付自我牌庫底代價後，牌頂 1 張可放頂或底。
+    'BS9-080': [{
+      kind: 'choose-one',
+      condition: { kind: 'support-color-count-at-least', color: 'blue', count: 3 },
+      modes: [
+        { label: 'Place the viewed card on the top of your deck.', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'top' }] },
+        { label: 'Place the viewed card on the bottom of your deck.', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'bottom' }] },
+      ],
+    }],
+    // BS9-081 Grapefruit Cookie：來源 Cookie 送牌庫頂。
+    'BS9-081': [{
+      kind: 'battle-to-deck-top',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS9-082 Animatronic of Deceit：Shadow Milk 在己方場上時，所有攻擊
+    // 強制改向此 Cookie；battle.ts 讀取 passive redirect-attack。
+    'BS9-082': [{
+      kind: 'redirect-attack',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Shadow Milk Cookie' },
+    }],
+    // BS9-083 Choco Cup Cookie：本回合曾把己方 Cookie 從戰鬥區放到牌庫
+    // 頂／底後，才可抽最多 1 張。
+    'BS9-083': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'cookie-placed-from-battle-to-deck-this-turn', side: 'self' },
+    }],
+    // BS9-086 Towerkeeper Cookie：On/Activate 的共同順序是抽 1 再把 1 張
+    // 手牌放牌庫頂。
+    'BS9-086': [{
+      kind: 'draw-up-to-then-discard',
+      max: 1,
+      discardCount: 1,
+      handDestination: 'deck-top',
+    }],
+    // BS9-087 Popcorn Cookie：目標限定藍色且剩餘 HP 不超過 2。
+    'BS9-087': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1, energyColor: 'blue', maxRemainingHp: 2 },
+    }],
+    // BS9-089 Pure Vanilla Cookie：牌頂藍色 LV.2 Cookie 才對手全場 1 傷害。
+    'BS9-089': [{
+      kind: 'reveal-top-deck',
+      match: { type: 'cookie', energyColor: 'blue', level: 2 },
+      effects: [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true, target: { side: 'opponent', min: 0, max: 4 } }],
+    }],
+    // BS9-096 Nosy Wizard：Refresh 時不需把 Cookie 放入 Break。
+    'BS9-096': [{ kind: 'prevent-refresh-cookie-break' }],
+    // BS9-097 Dark Cacao Cookie：另一張 Ancient 存在時磨對手一張 Cookie 的
+    // 最上方 HP；其能量／棄牌費用見 exactCookieSkillCosts。
+    'BS9-097': [{
+      kind: 'hp-to-trash',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-keyword', side: 'self', keyword: 'ancient', excludeSource: true },
+    }],
+    // BS9-098 Latte Cookie：三張紫色支援卡後自我進棄牌，磨對手牌庫頂 3 張。
+    'BS9-098': [{
+      kind: 'deck-to-trash',
+      amount: 3,
+      side: 'opponent',
+      condition: { kind: 'support-color-count-at-least', color: 'purple', count: 3 },
+    }],
+    // BS9-099 Wizard Cookie：先磨自己牌庫頂 5，再本回合攻擊 +1。
+    'BS9-099': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true } },
+    ],
+    // BS9-100 Black Sapphire Cookie On Play：雙方各磨牌庫頂 5。
+    'BS9-100': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'deck-to-trash', amount: 5, side: 'opponent' },
+    ],
+    // BS9-101 Blueberry Pie Cookie：自我進棄牌後檢視牌頂 3，選紫色入手，
+    // 其餘牌進棄牌。
+    'BS9-101': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        filterColor: 'purple',
+        optionalPick: true,
+        restDestination: 'trash',
+      },
+    ],
+    // BS9-090 Storybook of Lies：檢視牌頂 3 張並由玩家重排回牌頂。
+    'BS9-090': [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' }],
+    // BS9-091 Light of Deceit：展示手牌中的 Shadow Milk 作為代價，
+    // 再回收己方藍色 LV.2 以下 Cookie，最後從手牌登場 Shadow Milk。
+    'BS9-091': [
+      {
+        kind: 'reveal-hand',
+        amount: 1,
+        asCost: true,
+        selectCard: true,
+        cookieOnly: true,
+        cardName: 'Shadow Milk Cookie',
+      },
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 1, max: 1, energyColor: 'blue', maxLevel: 2 },
+      },
+      {
+        kind: 'hand-to-battle',
+        amount: 1,
+        cardName: 'Shadow Milk Cookie',
+      },
+    ],
+    // BS9-092 Soul Jam: Light of Deceit：先傷害對手 Cookie，再可裝備
+    // 到 Shadow Milk；裝備的 -3 傷害只在持有者自己回合且手牌至多 5 張時啟用。
+    'BS9-092': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1, cardName: 'Shadow Milk Cookie' },
+        damageReceivedReduction: 3,
+        bonusCondition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'hand-count-at-most', count: 5 },
+            { kind: 'activated-during-your-turn' },
+          ],
+        },
+      },
+    ],
+    // BS9-106～108：牌文要求「由 Shadow Milk 效果從手牌進棄牌」的來源
+    // provenance，交由 executeCardEffect 在 discard-hand 後啟動巢狀效果。
+    'BS9-106': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'draw-up-to', max: 2 }] }],
+    'BS9-107': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'purple' } }] }],
+    'BS9-108': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] }],
+    // BS9-111 Everything Pie Cookie：對手 Refresh 必須把兩張 Cookie 放入 Break。
+    'BS9-111': [{ kind: 'refresh-cookie-break-count', count: 2 }],
+    // BS9-112 Pumpkin Pie Cookie：己方棄牌區至少 15 張時持續攻擊 +1。
+    'BS9-112': [{
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'persistent',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }],
+    // BS9-114 Flipped Coin：依己方棄牌張數選擇磨自己或對手牌庫。
+    'BS9-114': [{
+      kind: 'choose-one',
+      modes: [
+        {
+          label: 'If there are 14 cards or less in your trash, place 5 cards from the top of your deck into your trash.',
+          effects: [{ kind: 'deck-to-trash', amount: 5, side: 'self', condition: { kind: 'trash-count-at-most', count: 14 } }],
+        },
+        {
+          label: 'If there are 15 cards or more in your trash, place 3 cards from the top of your opponent\'s deck into their trash.',
+          effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent', condition: { kind: 'trash-count-at-least', count: 15 } }],
+        },
+      ],
+    }],
+    // BS9-115 Wolf in Sheep's Clothing：抽牌後，僅在對手棄牌不超過 15
+    // 張時磨對手牌庫頂 3 張。
+    'BS9-115': [
+      { kind: 'draw-up-to', max: 1 },
+      { kind: 'deck-to-trash', amount: 3, side: 'opponent', condition: { kind: 'opponent-trash-count-at-most', count: 15 } },
+    ],
+    // BS9-066 Meat Jelly：支援卡送棄是物品的額外支付，效果本身只留下
+    // 己方至多一張 Cookie +1 HP。
+    'BS9-066': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1 },
+    }],
+    // BS9-067 Concealer of Truth：支付一張支援卡後抽最多兩張。
+    'BS9-067': [{ kind: 'draw-up-to', max: 2 }],
+    // BS9-064 Clover Cookie：昏厥時由對手選擇一張自己的支援卡送入
+    // 棄牌區；side: opponent 讓目標玩家與操作玩家分離。
+    'BS9-064': [{ kind: 'support-to-trash', amount: 1, side: 'opponent' }],
   }
   const exactEffects =
     exactStarterEffects[card.cardNumber] ??
@@ -5662,12 +6043,27 @@ export const convertOfficialItemAbility = (
       discardHandColor: 'purple',
       discardHandNonCookie: true,
     },
-  'BS9-019': { energy: { red: 2 }, discardHand: 0 },
-  'BS9-020': { energy: { red: 1 }, discardHand: 0 },
+    'BS9-066': {
+      energy: { green: 1 },
+      discardHand: 0,
+      supportToTrash: 1,
+    },
+    'BS9-067': {
+      energy: { green: 1 },
+      discardHand: 0,
+      supportToTrash: 1,
+    },
+    'BS9-090': { energy: { blue: 1 }, discardHand: 0 },
+    'BS9-091': { energy: { blue: 2 }, discardHand: 0 },
+    'BS9-092': { energy: { blue: 1, neutral: 1 }, discardHand: 2 },
+    'BS9-114': { energy: { purple: 1 }, discardHand: 0 },
+    'BS9-115': { energy: { purple: 1 }, discardHand: 0 },
+    'BS9-019': { energy: { red: 2 }, discardHand: 0 },
+    'BS9-020': { energy: { red: 1 }, discardHand: 0 },
   // BS9-027 Vampire Cookie：技能本身沒有額外印刷代價；手牌置入 HP
   // 是效果，不是 cost，避免 generic parser 將它誤當成棄牌代價。
-  'BS9-027': { energy: {}, discardHand: 0 },
-}
+    'BS9-027': { energy: {}, discardHand: 0 },
+  }
   const exactEquippedAttackEffects: Partial<Record<string, CardEffect[]>> = {
     'BS8-021': [
       {
@@ -6246,6 +6642,42 @@ export const convertOfficialStageAbility = (
         destination: 'bottom',
       },
     ],
+    // BS9-047 Yogurt River of Rebirth：放置的黃色能量與 Activate 的
+    // 橫置自身／棄 1 手牌分屬不同時機；回收只接受實際有 FLIP 的 Cookie。
+    'BS9-047': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      cookieOnly: true,
+      hasFlip: true,
+    }],
+    // BS9-070 Puppet Theater Stage：啟動後檢查雙方支援區張數及本回合
+    // 支援卡送棄數，再把牌庫頂至多一張以活躍狀態放入支援區。
+    'BS9-070': [{
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: false,
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'support-count-less-than-opponent', difference: 0 },
+          { kind: 'support-cards-trashed-this-turn-at-least', count: 2 },
+        ],
+      },
+    }],
+    // BS9-095 Spire of Deceit：Shadow Milk 攻擊時，手牌至多 5 張抽最多 1。
+    // 這是場景的攻擊觸發，不是可由玩家主動啟動的效果。
+    'BS9-095': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS9-118 Endless Game of Chess：任一玩家皆可在自己的回合啟動，
+    // 棄 1 張手牌後磨對手 Cookie 的最上方 HP。
+    'BS9-118': [{
+      kind: 'hp-to-trash',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
   }
   // 無 Activate 標記的 Stage 持續效果不能塞進 `effects`：它們沒有被玩家啟動
   // 的單一結算點，必須在每次攻擊費用查詢時由目前場面重新計算。
@@ -6301,6 +6733,10 @@ export const convertOfficialStageAbility = (
       stageSourceToTrash: true,
     },
     'BS9-023': { energy: { red: 1 }, discardHand: 0 },
+    'BS9-047': { energy: {}, discardHand: 1 },
+    'BS9-070': { energy: { green: 1 }, discardHand: 0 },
+    'BS9-095': { energy: {}, discardHand: 0 },
+    'BS9-118': { energy: {}, discardHand: 1 },
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
     'BS3-024': {
@@ -6388,6 +6824,17 @@ export const convertOfficialStageAbility = (
         card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
+      ...(card.cardNumber === 'BS9-095' || card.baseCardNumber === 'BS9-095'
+        ? {
+            triggered: true,
+            triggerOnAttackCardName: 'Shadow Milk Cookie',
+            triggerOnAttackHandCountAtMost: 5,
+          }
+        : {}),
+      ...(card.cardNumber === 'BS9-118' || card.baseCardNumber === 'BS9-118'
+        ? { ownerIndependent: true, oncePerTurn: true }
+        : {}),
+      ...(activation?.markers.includes('t1') ? { oncePerTurn: true } : {}),
       ...(endPhaseScope ? { endPhase: true, endPhaseScope } : {}),
     }
   }
@@ -6408,6 +6855,7 @@ export const convertOfficialStageAbility = (
     text: sourceText,
     effects: conversion.effects,
     restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
+    ...(activation.markers.includes('t1') ? { oncePerTurn: true } : {}),
     ...(endPhaseScope ? { endPhase: true, endPhaseScope } : {}),
   }
 }
@@ -6429,6 +6877,8 @@ export const convertOfficialAttackEffects = (
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
+  // BS9-079@3 is a distinct printed variant without the Extra Deck Then clause.
+  if (card.cardNumber === 'BS9-079@3') return undefined
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
     // BS8 EXTRA cards remain outside the main-deck GameCard pool, but after
     // materialization their attacks use the same attack-effect pipeline.  Keep
@@ -6530,6 +6980,32 @@ export const convertOfficialAttackEffects = (
         effectText:
           'Then, <discard 1 Cookie that has FLIP from your hand.> Activate the discarded card\'s FLIP effect.',
         mandatory: false,
+      },
+    ],
+    // BS9-035 Truthless Recluse：攻擊後可棄一張具有 FLIP 的 Cookie；
+    // 支付後才檢查己方休息區是否至少有兩張 Cookie，再選擇至多一個目標。
+    'BS9-035': [
+      {
+        kind: 'optional-cost-attack',
+        payBeforeCondition: true,
+        cost: {
+          energy: {},
+          discardHand: 1,
+          discardHandType: 'cookie',
+          discardHandHasFlip: true,
+        },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'break-area-card-count-at-least',
+            side: 'self',
+            count: 2,
+          },
+        }],
+        effectText:
+          'Then, <discard 1 Cookie that has FLIP from your hand.> If there are 2 Cookies or more in your break area, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
       },
     ],
     // BS9-017 Hollyberry Cookie：攻擊後直到對手回合結束，己方 Ancient
@@ -8462,6 +8938,129 @@ export const convertOfficialAttackEffects = (
         keyword: 'arena',
       },
     ],
+    // BS9-050 Wind Archer Cookie：Arrow of Darkness 的 Then 可支付兩張
+    // 自己支援區卡進入棄牌區，支付後讓所有對手餅乾各受 1 傷害。
+    // damage-all 保留 sequential，讓正式 UI／AI 逐一確認每個對手目標。
+    'BS9-050': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToTrash: 2 },
+        effects: [{
+          kind: 'damage-all',
+          amount: 1,
+          side: 'opponent',
+          sequential: true,
+          target: { side: 'opponent', min: 1, max: 2 },
+        }],
+        effectText:
+          "Then, <place 2 cards from your support area into your trash.> All of your opponent's Cookies receive 1 damage.",
+      },
+    ],
+    // BS9-055 Shadow Milk Cookie EXTRA：攻擊後可返回一張支援卡支付代價，
+    // 再讓對手至多一張 Cookie 受 1 傷害。
+    'BS9-055': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+        effectText:
+          "Then, <return 1 card from your support area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      },
+    ],
+    // BS9-059 Fairy Cookie：攻擊後以自身及兩張支援卡進棄牌區為可略過
+    // 的代價，支付後抽最多兩張牌。
+    'BS9-059': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToTrash: true, supportToTrash: 2 },
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+        effectText:
+          'Then, <place this Cookie and 2 cards from your support area into your trash.> Draw up to 2 cards from your deck.',
+      },
+    ],
+    // BS9-060 Elder Faerie Cookie：支援區至少六張時，攻擊後可使對手一張
+    // Cookie 受 1 傷害。
+    'BS9-060': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'opponent-support-count-at-least', count: 6 },
+    }],
+    // BS9-062 Carameleon Cookie：攻擊後必須將兩張支援卡送入棄牌區。
+    'BS9-062': [{ kind: 'support-to-trash', amount: 2 }],
+    // BS9-065 Pure Vanilla Cookie：攻擊後支付兩張支援卡，再讓己方至多
+    // 一張 Cookie 增加 1 HP。
+    'BS9-065': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToTrash: 2 },
+        effects: [{
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+        }],
+        effectText:
+          'Then, <place 2 cards from your support area into your trash.> Select up to 1 of your Cookies. That Cookie gains +1 HP.',
+      },
+    ],
+    // BS9-075 Ice Juggler Cookie：攻擊後可將己方 LV.2 以下 Cookie 放牌庫頂
+    // 或底；兩個模式共用同一個精確目標 selector。
+    'BS9-075': [{
+      kind: 'choose-one',
+      modes: [
+        { label: 'Place up to 1 LV.2 or lower Cookie on the top of your deck.', effects: [{ kind: 'battle-to-deck-top', target: { side: 'self', min: 0, max: 1, maxLevel: 2 } }] },
+        { label: 'Place up to 1 LV.2 or lower Cookie on the bottom of your deck.', effects: [{ kind: 'field-to-deck-bottom', target: { side: 'self', min: 0, max: 1, maxLevel: 2 }, battleSide: 'self' }] },
+      ],
+    }],
+    // BS9-076 Banana Cookie：手牌不超過 2 張時可將自身放牌庫底。
+    'BS9-076': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+      battleSide: 'self',
+      condition: { kind: 'hand-count-at-most', count: 2 },
+    }],
+    // BS9-077 Black Raisin Cookie：攻擊後自身牌庫頂／底二選一。
+    'BS9-077': [{
+      kind: 'choose-one',
+      modes: [
+        { label: 'Place this Cookie on the top of your deck.', effects: [{ kind: 'battle-to-deck-top', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }] },
+        { label: 'Place this Cookie on the bottom of your deck.', effects: [{ kind: 'field-to-deck-bottom', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, battleSide: 'self' }] },
+      ],
+    }],
+    // BS9-078 Pure Vanilla Cookie：手牌至多 5 張時抽 2。
+    'BS9-078': [{ kind: 'draw-up-to', max: 2, condition: { kind: 'hand-count-at-most', count: 5 } }],
+    // BS9-079 Shadow Milk Cookie：揭示 Extra Deck 同名卡並啟動其攻擊效果；
+    // @3 的卡文沒有 Then，依 cardNumber 逐卡保留無攻擊後效果。
+    'BS9-079': [{ kind: 'activate-extra-deck-attack', cardName: 'Shadow Milk Cookie', optional: true }],
+    // BS9-088 Pure Vanilla Cookie EXTRA：攻擊後可由支援區支付 1 藍色能量，
+    // 再選至多 1 張己方 Cookie 增加 1 HP。
+    'BS9-088': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effectText: 'Then, <can be used as {B}.> Select up to 1 of your Cookies. That Cookie gains +1 HP.',
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 } }],
+    }],
+    // BS9-089 Pure Vanilla Cookie：先把己方 LV.1 Cookie 放牌庫底，再由來源
+    // Cookie 補 1 HP；若無可選目標，整段 up-to 略過。
+    'BS9-089': [
+      { kind: 'field-to-deck-bottom', target: { side: 'self', min: 0, max: 1, maxLevel: 1 }, battleSide: 'self' },
+      { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true } },
+    ],
+    // BS9-097 Dark Cacao Cookie：對手棄牌至少 20 張時追加 1 傷害。
+    'BS9-097': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'opponent-trash-count-at-least', count: 20 } }],
+    // BS9-100 Black Sapphire Cookie：攻擊後雙方各磨牌庫頂 3。
+    'BS9-100': [
+      { kind: 'deck-to-trash', amount: 3, side: 'self' },
+      { kind: 'deck-to-trash', amount: 3, side: 'opponent' },
+    ],
+    // BS9-102 Shadow Milk Cookie EXTRA：對手棄牌至少 20 張時追加 1 傷害。
+    'BS9-102': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'opponent-trash-count-at-least', count: 20 } }],
+    // BS9-115 的 Then 屬 Item，不會落入攻擊效果；BS9-117 的額外攻擊力
+    // 也由 Trap map 綁定同一目標。
   }
 
   if (exactAttackEffects[card.cardNumber]) {
@@ -8517,7 +9116,12 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost; attachedHpBonus?: number }>> = {
+  const exactFlipEffects: Partial<Record<string, {
+    effects: CardEffect[]
+    cost?: AbilityCost
+    attachedHpBonus?: number
+    attachedHpAlternateTarget?: EffectTargetSelector
+  }>> = {
     // BS9-001 Icicle Yeti Cookie: the selected Cookie receives less effect
     // damage for the rest of this turn.  Keep this separate from the attack
     // damage modifiers used by cards such as BS7-097.
@@ -8549,6 +9153,62 @@ export const convertOfficialFlipAbility = (
         },
       ],
     },
+    // BS9-031 Alchemist Cookie：FLIP 發動時先支付棄 1 張手牌，
+    // 再選擇己方 LV.3 餅乾補 1 張 HP。Then 的抽牌只在該 FLIP 由來源玩家
+    // 自己回合啟動時成立；它不是附著餅乾的 sourceOnly HP 增益，也不能在
+    // 對手回合把抽牌條件降級成無條件效果。
+    'BS9-031': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, minLevel: 3 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'activated-during-your-turn' },
+        },
+      ],
+    },
+    // BS9-032 Yoga Cookie：先抽最多 1 張牌；只有這張 FLIP 在其持有者
+    // 自己的回合被發動時，才可將己方至多 1 張休息中的 Cookie 設為活躍。
+    // 兩段必須保留原印刷順序，抽牌選 0 仍可接續 Then 的選填目標。
+    'BS9-032': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [
+        { kind: 'draw-up-to', max: 1 },
+        {
+          kind: 'set-cookie-active',
+          target: { side: 'self', min: 0, max: 1, restedOnly: true },
+          condition: { kind: 'activated-during-your-turn' },
+        },
+      ],
+    },
+    // BS9-041 Pistachio Cookie：先抽最多 1 張牌；只有這張 FLIP 在其
+    // 持有者自己的回合被發動時，才接續選對手 0～1 張 Cookie 造成 1 傷害。
+    // 兩段保留在同一個 effects 陣列，resolveFlip 會在抽牌決策後以
+    // pendingDrawUpTo.afterEffects 續接第二段，並於續接時重新檢查回合條件。
+    'BS9-041': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [
+        { kind: 'draw-up-to', max: 1 },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'activated-during-your-turn' },
+        },
+      ],
+    },
+    // BS9-042 Financier Cookie：支付 1 張手牌後，僅在這張 FLIP 實際翻開時
+    // 讓原附著 Cookie 補 1 張 HP。
+    'BS9-042': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
     // BS9-005 Macaron Cookie：支付一張手牌後，讓附著餅乾增加一張 HP。
     // 附著對象由 FLIP 結算器依實際 HP 堆處理，不能把來源卡自身當成目標。
     'BS9-005': {
@@ -8556,10 +9216,58 @@ export const convertOfficialFlipAbility = (
       effects: [],
       attachedHpBonus: 1,
     },
+    // BS9-025 Mala Sauce Cookie：在持有者自己的回合，這次附著 HP 的
+    // +1 可改給「另一隻自己的 Cookie」；玩家不選時仍由原附著餅乾取得。
+    // 這是專案採用的效果語義，選擇器只描述受益者，不會移動或重新附著
+    // 翻開的 FLIP 卡本身。
+    'BS9-025': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+      attachedHpAlternateTarget: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        excludeSource: true,
+      },
+    },
     // BS9-007 Cherry Blossom Cookie：沒有額外代價，翻開後抽至多一張。
     'BS9-007': {
       cost: { energy: {}, discardHand: 0 },
       effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS9-071 Candy Diver Cookie：FLIP 抽最多 1 張。
+    'BS9-071': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS9-084 Capsaicin Cookie：棄 1 後，原附著餅乾補 1 HP。
+    'BS9-084': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS9-085 Captain Caviar Cookie：抽 2，再選 2 張手牌放牌庫頂（保留
+    // 任意順序的牌庫頂／底分流 UI；每張選定手牌都必須明確指定去向。
+    'BS9-085': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 2, handDestination: 'deck-top-or-bottom' }],
+    },
+    // BS9-104 Prophet Cookie：FLIP 抽最多 1 張。
+    'BS9-104': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS9-110 Crunchy Chip Cookie：與 BS9-084 相同的附著 +1 HP 效果。
+    'BS9-110': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS9-113 Prune Juice Cookie：棄牌至少 15 張才可棄 1 並回收 Cookie。
+    'BS9-113': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, condition: { kind: 'trash-count-at-least', count: 15 } }],
     },
     'P-024': {
       cost: { energy: {}, discardHand: 1 },
@@ -8947,6 +9655,24 @@ export const convertOfficialFlipAbility = (
         },
       ],
     },
+    // BS9-053 Cream Ferret Cookie：返回至多三張支援卡後，從手牌放入
+    // 同樣張數的綠色卡牌並以休息狀態進支援區；Then 的數量依前段實際
+    // 選取數量傳遞，不能固定成三張。
+    'BS9-053': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{
+        kind: 'support-to-hand',
+        amount: 3,
+        optional: true,
+        thenEffects: [{
+          kind: 'hand-to-support',
+          amount: 0,
+          energyColor: 'green',
+          rested: true,
+          sameAmountAsPreviousEffect: true,
+        }],
+      }],
+    },
   }
   const exactFlip = exactFlipEffects[cardKey]
   const pExactFlip = P_EXACT_FLIP_EFFECTS[cardKey]
@@ -8958,6 +9684,9 @@ export const convertOfficialFlipAbility = (
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
         : {}),
+      ...(exactFlip.attachedHpAlternateTarget !== undefined
+        ? { attachedHpAlternateTarget: exactFlip.attachedHpAlternateTarget }
+        : {}),
     }
   }
   if (pExactFlip) {
@@ -8967,6 +9696,9 @@ export const convertOfficialFlipAbility = (
       effects: pExactFlip.effects,
       ...(pExactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: pExactFlip.attachedHpBonus }
+        : {}),
+      ...(pExactFlip.attachedHpAlternateTarget !== undefined
+        ? { attachedHpAlternateTarget: pExactFlip.attachedHpAlternateTarget }
         : {}),
     }
   }
@@ -9289,6 +10021,40 @@ export const convertOfficialTrapAbility = (
             'Soul Jam: Light of Abundance',
           ],
         },
+      ],
+    },
+    // BS9-045 Overtaken Other-Realm：先以實際 FLIP Cookie 支付陷阱代價，
+    // 再選至多一張對手 Cookie -2 攻；選 0 仍會接續 Then 的抽牌選擇。
+    'BS9-045': {
+      cost: {
+        energy: { yellow: 1 },
+        discardHand: 2,
+        discardHandType: 'cookie',
+        discardHandHasFlip: true,
+      },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'draw-up-to', max: 2 },
+      ],
+    },
+    // BS9-046 Fragmented Soul：先讓至多一張攻擊中的對手 Cookie 本回合
+    // -2 攻，Then 才回收至多一張有 FLIP 的 Cookie。選 0 前段目標仍要
+    // 保留後段的可選回收決策。
+    'BS9-046': {
+      cost: { energy: { yellow: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'trash-to-hand', max: 1, cookieOnly: true, hasFlip: true },
       ],
     },
     'BS8-123': {
@@ -10011,7 +10777,8 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
-    // BS9-021 Stolen Light of Truth：將對手餅乾最上方 HP 搬到己方餅乾。
+    // BS9-021 Stolen Light of Truth：選至多一張對手餅乾，將其最上方 HP
+    // 正面朝上放到所選己方 Cookie HP 的最下方。
     'BS9-021': {
       cost: { energy: { red: 3 }, discardHand: 0 },
       effects: [
@@ -10019,6 +10786,8 @@ export const convertOfficialTrapAbility = (
           kind: 'transfer-hp',
           amount: 1,
           direction: 'to-source',
+          hpPlacement: 'bottom',
+          faceUp: true,
           target: { side: 'opponent', min: 0, max: 1 },
           receiverTarget: { side: 'self', min: 1, max: 1 },
         },
@@ -10041,6 +10810,96 @@ export const convertOfficialTrapAbility = (
           condition: { kind: 'cookie-has-opponent-hp', side: 'self' },
         },
       ],
+    },
+    // BS9-068 Radiant Light of Protection：只有己方支援區張數少於對手時，
+    // 對手所有 Cookie 本回合攻擊傷害 -1。
+    'BS9-068': {
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      effects: [{
+        kind: 'modify-all-attack',
+        amount: -1,
+        duration: 'this-turn',
+        side: 'opponent',
+      }],
+    },
+    // BS9-069 Broken Seal：第一段選對手 Cookie -2 攻後，若對手支援區
+    // 至少五張，再選己方至多一張支援卡設為活躍。
+    'BS9-069': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'set-active',
+          supportCount: 1,
+          selectable: true,
+          optional: true,
+          condition: { kind: 'opponent-support-count-at-least', count: 5 },
+        },
+      ],
+    },
+    // BS9-093 Reversed Prophecy：先使攻擊中的對手 Cookie -2，Then 在
+    // 防守方手牌至多 5 張時抽 2 並把 1 張手牌放牌庫頂。
+    'BS9-093': {
+      cost: { energy: { blue: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [
+            {
+              kind: 'draw-up-to-then-discard',
+              max: 2,
+              discardCount: 1,
+              handDestination: 'deck-top',
+              condition: { kind: 'hand-count-at-most', count: 5 },
+            },
+          ],
+        },
+      ],
+    },
+    // BS9-094 Shadow Milk Cookie's Tarot Card：依牌庫頂卡片類型分支，
+    // Cookie 讓對手全體 -1 攻，非 Cookie 則抽最多 1 張。
+    'BS9-094': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'reveal-top-deck',
+        match: { type: 'cookie' },
+        effects: [{ kind: 'modify-all-attack', amount: -1, duration: 'this-turn', side: 'opponent' }],
+        otherwiseEffects: [{ kind: 'draw-up-to', max: 1 }],
+      }],
+    },
+    // BS9-116 Light of False Truths：只有攻擊方棄牌區達 15 張才可發動，
+    // 目標由對手（攻擊方）選擇其自己的 Cookie。
+    'BS9-116': {
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      condition: { kind: 'attacker-trash-count-at-least', count: 15 },
+      effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }],
+    },
+    // BS9-117 Truth Stained With Lies：同一攻擊目標先 -2，對手棄牌達 20
+    // 張時，Then 同一目標再 -1。
+    'BS9-117': {
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+        }],
+      }],
     },
   }
 
@@ -10128,6 +10987,65 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: {},
     discardHand: 0,
     hpToTrash: { amount: 2, excludeSource: true },
+  },
+  // BS9-033 GingerBrave：能量與手牌都是啟動成本；棄牌候選必須真的帶
+  // runtime FLIP，不能只靠名稱或黃色卡片推定。
+  'BS9-033': {
+    energy: { yellow: 1 },
+    discardHand: 1,
+    discardHandHasFlip: true,
+  },
+  'BS9-034': {
+    energy: { yellow: 1 },
+    discardHand: 0,
+  },
+  'BS9-035': {
+    energy: {},
+    discardHand: 1,
+  },
+  'BS9-054': {
+    energy: {},
+    discardHand: 0,
+    supportToTrash: 2,
+  },
+  'BS9-060': {
+    energy: {},
+    discardHand: 0,
+    supportToTrash: 2,
+  },
+  'BS9-061': {
+    energy: {},
+    discardHand: 0,
+  },
+  'BS9-063': {
+    energy: {},
+    discardHand: 0,
+    selfToTrash: true,
+  },
+  'BS9-065': {
+    energy: {},
+    discardHand: 0,
+  },
+  'BS9-078': { energy: { neutral: 1 }, discardHand: 0 },
+  'BS9-080': { energy: {}, discardHand: 0, selfToDeckBottom: true },
+  'BS9-081': { energy: {}, discardHand: 0 },
+  'BS9-083': { energy: {}, discardHand: 0 },
+  'BS9-086': { energy: {}, discardHand: 0 },
+  'BS9-087': { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+  'BS9-089': { energy: { blue: 1 }, discardHand: 0 },
+  'BS9-096': { energy: {}, discardHand: 0 },
+  'BS9-097': { energy: { neutral: 1 }, discardHand: 1 },
+  'BS9-098': { energy: {}, discardHand: 0, selfToTrash: true },
+  'BS9-099': { energy: { purple: 1 }, discardHand: 0 },
+  'BS9-100': { energy: {}, discardHand: 0 },
+  'BS9-101': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  'BS9-106': { energy: {}, discardHand: 0 },
+  'BS9-107': { energy: {}, discardHand: 0 },
+  'BS9-108': { energy: {}, discardHand: 0 },
+  'BS9-112': { energy: {}, discardHand: 0 },
+  'BS9-040': {
+    energy: { yellow: 1 },
+    discardHand: 0,
   },
   // BS8-107 的官方英文使用大寫「Item」；generic cost parser 僅接受其既有
   // 小寫句型，故在此保留實際的紫色物品棄牌成本，不能降成零成本。

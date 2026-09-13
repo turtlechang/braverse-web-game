@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
-import bs9Candidates from '../../data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json'
+import bs9Candidates from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import {
   createBs9ActualDamageDemoState,
   createBs9CandidatePreviewDemoState,
@@ -403,5 +403,22 @@ describe('BS9-002～009 first candidate batch', () => {
       kind: 'bs9-damage', cardNumber: 'BS9-006@1', negative: true,
     })
     expect(parseTestStateConfig('?test-state=bs9-card:BS9-009', 'braverse.example')).toBeNull()
+  })
+
+  it('routes vanilla BS9 attacks through the real payable and blocked attack fixtures', () => {
+    expect(parseTestStateConfig('?test-state=card:BS9-004', 'localhost')).toEqual({
+      kind: 'card-check',
+      cardNumber: 'BS9-004',
+    })
+    expect(parseTestStateConfig('?test-state=card-attack:BS9-004@1', 'localhost')).toEqual({
+      kind: 'card-check',
+      cardNumber: 'BS9-004@1',
+      normalAttack: 'payable',
+    })
+    expect(parseTestStateConfig('?test-state=card-attack-negative:BS9-008', 'localhost')).toEqual({
+      kind: 'card-negative',
+      cardNumber: 'BS9-008',
+      normalAttack: 'blocked',
+    })
   })
 })

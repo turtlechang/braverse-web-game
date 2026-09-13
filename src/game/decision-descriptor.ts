@@ -98,6 +98,14 @@ export const describePendingDecision = (
         steps: [{ id: 'payment-1', kind: 'payment', required: decision.mandatory === true, candidateIds: ids, cost: decision.cost, commandKinds: ['resolve-optional-cost-attack'], label: decision.mandatory ? '支付攻擊後續代價' : '選擇支付代價或略過' }],
         actionKinds: ['resolve-optional-cost-attack'],
       }
+    case 'extra-deck-attack':
+      return {
+        schemaVersion: 1,
+        ...source,
+        decisionKind: decision.kind,
+        steps: [{ id: 'extra-1', kind: 'target', required: !decision.optional, min: decision.optional ? 0 : 1, max: 1, candidateIds: ids, candidateSource: 'provided', commandKinds: ['resolve-extra-deck-attack'], label: decision.optional ? `選擇最多 1 張「${decision.cardName}」或略過` : `選擇 1 張「${decision.cardName}」` }],
+        actionKinds: ['resolve-extra-deck-attack'],
+      }
     case 'effect-order':
       return {
         schemaVersion: 1,

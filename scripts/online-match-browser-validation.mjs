@@ -390,7 +390,11 @@ try {
   await hostActivityToggle.click()
   const hostActivityFeed = hostPage.getByTestId('online-activity-feed')
   await hostActivityFeed.waitFor({ state: 'visible' })
-  await hostActivityFeed.getByTestId('command-log-filters').waitFor({ state: 'visible' })
+  // The online feed now renders the complete grouped history directly; the
+  // former CommandLogFilterBar was removed when the shared log UI was
+  // simplified.  Wait for the live history section that is actually exposed
+  // by the current component instead of a stale test id.
+  await hostActivityFeed.locator('.online-activity-history').waitFor({ state: 'visible' })
   assert.ok((await hostActivityFeed.locator('li').count()) > 0)
   await hostActivityToggle.click()
   await hostActivityFeed.waitFor({ state: 'hidden' })

@@ -9,6 +9,7 @@ import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
+  getFixedModifierTargetIds,
   getNestedSequentialDamageSelectionEffect,
   getSupportEffectCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
@@ -22,6 +23,7 @@ import {
   getTrashCookieToBreakAreaCostCandidates,
   getHandToBreakAreaCostCandidates,
   isEffectConditionMet,
+  isChooseOneModePlayable,
   isEffectUntargeted,
   requiresEffectCardSelection,
   selectEnergyPayment,
@@ -208,7 +210,8 @@ export function useOnlinePendingEffect(params: {
       !game.pendingReplacement &&
       !game.pendingRefresh &&
       !game.pendingOnPlay &&
-      !game.pendingBattle?.effectDamageSequence &&
+      (!game.pendingBattle?.effectDamageSequence ||
+        pendingAbility.sourceKind === 'flip') &&
       !(pendingAbility.trigger === 'attacker-faint' && game.pendingBattle),
   )
 
@@ -273,6 +276,12 @@ export function useOnlinePendingEffect(params: {
     : null
   const displayedEffect = currentEffect ?? draftEffect
   const displayedContext = context ?? draftContext
+  // BS9-079 pauses the attack queue for a separate Extra Deck card decision.
+  // Do not expose the surrounding attack-effect panel at the same time: the
+  // shared PendingDecisionModals must be the sole owner of this choice.
+  const extraDeckAttackPendingForViewer = Boolean(
+    game.pendingExtraDeckAttack?.playerId === viewerPlayerId,
+  )
   // Keep the composite setup effect as the command being resolved, while the
   // panel exposes its nested sequential damage so the player can order every
   // target before that setup is executed.
@@ -291,13 +300,22 @@ export function useOnlinePendingEffect(params: {
     amounts: number[]
   }>({ key: effectKey, ids: [], amounts: [] })
   const selectedTargetIds =
-    selectedTargetState.key === effectKey ? selectedTargetState.ids : []
+    (displayedContext && getFixedModifierTargetIds(game, displayedContext, selectionEffect)) ??
+    (selectedTargetState.key === effectKey ? selectedTargetState.ids : [])
   const selectedTargetAmounts =
     selectedTargetState.key === effectKey ? selectedTargetState.amounts : []
   const displayedEffectConditionMet =
     displayedEffect && displayedContext
       ? isEffectConditionMet(game, displayedContext, displayedEffect)
       : true
+  const chooseOneModePlayable =
+    displayedEffect?.kind === 'choose-one' && displayedContext
+      ? displayedEffect.modes.map((mode) =>
+          abilityCostDraft
+            ? true
+            : isChooseOneModePlayable(game, displayedContext, mode.effects),
+        )
+      : undefined
 
   const currentTargetSelector = getTargetSelector(selectionEffect)
   const displayedSelectionLimits = selectionEffect
@@ -1045,7 +1063,8 @@ export function useOnlinePendingEffect(params: {
       (cost.trashBattleCookie?.count ?? 0) > 0 ||
       (cost.trashCookieToBreakArea?.count ?? 0) > 0 ||
       (cost.handToBreakArea?.count ?? 0) > 0 ||
-      (cost.battleCookieToHand?.count ?? 0) > 0
+      (cost.battleCookieToHand?.count ?? 0) > 0 ||
+      ability.effects.some(requiresEffectCardSelection)
     )
   }
 
@@ -1262,7 +1281,9 @@ export function useOnlinePendingEffect(params: {
    * 代價選擇 UI、直接顯示目標選擇畫面。
    */
   const pendingEffectView: PendingEffect | null =
-    abilityCostDraft && draftEffect && draftContext && draftSkill
+    extraDeckAttackPendingForViewer
+      ? null
+      : abilityCostDraft && draftEffect && draftContext && draftSkill
       ? {
           sourceCard: abilityCostDraft.card,
           context: draftContext,
@@ -1408,6 +1429,7 @@ export function useOnlinePendingEffect(params: {
     toggleTarget,
     setTargetAmount,
     chooseEffectMode,
+    chooseOneModePlayable,
     confirmEffect,
     beginCookieSkill,
     handleOnPlayTrigger,

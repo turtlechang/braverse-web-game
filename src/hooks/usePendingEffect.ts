@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   CardAbility,
   EnergyCost,
@@ -20,11 +20,14 @@ import {
   getBreakToTrashCandidates,
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
+  getFixedModifierTargetIds,
+  hasFixedModifierTargets,
   getEffectTargetCandidatesForEffect,
   getNestedSequentialDamageSelectionEffect,
   getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
   getCookieSkillCost,
+  getHandCountAfterFixedSkillCost,
   getCookieSkillEffects,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
@@ -48,6 +51,7 @@ import {
   isCardAbilityEffectConditionDeferredUntilCost,
   isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
+  isChooseOneModePlayable,
   isEffectUntargeted,
   validateEnergyPayment,
 } from '../game'
@@ -117,8 +121,14 @@ export function usePendingEffect(params: {
     setSelectedAfterDamageTargetIds,
   } = params
 
-  const [pendingEffect, setPendingEffect] =
+  const [pendingEffectState, setPendingEffect] =
     useState<PendingEffect | null>(null)
+  const pendingEffect = useMemo(() => {
+    if (!pendingEffectState) return null
+    const ids = getFixedModifierTargetIds(game, pendingEffectState.context,
+      pendingEffectState.effects[pendingEffectState.effectIndex] ?? null)
+    return ids === undefined ? pendingEffectState : { ...pendingEffectState, selectedTargetIds: ids }
+  }, [game, pendingEffectState])
   const [suspendedEffect, setSuspendedEffect] =
     useState<PendingEffect | null>(null)
   const [effectHistory, setEffectHistory] = useState<string[]>([])
@@ -148,6 +158,14 @@ export function usePendingEffect(params: {
             currentEffect,
           ))
       : true
+  const chooseOneModePlayable =
+    pendingEffect && currentEffect?.kind === 'choose-one'
+      ? currentEffect.modes.map((mode) =>
+          pendingEffect.skillActivated
+            ? isChooseOneModePlayable(game, pendingEffect.context, mode.effects)
+            : true,
+        )
+      : undefined
   // Keep the composite setup effect as the command payload. For a nested
   // sequential all-target damage, the panel must instead expose its targets
   // now, so the chosen order travels with that outer command.
@@ -390,6 +408,7 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'trash-to-break' ||
+      currentEffect.kind === 'equipped-to-hp' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
       currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
@@ -804,7 +823,11 @@ export function usePendingEffect(params: {
       game.pendingOnPlay ||
       // 效果傷害正在由 battle/FLIP state machine 逐點結算，
       // 先隱藏效果選擇面板，待序列完成後再依 effectIndex 恢復。
-      game.pendingBattle?.effectDamageSequence ||
+      // A FLIP can pause an effect-damage sequence at a draw decision and
+      // then enqueue its own targeted continuation. That nested FLIP panel
+      // must remain actionable before the outer damage sequence resumes.
+      (game.pendingBattle?.effectDamageSequence &&
+        pendingAbility.sourceKind !== 'flip') ||
       // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾後結算；
       // 完整效果鏈完成後規則層才會建立對手補位。若仍在 pendingBattle，
       // 這裡先不顯示效果面板，避免玩家點下去被規則層拒絕。
@@ -851,6 +874,8 @@ export function usePendingEffect(params: {
       ? '回合結束效果'
       : pendingAbility.sourceKind === 'trap'
         ? '陷阱效果'
+        : pendingAbility.sourceKind === 'flip'
+          ? 'FLIP 效果'
         : pendingAbility.sourceKind === 'stage'
           ? '場景效果'
           : pendingAbility.sourceKind === 'skill'
@@ -892,7 +917,7 @@ export function usePendingEffect(params: {
         optional: Boolean(pendingAbility.awaitingActivation),
         triggerLabel,
         sourceKind: pendingAbility.sourceKind === 'trap' ? 'item'
-          : pendingAbility.sourceKind === 'skill' ? 'cookie'
+          : pendingAbility.sourceKind === 'skill' || pendingAbility.sourceKind === 'flip' ? 'cookie'
           : pendingAbility.sourceKind,
         endPhase: isEndPhaseEffect,
       })
@@ -914,14 +939,32 @@ export function usePendingEffect(params: {
    * a command against an already-resolved queue and appears to do nothing.
    */
   useEffect(() => {
-    if (
-      !pendingEffect?.skillActivated ||
-      pendingEffect.sourceKind === 'attack'
-    ) {
+    if (!pendingEffect?.skillActivated) {
       return
     }
 
     const authoritative = game.pendingAbilityEffect
+    // A BS9-079 Extra Deck choice (and similar nested attack continuations)
+    // replaces the local attack wizard with a new authoritative ability
+    // queue.  The attack wizard is not itself backed by
+    // `pendingAbilityEffect`, so the generic same-source synchronizer below
+    // intentionally ignores it; clear it explicitly here or its stale
+    // confirm button can re-submit `resolve-attack-effect` and hide the new
+    // nested ability panel.
+    if (pendingEffect.sourceKind === 'attack') {
+      const replacementPending = Boolean(
+        game.pendingExtraDeckAttack ||
+          (authoritative &&
+            authoritative.sourceInstanceId !== pendingEffect.context.sourceInstanceId),
+      )
+      if (!replacementPending) return
+      const timer = window.setTimeout(() => {
+        setPendingEffect((current) => (current === pendingEffect ? null : current))
+        setEffectHistory([])
+      }, 0)
+      return () => window.clearTimeout(timer)
+    }
+
     const sameSource = Boolean(
       authoritative &&
         authoritative.playerId === pendingEffect.context.sourcePlayerId &&
@@ -958,7 +1001,7 @@ export function usePendingEffect(params: {
       }, 0)
       return () => window.clearTimeout(timer)
     }
-  }, [game.pendingAbilityEffect, pendingEffect])
+  }, [game.pendingAbilityEffect, game.pendingExtraDeckAttack, pendingEffect])
 
   useEffect(() => {
     if (
@@ -1066,10 +1109,21 @@ export function usePendingEffect(params: {
       sourceInstanceId: card.instanceId,
     }
     const skillEffects = getCookieSkillEffects(card.skill, trigger)
+    const skillCost = getCookieSkillCost(card.skill, trigger)
+    const handCountAfterFixedCost = getHandCountAfterFixedSkillCost(
+      nextGame.players[playerId],
+      skillCost,
+    )
     const availableEffects = skillEffects.filter((effect) =>
       isEffectConditionMet(nextGame, context, effect) ||
       card.skill!.effectConditionsAtResolution ||
-      isSkillEffectConditionDeferredUntilCost(card.skill!, effect),
+      isSkillEffectConditionDeferredUntilCost(card.skill!, effect) ||
+      (
+        'condition' in effect &&
+        effect.condition?.kind === 'hand-count-at-most' &&
+        handCountAfterFixedCost !== undefined &&
+        handCountAfterFixedCost <= effect.condition.count
+      ),
     )
 
     if (availableEffects.length === 0) {
@@ -1086,7 +1140,6 @@ export function usePendingEffect(params: {
       return
     }
 
-    const skillCost = getCookieSkillCost(card.skill, trigger)
     const hasRequiredTargets = Boolean(skillCost.trashCookieToBreakArea || skillCost.handToBreakArea) || availableEffects.every((effect) => {
       if (effect.kind === 'opponent-battle-to-trash') {
         // 這類效果不能只用一般 selector 判定：BS6-010 的移動封鎖與
@@ -1218,7 +1271,9 @@ export function usePendingEffect(params: {
       triggerLabel,
       sourceKind: 'cookie',
     })
-    setMessage(`${card.name}的技能等待支付技能代價並選擇目標。`)
+    setMessage(hasFixedModifierTargets(availableEffects[0] ?? null)
+      ? `${card.name}的技能等待支付代價並確認固定效果。`
+      : `${card.name}的技能等待支付技能代價並選擇目標。`)
     },
     [setGame, setMessage, clearAttacker, setPendingEffect],
   )
@@ -1307,6 +1362,8 @@ export function usePendingEffect(params: {
       battle.stage !== 'attack-effect' ||
       battle.attackerPlayerId !== viewerPlayerId ||
       game.pendingOptionalCostAttack ||
+      game.pendingExtraDeckAttack ||
+      game.pendingAbilityEffect ||
       pendingEffect ||
       faintActive ||
       // resolve-attack-effect 是 player-action 指令，規則層的
@@ -1440,7 +1497,9 @@ export function usePendingEffect(params: {
         triggerLabel: '攻擊後續效果',
         sourceKind: 'attack',
       })
-      setMessage(`${sourceCard.name}等待選擇攻擊後續效果目標。`)
+      setMessage(hasFixedModifierTargets(battle.attackEffects[battle.attackEffectIndex] ?? null)
+        ? `${sourceCard.name}等待確認攻擊後續效果；目標已依卡文固定。`
+        : `${sourceCard.name}等待選擇攻擊後續效果目標。`)
     }, 0)
     return () => window.clearTimeout(timer)
   }, [
@@ -1564,7 +1623,8 @@ export function usePendingEffect(params: {
         ? effectTargetCandidates.length
         : currentEffect.kind === 'break-to-trash' ||
         currentEffect.kind === 'trash-to-hand' ||
-        currentEffect.kind === 'trash-to-deck'
+        currentEffect.kind === 'trash-to-deck' ||
+        currentEffect.kind === 'equipped-to-hp'
         ? currentEffect.max
         : currentEffect.kind === 'break-to-hand-by-level-sum' ||
             currentEffect.kind === 'hand-to-break-by-level-sum'
@@ -2587,6 +2647,7 @@ export function usePendingEffect(params: {
     pendingEffect,
     setPendingEffect,
     chooseEffectMode,
+    chooseOneModePlayable,
     suspendedEffect,
     setSuspendedEffect,
     effectHistory,

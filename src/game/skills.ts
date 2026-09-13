@@ -228,6 +228,23 @@ export const isSkillEffectConditionDeferredUntilCost = (
   'condition' in effect &&
   effect.condition?.kind === 'last-hp-trash-card-non-cookie'
 
+/**
+ * 固定手牌成本支付後的預期張數。只處理張數確定的成本；`discardHandAtLeast`
+ * 可由玩家自行多棄，不能在尚未選牌時猜測，因此回傳 undefined。
+ */
+export const getHandCountAfterFixedSkillCost = (
+  player: PlayerState,
+  cost: AbilityCost,
+): number | undefined => {
+  if (cost.discardHandAtLeast) return undefined
+  const afterDiscard = cost.discardAllHand
+    ? 0
+    : player.hand.length - (cost.discardHand ?? 0)
+  return Math.max(0, afterDiscard - (cost.handToBreakArea?.count ?? 0)) +
+    (cost.supportToHand ?? 0) +
+    (cost.battleCookieToHand?.count ?? 0)
+}
+
 export const canPaySupportToTrashCost = (
   cost: AbilityCost,
   supports: SupportCard[],
@@ -1267,6 +1284,18 @@ export const canActivateCookieSkill = (
     }
     if (!isEffectConditionMet(state, context, effect)) {
       if (skill.effectConditionsAtResolution) continue
+      if (
+        'condition' in effect &&
+        effect.condition?.kind === 'hand-count-at-most'
+      ) {
+        const handCountAfterCost = getHandCountAfterFixedSkillCost(player, cost)
+        if (
+          handCountAfterCost !== undefined &&
+          handCountAfterCost <= effect.condition.count
+        ) {
+          continue
+        }
+      }
       if (!isSkillEffectConditionDeferredUntilCost(skill, effect)) return false
     }
     // BS3-019 / BS6-039 的第一段效果必須先有對手休息區餅乾；
@@ -1395,6 +1424,19 @@ export const getCookieSkillUnavailableReason = (
       ? `LV.${minLevel} `
       : ''
     return `對手上一回合${colorLabel}${levelLabel}餅乾昏厥數尚未達到 ${count} 張。`
+  }
+  const unmetSupportTrashCondition = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
+    'condition' in effect &&
+    effect.condition?.kind === 'support-cards-trashed-this-turn-at-least' &&
+    !isEffectConditionMet(state, context, effect),
+  )
+  if (
+    unmetSupportTrashCondition &&
+    'condition' in unmetSupportTrashCondition &&
+    unmetSupportTrashCondition.condition?.kind ===
+      'support-cards-trashed-this-turn-at-least'
+  ) {
+    return `本回合進入棄牌區的支援卡尚未達到 ${unmetSupportTrashCondition.condition.count} 張。`
   }
   const missingAnotherCookie = skill && getCookieSkillEffects(skill, trigger).find((effect) =>
     'condition' in effect && effect.condition?.kind === 'battle-area-has-another-cookie' &&
@@ -1729,6 +1771,7 @@ export const activateCookieSkill = (
     }
   }
 
+  let selfToTrashDepartedCount = 0
   if (cost.selfToTrash) {
     const stillInBattle = playerAfterCosts.battleArea.find(
       (cookie) => cookie.card.instanceId === sourceInstanceId,
@@ -1745,6 +1788,7 @@ export const activateCookieSkill = (
           ...stillInBattle.hpCards,
         ],
       }
+      selfToTrashDepartedCount = 1
     }
   }
 
@@ -1885,15 +1929,61 @@ export const activateCookieSkill = (
     hpToTrashPayment.departedCount +
     trashBattlePayment.departedCount +
     selfToBreakDepartedCount +
-    selfToDeckBottomDepartedCount
+    selfToDeckBottomDepartedCount +
+    selfToTrashDepartedCount
 
-  const paidState = totalDepartedCount > 0
+  let paidState = totalDepartedCount > 0
     ? recordCookieDepartures(
         clearDepartedCookieModifiers(activatedState),
         playerId,
         totalDepartedCount,
       )
     : activatedState
+  if (selfToDeckBottomDepartedCount > 0 || selfToTrashDepartedCount > 0) {
+    paidState = {
+      ...paidState,
+      cookiesPlacedFromBattleToDeckThisTurn: selfToDeckBottomDepartedCount > 0
+        ? {
+            ...(paidState.cookiesPlacedFromBattleToDeckThisTurn ?? {}),
+            [playerId]: true,
+          }
+      : paidState.cookiesPlacedFromBattleToDeckThisTurn,
+    }
+  }
+  // BS9-106～108 are provenance-sensitive: only a Chess Piece Cookie that
+  // this player's own Shadow Milk effect moved from hand to trash may trigger.
+  // Cost payment happens before the normal ability queue is opened, so retain
+  // the concrete discarded instances here and let commands start the trigger
+  // queue after Shadow Milk's printed effect has finished resolving.
+  const shadowMilkDiscardTriggers = /shadow\s+milk\s+cookie/i.test(source.card.name)
+    ? discardedCards.flatMap((card) =>
+        [...(card.skill?.effects ?? []), ...(card.skill?.passiveEffects ?? [])]
+          .filter((effect) => effect.kind === 'shadow-milk-discard-trigger')
+          .map((effect) => ({
+            playerId,
+            sourceInstanceId: card.instanceId,
+            sourceCardName: card.name,
+            effects: effect.effects,
+          })),
+      )
+    : []
+  if (shadowMilkDiscardTriggers.length > 0) {
+    paidState = {
+      ...paidState,
+      pendingShadowMilkDiscardTriggers: [
+        ...(paidState.pendingShadowMilkDiscardTriggers ?? []),
+        ...shadowMilkDiscardTriggers,
+      ],
+    }
+  }
+  // 支援區代價也是本回合「支援卡進入棄牌區」的正式事件。除了累計
+  // BS9-050 這類條件外，還要讓既有的支援區減少觸發技能沿用同一入口。
+  if (trashedCards.length > 0) {
+    paidState = markSupportAreaDecreased(paidState, playerId, {
+      triggerSkill: true,
+      trashedCount: trashedCards.length,
+    })
+  }
   return resolveBreakLevelVictory(paidState)
 }
 

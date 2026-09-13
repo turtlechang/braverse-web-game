@@ -7,6 +7,7 @@ import {
   getRemainingEnergyCost,
   getHpToHandCostCandidates,
   getHpToTrashCostCandidates,
+  getSupportEffectCandidates,
   getTrashToDeckCostCandidates,
   isEffectConditionMet,
   isSupportToHandCostCandidate,
@@ -35,6 +36,8 @@ export interface OptionalCostAttackPromptData {
   discardHandCost: number
   discardHandCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCost: number
+  supportToTrashCost: number
+  supportToTrashCandidates: { card: GameCard; instanceId: string }[]
   hpToTrashCost: number
   hpToTrashCandidates: { card: GameCard; instanceId: string }[]
   hpToHandCost: number
@@ -104,6 +107,7 @@ const describeCost = (
   sourceEnergy: EnergyCost | undefined,
   discardHandCost: number,
   supportToHandCost: number,
+  supportToTrashCost: number,
   hpToTrashCost: number,
   hpToHandCost: number,
   selfToBreakAreaCost: boolean,
@@ -134,6 +138,9 @@ const describeCost = (
   if (discardHandCost > 0) parts.push(`棄置 ${discardHandCost} 張手牌`)
   if (supportToHandCost > 0) {
     parts.push(`將 ${supportToHandCost} 張支援區卡返回手牌`)
+  }
+  if (supportToTrashCost > 0) {
+    parts.push(`將 ${supportToTrashCost} 張支援區卡送入棄牌區`)
   }
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
   if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
@@ -288,6 +295,20 @@ export function getOptionalCostAttackPrompt(
     pending.sourceInstanceId,
   ).map((card) => ({ card, instanceId: card.instanceId }))
   const supportToHandCost = pending.cost.supportToHand ?? 0
+  const supportToTrashCost = pending.cost.supportToTrash ?? 0
+  const supportToTrashCandidates = supportToTrashCost === 0
+    ? []
+    : getSupportEffectCandidates(
+        game,
+        {
+          sourcePlayerId: viewerPlayerId,
+          sourceInstanceId: pending.sourceInstanceId,
+        },
+        {
+          side: 'self',
+          keyword: pending.cost.supportToTrashKeyword,
+        },
+      ).map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
   const hpToTrashCost = pending.cost.hpToTrash ? 1 : 0
   const hpToTrashCandidates = hpToTrashCost
     ? getHpToTrashCostCandidates(
@@ -352,9 +373,11 @@ export function getOptionalCostAttackPrompt(
     effectText: pending.effectText,
     resolution: pending.resolution,
     mandatory: pending.mandatory === true,
-    discardHandCost,
-    discardHandCandidates,
-    supportToHandCost,
+      discardHandCost,
+      discardHandCandidates,
+      supportToHandCost,
+      supportToTrashCost,
+      supportToTrashCandidates,
     hpToTrashCost,
     hpToTrashCandidates,
     hpToHandCost,
@@ -367,6 +390,7 @@ export function getOptionalCostAttackPrompt(
       pending.sourceEnergy,
       discardHandCost,
       supportToHandCost,
+      supportToTrashCost,
       hpToTrashCost,
       hpToHandCost,
       pending.cost.selfToBreakArea === true,

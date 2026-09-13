@@ -781,6 +781,9 @@ const describeAttackEffectAction = (effect: CardEffect): string => {
     case 'modify-attack':
       return `使目標攻擊力 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-damage-received':
+      if (effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+        return `${effect.duration === 'opponent-next-turn' ? '直到對手回合結束，' : ''}使目標每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}改為 ${effect.setDamageTo} 點`
+      }
       return `使目標受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-attack-by-break-count':
       return '依休息區張數修改目標攻擊力'
@@ -1325,6 +1328,13 @@ export const describeCommand = (
         ? `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}；${outcome}`
         : `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}`
     }
+    case 'resolve-extra-deck-attack': {
+      const pending = previous.pendingExtraDeckAttack
+      if (!command.extraDeckInstanceId) {
+        return `${actor} 略過「${pending?.cardName ?? 'EXTRA 餅乾'}」的攻擊效果`
+      }
+      return `${actor} reveal 了「${findCardName(previous, command.extraDeckInstanceId)}」並啟動其攻擊效果`
+    }
     case 'resolve-next-damage': {
       const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
       const sequence = previous.pendingBattle?.effectDamageSequence
@@ -1451,6 +1461,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'declare-attack': 'attack',
   'resolve-optional-cost-attack': 'attack',
   'resolve-attack-effect': 'attack',
+  'resolve-extra-deck-attack': 'attack',
   'resolve-next-damage': 'damage',
   'resolve-battle': 'attack',
   'resolve-after-damage-effect': 'damage',
@@ -2354,7 +2365,18 @@ export const resolveLogCard = (
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)
         : undefined
+    case 'resolve-extra-deck-attack':
+      return command.extraDeckInstanceId
+        ? findCard(previous, command.extraDeckInstanceId) ??
+            findCard(next, command.extraDeckInstanceId)
+        : previous.pendingExtraDeckAttack?.sourceInstanceId
+          ? findCard(previous, previous.pendingExtraDeckAttack.sourceInstanceId)
+          : undefined
     case 'resolve-ability-effect':
+      return previous.pendingAbilityEffect?.sourceInstanceId
+        ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
+        : undefined
+    case 'resolve-reorder-hp':
       return previous.pendingAbilityEffect?.sourceInstanceId
         ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
         : undefined
@@ -2378,6 +2400,15 @@ export const resolveLogCard = (
     case 'begin-activate-stage':
       return previous.players[command.playerId].stage?.card
     case 'resolve-next-damage':
+      // Sequential effect damage is attributed to its real effect source so a
+      // contract trace can prove every damage segment even when protection
+      // prevents the HP reveal (or when the revealed card is only a filler).
+      // Ordinary battle damage keeps the existing revealed-HP association.
+      if (previous.pendingBattle?.effectDamageSequence) {
+        const sourceId = previous.pendingBattle.attackerInstanceId
+        const source = sourceId ? findCard(previous, sourceId) : undefined
+        if (source) return source
+      }
       return resolveRevealedDamageCard(previous, next, command.playerId)
     case 'resolve-flip':
       // BS9-030 activates a discarded Cookie's FLIP as part of the attacker's

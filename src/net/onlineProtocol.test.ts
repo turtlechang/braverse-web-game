@@ -186,6 +186,38 @@ describe('online protocol validation', () => {
     ).toBe(false)
   })
 
+  it('accepts BS9-079 EXTRA attack selection and optional skip', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-extra-deck-attack',
+          playerId: 'player-one',
+          extraDeckInstanceId: 'bs9-102-copy-2',
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-extra-deck-attack',
+          playerId: 'player-one',
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-extra-deck-attack',
+          playerId: 'player-one',
+          extraDeckInstanceId: 2,
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts per-effect trap targets and rejects non-string matrix entries', () => {
     expect(
       isClientMessage({

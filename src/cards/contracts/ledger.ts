@@ -37,8 +37,9 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 }
 
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
+  [/\bboth\s+players\s+can\s+use\s+(?:the\s+)?effect\s+below\b/i, 'condition'],
   [/\b(?:draw\w*|reveal\w*|inspect\w*|look at|view\w*|rearrange\w*)\b/i, 'effect'],
-  [/\b(?:deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\{da\}/i, 'effect'],
+  [/\b(?:add\w*|deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\bcannot\s+add\s+HP\b|\{da\}/i, 'effect'],
   [
     /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
     'effect',
@@ -294,8 +295,14 @@ const additionalRuntimeSelectorsForEffect = (
           : [fixed(amount)]
         : []
     case 'draw-up-to-then-discard':
-      return record.handDestination === 'deck-top'
-        ? [{ side: 'self', min: 1, max: 1 }]
+      return record.handDestination === 'deck-top' ||
+        record.handDestination === 'deck-bottom' ||
+        record.handDestination === 'deck-top-or-bottom'
+        ? [{
+            side: 'self',
+            min: typeof record.discardCount === 'number' ? record.discardCount : 1,
+            max: typeof record.discardCount === 'number' ? record.discardCount : 1,
+          }]
         : []
     case 'break-to-hand-by-level-sum':
       return typeof record.cardCount === 'number'
@@ -404,7 +411,17 @@ const runtimeSelectorForEffect = (
       ...(target as Partial<EffectTargetSelector>),
       ...(typeof target.exactLevel === 'number'
         ? { minLevel: target.exactLevel, maxLevel: target.exactLevel }
-        : {}),
+      : {}),
+    }
+  }
+  // Equipped cards remain public on their host Cookie, but they are a
+  // distinct selection domain from the host itself. Project the card-level
+  // selector so an "Equipped [Soul Jam]" clause cannot be satisfied by a
+  // generic opposing Cookie target.
+  if (record.kind === 'equipped-to-hp') {
+    return {
+      ...common,
+      ...(amount !== undefined ? { min: 0, max: amount } : {}),
     }
   }
   const movementKinds = new Set([
@@ -696,11 +713,16 @@ const bracketClauses = (
     )
     const hpTrash =
       inner.match(
-        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?(?:\s+in\s+your\s+battle\s+area)?\s+(?:into|in)\s+the\s+trash/i,
+        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?(?:\s+in\s+your\s+battle\s+area)?\s+(?:into|in)\s+(?:the|your)\s+trash/i,
       ) ??
       inner.match(/place\s+(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
     const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
+    // BS9-059 combines the source Cookie and support-card payment in a
+    // single bracketed clause; retain both cost witnesses under this clause.
+    const selfAndSupportTrash = inner.match(
+      /place\s+this\s+(?:cookie|card)\s+and\s+(\d+)\s+cards?\s+from\s+your\s+support\s+area\s+into\s+(?:the|your)\s+trash/i,
+    )
     const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
     const selfAndHandBreak = /place\s+this\s+cookie\s+and\s+(?:a|\d+)\s+cookie(?:\s+that\s+is\s+LV\.\s*\d+\s+or\s+above)?\s+from\s+your\s+hand\s+into\s+your\s+break\s+area/i.test(inner)
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
@@ -716,11 +738,11 @@ const bracketClauses = (
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
     const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
-    const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+your\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
+    const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+(?:your|this)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
-    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
+    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
     const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
       discard ||
@@ -729,6 +751,7 @@ const bracketClauses = (
       hpTrash ||
       battleTrash ||
       selfTrash ||
+      selfAndSupportTrash ||
       selfBreak ||
       selfAndHandBreak ||
       battleFaint ||
@@ -761,6 +784,8 @@ const bracketClauses = (
               ? 'battle-to-trash'
                 : selfTrash
                   ? 'self-to-trash'
+                  : selfAndSupportTrash
+                    ? 'self-to-trash'
                   : selfAndHandBreak
                     ? 'self-to-break'
                     : selfBreak
@@ -818,6 +843,13 @@ const bracketClauses = (
         amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
+      if (selfAndSupportTrash) {
+        costs.push({
+          kind: 'support-to-trash',
+          amount: Number(selfAndSupportTrash[1]),
+          clauseIds: [clauseId],
+        })
+      }
       if (selfAndHandBreak) {
         costs.push({
           kind: 'hand-to-break',
@@ -841,6 +873,50 @@ const targetClauses = (
 ): ContractTarget[] => {
   const targets: ContractTarget[] = []
   const structuredRanges: Array<{ start: number; end: number }> = []
+  // BS9-025's trailing clause omits a number: the player may select another
+  // one of their Cookies as the recipient of the attached +1 HP.  Treat this
+  // as an optional battle Cookie selector and keep `excludeSource` explicit;
+  // the runtime adapter binds it to `attachedHpAlternateTarget` while the
+  // FLIP card itself still resolves to Trash.
+  const anotherCookieSelection = /\bselect\s+another\s+of\s+(?:your)\s+Cookies?\b/gi
+  for (const match of text.matchAll(anotherCookieSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: { side: 'self', min: 0, max: 1, excludeSource: true },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
+  // An equipped card is selected from the Cookie that hosts it, rather than
+  // selecting that Cookie. Parse this narrow grammar before the generic
+  // Cookie/card selector, which would otherwise consume the later word
+  // "card" in the placement sentence and lose the Soul Jam qualifier.
+  const equippedSelection =
+    /\bselect\s+(up\s+to\s+)?(\d+)\s+of\s+(your opponent's|your)\s+equipped\s+\[([^\]]+)\]/gi
+  for (const match of text.matchAll(equippedSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    const amount = Number(match[2])
+    const keywordName = match[4].trim().toLowerCase()
+    const keyword = keywordName === 'soul jam' ? ('soul-jam' as const) : undefined
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: /opponent/i.test(match[3]) ? 'opponent' : 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        ...(keyword ? { keyword } : {}),
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
   const re = /select\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(your opponent's|your|either player's)\s+([\s\S]*?)\b(?:cookies?|cards?)(?=\s|[.,;]|$)/gi
   for (const match of text.matchAll(re)) {
     const min = match[1] ? 0 : Number(match[2])
@@ -1510,6 +1586,22 @@ const collectRuntime = (value: unknown, result: {
       })
     }
   }
+  // Attached-HP FLIPs do not carry their default recipient as a regular
+  // CardEffect: the host Cookie is resolved by battle.ts. Still expose the
+  // concrete +1 HP family and the optional alternate-recipient selector to
+  // the contract audit so printed BS9-025 target/cost clauses bind to runtime
+  // evidence instead of being reported as unresolved.
+  if (typeof record.attachedHpBonus === 'number' && record.attachedHpBonus > 0) {
+    result.effectKinds.add('gain-hp')
+  }
+  if (
+    record.attachedHpAlternateTarget &&
+    typeof record.attachedHpAlternateTarget === 'object'
+  ) {
+    result.targetSelectors.push(
+      record.attachedHpAlternateTarget as Partial<EffectTargetSelector>,
+    )
+  }
   if (record.energyCost && typeof record.energyCost === 'object') {
     result.energyCosts.push(record.energyCost as EnergyCost)
   }
@@ -1568,7 +1660,15 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
         }
       : undefined,
     attackEffects: card.type === 'cookie' ? card.attackEffects : undefined,
-    flip: card.flip ? { cost: card.flip.cost, effects: card.flip.effects } : undefined,
+    flip: card.flip
+      ? {
+          cost: card.flip.cost,
+          effects: card.flip.effects,
+          ...(card.flip.attachedHpAlternateTarget
+            ? { attachedHpAlternateTarget: card.flip.attachedHpAlternateTarget }
+            : {}),
+        }
+      : undefined,
     ability: card.item
       ? {
           cost: card.item.cost,
@@ -1582,6 +1682,7 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
         ? {
             cost: card.stageAbility.cost,
             restSource: card.stageAbility.restSource,
+            oncePerTurn: card.stageAbility.oncePerTurn,
             effects: card.stageAbility.effects,
           }
         : card.trap
@@ -1818,6 +1919,11 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   if (/damage|deal|receives/.test(text)) kinds.push('damage', 'damage-all')
   if (/draw/.test(text)) kinds.push('draw', 'draw-up-to')
   if (/discard/.test(text)) kinds.push('discard-hand', 'opponent-discard-hand')
+  if (/cannot add hp[\s\S]*card effects/.test(text)) kinds.push('prevent-opponent-hp-gain')
+  if (/(?:view|rearrange)[\s\S]*hp/.test(text)) kinds.push('reorder-hp')
+  if (/return[\s\S]*from your trash to your hand/.test(text)) kinds.push('trash-to-hand')
+  if (/gain(?:s)?\s+\+?\d+\s+hp/.test(text)) kinds.push('gain-hp')
+  if (/top[\s\S]*hp[\s\S]*(?:into|to) (?:your )?trash/.test(text)) kinds.push('hp-to-trash')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
   if (/\bplace\s+(?:up\s+to\s+)?\d+\s+cookie\s+with\s+the\s+same\s+LV\.\s+as\s+that\s+cookie\s+from\s+your\s+break\s+area\s+into\s+your\s+trash\b/.test(text)) {
     kinds.push('break-to-trash')
@@ -1920,6 +2026,60 @@ const buildContract = (
   if (record.type === 'flip' && segments.flip && evidence.flip === undefined) {
     blockers.push('FLIP text has no runtime flip ability')
   }
+  const fullSourceText = Object.values(segments).join(' ')
+  const flattenedRuntimeEffects = flattenRuntimeEffects(evidence)
+  const hasRuntimeEffect = (kind: string): boolean =>
+    flattenedRuntimeEffects.some((effect) => effect.kind === kind)
+  if (
+    /cannot add HP to Cookies via card effects/i.test(fullSourceText) &&
+    !hasRuntimeEffect('prevent-opponent-hp-gain')
+  ) {
+    blockers.push('opponent HP-gain prevention has no runtime effect')
+  }
+  if (/rearrange them in any order/i.test(fullSourceText) && !hasRuntimeEffect('reorder-hp')) {
+    blockers.push('HP rearrangement has no runtime effect')
+  }
+  if (/discard 1 Cookie that has FLIP from your hand or place 1 card from the top of this Cookie's HP/i.test(fullSourceText)) {
+    const chooseOne = flattenedRuntimeEffects.find((effect) => effect.kind === 'choose-one')
+    const discard = flattenedRuntimeEffects.find((effect) => effect.kind === 'discard-hand')
+    if (
+      !chooseOne ||
+      !discard ||
+      discard.cookieOnly !== true ||
+      discard.hasFlip !== true ||
+      !hasRuntimeEffect('hp-to-trash')
+    ) {
+      blockers.push('FLIP discard or source HP choice lacks exact runtime evidence')
+    }
+  }
+  if (/return up to 2 \{Y\} Cookies that have FLIP from your trash to your hand/i.test(fullSourceText)) {
+    const recovery = flattenedRuntimeEffects.find((effect) => effect.kind === 'trash-to-hand')
+    if (
+      !recovery ||
+      recovery.max !== 2 ||
+      recovery.energyColor !== 'yellow' ||
+      recovery.cookieOnly !== true ||
+      recovery.hasFlip !== true
+    ) {
+      blockers.push('yellow FLIP Cookie trash recovery lacks exact runtime filters')
+    }
+  }
+  if (/another \[Chess Choco Cookie\][\s\S]*all your Cookies gain \+1 HP/i.test(fullSourceText)) {
+    const gain = flattenedRuntimeEffects.find((effect) => effect.kind === 'gain-hp')
+    const condition = gain?.condition as Record<string, unknown> | undefined
+    const target = gain?.target as Record<string, unknown> | undefined
+    if (
+      !gain ||
+      gain.amount !== 1 ||
+      target?.side !== 'self' ||
+      target.allMatching !== true ||
+      condition?.kind !== 'battle-area-has-named-cookie' ||
+      condition.name !== 'Chess Choco Cookie' ||
+      condition.excludeSource !== true
+    ) {
+      blockers.push('named twin all-Cookie HP gain lacks exact runtime evidence')
+    }
+  }
   if (clauses.some((clause) => clause.role === 'unsupported')) blockers.push('source contains unclassified clause')
   const runtimeArrays = {
     targetSelectors: [] as Partial<EffectTargetSelector>[],
@@ -1952,7 +2112,12 @@ const buildContract = (
   if (timingMarkers.has('mob') || timingMarkers.has('ap')) {
     if (evidence.skill === undefined && evidence.ability === undefined) blockers.push('timing marker has no runtime ability')
   }
-  if (timingMarkers.has('t1') && evidence.skill?.oncePerTurn !== true) blockers.push('once-per-turn marker missing runtime flag')
+  if (
+    timingMarkers.has('t1') &&
+    (evidence.skill?.oncePerTurn ?? evidence.ability?.oncePerTurn) !== true
+  ) {
+    blockers.push('once-per-turn marker missing runtime flag')
+  }
   if (timingMarkers.has('mt') && evidence.skill?.yourTurn !== true) blockers.push('your-turn marker missing runtime flag')
   return {
     schemaVersion: 1,
@@ -2127,7 +2292,9 @@ export const analyzeOfficialCardBehavior = (
   )
   const resolutionOrderCovered = coversResolutionOrder(contract, evidence)
   const timingCovered = contract.timing.markers.every((marker) => {
-    if (marker === 't1') return evidence.skill?.oncePerTurn === true
+    if (marker === 't1') {
+      return (evidence.skill?.oncePerTurn ?? evidence.ability?.oncePerTurn) === true
+    }
     if (marker === 'mt') return evidence.skill?.yourTurn === true
     if (marker === 'mob' || marker === 'ap') return evidence.skill !== undefined || evidence.ability !== undefined
     if (marker === 'bl') return evidence.skill?.trigger === 'block'

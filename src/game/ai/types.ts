@@ -85,6 +85,7 @@ export type AiActionType =
   | 'resolve-effect-order'
   | 'resolve-inspect-deck'
   | 'resolve-reveal-top-deck'
+  | 'resolve-extra-deck-attack'
   | 'resolve-optional-cost-attack'
   | 'resolve-stage-trigger'
   | 'error'

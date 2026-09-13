@@ -364,6 +364,13 @@
   color: #ffe66e;
 }
 
+/* Fixed recipients are included in the effect, so keep their cards legible. */
+.effect-panel .effect-candidates button[data-fixed-target='true']:disabled {
+  opacity: 1;
+  filter: none;
+  cursor: default;
+}
+
 .effect-panel .effect-hp-amount-candidates {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

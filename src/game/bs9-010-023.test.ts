@@ -4,7 +4,7 @@ import {
   convertOfficialCardToGameCard,
 } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
-import bs9Candidates from '../../data/candidates/official-a-game-of-truth-and-deceit-bs9.en.json'
+import bs9Candidates from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import {
   createBs9CandidatePreviewDemoState,
   createCardCheckDemoState,
@@ -12,8 +12,17 @@ import {
   parseTestStateConfig,
 } from './demo'
 import { applyGameCommand } from './commands'
-import { getAttackDamageAgainst, getEffectDamageAmount } from './effects'
+import {
+  getAttackDamageAgainst,
+  getEffectDamageAmount,
+  getEffectSelectionCandidates,
+  getEffectTargetSelectionLimits,
+  getEffectTargetCandidates,
+  getFixedModifierTargetIds,
+} from './effects'
 import { advancePhase } from './turn'
+import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
+import { describeCommandSteps } from './command-log'
 import type { GameCard, GameState, PlayerId } from './types'
 
 const records = bs9Candidates.cards as unknown as OfficialCardRecord[]
@@ -150,7 +159,13 @@ describe('BS9-010～023 second RED candidate batch', () => {
     expect(candidate('BS9-013').skill).toBeUndefined()
     expect(candidate('BS9-014').skill).toMatchObject({
       cost: { hpToTrash: { amount: 2, excludeSource: true } },
-      effects: [{ kind: 'transfer-hp', direction: 'to-source', amount: 1 }],
+      effects: [{
+        kind: 'transfer-hp',
+        direction: 'to-source',
+        amount: 1,
+        hpPlacement: 'bottom',
+        faceUp: true,
+      }],
     })
     expect(candidate('BS9-015').skill).toMatchObject({
       faint: true,
@@ -182,7 +197,12 @@ describe('BS9-010～023 second RED candidate batch', () => {
     })
     expect(candidate('BS9-021').trap).toMatchObject({
       cost: { energy: { red: 3 } },
-      effects: [{ kind: 'transfer-hp', receiverTarget: { side: 'self', min: 1, max: 1 } }],
+      effects: [{
+        kind: 'transfer-hp',
+        hpPlacement: 'bottom',
+        faceUp: true,
+        receiverTarget: { side: 'self', min: 1, max: 1 },
+      }],
     })
     expect(candidate('BS9-022').trap).toMatchObject({
       cost: { energy: { red: 1 } },
@@ -283,20 +303,25 @@ describe('BS9-010～023 second RED candidate batch', () => {
     const candy = battle(state, 'BS9-014')
     const donor = battle(state, 'BS8-014')
     const target = state.players['player-two'].battleArea[0]
+    const targetTopHp = target.hpCards[target.hpCards.length - 1]!
     state = applyGameCommand(state, {
       kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: candy.card.instanceId,
       trigger: 'on-play', paymentIds: [], hpToTrashTargetIds: [donor.card.instanceId],
       effectTargets: [[target.card.instanceId]],
     })
     expect(battle(state, 'BS8-014').hpCards).toHaveLength(2)
-    expect(battle(state, 'BS9-014').hpCards).toHaveLength(3)
-    expect(state.foreignHpCardInstanceIds?.[candy.card.instanceId]).toContain(target.hpCards[target.hpCards.length - 1]!.instanceId)
+    const candyAfter = battle(state, 'BS9-014')
+    expect(candyAfter.hpCards).toHaveLength(3)
+    expect(candyAfter.hpCards[0]?.instanceId).toBe(targetTopHp.instanceId)
+    expect(candyAfter.faceUpHpCardInstanceIds).toContain(targetTopHp.instanceId)
+    expect(state.foreignHpCardInstanceIds?.[candy.card.instanceId]).toContain(targetTopHp.instanceId)
     const negativeFourteen = deploy(createCardNegativeDemoState('BS9-014'), 'BS9-014')
     const negativeCandy = battle(negativeFourteen, 'BS9-014')
+    const negativeTarget = negativeFourteen.players['player-two'].battleArea[0]!
     expect(() => applyGameCommand(negativeFourteen, {
       kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: negativeCandy.card.instanceId,
       trigger: 'on-play', paymentIds: [], hpToTrashTargetIds: [battle(negativeFourteen, 'BS8-014').card.instanceId],
-      effectTargets: [[target.card.instanceId]],
+      effectTargets: [[negativeTarget.card.instanceId]],
     })).toThrow()
 
     state = deploy(createCardCheckDemoState('BS9-016'), 'BS9-016')
@@ -321,6 +346,21 @@ describe('BS9-010～023 second RED candidate batch', () => {
     const hand = handCard(state, 'BS9-013')
     state = applyGameCommand(state, { kind: 'resolve-faint-effect', playerId: 'player-one', targetIds: [hand.instanceId] })
     expect(state.pendingAbilityEffect?.previousEffectTargetIds).toEqual([hand.instanceId])
+    const pending = state.pendingAbilityEffect!
+    const hpToHand = pending.effects[pending.effectIndex]
+    if (hpToHand.kind !== 'hp-to-hand') throw new Error('BS9-015 Then effect is missing')
+    const context = {
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+    }
+    expect(getEffectTargetCandidates(state, context, hpToHand.target).map((cookie) => cookie.card.instanceId))
+      .toEqual([hand.instanceId])
+    expect(getEffectSelectionCandidates(state, context, hpToHand).map((card) => card.instanceId))
+      .toEqual([hand.instanceId])
+    const wrongTarget = battle(state, 'BS8-014').card.instanceId
+    expect(() => applyGameCommand(state, {
+      kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [wrongTarget],
+    })).toThrow('後續 HP 效果只能作用於先前選定的同一張餅乾。')
     state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [hand.instanceId] })
     expect(state.players['player-one'].hand.some((card) => card.instanceId.startsWith('bs9-faint-player-one-deck-'))).toBe(true)
     expect(createCardNegativeDemoState('BS9-015').pendingAbilityEffect).toBeUndefined()
@@ -341,10 +381,48 @@ describe('BS9-010～023 second RED candidate batch', () => {
     const attackState = createCardCheckDemoState('BS9-017')
     const attackSource = battle(attackState, 'BS9-017')
     const attackCompanion = battle(attackState, 'BS8-026')
+    const attackEffect = attackSource.card.type === 'cookie' ? attackSource.card.attackEffects![0] : null
+    expect(getFixedModifierTargetIds(attackState, {
+      sourcePlayerId: 'player-one', sourceInstanceId: attackSource.card.instanceId,
+    }, attackEffect)).toEqual([attackSource.card.instanceId, attackCompanion.card.instanceId])
     const attackResolved = applyGameCommand(attackState, {
       kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [attackSource.card.instanceId, attackCompanion.card.instanceId],
     })
     expect(attackResolved.damageReceivedModifiers).toHaveLength(2)
+    const logText = describeCommandSteps(attackState, attackResolved, {
+      kind: 'resolve-attack-effect', playerId: 'player-one',
+      targetIds: [attackSource.card.instanceId, attackCompanion.card.instanceId],
+    })?.map(step => step.text).join('\n')
+    expect(logText).toContain('3 點以上的傷害改為 2 點')
+    expect(logText).not.toContain('傷害 +0')
+    const opponent = attackResolved.players['player-two'].battleArea[1]
+    for (const protectedCookie of [attackSource, attackCompanion]) {
+      for (const amount of [0, 1, 2, 3, 5]) {
+        expect(getEffectDamageAmount(attackResolved, {
+          sourcePlayerId: 'player-two', sourceInstanceId: opponent.card.instanceId,
+        }, amount, protectedCookie.card.instanceId)).toBe(amount >= 3 ? 2 : amount)
+      }
+      expect(getAttackDamageAgainst(attackResolved, opponent.card.instanceId, protectedCookie.card.instanceId)).toBe(2)
+    }
+    const ownTurnEnded = advancePhase({ ...attackResolved, phase: 'end' })
+    expect(ownTurnEnded.damageReceivedModifiers).toHaveLength(2)
+    expect(ownTurnEnded.players['player-two'].supportArea).toHaveLength(6)
+    expect(ownTurnEnded.players['player-two'].supportArea.every(support => support.card.id === 'BS8-021' && !support.rested)).toBe(true)
+    let opponentAttack: GameState = { ...ownTurnEnded, phase: 'main' }
+    const opponentPayment = selectEnergyPayment(getAttackEnergyCostForState(opponentAttack, opponent.card.instanceId), opponentAttack.players['player-two'].supportArea)
+    expect(opponentPayment).not.toBeNull()
+    opponentAttack = applyGameCommand(opponentAttack, {
+      kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: opponent.card.instanceId,
+      targetInstanceId: attackCompanion.card.instanceId, supportPaymentIds: opponentPayment!,
+    })
+    expect(opponentAttack.pendingBattle?.declaredDamage).toBe(2)
+    opponentAttack = applyGameCommand(opponentAttack, { kind: 'skip-trap', playerId: 'player-one' })
+    for (let step = 0; opponentAttack.pendingBattle?.stage === 'damage' && step < 8; step++) {
+      opponentAttack = applyGameCommand(opponentAttack, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    }
+    expect(battle(opponentAttack, 'BS8-026').hpCards).toHaveLength(3)
+    const opponentTurnEnded = advancePhase({ ...ownTurnEnded, phase: 'end' })
+    expect(opponentTurnEnded.damageReceivedModifiers).toHaveLength(0)
     const attackNegative = createCardNegativeDemoState('BS9-017')
     const attackNegativeSource = battle(attackNegative, 'BS9-017')
     const attackNegativeCompanion = battle(attackNegative, 'BS8-105')
@@ -352,6 +430,9 @@ describe('BS9-010～023 second RED candidate batch', () => {
       kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [attackNegativeSource.card.instanceId],
     })
     expect(attackNegativeResolved.damageReceivedModifiers).toHaveLength(1)
+    expect(getEffectDamageAmount(attackNegativeResolved, {
+      sourcePlayerId: 'player-two', sourceInstanceId: opponent.card.instanceId,
+    }, 3, attackNegativeCompanion.card.instanceId)).toBe(3)
     expect(() => applyGameCommand(attackNegative, {
       kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [attackNegativeSource.card.instanceId, attackNegativeCompanion.card.instanceId],
     })).toThrow()
@@ -397,6 +478,16 @@ describe('BS9-010～023 second RED candidate batch', () => {
     const trap = handCard(trapState, 'BS9-021')
     const donor = battle(trapState, 'BS8-009', 'player-two')
     const receiver = battle(trapState, 'BS8-030')
+    const donorTop = donor.hpCards.at(-1)!
+    const receiverBottom = receiver.hpCards[0]!
+    const transferEffect = trap.trap!.effects[0]!
+    expect(getEffectTargetSelectionLimits(transferEffect)).toEqual({ min: 0, max: 1 })
+    expect(() => applyGameCommand(trapState, {
+      kind: 'play-trap', playerId: 'player-one', trapInstanceId: trap.instanceId,
+      paymentIds: trapState.players['player-one'].supportArea.slice(0, 3).map((entry) => entry.card.instanceId),
+      targetIds: trapState.players['player-two'].battleArea.map((entry) => entry.card.instanceId),
+      selfTargetIds: [receiver.card.instanceId],
+    })).toThrow()
     const payment = trapState.players['player-one'].supportArea.slice(0, 3).map((entry) => entry.card.instanceId)
     trapState = applyGameCommand(trapState, {
       kind: 'play-trap', playerId: 'player-one', trapInstanceId: trap.instanceId,
@@ -404,6 +495,9 @@ describe('BS9-010～023 second RED candidate batch', () => {
     })
     expect(battle(trapState, 'BS8-030').hpCards).toHaveLength(6)
     expect(battle(trapState, 'BS8-009', 'player-two').hpCards).toHaveLength(4)
+    expect(battle(trapState, 'BS8-030').hpCards[0]?.instanceId).toBe(donorTop.instanceId)
+    expect(battle(trapState, 'BS8-030').hpCards[1]?.instanceId).toBe(receiverBottom.instanceId)
+    expect(battle(trapState, 'BS8-030').faceUpHpCardInstanceIds).toContain(donorTop.instanceId)
     expect(trapState.foreignHpCardInstanceIds?.['bs9-trap-receiver']).toHaveLength(1)
     const negativeTrap = createCardNegativeDemoState('BS9-021')
     const negativeDonor = battle(negativeTrap, 'BS8-009', 'player-two')

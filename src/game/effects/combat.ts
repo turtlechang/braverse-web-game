@@ -7,6 +7,7 @@ import type {
   GameState,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
+  PlayerId,
   PlayerState,
 } from '../types'
 import { isBlockedByOpponentEffectProtection, isEffectConditionMet } from './targeting'
@@ -125,12 +126,16 @@ export const getEffectDamageAmount = (
 
   return targetInstanceId === undefined
     ? Math.max(0, adjustedAmount)
-    : Math.max(0, applyAllDamageReceivedModifiers(
-        state,
-        targetInstanceId,
-        adjustedAmount,
-        'effect',
-      ))
+    : Math.max(
+        0,
+        applyAllDamageReceivedModifiers(
+          state,
+          targetInstanceId,
+          adjustedAmount,
+          'effect',
+          context.sourcePlayerId,
+        ),
+      )
 }
 
 const getCookieByInstanceId = (
@@ -143,8 +148,32 @@ const getCookieByInstanceId = (
 
 const isConditionalModifierActive = (
   state: GameState,
-  modifier: { targetInstanceId: string; maxTargetRemainingHp?: number },
+  modifier: {
+    targetInstanceId: string
+    maxTargetRemainingHp?: number
+    condition?: import('../types').EffectCondition
+    sourceInstanceId?: string
+  },
 ): boolean => {
+  if (modifier.condition) {
+    const sourceOwner = Object.values(state.players).find((player) => {
+      const cards: GameCard[] = [
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.equippedCards ?? []),
+        ...player.supportArea.map((support) => support.card),
+        ...player.hand,
+        ...player.breakArea,
+        ...player.discardPile,
+        ...(player.stage ? [player.stage.card] : []),
+      ]
+      return modifier.sourceInstanceId !== undefined && cards.some((card) => card.instanceId === modifier.sourceInstanceId)
+    })
+    if (!sourceOwner || !modifier.sourceInstanceId) return false
+    if (!isEffectConditionMet(state, {
+      sourcePlayerId: sourceOwner.id,
+      sourceInstanceId: modifier.sourceInstanceId,
+    }, { kind: 'damage', amount: 0, target: { side: 'self', min: 0, max: 0 }, condition: modifier.condition })) return false
+  }
   if (modifier.maxTargetRemainingHp === undefined) return true
   const target = getCookieByInstanceId(state, modifier.targetInstanceId)
   return target !== undefined && getCookieEffectiveHp(target) <= modifier.maxTargetRemainingHp
@@ -170,6 +199,34 @@ const isDamageType = (
   return modifierType === 'all' || modifierType === damageType
 }
 
+/**
+ * BS9-018 is a continuous owner-wide shield.  It only applies while the
+ * owner's turn is active, and only when the damage source belongs to the
+ * opponent; damage caused by the owner must still resolve normally.
+ */
+export const isOpponentDamagePrevented = (
+  state: GameState,
+  targetInstanceId: string,
+  damageSourcePlayerId: PlayerId,
+): boolean => {
+  const owner = Object.values(state.players).find((player) =>
+    player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
+  )
+  if (!owner || state.activePlayerId !== owner.id || damageSourcePlayerId === owner.id) {
+    return false
+  }
+
+  return owner.battleArea.some((cookie) => {
+    const skill = cookie.card.skill
+    if (skill?.trigger !== 'passive') return false
+    if (skill.yourTurn && state.activePlayerId !== owner.id) return false
+    return [
+      ...(skill.effects ?? []),
+      ...(skill.passiveEffects ?? []),
+    ].some((effect) => effect.kind === 'prevent-opponent-damage')
+  })
+}
+
 const applyStoredDamageReceivedModifiers = (
   state: GameState,
   targetInstanceId: string,
@@ -190,6 +247,7 @@ const applyPassiveDamageReceivedModifiers = (
   targetInstanceId: string,
   damage: number,
   damageType: 'attack' | 'effect',
+  damageSourcePlayerId?: PlayerId,
 ): number => {
   const owner = Object.values(state.players).find((player) =>
     player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
@@ -209,16 +267,12 @@ const applyPassiveDamageReceivedModifiers = (
     if (!owner || !target) return damage
   }
 
-  const heroProtectsOwner = owner.battleArea.some((cookie) => {
-    const cookieSkill = cookie.card.skill
-    if (cookieSkill?.trigger !== 'passive') return false
-    if (cookieSkill.yourTurn && state.activePlayerId !== owner.id) return false
-    return [
-      ...(cookieSkill.effects ?? []),
-      ...(cookieSkill.passiveEffects ?? []),
-    ].some((effect) => effect.kind === 'prevent-opponent-damage')
-  })
-  if (heroProtectsOwner && state.activePlayerId === owner.id) return 0
+  if (
+    damageSourcePlayerId !== undefined &&
+    isOpponentDamagePrevented(state, targetInstanceId, damageSourcePlayerId)
+  ) {
+    return 0
+  }
 
   if (!skill || (skill.trigger !== 'passive' && skill.trigger !== 'block')) {
     return damage
@@ -245,11 +299,13 @@ const applyAllDamageReceivedModifiers = (
   targetInstanceId: string,
   damage: number,
   damageType: 'attack' | 'effect',
+  damageSourcePlayerId?: PlayerId,
 ): number => applyPassiveDamageReceivedModifiers(
   state,
   targetInstanceId,
   applyStoredDamageReceivedModifiers(state, targetInstanceId, damage, damageType),
   damageType,
+  damageSourcePlayerId,
 )
 
 export const getEffectiveAttack = (
@@ -446,6 +502,12 @@ export const getAttackDamageAgainst = (
 ): number => {
   const baseDamage = getEffectiveAttack(state, attackerInstanceId, targetInstanceId)
 
+  const attackerOwner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === attackerInstanceId,
+    ),
+  )
+
   const modifiedDamage = applyStoredDamageReceivedModifiers(
     state,
     targetInstanceId,
@@ -464,14 +526,10 @@ export const getAttackDamageAgainst = (
         targetInstanceId,
         modifiedDamage,
         'attack',
+        attackerOwner?.id,
       )
     : modifiedDamage
 
-  const attackerOwner = Object.values(state.players).find((player) =>
-    player.battleArea.some(
-      (cookie) => cookie.card.instanceId === attackerInstanceId,
-    ),
-  )
   const attacker = attackerOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === attackerInstanceId,
   )

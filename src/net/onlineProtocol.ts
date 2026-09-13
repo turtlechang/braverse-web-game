@@ -419,6 +419,7 @@ const commandShapes = {
       'discardCardIds',
       'targetIds',
       'paymentIds',
+      'supportToTrashIds',
       'supportToHandIds',
       'hpToTrashIds',
       'hpToHandIds',
@@ -536,6 +537,7 @@ const commandShapes = {
   'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
   'resolve-reorder-hp': { requiredStringArrays: ['orderedCardIds'] },
   'resolve-choose-one': { requiredNumbers: ['modeIndex'] },
+  'resolve-extra-deck-attack': { optionalStrings: ['extraDeckInstanceId'] },
   'replace-cookie': { requiredStrings: ['instanceId'] },
   'skip-replacement': {},
   'refresh-deck': {

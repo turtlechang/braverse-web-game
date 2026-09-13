@@ -44,7 +44,7 @@ const DeckEditorModal = lazy(async () => {
   return { default: module.DeckEditorModal }
 })
 
-export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal, OpponentRestSupportResponseModal, PlaceHandHpModal, ReorderHpModal } from './PendingDecisionModals'
+export { EffectOrderModal, ExtraDeckAttackModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal, OpponentRestSupportResponseModal, PlaceHandHpModal, ReorderHpModal } from './PendingDecisionModals'
 
 export interface StagePlacementModalProps {
   card: GameCard
@@ -2078,7 +2078,12 @@ export interface FlipResponseModalProps {
   discardCount: number
   selectedDiscardIds: string[]
   onToggleDiscard: (instanceId: string) => void
-  onActivate: (chooseOneModeIndex?: number, targetIds?: string[]) => void
+  onActivate: (
+    chooseOneModeIndex?: number,
+    targetIds?: string[],
+    effectTargetIds?: string[],
+    thenTargetIds?: string[],
+  ) => void
   onSkip: () => void
   chooseOneModes?: Extract<CardEffect, { kind: 'choose-one' }>['modes']
   targetCandidates?: GameCard[]
@@ -2089,6 +2094,14 @@ export interface FlipResponseModalProps {
   targetPair?: boolean
   targetMin?: number
   targetMax?: number
+  /** Non-battle card selections such as support-to-hand. */
+  cardSelectionCandidates?: GameCard[]
+  cardSelectionKind?: CardEffect['kind']
+  cardSelectionMin?: number
+  cardSelectionMax?: number
+  /** Optional nested Then selection for a composite FLIP. */
+  thenSelectionCandidates?: GameCard[]
+  thenSelectionKind?: CardEffect['kind']
 }
 
 const FLIP_HAND_PAGE_SIZE = 3
@@ -2107,11 +2120,19 @@ export function FlipResponseModal({
   targetPair = false,
   targetMin = 0,
   targetMax = 1,
+  cardSelectionCandidates = [],
+  cardSelectionKind,
+  cardSelectionMin = 0,
+  cardSelectionMax = 0,
+  thenSelectionCandidates = [],
+  thenSelectionKind,
 }: FlipResponseModalProps) {
   const [pageIndex, setPageIndex] = useState(0)
   const [minimized, setMinimized] = useState(false)
   const [selectedChooseOneMode, setSelectedChooseOneMode] = useState<number | null>(null)
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
+  const [selectedCardSelectionIds, setSelectedCardSelectionIds] = useState<string[]>([])
+  const [selectedThenSelectionIds, setSelectedThenSelectionIds] = useState<string[]>([])
   const pageCount = Math.max(1, Math.ceil(hand.length / FLIP_HAND_PAGE_SIZE))
   const visibleHand = hand.slice(
     pageIndex * FLIP_HAND_PAGE_SIZE,
@@ -2120,6 +2141,12 @@ export function FlipResponseModal({
   const targetSelectionReady = targetPair
     ? selectedTargetIds.length === 0 || selectedTargetIds.length === 2
     : selectedTargetIds.length >= targetMin && selectedTargetIds.length <= targetMax
+  const cardSelectionReady =
+    selectedCardSelectionIds.length >= cardSelectionMin &&
+    selectedCardSelectionIds.length <= cardSelectionMax
+  const thenSelectionRequired = selectedCardSelectionIds.length > 0 && thenSelectionCandidates.length > 0
+  const thenSelectionReady = !thenSelectionRequired ||
+    selectedThenSelectionIds.length === selectedCardSelectionIds.length
 
   if (minimized) {
     return (
@@ -2240,6 +2267,71 @@ export function FlipResponseModal({
             )}
           </div>
         )}
+        {cardSelectionCandidates.length > 0 && (
+          <div className="flip-choice-section">
+            <strong>
+              {cardSelectionKind === 'support-to-hand'
+                ? `選擇返回手牌的支援卡（${cardSelectionMin === 0 ? '可不選' : `至少 ${cardSelectionMin} 張`}）`
+                : '選擇放入支援區的手牌'}
+            </strong>
+            <div className="flip-choice-options" role="group" aria-label="FLIP 效果卡片選擇">
+              {cardSelectionCandidates.map((candidate) => {
+                const selected = selectedCardSelectionIds.includes(candidate.instanceId)
+                return (
+                  <button
+                    type="button"
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    key={candidate.instanceId}
+                    onClick={() => setSelectedCardSelectionIds((current) => {
+                      if (selected) {
+                        setSelectedThenSelectionIds([])
+                        return current.filter((id) => id !== candidate.instanceId)
+                      }
+                      return current.length < cardSelectionMax
+                        ? [...current, candidate.instanceId]
+                        : current
+                    })}
+                  >
+                    <CardFace card={candidate} />
+                    <span>{candidate.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        {thenSelectionRequired && (
+          <div className="flip-choice-section">
+            <strong>
+              {thenSelectionKind === 'hand-to-support'
+                ? `選擇同樣 ${selectedCardSelectionIds.length} 張綠色手牌放入支援區`
+                : '選擇後續效果卡片'}
+            </strong>
+            <div className="flip-choice-options" role="group" aria-label="FLIP 效果後續卡片選擇">
+              {thenSelectionCandidates.map((candidate) => {
+                const selected = selectedThenSelectionIds.includes(candidate.instanceId)
+                return (
+                  <button
+                    type="button"
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    key={candidate.instanceId}
+                    onClick={() => setSelectedThenSelectionIds((current) => {
+                      if (selected) return current.filter((id) => id !== candidate.instanceId)
+                      return current.length < selectedCardSelectionIds.length
+                        ? [...current, candidate.instanceId]
+                        : current
+                    })}
+                  >
+                    <CardFace card={candidate} />
+                    <span>{candidate.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         {discardCount > 0 && (
           <>
             <strong>選擇 {discardCount} 張手牌棄置</strong>
@@ -2302,11 +2394,23 @@ export function FlipResponseModal({
             disabled={
               selectedDiscardIds.length !== discardCount ||
               (chooseOneModes && selectedChooseOneMode === null) ||
-              !targetSelectionReady
+              !targetSelectionReady ||
+              !cardSelectionReady ||
+              !thenSelectionReady
             }
-            onClick={() =>
-              onActivate(selectedChooseOneMode ?? undefined, selectedTargetIds)
-            }
+            onClick={() => {
+              const chooseOneModeIndex = selectedChooseOneMode ?? undefined
+              if (cardSelectionCandidates.length > 0 || thenSelectionCandidates.length > 0) {
+                onActivate(
+                  chooseOneModeIndex,
+                  selectedTargetIds,
+                  cardSelectionCandidates.length > 0 ? selectedCardSelectionIds : undefined,
+                  thenSelectionCandidates.length > 0 ? selectedThenSelectionIds : undefined,
+                )
+                return
+              }
+              onActivate(chooseOneModeIndex, selectedTargetIds)
+            }}
           >
             發動 FLIP
           </button>

@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import bs9Candidates from '../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json' with { type: 'json' }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(import.meta.url)
@@ -37,7 +38,7 @@ const preview = spawn(
 )
 const wait = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms))
 
-const cases = [
+const baseCases = [
   {
     card: 'BS9-024',
     title: 'Golden Cheese Cookie',
@@ -55,10 +56,16 @@ const cases = [
   {
     card: 'BS9-025',
     title: 'Mala Sauce Cookie',
-    mode: 'review',
-    reviewOnly: true,
+    mode: 'flip-attached',
     positiveRoute: 'bs9-card:BS9-025',
     negativeRoute: 'bs9-card-negative:BS9-025',
+  },
+  {
+    card: 'BS9-025@1',
+    title: 'Mala Sauce Cookie',
+    mode: 'flip-attached',
+    positiveRoute: 'bs9-card:BS9-025@1',
+    negativeRoute: 'bs9-card-negative:BS9-025@1',
   },
   {
     card: 'BS9-026',
@@ -90,6 +97,22 @@ const cases = [
   },
 ]
 
+const cases = [...new Map(
+  baseCases.flatMap((testCase) => {
+    const baseCard = testCase.card.split('@')[0]
+    if (testCase.card.includes('@')) return [{ ...testCase, baseCard }]
+    const records = bs9Candidates.cards.filter((record) => record.baseCardNumber === baseCard)
+    if (records.length === 0) throw new Error(`Missing BS9 candidates for ${baseCard}`)
+    return records.map((record) => ({
+      ...testCase,
+      card: record.cardNumber,
+      baseCard,
+      positiveRoute: testCase.positiveRoute.replace(testCase.card, record.cardNumber),
+      negativeRoute: testCase.negativeRoute.replace(testCase.card, record.cardNumber),
+    }))
+  }).map((testCase) => [`${testCase.card}|${testCase.mode}`, testCase]),
+).values()]
+
 const recordBrowserErrors = (page) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`))
@@ -117,6 +140,88 @@ const sourceBattle = (page, card) =>
   page.locator(`.bottom-field .combat-card-wrap[data-card-instance-id="bs9-${card.toLowerCase()}-source"]`).first()
 const sourceHand = (page, title) =>
   page.locator(`.bottom-hand .hand-card-wrap:has(.hand-card[title="${title}"])`).first()
+const candidateRecord = (cardNumber) =>
+  bs9Candidates.cards.find((record) => record.cardNumber === cardNumber) ??
+  bs9Candidates.cards.find((record) => record.baseCardNumber === cardNumber)
+
+const behaviorCard = (testCase) => testCase.baseCard ?? testCase.card.split('@')[0]
+
+const finalSurfaceSelectors = [
+  ['effect-panel', '.effect-panel[role="alertdialog"]'],
+  ['effect-order', '.effect-order-modal'],
+  ['draw-up-to', '.draw-up-to-modal'],
+  ['hand-discard', '.hand-discard-modal'],
+  ['inspect-deck', '.inspect-deck-modal'],
+  ['stage-placement', '.stage-placement-modal'],
+  ['flip-response', '.flip-response-modal'],
+  ['trap-response', '.trap-response-modal'],
+  ['attack-response', '.attack-response-modal'],
+  ['attack-response-skill', '.attack-response-skill-modal'],
+  ['blocker-response', '.blocker-response-modal'],
+  ['optional-cost-attack', '.optional-cost-attack-modal'],
+  ['faint-response', '.faint-response-modal'],
+  ['hp-reorder', '.hp-reorder-modal'],
+  ['card-reveal', '.card-reveal-modal'],
+  ['discard-reveal', '.discard-reveal-modal'],
+  ['extra-deck-attack', '.extra-deck-attack-modal'],
+  ['attack-payment', '.attack-payment-panel'],
+  ['card-detail', '.card-detail-modal'],
+]
+
+const readVisibleFinalSurfaces = async (page) => page.evaluate((selectors) =>
+  selectors.filter(([, selector]) => [...document.querySelectorAll(selector)].some((node) => {
+    const style = window.getComputedStyle(node)
+    return style.display !== 'none' && style.visibility !== 'hidden' && node.getBoundingClientRect().width > 0
+  })).map(([name]) => name), finalSurfaceSelectors)
+
+const assertPhysicalCardImage = async (locator, record, exactImageRequested) => {
+  await locator.waitFor({ state: 'visible' })
+  const alts = await locator.locator('img').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('alt'))).catch(() => [])
+  assert.ok(alts.includes(record.name), `${record.cardNumber} must render an image-backed physical card face`)
+  const imageEvidence = await locator.locator('img').evaluateAll((nodes, options) => {
+    const { expectedUrl, requested } = options
+    const matches = nodes.filter((node) => [node.getAttribute('src'), node.currentSrc, node.src].includes(expectedUrl))
+    const isLoaded = (node) => node.complete && node.naturalWidth > 0
+    if (matches.some(isLoaded)) return {
+      exactImageRendered: true,
+      exactImageLoaded: true,
+      exactImageRequested: requested,
+    }
+    return new Promise((resolvePromise) => {
+      let settled = false
+      const timeout = window.setTimeout(() => finish(false), 10_000)
+      const finish = (loaded) => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timeout)
+        for (const node of matches) {
+          node.removeEventListener('load', onLoad)
+          node.removeEventListener('error', onError)
+        }
+        resolvePromise({
+          exactImageRendered: matches.length > 0,
+          exactImageLoaded: loaded,
+          exactImageRequested: requested,
+        })
+      }
+      const onLoad = () => {
+        if (matches.some(isLoaded)) finish(true)
+      }
+      const onError = () => {
+        if (matches.length > 0 && matches.every((node) => node.complete && node.naturalWidth === 0)) finish(false)
+      }
+      for (const node of matches) {
+        node.addEventListener('load', onLoad)
+        node.addEventListener('error', onError)
+      }
+      if (matches.length === 0) finish(false)
+      else if (matches.every((node) => node.complete)) onError()
+    })
+  }, { expectedUrl: record.imageUrl, requested: exactImageRequested }).catch(() => ({ exactImageRendered: false, exactImageLoaded: false, exactImageRequested }))
+  assert.equal(imageEvidence.exactImageRendered, true, `${record.cardNumber} must render its exact official image URL`)
+  assert.equal(imageEvidence.exactImageLoaded, true, `${record.cardNumber} must load its exact official image URL`)
+  return imageEvidence
+}
 const assertTraceKind = (trace, kind, message) => {
   assert.ok(trace.some((entry) => entry.commandKind === kind), message)
 }
@@ -139,7 +244,7 @@ const readSnapshot = async (page) => page.evaluate(() => {
 })
 
 const runSkill = async (page, testCase, negative, result) => {
-  const source = sourceBattle(page, testCase.card)
+  const source = sourceBattle(page, behaviorCard(testCase))
   await source.waitFor({ state: 'visible' })
   const skill = source.locator('.skill-action')
   assert.equal(await skill.count(), 1, `${testCase.card} 應有啟動技能入口`)
@@ -169,7 +274,7 @@ const runSkill = async (page, testCase, negative, result) => {
   const snapshot = await readSnapshot(page)
   assertTraceKind(snapshot.trace, 'begin-activate-skill', '正向路徑應留下 begin-activate-skill')
   assertTraceKind(snapshot.trace, 'resolve-ability-effect', '正向路徑應留下 resolve-ability-effect')
-  const sourceSnapshot = snapshot.battleCards.find((entry) => entry.id === `bs9-${testCase.card.toLowerCase()}-source`)
+  const sourceSnapshot = snapshot.battleCards.find((entry) => entry.id === `bs9-${behaviorCard(testCase).toLowerCase()}-source`)
   assert.match(sourceSnapshot?.hp ?? '', /5\//, `${testCase.card} 正向技能應改變來源 HP`)
 }
 
@@ -198,9 +303,15 @@ const runVampireSkill = async (page, negative, result) => {
   const secondPanel = visiblePanel(page)
   await secondPanel.waitFor({ state: 'visible' })
   const sourceTarget = secondPanel.locator('.effect-candidates-target button:not(:disabled)')
-  assert.equal(await sourceTarget.count(), 1, 'BS9-027 第二段應只提供來源餅乾')
-  assert.match(await sourceTarget.first().innerText(), /Vampire Cookie/)
-  await sourceTarget.first().click()
+  const fixedSourceTarget = secondPanel.locator('.effect-candidates-target button').first()
+  assert.equal(await secondPanel.locator('.effect-candidates-target button').count(), 1, 'BS9-027 第二段應只提供來源餅乾')
+  assert.match(await fixedSourceTarget.innerText(), /Vampire Cookie/)
+  if (await sourceTarget.count()) {
+    await sourceTarget.first().click()
+  } else {
+    assert.equal(await fixedSourceTarget.getAttribute('data-fixed-target'), 'true', '固定來源目標應明確標示')
+    assert.equal(await fixedSourceTarget.evaluate((button) => button.classList.contains('is-selected')), true, '固定來源目標應已套用')
+  }
   await secondPanel.locator('.effect-panel-primary-action').click()
   result.actions.push('resolve-damage-step')
   await secondPanel.waitFor({ state: 'hidden' })
@@ -269,6 +380,13 @@ const runFlip = async (page, testCase, negative, result) => {
   assert.equal(await modal.locator('h2').innerText(), `${testCase.title} FLIP`)
 
   if (negative) {
+    if (testCase.mode === 'flip-attached') {
+      const activate = modal.getByRole('button', { name: '發動 FLIP', exact: true })
+      assert.equal(await activate.isEnabled(), false, `${testCase.card} 無手牌時不得支付 FLIP 代價`)
+      assert.equal(await modal.locator('.flip-card-page button').count(), 0, `${testCase.card} 負向路徑不應提供棄牌手牌`)
+      result.actions.push('blocked-flip-discard-cost')
+      result.noOpReason = '沒有可棄置的手牌，FLIP 代價不成立'
+    }
     await modal.getByRole('button', { name: '不發動', exact: true }).click()
     result.actions.push('skip-flip')
     await modal.waitFor({ state: 'hidden' })
@@ -278,6 +396,47 @@ const runFlip = async (page, testCase, negative, result) => {
     const flipEntry = snapshot.trace.find((entry) => entry.commandKind === 'resolve-flip')
     assert.match(`${flipEntry?.summary ?? ''} ${flipEntry?.steps?.join(' ') ?? ''}`, /未發動|略過|未執行/)
     result.actions.push('flip-skipped')
+    return
+  }
+
+  if (testCase.mode === 'flip-attached') {
+    const targetSection = modal.locator('.flip-choice-section').filter({ hasText: '選擇目標' }).first()
+    await targetSection.waitFor({ state: 'visible' })
+    const target = targetSection.locator('button').first()
+    assert.equal(await target.count(), 1, `${testCase.card} 應提供另一隻己方 Cookie 目標`)
+    const targetId = await target.getAttribute('data-card-instance-id')
+    await target.click()
+    result.actions.push('select-alternate-recipient')
+    const activate = modal.getByRole('button', { name: '發動 FLIP', exact: true })
+    assert.equal(await activate.isEnabled(), false, `${testCase.card} 尚未支付棄牌代價時不得發動`)
+
+    const payment = modal.locator('.flip-card-page button').first()
+    await payment.waitFor({ state: 'visible' })
+    await payment.click()
+    result.actions.push('discard-one-hand-card')
+    assert.equal(await activate.isEnabled(), true, `${testCase.card} 選目標並棄 1 張手牌後應可發動`)
+    await activate.click()
+    result.actions.push('activate-flip-redirect')
+    await modal.waitFor({ state: 'hidden' })
+    await page.waitForTimeout(280)
+    const snapshot = await readSnapshot(page)
+    assertTraceKind(snapshot.trace, 'resolve-flip', `${testCase.card} 應留下 resolve-flip`)
+    const hostSnapshot = snapshot.battleCards.find((entry) => entry.id === 'bs9-flip-defender')
+    const recipientSnapshot = snapshot.battleCards.find((entry) => entry.id === 'bs9-own-companion')
+    assert.match(hostSnapshot?.hp ?? '', /1\//, `${testCase.card} 重新指定後原附著餅乾不應增加 HP`)
+    assert.match(recipientSnapshot?.hp ?? '', /5\//, `${testCase.card} 另一隻己方餅乾應增加 1 HP`)
+    const flipTrace = snapshot.trace.find((entry) => entry.commandKind === 'resolve-flip')
+    assert.ok(
+      `${flipTrace?.summary ?? ''} ${flipTrace?.steps?.join(' ') ?? ''}`.includes(testCase.title),
+      `${testCase.card} resolve-flip trace 應保留翻開的實卡名稱`,
+    )
+    result.effectWitness = {
+      kind: 'attached-hp-redirect',
+      targetId,
+      hostHp: hostSnapshot?.hp ?? null,
+      recipientHp: recipientSnapshot?.hp ?? null,
+      flipCardTraced: true,
+    }
     return
   }
 
@@ -323,40 +482,40 @@ const runFlip = async (page, testCase, negative, result) => {
   const receiverSnapshot = snapshot.battleCards.find((entry) => entry.id === 'bs9-flip-defender')
   assert.match(donorSnapshot?.hp ?? '', /3\//, 'BS9-029 供牌應移除一張 HP')
   assert.match(receiverSnapshot?.hp ?? '', /2\//, 'BS9-029 接收牌應增加一張 HP')
+  // Keep the concrete HP deltas in the report.  The generic FLIP command log
+  // intentionally records the declaration, while this witness proves that
+  // both printed movement legs actually settled in the public state.
+  result.effectWitness = {
+    kind: 'hp-transfer',
+    donor: donorSnapshot?.hp ?? null,
+    receiver: receiverSnapshot?.hp ?? null,
+  }
 }
 
-const runVanilla = async (page, testCase, result) => {
+const runVanilla = async (page, testCase, negative, result) => {
   const hand = sourceHand(page, testCase.title)
   await hand.waitFor({ state: 'visible' })
   await hand.locator('.hand-card').click()
   const deploy = hand.locator('.hand-card-action').filter({ hasText: '登場' })
   assert.equal(await deploy.count(), 1, `${testCase.card} 應提供登場入口`)
+  assert.equal(await deploy.isEnabled(), true, `${testCase.card} 登場入口應可用`)
   await deploy.click()
   result.actions.push('deploy-cookie')
   await page.waitForTimeout(300)
-  assert.equal(await visiblePanel(page).count(), 0, '無技能餅乾不應開啟效果面板')
+  assert.equal(await visiblePanel(page).count(), 0, `${testCase.card} 無技能／FLIP 不應開啟效果面板`)
   const snapshot = await readSnapshot(page)
   assert.ok(snapshot.battleCards.some((entry) => entry.title === testCase.title), '登場後應保留實卡名稱')
   assertTraceKind(snapshot.trace, 'deploy-cookie', 'vanilla 路徑應留下 deploy-cookie')
-}
-
-const runReview = async (page, testCase, result) => {
-  const hand = sourceHand(page, testCase.title)
-  await hand.waitFor({ state: 'visible' })
-  await hand.locator('.hand-card').click()
-  const detailButton = hand.locator('.hand-card-detail')
-  await detailButton.waitFor({ state: 'visible' })
-  await detailButton.click()
-  const detail = page.locator('.card-detail-modal:visible').first()
-  await detail.waitFor({ state: 'visible' })
-  assert.match(await detail.innerText(), /Mala Sauce Cookie/)
-  assert.match(await detail.innerText(), /Tough Rook/)
-  assert.equal(await page.locator('.flip-response-modal:visible').count(), 0)
-  result.reviewOnly = true
-  result.actions.push('inspect-card-detail')
-  await detail.locator('.close-modal').click()
-  await page.waitForTimeout(100)
-  assert.equal(await page.locator('.card-detail-modal:visible').count(), 0)
+  assert.equal(
+    snapshot.trace.some((entry) => entry.commandKind === 'resolve-ability-effect'),
+    false,
+    `${testCase.card} 無技能／FLIP 不應產生效果結算 trace`,
+  )
+  result.noOpReason = '官方卡面沒有 Skill 或 FLIP；登場後是合法 no-op'
+  if (negative) {
+    result.negativeReason = result.noOpReason
+    result.actions.push('legal-no-op-no-skill-or-flip')
+  }
 }
 
 const runScenario = async (browser, viewport, testCase, negative) => {
@@ -364,39 +523,51 @@ const runScenario = async (browser, viewport, testCase, negative) => {
   page.setDefaultTimeout(7_000)
   const errors = recordBrowserErrors(page)
   const route = negative ? testCase.negativeRoute : testCase.positiveRoute
+  const sourceRecord = candidateRecord(testCase.card)
+  if (!sourceRecord) throw new Error(`Missing BS9 candidate ${testCase.card}`)
+  let exactImageRequested = false
+  page.on('request', (request) => {
+    if (request.url() === sourceRecord.imageUrl) exactImageRequested = true
+  })
   const result = {
     card: testCase.card,
+    baseCard: behaviorCard(testCase),
     mode: testCase.mode,
     viewport,
     negative,
     route,
     status: 'FAIL',
     actions: [],
+    expectedImageUrl: sourceRecord.imageUrl,
     ...(testCase.reviewOnly ? { reviewOnly: true } : {}),
   }
   try {
     await page.goto(
-      `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=${testCase.card}`,
+      `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=${behaviorCard(testCase)}`,
       { waitUntil: 'domcontentloaded' },
     )
     await waitForGame(page)
-    if (testCase.mode !== 'attack' && testCase.mode !== 'flip-draw' && testCase.mode !== 'flip-pair') {
-      assert.ok(await page.locator(`.card-face[title="${testCase.title}"]`).count(), `${testCase.title} 實卡應出現在 fixture`)
-    }
+    const escapedTitle = testCase.title.replaceAll('"', '\\"')
+    const sourceSurface = testCase.mode === 'flip-draw' || testCase.mode === 'flip-pair' || testCase.mode === 'flip-attached'
+      ? page.locator('.flip-response-modal:visible .flip-reveal-card').first()
+      : page.locator(`.card-face[title="${escapedTitle}"], .hand-card[title="${escapedTitle}"]`).first()
+    Object.assign(result, await assertPhysicalCardImage(sourceSurface, sourceRecord, exactImageRequested))
     if (testCase.mode === 'skill') {
-      if (testCase.card === 'BS9-027') await runVampireSkill(page, negative, result)
+      if (behaviorCard(testCase) === 'BS9-027') await runVampireSkill(page, negative, result)
       else await runSkill(page, testCase, negative, result)
     } else if (testCase.mode === 'attack') {
       await runAttack(page, negative, result)
-    } else if (testCase.mode === 'review') {
-      await runReview(page, testCase, result)
-    } else if (testCase.mode === 'flip-draw' || testCase.mode === 'flip-pair') {
+    } else if (testCase.mode === 'flip-draw' || testCase.mode === 'flip-pair' || testCase.mode === 'flip-attached') {
       await runFlip(page, testCase, negative, result)
     } else {
-      await runVanilla(page, testCase, result)
+      await runVanilla(page, testCase, negative, result)
     }
     result.trace = await readTrace(page)
+    result.traceCommandKinds = result.trace.map((entry) => entry.commandKind)
+    result.finalPendingSurfaces = await readVisibleFinalSurfaces(page)
+    assert.deepEqual(result.finalPendingSurfaces, [], `${testCase.card} must settle all pending UI surfaces: ${result.finalPendingSurfaces.join(', ')}`)
     result.errors = errors
+    result.exactImageRequested = exactImageRequested
     assert.equal(errors.length, 0, `browser errors: ${errors.join('; ')}`)
     result.status = 'PASS'
     result.screenshot = resolve(
@@ -408,6 +579,9 @@ const runScenario = async (browser, viewport, testCase, negative) => {
     result.error = error instanceof Error ? error.message : String(error)
     result.body = (await page.locator('body').innerText().catch(() => '')).slice(0, 7000)
     result.trace = await readTrace(page).catch(() => [])
+    result.traceCommandKinds = result.trace.map((entry) => entry.commandKind)
+    result.finalPendingSurfaces = await readVisibleFinalSurfaces(page).catch(() => [])
+    result.exactImageRequested = exactImageRequested
     await page.screenshot({
       path: resolve(
         outputDirectory,
@@ -468,7 +642,7 @@ const report = {
     { width: 1907, height: 863 },
     { width: 1164, height: 777 },
   ],
-  scope: 'BS9-024～029 candidate routes; BS9-025 is review-only and remains fail-closed.',
+  scope: 'BS9-024～029 candidate routes; BS9-025 attached-HP recipient redirect is covered by positive/negative FLIP lanes.',
   total: results.length,
   passed: results.filter((result) => result.status === 'PASS').length,
   failed: results.filter((result) => result.status !== 'PASS'),

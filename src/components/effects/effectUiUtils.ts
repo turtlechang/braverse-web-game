@@ -152,6 +152,12 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'disable-traps') {
     return '本次戰鬥中對手不能發動陷阱。'
   }
+  if (effect.kind === 'prevent-opponent-damage') {
+    return '你的回合中，防止對手造成的所有傷害。'
+  }
+  if (effect.kind === 'prevent-opponent-hp-gain') {
+    return '本回合對手不能透過卡牌效果增加餅乾的 HP。'
+  }
   if (effect.kind === 'hp-to-trash') {
     if (effect.amount === 0) return '不移除任何 HP 卡。'
     if (effect.amountByTargetIndex) {
@@ -179,6 +185,11 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'trash-to-hand') {
     return `從棄牌區選最多 ${effect.max} 張卡返回手牌。`
+  }
+  if (effect.kind === 'equipped-to-hp') {
+    const side = effect.side === 'opponent' ? '對手' : '我方'
+    const keyword = effect.keyword === 'soul-jam' ? ' [Soul Jam]' : ''
+    return `選擇最多 ${effect.max} 張${side}已裝備的${keyword}，正面朝上放到裝備餅乾的 HP 最上方。`
   }
   if (effect.kind === 'trash-to-deck') {
     return effect.destination === 'bottom'
@@ -369,6 +380,20 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if ((effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') && t) {
     const amount = effect.amount
+    if (effect.kind === 'modify-attack' && effect.target.sourceOnly) {
+      const condition = effect.condition
+      const requirement = condition?.kind === 'battle-area-has-keyword' &&
+        condition.side === 'self' && condition.excludeSource
+        ? `若己方戰鬥區有另一張【${condition.keyword === 'ancient' ? 'Ancient' : condition.keyword}】餅乾，`
+        : ''
+      return `${requirement}這張餅乾${effect.duration === 'this-turn' ? '本回合' : ''}攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}；不需選擇其他餅乾。`
+    }
+    if (effect.kind === 'modify-damage-received' && effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+      const recipients = effect.target.allMatching
+        ? `所有${effect.target.side === 'self' ? '我方' : effect.target.side === 'opponent' ? '對手' : '雙方'}${effect.target.keyword ? `【${effect.target.keyword === 'ancient' ? 'Ancient' : effect.target.keyword}】` : ''}餅乾`
+        : `選擇 ${t.count}${t.target}，`
+      return `${effect.duration === 'opponent-next-turn' ? '直到對手的下一個回合結束，' : ''}${recipients}每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}時，改為 ${effect.setDamageTo} 點${effect.target.allMatching ? '；自動套用全部符合條件的餅乾' : ''}。`
+    }
     return effect.kind === 'modify-attack'
       ? `選擇 ${t.count}${t.target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
       : `選擇 ${t.count}${t.target}，受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${amount >= 0 ? '+' : ''}${amount}。`
@@ -452,8 +477,11 @@ export const describeEffectResult = (
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
   if (effect.kind === 'disable-traps') return '本次戰鬥中對手不能發動陷阱。'
+  if (effect.kind === 'prevent-opponent-damage') return '已套用對手傷害防止。'
+  if (effect.kind === 'prevent-opponent-hp-gain') return '本回合已禁止對手透過卡牌效果增加 HP。'
   if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
+  if (effect.kind === 'equipped-to-hp') return '已裝備卡已正面朝上放到裝備餅乾的 HP 最上方。'
   if (effect.kind === 'trash-to-deck') {
     return effect.destination === 'bottom'
       ? '棄牌區卡牌已依選取順序放到牌庫底。'
@@ -509,6 +537,9 @@ export const describeEffectResult = (
       return effect.kind === 'modify-attack'
         ? '未選擇攻擊力效果目標，未套用攻擊力修改。'
         : '未選擇受到攻擊傷害效果目標，未套用傷害修改。'
+    }
+    if (effect.kind === 'modify-damage-received' && effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+      return `${names}：${effect.duration === 'opponent-next-turn' ? '直到對手的下一個回合結束，' : ''}每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}時，改為 ${effect.setDamageTo} 點。`
     }
     return effect.kind === 'modify-attack'
       ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`

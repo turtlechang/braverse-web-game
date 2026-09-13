@@ -1,4 +1,5 @@
 import {
+  getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
   requiresTargetSelection,
@@ -13,7 +14,10 @@ import {
 } from '../modals/GameModals'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 import { getUnmetTrapConditionWarning } from './trapWarnings'
-import { shouldShowAttackResponseChooser } from './battleResponseSelectors'
+import {
+  buildTrapEffectTargetSubmission,
+  shouldShowAttackResponseChooser,
+} from './battleResponseSelectors'
 
 export interface BattleResponseModalsProps {
   match: BattleUiMatchLike
@@ -52,9 +56,30 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
   const flipPlayerId = pendingBattle
     ? pendingBattle.damagePlayerId ?? pendingBattle.defenderPlayerId
     : null
+  const flipAttachedHpAlternateTarget =
+    pendingBattle?.revealedHpCard?.flip?.attachedHpAlternateTarget
+  const flipAttachedHpSourceInstanceId = pendingBattle
+    ? pendingBattle.damageTargetInstanceId ?? pendingBattle.targetInstanceId
+    : null
+  // An attached-HP redirect is a recipient choice rather than a standalone
+  // gain-hp effect in the card's printed effect list.  Expose a synthetic
+  // selector to the existing FLIP modal only while the source player is on
+  // their own turn; resolveFlip remains the authority for validation and
+  // settlement.
+  const flipAttachedHpTargetEffect: CardEffect | null =
+    flipAttachedHpAlternateTarget &&
+    flipAttachedHpSourceInstanceId &&
+    flipPlayerId &&
+    match.game.activePlayerId === flipPlayerId
+      ? {
+          kind: 'gain-hp',
+          amount: pendingBattle?.revealedHpCard?.flip?.attachedHpBonus ?? 1,
+          target: flipAttachedHpAlternateTarget,
+        }
+      : null
   const flipTargetEffect = pendingBattle?.revealedHpCard?.flip?.effects.find(
     (effect) => requiresTargetSelection(effect),
-  )
+  ) ?? flipAttachedHpTargetEffect
   const flipTargetSelector =
     flipTargetEffect && 'target' in flipTargetEffect
       ? flipTargetEffect.target
@@ -67,17 +92,54 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           sourceCardName: pendingBattle.revealedHpCard?.name,
         }
       : null
+  const flipTargetContextForSelection =
+    flipAttachedHpTargetEffect && flipTargetContext && flipAttachedHpSourceInstanceId
+      ? {
+          ...flipTargetContext,
+          // `excludeSource` must exclude the Cookie that held the revealed HP
+          // card, not the FLIP card currently shown in the response modal.
+          sourceInstanceId: flipAttachedHpSourceInstanceId,
+        }
+      : flipTargetContext
   const flipTargetCandidates =
-    flipTargetSelector && flipTargetContext
+    flipTargetSelector && flipTargetContextForSelection
       ? getEffectTargetCandidates(
           match.game,
-          flipTargetContext,
+          flipTargetContextForSelection,
           flipTargetSelector,
         ).map((candidate) => candidate.card)
       : []
   const flipTargetLimits = flipTargetEffect
     ? getEffectSelectionLimits(flipTargetEffect)
     : null
+  // Some FLIP text selects cards from a non-battle zone rather than a
+  // target-bearing effect (BS9-053 returns supports, then selects the same
+  // number of green hand cards). Keep those ids separate from battle targets
+  // so the Flip modal can submit both selections in one authoritative command.
+  const flipCardSelectionEffect = pendingBattle?.revealedHpCard?.flip?.effects.find(
+    (effect) => effect.kind === 'support-to-hand' || effect.kind === 'hand-to-support',
+  )
+  const flipCardSelectionCandidates =
+    flipCardSelectionEffect && flipTargetContext
+      ? getEffectSelectionCandidates(
+          match.game,
+          flipTargetContext,
+          flipCardSelectionEffect,
+        )
+      : []
+  const flipCardSelectionLimits = flipCardSelectionEffect
+    ? getEffectSelectionLimits(flipCardSelectionEffect)
+    : null
+  const flipCardThenEffect =
+    flipCardSelectionEffect?.kind === 'support-to-hand'
+      ? flipCardSelectionEffect.thenEffects?.find(
+          (effect) => effect.kind === 'hand-to-support',
+        )
+      : undefined
+  const flipCardThenCandidates =
+    flipCardThenEffect && flipTargetContext
+      ? getEffectSelectionCandidates(match.game, flipTargetContext, flipCardThenEffect)
+      : []
   const flipReceiverTargetSelector =
     flipTargetEffect?.kind === 'transfer-hp' && flipTargetEffect.receiverTarget
       ? flipTargetEffect.receiverTarget
@@ -350,13 +412,12 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               const trap = match.selectedTrap
               const hasPerEffectTargetSelection =
                 match.trapEffectTargetSteps.length > 0
-              const trapEffectTargets =
-                hasPerEffectTargetSelection && trap.trap
-                  ? trap.trap.effects.map(
-                      (_, effectIndex) =>
-                        match.selectedTrapEffectTargets[effectIndex] ?? [],
-                    )
-                  : undefined
+              const trapEffectTargets = hasPerEffectTargetSelection
+                ? buildTrapEffectTargetSubmission(
+                    match.trapEffectTargetSteps,
+                    match.selectedTrapEffectTargets,
+                  )
+                : undefined
               match.setSelectedTrapId(null)
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
@@ -552,6 +613,12 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             targetPair={flipTargetPair}
             targetMin={flipTargetLimits?.min ?? 0}
             targetMax={flipTargetPair ? 2 : (flipTargetLimits?.max ?? 1)}
+            cardSelectionCandidates={flipCardSelectionCandidates}
+            cardSelectionMin={flipCardSelectionLimits?.min ?? 0}
+            cardSelectionMax={flipCardSelectionLimits?.max ?? 0}
+            cardSelectionKind={flipCardSelectionEffect?.kind}
+            thenSelectionCandidates={flipCardThenCandidates}
+            thenSelectionKind={flipCardThenEffect?.kind}
             onToggleDiscard={(instanceId) =>
               match.setSelectedFlipDiscardIds((current) =>
                 current.includes(instanceId)
@@ -570,7 +637,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 '未發動 FLIP，繼續傷害結算。',
               )
             }}
-            onActivate={(chooseOneModeIndex, targetIds) => {
+            onActivate={(chooseOneModeIndex, targetIds, effectTargetIds, thenTargetIds) => {
               match.setSelectedFlipDiscardIds([])
               match.dispatch(
                 {
@@ -580,6 +647,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                   discardHandIds: match.selectedFlipDiscardIds,
                   chooseOneModeIndex,
                   targetIds,
+                  effectTargetIds,
+                  thenTargetIds,
                 },
                 `已發動${match.game.pendingBattle?.revealedHpCard?.name ?? 'FLIP'}。`,
               )

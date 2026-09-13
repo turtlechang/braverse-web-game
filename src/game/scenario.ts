@@ -2,6 +2,8 @@ import { createCard } from './starter-deck'
 import { convertOfficialCardToExtraDeckCard } from '../cards/official-card-adapter'
 import { getCardPoolEntry } from './card-pool'
 import { validateExtraDeck } from './extra-deck'
+import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
+import type { OfficialCardRecord } from '../cards/types'
 import type {
   CookieCard,
   CookieInBattle,
@@ -15,6 +17,60 @@ import type {
 } from './types'
 
 export const SCENARIO_MAX_BATTLE_SLOTS = 2
+
+/**
+ * Candidate EXTRA cards that have a complete, intentionally isolated runtime
+ * contract. They are available only through this localhost test-scenario
+ * staging field and never become part of the formal card pool.
+ */
+const SCENARIO_CANDIDATE_EXTRA_BASE_NUMBERS = new Set(['BS9-010', 'BS9-030'])
+const bs9CandidateExtraRecords = bs9CandidateDocument.cards as OfficialCardRecord[]
+
+const getScenarioCandidateExtraRecord = (
+  cardNumber: string,
+): OfficialCardRecord | undefined => {
+  const trimmed = cardNumber.trim()
+  const direct = bs9CandidateExtraRecords.find(
+    (record) =>
+      record.type === 'extra' &&
+      record.cardNumber === trimmed &&
+      SCENARIO_CANDIDATE_EXTRA_BASE_NUMBERS.has(record.baseCardNumber),
+  )
+  if (direct) return direct
+
+  return bs9CandidateExtraRecords.find(
+    (record) =>
+      record.type === 'extra' &&
+      record.baseCardNumber === trimmed &&
+      SCENARIO_CANDIDATE_EXTRA_BASE_NUMBERS.has(record.baseCardNumber),
+  )
+}
+
+export interface ScenarioCandidateExtraDeckCardDefinition {
+  cardNumber: string
+  name: string
+  imageUrl: string | null
+}
+
+/** Candidate options shown by the localhost scenario modal datalist. */
+export const getScenarioCandidateExtraDeckCardDefinitions = (): readonly ScenarioCandidateExtraDeckCardDefinition[] =>
+  bs9CandidateExtraRecords
+    .filter(
+      (record) =>
+        record.type === 'extra' &&
+        SCENARIO_CANDIDATE_EXTRA_BASE_NUMBERS.has(record.baseCardNumber),
+    )
+    .map((record) => ({
+      cardNumber: record.cardNumber,
+      name: record.name,
+      imageUrl: record.imageUrl ?? null,
+    }))
+    .sort((left, right) =>
+      left.cardNumber.localeCompare(right.cardNumber, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }),
+    )
 
 export interface ScenarioCookieSlot {
   cardNumber: string
@@ -265,13 +321,15 @@ const buildExtraDeck = (
     if (!trimmed) continue
 
     const entry = getCardPoolEntry(trimmed)
-    if (!entry) {
+    const candidateEntry = entry ? undefined : getScenarioCandidateExtraRecord(trimmed)
+    const source = entry ?? candidateEntry
+    if (!source) {
       errors.push(`找不到額外牌組卡號「${trimmed}」。`)
       continue
     }
 
     const conversion = convertOfficialCardToExtraDeckCard(
-      entry,
+      source,
       `scenario-${playerId}-${index + 1}`,
     )
     if (conversion.status !== 'converted') {

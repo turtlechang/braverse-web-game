@@ -8,7 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import type { CardEffect, CardSkill, GameCard } from '../../game'
-import { isEffectUntargeted, requiresEffectCardSelection } from '../../game'
+import { hasFixedModifierTargets, isEffectUntargeted, requiresEffectCardSelection } from '../../game'
 import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
@@ -83,6 +83,8 @@ export interface EffectPanelProps {
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
   onChooseMode?: (modeIndex: number) => void
+  /** 規則層計算的各模式可執行性；未提供時維持向後相容，全部可選。 */
+  chooseOneModePlayable?: readonly boolean[]
   /** 設定 hp-to-trash 目前選定目標的個別 HP 移除數量。 */
   onSetTargetAmount?: (instanceId: string, amount: number) => void
 }
@@ -94,6 +96,7 @@ function CandidateButtons({
   labels,
   onToggle,
   className,
+  readOnly = false,
 }: {
   cards: GameCard[]
   selectedIds: Set<string>
@@ -101,6 +104,7 @@ function CandidateButtons({
   labels?: Record<string, string>
   onToggle?: (instanceId: string) => void
   className: string
+  readOnly?: boolean
 }) {
   if (cards.length === 0) return null
 
@@ -114,6 +118,8 @@ function CandidateButtons({
             type="button"
             className={selected ? 'is-selected' : ''}
             key={card.instanceId}
+            disabled={readOnly}
+            data-fixed-target={readOnly || undefined}
             onClick={() => onToggle?.(card.instanceId)}
           >
             <CardFace card={card} selected={selected} concealed={card.id === 'hidden'} />
@@ -296,9 +302,11 @@ function EffectPanelContent({
   effectSelectionError = null,
   optionalCostAttack = null,
   onChooseMode,
+  chooseOneModePlayable,
   onSetTargetAmount,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
+  const fixedTargets = hasFixedModifierTargets(currentEffect)
   const attackTextSections =
     pendingEffect?.sourceKind === 'attack'
       ? splitAttackText(pendingEffect.skill.text)
@@ -324,7 +332,9 @@ function EffectPanelContent({
     ) ?? [],
   )
   const selectionLimits =
-    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+    fixedTargets
+      ? { min: candidateCards.length, max: candidateCards.length }
+      : currentEffect?.kind === 'damage-all' && currentEffect.sequential
       ? { min: candidateCards.length, max: candidateCards.length }
       : currentEffect?.kind === 'break-to-trash' ||
       currentEffect?.kind === 'trash-to-hand' ||
@@ -336,6 +346,8 @@ function EffectPanelContent({
               : 0,
           max: currentEffect.max,
         }
+      : currentEffect?.kind === 'equipped-to-hp'
+        ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
@@ -677,6 +689,7 @@ function EffectPanelContent({
   const hasNextPhase =
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
   const hasOptionalSkip =
+    !fixedTargets &&
     pendingEffect !== null &&
     ((pendingEffect.sourceKind === 'attack' &&
       currentEffect !== null &&
@@ -1066,12 +1079,14 @@ function EffectPanelContent({
                 >
                   {chooseOneModes.map((mode, modeIndex) => {
                     const selected = selectedChooseOneMode === modeIndex
+                    const playable = chooseOneModePlayable?.[modeIndex] ?? true
                     return (
                       <button
                         key={`${chooseOneSignature}-${modeIndex}`}
                         type="button"
                         className={selected ? 'is-selected' : ''}
                         aria-pressed={selected}
+                        disabled={!playable}
                         onClick={() =>
                           setChooseOneSelection({
                             signature: chooseOneSignature,
@@ -1084,6 +1099,7 @@ function EffectPanelContent({
                         </span>
                         <span className="effect-choice-option-label">
                           {mode.label}
+                          {!playable && <small>（目前無法支付）</small>}
                         </span>
                         {selected ? (
                           <Check aria-hidden="true" />
@@ -1165,6 +1181,7 @@ function EffectPanelContent({
                     }
                     onToggle={onToggleCandidate}
                     className="effect-candidates-target"
+                    readOnly={fixedTargets}
                     labels={candidateLabels}
                   />
                 )}
@@ -1174,7 +1191,9 @@ function EffectPanelContent({
                   </small>
                 )}
                 {effectSelectionError && <small role="status">{effectSelectionError}</small>}
-                {currentEffect.kind === 'hand-to-break-by-level-sum' ||
+                {fixedTargets ? (
+                  <small>固定套用 {candidateCards.length} 張餅乾，不需選取。</small>
+                ) : currentEffect.kind === 'hand-to-break-by-level-sum' ||
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>
                     已選等級總和 {selectedLevelSum}／

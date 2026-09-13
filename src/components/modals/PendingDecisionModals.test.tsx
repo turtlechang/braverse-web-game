@@ -3,9 +3,10 @@
 import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { CookieCard, GameCard } from '../../game'
+import type { CookieCard, ExtraDeckCard, GameCard } from '../../game'
 import {
   DrawUpToResponseModal,
+  ExtraDeckAttackModal,
   HandDiscardResponseModal,
   OptionalCostAttackModal,
   InspectDeckModal,
@@ -27,6 +28,87 @@ const createItemCard = (index: number): GameCard => ({
   name: `測試物品 ${index}`,
   type: 'item',
   energyColor: 'blue',
+})
+
+const createExtraDeckCard = (index: number): ExtraDeckCard => ({
+  id: 'BS9-079',
+  instanceId: `extra-attack-${index}`,
+  name: 'Shadow Milk Cookie',
+  type: 'extra',
+  attack: 7,
+  attackText: `額外牌組攻擊 ${index}`,
+})
+
+describe('ExtraDeckAttackModal', () => {
+  it('shows each exact Extra Deck candidate and returns the selected instance', async () => {
+    const candidates = [createExtraDeckCard(1), createExtraDeckCard(2)]
+    const onSelect = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <ExtraDeckAttackModal
+          sourceCardName="Shadow Milk Cookie"
+          cardName="Shadow Milk Cookie"
+          candidates={candidates}
+          optional
+          onSelect={onSelect}
+          onSkip={onSkip}
+        />,
+      ),
+    )
+
+    expect(container.querySelectorAll('.extra-deck-attack-option')).toHaveLength(2)
+    expect(container.textContent).toContain('實體 ID：extra-attack-1')
+    expect(container.textContent).toContain('實體 ID：extra-attack-2')
+
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="extra-deck-attack-candidate-extra-attack-2"]',
+        )!
+        .click()
+    })
+    expect(onSelect).toHaveBeenCalledWith('extra-attack-2')
+    expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('keeps an explicit skip action when no candidate is available', async () => {
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <ExtraDeckAttackModal
+          sourceCardName="Shadow Milk Cookie"
+          cardName="Shadow Milk Cookie"
+          candidates={[]}
+          optional
+          onSelect={() => undefined}
+          onSkip={onSkip}
+        />,
+      ),
+    )
+
+    expect(container.textContent).toContain('目前沒有可用的「Shadow Milk Cookie」')
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="extra-deck-attack-skip"]')!
+        .click()
+    })
+    expect(onSkip).toHaveBeenCalledOnce()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })
 
 describe('ReorderHpModal', () => {

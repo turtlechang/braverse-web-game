@@ -1,10 +1,37 @@
 import { GameRuleError } from '../errors'
-import type { CardEffect, ChooseOneEffect } from '../types'
+import type { CardEffect, ChooseOneEffect, EffectContext, GameState } from '../types'
+import {
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
+  isEffectConditionMet,
+  requiresEffectCardSelection,
+} from './targeting'
 
 export const asChooseOneEffect = (
   effect: CardEffect | undefined,
 ): ChooseOneEffect | null =>
   effect?.kind === 'choose-one' ? effect : null
+
+/** Authoritative availability check shared by commands and AI. */
+export const isChooseOneModePlayable = (
+  state: GameState,
+  context: EffectContext,
+  effects: readonly CardEffect[],
+): boolean =>
+  effects.every((effect) => {
+    if (!isEffectConditionMet(state, context, effect)) return false
+    if (effect.kind === 'discard-hand') {
+      return state.players[context.sourcePlayerId].hand.filter(
+        (card) =>
+          (!effect.cookieOnly || card.type === 'cookie') &&
+          (!effect.hasFlip || Boolean(card.flip)),
+      ).length >= effect.count
+    }
+    if (!requiresEffectCardSelection(effect)) return true
+    const limits = getEffectSelectionLimits(effect)
+    if (!limits || limits.min === 0) return true
+    return getEffectSelectionCandidates(state, context, effect).length >= limits.min
+  })
 
 /**
  * 把 `choose-one` 就地換成選定模式的效果，`effectIndex` 維持不變，

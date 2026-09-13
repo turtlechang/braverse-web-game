@@ -73,6 +73,15 @@ export const maskGameStateForViewer = (
         }
       : state.pendingInspectDeck
 
+  const maskedExtraDeckAttack =
+    state.pendingExtraDeckAttack &&
+    state.pendingExtraDeckAttack.playerId !== viewerId
+      ? {
+          ...state.pendingExtraDeckAttack,
+          candidateIds: [],
+        }
+      : state.pendingExtraDeckAttack
+
   return {
     ...publicState,
     players: {
@@ -80,6 +89,7 @@ export const maskGameStateForViewer = (
       'player-two': maskPlayerState(state.players['player-two'], viewerId, reorderTarget),
     },
     pendingInspectDeck: maskedInspect,
+    pendingExtraDeckAttack: maskedExtraDeckAttack,
     ...(hpInspectionResults?.[viewerId]
       ? { hpInspectionResults: { [viewerId]: hpInspectionResults[viewerId] } }
       : {}),

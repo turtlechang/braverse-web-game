@@ -142,6 +142,38 @@ describe('TestScenarioModal', () => {
     await act(() => root.unmount())
   })
 
+  it('accepts the isolated BS9-010 candidate in the scenario EXTRA field', async () => {
+    const onStart = vi.fn()
+    const { container, root } = await renderModal(onStart)
+
+    const extraOptions = container.querySelectorAll(
+      '#scenario-extra-card-options option',
+    )
+    expect(
+      Array.from(extraOptions).some((option) => option.getAttribute('value') === 'BS9-010'),
+    ).toBe(true)
+
+    await changeInput(
+      container.querySelector<HTMLInputElement>(
+        '[data-testid="scenario-player-battle-card-0"]',
+      ),
+      'BS3-017',
+    )
+    await changeInput(
+      container.querySelector<HTMLInputElement>(
+        '[data-testid="scenario-player-extra-deck"]',
+      ),
+      'BS9-010',
+    )
+    await click(container.querySelector('[data-testid="scenario-start-button"]'))
+
+    expect(onStart).toHaveBeenCalledTimes(1)
+    const state = onStart.mock.calls[0][0] as GameState
+    expect(state.players['player-one'].extraDeck?.map((card) => card.id)).toEqual(['BS9-010'])
+
+    await act(() => root.unmount())
+  })
+
   it('rejects a non-EXTRA card in the scenario EXTRA Deck field', async () => {
     const onStart = vi.fn()
     const { container, root } = await renderModal(onStart)
