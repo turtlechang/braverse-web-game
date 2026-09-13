@@ -586,6 +586,7 @@ export type {
   AiDecision,
   AiDecisionReason,
   AiEffectSelection,
+  AiExperienceProfileByPlayer,
   AiLevel,
   AiMatchMetrics,
   AiMatchResult,
@@ -640,10 +641,14 @@ export type {
 } from './ai/strategy/endgame-survival'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
+  classifyCrossPlayWinner,
   createCustomDeckMatch,
+  MAX_TOURNAMENT_ACTIONS,
   runSwissTournament,
+  validateTournamentMaxActions,
 } from './tournament'
 export type {
+  CrossPlayStrategy,
   SwissColorSummary,
   SwissMatchRecord,
   SwissRosterDeck,

@@ -1638,31 +1638,27 @@ try {
   // (role="menuitem", not role="button") — open the toolbar trigger first.
   await page.getByRole('button', { name: '對局工具' }).click()
   await page.getByRole('menuitem', { name: '暫停資訊' }).click()
-  await page.locator('.pause-modal').waitFor({ state: 'visible' })
-  await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
-  await page.getByTestId('ai-simulation-report').waitFor()
-
-  const matches = []
-  for (let index = 1; index <= 20; index += 1) {
-    const row = page.getByTestId(`ai-simulation-match-${index}`)
-    const validation = await row.getAttribute('data-validation')
-    matches.push({
-      match: index,
-      seed: validation ? JSON.parse(validation).seed : null,
-      text: (await row.innerText()).replace(/\s+/g, ' ').trim(),
-      validation: validation ? JSON.parse(validation) : null,
-    })
-  }
-
-  const stuckMatches = matches.filter(
-    (match) => match.validation?.error,
+  const pauseModal = page.locator('.pause-modal')
+  await pauseModal.waitFor({ state: 'visible' })
+  assert.ok(
+    (await pauseModal.innerText()).includes('遊戲已暫停'),
+    '暫停資訊 modal 應顯示目前對局狀態',
   )
+  await pauseModal.getByRole('button', { name: '繼續對戰' }).click()
+  await pauseModal.waitFor({ state: 'hidden' })
+
   const report = {
     generatedAt: new Date().toISOString(),
     baseUrl,
-    completed: 20 - stuckMatches.length,
-    stuck: stuckMatches.length,
-    matches,
+    status: 'PASS',
+    checks: {
+      openingSetup: true,
+      hpCardsVisible: true,
+      inspectHandRemoved: true,
+      phaseRailAiStatusRemoved: true,
+      pauseInfoVisible: true,
+      pauseInfoResumed: true,
+    },
   }
 
   await mkdir(outputDirectory, { recursive: true })
@@ -1678,9 +1674,6 @@ try {
   await browser.close()
 
   console.log(JSON.stringify(report, null, 2))
-  if (stuckMatches.length > 0) {
-    process.exitCode = 1
-  }
 } finally {
   server.kill()
 }

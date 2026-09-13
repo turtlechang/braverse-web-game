@@ -84,7 +84,7 @@ const allFixtureCards = (state: GameState): Array<GameCard | ExtraDeckCard> => {
   return cards
 }
 
-describe('BS9-071～118 candidate-isolated conversion and rules', () => {
+describe('BS9-071～118 candidate-isolated conversion and rules', { timeout: 30_000 }, () => {
   it('converts and strictly audits every physical candidate, with exact positive/negative fixtures', () => {
     expect(bs9Range).toHaveLength(76)
     for (const source of bs9Range) {

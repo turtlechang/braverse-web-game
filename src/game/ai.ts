@@ -100,6 +100,7 @@ import {
 export type {
   AiActionType,
   AiDecision,
+  AiExperienceProfileByPlayer,
   AiDecisionReason,
   AiEffectSelection,
   AiLevel,
@@ -1829,11 +1830,15 @@ export const simulateAiMatch = (
     }
 
     const controller = getActingPlayerId(state)
+    const playerExperienceProfile = options.experienceProfileByPlayer?.[controller]
+    const experienceProfile = playerExperienceProfile === undefined
+      ? options.experienceProfile
+      : playerExperienceProfile
     const decision = takeAiStep(state, controller, {
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
       memory: strategyMemories[controller],
-      experienceProfile: options.experienceProfile,
+      experienceProfile,
     })
     if (decision.reason?.strategyMemory) {
       strategyMemories[controller] = decision.reason.strategyMemory

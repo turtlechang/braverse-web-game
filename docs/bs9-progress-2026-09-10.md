@@ -22,6 +22,13 @@
 
 上述舊版交叉證據保留為採用前歷史快照；本輪 strict 已更新為 185／185 verified。由於 `test-results/bs9-024-029-browser.json` 的終端重跑在官方影像載入前即受 `cookierunbraverse.com:443` 網路限制中止，不能把該檔案宣稱為目前全量 Browser audit；BS9-025 的 8／8 互動與 Chrome 官方卡圖載入證據另列於下方。
 
+## 2026-09-14 BS9 Lv.5 benchmark review 修正
+
+- 修正 holdout 的比較方法：同一 fixed pairing 以 baseline／訓練 profile 做兩種策略座位交叉對戰，依實際 `winnerPlayerId` 歸屬勝場；不再將單邊 replay 的 winner-change 當成訓練勝場。
+- benchmark 與正式 Swiss 使用 500 步硬上限；本次固定 seed 的 1,024 副／10 輪 Swiss 完成 **5,084／5,120**，36 場卡住／超限標記 FAIL，訓練 profile 僅收錄 5,084 場完成決勝資料。Top cut 仍產生冠軍藍色 `#005`、四強 `#005`／`#183`／`#040`／`#201`。
+- 32 副×2 輪縮小 holdout 共 64 場雙向交叉對戰，訓練策略 35 勝、baseline 29 勝、0 失敗；完整 256 副×8 輪版本可由同一腳本參數重跑，本次報告的實測規模已在產物中標明。
+- CI 對應修正：BS9-071～118 長稽核測試設 30 秒 suite timeout；AI Browser 改驗證現行「暫停資訊／繼續對戰」流程，不再等待已移除的 20 場 AI 按鈕。完整 Vitest **323 檔／4,782 項**、build、AI Browser Smoke 與修改檔 scoped lint 通過；本機全域 lint 的 4 個錯誤仍只來自既有未追蹤暫存／診斷檔。
+
 ## 2026-09-13 BS9 正式牌池端到端收尾
 
 BS9 已完成候選隔離 → strict contract → Browser 正／負驗收 → 正式 promotion → 正式牌組／線上共用 gate 的收尾鏈。正式資料為 `data/cards/official-a-game-of-truth-and-deceit-bs9.en.json`，`data/candidates/` 不再保留 BS9 JSON；正式 registry 已重建，Standard／Open 可讀取 BS9。
@@ -30,7 +37,7 @@ BS9 已完成候選隔離 → strict contract → Browser 正／負驗收 → �
 - **BS9 Browser 矩陣**：所有 `test:bs9-*` package scripts 均 exit 0，合計執行 **864 lanes（含重疊的專卡加強矩陣）**；每筆正式記錄均走雙尺寸正／負路徑，檢查實卡名稱、官方 `imageUrl` request／render／load、支付／目標／時機、公開 `GameCommand` trace 與 pending 結算。BS9-018 的隱藏對手手牌路徑依規則標記 N/A；其餘可見卡圖 lanes 均通過 exact image gate。
 - **跨流程 Browser gate**：`test:deck:browser` 四種視窗（1366×768、622×1040、390×844、280×720）通過；`test:online:match:browser` 通過開房、開局同步、攻擊預覽／支付、非法指令拒絕、斷線與連線失敗；`test:online:browser` 桌機與 280px modal **2／2** 通過，無水平溢出。
 - **本機回歸**：完整 Vitest **319 檔／4,769 項**、build、牌池核對均 exit 0；scoped ESLint 與 `git diff --check` 通過。
-- **已知基線阻塞**：完整 `npm.cmd run lint` 仍被 4 個既有無關暫存／診斷檔錯誤阻塞；`test:ai:browser` 的舊驗收腳本仍等待目前 UI 已移除的「執行 20 場 AI 驗證」按鈕，故不將其誤列為 BS9 失敗。以上兩項均未修改無關檔案。
+- **當時基線狀態（2026-09-13）**：完整 `npm.cmd run lint` 仍被 4 個既有無關暫存／診斷檔錯誤阻塞；當時 `test:ai:browser` 尚未更新為現行暫停資訊流程。最新修正與驗證請見上方 2026-09-14 區段。
 - **剩餘驗收邊界**：已通過正式牌組與通用雙瀏覽器好友房／線上 modal gate，但尚未建立「每一張 BS9 卡在真實雙瀏覽器線上對局中逐卡操作」的專用矩陣；這是額外覆蓋範圍，不影響本次正式 promotion 與 BS9 Browser 收尾判定。
 
 ## 2026-09-13 BS9-025 採用語義收尾

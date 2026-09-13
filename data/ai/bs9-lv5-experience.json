@@ -9,685 +9,693 @@
     "tournamentId": "bs9-lv5-1024-swiss",
     "rosterSize": 1024,
     "rounds": 10,
-    "swissMatches": 5120,
+    "swissMatches": 5084,
     "seed": 20260913,
-    "generatedAt": "2026-09-13T13:04:31.326Z"
+    "generatedAt": "2026-09-13T17:20:31.545Z"
   },
   "actionWeights": {
-    "activate-skill": 1,
     "advance-phase": 1,
     "attack": 4,
     "idle": 1,
     "place-support": 2,
     "play-item": -3,
-    "play-stage": -3,
+    "play-stage": -2,
     "play-trap": -3,
     "refresh": -6,
     "replace-cookie": -2,
     "resolve-attack-effect": 4,
     "resolve-damage": -3,
-    "resolve-faint": -8,
-    "resolve-flip": -1,
-    "resolve-inspect-deck": 8,
+    "resolve-faint": -7,
+    "resolve-inspect-deck": -1,
     "resolve-optional-cost-attack": -4,
-    "resolve-reveal-top-deck": 2,
-    "skip-replacement": -9
+    "resolve-reveal-top-deck": 1,
+    "skip-replacement": -10
   },
   "cardActionWeights": {
     "BS9-001": {
-      "attack": -3,
-      "deploy-cookie": -16,
-      "play-trap": 4,
-      "replace-cookie": -9,
-      "resolve-damage": 4
+      "attack": -4,
+      "deploy-cookie": -9,
+      "place-support": -1,
+      "play-trap": 6,
+      "replace-cookie": -7,
+      "resolve-damage": 5
     },
     "BS9-002": {
-      "attack": 4,
-      "place-support": -2,
-      "play-trap": -3,
-      "replace-cookie": 4,
-      "resolve-damage": -3
+      "activate-skill": -8,
+      "attack": -2,
+      "deploy-cookie": -5,
+      "play-trap": 4,
+      "replace-cookie": -7,
+      "resolve-damage": 4
     },
     "BS9-003": {
-      "deploy-cookie": -4,
-      "place-support": -1,
-      "play-trap": 1,
-      "replace-cookie": -11,
+      "deploy-cookie": -1,
+      "play-trap": 2,
+      "replace-cookie": -13,
       "resolve-damage": 1
     },
     "BS9-004": {
       "attack": 2,
-      "deploy-cookie": -4,
+      "deploy-cookie": -3,
       "play-trap": -1,
-      "replace-cookie": -3,
+      "replace-cookie": -5,
       "resolve-damage": -1
     },
     "BS9-005": {
-      "attack": -4,
-      "place-support": -4,
-      "play-trap": 7,
-      "replace-cookie": -10,
-      "resolve-damage": 6
+      "attack": 1,
+      "place-support": -3,
+      "play-trap": 1,
+      "replace-cookie": -9,
+      "resolve-damage": 1
     },
     "BS9-006": {
-      "attack": 2,
-      "deploy-cookie": 2,
-      "place-support": -1,
-      "replace-cookie": -9,
-      "resolve-damage": -1
+      "attack": 1,
+      "deploy-cookie": -3,
+      "replace-cookie": -6
     },
     "BS9-007": {
-      "attack": -4,
-      "idle": -8,
+      "attack": -8,
+      "idle": -9,
       "place-support": 3,
-      "play-trap": 5,
-      "replace-cookie": -11,
-      "resolve-damage": 4
+      "play-trap": 8,
+      "replace-cookie": -8,
+      "resolve-damage": 8
     },
     "BS9-008": {
-      "attack": -2,
-      "place-support": 1,
-      "play-trap": 2,
-      "replace-cookie": -6,
-      "resolve-damage": 2
+      "attack": -7,
+      "play-trap": 8,
+      "replace-cookie": -11,
+      "resolve-damage": 8
     },
     "BS9-009": {
-      "deploy-cookie": -2,
-      "idle": 8,
-      "play-trap": 1,
+      "attack": -1,
+      "deploy-cookie": -3,
+      "idle": 2,
+      "place-support": -1,
+      "play-trap": 2,
       "replace-cookie": -11,
-      "resolve-damage": 1
+      "resolve-damage": 2
     },
     "BS9-010": {
-      "attack": 8,
-      "play-trap": -4,
-      "resolve-attack-effect": 8,
-      "resolve-damage": -8,
-      "resolve-optional-cost-attack": 8
+      "deploy-cookie": -3,
+      "resolve-attack-effect": 1,
+      "resolve-damage": 1,
+      "resolve-optional-cost-attack": 1
     },
     "BS9-011": {
-      "play-trap": 2,
-      "replace-cookie": -8,
-      "resolve-damage": 1
-    },
-    "BS9-012": {
-      "attack": -4,
-      "deploy-cookie": -9,
-      "idle": -8,
-      "place-support": 3,
-      "play-trap": 5,
-      "replace-cookie": -8,
-      "resolve-damage": -7
-    },
-    "BS9-013": {
-      "attack": 3,
-      "deploy-cookie": -6,
-      "place-support": 1,
-      "play-trap": -1,
-      "replace-cookie": -3,
-      "resolve-damage": -2
-    },
-    "BS9-014": {
       "attack": -2,
-      "deploy-cookie": 2,
-      "place-support": -8,
-      "play-trap": 3,
-      "replace-cookie": -10,
+      "deploy-cookie": -2,
+      "place-support": 1,
+      "play-trap": 4,
+      "replace-cookie": -9,
       "resolve-damage": 3
     },
-    "BS9-015": {
-      "attack": -5,
-      "deploy-cookie": -4,
-      "idle": -8,
-      "place-support": -2,
+    "BS9-012": {
+      "attack": -12,
+      "deploy-cookie": -16,
+      "idle": -7,
+      "place-support": 2,
+      "play-trap": 16,
+      "replace-cookie": -7,
+      "resolve-damage": -5
+    },
+    "BS9-013": {
+      "attack": 4,
+      "deploy-cookie": -3,
+      "place-support": 1,
+      "play-trap": -4,
+      "replace-cookie": -2,
+      "resolve-damage": -4
+    },
+    "BS9-014": {
+      "attack": -6,
+      "deploy-cookie": -11,
+      "place-support": -3,
       "play-trap": 7,
+      "replace-cookie": -8,
+      "resolve-damage": 7
+    },
+    "BS9-015": {
+      "attack": -3,
+      "idle": -7,
+      "place-support": -5,
+      "play-trap": 4,
       "replace-cookie": -12,
-      "resolve-damage": 6,
+      "resolve-damage": 4,
       "resolve-faint": -8
     },
     "BS9-016": {
-      "attack": -2,
-      "deploy-cookie": -6,
-      "place-support": 2,
-      "play-trap": 3,
+      "attack": -1,
+      "deploy-cookie": -2,
+      "place-support": -4,
+      "play-trap": 2,
       "replace-cookie": -3,
-      "resolve-damage": 4
+      "resolve-damage": 3
     },
     "BS9-017": {
       "activate-skill": 10,
       "attack": 3,
       "deploy-cookie": -3,
-      "idle": -12,
-      "place-support": -3,
-      "play-trap": -3,
+      "idle": -18,
+      "place-support": 3,
+      "play-trap": -2,
       "replace-cookie": 3,
       "resolve-attack-effect": 3,
       "resolve-damage": -4
     },
     "BS9-018": {
-      "attack": -9,
-      "deploy-cookie": -1,
-      "place-support": -3,
-      "play-trap": 10,
-      "replace-cookie": -13,
-      "resolve-damage": 10
+      "attack": -7,
+      "deploy-cookie": -10,
+      "place-support": -9,
+      "play-trap": 8,
+      "replace-cookie": -11,
+      "resolve-damage": 8
     },
     "BS9-019": {
-      "play-item": -4
+      "place-support": 1,
+      "play-item": -5
     },
     "BS9-020": {
       "idle": -11,
-      "place-support": 1,
+      "place-support": 2,
       "play-item": -11
     },
     "BS9-021": {
       "place-support": 3,
-      "play-trap": -7
+      "play-trap": -9
     },
     "BS9-022": {
-      "idle": -9,
+      "idle": -5,
       "place-support": 3,
       "play-trap": -3
     },
     "BS9-023": {
-      "place-support": 3,
+      "place-support": 4,
       "play-stage": -4
     },
     "BS9-024": {
-      "attack": 4,
-      "deploy-cookie": -2,
+      "attack": 2,
+      "deploy-cookie": -5,
       "place-support": 2,
-      "play-trap": -3,
-      "replace-cookie": 3,
-      "resolve-attack-effect": 4,
-      "resolve-damage": -4,
-      "resolve-optional-cost-attack": 3
+      "replace-cookie": 9,
+      "resolve-attack-effect": 1,
+      "resolve-damage": -1,
+      "resolve-optional-cost-attack": 4
     },
     "BS9-025": {
-      "attack": -1,
-      "place-support": 1,
-      "play-trap": 2,
-      "resolve-damage": 2
+      "attack": 7,
+      "place-support": -1,
+      "play-trap": -6,
+      "resolve-damage": -6
     },
     "BS9-026": {
-      "attack": 12,
-      "idle": 1,
-      "play-trap": -12,
-      "replace-cookie": 5,
-      "resolve-damage": -12
-    },
-    "BS9-027": {
-      "activate-skill": 2,
-      "attack": 6,
-      "deploy-cookie": 2,
-      "place-support": 4,
-      "play-trap": -5,
-      "replace-cookie": -1,
-      "resolve-damage": -2
-    },
-    "BS9-028": {
-      "attack": 8,
-      "deploy-cookie": -14,
-      "place-support": 4,
-      "play-trap": -6,
-      "replace-cookie": -6,
-      "resolve-damage": -7
-    },
-    "BS9-029": {
-      "attack": 5,
+      "attack": 3,
       "place-support": 2,
       "play-trap": -3,
-      "replace-cookie": -1,
-      "resolve-damage": -4
+      "replace-cookie": -7,
+      "resolve-damage": -3
+    },
+    "BS9-027": {
+      "activate-skill": -1,
+      "attack": 1,
+      "deploy-cookie": -1,
+      "place-support": 3,
+      "replace-cookie": -2
+    },
+    "BS9-028": {
+      "attack": 9,
+      "deploy-cookie": -9,
+      "place-support": 3,
+      "play-trap": -8,
+      "replace-cookie": -17,
+      "resolve-damage": -8
+    },
+    "BS9-029": {
+      "attack": -1,
+      "place-support": 2,
+      "play-trap": 1,
+      "replace-cookie": -14,
+      "resolve-damage": 3
     },
     "BS9-031": {
       "attack": 1,
-      "deploy-cookie": -6,
-      "idle": -9,
+      "deploy-cookie": -11,
+      "idle": 6,
       "place-support": 3,
-      "replace-cookie": -5
+      "play-trap": 1,
+      "replace-cookie": -2
     },
     "BS9-032": {
-      "attack": 17,
-      "idle": 3,
-      "place-support": 3,
-      "play-trap": -17,
-      "replace-cookie": 2,
-      "resolve-damage": -17
+      "idle": 2,
+      "place-support": 2,
+      "replace-cookie": -4
     },
     "BS9-033": {
-      "activate-skill": 5,
-      "attack": 6,
-      "deploy-cookie": -7,
-      "idle": 5,
-      "place-support": 4,
-      "play-trap": -5,
+      "activate-skill": 3,
+      "attack": 3,
+      "deploy-cookie": -9,
+      "idle": 3,
+      "place-support": 3,
+      "play-trap": -2,
       "replace-cookie": 2,
-      "resolve-damage": -5
+      "resolve-damage": -2
     },
     "BS9-034": {
-      "attack": 7,
-      "deploy-cookie": 4,
-      "place-support": 3,
-      "play-trap": -5,
-      "replace-cookie": -6,
-      "resolve-damage": -6
+      "attack": 4,
+      "deploy-cookie": 1,
+      "place-support": 1,
+      "play-trap": -2,
+      "replace-cookie": -16,
+      "resolve-damage": -3
     },
     "BS9-035": {
-      "activate-skill": -1,
-      "attack": 1,
+      "activate-skill": -2,
       "deploy-cookie": -6,
-      "idle": -1,
+      "idle": -4,
       "place-support": 5,
-      "replace-cookie": 4,
-      "resolve-attack-effect": 2,
-      "resolve-damage": -1,
-      "resolve-optional-cost-attack": 2
+      "play-trap": 1,
+      "replace-cookie": 3,
+      "resolve-damage": 1
     },
     "BS9-036": {
-      "attack": 5,
-      "deploy-cookie": -3,
+      "attack": 3,
+      "deploy-cookie": -8,
       "idle": -3,
       "place-support": 5,
-      "play-trap": -4,
-      "replace-cookie": -1,
-      "resolve-damage": -4
+      "play-trap": -3,
+      "replace-cookie": -2,
+      "resolve-damage": -2
     },
     "BS9-037": {
-      "attack": 6,
+      "attack": 5,
       "deploy-cookie": -4,
       "place-support": 2,
-      "play-trap": -5,
-      "resolve-damage": -6,
+      "play-trap": -4,
+      "replace-cookie": -3,
+      "resolve-damage": -4,
       "resolve-faint": 2
     },
     "BS9-038": {
       "attack": 8,
       "deploy-cookie": 4,
-      "place-support": 2,
-      "play-trap": -6,
+      "place-support": 1,
+      "play-trap": -7,
       "replace-cookie": 4,
       "resolve-damage": -7
     },
     "BS9-039": {
-      "attack": 8,
-      "deploy-cookie": 3,
+      "attack": 7,
+      "deploy-cookie": 4,
+      "place-support": -5,
       "play-trap": -6,
-      "replace-cookie": 1,
+      "replace-cookie": -2,
       "resolve-damage": -6
     },
     "BS9-040": {
-      "activate-skill": -1,
+      "activate-skill": -2,
       "attack": 1,
-      "deploy-cookie": -5,
-      "idle": -2,
-      "place-support": -2,
-      "replace-cookie": -2,
-      "resolve-reveal-top-deck": -1
+      "deploy-cookie": -10,
+      "idle": 1,
+      "place-support": -3,
+      "replace-cookie": -3,
+      "resolve-reveal-top-deck": -2
     },
     "BS9-041": {
-      "deploy-cookie": -11,
-      "place-support": 5,
+      "attack": 1,
+      "deploy-cookie": -3,
+      "idle": -1,
+      "place-support": -4,
       "play-trap": 1,
       "replace-cookie": -6,
       "resolve-damage": 1
     },
     "BS9-042": {
-      "attack": 2,
-      "deploy-cookie": -14,
-      "place-support": 3,
-      "play-trap": -1,
+      "attack": 3,
+      "deploy-cookie": -13,
+      "place-support": -12,
+      "play-trap": -2,
       "replace-cookie": -6,
-      "resolve-damage": -1
+      "resolve-damage": -2
     },
     "BS9-044": {
-      "place-support": 7
+      "place-support": 6,
+      "play-item": -2
     },
     "BS9-045": {
-      "idle": 7,
-      "place-support": 8,
-      "play-trap": 7
+      "idle": 6,
+      "place-support": 7,
+      "play-trap": 6
     },
     "BS9-046": {
-      "place-support": 7,
-      "play-trap": 2
+      "place-support": 9,
+      "play-trap": 3
     },
     "BS9-047": {
-      "place-support": 13,
-      "play-stage": 3
+      "place-support": 11,
+      "play-stage": 2
     },
     "BS9-048": {
-      "attack": -4,
+      "attack": -5,
       "deploy-cookie": -3,
-      "place-support": -8,
-      "play-trap": 7,
+      "place-support": -7,
+      "play-trap": 6,
       "replace-cookie": -17,
       "resolve-damage": 6
     },
     "BS9-049": {
-      "attack": 1,
-      "place-support": -8,
-      "play-trap": 1,
-      "resolve-faint": -5
+      "attack": 5,
+      "deploy-cookie": 3,
+      "place-support": -7,
+      "play-trap": -3,
+      "replace-cookie": -4,
+      "resolve-damage": -3,
+      "resolve-faint": -2
     },
     "BS9-050": {
       "activate-skill": -9,
-      "attack": -9,
+      "attack": -7,
       "deploy-cookie": -10,
       "place-support": -7,
-      "play-trap": 10,
-      "replace-cookie": -13,
-      "resolve-attack-effect": -9,
-      "resolve-damage": 9,
-      "resolve-optional-cost-attack": -9
+      "play-trap": 8,
+      "replace-cookie": -9,
+      "resolve-attack-effect": -7,
+      "resolve-damage": 8,
+      "resolve-optional-cost-attack": -7
     },
     "BS9-051": {
-      "idle": -10,
-      "place-support": -8,
-      "play-trap": 3,
-      "resolve-damage": 2
+      "attack": -8,
+      "idle": -12,
+      "place-support": -7,
+      "play-trap": 13,
+      "resolve-damage": 9
     },
     "BS9-052": {
       "attack": -1,
-      "deploy-cookie": 3,
-      "place-support": -8,
+      "deploy-cookie": -6,
+      "place-support": -7,
       "play-trap": 3,
-      "replace-cookie": -10,
+      "replace-cookie": -9,
       "resolve-damage": 3
     },
     "BS9-053": {
-      "attack": 18,
+      "attack": -1,
       "place-support": -7,
-      "play-trap": -16,
-      "replace-cookie": -4,
-      "resolve-damage": -17
+      "replace-cookie": -6,
+      "resolve-damage": 2
     },
     "BS9-054": {
-      "activate-skill": -13,
-      "attack": -3,
-      "place-support": -7,
-      "play-trap": 7,
-      "replace-cookie": -22,
-      "resolve-damage": 5
+      "activate-skill": -10,
+      "attack": 1,
+      "place-support": -6,
+      "play-trap": 1,
+      "replace-cookie": -20,
+      "resolve-damage": 1
+    },
+    "BS9-055": {
+      "activate-skill": -12,
+      "deploy-cookie": -12
     },
     "BS9-056": {
-      "attack": 4,
+      "attack": -20,
       "place-support": -5,
-      "play-trap": -4,
-      "resolve-damage": -3
+      "play-trap": 20,
+      "resolve-damage": 20
     },
     "BS9-057": {
-      "attack": -7,
-      "deploy-cookie": -6,
+      "attack": -3,
+      "deploy-cookie": -3,
       "place-support": -8,
-      "play-trap": 9,
-      "replace-cookie": -9,
-      "resolve-damage": 9
+      "play-trap": 5,
+      "replace-cookie": -5,
+      "resolve-damage": 5
     },
     "BS9-058": {
-      "attack": 8,
-      "deploy-cookie": -8,
-      "place-support": -6,
-      "play-trap": -7,
+      "attack": 9,
+      "deploy-cookie": -5,
+      "place-support": -7,
+      "play-trap": -8,
       "replace-cookie": -11,
-      "resolve-damage": -7
+      "resolve-damage": -8
     },
     "BS9-059": {
-      "attack": -16,
-      "idle": -16,
-      "place-support": -7,
-      "play-trap": 18,
-      "resolve-attack-effect": -16,
-      "resolve-damage": 16,
-      "resolve-optional-cost-attack": -16
+      "attack": -20,
+      "idle": -20,
+      "place-support": -5,
+      "play-trap": 17,
+      "replace-cookie": -14,
+      "resolve-attack-effect": -20,
+      "resolve-damage": 20,
+      "resolve-optional-cost-attack": -20
     },
     "BS9-060": {
-      "activate-skill": 9,
-      "attack": 6,
-      "deploy-cookie": -7,
-      "idle": -14,
-      "place-support": -7,
-      "play-trap": -5,
-      "replace-cookie": -9,
-      "resolve-attack-effect": 6,
-      "resolve-damage": -4
+      "activate-skill": 10,
+      "attack": 8,
+      "deploy-cookie": -6,
+      "place-support": -6,
+      "play-trap": -6,
+      "replace-cookie": -8,
+      "resolve-attack-effect": 8,
+      "resolve-damage": -7
     },
     "BS9-061": {
       "activate-skill": -7,
-      "attack": -4,
-      "deploy-cookie": -13,
+      "attack": -3,
+      "deploy-cookie": -4,
       "place-support": -9,
-      "play-trap": 6,
-      "replace-cookie": -11,
+      "play-trap": 5,
+      "replace-cookie": -9,
       "resolve-damage": 5
     },
     "BS9-062": {
       "attack": -14,
-      "deploy-cookie": -15,
-      "place-support": -11,
+      "deploy-cookie": -20,
+      "place-support": -12,
       "play-trap": 15,
-      "replace-cookie": -14,
+      "replace-cookie": -11,
       "resolve-attack-effect": -14,
       "resolve-damage": 15
     },
     "BS9-063": {
       "attack": -3,
-      "deploy-cookie": -7,
-      "place-support": -10,
-      "play-trap": 5,
+      "deploy-cookie": -8,
+      "place-support": -6,
+      "play-trap": 4,
       "replace-cookie": -9,
-      "resolve-damage": 5
+      "resolve-damage": 4
     },
     "BS9-064": {
-      "attack": -1,
+      "attack": 2,
       "deploy-cookie": -7,
-      "place-support": -13,
-      "play-trap": 2,
-      "replace-cookie": -14,
-      "resolve-damage": 2,
-      "resolve-faint": -14
+      "place-support": -5,
+      "play-trap": -1,
+      "replace-cookie": -12,
+      "resolve-damage": -1,
+      "resolve-faint": -12
     },
     "BS9-065": {
-      "activate-skill": -8,
-      "attack": -9,
-      "deploy-cookie": -17,
-      "idle": -9,
-      "place-support": -10,
+      "activate-skill": -11,
+      "attack": -10,
+      "deploy-cookie": -18,
+      "idle": 2,
+      "place-support": -1,
       "play-trap": 10,
       "replace-cookie": -12,
       "resolve-attack-effect": -9,
-      "resolve-damage": 9,
+      "resolve-damage": 10,
       "resolve-optional-cost-attack": -9
     },
     "BS9-066": {
-      "place-support": -5,
-      "play-item": -12
+      "place-support": -2,
+      "play-item": -11
     },
     "BS9-067": {
-      "idle": -8,
-      "place-support": -4,
-      "play-item": -8
+      "idle": -13,
+      "place-support": -2,
+      "play-item": -13
     },
     "BS9-068": {
-      "place-support": 10,
+      "place-support": 12,
       "play-trap": -11
     },
     "BS9-069": {
-      "place-support": 6,
-      "play-trap": -8
+      "place-support": 7,
+      "play-trap": -7
     },
     "BS9-070": {
-      "place-support": -1,
-      "play-stage": -7
+      "play-stage": -6
     },
     "BS9-071": {
-      "attack": 8,
-      "deploy-cookie": 14,
+      "attack": 7,
+      "deploy-cookie": 7,
       "idle": 6,
       "place-support": 10,
       "play-trap": -7,
       "replace-cookie": 5,
-      "resolve-damage": -8
+      "resolve-damage": -7
     },
     "BS9-072": {
-      "attack": 15,
+      "attack": 17,
       "place-support": 10,
-      "play-trap": -15,
-      "resolve-damage": -15
+      "play-trap": -16,
+      "replace-cookie": -6,
+      "resolve-damage": -16
     },
     "BS9-073": {
-      "attack": 15,
-      "deploy-cookie": 11,
+      "attack": 11,
+      "deploy-cookie": 9,
       "place-support": 10,
-      "play-trap": -14,
-      "replace-cookie": 3,
-      "resolve-damage": -15
+      "play-trap": -10,
+      "replace-cookie": 5,
+      "resolve-damage": -11
     },
     "BS9-074": {
-      "attack": 13,
+      "attack": 10,
       "deploy-cookie": 7,
       "place-support": 10,
-      "play-trap": -12,
-      "replace-cookie": 4,
-      "resolve-damage": -13
+      "play-trap": -10,
+      "replace-cookie": 3,
+      "resolve-damage": -10
     },
     "BS9-075": {
       "attack": 8,
-      "deploy-cookie": 9,
+      "deploy-cookie": 11,
       "place-support": 11,
-      "play-trap": -8,
+      "play-trap": -7,
       "replace-cookie": 5,
-      "resolve-attack-effect": 9,
-      "resolve-damage": -8
+      "resolve-attack-effect": 8,
+      "resolve-damage": -7
     },
     "BS9-076": {
       "attack": 16,
       "place-support": 10,
       "play-trap": -17,
-      "replace-cookie": 9,
-      "resolve-attack-effect": 16,
-      "resolve-damage": -16
+      "replace-cookie": 7,
+      "resolve-attack-effect": 15,
+      "resolve-damage": -15
     },
     "BS9-077": {
-      "attack": 10,
+      "attack": 9,
       "deploy-cookie": 12,
-      "idle": 9,
+      "idle": 8,
       "place-support": 10,
-      "play-trap": -9,
-      "replace-cookie": 5,
-      "resolve-attack-effect": 10,
-      "resolve-damage": -9
+      "play-trap": -8,
+      "replace-cookie": 2,
+      "resolve-attack-effect": 9,
+      "resolve-damage": -8
     },
     "BS9-078": {
-      "activate-skill": 8,
-      "attack": 11,
-      "deploy-cookie": 10,
-      "idle": 11,
+      "activate-skill": 10,
+      "attack": 10,
+      "deploy-cookie": 8,
+      "idle": 10,
       "place-support": 11,
-      "play-trap": -10,
-      "replace-cookie": 10,
-      "resolve-attack-effect": 11,
+      "play-trap": -9,
+      "replace-cookie": 9,
+      "resolve-attack-effect": 10,
       "resolve-damage": -10
     },
     "BS9-080": {
-      "attack": 7,
-      "place-support": 12,
-      "play-trap": -6,
-      "replace-cookie": 2,
-      "resolve-damage": -6
+      "attack": 12,
+      "place-support": 11,
+      "play-trap": -11,
+      "replace-cookie": 11,
+      "resolve-damage": -11
     },
     "BS9-081": {
-      "attack": -8,
-      "place-support": 14,
-      "play-trap": 9,
-      "replace-cookie": -10,
-      "resolve-damage": 9
+      "attack": 4,
+      "place-support": 15,
+      "play-trap": -3,
+      "replace-cookie": 1,
+      "resolve-damage": -3
     },
     "BS9-082": {
       "attack": 11,
-      "deploy-cookie": 9,
+      "deploy-cookie": 12,
       "place-support": 12,
-      "play-trap": -11,
-      "replace-cookie": 6,
-      "resolve-damage": -11
+      "play-trap": -10,
+      "replace-cookie": 7,
+      "resolve-damage": -10
     },
     "BS9-083": {
-      "activate-skill": 10,
+      "activate-skill": 9,
       "attack": 11,
-      "deploy-cookie": 9,
-      "idle": 10,
-      "place-support": 14,
+      "deploy-cookie": 10,
+      "idle": 9,
+      "place-support": 11,
       "play-trap": -10,
       "replace-cookie": 9,
       "resolve-damage": -11
     },
     "BS9-084": {
-      "attack": 9,
-      "deploy-cookie": 3,
-      "place-support": 12,
+      "attack": 10,
+      "deploy-cookie": 10,
+      "place-support": 8,
       "play-trap": -9,
-      "replace-cookie": -3,
-      "resolve-damage": -9
+      "replace-cookie": 1,
+      "resolve-damage": -10
     },
     "BS9-085": {
-      "attack": 9,
-      "deploy-cookie": -2,
-      "idle": 6,
-      "place-support": 11,
-      "play-trap": -8,
-      "replace-cookie": 4,
-      "resolve-damage": -8
+      "attack": 10,
+      "deploy-cookie": 13,
+      "idle": 7,
+      "place-support": 17,
+      "play-trap": -9,
+      "replace-cookie": 5,
+      "resolve-damage": -9
     },
     "BS9-086": {
       "activate-skill": 15,
-      "attack": 16,
+      "attack": 17,
       "deploy-cookie": 14,
       "idle": 15,
-      "place-support": 1,
-      "play-trap": -15,
-      "replace-cookie": 7,
-      "resolve-damage": -15
+      "place-support": 6,
+      "play-trap": -17,
+      "replace-cookie": 5,
+      "resolve-damage": -17
     },
     "BS9-087": {
-      "attack": 9,
-      "play-trap": -7,
-      "replace-cookie": 2,
+      "attack": 10,
+      "play-trap": -8,
+      "replace-cookie": 1,
       "resolve-damage": -9
     },
     "BS9-089": {
-      "attack": 9,
-      "deploy-cookie": 13,
-      "idle": -2,
-      "play-trap": -8,
+      "activate-skill": 1,
+      "attack": 10,
+      "deploy-cookie": 7,
+      "idle": 2,
+      "play-trap": -9,
       "replace-cookie": 8,
-      "resolve-attack-effect": 9,
-      "resolve-damage": -8
+      "resolve-attack-effect": 10,
+      "resolve-damage": -9,
+      "resolve-reveal-top-deck": 1
     },
     "BS9-090": {
-      "place-support": 12,
-      "play-item": 8,
-      "resolve-inspect-deck": 8
+      "place-support": 9,
+      "play-item": -1,
+      "resolve-inspect-deck": -1
     },
     "BS9-091": {
-      "place-support": 11
+      "place-support": 10
     },
     "BS9-092": {
-      "place-support": 15,
-      "play-item": 9
+      "place-support": 13,
+      "play-item": 7
     },
     "BS9-093": {
-      "idle": 8,
-      "play-trap": 10
+      "idle": 5,
+      "place-support": 9,
+      "play-trap": 7
     },
     "BS9-094": {
-      "idle": 4,
-      "place-support": 3,
-      "play-trap": 11,
-      "resolve-reveal-top-deck": 11
+      "idle": 5,
+      "place-support": 4,
+      "play-trap": 7,
+      "resolve-reveal-top-deck": 7
     },
     "BS9-095": {
-      "place-support": 13,
-      "play-stage": 7
+      "place-support": 11,
+      "play-stage": 8
     },
     "BS9-097": {
       "activate-skill": 9,
@@ -700,984 +708,974 @@
       "resolve-damage": -7
     },
     "BS9-098": {
-      "attack": 7,
-      "deploy-cookie": 1,
-      "place-support": 1,
-      "play-trap": -5,
-      "replace-cookie": -6,
-      "resolve-damage": -6
+      "attack": 3,
+      "place-support": 2,
+      "play-trap": -2,
+      "resolve-damage": -3
     },
     "BS9-099": {
-      "activate-skill": 2,
-      "attack": 5,
+      "attack": 4,
       "place-support": 2,
-      "play-trap": -4,
-      "replace-cookie": 1,
+      "play-trap": -3,
+      "replace-cookie": -2,
       "resolve-damage": -4
     },
     "BS9-100": {
-      "attack": 6,
-      "deploy-cookie": 4,
-      "idle": -1,
+      "attack": 5,
+      "deploy-cookie": 2,
+      "idle": 2,
       "place-support": 2,
       "play-trap": -5,
       "replace-cookie": 2,
-      "resolve-attack-effect": 6,
-      "resolve-damage": -6
+      "resolve-attack-effect": 5,
+      "resolve-damage": -5
     },
     "BS9-101": {
-      "attack": 7,
-      "place-support": 3,
-      "play-trap": -7,
+      "attack": 3,
+      "place-support": 2,
+      "play-trap": -3,
       "replace-cookie": 1,
-      "resolve-damage": -7
+      "resolve-damage": -3
     },
     "BS9-102": {
-      "activate-skill": 6,
-      "attack": 13,
-      "deploy-cookie": 7,
-      "idle": -6,
-      "play-trap": -13,
-      "resolve-attack-effect": 13,
-      "resolve-damage": -13
+      "attack": 7,
+      "deploy-cookie": 6,
+      "play-trap": -7,
+      "resolve-attack-effect": 6,
+      "resolve-damage": -5
     },
     "BS9-103": {
-      "attack": 8,
-      "deploy-cookie": 7,
-      "place-support": 3,
+      "attack": 9,
+      "deploy-cookie": 8,
+      "place-support": 2,
       "play-trap": -7,
-      "replace-cookie": 5,
+      "replace-cookie": 4,
       "resolve-damage": -7
     },
     "BS9-104": {
-      "attack": -2,
-      "deploy-cookie": -4,
-      "place-support": 5,
-      "play-trap": 3,
-      "replace-cookie": -6,
-      "resolve-damage": 3
-    },
-    "BS9-105": {
       "attack": -1,
       "deploy-cookie": -3,
-      "place-support": 3,
-      "play-trap": 3,
-      "replace-cookie": -2,
+      "place-support": 5,
+      "play-trap": 2,
+      "replace-cookie": -6,
       "resolve-damage": 2
+    },
+    "BS9-105": {
+      "attack": -3,
+      "deploy-cookie": -3,
+      "place-support": 5,
+      "play-trap": 4,
+      "replace-cookie": -9,
+      "resolve-damage": 3
     },
     "BS9-109": {
       "attack": 7,
-      "place-support": 3,
+      "deploy-cookie": 1,
+      "place-support": 5,
       "play-trap": -6,
-      "replace-cookie": 2,
-      "resolve-damage": -6
+      "replace-cookie": 3,
+      "resolve-damage": -7
     },
     "BS9-110": {
       "attack": -4,
-      "deploy-cookie": 1,
-      "place-support": 4,
+      "deploy-cookie": 2,
+      "place-support": 6,
       "play-trap": 5,
-      "replace-cookie": -7,
+      "replace-cookie": -8,
       "resolve-damage": 5
     },
     "BS9-112": {
-      "attack": 3,
-      "deploy-cookie": -2,
-      "place-support": 4,
+      "attack": 2,
+      "deploy-cookie": -7,
+      "place-support": 3,
       "play-trap": -2,
-      "replace-cookie": 1,
+      "replace-cookie": 3,
       "resolve-damage": -2
     },
     "BS9-113": {
-      "attack": 3,
-      "deploy-cookie": 4,
-      "place-support": 13,
+      "attack": 4,
+      "deploy-cookie": 5,
+      "place-support": -2,
       "play-trap": -3,
       "replace-cookie": 1,
       "resolve-damage": -3
     },
     "BS9-114": {
-      "place-support": 5
+      "place-support": 6
     },
     "BS9-115": {
-      "idle": -1,
-      "place-support": 6,
-      "play-item": -1
+      "place-support": 6
     },
     "BS9-116": {
-      "place-support": 6,
-      "play-trap": 2
+      "place-support": 5,
+      "play-trap": 3
     },
     "BS9-117": {
-      "place-support": 7,
+      "place-support": 9,
       "play-trap": 2
     },
     "BS9-118": {
-      "place-support": 6,
-      "play-stage": -2
+      "place-support": 5,
+      "play-stage": -3
     }
   },
   "sampleCounts": {
     "actions": {
-      "activate-skill": 23808,
-      "advance-phase": 410087,
-      "attack": 78224,
-      "deploy-cookie": 11011,
-      "idle": 25370,
-      "place-support": 78260,
-      "play-item": 5473,
-      "play-stage": 2713,
-      "play-trap": 78224,
-      "refresh": 1574,
-      "replace-cookie": 40177,
-      "resolve-attack-effect": 38496,
-      "resolve-damage": 183861,
-      "resolve-faint": 1445,
-      "resolve-flip": 25732,
-      "resolve-inspect-deck": 7,
-      "resolve-optional-cost-attack": 11539,
-      "resolve-reveal-top-deck": 666,
-      "skip-replacement": 1342
+      "activate-skill": 21992,
+      "advance-phase": 401110,
+      "attack": 77261,
+      "deploy-cookie": 10994,
+      "idle": 25654,
+      "place-support": 76307,
+      "play-item": 5308,
+      "play-stage": 2716,
+      "play-trap": 77261,
+      "refresh": 1525,
+      "replace-cookie": 40031,
+      "resolve-attack-effect": 37894,
+      "resolve-damage": 181401,
+      "resolve-faint": 1394,
+      "resolve-flip": 25300,
+      "resolve-inspect-deck": 4,
+      "resolve-optional-cost-attack": 10784,
+      "resolve-reveal-top-deck": 668,
+      "skip-replacement": 1408
     },
     "cardActions": {
       "BS9-001": {
-        "attack": 439,
-        "deploy-cookie": 18,
-        "place-support": 2090,
+        "attack": 449,
+        "deploy-cookie": 15,
+        "place-support": 2025,
         "play-trap": 406,
-        "replace-cookie": 216,
-        "resolve-damage": 854
+        "replace-cookie": 220,
+        "resolve-damage": 868
       },
       "BS9-002": {
-        "activate-skill": 90,
-        "attack": 174,
-        "deploy-cookie": 39,
-        "place-support": 120,
-        "play-trap": 156,
-        "replace-cookie": 29,
-        "resolve-damage": 542
+        "activate-skill": 72,
+        "attack": 137,
+        "deploy-cookie": 34,
+        "place-support": 128,
+        "play-trap": 122,
+        "replace-cookie": 30,
+        "resolve-damage": 425
       },
       "BS9-003": {
-        "attack": 157,
-        "deploy-cookie": 94,
-        "place-support": 1990,
-        "play-trap": 143,
-        "replace-cookie": 22,
-        "resolve-damage": 157
+        "attack": 170,
+        "deploy-cookie": 90,
+        "place-support": 2036,
+        "play-trap": 160,
+        "replace-cookie": 25,
+        "resolve-damage": 170
       },
       "BS9-004": {
-        "attack": 847,
-        "deploy-cookie": 278,
-        "place-support": 1507,
-        "play-trap": 764,
-        "replace-cookie": 382,
-        "resolve-damage": 2386
+        "attack": 824,
+        "deploy-cookie": 262,
+        "place-support": 1496,
+        "play-trap": 741,
+        "replace-cookie": 364,
+        "resolve-damage": 2334
       },
       "BS9-005": {
-        "attack": 39,
-        "deploy-cookie": 1,
-        "place-support": 123,
-        "play-trap": 35,
-        "replace-cookie": 38,
-        "resolve-damage": 109
+        "attack": 36,
+        "place-support": 113,
+        "play-trap": 34,
+        "replace-cookie": 46,
+        "resolve-damage": 103
       },
       "BS9-006": {
-        "attack": 593,
-        "deploy-cookie": 153,
-        "place-support": 1587,
-        "play-trap": 529,
-        "replace-cookie": 208,
-        "resolve-damage": 1163
+        "attack": 572,
+        "deploy-cookie": 140,
+        "place-support": 1557,
+        "play-trap": 502,
+        "replace-cookie": 211,
+        "resolve-damage": 1123
       },
       "BS9-007": {
-        "attack": 33,
-        "idle": 155,
-        "place-support": 90,
-        "play-trap": 33,
-        "replace-cookie": 46,
-        "resolve-damage": 67
+        "attack": 47,
+        "deploy-cookie": 1,
+        "idle": 178,
+        "place-support": 97,
+        "play-trap": 44,
+        "replace-cookie": 43,
+        "resolve-damage": 91
       },
       "BS9-008": {
-        "attack": 40,
-        "place-support": 125,
-        "play-trap": 36,
+        "attack": 17,
+        "place-support": 135,
+        "play-trap": 15,
         "replace-cookie": 6,
-        "resolve-damage": 40
+        "resolve-damage": 17
       },
       "BS9-009": {
-        "attack": 399,
-        "deploy-cookie": 196,
-        "idle": 4,
-        "place-support": 1112,
-        "play-trap": 376,
-        "replace-cookie": 81,
-        "resolve-damage": 402
+        "attack": 446,
+        "deploy-cookie": 236,
+        "idle": 3,
+        "place-support": 1100,
+        "play-trap": 422,
+        "replace-cookie": 82,
+        "resolve-damage": 447
       },
       "BS9-010": {
-        "attack": 28,
-        "deploy-cookie": 17,
-        "play-trap": 24,
-        "resolve-attack-effect": 28,
-        "resolve-damage": 50,
-        "resolve-optional-cost-attack": 28
+        "attack": 51,
+        "deploy-cookie": 20,
+        "play-trap": 49,
+        "resolve-attack-effect": 48,
+        "resolve-damage": 97,
+        "resolve-optional-cost-attack": 48
       },
       "BS9-011": {
-        "attack": 1582,
-        "deploy-cookie": 474,
-        "place-support": 632,
-        "play-trap": 1433,
-        "replace-cookie": 630,
-        "resolve-damage": 3116
+        "attack": 1517,
+        "deploy-cookie": 428,
+        "place-support": 619,
+        "play-trap": 1384,
+        "replace-cookie": 695,
+        "resolve-damage": 2992
       },
       "BS9-012": {
-        "attack": 49,
-        "deploy-cookie": 25,
-        "idle": 1727,
-        "place-support": 484,
-        "play-trap": 43,
-        "replace-cookie": 1598,
-        "resolve-damage": 1081
+        "attack": 43,
+        "deploy-cookie": 22,
+        "idle": 1715,
+        "place-support": 486,
+        "play-trap": 37,
+        "replace-cookie": 1592,
+        "resolve-damage": 1104
       },
       "BS9-013": {
-        "attack": 2613,
-        "deploy-cookie": 162,
+        "attack": 2616,
+        "deploy-cookie": 184,
         "place-support": 360,
-        "play-trap": 2382,
-        "replace-cookie": 1358,
-        "resolve-damage": 9605
+        "play-trap": 2368,
+        "replace-cookie": 1347,
+        "resolve-damage": 9659
       },
       "BS9-014": {
-        "attack": 95,
-        "deploy-cookie": 12,
-        "place-support": 21,
-        "play-trap": 88,
-        "replace-cookie": 34,
-        "resolve-damage": 188
+        "attack": 120,
+        "deploy-cookie": 16,
+        "place-support": 26,
+        "play-trap": 106,
+        "replace-cookie": 39,
+        "resolve-damage": 231
       },
       "BS9-015": {
-        "attack": 616,
-        "deploy-cookie": 11,
-        "idle": 520,
-        "place-support": 295,
-        "play-trap": 559,
-        "replace-cookie": 350,
-        "resolve-damage": 1216,
-        "resolve-faint": 475
+        "attack": 570,
+        "deploy-cookie": 13,
+        "idle": 506,
+        "place-support": 251,
+        "play-trap": 534,
+        "replace-cookie": 327,
+        "resolve-damage": 1135,
+        "resolve-faint": 471
       },
       "BS9-016": {
-        "attack": 2718,
-        "deploy-cookie": 350,
-        "place-support": 81,
-        "play-trap": 2583,
-        "replace-cookie": 1631,
-        "resolve-damage": 2820
+        "attack": 2705,
+        "deploy-cookie": 397,
+        "place-support": 68,
+        "play-trap": 2554,
+        "replace-cookie": 1544,
+        "resolve-damage": 2826
       },
       "BS9-017": {
-        "activate-skill": 2723,
-        "attack": 5626,
-        "deploy-cookie": 416,
-        "idle": 12,
-        "place-support": 39,
-        "play-trap": 5143,
-        "replace-cookie": 1710,
-        "resolve-attack-effect": 5458,
-        "resolve-damage": 12014
+        "activate-skill": 2594,
+        "attack": 5464,
+        "deploy-cookie": 400,
+        "idle": 10,
+        "place-support": 40,
+        "play-trap": 5000,
+        "replace-cookie": 1690,
+        "resolve-attack-effect": 5289,
+        "resolve-damage": 11514
       },
       "BS9-018": {
-        "attack": 844,
-        "deploy-cookie": 10,
-        "place-support": 37,
-        "play-trap": 808,
-        "replace-cookie": 901,
-        "resolve-damage": 1671
+        "attack": 878,
+        "deploy-cookie": 12,
+        "place-support": 47,
+        "play-trap": 845,
+        "replace-cookie": 972,
+        "resolve-damage": 1741
       },
       "BS9-019": {
-        "place-support": 916,
-        "play-item": 488
+        "place-support": 954,
+        "play-item": 494
       },
       "BS9-020": {
-        "idle": 138,
-        "place-support": 1188,
-        "play-item": 69
+        "idle": 148,
+        "place-support": 1185,
+        "play-item": 74
       },
       "BS9-021": {
-        "place-support": 684,
-        "play-trap": 345
+        "place-support": 645,
+        "play-trap": 368
       },
       "BS9-022": {
-        "idle": 23,
-        "place-support": 112,
-        "play-trap": 1348
+        "idle": 24,
+        "place-support": 106,
+        "play-trap": 1345
       },
       "BS9-023": {
-        "place-support": 740,
-        "play-stage": 1803
+        "place-support": 676,
+        "play-stage": 1805
       },
       "BS9-024": {
-        "attack": 169,
-        "deploy-cookie": 44,
-        "idle": 1,
-        "place-support": 113,
-        "play-trap": 151,
-        "replace-cookie": 54,
-        "resolve-attack-effect": 157,
-        "resolve-damage": 419,
-        "resolve-optional-cost-attack": 61
+        "attack": 191,
+        "deploy-cookie": 55,
+        "place-support": 149,
+        "play-trap": 172,
+        "replace-cookie": 40,
+        "resolve-attack-effect": 182,
+        "resolve-damage": 474,
+        "resolve-optional-cost-attack": 68
       },
       "BS9-025": {
         "attack": 4,
-        "place-support": 186,
+        "place-support": 214,
         "play-trap": 4,
         "resolve-damage": 4
       },
       "BS9-026": {
-        "attack": 19,
-        "deploy-cookie": 2,
+        "attack": 31,
+        "deploy-cookie": 4,
         "idle": 208,
-        "place-support": 223,
-        "play-trap": 12,
-        "replace-cookie": 10,
-        "resolve-damage": 34
+        "place-support": 251,
+        "play-trap": 27,
+        "replace-cookie": 14,
+        "resolve-damage": 61
       },
       "BS9-027": {
-        "activate-skill": 1142,
-        "attack": 795,
-        "deploy-cookie": 373,
-        "place-support": 1746,
-        "play-trap": 744,
-        "replace-cookie": 196,
-        "resolve-damage": 2523
+        "activate-skill": 1238,
+        "attack": 811,
+        "deploy-cookie": 370,
+        "place-support": 1730,
+        "play-trap": 742,
+        "replace-cookie": 179,
+        "resolve-damage": 2622
       },
       "BS9-028": {
-        "attack": 184,
-        "deploy-cookie": 14,
-        "place-support": 1901,
-        "play-trap": 167,
-        "replace-cookie": 30,
-        "resolve-damage": 363
+        "attack": 171,
+        "deploy-cookie": 23,
+        "place-support": 1864,
+        "play-trap": 152,
+        "replace-cookie": 22,
+        "resolve-damage": 339
       },
       "BS9-029": {
         "attack": 34,
-        "deploy-cookie": 1,
-        "place-support": 162,
-        "play-trap": 33,
-        "replace-cookie": 27,
+        "deploy-cookie": 2,
+        "place-support": 164,
+        "play-trap": 32,
+        "replace-cookie": 25,
         "resolve-damage": 67
       },
       "BS9-031": {
-        "attack": 346,
-        "deploy-cookie": 9,
-        "idle": 5,
-        "place-support": 1735,
-        "play-trap": 323,
-        "replace-cookie": 141,
-        "resolve-damage": 346
+        "attack": 359,
+        "deploy-cookie": 14,
+        "idle": 8,
+        "place-support": 1719,
+        "play-trap": 333,
+        "replace-cookie": 130,
+        "resolve-damage": 359
       },
       "BS9-032": {
-        "attack": 6,
-        "idle": 154,
-        "place-support": 131,
-        "play-trap": 6,
-        "replace-cookie": 5,
-        "resolve-damage": 6
+        "attack": 2,
+        "idle": 164,
+        "place-support": 137,
+        "play-trap": 2,
+        "replace-cookie": 3,
+        "resolve-damage": 2
       },
       "BS9-033": {
         "activate-skill": 381,
-        "attack": 641,
-        "deploy-cookie": 17,
+        "attack": 653,
+        "deploy-cookie": 20,
         "idle": 381,
-        "place-support": 1399,
-        "play-trap": 599,
-        "replace-cookie": 677,
-        "resolve-damage": 642
+        "place-support": 1388,
+        "play-trap": 622,
+        "replace-cookie": 683,
+        "resolve-damage": 653
       },
       "BS9-034": {
-        "attack": 764,
-        "deploy-cookie": 272,
-        "place-support": 1193,
-        "play-trap": 712,
-        "replace-cookie": 38,
-        "resolve-damage": 765
+        "attack": 671,
+        "deploy-cookie": 249,
+        "place-support": 1184,
+        "play-trap": 627,
+        "replace-cookie": 28,
+        "resolve-damage": 671
       },
       "BS9-035": {
-        "activate-skill": 6890,
-        "attack": 4604,
-        "deploy-cookie": 677,
-        "idle": 9,
-        "place-support": 523,
-        "play-trap": 4080,
-        "replace-cookie": 1155,
-        "resolve-attack-effect": 4326,
-        "resolve-damage": 11509,
-        "resolve-optional-cost-attack": 4326
+        "activate-skill": 6963,
+        "attack": 4675,
+        "deploy-cookie": 671,
+        "idle": 13,
+        "place-support": 491,
+        "play-trap": 4160,
+        "replace-cookie": 1172,
+        "resolve-attack-effect": 4369,
+        "resolve-damage": 11698,
+        "resolve-optional-cost-attack": 4369
       },
       "BS9-036": {
-        "attack": 683,
-        "deploy-cookie": 110,
-        "idle": 3130,
-        "place-support": 602,
-        "play-trap": 621,
-        "replace-cookie": 1171,
-        "resolve-damage": 2554
+        "attack": 688,
+        "deploy-cookie": 112,
+        "idle": 3230,
+        "place-support": 604,
+        "play-trap": 628,
+        "replace-cookie": 1192,
+        "resolve-damage": 2542
       },
       "BS9-037": {
-        "attack": 382,
-        "deploy-cookie": 45,
-        "place-support": 458,
-        "play-trap": 352,
-        "replace-cookie": 113,
-        "resolve-damage": 757,
-        "resolve-faint": 272
+        "attack": 322,
+        "deploy-cookie": 38,
+        "place-support": 459,
+        "play-trap": 295,
+        "replace-cookie": 97,
+        "resolve-damage": 642,
+        "resolve-faint": 260
       },
       "BS9-038": {
-        "attack": 3737,
-        "deploy-cookie": 581,
-        "place-support": 163,
-        "play-trap": 3372,
-        "replace-cookie": 1243,
-        "resolve-damage": 10354
+        "attack": 3572,
+        "deploy-cookie": 590,
+        "place-support": 157,
+        "play-trap": 3199,
+        "replace-cookie": 1230,
+        "resolve-damage": 9831
       },
       "BS9-039": {
-        "attack": 1486,
-        "deploy-cookie": 260,
-        "place-support": 159,
-        "play-trap": 1369,
-        "replace-cookie": 531,
-        "resolve-damage": 4162
+        "attack": 1463,
+        "deploy-cookie": 301,
+        "place-support": 129,
+        "play-trap": 1334,
+        "replace-cookie": 555,
+        "resolve-damage": 4098
       },
       "BS9-040": {
-        "activate-skill": 340,
-        "attack": 401,
-        "deploy-cookie": 13,
-        "idle": 83,
-        "place-support": 86,
-        "play-trap": 379,
-        "replace-cookie": 284,
-        "resolve-damage": 401,
-        "resolve-reveal-top-deck": 340
+        "activate-skill": 321,
+        "attack": 384,
+        "deploy-cookie": 9,
+        "idle": 76,
+        "place-support": 92,
+        "play-trap": 365,
+        "replace-cookie": 261,
+        "resolve-damage": 385,
+        "resolve-reveal-top-deck": 321
       },
       "BS9-041": {
-        "attack": 257,
-        "deploy-cookie": 19,
-        "idle": 2313,
-        "place-support": 37,
-        "play-trap": 248,
-        "replace-cookie": 572,
-        "resolve-damage": 500
+        "attack": 272,
+        "deploy-cookie": 27,
+        "idle": 2364,
+        "place-support": 41,
+        "play-trap": 265,
+        "replace-cookie": 569,
+        "resolve-damage": 529
       },
       "BS9-042": {
-        "attack": 585,
-        "deploy-cookie": 80,
-        "place-support": 13,
-        "play-trap": 564,
-        "replace-cookie": 886,
-        "resolve-damage": 1640
+        "attack": 564,
+        "deploy-cookie": 77,
+        "place-support": 14,
+        "play-trap": 525,
+        "replace-cookie": 863,
+        "resolve-damage": 1551
       },
       "BS9-044": {
-        "place-support": 542,
-        "play-item": 164
+        "place-support": 518,
+        "play-item": 171
       },
       "BS9-045": {
-        "idle": 219,
-        "place-support": 309,
-        "play-trap": 219
+        "idle": 228,
+        "place-support": 298,
+        "play-trap": 228
       },
       "BS9-046": {
         "place-support": 124,
-        "play-trap": 711
+        "play-trap": 687
       },
       "BS9-047": {
-        "place-support": 336,
-        "play-stage": 299
+        "place-support": 320,
+        "play-stage": 276
       },
       "BS9-048": {
-        "attack": 90,
-        "deploy-cookie": 6,
-        "place-support": 3654,
-        "play-trap": 80,
-        "replace-cookie": 18,
-        "resolve-damage": 261
+        "attack": 92,
+        "deploy-cookie": 5,
+        "place-support": 3320,
+        "play-trap": 78,
+        "replace-cookie": 19,
+        "resolve-damage": 266
       },
       "BS9-049": {
-        "attack": 209,
-        "deploy-cookie": 2,
-        "place-support": 3489,
-        "play-trap": 183,
-        "resolve-damage": 410,
-        "resolve-faint": 160
+        "attack": 206,
+        "deploy-cookie": 5,
+        "place-support": 3276,
+        "play-trap": 179,
+        "replace-cookie": 8,
+        "resolve-damage": 403,
+        "resolve-faint": 161
       },
       "BS9-050": {
-        "activate-skill": 941,
-        "attack": 861,
-        "deploy-cookie": 320,
-        "place-support": 2823,
-        "play-trap": 738,
-        "replace-cookie": 305,
-        "resolve-attack-effect": 844,
-        "resolve-damage": 3437,
-        "resolve-optional-cost-attack": 844
+        "activate-skill": 841,
+        "attack": 795,
+        "deploy-cookie": 308,
+        "place-support": 2668,
+        "play-trap": 671,
+        "replace-cookie": 279,
+        "resolve-attack-effect": 781,
+        "resolve-damage": 3172,
+        "resolve-optional-cost-attack": 781
       },
       "BS9-051": {
-        "attack": 17,
-        "idle": 263,
-        "place-support": 277,
-        "play-trap": 14,
-        "resolve-damage": 17
+        "attack": 7,
+        "idle": 226,
+        "place-support": 273,
+        "play-trap": 6,
+        "resolve-damage": 7
       },
       "BS9-052": {
-        "attack": 813,
-        "deploy-cookie": 62,
-        "place-support": 2965,
-        "play-trap": 714,
-        "replace-cookie": 450,
-        "resolve-damage": 1616
+        "attack": 864,
+        "deploy-cookie": 72,
+        "place-support": 2627,
+        "play-trap": 775,
+        "replace-cookie": 462,
+        "resolve-damage": 1726
       },
       "BS9-053": {
-        "attack": 23,
-        "place-support": 270,
-        "play-trap": 21,
-        "replace-cookie": 3,
-        "resolve-damage": 45
+        "attack": 32,
+        "place-support": 245,
+        "play-trap": 29,
+        "replace-cookie": 6,
+        "resolve-damage": 63
       },
       "BS9-054": {
-        "activate-skill": 9,
-        "attack": 204,
-        "place-support": 2790,
-        "play-trap": 174,
-        "replace-cookie": 10,
-        "resolve-damage": 204
+        "activate-skill": 8,
+        "attack": 194,
+        "place-support": 2626,
+        "play-trap": 173,
+        "replace-cookie": 8,
+        "resolve-damage": 194
       },
       "BS9-055": {
-        "activate-skill": 2,
-        "deploy-cookie": 2
+        "activate-skill": 4,
+        "deploy-cookie": 3
       },
       "BS9-056": {
-        "attack": 16,
-        "place-support": 182,
-        "play-trap": 13,
-        "replace-cookie": 2,
-        "resolve-damage": 16
+        "attack": 24,
+        "place-support": 185,
+        "play-trap": 22,
+        "replace-cookie": 1,
+        "resolve-damage": 24
       },
       "BS9-057": {
-        "attack": 375,
-        "deploy-cookie": 84,
-        "place-support": 2273,
-        "play-trap": 334,
-        "replace-cookie": 32,
-        "resolve-damage": 375
+        "attack": 402,
+        "deploy-cookie": 96,
+        "place-support": 2049,
+        "play-trap": 365,
+        "replace-cookie": 31,
+        "resolve-damage": 402
       },
       "BS9-058": {
-        "attack": 754,
-        "deploy-cookie": 472,
-        "place-support": 1312,
-        "play-trap": 648,
-        "replace-cookie": 694,
-        "resolve-damage": 2758
+        "attack": 787,
+        "deploy-cookie": 445,
+        "place-support": 1174,
+        "play-trap": 682,
+        "replace-cookie": 716,
+        "resolve-damage": 2906
       },
       "BS9-059": {
         "attack": 12,
         "idle": 12,
-        "place-support": 88,
+        "place-support": 79,
         "play-trap": 9,
-        "replace-cookie": 1,
+        "replace-cookie": 4,
         "resolve-attack-effect": 12,
-        "resolve-damage": 24,
+        "resolve-damage": 23,
         "resolve-optional-cost-attack": 12
       },
       "BS9-060": {
-        "activate-skill": 150,
-        "attack": 1938,
-        "deploy-cookie": 665,
-        "idle": 4,
-        "place-support": 619,
-        "play-trap": 1615,
-        "replace-cookie": 1385,
-        "resolve-attack-effect": 1885,
-        "resolve-damage": 4806
+        "activate-skill": 152,
+        "attack": 2082,
+        "deploy-cookie": 660,
+        "idle": 2,
+        "place-support": 495,
+        "play-trap": 1767,
+        "replace-cookie": 1368,
+        "resolve-attack-effect": 2033,
+        "resolve-damage": 5199
       },
       "BS9-061": {
-        "activate-skill": 277,
-        "attack": 734,
-        "deploy-cookie": 18,
-        "place-support": 612,
-        "play-trap": 658,
-        "replace-cookie": 766,
-        "resolve-damage": 735
+        "activate-skill": 270,
+        "attack": 746,
+        "deploy-cookie": 9,
+        "place-support": 583,
+        "play-trap": 678,
+        "replace-cookie": 725,
+        "resolve-damage": 749
       },
       "BS9-062": {
-        "attack": 464,
-        "deploy-cookie": 27,
-        "idle": 1,
-        "place-support": 224,
-        "play-trap": 401,
-        "replace-cookie": 163,
-        "resolve-attack-effect": 452,
-        "resolve-damage": 1205
+        "attack": 426,
+        "deploy-cookie": 30,
+        "idle": 2,
+        "place-support": 204,
+        "play-trap": 369,
+        "replace-cookie": 146,
+        "resolve-attack-effect": 412,
+        "resolve-damage": 1089
       },
       "BS9-063": {
-        "attack": 1686,
-        "deploy-cookie": 6,
+        "attack": 1574,
+        "deploy-cookie": 3,
         "place-support": 67,
-        "play-trap": 1503,
-        "replace-cookie": 1840,
-        "resolve-damage": 1692
+        "play-trap": 1416,
+        "replace-cookie": 1776,
+        "resolve-damage": 1577
       },
       "BS9-064": {
-        "attack": 532,
-        "deploy-cookie": 153,
-        "place-support": 29,
-        "play-trap": 479,
-        "replace-cookie": 478,
-        "resolve-damage": 1035,
-        "resolve-faint": 538
+        "attack": 602,
+        "deploy-cookie": 150,
+        "place-support": 28,
+        "play-trap": 551,
+        "replace-cookie": 489,
+        "resolve-damage": 1177,
+        "resolve-faint": 502
       },
       "BS9-065": {
-        "activate-skill": 6582,
-        "attack": 6384,
-        "deploy-cookie": 263,
+        "activate-skill": 4748,
+        "attack": 5621,
+        "deploy-cookie": 229,
         "idle": 5,
-        "place-support": 5,
-        "play-trap": 5105,
-        "replace-cookie": 2491,
-        "resolve-attack-effect": 6268,
-        "resolve-damage": 15768,
-        "resolve-optional-cost-attack": 6268
+        "place-support": 4,
+        "play-trap": 4600,
+        "replace-cookie": 2261,
+        "resolve-attack-effect": 5506,
+        "resolve-damage": 13963,
+        "resolve-optional-cost-attack": 5506
       },
       "BS9-066": {
-        "place-support": 339,
-        "play-item": 1404
+        "place-support": 404,
+        "play-item": 1217
       },
       "BS9-067": {
-        "idle": 98,
-        "place-support": 695,
-        "play-item": 98
+        "idle": 92,
+        "place-support": 717,
+        "play-item": 92
       },
       "BS9-068": {
-        "place-support": 129,
-        "play-trap": 1216
+        "place-support": 136,
+        "play-trap": 1058
       },
       "BS9-069": {
-        "place-support": 91,
-        "play-trap": 1556
+        "place-support": 103,
+        "play-trap": 1432
       },
       "BS9-070": {
-        "place-support": 49,
-        "play-stage": 247
+        "place-support": 38,
+        "play-stage": 233
       },
       "BS9-071": {
-        "attack": 156,
-        "deploy-cookie": 10,
-        "idle": 2178,
-        "place-support": 2625,
-        "play-trap": 151,
+        "attack": 130,
+        "deploy-cookie": 6,
+        "idle": 2183,
+        "place-support": 2736,
+        "play-trap": 118,
         "replace-cookie": 8,
-        "resolve-damage": 156
+        "resolve-damage": 130
       },
       "BS9-072": {
-        "attack": 145,
-        "place-support": 2536,
-        "play-trap": 140,
-        "replace-cookie": 1,
-        "resolve-damage": 289
+        "attack": 134,
+        "deploy-cookie": 2,
+        "place-support": 2423,
+        "play-trap": 124,
+        "replace-cookie": 4,
+        "resolve-damage": 265
       },
       "BS9-073": {
-        "attack": 285,
-        "deploy-cookie": 110,
-        "place-support": 2531,
-        "play-trap": 258,
-        "replace-cookie": 60,
-        "resolve-damage": 814
+        "attack": 276,
+        "deploy-cookie": 95,
+        "place-support": 2489,
+        "play-trap": 257,
+        "replace-cookie": 67,
+        "resolve-damage": 792
       },
       "BS9-074": {
-        "attack": 637,
-        "deploy-cookie": 526,
-        "place-support": 1734,
-        "play-trap": 588,
-        "replace-cookie": 290,
-        "resolve-damage": 2439
+        "attack": 652,
+        "deploy-cookie": 511,
+        "place-support": 1737,
+        "play-trap": 608,
+        "replace-cookie": 322,
+        "resolve-damage": 2498
       },
       "BS9-075": {
-        "attack": 1402,
-        "deploy-cookie": 207,
-        "idle": 1,
-        "place-support": 1480,
-        "play-trap": 1322,
-        "replace-cookie": 870,
-        "resolve-attack-effect": 2660,
-        "resolve-damage": 3539
+        "attack": 1414,
+        "deploy-cookie": 204,
+        "place-support": 1436,
+        "play-trap": 1332,
+        "replace-cookie": 845,
+        "resolve-attack-effect": 2676,
+        "resolve-damage": 3600
       },
       "BS9-076": {
-        "attack": 28,
+        "attack": 33,
         "deploy-cookie": 1,
-        "place-support": 152,
-        "play-trap": 23,
-        "replace-cookie": 24,
-        "resolve-attack-effect": 26,
-        "resolve-damage": 50
+        "place-support": 155,
+        "play-trap": 28,
+        "replace-cookie": 33,
+        "resolve-attack-effect": 31,
+        "resolve-damage": 61
       },
       "BS9-077": {
-        "attack": 740,
-        "deploy-cookie": 399,
-        "idle": 1318,
-        "place-support": 1368,
-        "play-trap": 713,
-        "replace-cookie": 261,
-        "resolve-attack-effect": 1452,
-        "resolve-damage": 740
+        "attack": 814,
+        "deploy-cookie": 423,
+        "idle": 1502,
+        "place-support": 1351,
+        "play-trap": 777,
+        "replace-cookie": 332,
+        "resolve-attack-effect": 1578,
+        "resolve-damage": 815
       },
       "BS9-078": {
-        "activate-skill": 1583,
-        "attack": 2929,
-        "deploy-cookie": 249,
-        "idle": 616,
-        "place-support": 637,
-        "play-trap": 2751,
-        "replace-cookie": 1724,
-        "resolve-attack-effect": 2770,
-        "resolve-damage": 5168
+        "activate-skill": 1662,
+        "attack": 2907,
+        "deploy-cookie": 266,
+        "idle": 650,
+        "place-support": 656,
+        "play-trap": 2716,
+        "replace-cookie": 1658,
+        "resolve-attack-effect": 2773,
+        "resolve-damage": 5119
       },
       "BS9-080": {
-        "attack": 226,
-        "deploy-cookie": 2,
-        "place-support": 862,
-        "play-trap": 206,
-        "replace-cookie": 122,
-        "resolve-damage": 227
+        "attack": 219,
+        "place-support": 842,
+        "play-trap": 199,
+        "replace-cookie": 146,
+        "resolve-damage": 220
       },
       "BS9-081": {
-        "activate-skill": 1,
-        "attack": 5,
-        "place-support": 38,
-        "play-trap": 5,
-        "replace-cookie": 11,
-        "resolve-damage": 5
+        "attack": 7,
+        "place-support": 36,
+        "play-trap": 7,
+        "replace-cookie": 10,
+        "resolve-damage": 7
       },
       "BS9-082": {
-        "attack": 593,
-        "deploy-cookie": 7,
-        "place-support": 349,
-        "play-trap": 563,
-        "replace-cookie": 701,
-        "resolve-damage": 1179
+        "attack": 622,
+        "deploy-cookie": 9,
+        "place-support": 379,
+        "play-trap": 591,
+        "replace-cookie": 745,
+        "resolve-damage": 1235
       },
       "BS9-083": {
-        "activate-skill": 390,
-        "attack": 5514,
-        "deploy-cookie": 447,
-        "idle": 390,
-        "place-support": 78,
-        "play-trap": 5149,
-        "replace-cookie": 1851,
-        "resolve-damage": 15504
+        "activate-skill": 426,
+        "attack": 5455,
+        "deploy-cookie": 432,
+        "idle": 426,
+        "place-support": 112,
+        "play-trap": 5078,
+        "replace-cookie": 1824,
+        "resolve-damage": 15295
       },
       "BS9-084": {
-        "attack": 120,
+        "attack": 142,
         "deploy-cookie": 14,
-        "place-support": 87,
-        "play-trap": 115,
-        "replace-cookie": 3,
-        "resolve-damage": 120
+        "place-support": 81,
+        "play-trap": 135,
+        "replace-cookie": 10,
+        "resolve-damage": 142
       },
       "BS9-085": {
-        "attack": 616,
-        "deploy-cookie": 9,
-        "idle": 4429,
-        "place-support": 33,
-        "play-trap": 590,
-        "replace-cookie": 492,
-        "resolve-damage": 1225
+        "attack": 608,
+        "deploy-cookie": 12,
+        "idle": 4237,
+        "place-support": 32,
+        "play-trap": 583,
+        "replace-cookie": 550,
+        "resolve-damage": 1205
       },
       "BS9-086": {
-        "activate-skill": 362,
-        "attack": 214,
-        "deploy-cookie": 7,
-        "idle": 724,
-        "place-support": 11,
-        "play-trap": 196,
-        "replace-cookie": 96,
-        "resolve-damage": 425
+        "activate-skill": 372,
+        "attack": 205,
+        "deploy-cookie": 4,
+        "idle": 744,
+        "place-support": 16,
+        "play-trap": 192,
+        "replace-cookie": 105,
+        "resolve-damage": 408
       },
       "BS9-087": {
-        "attack": 117,
+        "attack": 137,
         "place-support": 1,
-        "play-trap": 106,
-        "replace-cookie": 28,
-        "resolve-damage": 117
+        "play-trap": 122,
+        "replace-cookie": 40,
+        "resolve-damage": 137
       },
       "BS9-089": {
-        "activate-skill": 164,
-        "attack": 3226,
-        "deploy-cookie": 69,
-        "idle": 53,
-        "place-support": 1,
-        "play-trap": 3044,
-        "replace-cookie": 1578,
-        "resolve-attack-effect": 6133,
-        "resolve-damage": 8332,
-        "resolve-reveal-top-deck": 164
+        "activate-skill": 183,
+        "attack": 3258,
+        "deploy-cookie": 78,
+        "idle": 61,
+        "play-trap": 3057,
+        "replace-cookie": 1563,
+        "resolve-attack-effect": 6178,
+        "resolve-damage": 8419,
+        "resolve-reveal-top-deck": 183
       },
       "BS9-090": {
-        "place-support": 153,
-        "play-item": 7,
-        "resolve-inspect-deck": 7
+        "place-support": 179,
+        "play-item": 4,
+        "resolve-inspect-deck": 4
       },
       "BS9-091": {
-        "place-support": 128
+        "place-support": 152
       },
       "BS9-092": {
-        "idle": 1,
-        "place-support": 124,
-        "play-item": 116,
-        "resolve-damage": 2
+        "idle": 2,
+        "place-support": 125,
+        "play-item": 115,
+        "resolve-damage": 4
       },
       "BS9-093": {
-        "idle": 100,
-        "place-support": 48,
-        "play-trap": 106
+        "idle": 142,
+        "place-support": 39,
+        "play-trap": 122
       },
       "BS9-094": {
-        "idle": 3,
-        "place-support": 36,
-        "play-trap": 162,
-        "resolve-reveal-top-deck": 162
+        "idle": 5,
+        "place-support": 25,
+        "play-trap": 164,
+        "resolve-reveal-top-deck": 164
       },
       "BS9-095": {
-        "place-support": 63,
-        "play-stage": 151
+        "place-support": 68,
+        "play-stage": 172
       },
       "BS9-097": {
-        "activate-skill": 164,
-        "attack": 2011,
-        "deploy-cookie": 383,
-        "idle": 2,
-        "place-support": 1792,
-        "play-trap": 1780,
-        "replace-cookie": 859,
-        "resolve-attack-effect": 1923,
-        "resolve-damage": 5227
+        "activate-skill": 158,
+        "attack": 2008,
+        "deploy-cookie": 363,
+        "place-support": 1696,
+        "play-trap": 1775,
+        "replace-cookie": 918,
+        "resolve-attack-effect": 1926,
+        "resolve-damage": 5190
       },
       "BS9-098": {
-        "attack": 144,
-        "deploy-cookie": 4,
-        "place-support": 2146,
-        "play-trap": 129,
+        "attack": 116,
+        "deploy-cookie": 2,
+        "place-support": 2172,
+        "play-trap": 108,
         "replace-cookie": 39,
-        "resolve-damage": 286
+        "resolve-damage": 229
       },
       "BS9-099": {
-        "activate-skill": 136,
+        "activate-skill": 113,
         "attack": 333,
-        "deploy-cookie": 96,
-        "idle": 2,
-        "place-support": 1809,
-        "play-trap": 294,
-        "replace-cookie": 120,
-        "resolve-damage": 1023
+        "deploy-cookie": 97,
+        "idle": 1,
+        "place-support": 1815,
+        "play-trap": 298,
+        "replace-cookie": 124,
+        "resolve-damage": 1024
       },
       "BS9-100": {
-        "attack": 2131,
-        "deploy-cookie": 604,
-        "idle": 21,
-        "place-support": 1049,
-        "play-trap": 1917,
-        "replace-cookie": 572,
-        "resolve-attack-effect": 4087,
-        "resolve-damage": 5449
+        "attack": 2126,
+        "deploy-cookie": 601,
+        "idle": 29,
+        "place-support": 1051,
+        "play-trap": 1901,
+        "replace-cookie": 564,
+        "resolve-attack-effect": 4094,
+        "resolve-damage": 5369
       },
       "BS9-101": {
-        "attack": 132,
+        "attack": 137,
         "deploy-cookie": 1,
-        "place-support": 1597,
-        "play-trap": 122,
-        "replace-cookie": 30,
-        "resolve-damage": 132
+        "place-support": 1602,
+        "play-trap": 126,
+        "replace-cookie": 36,
+        "resolve-damage": 137
       },
       "BS9-102": {
-        "activate-skill": 13,
-        "attack": 16,
-        "deploy-cookie": 12,
-        "idle": 13,
-        "play-trap": 16,
-        "resolve-attack-effect": 15,
-        "resolve-damage": 29
+        "activate-skill": 2,
+        "attack": 7,
+        "deploy-cookie": 6,
+        "idle": 2,
+        "play-trap": 7,
+        "resolve-attack-effect": 6,
+        "resolve-damage": 15
       },
       "BS9-103": {
-        "attack": 243,
-        "deploy-cookie": 25,
-        "place-support": 1140,
-        "play-trap": 223,
-        "replace-cookie": 32,
-        "resolve-damage": 480
+        "attack": 282,
+        "deploy-cookie": 28,
+        "place-support": 1188,
+        "play-trap": 261,
+        "replace-cookie": 25,
+        "resolve-damage": 561
       },
       "BS9-104": {
-        "attack": 973,
-        "deploy-cookie": 42,
-        "idle": 1962,
-        "place-support": 641,
-        "play-trap": 879,
-        "replace-cookie": 1179,
-        "resolve-damage": 2649
+        "attack": 1007,
+        "deploy-cookie": 53,
+        "idle": 1889,
+        "place-support": 651,
+        "play-trap": 919,
+        "replace-cookie": 1222,
+        "resolve-damage": 2763
       },
       "BS9-105": {
-        "attack": 841,
-        "deploy-cookie": 238,
-        "place-support": 432,
-        "play-trap": 801,
-        "replace-cookie": 87,
-        "resolve-damage": 841
+        "attack": 932,
+        "deploy-cookie": 241,
+        "place-support": 424,
+        "play-trap": 889,
+        "replace-cookie": 88,
+        "resolve-damage": 931
       },
       "BS9-109": {
         "attack": 2533,
-        "deploy-cookie": 561,
-        "place-support": 177,
-        "play-trap": 2271,
-        "replace-cookie": 812,
-        "resolve-damage": 9227
+        "deploy-cookie": 555,
+        "place-support": 162,
+        "play-trap": 2284,
+        "replace-cookie": 791,
+        "resolve-damage": 9212
       },
       "BS9-110": {
-        "attack": 379,
-        "deploy-cookie": 16,
-        "place-support": 202,
-        "play-trap": 347,
-        "replace-cookie": 386,
-        "resolve-damage": 1067
+        "attack": 402,
+        "deploy-cookie": 15,
+        "place-support": 184,
+        "play-trap": 370,
+        "replace-cookie": 393,
+        "resolve-damage": 1141
       },
       "BS9-112": {
-        "attack": 1440,
-        "deploy-cookie": 58,
-        "place-support": 84,
-        "play-trap": 1347,
-        "replace-cookie": 846,
-        "resolve-damage": 2354
+        "attack": 1379,
+        "deploy-cookie": 68,
+        "place-support": 75,
+        "play-trap": 1290,
+        "replace-cookie": 875,
+        "resolve-damage": 2289
       },
       "BS9-113": {
-        "attack": 2994,
-        "deploy-cookie": 61,
-        "place-support": 25,
-        "play-trap": 2774,
-        "replace-cookie": 2084,
-        "resolve-damage": 5835
+        "attack": 2991,
+        "deploy-cookie": 60,
+        "place-support": 19,
+        "play-trap": 2786,
+        "replace-cookie": 2099,
+        "resolve-damage": 5843
       },
       "BS9-114": {
-        "place-support": 832,
-        "play-item": 1931
+        "place-support": 798,
+        "play-item": 1918
       },
       "BS9-115": {
-        "idle": 2390,
-        "place-support": 1178,
-        "play-item": 1196
+        "idle": 2445,
+        "place-support": 1223,
+        "play-item": 1223
       },
       "BS9-116": {
-        "place-support": 309,
-        "play-trap": 804
+        "place-support": 332,
+        "play-trap": 723
       },
       "BS9-117": {
-        "place-support": 173,
-        "play-trap": 971
+        "place-support": 205,
+        "play-trap": 1019
       },
       "BS9-118": {
-        "place-support": 143,
-        "play-stage": 213
+        "place-support": 142,
+        "play-stage": 230
       }
     }
   }

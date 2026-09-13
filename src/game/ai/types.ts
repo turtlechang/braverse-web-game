@@ -65,10 +65,17 @@ export interface AiDecisionReason {
   optionalCostDefense?: OptionalCostDefenseAssessment
 }
 
+/** 允許同一場對局由不同玩家分別套用 baseline／訓練後 profile。 */
+export type AiExperienceProfileByPlayer = Partial<
+  Record<PlayerId, AiTournamentExperienceProfile | null>
+>
+
 export interface SimulateAiMatchOptions {
   levels?: Partial<Record<PlayerId, AiLevel>>
   seed?: number
   experienceProfile?: AiTournamentExperienceProfile | null
+  /** 若指定玩家欄位，會覆蓋 shared experienceProfile；null 代表明確停用。 */
+  experienceProfileByPlayer?: AiExperienceProfileByPlayer
 }
 
 export type AiActionType =

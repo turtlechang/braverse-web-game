@@ -8,11 +8,23 @@ import {
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import { simulateAiMatchDetailed } from './ai-detailed-sim'
 import type { CustomDeck } from './custom-deck'
-import type { AiDetailedResult } from './ai/types'
+import type { AiDetailedResult, AiExperienceProfileByPlayer } from './ai/types'
 import type { AiTournamentExperienceProfile } from './ai/strategy/tournament-experience'
 import type { GameState, PlayerId } from './types'
 
 export type TournamentColor = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+
+/** 對局安全上限；benchmark 的超限對局必須標記為失敗。 */
+export const MAX_TOURNAMENT_ACTIONS = 500
+
+export const validateTournamentMaxActions = (
+  value = MAX_TOURNAMENT_ACTIONS,
+): number => {
+  if (!Number.isInteger(value) || value <= 0 || value > MAX_TOURNAMENT_ACTIONS) {
+    throw new Error(`賽事單局 maxActions 必須是 1～${MAX_TOURNAMENT_ACTIONS}。`)
+  }
+  return value
+}
 
 export interface SwissRosterDeck extends CustomDeck {
   color: TournamentColor
@@ -140,6 +152,22 @@ export interface SwissTournamentOptions {
   }) => void | Promise<void>
   /** Lv.5 only; null explicitly runs a no-experience baseline. */
   experienceProfile?: AiTournamentExperienceProfile | null
+  /** 若指定玩家欄位，會覆蓋 shared experienceProfile；null 代表明確停用。 */
+  experienceProfileByPlayer?: AiExperienceProfileByPlayer
+}
+
+export type CrossPlayStrategy = 'baseline' | 'trained'
+
+export const classifyCrossPlayWinner = (
+  winnerPlayerId: PlayerId | null,
+  assignment: {
+    baselinePlayerId: PlayerId
+    trainedPlayerId: PlayerId
+  },
+): CrossPlayStrategy | null => {
+  if (winnerPlayerId === assignment.trainedPlayerId) return 'trained'
+  if (winnerPlayerId === assignment.baselinePlayerId) return 'baseline'
+  return null
 }
 
 const COLORS: TournamentColor[] = [
@@ -354,7 +382,7 @@ export const runSwissTournament = async (
 ): Promise<SwissTournamentReport> => {
   const rounds = options.rounds ?? 9
   const seed = options.seed ?? 20260813
-  const maxActions = options.maxActions ?? 2500
+  const maxActions = options.maxActions ?? MAX_TOURNAMENT_ACTIONS
   const aiLevel = options.aiLevel ?? 4
   const totalMatches = Math.floor(decks.length / 2) * rounds
   if (decks.length < 2 || decks.length % 2 !== 0) {
@@ -400,6 +428,7 @@ export const runSwissTournament = async (
             },
             seed: matchSeed,
             experienceProfile: options.experienceProfile,
+            experienceProfileByPlayer: options.experienceProfileByPlayer,
           },
         )
       } catch (caught) {

@@ -23,8 +23,8 @@ import type {
   EndInfo,
   BehaviorMetrics,
   PlayerBehaviorMetrics,
-  AiLevel,
   AiDecision,
+  SimulateAiMatchOptions,
 } from './ai/types'
 import type { GameState, PendingBattle, PlayerId } from './types'
 import type { AiStrategyMemory } from './ai/strategy/session'
@@ -423,11 +423,7 @@ const computeBehaviorMetrics = (
 export const simulateAiMatchDetailed = (
   initialState: GameState,
   maxActions = 500,
-  options: {
-    levels?: Partial<Record<PlayerId, AiLevel>>
-    seed?: number
-    experienceProfile?: import('./ai/strategy/tournament-experience').AiTournamentExperienceProfile | null
-  } = {},
+  options: SimulateAiMatchOptions = {},
 ): AiDetailedResult => {
   let state = initialState
   const logs: string[] = []
@@ -490,11 +486,15 @@ export const simulateAiMatchDetailed = (
     const legalCommands = getLegalTurnCommands(state, controller)
     const legalAttacks = legalCommands.filter((command) => command.kind === 'attack')
     const publicLethals = publicLethalAttackCommands(state, controller)
+    const playerExperienceProfile = options.experienceProfileByPlayer?.[controller]
+    const experienceProfile = playerExperienceProfile === undefined
+      ? options.experienceProfile
+      : playerExperienceProfile
     const decision = takeAiStep(state, controller, {
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
       memory: strategyMemories[controller],
-      experienceProfile: options.experienceProfile,
+      experienceProfile,
     })
     recordDecisionProfile(
       decisionProfileByPlayer,

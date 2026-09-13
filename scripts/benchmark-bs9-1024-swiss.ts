@@ -3,15 +3,19 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   AI_STRATEGY_VERSION,
+  classifyCrossPlayWinner,
   createAiTournamentExperienceAccumulator,
   createCustomDeckMatch,
   finalizeAiTournamentExperience,
   getCardPoolEntry,
+  MAX_TOURNAMENT_ACTIONS,
   recordAiTournamentMatchExperience,
   runSwissTournament,
   simulateAiMatchDetailed,
+  validateTournamentMaxActions,
   validateCustomDeckDefinition,
   type AiDetailedResult,
+  type AiExperienceProfileByPlayer,
   type AiTournamentExperienceProfile,
   type PlayerId,
   type SwissMatchRecord,
@@ -27,7 +31,7 @@ const DEFAULT_MARKDOWN = 'docs/bs9-lv5-1024-report.md'
 const DEFAULT_EXPERIENCE = 'data/ai/bs9-lv5-experience.json'
 const DEFAULT_ROUNDS = 10
 const DEFAULT_SEED = 20260913
-const DEFAULT_MAX_ACTIONS = 2500
+const DEFAULT_MAX_ACTIONS = MAX_TOURNAMENT_ACTIONS
 const DEFAULT_HOLDOUT_SIZE = 256
 const DEFAULT_HOLDOUT_ROUNDS = 8
 
@@ -60,14 +64,14 @@ interface PlayoffReport {
   matches: PlayoffMatch[]
 }
 
-interface MatchSummary {
+interface CrossPlaySummary {
   matches: number
   completed: number
   stuck: number
   actions: number
   turns: number
-  playerOneWins: number
-  playerTwoWins: number
+  trainedWins: number
+  baselineWins: number
 }
 
 const argumentValue = (name: string): string | undefined => {
@@ -82,6 +86,10 @@ const positiveInteger = (name: string, fallback: number): number => {
   }
   return value
 }
+
+const tournamentMaxActions = (): number => validateTournamentMaxActions(
+  positiveInteger('max-actions', DEFAULT_MAX_ACTIONS),
+)
 
 const nonNegativeInteger = (name: string, fallback: number): number => {
   const value = Number(argumentValue(name) ?? fallback)
@@ -147,7 +155,7 @@ const matchResult = (
   firstPlayerId: PlayerId,
   seed: number,
   maxActions: number,
-  experienceProfile: AiTournamentExperienceProfile | null,
+  experienceProfileByPlayer: AiExperienceProfileByPlayer,
 ): { record: Omit<PlayoffMatch, 'stage' | 'table'>; result: AiDetailedResult | null } => {
   let result: AiDetailedResult | null = null
   let error: string | null = null
@@ -158,7 +166,7 @@ const matchResult = (
       {
         levels: { 'player-one': 5, 'player-two': 5 },
         seed,
-        experienceProfile,
+        experienceProfileByPlayer,
       },
     )
   } catch (caught) {
@@ -192,6 +200,13 @@ const matchResult = (
   }
 }
 
+const sharedExperienceProfile = (
+  profile: AiTournamentExperienceProfile | null,
+): AiExperienceProfileByPlayer => ({
+  'player-one': profile,
+  'player-two': profile,
+})
+
 const runPlayoffs = (
   swiss: SwissTournamentReport,
   decks: SwissRosterDeck[],
@@ -222,7 +237,7 @@ const runPlayoffs = (
       firstPlayerId,
       matchSeed,
       maxActions,
-      experienceProfile,
+      sharedExperienceProfile(experienceProfile),
     )
     matches.push({ stage, table, ...played.record })
     return played.record.winnerDeckId
@@ -314,69 +329,90 @@ const runPlayoffs = (
   }
 }
 
-const emptySummary = (): MatchSummary => ({
+const emptyCrossPlaySummary = (): CrossPlaySummary => ({
   matches: 0,
   completed: 0,
   stuck: 0,
   actions: 0,
   turns: 0,
-  playerOneWins: 0,
-  playerTwoWins: 0,
+  trainedWins: 0,
+  baselineWins: 0,
 })
 
-const addResult = (
-  summary: MatchSummary,
-  record: Pick<SwissMatchRecord, 'winnerDeckId' | 'playerOneDeckId' | 'actions' | 'turns' | 'result'>,
+const addCrossPlayResult = (
+  summary: CrossPlaySummary,
+  played: ReturnType<typeof matchResult>,
+  assignment: {
+    baselinePlayerId: PlayerId
+    trainedPlayerId: PlayerId
+  },
 ): void => {
   summary.matches += 1
-  summary.actions += record.actions
-  summary.turns += record.turns
-  if (record.result === 'win' && record.winnerDeckId) {
+  summary.actions += played.record.actions
+  summary.turns += played.record.turns
+  if (played.record.result === 'win' && played.result?.endInfo.winner) {
     summary.completed += 1
-    if (record.winnerDeckId === record.playerOneDeckId) summary.playerOneWins += 1
-    else summary.playerTwoWins += 1
+    const winner = classifyCrossPlayWinner(
+      played.result.endInfo.winner,
+      assignment,
+    )
+    if (winner === 'trained') summary.trainedWins += 1
+    if (winner === 'baseline') summary.baselineWins += 1
   } else {
     summary.stuck += 1
   }
 }
 
-const replaySchedule = (
+const crossPlaySchedule = (
   schedule: readonly SwissMatchRecord[],
   decks: SwissRosterDeck[],
   maxActions: number,
   scheduleSeed: number,
   experienceProfile: AiTournamentExperienceProfile | null,
-): { matches: SwissMatchRecord[]; summary: MatchSummary } => {
+): CrossPlaySummary => {
   const byId = new Map(decks.map((deck) => [deck.id, deck]))
-  const matches: SwissMatchRecord[] = []
-  const summary = emptySummary()
+  const summary = emptyCrossPlaySummary()
   for (const source of schedule) {
     const left = byId.get(source.playerOneDeckId)
     const right = byId.get(source.playerTwoDeckId)
     if (!left || !right) throw new Error(`Holdout schedule 找不到牌組：${source.playerOneDeckId}`)
     const matchSeed = scheduleSeed + source.round * 1_000_000 + (source.table - 1)
-    const played = matchResult(
+    const baselineLeft = matchResult(
       left,
       right,
       source.firstPlayerId,
       matchSeed,
       maxActions,
-      experienceProfile,
+      {
+        'player-one': null,
+        'player-two': experienceProfile,
+      },
     )
-    const record: SwissMatchRecord = {
-      ...source,
-      winnerDeckId: played.record.winnerDeckId,
-      loserDeckId: played.record.loserDeckId,
-      result: played.record.result === 'win' ? 'win' : 'stuck',
-      actions: played.record.actions,
-      turns: played.record.turns,
-      reason: played.record.reason,
-      error: played.record.error,
-    }
-    matches.push(record)
-    addResult(summary, record)
+    addCrossPlayResult(summary, baselineLeft, {
+      baselinePlayerId: 'player-one',
+      trainedPlayerId: 'player-two',
+    })
+
+    // Swap the strategy seats while retaining the same deck pairing.  Across
+    // the two orientations, each strategy pilots each deck and receives each
+    // first-player seat once.
+    const trainedLeft = matchResult(
+      left,
+      right,
+      source.firstPlayerId,
+      (matchSeed ^ 0x9e3779b9) >>> 0,
+      maxActions,
+      {
+        'player-one': experienceProfile,
+        'player-two': null,
+      },
+    )
+    addCrossPlayResult(summary, trainedLeft, {
+      baselinePlayerId: 'player-two',
+      trainedPlayerId: 'player-one',
+    })
   }
-  return { matches, summary }
+  return summary
 }
 
 const decklistMarkdown = (standing: SwissStanding): string => {
@@ -413,11 +449,7 @@ const buildMarkdown = (report: {
     rosterSize: number
     rounds: number
     scheduleMatches: number
-    baseline: MatchSummary
-    trained: MatchSummary
-    trainedWinsOverBaseline: number
-    baselineWinsOverTrained: number
-    sameWinner: number
+    crossPlay: CrossPlaySummary
   } | null
 }): string => {
   const { swiss, playoffs } = report.tournament
@@ -436,12 +468,12 @@ const buildMarkdown = (report: {
 
 ## 結論
 
-- 1024 副 BS9 五色牌組完成 ${swiss.methodology.rounds} 輪 Swiss：${swiss.metrics.completedMatches}/${swiss.metrics.totalMatches} 場完成，狀態 **${swiss.status}**。
+- 1024 副 BS9 五色牌組完成 ${swiss.methodology.rounds} 輪 Swiss：${swiss.metrics.completedMatches}/${swiss.methodology.totalMatches} 場完成，狀態 **${swiss.status}**。
 - 每副主牌組都載入 4 張同色 BS9 EXTRA Deck；對局開局與 AI 決策使用同一份正式 EXTRA runtime 卡片。
 - Top cut：${playoffs.status}；冠軍：**${playoffs.champion?.name ?? '未產生'}**；亞軍：**${playoffs.runnerUp?.name ?? '未產生'}**。
 - 四強：${playoffs.top4.map((standing) => standing.name).join('、') || '未產生'}。
 - 經驗 profile 已由 ${report.experience.source.rosterSize} 副、${report.experience.source.swissMatches} 場 Swiss 的公開 Lv.5 決策樣本產生；啟用 ${profileCardCount} 張 BS9 卡片的卡片／動作權重。
-${holdout ? `- ${holdout.rosterSize} 副、${holdout.rounds} 輪固定 pairing holdout：訓練後勝出 ${holdout.trainedWinsOverBaseline} 場、baseline 勝出 ${holdout.baselineWinsOverTrained} 場、同勝者 ${holdout.sameWinner} 場。` : '- 未執行 holdout。'}
+${holdout ? `- ${holdout.rosterSize} 副、${holdout.rounds} 輪固定 pairing holdout 交叉對戰：訓練策略勝出 ${holdout.crossPlay.trainedWins} 場、baseline 勝出 ${holdout.crossPlay.baselineWins} 場、卡住／超限失敗 ${holdout.crossPlay.stuck} 場。` : '- 未執行 holdout。'}
 
 ## 賽事設定
 
@@ -475,16 +507,19 @@ ${top8}
 - card/action weights：${profileCardCount}
 - strategy version：${report.experience.strategyVersion}
 
-${holdout ? `## Holdout 對照
+${holdout ? `## Holdout 交叉對戰
 
-| 指標 | 無經驗 baseline | 注入 BS9 經驗 |
-|---|---:|---:|
-| 完成場數 | ${holdout.baseline.completed}/${holdout.baseline.matches} | ${holdout.trained.completed}/${holdout.trained.matches} |
-| 卡住場數 | ${holdout.baseline.stuck} | ${holdout.trained.stuck} |
-| player-one 勝場 | ${holdout.baseline.playerOneWins} | ${holdout.trained.playerOneWins} |
-| 平均行動 | ${(holdout.baseline.actions / Math.max(1, holdout.baseline.matches)).toFixed(2)} | ${(holdout.trained.actions / Math.max(1, holdout.trained.matches)).toFixed(2)} |
+| 指標 | 結果 |
+|---|---:|
+| 固定 pairing 場數 | ${holdout.scheduleMatches} |
+| 交叉對戰場數（兩種策略座位） | ${holdout.crossPlay.matches} |
+| 完成場數 | ${holdout.crossPlay.completed}/${holdout.crossPlay.matches} |
+| 訓練策略勝場 | ${holdout.crossPlay.trainedWins} |
+| baseline 勝場 | ${holdout.crossPlay.baselineWins} |
+| 卡住／超限失敗 | ${holdout.crossPlay.stuck} |
+| 平均行動 | ${(holdout.crossPlay.actions / Math.max(1, holdout.crossPlay.matches)).toFixed(2)} |
 
-「訓練後勝出」是同一 fixed schedule 下逐場比較 winner，不將同一場兩次 replay 當成獨立樣本；此結果是本輪 holdout 的證據，仍需更多 seed 與真人盲評。` : ''}
+每個 fixed pairing 會以相同牌組做兩次交叉對戰，交換 baseline／訓練策略所在座位；勝負依實際 winner player 歸屬，不以牌組勝者變更推定訓練優勢。卡住或超過 500 步的場次不計入任何策略勝場；此結果仍需更多 seed 與真人盲評。` : ''}
 
 ## 限制
 
@@ -499,7 +534,7 @@ const main = async () => {
   const limit = positiveInteger('limit', 1024)
   const rounds = positiveInteger('rounds', DEFAULT_ROUNDS)
   const seed = positiveInteger('seed', DEFAULT_SEED)
-  const maxActions = positiveInteger('max-actions', DEFAULT_MAX_ACTIONS)
+  const maxActions = tournamentMaxActions()
   const holdoutSize = Math.min(
     limit,
     nonNegativeInteger('holdout-size', Math.min(DEFAULT_HOLDOUT_SIZE, limit)),
@@ -514,8 +549,8 @@ const main = async () => {
     aiLevel: 5,
     experienceProfile: null,
     progressEvery: 32,
-    onMatch: ({ result }) => {
-      if (result) {
+    onMatch: ({ record, result }) => {
+      if (record.result === 'win' && result?.endInfo.winner) {
         recordAiTournamentMatchExperience(
           experienceAccumulator,
           result.decisionProfileByPlayer,
@@ -539,7 +574,7 @@ const main = async () => {
       tournamentId: 'bs9-lv5-1024-swiss',
       rosterSize: limit,
       rounds,
-      swissMatches: swiss.matches.length,
+      swissMatches: experienceAccumulator.matches,
       seed,
       generatedAt,
     },
@@ -555,14 +590,10 @@ const main = async () => {
     rosterSize: number
     rounds: number
     scheduleMatches: number
-    baseline: MatchSummary
-    trained: MatchSummary
-    trainedWinsOverBaseline: number
-    baselineWinsOverTrained: number
-    sameWinner: number
+    crossPlay: CrossPlaySummary
   } | null = null
   if (holdout) {
-    process.stdout.write(`BS9 fixed holdout baseline ${holdoutSize} decks × ${holdoutRounds} rounds...\n`)
+    process.stdout.write(`BS9 fixed holdout cross-play ${holdoutSize} decks × ${holdoutRounds} rounds...\n`)
     const holdoutSchedule = await runSwissTournament(holdout.holdoutDecks, {
       rounds: holdoutRounds,
       seed: seed ^ 0x13579bdf,
@@ -571,42 +602,18 @@ const main = async () => {
       experienceProfile: null,
       progressEvery: 64,
     })
-    const baseline = replaySchedule(
-      holdoutSchedule.matches,
-      holdout.holdoutDecks,
-      maxActions,
-      seed ^ 0x13579bdf,
-      null,
-    )
-    const trained = replaySchedule(
+    const crossPlay = crossPlaySchedule(
       holdoutSchedule.matches,
       holdout.holdoutDecks,
       maxActions,
       seed ^ 0x13579bdf,
       experience,
     )
-    let trainedWinsOverBaseline = 0
-    let baselineWinsOverTrained = 0
-    let sameWinner = 0
-    for (const [index, baselineMatch] of baseline.matches.entries()) {
-      const trainedMatch = trained.matches[index]
-      if (baselineMatch.winnerDeckId === trainedMatch?.winnerDeckId) {
-        sameWinner += 1
-      } else if (trainedMatch?.winnerDeckId) {
-        trainedWinsOverBaseline += 1
-      } else if (baselineMatch.winnerDeckId) {
-        baselineWinsOverTrained += 1
-      }
-    }
     holdoutReport = {
       rosterSize: holdoutSize,
       rounds: holdoutRounds,
       scheduleMatches: holdoutSchedule.matches.length,
-      baseline: baseline.summary,
-      trained: trained.summary,
-      trainedWinsOverBaseline,
-      baselineWinsOverTrained,
-      sameWinner,
+      crossPlay,
     }
   }
 
@@ -617,7 +624,7 @@ const main = async () => {
     schemaVersion: 1,
     generatedAt,
     status: swiss.status === 'PASS' && playoffs.status === 'PASS' &&
-      (!holdoutReport || holdoutReport.baseline.stuck === 0 && holdoutReport.trained.stuck === 0)
+      (!holdoutReport || holdoutReport.crossPlay.stuck === 0)
       ? 'PASS'
       : 'FAIL',
     tournament: { swiss, playoffs },
