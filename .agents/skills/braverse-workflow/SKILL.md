@@ -1,31 +1,34 @@
 ---
 name: braverse-workflow
-description: 規劃、拆分、分派、驗證與提交前檢查 Braverse 任務。處理任務契約、Codex 模型路由、平行代理、OpenCode Go 備援、驗證層級、Git review、AGENTS.md 或 Skill 工作流調整時使用；實作細節搭配 develop-braverse。
+description: 管理 Braverse 工作流、專案指令、驗證分級與提交前檢查；遊戲規則、卡牌、UI 或 AI 實作用 develop-braverse。
 ---
 
 # Braverse 工作流
 
-用最小任務契約管理 Braverse 工作的範圍、執行者、驗證與提交準備。需要修改遊戲功能、規則、UI 或 AI 時，搭配 `develop-braverse`。
+用於需要任務契約、專案指令、驗證分級或提交收尾的 Braverse 工作；遊戲規則、卡牌、UI 或 AI 實作用 develop-braverse。依使用者目標與授權推進到可驗證交付；唯讀或核准清單任務在其門檻停止。
 
-## 快速流程
+## 必要輸入
 
-1. 將任務分類為 `rules`、`ui`、`ai`、`tests`、`git-review` 或 `docs-workflow`。
-2. 依 [references/task-template.md](references/task-template.md) 建立最小任務契約。
-3. 由 Codex 主線直接執行；需要模型分級、平行代理或外部備援時，讀 [references/delegation-template.md](references/delegation-template.md)。
-4. 依 [references/verification-levels.md](references/verification-levels.md) 選擇必要驗證。
-5. stage 或 commit 前執行 [references/pre-commit-review.md](references/pre-commit-review.md)。
+從現有對話與相關檔案確認目標、背景／素材、允許範圍、完成條件和目前證據。不足且影響成果或授權時才集中提問，最多 3 題。任務分類與契約格式見 [任務模板](references/task-template.md)。
 
-## 依需求載入
+## 執行
 
-- 新任務或新 thread：讀 `task-template.md`。
-- 驗證決策：讀 `verification-levels.md`。
-- Codex 模型分級、subagent 或 OpenCode Go：先讀 `delegation-template.md`；只有確定使用 OpenCode Go 時，才讀 `../develop-braverse/references/delegation.md`。
-- commit 準備或 diff review：讀 `pre-commit-review.md`。
+1. 確認目標、授權與 Git 狀態，沿用仍有效的契約與證據；簡單任務直接處理，複雜任務只維持一份短計畫。
+2. 每次探索只解決尚未回答的問題；證據足以進入下一個安全動作就停止探索。檔案、依賴未變且資訊足夠時重用證據；同一假設兩輪無進展即換方法。
+3. 以「基線／重現 → 最小修改 → 針對性驗證 → 受影響範圍回歸 → 完成條件」小批推進。遊戲功能、規則、UI 或 AI 才搭配 `develop-braverse`。
+4. 做驗證決策前讀 [驗證分級](references/verification-levels.md)，採用現有分類，不新增另一套同名層級。
+5. 必要驗證通過後停止擴充；收尾檢查最終差異、完成條件及未驗證項目。stage／commit 另依 [提交前檢查](references/pre-commit-review.md)，不推定已有提交授權。
 
-## 邊界
+## 按條件載入
 
-- 以根目錄 `AGENTS.md` 為硬規則入口。
-- 不弱化 `AGENTS.md` 與 `develop-braverse` 的規則層、UI、AI、Git 或安全邊界。
-- Codex 是預設主線；OpenCode Go 僅用於溢出、備援、低風險平行工或第二意見。
-- 不讓多個執行者同時修改相同檔案或同一責任區。
-- 將歷史 bug 矩陣與供應商模型細節留在 references 或 README，不放進每個任務提示。
+- 卡牌轉換、卡圖核對或逐卡 Browser 驗收時，讀 [卡牌匯入稽核](../braverse-card-import-audit/SKILL.md)，並依其實體卡圖與獨立驗收方法建立預期；不得只以既有轉接輸出當答案。
+- 契約缺欄位、開新複雜任務或需要整理交接時，讀 [任務模板](references/task-template.md)；不強制建立檔案。
+- 只有確定有獨立且值得並行的子任務，才讀 [派工契約](references/delegation-template.md)；發生停滯時再讀其交接協定。
+- 長任務使用已有的任務報告或計畫入口，只記已完成、未完成、驗證證據、阻塞及下一步；不另建 STATE／PLAN。
+- 引用不是載入證據：觸發上述條件時要實際讀取，已讀且仍有效則直接重用。
+
+## 輸出與失敗處理
+
+- 回報實際完成內容、重要檔案、命令／環境／結束碼／結果、未完成或未驗證事項。
+- 修正本次造成的失敗；產品缺陷、測試失敗、環境阻塞分開處理。缺少授權、關鍵外部資料或資源時，只停相關部分，其餘可完成工作繼續。
+- 不以建議下一步結束可完成的實作，不用靜態檢查或 demo 代替正式驗收；不改寫規則解除本次核准門檻。

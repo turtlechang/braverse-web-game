@@ -152,6 +152,12 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'disable-traps') {
     return '本次戰鬥中對手不能發動陷阱。'
   }
+  if (effect.kind === 'prevent-opponent-damage') {
+    return '你的回合中，防止對手造成的所有傷害。'
+  }
+  if (effect.kind === 'prevent-opponent-hp-gain') {
+    return '本回合對手不能透過卡牌效果增加餅乾的 HP。'
+  }
   if (effect.kind === 'hp-to-trash') {
     if (effect.amount === 0) return '不移除任何 HP 卡。'
     if (effect.amountByTargetIndex) {
@@ -179,6 +185,11 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'trash-to-hand') {
     return `從棄牌區選最多 ${effect.max} 張卡返回手牌。`
+  }
+  if (effect.kind === 'equipped-to-hp') {
+    const side = effect.side === 'opponent' ? '對手' : '我方'
+    const keyword = effect.keyword === 'soul-jam' ? ' [Soul Jam]' : ''
+    return `選擇最多 ${effect.max} 張${side}已裝備的${keyword}，正面朝上放到裝備餅乾的 HP 最上方。`
   }
   if (effect.kind === 'trash-to-deck') {
     return effect.destination === 'bottom'
@@ -337,6 +348,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}，取回最上方 HP 後可放回 1 張手牌。`
   }
   if (effect.kind === 'hand-to-hp' && t) {
+    if (effect.handSide === 'opponent') {
+      return `選擇${effect.optional ? '最多 ' : ''}1 張對手手牌（不查看牌面），${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP ${effect.hpPlacement === 'bottom' ? '最下方' : '最上方'}。`
+    }
     return `選擇 ${t.count}${t.target}，將 1 張手牌當作 HP 卡。`
   }
   if (effect.kind === 'hp-to-hand' && t) {
@@ -352,15 +366,37 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${t.count}${t.target}放回牌庫頂。`
   }
   if (effect.kind === 'transfer-hp' && t) {
+    if (effect.direction === 'to-source' && effect.hpPlacement === 'bottom' && !effect.receiverTarget) {
+      return `選擇 ${t.count}${t.target}，將其最上方 ${effect.amount} 張 HP 卡${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP 最下方。`
+    }
+    if (effect.receiverTarget) {
+      return effect.direction === 'to-source'
+        ? `選擇供牌餅乾，再選擇另一張接收餅乾，將供牌餅乾最上方 ${effect.amount} 張 HP 卡移到接收餅乾（可略過）。`
+        : `選擇接收餅乾，將這張餅乾最上方 ${effect.amount} 張 HP 卡移過去（可略過）。`
+    }
     return effect.direction === 'to-source'
       ? `選擇 ${t.count}${t.target}，將其 ${effect.amount} 張 HP 卡移到這張餅乾上。`
       : `選擇 ${t.count}${t.target}，將這張餅乾的 ${effect.amount} 張 HP 卡移過去。`
   }
   if ((effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') && t) {
     const amount = effect.amount
+    if (effect.kind === 'modify-attack' && effect.target.sourceOnly) {
+      const condition = effect.condition
+      const requirement = condition?.kind === 'battle-area-has-keyword' &&
+        condition.side === 'self' && condition.excludeSource
+        ? `若己方戰鬥區有另一張【${condition.keyword === 'ancient' ? 'Ancient' : condition.keyword}】餅乾，`
+        : ''
+      return `${requirement}這張餅乾${effect.duration === 'this-turn' ? '本回合' : ''}攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}；不需選擇其他餅乾。`
+    }
+    if (effect.kind === 'modify-damage-received' && effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+      const recipients = effect.target.allMatching
+        ? `所有${effect.target.side === 'self' ? '我方' : effect.target.side === 'opponent' ? '對手' : '雙方'}${effect.target.keyword ? `【${effect.target.keyword === 'ancient' ? 'Ancient' : effect.target.keyword}】` : ''}餅乾`
+        : `選擇 ${t.count}${t.target}，`
+      return `${effect.duration === 'opponent-next-turn' ? '直到對手的下一個回合結束，' : ''}${recipients}每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}時，改為 ${effect.setDamageTo} 點${effect.target.allMatching ? '；自動套用全部符合條件的餅乾' : ''}。`
+    }
     return effect.kind === 'modify-attack'
       ? `選擇 ${t.count}${t.target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-      : `選擇 ${t.count}${t.target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `選擇 ${t.count}${t.target}，受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${amount >= 0 ? '+' : ''}${amount}。`
   }
 
   return `效果已處理。`
@@ -410,7 +446,11 @@ export const describeEffectResult = (
   if (effect.kind === 'opponent-battle-to-trash') return effect.destination === 'break' ? '對手餅乾已放入休息區。' : '對手餅乾已放入棄牌區。'
   if (effect.kind === 'make-faint') return `${names} 已昏厥。`
   if (effect.kind === 'place-source-to-support') return '已放入支援區。'
-  if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
+  if (effect.kind === 'set-active') {
+    return effect.selectable && targetNames.length === 0
+      ? '未選擇疲勞支援卡，效果未生效。'
+      : '支援區卡已設為活躍。'
+  }
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'
   if (effect.kind === 'optional-cost-attack') return '攻擊後續效果已處理。'
   if (effect.kind === 'damage') {
@@ -437,8 +477,11 @@ export const describeEffectResult = (
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
   if (effect.kind === 'disable-traps') return '本次戰鬥中對手不能發動陷阱。'
+  if (effect.kind === 'prevent-opponent-damage') return '已套用對手傷害防止。'
+  if (effect.kind === 'prevent-opponent-hp-gain') return '本回合已禁止對手透過卡牌效果增加 HP。'
   if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
+  if (effect.kind === 'equipped-to-hp') return '已裝備卡已正面朝上放到裝備餅乾的 HP 最上方。'
   if (effect.kind === 'trash-to-deck') {
     return effect.destination === 'bottom'
       ? '棄牌區卡牌已依選取順序放到牌庫底。'
@@ -475,7 +518,13 @@ export const describeEffectResult = (
   if (effect.kind === 'battle-to-break') return `${names} 已放入休息區。`
   if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
   if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`
+  if (effect.kind === 'hand-to-hp' && effect.handSide === 'opponent') {
+    return targetNames.length > 0
+      ? `已將選定的對手手牌${effect.faceUp ? '正面朝上' : '面朝下'}放到這張餅乾的 HP ${effect.hpPlacement === 'bottom' ? '最下方' : '最上方'}。`
+      : '未選擇對手手牌，HP 未改變。'
+  }
   if (effect.kind === 'transfer-hp') {
+    if (targetNames.length === 0) return '未選擇 HP 移動目標，HP 未改變。'
     return effect.direction === 'to-source'
       ? `已從 ${names} 移走 ${effect.amount} 張 HP 卡。`
       : `已將 ${effect.amount} 張 HP 卡移給 ${names}。`
@@ -489,9 +538,12 @@ export const describeEffectResult = (
         ? '未選擇攻擊力效果目標，未套用攻擊力修改。'
         : '未選擇受到攻擊傷害效果目標，未套用傷害修改。'
     }
+    if (effect.kind === 'modify-damage-received' && effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+      return `${names}：${effect.duration === 'opponent-next-turn' ? '直到對手的下一個回合結束，' : ''}每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}時，改為 ${effect.setDamageTo} 點。`
+    }
     return effect.kind === 'modify-attack'
       ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-      : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `${names} 受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${amount >= 0 ? '+' : ''}${amount}。`
   }
 
   return `效果已處理。`

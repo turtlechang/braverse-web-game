@@ -37,7 +37,17 @@ const setup072 = async page => {
   await page.locator('.game-shell').waitFor()
 }
 const cases = [
-  ...[{ mode:0, ids:[], delta:[0,0] }, {mode:1,ids:[0],delta:[1,0]}, {mode:1,ids:[1],delta:[0,1]}, {mode:2,ids:[0],delta:[2,0]}, {mode:2,ids:[1],delta:[0,2]}, {mode:3,ids:[0,1],delta:[1,1]}, {mode:4,ids:[0,1],delta:[2,1]}, {mode:4,ids:[1,0],delta:[1,2]}, {mode:5,ids:[0,1],delta:[2,2]}].map(c=>({card:'BS8-059',...c})),
+  ...[
+    { targetIds: [], amounts: [], delta: [0, 0] },
+    { targetIds: [0], amounts: [1], delta: [1, 0] },
+    { targetIds: [1], amounts: [1], delta: [0, 1] },
+    { targetIds: [0], amounts: [2], delta: [2, 0] },
+    { targetIds: [1], amounts: [2], delta: [0, 2] },
+    { targetIds: [0, 1], amounts: [1, 1], delta: [1, 1] },
+    { targetIds: [0, 1], amounts: [2, 1], delta: [2, 1] },
+    { targetIds: [1, 0], amounts: [1, 2], delta: [2, 1] },
+    { targetIds: [0, 1], amounts: [2, 2], delta: [2, 2] },
+  ].map(c=>({card:'BS8-059',...c})),
   ...[0,1].map(mode=>({card:'BS8-067',mode,ids:[]})),
   ...[0,1,2].map(mode=>({card:'BS8-072',mode,ids:[]})),
   ...[0,1,2,3,4].map(mode=>({card:'BS8-111',mode,ids:[]})),
@@ -49,13 +59,34 @@ const drive = async (page,c,operations) => {
     if(await visible(panel)) {
       const choice=panel.locator('.effect-candidates-choice button')
       if(await choice.count() && !chose) { assert.ok(await choice.count()>c.mode); await choice.nth(c.mode).click(); chose=true; operations.push(`mode:${c.mode}`); await wait(100); continue }
-      const targets=panel.locator('.effect-candidates-target button')
+      const targetIds = c.targetIds ?? c.ids ?? []
+      const targets = c.card === 'BS8-059'
+        ? panel.locator('.effect-hp-amount-card')
+        : panel.locator('.effect-candidates-target button')
       if(await targets.count()) {
-        const selected=await panel.locator('.effect-candidates-target button.is-selected').count()
-        if(selected<c.ids.length) { await targets.nth(c.ids[selected]).click(); operations.push(`target:${c.ids[selected]}`); await wait(100); continue }
+        const selected = c.card === 'BS8-059'
+          ? await panel.locator('.effect-hp-amount-card[aria-pressed="true"]').count()
+          : await panel.locator('.effect-candidates-target button.is-selected').count()
+        if(selected<targetIds.length) { await targets.nth(targetIds[selected]).click(); operations.push(`target:${targetIds[selected]}`); await wait(100); continue }
+        if(c.card === 'BS8-059') {
+          for (let targetIndex = 0; targetIndex < targetIds.length; targetIndex++) {
+            const candidate = panel.locator('.effect-hp-amount-candidate').nth(targetIds[targetIndex])
+            const amount = c.amounts[targetIndex]
+            const amountButton = candidate.locator('.effect-hp-amount-options button').nth(amount - 1)
+            await amountButton.click()
+            operations.push(`amount:${targetIndex}:${amount}`)
+            await wait(100)
+          }
+        }
       }
       const primary=panel.locator('.effect-panel-primary-action')
-      if(await primary.isEnabled().catch(()=>false)) { operations.push(`confirm:${await primary.innerText()}`); await primary.click(); await wait(200); continue }
+      if(await primary.isEnabled().catch(()=>false)) {
+        operations.push(`confirm:${await primary.innerText()}`)
+        await primary.click()
+        await wait(200)
+        if (c.card === 'BS8-059' && !(await visible(panel))) return
+        continue
+      }
       let paid=false
       for(const selector of ['.effect-candidates-payment','.effect-candidates-cost-support','.effect-candidates-discard-hand']) {
         const candidate=panel.locator(`${selector} button:not(.is-selected):not(:disabled)`).first()
@@ -94,7 +125,7 @@ try {
         result.trace=await page.evaluate(()=>window.__braverseContractTrace??[])
         assert.ok(result.trace.length,'Missing command evidence')
         assert.ok(result.trace.some(entry=>entry.commandKind===(c.card==='BS8-067'?'resolve-attack-effect':'resolve-ability-effect')),'Missing actual effect resolution command')
-        if(c.card==='BS8-059') {assert.deepEqual(result.before.top.hp.map((n,i)=>n.hp-result.after.top.hp[i].hp),c.delta); assert.equal(result.after.bottom.support,result.before.bottom.support-2)}
+        if(c.card==='BS8-059') {assert.deepEqual(result.before.top.hp.map((n,i)=>n.hp-result.after.top.hp[i].hp),c.delta); assert.equal(result.after.bottom.support,result.before.bottom.support-2); assert.ok(result.operations.some(operation=>operation.startsWith('amount:')) === (c.amounts.length > 0), '個別 HP 數量選擇必須留下 UI 操作紀錄')}
         if(c.card==='BS8-067'||c.card==='BS8-072') {assert.equal(result.after.bottom.support-result.before.bottom.support,c.mode);assert.equal(result.before.bottom.deck-result.after.bottom.deck,c.mode);const added=result.after.bottom.supportCards.filter(n=>!result.before.bottom.supportCards.some(old=>old.id===n.id));assert.equal(added.filter(n=>!n.rested).length,c.mode>0?1:0);assert.equal(added.filter(n=>n.rested).length,Math.max(0,c.mode-1))}
         if(c.card==='BS8-111') {assert.equal(result.before.bottom.deck-result.after.bottom.deck,c.mode+3,'three HP setup cards plus selected milling');assert.equal(result.after.bottom.trash-result.before.bottom.trash,c.mode+1);assert.equal(result.after.bottom.hp.find(n=>n.id.includes('BS8-111'))?.hp,3)}
         result.status='PASS'

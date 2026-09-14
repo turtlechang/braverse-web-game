@@ -164,6 +164,31 @@ describe('buildScenarioState', () => {
     expect(player.deck.every((card) => card.id !== 'BS8-005')).toBe(true)
   })
 
+  it('builds supported BS9 candidate EXTRA cards without adding them to the formal pool', () => {
+    const result = buildScenarioState({
+      player: emptySide({
+        battle: [{ cardNumber: 'BS3-017' }],
+        extraDeck: ['BS9-010', 'BS9-010@1'],
+      }),
+      ai: emptySide({
+        extraDeck: ['BS9-030'],
+      }),
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.state).not.toBeNull()
+
+    const player = result.state!.players['player-one']
+    const ai = result.state!.players['player-two']
+    expect(player.extraDeck?.map((card) => card.id)).toEqual(['BS9-010', 'BS9-010'])
+    expect(ai.extraDeck?.map((card) => card.id)).toEqual(['BS9-030'])
+    expect(player.extraDeck?.[0].playRequirement).toMatchObject({
+      kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+      count: 2,
+    })
+    expect(player.deck.every((card) => card.id !== 'BS9-010')).toBe(true)
+  })
+
   it('rejects non-EXTRA cards and invalid EXTRA Deck limits', () => {
     const nonExtra = buildScenarioState({
       player: emptySide({

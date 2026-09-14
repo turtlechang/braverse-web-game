@@ -24,7 +24,8 @@ import {
   getTrapCostOptions,
   getTrapTargetCandidates,
   getEffectTargetCandidatesForEffect,
-  getEffectSelectionLimits,
+  getEffectSelectionCandidates,
+  getEffectTargetSelectionLimits,
   getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
@@ -36,6 +37,7 @@ import {
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   isEffectConditionMet,
+  requiresEffectCardSelection,
   requiresTargetSelection,
   getTrashToDeckCostCandidates,
   validateEnergyPayment,
@@ -85,11 +87,17 @@ import {
   createBs3SilverbellConditionDemoState,
   createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
+  createBs9CandidatePreviewDemoState,
+  createBs9041AttackDemoState,
+  createBs9041OwnTurnDemoState,
+  createBs9018ProtectionDemoState,
+  createBs9018KumihoAttackDemoState,
   createBs5FaintDemoState,
   createBs5TrapDemoState,
   createBs5ItemConditionDemoState,
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
+  createBs9ActualDamageDemoState,
   createBs6ConditionDemoState,
   createCardNegativeDemoState,
   createP082TrapDemoState,
@@ -189,6 +197,43 @@ export function useMatchController(params: {
         testStateConfig.orderedTargets,
       )
     }
+    if (testStateConfig?.kind === 'bs9-candidate') {
+      return createBs9CandidatePreviewDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-damage') {
+      return createBs9ActualDamageDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-protection') {
+      return createBs9018ProtectionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-018-kumiho') {
+      return createBs9018KumihoAttackDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+        testStateConfig.targetCardNumber,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-041-attack') {
+      return createBs9041AttackDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs9-041-own-turn') {
+      return createBs9041OwnTurnDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+      )
+    }
     if (testStateConfig?.kind === 'bs8-011-double-skill') {
       return createBs8011DoubleSkillDemoState()
     }
@@ -240,6 +285,7 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-negative') {
       return createCardNegativeDemoState(testStateConfig.cardNumber, {
         preferSkillSurface: testStateConfig.preferSkillSurface,
+        normalAttack: testStateConfig.normalAttack,
       })
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
@@ -633,13 +679,30 @@ export function useMatchController(params: {
   ] = useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedOpponentDiscardPlacementById, setSelectedOpponentDiscardPlacementById] =
+    useState<Record<string, 'top' | 'bottom'>>({})
   const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
     useState<string[]>([])
   const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
     string | undefined
   >(undefined)
 
-  const viewerPlayerId: PlayerId = 'player-one'
+  // The BS9-041 attack fixture intentionally exposes the defender's FLIP
+  // response in both A/B routes.  In a normal match the defender owns that
+  // response; the localhost fixture switches the local control surface to
+  // player-two so the revealed HP card can be activated and inspected.
+  const testCardBase =
+    (testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative')
+      ? testStateConfig.cardNumber.split('@')[0]
+      : undefined
+  const viewerPlayerId: PlayerId =
+    testStateConfig?.kind === 'bs9-041-attack' ||
+    testStateConfig?.kind === 'bs9-018-kumiho' ||
+    (testCardBase === 'BS9-082') ||
+    (testCardBase === 'BS9-096' && testStateConfig?.kind === 'card-negative') ||
+    (testCardBase === 'BS9-111' && testStateConfig?.kind === 'card-check')
+      ? 'player-two'
+      : 'player-one'
   const opponentId = opponentOfId(viewerPlayerId)
   const activePlayer = game.players[game.activePlayerId]
 
@@ -1056,11 +1119,10 @@ export function useMatchController(params: {
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
-    ? game.players[viewerPlayerId].hand.filter(
-        (card) =>
-          card.instanceId !== selectedTrap.instanceId &&
-          (!selectedTrapCost?.discardHandColor ||
-            card.energyColor === selectedTrapCost.discardHandColor),
+    ? getDiscardHandCostCandidates(
+        selectedTrapCost ?? {},
+        game.players[viewerPlayerId].hand,
+        selectedTrap.instanceId,
       )
     : []
   const selectedTrapTrashCookieToBreakAreaAmount =
@@ -1143,18 +1205,28 @@ export function useMatchController(params: {
     selectedTrap?.trap && trapEffectTargetContext
       ? selectedTrap.trap.effects.flatMap((effect, effectIndex) => {
           if (
-            !requiresTargetSelection(effect) ||
+            (!requiresTargetSelection(effect) && !requiresEffectCardSelection(effect)) ||
             !isEffectConditionMet(game, trapEffectTargetContext, effect)
           ) {
             return []
           }
-          const candidates = getEffectTargetCandidatesForEffect(
-            game,
-            trapEffectTargetContext,
-            effect,
-          )
+          const candidates = requiresTargetSelection(effect)
+            ? getEffectTargetCandidatesForEffect(
+                game,
+                trapEffectTargetContext,
+                effect,
+              )
+            : getEffectSelectionCandidates(
+                game,
+                trapEffectTargetContext,
+                effect,
+              ).map((card) => ({
+                card,
+                hpCards: [],
+                rested: false,
+              }))
           if (candidates.length === 0) return []
-          const limits = getEffectSelectionLimits(effect)
+          const limits = getEffectTargetSelectionLimits(effect)
           const ordered = effect.kind === 'damage-all' && effect.sequential === true
           return [
             {
@@ -1219,12 +1291,15 @@ export function useMatchController(params: {
     !hasPerEffectSelfTargetSelection &&
     (selectedTrap?.trap?.effects.some(
       (effect) =>
-        (effect.kind === 'damage' ||
+        ((effect.kind === 'damage' ||
           effect.kind === 'gain-hp' ||
           effect.kind === 'hp-to-hand') &&
-        'target' in effect &&
-        effect.target?.side === 'self' &&
-        (effect.target.min ?? 0) > 0,
+          'target' in effect &&
+          effect.target?.side === 'self' &&
+          (effect.target.min ?? 0) > 0) ||
+        (effect.kind === 'transfer-hp' &&
+          effect.receiverTarget?.side === 'self' &&
+          (effect.receiverTarget.min ?? 0) > 0),
     ) ?? false)
   const selectedTrapSelfTargets = selectedTrapSelfTarget
     ? [selectedTrapSelfTarget]
@@ -1463,7 +1538,14 @@ export function useMatchController(params: {
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
-    isPlayerControllingState(game, 'player-two')
+    testStateConfig?.kind === 'bs9-041-attack' ||
+    testStateConfig?.kind === 'bs9-018-kumiho' ||
+    (testStateConfig?.kind === 'bs9-candidate' &&
+      ['BS9-031', 'BS9-032'].includes(testStateConfig.cardNumber.split('@')[0])) ||
+    ((testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative') &&
+      ['BS9-077', 'BS9-081', 'BS9-082', 'BS9-096', 'BS9-100', 'BS9-111'].includes(testStateConfig.cardNumber.split('@')[0]))
+      ? false
+      : isPlayerControllingState(game, 'player-two')
 
   const pendingPlayerId = getPendingChoicePlayerId(game, replacementTask)
   const pendingPlayer = pendingPlayerId
@@ -1523,13 +1605,15 @@ export function useMatchController(params: {
     if (
       testStateConfig &&
       battle?.stage === 'damage' &&
-      !getPendingDecision(game)
+      !getPendingDecision(game) &&
+      game.pendingAbilityEffect?.sourceKind !== 'flip'
     ) {
       const timer = window.setTimeout(() => {
         setGame((current) => {
           if (
             current.pendingBattle?.stage !== 'damage' ||
-            getPendingDecision(current)
+            getPendingDecision(current) ||
+            current.pendingAbilityEffect?.sourceKind === 'flip'
           ) {
             return current
           }
@@ -1656,6 +1740,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentDiscardPlacementById({})
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
       setSelectedBlockerPaymentIds([])
@@ -1687,6 +1772,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentDiscardPlacementById({})
       setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
       setSelectedBlockerPaymentIds([])
@@ -1878,6 +1964,8 @@ export function useMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    selectedOpponentDiscardPlacementById,
+    setSelectedOpponentDiscardPlacementById,
     // Opponent rest support (BS5-065 Petrification)
     selectedOpponentRestSupportIds,
     setSelectedOpponentRestSupportIds,

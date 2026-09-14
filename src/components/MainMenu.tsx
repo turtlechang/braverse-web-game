@@ -13,21 +13,16 @@ import { getDeckFormatLabel } from '../game/deck-rules'
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
 
 const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
+  { value: 'bs9-red-truth', label: 'BS9 紅｜Truth Aggro' },
+  { value: 'bs9-yellow-prophecy', label: 'BS9 黃｜Prophecy Control' },
+  { value: 'bs9-green-support', label: 'BS9 綠｜Support Engine' },
+  { value: 'bs9-blue-deceit', label: 'BS9 藍｜Deceit Tempo' },
+  { value: 'bs9-purple-mill', label: 'BS9 紫｜Mill Control' },
   { value: 'bs7-red-arena', label: 'BS7 紅｜Arena' },
   { value: 'bs7-yellow-arena', label: 'BS7 黃｜Arena' },
   { value: 'bs7-green-arena', label: 'BS7 綠｜Arena' },
   { value: 'bs7-blue-arena', label: 'BS7 藍｜Arena' },
   { value: 'bs7-purple-arena', label: 'BS7 紫｜Arena' },
-  { value: 'bs6-red-standard', label: 'BS6 紅｜標準' },
-  { value: 'bs6-yellow-standard', label: 'BS6 黃｜標準' },
-  { value: 'bs6-green-standard', label: 'BS6 綠｜標準' },
-  { value: 'bs6-blue-standard', label: 'BS6 藍｜標準' },
-  { value: 'bs6-purple-standard', label: 'BS6 紫｜標準' },
-  { value: 'bs6-red-competitive', label: 'BS6 紅｜競技環境' },
-  { value: 'bs6-yellow-competitive', label: 'BS6 黃｜競技環境' },
-  { value: 'bs6-green-competitive', label: 'BS6 綠｜競技環境' },
-  { value: 'bs6-blue-competitive', label: 'BS6 藍｜競技環境' },
-  { value: 'bs6-purple-competitive', label: 'BS6 紫｜競技環境' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
@@ -35,7 +30,7 @@ const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
   { value: 2, label: 'Lv.2 基礎戰術', hint: '會出牌、用技能並攻擊較脆弱的目標。' },
   { value: 3, label: 'Lv.3 評估戰局', hint: '對每個可行動作評分後選擇最佳選項，會優先斬殺。' },
   { value: 4, label: 'Lv.4 多步前瞻', hint: '規劃同回合多步行動，並考量破壞區風險與高威脅目標。' },
-  { value: 5, label: 'Lv.5 高手對抗（實驗）', hint: '延續多步規劃，以公開資訊估計對手回應並維持跨步策略；不讀隱藏卡面。' },
+  { value: 5, label: 'Lv.5 賽事高手（BS9）', hint: '延續多步規劃，加入 BS9 1024 人瑞士賽的公開決策經驗；不讀隱藏卡面。' },
 ]
 
 interface MainMenuProps {
@@ -52,7 +47,6 @@ interface MainMenuProps {
   onOpenOnlineMatch: () => void
   onOpenTestScenario: () => void
   onCreateDeck: () => void
-  onCreateBs8CandidateDeck?: () => void
   onEditDeck: (deck: CustomDeck) => void
   onDuplicateDeck: (deck: CustomDeck) => void
   onDeleteDeck: (deck: CustomDeck) => void
@@ -81,7 +75,6 @@ export function MainMenu({
   onOpenOnlineMatch,
   onOpenTestScenario,
   onCreateDeck,
-  onCreateBs8CandidateDeck,
   onEditDeck,
   onDuplicateDeck,
   onDeleteDeck,
@@ -371,16 +364,6 @@ export function MainMenu({
               <RefreshCw aria-hidden="true" />
               重新讀取
             </button>
-            {onCreateBs8CandidateDeck && (
-              <button
-                type="button"
-                data-testid="open-bs8-candidate-deck-editor"
-                onClick={onCreateBs8CandidateDeck}
-              >
-                <FlaskConical aria-hidden="true" />
-                BS8 候選 EXTRA 驗收
-              </button>
-            )}
           </nav>
         </details>
         <p className="main-menu-disclaimer">

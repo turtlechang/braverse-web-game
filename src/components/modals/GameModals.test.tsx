@@ -1044,6 +1044,44 @@ describe('DeckEditorModal', () => {
 })
 
 describe('CardDetailModal', () => {
+  it('shows the previous Cookie card under an Awakened Cookie', () => {
+    const underlay: CookieCard = {
+      id: 'BS8-103',
+      instanceId: 'underlay-bs8-103',
+      name: 'Dark Cacao Cookie',
+      type: 'cookie',
+      level: 3,
+      hp: 4,
+      attack: 3,
+      attackCost: 3,
+      imageUrl: '/dark-cacao-cookie.webp',
+    }
+    const awakened: CookieCard = {
+      ...underlay,
+      id: 'BS8-104',
+      instanceId: 'awakened-bs8-104',
+      name: 'Dark Cacao Cookie',
+      extraDeckOrigin: 'awakened',
+      awakenHpBonus: 2,
+    }
+
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={awakened}
+        awakenedUnderlay={[underlay]}
+        onInspectUnderlay={() => undefined}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('class="card-detail-underlay"')
+    expect(markup).toContain('覺醒前的餅乾')
+    expect(markup).toContain('查看覺醒前卡牌：Dark Cacao Cookie')
+    expect(markup).toContain('BS8-103')
+    expect(markup).toContain('/dark-cacao-cookie.webp')
+    expect(markup).toContain('此卡覆蓋在覺醒卡下方')
+  })
+
   it('shows skill text before the attack text', () => {
     const card: CookieCard = {
       id: 'ST1-008',
@@ -1545,6 +1583,63 @@ describe('FlipResponseModal', () => {
     expect(markup).toContain('your deck')
     expect(markup).toContain('opponent&#x27;s deck')
   })
+
+  it('requires an ordered donor and receiver pair for transfer FLIP effects', async () => {
+    const flipCard: CookieCard = {
+      id: 'BS9-029',
+      instanceId: 'pair-flip',
+      name: 'Caramel Choux Cookie',
+      type: 'cookie',
+      officialType: 'flip',
+      level: 1,
+      hp: 1,
+      attack: 2,
+      attackCost: 2,
+      flip: {
+        text: 'Add up to 1 HP card from one Cookie to another Cookie.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'transfer-hp',
+          amount: 1,
+          direction: 'to-source',
+          target: { side: 'self', min: 0, max: 1 },
+          receiverTarget: { side: 'self', min: 0, max: 1 },
+        }],
+      },
+    }
+    const donor = { ...createBattleCookie(1).card, name: '供牌餅乾' }
+    const receiver = { ...createBattleCookie(2).card, name: '接收餅乾' }
+    const onActivate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FlipResponseModal
+        card={flipCard}
+        hand={[]}
+        discardCount={0}
+        selectedDiscardIds={[]}
+        onToggleDiscard={() => undefined}
+        onActivate={onActivate}
+        onSkip={() => undefined}
+        targetCandidates={[donor]}
+        receiverTargetCandidates={[receiver]}
+        targetPair
+        targetMin={0}
+        targetMax={2}
+      />,
+    ))
+
+    const activate = () => findButton(container, '發動 FLIP') as HTMLButtonElement
+    expect(activate().disabled).toBe(false)
+    await click(container.querySelector('[aria-label="FLIP 效果供牌目標"] button') as HTMLButtonElement)
+    expect(activate().disabled).toBe(true)
+    await click(container.querySelector('[aria-label="FLIP 效果接收目標"] button') as HTMLButtonElement)
+    expect(activate().disabled).toBe(false)
+    await click(activate())
+    expect(onActivate).toHaveBeenCalledWith(undefined, [donor.instanceId, receiver.instanceId])
+
+    await act(() => root.unmount())
+  })
 })
 
 describe('ResultModal', () => {
@@ -1622,7 +1717,6 @@ describe('PauseModal', () => {
     phaseLabel: '主要階段',
     deckConfig: { player: 'red', ai: 'red' } as const,
     aiActionCount: 5,
-    onRunSimulation: () => undefined,
     onResume: () => undefined,
   }
 

@@ -5,6 +5,7 @@ import {
   SCENARIO_MAX_BATTLE_SLOTS,
   buildScenarioState,
   getBreakAreaLevelPreview,
+  getScenarioCandidateExtraDeckCardDefinitions,
   type ScenarioCookieSlot,
 } from '../../game/scenario'
 import type { GameState } from '../../game'
@@ -372,6 +373,10 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
   const [errors, setErrors] = useState<string[]>([])
 
   const cardOptions = useMemo(() => getAllCardPoolEntries(), [])
+  const candidateExtraCardOptions = useMemo(
+    () => getScenarioCandidateExtraDeckCardDefinitions(),
+    [],
+  )
 
   const handleStart = () => {
     const result = buildScenarioState({
@@ -464,6 +469,11 @@ export function TestScenarioModal({ onClose, onStart }: TestScenarioModalProps) 
                 {entry.name}
               </option>
             ))}
+          {candidateExtraCardOptions.map((entry) => (
+            <option key={`candidate-${entry.cardNumber}`} value={entry.cardNumber}>
+              {entry.name}（候選 staging）
+            </option>
+          ))}
         </datalist>
 
         <div className="scenario-layout">

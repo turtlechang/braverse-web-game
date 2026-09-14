@@ -33,6 +33,11 @@ import bs7YellowArenaDeck from '../../data/decks/bs7-yellow-arena.json'
 import bs7GreenArenaDeck from '../../data/decks/bs7-green-arena.json'
 import bs7BlueArenaDeck from '../../data/decks/bs7-blue-arena.json'
 import bs7PurpleArenaDeck from '../../data/decks/bs7-purple-arena.json'
+import bs9RedTruthDeck from '../../data/decks/bs9-red-truth.json'
+import bs9YellowProphecyDeck from '../../data/decks/bs9-yellow-prophecy.json'
+import bs9GreenSupportDeck from '../../data/decks/bs9-green-support.json'
+import bs9BlueDeceitDeck from '../../data/decks/bs9-blue-deceit.json'
+import bs9PurpleMillDeck from '../../data/decks/bs9-purple-mill.json'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -43,12 +48,13 @@ import {
   convertOfficialTrapAbility,
 } from '../cards/official-effect-adapter'
 import {
+  convertOfficialCardToExtraDeckCard,
   getRuntimeKeywords,
   normalizeOfficialCardRecord,
 } from '../cards/official-card-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
-import type { CardEffect, GameCard, PlayerId } from './types'
+import type { CardEffect, ExtraDeckCard, GameCard, PlayerId } from './types'
 import { getCardPoolEntry } from './card-pool'
 
 export type StarterDeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
@@ -107,6 +113,14 @@ export const BS7_ARENA_AI_PRESET_DECK_CHOICES = [
   'bs7-purple-arena',
 ] as const
 
+export const BS9_AI_PRESET_DECK_CHOICES = [
+  'bs9-red-truth',
+  'bs9-yellow-prophecy',
+  'bs9-green-support',
+  'bs9-blue-deceit',
+  'bs9-purple-mill',
+] as const
+
 export type Bs3AiPresetDeckChoice =
   (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
 
@@ -125,6 +139,9 @@ export type Bs6CompetitiveAiPresetDeckChoice =
 export type Bs7ArenaAiPresetDeckChoice =
   (typeof BS7_ARENA_AI_PRESET_DECK_CHOICES)[number]
 
+export type Bs9AiPresetDeckChoice =
+  (typeof BS9_AI_PRESET_DECK_CHOICES)[number]
+
 export type AiPresetDeckChoice =
   | 'bs2-red'
   | 'bs2-yellow'
@@ -137,6 +154,7 @@ export type AiPresetDeckChoice =
   | Bs6AiPresetDeckChoice
   | Bs6CompetitiveAiPresetDeckChoice
   | Bs7ArenaAiPresetDeckChoice
+  | Bs9AiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -161,6 +179,7 @@ export const ALL_AI_TRAINING_DECK_CHOICES = [
   ...BS6_AI_PRESET_DECK_CHOICES,
   ...BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES,
   ...BS7_ARENA_AI_PRESET_DECK_CHOICES,
+  ...BS9_AI_PRESET_DECK_CHOICES,
 ] as const satisfies readonly BuiltInDeckChoice[]
 
 export interface StarterDeckEntry {
@@ -648,6 +667,45 @@ export const AI_PRESET_BS7_BLUE_ARENA_DECK: StarterDeckEntry[] =
 export const AI_PRESET_BS7_PURPLE_ARENA_DECK: StarterDeckEntry[] =
   bs7PurpleArenaDeck.entries
 
+export const AI_PRESET_BS9_RED_TRUTH_DECK: StarterDeckEntry[] =
+  bs9RedTruthDeck.entries
+export const AI_PRESET_BS9_YELLOW_PROPHECY_DECK: StarterDeckEntry[] =
+  bs9YellowProphecyDeck.entries
+export const AI_PRESET_BS9_GREEN_SUPPORT_DECK: StarterDeckEntry[] =
+  bs9GreenSupportDeck.entries
+export const AI_PRESET_BS9_BLUE_DECEIT_DECK: StarterDeckEntry[] =
+  bs9BlueDeceitDeck.entries
+export const AI_PRESET_BS9_PURPLE_MILL_DECK: StarterDeckEntry[] =
+  bs9PurpleMillDeck.entries
+
+/**
+ * BS9 五色預設牌組各自攜帶的正式 EXTRA Deck 配置。
+ *
+ * 每色放入 4 張同色核心 EXTRA Cookie；EXTRA Deck 不佔 60 張主牌組，
+ * 但會隨牌組一起建立並交給規則層／Lv.5 AI 使用。
+ */
+export const AI_PRESET_BS9_RED_EXTRA_DECK: StarterDeckEntry[] =
+  bs9RedTruthDeck.extraDeckEntries ?? []
+export const AI_PRESET_BS9_YELLOW_EXTRA_DECK: StarterDeckEntry[] =
+  bs9YellowProphecyDeck.extraDeckEntries ?? []
+export const AI_PRESET_BS9_GREEN_EXTRA_DECK: StarterDeckEntry[] =
+  bs9GreenSupportDeck.extraDeckEntries ?? []
+export const AI_PRESET_BS9_BLUE_EXTRA_DECK: StarterDeckEntry[] =
+  bs9BlueDeceitDeck.extraDeckEntries ?? []
+export const AI_PRESET_BS9_PURPLE_EXTRA_DECK: StarterDeckEntry[] =
+  bs9PurpleMillDeck.extraDeckEntries ?? []
+
+export const BS9_EXTRA_DECK_RECIPES: Record<
+  Bs9AiPresetDeckChoice,
+  StarterDeckEntry[]
+> = {
+  'bs9-red-truth': AI_PRESET_BS9_RED_EXTRA_DECK,
+  'bs9-yellow-prophecy': AI_PRESET_BS9_YELLOW_EXTRA_DECK,
+  'bs9-green-support': AI_PRESET_BS9_GREEN_EXTRA_DECK,
+  'bs9-blue-deceit': AI_PRESET_BS9_BLUE_EXTRA_DECK,
+  'bs9-purple-mill': AI_PRESET_BS9_PURPLE_EXTRA_DECK,
+}
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -697,6 +755,11 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs7-green-arena': AI_PRESET_BS7_GREEN_ARENA_DECK,
   'bs7-blue-arena': AI_PRESET_BS7_BLUE_ARENA_DECK,
   'bs7-purple-arena': AI_PRESET_BS7_PURPLE_ARENA_DECK,
+  'bs9-red-truth': AI_PRESET_BS9_RED_TRUTH_DECK,
+  'bs9-yellow-prophecy': AI_PRESET_BS9_YELLOW_PROPHECY_DECK,
+  'bs9-green-support': AI_PRESET_BS9_GREEN_SUPPORT_DECK,
+  'bs9-blue-deceit': AI_PRESET_BS9_BLUE_DECEIT_DECK,
+  'bs9-purple-mill': AI_PRESET_BS9_PURPLE_MILL_DECK,
 }
 
 const getEnergyColor = (
@@ -1026,6 +1089,47 @@ export const createAiPresetBs7BlueArenaDeck = (playerId: PlayerId): GameCard[] =
 export const createAiPresetBs7PurpleArenaDeck = (playerId: PlayerId): GameCard[] =>
   createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS7_PURPLE_ARENA_DECK, [])
 
+export const createAiPresetBs9RedTruthDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS9_RED_TRUTH_DECK, [])
+export const createAiPresetBs9YellowProphecyDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS9_YELLOW_PROPHECY_DECK, [])
+export const createAiPresetBs9GreenSupportDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS9_GREEN_SUPPORT_DECK, [])
+export const createAiPresetBs9BlueDeceitDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS9_BLUE_DECEIT_DECK, [])
+export const createAiPresetBs9PurpleMillDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS9_PURPLE_MILL_DECK, [])
+
+const createOfficialExtraDeckFromRecipe = (
+  playerId: PlayerId,
+  recipe: readonly StarterDeckEntry[],
+): ExtraDeckCard[] => recipe.flatMap((entry) => {
+  const source = getCardPoolEntry(entry.cardNumber)
+  if (!source || source.type !== 'extra') {
+    throw new Error(`Missing official EXTRA card ${entry.cardNumber}`)
+  }
+
+  return Array.from({ length: entry.count }, (_, index) => {
+    const instanceSuffix = `formal-extra:${playerId}:${source.baseCardNumber}:${index + 1}`
+    const conversion = convertOfficialCardToExtraDeckCard(source, instanceSuffix)
+    if (conversion.status !== 'converted') {
+      throw new Error(`Unsupported official EXTRA card ${entry.cardNumber}: ${conversion.reason}`)
+    }
+    return conversion.extraDeckCard
+  })
+})
+
+export const createAiPresetBs9RedExtraDeck = (playerId: PlayerId): ExtraDeckCard[] =>
+  createOfficialExtraDeckFromRecipe(playerId, AI_PRESET_BS9_RED_EXTRA_DECK)
+export const createAiPresetBs9YellowExtraDeck = (playerId: PlayerId): ExtraDeckCard[] =>
+  createOfficialExtraDeckFromRecipe(playerId, AI_PRESET_BS9_YELLOW_EXTRA_DECK)
+export const createAiPresetBs9GreenExtraDeck = (playerId: PlayerId): ExtraDeckCard[] =>
+  createOfficialExtraDeckFromRecipe(playerId, AI_PRESET_BS9_GREEN_EXTRA_DECK)
+export const createAiPresetBs9BlueExtraDeck = (playerId: PlayerId): ExtraDeckCard[] =>
+  createOfficialExtraDeckFromRecipe(playerId, AI_PRESET_BS9_BLUE_EXTRA_DECK)
+export const createAiPresetBs9PurpleExtraDeck = (playerId: PlayerId): ExtraDeckCard[] =>
+  createOfficialExtraDeckFromRecipe(playerId, AI_PRESET_BS9_PURPLE_EXTRA_DECK)
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -1078,7 +1182,36 @@ export const DECK_CREATORS: Record<
   'bs7-green-arena': createAiPresetBs7GreenArenaDeck,
   'bs7-blue-arena': createAiPresetBs7BlueArenaDeck,
   'bs7-purple-arena': createAiPresetBs7PurpleArenaDeck,
+  'bs9-red-truth': createAiPresetBs9RedTruthDeck,
+  'bs9-yellow-prophecy': createAiPresetBs9YellowProphecyDeck,
+  'bs9-green-support': createAiPresetBs9GreenSupportDeck,
+  'bs9-blue-deceit': createAiPresetBs9BlueDeceitDeck,
+  'bs9-purple-mill': createAiPresetBs9PurpleMillDeck,
 }
+
+/**
+ * Built-in 牌組的平行 EXTRA Deck 建立器。舊版 Starter／BS2–BS7 沒有正式
+ * EXTRA 配置，因此回傳空陣列；BS9 五色則回傳其同色正式 EXTRA Deck。
+ */
+export const EXTRA_DECK_CREATORS: Record<
+  BuiltInDeckChoice,
+  (playerId: PlayerId) => ExtraDeckCard[]
+> = Object.fromEntries(
+  (Object.keys(DECK_CREATORS) as BuiltInDeckChoice[]).map((choice) => {
+    const recipe = (BS9_EXTRA_DECK_RECIPES as Partial<
+      Record<BuiltInDeckChoice, StarterDeckEntry[]>
+    >)[choice]
+    return [
+      choice,
+      (playerId: PlayerId) => createOfficialExtraDeckFromRecipe(playerId, recipe ?? []),
+    ]
+  }),
+) as Record<BuiltInDeckChoice, (playerId: PlayerId) => ExtraDeckCard[]>
+
+export const createExtraDeckForChoice = (
+  choice: BuiltInDeckChoice,
+  playerId: PlayerId,
+): ExtraDeckCard[] => EXTRA_DECK_CREATORS[choice](playerId)
 
 export const createDeckForChoice = (
   choice: BuiltInDeckChoice,

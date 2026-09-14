@@ -106,6 +106,69 @@
   width: min(820px, calc(100vw - 48px));
 }
 
+.extra-deck-attack-modal {
+  width: min(900px, calc(100vw - 48px));
+}
+
+.extra-deck-attack-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: start;
+  max-height: min(440px, 52vh);
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.extra-deck-attack-option {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(113, 233, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.72);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+}
+
+.extra-deck-attack-option:hover,
+.extra-deck-attack-option:focus-visible {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.2);
+}
+
+.extra-deck-attack-option .card-face {
+  width: 116px;
+}
+
+.extra-deck-attack-option small {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+.extra-deck-attack-text {
+  color: #bbdaf3;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.extra-deck-attack-empty {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px dashed rgba(255, 241, 124, 0.5);
+  border-radius: 8px;
+  color: #fff1a8;
+}
+
+.extra-deck-attack-actions {
+  justify-content: flex-end;
+}
+
 .inspect-deck-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));

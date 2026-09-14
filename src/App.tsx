@@ -629,7 +629,6 @@ function App() {
             `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
           )
         }}
-        onViewDeck={() => dialogs.openDeckList('player')}
         onPause={dialogs.openPause}
       />
 
@@ -725,6 +724,7 @@ function App() {
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        chooseOneModePlayable={pending.chooseOneModePlayable}
         effectConditionMet={pending.currentEffectConditionMet}
         effectSelectionError={pending.effectSelectionError}
         candidateLabels={Object.fromEntries(Object.values(match.game.players).flatMap((player) =>
@@ -766,6 +766,7 @@ function App() {
           ...pending.trashToDeckCandidates,
         ]}
         onToggleCandidate={pending.toggleEffectTarget}
+        onSetTargetAmount={pending.setEffectTargetAmount}
         restSupportCandidates={
           pending.restSupportAndDamageSupportCandidates
         }
@@ -846,6 +847,7 @@ function App() {
                   hpToTrashIds,
                   trashToDeckIds,
                   hpToHandIds,
+                  supportToTrashIds = [],
                 ) => {
                   match.dispatch(
                     {
@@ -859,6 +861,7 @@ function App() {
                       hpToTrashIds,
                       trashToDeckIds,
                       hpToHandIds,
+                      supportToTrashIds,
                     },
                     optionalCostAttackPrompt.resolution === 'ability'
                       ? '已支付技能 Then 費用。'

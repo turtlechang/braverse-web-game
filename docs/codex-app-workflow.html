@@ -436,9 +436,9 @@
 <body>
   <main class="page">
     <header class="hero">
-      <div class="eyebrow">目前版本：已上線</div>
+      <div class="eyebrow">工程工作流：2026-09-08 更新</div>
       <h1>Braverse Codex App 工作流</h1>
-      <p>白話講：你提出需求，Codex 先拆解與檢查規則，OpenCode Go 負責改檔，GitHub 自動檢查有沒有壞，Vercel 幫你做可點開的網頁成品與正式站。</p>
+      <p>你提出目標與授權範圍，Codex 直接完成實作、驗證與修正。日常使用 <code>$braverse-workflow</code>；OpenCode Go 備援已取消。只有另外授權發布時，才進入 PR、CI 與部署流程。</p>
       <div class="quick-links" aria-label="快速連結">
         <a class="button" href="https://braverse-web-game.vercel.app/">打開正式網站</a>
         <a class="button secondary" href="#daily">看平常怎麼用</a>
@@ -502,10 +502,10 @@
 
             <rect x="238" y="105" width="150" height="76" rx="18" fill="#eaf1ff" stroke="#bdd0ff"/>
             <text x="313" y="137" text-anchor="middle" fill="#1f4eb7" font-size="17" font-weight="800">Codex</text>
-            <text x="313" y="160" text-anchor="middle" fill="#657083" font-size="13">分析、拆任務</text>
+            <text x="313" y="160" text-anchor="middle" fill="#657083" font-size="13">確認目標與邊界</text>
 
             <rect x="434" y="105" width="150" height="76" rx="18" fill="#fff" stroke="#d9dfeb"/>
-            <text x="509" y="137" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">OpenCode Go</text>
+            <text x="509" y="137" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">Codex 實作</text>
             <text x="509" y="160" text-anchor="middle" fill="#657083" font-size="13">新增或修改檔案</text>
 
             <rect x="630" y="105" width="150" height="76" rx="18" fill="#e8f8f1" stroke="#b6ead4"/>
@@ -576,13 +576,13 @@
           </tr>
           <tr>
             <td data-label="角色"><strong>Codex</strong></td>
-            <td data-label="白話說明">像指揮官：先讀規則、拆任務、驗證結果、帶你走流程。</td>
-            <td data-label="不該做什麼">一般情況不直接改專案檔，除非你明確同意例外。</td>
+            <td data-label="白話說明">在已授權範圍內完成分析、實作、驗證、修正與交付。</td>
+            <td data-label="不該做什麼">遵守唯讀與核准清單；不擴大範圍、不自行提交或發布。</td>
           </tr>
           <tr>
-            <td data-label="角色"><strong>OpenCode Go</strong></td>
-            <td data-label="白話說明">像施工團隊：依 Codex 指令新增、修改檔案。</td>
-            <td data-label="不該做什麼">不擅自還原你的其他修改，不提交密鑰。</td>
+            <td data-label="角色"><strong>Codex 子代理（選用）</strong></td>
+            <td data-label="白話說明">只有獨立工作值得並行時使用；最多 2 個，由主代理整合驗證。</td>
+            <td data-label="不該做什麼">不與其他執行者同檔寫入、不遞迴派工、不自行提交。</td>
           </tr>
           <tr>
             <td data-label="角色"><strong>GitHub Actions</strong></td>
@@ -600,27 +600,27 @@
 
     <section id="daily" aria-labelledby="daily-title">
       <h2 id="daily-title">平常怎麼用</h2>
-      <p class="section-lead">你每天真正需要記住的是這五步。</p>
+      <p class="section-lead">入口：<code>$braverse-workflow</code>。只要提供目標、素材、邊界及完成標準；已知資訊不必重複填寫。</p>
       <div class="timeline">
         <article class="step">
           <strong>開新需求</strong>
           <span>跟 Codex 說你要改什麼。Codex 先確認目標、風險與完成標準。</span>
         </article>
         <article class="step">
-          <strong>開 PR</strong>
-          <span>改完後推分支，建立 Pull Request，不直接推 main。</span>
+          <strong>實作與驗證</strong>
+          <span>先重現或建立基線，再做最小修改與針對性驗證。</span>
         </article>
         <article class="step">
-          <strong>看兩個燈</strong>
-          <span>GitHub CI 要綠燈，Vercel Preview 要能打開。</span>
+          <strong>修正與回歸</strong>
+          <span>修正失敗，再核對受影響範圍；必要的正式 Browser 路徑不能省略。</span>
         </article>
         <article class="step">
-          <strong>看網頁成品</strong>
-          <span>在 Preview 直接玩或檢查畫面，確認不是只看程式碼。</span>
+          <strong>交付結果</strong>
+          <span>說明實際修改、驗證證據及未完成事項，不把受阻測試說成全綠。</span>
         </article>
         <article class="step">
-          <strong>合併 main</strong>
-          <span>確認後合併，Vercel 自動更新正式網站。</span>
+          <strong>需要才發布</strong>
+          <span>另外授權後才 commit、push、開 PR 或合併；再依當前 CI／部署設定驗證。</span>
         </article>
       </div>
     </section>
@@ -725,12 +725,12 @@
         <div class="check-item"><span>✓</span><div>合併後確認正式網站仍能載入。</div></div>
       </div>
       <div class="note">
-        一句話記法：<strong>先 PR，看綠燈，看 Preview，再合併。</strong>正式網站交給 Vercel 自動更新。
+        日常先完成授權範圍與必要驗證；只有獲得發布授權才進入 PR、Preview 與合併。綠燈不能取代受影響正式流程的驗收。
       </div>
     </section>
 
     <footer>
-      產生日期：2026-06-16。此頁是給人看的流程說明，不取代 <code>README.md</code>、<code>AGENTS.md</code> 或 GitHub Actions 設定檔。
+      產生日期：2026-06-16；工作流更新：2026-09-08。部署相關內容為流程參考，實際狀態須查當前設定。此頁不取代 <code>README.md</code>、<code>AGENTS.md</code> 或 GitHub Actions 設定檔。
     </footer>
   </main>
 </body>

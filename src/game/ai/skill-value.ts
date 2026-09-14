@@ -28,6 +28,8 @@ const OFFENSIVE_EFFECT_KINDS = new Set<CardEffect['kind']>([
   'disable-flip',
   'disable-block',
   'disable-traps',
+  'prevent-opponent-damage',
+  'prevent-opponent-hp-gain',
   'modify-attack-by-break-count',
   'multiply-attack-damage',
 ])

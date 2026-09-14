@@ -1,19 +1,15 @@
 ---
 name: develop-braverse
-description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實作、卡牌資料轉接、AI 決策、測試、瀏覽器驗證、程式碼審查與文件同步。處理功能開發、錯誤修正、重構、規則或卡牌效果、UI 互動、AI 對戰與測試補強時使用；任務拆分、模型路由與提交準備搭配 braverse-workflow。
+description: 實作或修復 Braverse 規則、卡牌、React UI 或 AI；依相關規格與受影響流程驗證，純工作流文件調整用 braverse-workflow。
 ---
 
 # Braverse 開發流程
 
-以專案根目錄的 `AGENTS.md` 為最高優先的本機工作規範。使用正體中文與台灣常用詞彙溝通，程式碼符號維持英文，commit 訊息使用英文。
+以專案根目錄 `AGENTS.md` 為本機規格與不可破壞契約入口，遵守更高優先指令及使用者本次授權；Skill 不擴張範圍或解除核准門檻。
 
 ## 1. 啟動工作
 
-1. 執行 `git status --short --branch`。
-2. 工作區乾淨時執行 `git pull --ff-only`；有既有修改時先執行 `git fetch` 確認遠端差異。
-3. 保留所有非本次任務的修改，不得擅自還原、覆蓋或納入提交。
-4. 讀取 `AGENTS.md`、相關原始碼、測試及文件，再決定改動範圍。
-5. 使用 `rg` 或 `rg --files` 搜尋符號、測試與文件；先理解現有公開 API 與資料流。
+沿用 `braverse-workflow` 已確認的契約及目前證據，確認 Git 狀態；不重做尚未失效的探索。只定位本次相關公開 API、資料流與測試，直接開始最小充分修改。
 
 ## 2. 依任務載入依據
 
@@ -26,7 +22,7 @@ description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實�
 - 修改 AI 或完整對戰流程：讀 `src/game/ai.ts`、相關規則模組與瀏覽器驗證腳本。
 - 決定驗證層級：讀 `../braverse-workflow/references/verification-levels.md`。
 - 準備文件或 Git 收尾：讀 [references/verification-and-git.md](references/verification-and-git.md)。
-- 需要模型分級、subagent 或外部備援：先讀 `../braverse-workflow/references/delegation-template.md`；確定使用 OpenCode Go 時才讀 [references/delegation.md](references/delegation.md)。
+- 確定需要獨立 Codex 子代理：讀 [派工契約](../braverse-workflow/references/delegation-template.md)。
 
 ## 3. 查核規則
 
@@ -53,15 +49,7 @@ description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實�
 
 ## 5. 驗證
 
-依 `../braverse-workflow/references/verification-levels.md` 選擇測試層級。最低提交門檻為：
-
-```powershell
-npm test
-npm run lint
-npm run build
-```
-
-AI 或完整對戰行為改變時，另執行 `npm run test:ai:browser`。付款或 UI 互動改變時，先建置，再用瀏覽器驗證合法與不合法路徑。修正所有由本次變更造成的失敗，不以特製種子或硬編碼資料掩蓋問題。
+依變更類型選擇必要測試與正式 Browser 驗收；提交最低門檻維持根目錄 AGENTS 的要求。
 
 官方卡文條件、代價、目標或 `Then` 的轉接，除單元測試外，必須確認 strict
 contract 沒有遺失 runtime evidence；Browser 負向 fixture 要保留其他支付／目標
@@ -70,9 +58,4 @@ contract 沒有遺失 runtime evidence；Browser 負向 fixture 要保留其他�
 
 ## 6. 收尾
 
-1. 檢查完整 diff、`git diff --check` 與 `git status --short`。
-2. 排除 `node_modules/`、`dist/`、`test-results/`、密鑰與無關檔案。
-3. 功能完成或準備 commit 時，更新 `README.md` 的「開發背景」、「目前進度」與「下一步計畫」。
-4. `README.md` 的「更新日誌」固定使用「日期 / 概要」Markdown 表格；同日期可合併為一列，概要保持精簡。
-5. 測試數量或瀏覽器驗證範圍改變時，同步更新 `AGENTS.md` 與 `README.md`。
-6. 僅在使用者要求時建立 commit；使用英文 commit 訊息，並只納入本次任務檔案。
+按 [驗證、文件與 Git](references/verification-and-git.md) 檢查最終差異、文件同步與完成條件。保留命令、環境、結束碼及結果；明確揭露正式流程尚未驗證的部分，不以 demo 或 contract verified 代替完整驗收。

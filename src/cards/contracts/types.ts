@@ -135,10 +135,12 @@ export interface RuntimeCardEvidence {
   flip?: {
     cost?: AbilityCost
     effects?: CardEffect[]
+    attachedHpAlternateTarget?: EffectTargetSelector
   }
   ability?: {
     cost?: AbilityCost
     restSource?: boolean
+    oncePerTurn?: boolean
     sourceEnergy?: EnergyCost
     effects?: CardEffect[]
   }

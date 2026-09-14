@@ -51,8 +51,20 @@ import type { AiDecision, AiLevel } from './types'
  * 規則必須等本次戰鬥收尾後才能結算；補位任務若已排入，仍要等這條效果鏈
  * 完成後才可執行。AI 在 pendingBattle 期間仍不得搶先結算（規則層會拒絕）。
  */
-const hasBlockingAbilityPending = (state: GameState): boolean =>
-  Boolean(
+const hasBlockingAbilityPending = (state: GameState): boolean => {
+  // 昏厥觸發的 Then 可能在攻擊後傷害序列建立前就已排入佇列。若序列
+  // 已完成目前目標且沒有下一個目標，這個延續效果必須先交給其控制者；
+  // 否則 battle handler 會無限重送 resolve-next-damage，而 pending ability
+  // 永遠拿不到控制權。其他仍有目標的序列與外層 ability continuation
+  // 仍維持原本的阻擋順序。
+  const canResolveCompletedFaintContinuation = Boolean(
+    state.pendingBattle?.effectDamageSequence?.continuation === 'attack-effect' &&
+      state.pendingBattle.effectDamageSequence.afterCurrentDamageResolved &&
+      state.pendingBattle.effectDamageSequence.remainingTargetInstanceIds.length === 0 &&
+      state.pendingAbilityEffect?.isFaintEffectContinuation,
+  )
+
+  return Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
       hasActiveEffectOrder(state) ||
@@ -64,17 +76,20 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
       state.pendingInspectDeck ||
       state.pendingRevealTopDeck ||
       state.pendingOptionalCostAttack ||
+      state.pendingExtraDeckAttack ||
       state.pendingDrawUpTo ||
       state.pendingStageTrigger ||
       // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
       // 不能在中途搶先執行同一條 pendingAbilityEffect。
-      state.pendingBattle?.effectDamageSequence ||
+      (state.pendingBattle?.effectDamageSequence &&
+        !canResolveCompletedFaintContinuation) ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       state.pendingAbilityEffect?.pendingReorderHp ||
       (state.pendingBattle &&
         state.pendingAbilityEffect?.trigger === 'attacker-faint'),
   )
+}
 
 export interface AiPendingDecisionOptions {
   level?: AiLevel
@@ -117,6 +132,13 @@ export const handleAiPendingDecision = (
   const pendingAbility = state.pendingAbilityEffect
   if (pendingAbility && !hasBlockingAbilityPending(state)) {
     if (pendingAbility.playerId !== playerId) {
+      // 攻擊後效果屬於攻擊者，必須先由 battle handler 結算；被擊倒餅乾
+      // 的延遲效果可能同時掛在防守者身上，不能用「等待效果持有者」的
+      // idle 決策遮住這個更高優先級的戰鬥階段。
+      if (
+        state.pendingBattle?.stage === 'attack-effect' &&
+        state.pendingBattle.attackerPlayerId === playerId
+      ) return null
       return {
         state,
         action: 'idle',
@@ -209,6 +231,35 @@ export const handleAiPendingDecision = (
       action: 'idle',
       description: `${state.players[playerId].name}結算${pendingAbility.sourceCardName ?? '卡牌'}的效果。`,
     }, 'effect-target', pendingAbility.sourceInstanceId, effect)
+  }
+
+  if (pendingDecision?.kind === 'extra-deck-attack') {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇 EXTRA 攻擊效果。`,
+      }
+    }
+    const selectedId = pendingDecision.candidateIds
+      .slice()
+      .sort((left, right) => left.localeCompare(right))[0]
+    return withPendingReason({
+      state: applyGameCommand(state, selectedId
+        ? {
+            kind: 'resolve-extra-deck-attack',
+            playerId,
+            extraDeckInstanceId: selectedId,
+          }
+        : {
+            kind: 'resolve-extra-deck-attack',
+            playerId,
+          }),
+      action: 'resolve-extra-deck-attack',
+      description: selectedId
+        ? `${state.players[playerId].name}選擇 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`
+        : `${state.players[playerId].name}略過 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`,
+    }, 'extra-deck-attack', pendingDecision.sourceInstanceId)
   }
 
   if (pendingDecision?.kind === 'effect-order') {
@@ -473,8 +524,10 @@ export const handleAiPendingDecision = (
     }
     const hand = state.players[playerId].hand.filter(
       (card) =>
-        pendingDecision.energyColor === undefined ||
-        card.energyColor === pendingDecision.energyColor,
+        (pendingDecision.energyColor === undefined ||
+          card.energyColor === pendingDecision.energyColor) &&
+        (!pendingDecision.cookieOnly || card.type === 'cookie') &&
+        (!pendingDecision.hasFlip || Boolean(card.flip)),
     )
     const discardedCards = universal.enabled
       ? universal.orderCostIds(
@@ -483,11 +536,15 @@ export const handleAiPendingDecision = (
         ).map((instanceId) => hand.find((card) => card.instanceId === instanceId)!)
       : hand.slice(0, pendingDecision.drawEqualDiscarded ? hand.length : pendingDecision.count)
     const discardIds = discardedCards.map((card) => card.instanceId)
+    const placementByCardId = pendingDecision.destination === 'deck-top-or-bottom'
+      ? Object.fromEntries(discardIds.map((id) => [id, 'top' as const]))
+      : undefined
     return withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-opponent-hand-discard',
         playerId,
         cardIds: discardIds,
+        ...(placementByCardId ? { placementByCardId } : {}),
       }),
       action: 'idle',
       revealedCards: discardedCards,
@@ -604,6 +661,12 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
+    const discardHandAmount = pendingDecision.cost.discardHand ?? 0
+    const discardHandCandidateIds = getDiscardHandCostCandidates(
+      pendingDecision.cost,
+      hand,
+      pendingDecision.sourceInstanceId,
+    ).map((card) => card.instanceId)
     const effectiveEnergyCost = getRemainingEnergyCost(
       pendingDecision.cost.energy ?? pendingDecision.cost,
       pendingDecision.sourceEnergy,
@@ -616,11 +679,29 @@ export const handleAiPendingDecision = (
           )!)
       : supports
     const paymentIds = selectEnergyPayment(effectiveEnergyCost, orderedSupports)
+    const supportToTrashAmount = pendingDecision.cost.supportToTrash ?? 0
+    const supportToTrashCandidateIds = state.players[playerId].supportArea
+      .filter(
+        (support) =>
+          !paymentIds?.includes(support.card.instanceId) &&
+          (pendingDecision.cost.supportToTrashKeyword === undefined ||
+            support.card.keywords?.includes(
+              pendingDecision.cost.supportToTrashKeyword,
+            )),
+      )
+      .map((support) => support.card.instanceId)
+    const supportToTrashIds = universal.enabled
+      ? universal.orderCostIds(
+          supportToTrashCandidateIds,
+          supportToTrashAmount,
+        )
+      : supportToTrashCandidateIds.slice(0, supportToTrashAmount)
     const supportToHandAmount = pendingDecision.cost.supportToHand ?? 0
     const supportToHandCandidateIds = state.players[playerId].supportArea
       .filter(
         (support) =>
           !paymentIds?.includes(support.card.instanceId) &&
+          !supportToTrashIds.includes(support.card.instanceId) &&
           isSupportToHandCostCandidate(pendingDecision.cost, support),
       )
       .map((support) => support.card.instanceId)
@@ -628,8 +709,9 @@ export const handleAiPendingDecision = (
       ? universal.orderCostIds(supportToHandCandidateIds, supportToHandAmount)
       : supportToHandCandidateIds.slice(0, supportToHandAmount)
     const canPay =
-      hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
+      discardHandCandidateIds.length >= discardHandAmount &&
       Boolean(paymentIds) &&
+      supportToTrashIds.length >= supportToTrashAmount &&
       supportToHandIds.length >= supportToHandAmount
     const hpToTrashCandidateIds = pendingDecision.cost.hpToTrash
       ? getHpToTrashCostCandidates(
@@ -715,12 +797,10 @@ export const handleAiPendingDecision = (
     if (canResolveOptionalEffect) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
-            hand.map((card) => card.instanceId),
-            pendingDecision.cost.discardHand ?? 0,
+            discardHandCandidateIds,
+            discardHandAmount,
           )
-        : hand
-            .slice(0, pendingDecision.cost.discardHand ?? 0)
-            .map((card) => card.instanceId)
+        : discardHandCandidateIds.slice(0, discardHandAmount)
       const decision = withPendingReason({
         state: applyGameCommand(state, {
           kind: 'resolve-optional-cost-attack',
@@ -730,6 +810,7 @@ export const handleAiPendingDecision = (
           targetIds,
           paymentIds: paymentIds ?? [],
           supportToHandIds,
+          supportToTrashIds,
           hpToTrashIds,
           trashToDeckIds,
           hpToHandIds,

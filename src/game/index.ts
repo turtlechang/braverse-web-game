@@ -20,6 +20,7 @@ export {
   executeCardEffect,
   getAttackDamageAgainst,
   getEffectDamageAmount,
+  isOpponentDamagePrevented,
   getBreakCount,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
@@ -34,6 +35,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getEffectTargetSelectionLimits,
   getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
@@ -46,6 +48,8 @@ export {
   type AttackModifierBreakdownEntry,
   isEffectConditionMet,
   isEffectTargeted,
+  hasFixedModifierTargets,
+  getFixedModifierTargetIds,
   isEffectUntargeted,
   requiresEffectCardSelection,
   requiresTargetSelection,
@@ -57,6 +61,7 @@ export {
   validateBreakToTrashTargets,
   expandChooseOne,
   expandChooseOneSequence,
+  isChooseOneModePlayable,
   placeHandCardOnHp,
 } from './effects'
 export {
@@ -73,6 +78,7 @@ export { createSeededRandom, createSeededShuffle, getCookieEffectiveHp } from '.
 export {
   EXTRA_DECK_MAX_CARDS,
   EXTRA_DECK_MAX_COPIES_PER_CARD,
+  getExtraDeckAttackCandidates,
   reorderExtraDeck,
   validateExtraDeck,
 } from './extra-deck'
@@ -166,6 +172,16 @@ export {
   createAiPresetBs7PurpleArenaDeck,
   createAiPresetBs7RedArenaDeck,
   createAiPresetBs7YellowArenaDeck,
+  createAiPresetBs9BlueDeceitDeck,
+  createAiPresetBs9BlueExtraDeck,
+  createAiPresetBs9GreenSupportDeck,
+  createAiPresetBs9GreenExtraDeck,
+  createAiPresetBs9PurpleMillDeck,
+  createAiPresetBs9PurpleExtraDeck,
+  createAiPresetBs9RedTruthDeck,
+  createAiPresetBs9RedExtraDeck,
+  createAiPresetBs9YellowProphecyDeck,
+  createAiPresetBs9YellowExtraDeck,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
@@ -178,7 +194,10 @@ export {
   BS6_AI_PRESET_DECK_CHOICES,
   BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES,
   BS7_ARENA_AI_PRESET_DECK_CHOICES,
+  BS9_AI_PRESET_DECK_CHOICES,
+  BS9_EXTRA_DECK_RECIPES,
   DECK_CREATORS,
+  EXTRA_DECK_CREATORS,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_DECK_RECIPES,
   OFFICIAL_GREEN_STARTER_DECK,
@@ -186,6 +205,7 @@ export {
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_STARTER_DECK_RED,
   OFFICIAL_YELLOW_STARTER_DECK,
+  createExtraDeckForChoice,
 } from './starter-deck'
 export type {
   AiPresetDeckChoice,
@@ -195,6 +215,7 @@ export type {
   Bs6AiPresetDeckChoice,
   Bs6CompetitiveAiPresetDeckChoice,
   Bs7ArenaAiPresetDeckChoice,
+  Bs9AiPresetDeckChoice,
   BuiltInDeckChoice,
   DeckChoice,
   StarterDeckChoice,
@@ -287,6 +308,7 @@ export type {
 export {
   canSpecialPlayCookie,
   canPlayExtraDeckCookie,
+  getExtraDeckCookieUnavailableReason,
   attackCookie,
   deployCookie,
   playExtraDeckCookie,
@@ -331,6 +353,7 @@ export {
   getDiscardHandCostCandidates,
   getFaintTriggeredCost,
   getCookieSkillCost,
+  getHandCountAfterFixedSkillCost,
   getCookieSkillEffects,
   isSupportToHandCostCandidate,
   hasCookieOnPlayEffects,
@@ -429,6 +452,7 @@ export type {
   OpponentRandomDiscardEffect,
   OpponentTrashCountAtLeastCondition,
   PendingFaintEffect,
+  PendingExtraDeckAttack,
   PendingOpponentHandDiscard,
   PlayerId,
   PlayerSetup,
@@ -478,6 +502,7 @@ export type {
   OptionalCostAttackDecision,
   DrawUpToDecision,
   EffectOrderDecision,
+  ExtraDeckAttackDecision,
   StageTriggerDecision,
   PendingDecision,
   PendingDecisionCommand,
@@ -485,6 +510,7 @@ export type {
   ResolveEffectOrderCommand,
   ResolveFaintEffectCommand,
   ResolveInspectDeckCommand,
+  ResolveExtraDeckAttackCommand,
   ResolveOpponentHandDiscardCommand,
   ResolveOptionalCostAttackCommand,
   ResolveDrawUpToCommand,
@@ -560,6 +586,7 @@ export type {
   AiDecision,
   AiDecisionReason,
   AiEffectSelection,
+  AiExperienceProfileByPlayer,
   AiLevel,
   AiMatchMetrics,
   AiMatchResult,
@@ -574,6 +601,20 @@ export type {
   EndInfo,
   BehaviorMetrics,
 } from './ai/types'
+export {
+  DEFAULT_LV5_TOURNAMENT_EXPERIENCE_PROFILE,
+  createAiTournamentExperienceAccumulator,
+  finalizeAiTournamentExperience,
+  recordAiTournamentMatchExperience,
+  scoreTournamentExperience,
+} from './ai/strategy/tournament-experience'
+export type {
+  AiDecisionProfile,
+  AiTournamentExperienceAccumulator,
+  AiTournamentExperienceProfile,
+  TournamentExperienceAdjustment,
+  TournamentExperienceSource,
+} from './ai/strategy/tournament-experience'
 export {
   evaluatePlayerView,
   evaluatePlayerViewBreakdown,
@@ -600,10 +641,14 @@ export type {
 } from './ai/strategy/endgame-survival'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
 export {
+  classifyCrossPlayWinner,
   createCustomDeckMatch,
+  MAX_TOURNAMENT_ACTIONS,
   runSwissTournament,
+  validateTournamentMaxActions,
 } from './tournament'
 export type {
+  CrossPlayStrategy,
   SwissColorSummary,
   SwissMatchRecord,
   SwissRosterDeck,

@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CardEffect, CookieCard, EnergyColor, GameCard } from '../../game'
 import { createCardCheckDemoState } from '../../game/demo'
+import { applyGameCommand, getEffectSelectionCandidates } from '../../game'
 import { EffectPanel } from './EffectPanel'
 import type { PendingEffect } from './effectUiTypes'
 
@@ -15,6 +16,63 @@ Element.prototype.scrollIntoView = scrollIntoViewMock
 
 afterEach(() => {
   scrollIntoViewMock.mockReset()
+})
+
+it('BS9-017 shows all Ancient recipients as fixed and offers no partial skip', async () => {
+  const effect: CardEffect = { kind: 'modify-damage-received', amount: 0,
+    duration: 'opponent-next-turn', damageType: 'all', minimumDamage: 3, setDamageTo: 2,
+    target: { side: 'self', min: 0, max: 4, keyword: 'ancient', allMatching: true } }
+  const cards = [createCookieCard(91), createCookieCard(92)]
+  const pending = createPendingEffect({ effects: [effect], sourceKind: 'attack', skillActivated: true,
+    selectedTargetIds: cards.map(card => card.instanceId) })
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<EffectPanel pendingEffect={pending} currentEffect={effect}
+      effectHistory={[]} candidateCards={cards} onConfirm={vi.fn()} onSkip={vi.fn()} />))
+    expect(container.textContent).toContain('固定套用 2 張餅乾，不需選取。')
+    expect(container.textContent).not.toMatch(/最多 4|傷害 \+0|略過/)
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>('.effect-candidates-target button')]
+    expect(buttons).toHaveLength(2)
+    expect(buttons.every(button => button.disabled)).toBe(true)
+    expect(container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')?.disabled).toBe(false)
+  } finally { await act(() => root.unmount()) }
+})
+
+it('BS9-043 presents equipped Soul Jam cards as optional card-level targets', async () => {
+  const effect: CardEffect = {
+    kind: 'equipped-to-hp',
+    side: 'opponent',
+    max: 1,
+    keyword: 'soul-jam',
+    faceUp: true,
+  }
+  const soulJam = { ...createItemCard(943), name: 'Soul Jam: Light of Destruction' }
+  const pending = createPendingEffect({ effects: [effect], skillActivated: true })
+  const onToggleCandidate = vi.fn()
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        candidateCards={[soulJam]}
+        onToggleCandidate={onToggleCandidate}
+      />,
+    ))
+    expect(container.textContent).toContain('已裝備的 [Soul Jam]')
+    const targets = container.querySelectorAll<HTMLButtonElement>('.effect-candidates-target button')
+    expect(targets).toHaveLength(1)
+    expect((container.querySelector('.effect-panel-primary-action') as HTMLButtonElement).disabled).toBe(false)
+    await act(() => targets[0]!.click())
+    expect(onToggleCandidate).toHaveBeenCalledWith(soulJam.instanceId)
+  } finally {
+    await act(() => root.unmount())
+  }
 })
 
 describe('BS6-039 compound target UI', () => {
@@ -271,7 +329,110 @@ describe('Break area selection costs', () => {
   })
 })
 
+describe('BS9-010 blind hand selector', () => {
+  it('shows anonymous card backs and submits a slot without disclosing hand identities', async () => {
+    let game = createCardCheckDemoState('BS9-010')
+    const sourceId = game.players['player-one'].extraDeck![0].instanceId
+    game = applyGameCommand(game, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: sourceId })
+    game = applyGameCommand(game, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: sourceId,
+      trigger: 'on-play', paymentIds: [] })
+    const effect = game.pendingAbilityEffect!.effects[0]
+    const candidates = getEffectSelectionCandidates(game, { sourcePlayerId: 'player-one', sourceInstanceId: sourceId }, effect)
+    const toggle = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(<EffectPanel pendingEffect={createPendingEffect({ effects: [effect], skillActivated: true })}
+        currentEffect={effect} effectHistory={[]} onConfirm={() => undefined} onSkip={() => undefined}
+        candidateCards={candidates} onToggleCandidate={toggle} />))
+      expect(container.textContent).toContain('對手手牌 1（未公開）')
+      expect(container.textContent).toContain('對手手牌 2（未公開）')
+      expect(container.textContent).toContain('最下方')
+      for (const card of game.players['player-two'].hand) {
+        expect(container.innerHTML).not.toContain(card.name)
+        expect(container.innerHTML).not.toContain(card.instanceId)
+        if (card.imageUrl) expect(container.innerHTML).not.toContain(card.imageUrl)
+      }
+      const buttons = container.querySelectorAll<HTMLButtonElement>('.effect-candidates-target button')
+      expect(buttons).toHaveLength(2)
+      await act(() => buttons[1].click())
+      expect(toggle).toHaveBeenCalledWith('player-two-hidden-hand-1')
+      expect(container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.disabled).toBe(false)
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+})
+
 describe('EffectPanel', () => {
+  it('shows hand-to-battle candidates and keeps the optional zero-target path', async () => {
+    const initial = createCardCheckDemoState('BS8-078')
+    const source = initial.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-078',
+    )!
+    const candidate = initial.players['player-one'].hand.find(
+      (card) => card.instanceId === 'BS8-blue-lv2-hand',
+    )!
+    const effect: CardEffect = {
+      kind: 'hand-to-battle',
+      amount: 1,
+      energyColor: 'blue',
+      minLevel: 2,
+      optional: true,
+      gainHp: 1,
+    }
+    const onConfirm = vi.fn()
+    const onToggleCandidate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const render = async (selectedTargetIds: string[] = []) => {
+      await act(() =>
+        root.render(
+          <EffectPanel
+            pendingEffect={createPendingEffect({
+              sourceCard: source.card,
+              effects: [effect],
+              selectedTargetIds,
+              skillActivated: true,
+            })}
+            currentEffect={effect}
+            effectHistory={[]}
+            onConfirm={onConfirm}
+            onSkip={() => undefined}
+            candidateCards={[candidate]}
+            onToggleCandidate={onToggleCandidate}
+          />,
+        ),
+      )
+    }
+
+    try {
+      await render()
+      expect(container.textContent).toContain('目標')
+      expect(container.textContent).toContain('Kumiho Cookie')
+      expect(
+        (container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+          .disabled,
+      ).toBe(false)
+
+      await act(() =>
+        (container.querySelector(
+          '.effect-candidates-target button',
+        ) as HTMLButtonElement).click(),
+      )
+      expect(onToggleCandidate).toHaveBeenCalledOnce()
+      expect(onToggleCandidate).toHaveBeenCalledWith(candidate.instanceId)
+
+      await render([candidate.instanceId])
+      await act(() =>
+        (container.querySelector('.effect-panel-primary-action') as HTMLButtonElement).click(),
+      )
+      expect(onConfirm).toHaveBeenCalledOnce()
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+
   it('allows confirmation when a mandatory card-selection effect has no legal candidates', async () => {
     const onConfirm = vi.fn()
     const effect: CardEffect = {
@@ -1760,6 +1921,42 @@ describe('EffectPanel', () => {
       />,
     ))
     expect(container.textContent).toContain('棄置 1 張 HP 卡')
+    await act(() => root.unmount())
+  })
+
+  it('disables choose-one modes that the rules layer marks as unpayable', async () => {
+    const chooseOneEffect: CardEffect = {
+      kind: 'choose-one',
+      modes: [
+        { label: 'Discard a FLIP Cookie', effects: [{ kind: 'discard-hand', count: 1, cookieOnly: true, hasFlip: true }] },
+        { label: 'Trash 1 HP', effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true } }] },
+      ],
+    }
+    const pending = createPendingEffect({
+      effects: [chooseOneEffect],
+      skillActivated: true,
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={chooseOneEffect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        onChooseMode={() => undefined}
+        chooseOneModePlayable={[false, true]}
+      />,
+    ))
+
+    const modes = container.querySelectorAll<HTMLButtonElement>('.effect-candidates-choice button')
+    expect(modes).toHaveLength(2)
+    expect(modes[0].disabled).toBe(true)
+    expect(modes[0].textContent).toContain('目前無法支付')
+    expect(modes[1].disabled).toBe(false)
+
     await act(() => root.unmount())
   })
 

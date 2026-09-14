@@ -1,0 +1,26 @@
+{
+  "name": "BS9 紅｜Truth Aggro",
+  "entries": [
+    { "cardNumber": "BS9-001", "count": 4 },
+    { "cardNumber": "BS9-003", "count": 4 },
+    { "cardNumber": "BS9-006", "count": 4 },
+    { "cardNumber": "BS9-009", "count": 4 },
+    { "cardNumber": "BS9-011", "count": 4 },
+    { "cardNumber": "BS9-012", "count": 4 },
+    { "cardNumber": "BS9-013", "count": 4 },
+    { "cardNumber": "BS9-015", "count": 4 },
+    { "cardNumber": "BS9-016", "count": 4 },
+    { "cardNumber": "BS9-017", "count": 4 },
+    { "cardNumber": "BS9-018", "count": 4 },
+    { "cardNumber": "BS9-019", "count": 2 },
+    { "cardNumber": "BS9-020", "count": 2 },
+    { "cardNumber": "BS9-021", "count": 2 },
+    { "cardNumber": "BS9-022", "count": 2 },
+    { "cardNumber": "BS9-023", "count": 4 },
+    { "cardNumber": "BS9-004", "count": 4 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS9-010", "count": 4 }
+  ],
+  "format": "standard"
+}

@@ -7,6 +7,7 @@ import type {
   GameState,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
+  PlayerId,
   PlayerState,
 } from '../types'
 import { isBlockedByOpponentEffectProtection, isEffectConditionMet } from './targeting'
@@ -68,8 +69,11 @@ export const getEffectDamageAmount = (
   state: GameState,
   context: EffectContext,
   amount: number,
+  targetInstanceId?: string,
 ): number => {
   if (amount <= 0) return amount
+
+  let adjustedAmount = amount
 
   const sourceOwner = Object.values(state.players).find((player) =>
     player.battleArea.some(
@@ -79,9 +83,8 @@ export const getEffectDamageAmount = (
   const sourceCookie = sourceOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === context.sourceInstanceId,
   )
-  if (!sourceOwner || !sourceCookie) return amount
-
-  const bonus = Object.values(state.players).reduce((total, auraOwner) => {
+  if (sourceOwner && sourceCookie) {
+    const bonus = Object.values(state.players).reduce((total, auraOwner) => {
     const auraTotal = auraOwner.battleArea.reduce((subtotal, auraSource) => {
       const skill = auraSource.card.skill
       if (skill?.trigger !== 'passive' && skill?.trigger !== 'block') return subtotal
@@ -116,9 +119,23 @@ export const getEffectDamageAmount = (
       }, 0)
     }, 0)
     return total + auraTotal
-  }, 0)
+    }, 0)
 
-  return Math.max(0, amount + bonus)
+    adjustedAmount += bonus
+  }
+
+  return targetInstanceId === undefined
+    ? Math.max(0, adjustedAmount)
+    : Math.max(
+        0,
+        applyAllDamageReceivedModifiers(
+          state,
+          targetInstanceId,
+          adjustedAmount,
+          'effect',
+          context.sourcePlayerId,
+        ),
+      )
 }
 
 const getCookieByInstanceId = (
@@ -131,12 +148,165 @@ const getCookieByInstanceId = (
 
 const isConditionalModifierActive = (
   state: GameState,
-  modifier: { targetInstanceId: string; maxTargetRemainingHp?: number },
+  modifier: {
+    targetInstanceId: string
+    maxTargetRemainingHp?: number
+    condition?: import('../types').EffectCondition
+    sourceInstanceId?: string
+  },
 ): boolean => {
+  if (modifier.condition) {
+    const sourceOwner = Object.values(state.players).find((player) => {
+      const cards: GameCard[] = [
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.equippedCards ?? []),
+        ...player.supportArea.map((support) => support.card),
+        ...player.hand,
+        ...player.breakArea,
+        ...player.discardPile,
+        ...(player.stage ? [player.stage.card] : []),
+      ]
+      return modifier.sourceInstanceId !== undefined && cards.some((card) => card.instanceId === modifier.sourceInstanceId)
+    })
+    if (!sourceOwner || !modifier.sourceInstanceId) return false
+    if (!isEffectConditionMet(state, {
+      sourcePlayerId: sourceOwner.id,
+      sourceInstanceId: modifier.sourceInstanceId,
+    }, { kind: 'damage', amount: 0, target: { side: 'self', min: 0, max: 0 }, condition: modifier.condition })) return false
+  }
   if (modifier.maxTargetRemainingHp === undefined) return true
   const target = getCookieByInstanceId(state, modifier.targetInstanceId)
   return target !== undefined && getCookieEffectiveHp(target) <= modifier.maxTargetRemainingHp
 }
+
+const applyDamageReceivedModifier = (
+  damage: number,
+  modifier: Pick<ModifyDamageReceivedEffect, 'amount' | 'minimumDamage' | 'setDamageTo'>,
+): number => {
+  const adjustedDamage = Math.max(0, damage + modifier.amount)
+  return modifier.minimumDamage !== undefined &&
+    modifier.setDamageTo !== undefined &&
+    adjustedDamage >= modifier.minimumDamage
+    ? modifier.setDamageTo
+    : adjustedDamage
+}
+
+const isDamageType = (
+  modifier: Pick<ModifyDamageReceivedEffect, 'damageType'>,
+  damageType: 'attack' | 'effect',
+): boolean => {
+  const modifierType = modifier.damageType ?? 'attack'
+  return modifierType === 'all' || modifierType === damageType
+}
+
+/**
+ * BS9-018 is a continuous owner-wide shield.  It only applies while the
+ * owner's turn is active, and only when the damage source belongs to the
+ * opponent; damage caused by the owner must still resolve normally.
+ */
+export const isOpponentDamagePrevented = (
+  state: GameState,
+  targetInstanceId: string,
+  damageSourcePlayerId: PlayerId,
+): boolean => {
+  const owner = Object.values(state.players).find((player) =>
+    player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
+  )
+  if (!owner || state.activePlayerId !== owner.id || damageSourcePlayerId === owner.id) {
+    return false
+  }
+
+  return owner.battleArea.some((cookie) => {
+    const skill = cookie.card.skill
+    if (skill?.trigger !== 'passive') return false
+    if (skill.yourTurn && state.activePlayerId !== owner.id) return false
+    return [
+      ...(skill.effects ?? []),
+      ...(skill.passiveEffects ?? []),
+    ].some((effect) => effect.kind === 'prevent-opponent-damage')
+  })
+}
+
+const applyStoredDamageReceivedModifiers = (
+  state: GameState,
+  targetInstanceId: string,
+  damage: number,
+  damageType: 'attack' | 'effect',
+): number => state.damageReceivedModifiers
+  .filter(
+    (modifier) =>
+      modifier.targetInstanceId === targetInstanceId &&
+      isDamageType(modifier, damageType) &&
+      isConditionalModifierActive(state, modifier),
+  )
+  .reduce((currentDamage, modifier) =>
+    applyDamageReceivedModifier(currentDamage, modifier), damage)
+
+const applyPassiveDamageReceivedModifiers = (
+  state: GameState,
+  targetInstanceId: string,
+  damage: number,
+  damageType: 'attack' | 'effect',
+  damageSourcePlayerId?: PlayerId,
+): number => {
+  const owner = Object.values(state.players).find((player) =>
+    player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
+  )
+  const target = owner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
+  const skill = target?.card.skill
+  if (
+    !owner ||
+    !target ||
+    (skill?.trigger !== 'passive' && skill?.trigger !== 'block')
+  ) {
+    // BS9-018 applies from a Cookie's passive to every Cookie its owner
+    // controls.  It is checked here rather than stored as per-target state so
+    // that the protection follows the Hero while it remains in battle.
+    if (!owner || !target) return damage
+  }
+
+  if (
+    damageSourcePlayerId !== undefined &&
+    isOpponentDamagePrevented(state, targetInstanceId, damageSourcePlayerId)
+  ) {
+    return 0
+  }
+
+  if (!skill || (skill.trigger !== 'passive' && skill.trigger !== 'block')) {
+    return damage
+  }
+
+  return skill.effects
+    .filter(
+      (effect): effect is ModifyDamageReceivedEffect =>
+        effect.kind === 'modify-damage-received' &&
+        effect.target.sourceOnly === true &&
+        isDamageType(effect, damageType) &&
+        isEffectConditionMet(
+          state,
+          { sourcePlayerId: owner.id, sourceInstanceId: targetInstanceId },
+          effect,
+        ),
+    )
+    .reduce((currentDamage, effect) =>
+      applyDamageReceivedModifier(currentDamage, effect), damage)
+}
+
+const applyAllDamageReceivedModifiers = (
+  state: GameState,
+  targetInstanceId: string,
+  damage: number,
+  damageType: 'attack' | 'effect',
+  damageSourcePlayerId?: PlayerId,
+): number => applyPassiveDamageReceivedModifiers(
+  state,
+  targetInstanceId,
+  applyStoredDamageReceivedModifiers(state, targetInstanceId, damage, damageType),
+  damageType,
+  damageSourcePlayerId,
+)
 
 export const getEffectiveAttack = (
   state: GameState,
@@ -332,63 +502,34 @@ export const getAttackDamageAgainst = (
 ): number => {
   const baseDamage = getEffectiveAttack(state, attackerInstanceId, targetInstanceId)
 
-  const modifiedDamage = state.damageReceivedModifiers
-    .filter(
-      (modifier) =>
-        modifier.targetInstanceId === targetInstanceId &&
-        isConditionalModifierActive(state, modifier),
-    )
-    .reduce((damage, modifier) => {
-      const adjustedDamage = Math.max(0, damage + modifier.amount)
+  const attackerOwner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === attackerInstanceId,
+    ),
+  )
 
-      return modifier.minimumDamage !== undefined &&
-        modifier.setDamageTo !== undefined &&
-        adjustedDamage >= modifier.minimumDamage
-        ? modifier.setDamageTo
-        : adjustedDamage
-    }, baseDamage)
+  const modifiedDamage = applyStoredDamageReceivedModifiers(
+    state,
+    targetInstanceId,
+    baseDamage,
+    'attack',
+  )
   const defenderOwner = Object.values(state.players).find((player) =>
     player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
   )
   const defender = defenderOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === targetInstanceId,
   )
-  const damageAfterDefenderModifiers =
-    !defender ||
-    !defenderOwner ||
-    (defender.card.skill?.trigger !== 'passive' &&
-      defender.card.skill?.trigger !== 'block')
-      ? modifiedDamage
-      : defender.card.skill.effects
-          .filter(
-            (effect): effect is ModifyDamageReceivedEffect =>
-              effect.kind === 'modify-damage-received' &&
-              effect.target.sourceOnly === true &&
-              isEffectConditionMet(
-                state,
-                {
-                  sourcePlayerId: defenderOwner.id,
-                  sourceInstanceId: targetInstanceId,
-                },
-                effect,
-              ),
-          )
-          .reduce((damage, effect) => {
-            if (
-              effect.minimumDamage !== undefined &&
-              effect.setDamageTo !== undefined &&
-              damage >= effect.minimumDamage
-            ) {
-              return effect.setDamageTo
-            }
-            return Math.max(0, damage + effect.amount)
-          }, modifiedDamage)
+  const damageAfterDefenderModifiers = defender && defenderOwner
+    ? applyPassiveDamageReceivedModifiers(
+        state,
+        targetInstanceId,
+        modifiedDamage,
+        'attack',
+        attackerOwner?.id,
+      )
+    : modifiedDamage
 
-  const attackerOwner = Object.values(state.players).find((player) =>
-    player.battleArea.some(
-      (cookie) => cookie.card.instanceId === attackerInstanceId,
-    ),
-  )
   const attacker = attackerOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === attackerInstanceId,
   )

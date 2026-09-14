@@ -6,6 +6,7 @@ import {
   isEffectConditionMet,
   requiresEffectCardSelection,
 } from './effects'
+import { isChooseOneModePlayable } from './effects/choose-one'
 import { hasBlockingPending } from './pending'
 import type {
   CookieCard,
@@ -177,6 +178,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
       [activationState.activePlayerId]: 0,
       [getOpponentId(activationState.activePlayerId)]: 0,
     } as Record<PlayerId, number>,
+    cookiesFaintedThisTurnDetails: {},
     supportCardsTrashedThisTurn: {},
     arenaCookiesPlacedInBreakThisTurn: {},
     itemsActivatedThisTurn: {},
@@ -184,6 +186,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     arenaCookieDealtEffectDamageThisTurn: {},
     cookiesPlayedFromTrashThisTurn: {},
     cookiesPlayedFromBreakThisTurn: {},
+    cookiesPlacedFromBattleToDeckThisTurn: {},
     extraDeckPlayUsedThisTurn: false,
   }
 }
@@ -321,7 +324,16 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
           continue
         }
 
-        if (requiresEffectCardSelection(effect)) {
+        if (
+          effect.kind === 'choose-one' &&
+          !effect.modes.some((mode) =>
+            isChooseOneModePlayable(nextState, context, mode.effects),
+          )
+        ) {
+          continue
+        }
+
+        if (effect.kind === 'choose-one' || requiresEffectCardSelection(effect)) {
           // End-phase skills used to silently drop targeted effects because
           // the old path only executed effects classified as untargeted. Put
           // the remaining effect chain into the same pending channel used by
@@ -443,7 +455,7 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
       if (!isEffectConditionMet(nextState, context, effect)) {
         continue
       }
-      if (requiresEffectCardSelection(effect)) {
+      if (effect.kind === 'choose-one' || requiresEffectCardSelection(effect)) {
         // 剩餘效果鏈交由 pendingAbilityEffect 佇列逐步處理，入口移出佇列。
         return {
           ...nextState,
@@ -499,6 +511,12 @@ export const advancePhase = (state: GameState): GameState => {
       }
       return {
         ...endPhaseState,
+        // Snapshot the turn that just ended before Active Phase clears the
+        // current counters.  The next active player can then evaluate
+        // "during your opponent's previous turn" conditions against the
+        // matching owner and card colour/level.
+        cookiesFaintedDuringOpponentPreviousTurn:
+          endPhaseState.cookiesFaintedThisTurnDetails ?? {},
         attackModifiers: endPhaseState.attackModifiers.filter(
           (modifier) =>
             modifier.expiresAfterTurn === null ||
@@ -535,8 +553,10 @@ export const advancePhase = (state: GameState): GameState => {
         supportPlacedThisTurn: false,
         supportAreaDecreasedThisTurn: {},
         cookiesGainedHpThisTurn: {},
+        preventHpGainThisTurn: {},
         cookiesPlayedFromTrashThisTurn: {},
         cookiesPlayedFromBreakThisTurn: {},
+        cookiesPlacedFromBattleToDeckThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

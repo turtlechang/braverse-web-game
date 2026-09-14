@@ -6,6 +6,8 @@ runtime」的錯誤。`test-state` 可以快速建立場面，不能取代正式
 
 ## 為什麼會漏解析
 
+開始轉接前先依 [實體卡圖與獨立驗收方法](../../braverse-card-import-audit/references/physical-card-verification.md) 目視卡圖並寫下獨立預期，再檢查 runtime。各限制分別設計負向案例，Browser 核對精確結果；strict contract 全綠不能取代這些證據。
+
 1. `convertOfficialCardEffects` 是有限的 pattern parser；官方同一語意可能有
    不同語序、單複數、標點或 `@` 異圖變體。
 2. 複合效果、`Then`、可選代價與特殊時機通常走 card-specific exact map；新增

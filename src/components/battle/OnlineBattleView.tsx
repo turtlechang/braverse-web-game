@@ -757,6 +757,7 @@ export function OnlineBattleView({
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        chooseOneModePlayable={pending.chooseOneModePlayable}
         effectConditionMet={pending.effectConditionMet}
         effectSelectionError={pending.effectSelectionError}
         candidateLabels={Object.fromEntries(Object.values(game.players).flatMap((player) =>
@@ -782,6 +783,7 @@ export function OnlineBattleView({
         }}
         candidateCards={pending.candidateCards}
         onToggleCandidate={pending.toggleTarget}
+        onSetTargetAmount={pending.setTargetAmount}
         restSupportCandidates={
           pending.restSupportAndDamageSupportCandidates
         }
@@ -846,6 +848,7 @@ export function OnlineBattleView({
                   hpToTrashIds,
                   trashToDeckIds,
                   hpToHandIds,
+                  supportToTrashIds = [],
                 ) => {
                   match.dispatch(
                     {
@@ -859,6 +862,7 @@ export function OnlineBattleView({
                       hpToTrashIds,
                       trashToDeckIds,
                       hpToHandIds,
+                      supportToTrashIds,
                     },
                     optionalCostAttackPrompt.resolution === 'ability'
                       ? '已支付技能 Then 費用。'

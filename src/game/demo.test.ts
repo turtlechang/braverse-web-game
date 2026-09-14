@@ -20,6 +20,7 @@ import {
   type CardEffect,
   type GameCard,
   type GameState,
+  canPlayItem,
   canPlayExtraDeckCookie,
   getPendingDecision,
 } from '.'
@@ -71,6 +72,7 @@ import {
 } from './demo'
 import {
   getTrapCandidates,
+  getTrapCostOptions,
   playTrap,
   resolveFlip,
   resolveOptionalCostAttack,
@@ -363,6 +365,97 @@ describe('parseTestStateConfig', () => {
     state = resolveDrawUpTo(state, 'player-one', 1)
     expect(state.players['player-one'].deck).toHaveLength(before.deck.length - 1)
     expect(state.players['player-one'].hand).toHaveLength(before.hand.length + 1)
+  })
+
+  it('keeps BS8-111/113/114/117 negative fixtures below their printed boundaries', () => {
+    for (const [cardNumber, threshold] of [
+      ['BS8-111', undefined],
+      ['BS8-114', 30],
+      ['BS8-117', 15],
+    ] as const) {
+      const positive = createCardCheckDemoState(cardNumber, { preferSkillSurface: true })
+      const negative = createCardNegativeDemoState(cardNumber, { preferSkillSurface: true })
+      const positiveSource = positive.players['player-one'].hand.find(
+        (card) => card.id === cardNumber,
+      )!
+      const negativeSource = negative.players['player-one'].hand.find(
+        (card) => card.id === cardNumber,
+      )!
+
+      if (threshold !== undefined) {
+        expect(positive.players['player-one'].discardPile).toHaveLength(threshold)
+        expect(negative.players['player-one'].discardPile).toHaveLength(threshold - 1)
+      }
+      expect(negative.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+
+      const positiveDeployed = applyGameCommand(positive, {
+        kind: 'deploy-cookie',
+        playerId: 'player-one',
+        instanceId: positiveSource.instanceId,
+      })
+      expect(canActivateCookieSkill(
+        positiveDeployed,
+        'player-one',
+        positiveSource.instanceId,
+        'on-play',
+      )).toBe(true)
+
+      const negativeDeployed = applyGameCommand(negative, {
+        kind: 'deploy-cookie',
+        playerId: 'player-one',
+        instanceId: negativeSource.instanceId,
+      })
+      expect(canActivateCookieSkill(
+        negativeDeployed,
+        'player-one',
+        negativeSource.instanceId,
+        'on-play',
+      )).toBe(false)
+      const beforeNegative = structuredClone(negativeDeployed)
+      expect(() => applyGameCommand(negativeDeployed, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: negativeSource.instanceId,
+        trigger: 'on-play',
+        paymentIds: [],
+      })).toThrow()
+      expect(negativeDeployed).toEqual(beforeNegative)
+    }
+
+    const positive113 = createCardCheckDemoState('BS8-113', { preferSkillSurface: true })
+    const negative113 = createCardNegativeDemoState('BS8-113', { preferSkillSurface: true })
+    const positiveSource113 = positive113.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-113',
+    )!.card
+    const negativeSource113 = negative113.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-113',
+    )!.card
+    expect(positive113.players['player-one'].discardPile).toHaveLength(15)
+    expect(negative113.players['player-one'].discardPile).toHaveLength(14)
+    expect(negative113.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === negativeSource113.instanceId,
+    )?.rested).toBe(true)
+    expect(canActivateCookieSkill(
+      positive113,
+      'player-one',
+      positiveSource113.instanceId,
+      'activate',
+    )).toBe(true)
+    expect(canActivateCookieSkill(
+      negative113,
+      'player-one',
+      negativeSource113.instanceId,
+      'activate',
+    )).toBe(false)
+    const beforeNegative113 = structuredClone(negative113)
+    expect(() => applyGameCommand(negative113, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource113.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })).toThrow()
+    expect(negative113).toEqual(beforeNegative113)
   })
 
   it('BS8-115 skill fixtures use the five/six trash boundary and resolve a real OnPlay', () => {
@@ -1331,6 +1424,17 @@ describe('createCardCheckDemoState', () => {
     },
   )
 
+  it('prepares BS8-076 with a rested opponent target and exactly two discard witnesses', () => {
+    const state = createCardCheckDemoState('BS8-076')
+    const target = state.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'opp-lv1',
+    )
+
+    expect(state.players['player-one'].battleArea.some((entry) => entry.card.id === 'BS8-076')).toBe(true)
+    expect(target?.rested).toBe(true)
+    expect(state.players['player-two'].hand).toHaveLength(2)
+  })
+
   it('keeps every opposing Cookie rested in generic trap fixtures', () => {
     const state = createCardCheckDemoState('BS6-085')
 
@@ -1779,7 +1883,7 @@ describe('createCardCheckDemoState', () => {
   })
 
   it('uses the normalized attack energy for a colourless BS8 alternate-art fixture', () => {
-    const state = createCardCheckDemoState('BS8-083@2')
+    const state = createCardCheckDemoState('BS8-083@2', { normalAttack: 'payable' })
     const source = state.players['player-one'].battleArea.find(
       (cookie) => cookie.card.id === 'BS8-083',
     )
@@ -1929,6 +2033,336 @@ describe('createCardCheckDemoState', () => {
     }
   })
 
+  it('uses an official blue LV.2 Cookie for BS8-078 and grants its extra HP', () => {
+    const initial = createCardCheckDemoState('BS8-078')
+    const source = initial.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-078',
+    )
+    const handTarget = initial.players['player-one'].hand.find(
+      (entry) => entry.instanceId === 'BS8-blue-lv2-hand',
+    )
+    expect(source).toBeDefined()
+    expect(handTarget).toMatchObject({
+      id: 'BS8-077',
+      name: 'Kumiho Cookie',
+      type: 'cookie',
+      level: 2,
+      hp: 4,
+      energyColor: 'blue',
+    })
+
+    const paid = applyGameCommand(initial, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [handTarget!.instanceId],
+    })
+    const entered = resolved.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === handTarget!.instanceId,
+    )
+    expect(entered).toMatchObject({
+      card: {
+        id: 'BS8-077',
+        name: 'Kumiho Cookie',
+        level: 2,
+        hp: 4,
+        energyColor: 'blue',
+      },
+    })
+    expect(entered?.hpCards).toHaveLength(5)
+  })
+
+  it('builds BS8-079 with a rested official LV.1 target and preserves it through the next Active Phase', () => {
+    const initial = createCardCheckDemoState('BS8-079')
+    const source = initial.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-079',
+    )
+    const target = initial.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-070',
+    )
+    const levelThreeWitness = initial.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-083',
+    )
+    const preventionEffect = source?.card.skill?.effects.find(
+      (effect) => effect.kind === 'prevent-cookie-active-next-phase',
+    )
+
+    expect(source).toBeDefined()
+    expect(target).toMatchObject({
+      card: {
+        id: 'BS8-070',
+        name: 'White Ghost Cookie',
+        level: 1,
+      },
+      rested: true,
+    })
+    expect(levelThreeWitness?.card).toMatchObject({
+      id: 'BS8-083',
+      level: 3,
+    })
+    expect(preventionEffect).toMatchObject({
+      kind: 'prevent-cookie-active-next-phase',
+      target: { side: 'opponent', minLevel: 1, maxLevel: 1 },
+    })
+    if (!source || !preventionEffect || preventionEffect.kind !== 'prevent-cookie-active-next-phase') {
+      throw new Error('BS8-079 fixture is missing its prevention effect')
+    }
+    expect(getEffectTargetCandidates(
+      initial,
+      { sourcePlayerId: 'player-one', sourceInstanceId: source.card.instanceId },
+      preventionEffect.target,
+    ).map((entry) => entry.card.instanceId)).toEqual([target!.card.instanceId])
+
+    const discardIds = initial.players['player-one'].hand
+      .filter((card) => card.energyColor === 'blue')
+      .slice(0, 2)
+      .map((card) => card.instanceId)
+    expect(discardIds).toHaveLength(2)
+
+    const paid = applyGameCommand(initial, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      discardHandIds: discardIds,
+    })
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target!.card.instanceId],
+    })
+
+    expect(resolved.players['player-one'].battleArea).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ card: expect.objectContaining({ id: 'BS8-079' }) }),
+      ]),
+    )
+    expect(resolved.preventCookieActiveNextPhase).toEqual({
+      'player-two': [target!.card.instanceId],
+    })
+    expect(resolved.players['player-two'].battleArea.find(
+      (entry) => entry.card.instanceId === target!.card.instanceId,
+    )?.rested).toBe(true)
+
+    const afterReplacement = applyGameCommand(resolved, {
+      kind: 'skip-replacement',
+      playerId: 'player-one',
+    })
+    expect(afterReplacement.pendingReplacement).toBeNull()
+
+    const opponentActive = advancePhase(advancePhase(afterReplacement))
+    expect(opponentActive).toMatchObject({
+      activePlayerId: 'player-two',
+      phase: 'active',
+    })
+    expect(opponentActive.players['player-two'].battleArea.find(
+      (entry) => entry.card.instanceId === target!.card.instanceId,
+    )?.rested).toBe(true)
+
+    const afterOpponentActive = advancePhase(opponentActive)
+    expect(afterOpponentActive.phase).toBe('draw')
+    expect(afterOpponentActive.preventCookieActiveNextPhase).toBeUndefined()
+    expect(afterOpponentActive.players['player-two'].battleArea.find(
+      (entry) => entry.card.instanceId === target!.card.instanceId,
+    )?.rested).toBe(true)
+  })
+
+  it('builds BS8-083 with official OnPlay targets and exposes its attack Then boundary', () => {
+    const onPlay = createCardCheckDemoState('BS8-083')
+    const source = onPlay.players['player-one'].hand.find((card) => card.id === 'BS8-083')
+    const onPlayTargets = onPlay.players['player-two'].battleArea
+    expect(source).toMatchObject({
+      id: 'BS8-083',
+      name: 'Frost Queen Cookie',
+      type: 'cookie',
+      level: 3,
+    })
+    expect(onPlayTargets.map((entry) => entry.card.id)).toEqual(['BS8-070', 'BS8-084'])
+    expect(onPlayTargets[0]).toMatchObject({
+      card: { name: 'White Ghost Cookie', level: 1 },
+      rested: true,
+    })
+    expect(onPlayTargets[1]).toMatchObject({
+      card: { name: 'Sherbet Cookie', level: 2 },
+      rested: false,
+    })
+    if (!source || source.type !== 'cookie') throw new Error('BS8-083 OnPlay source is missing')
+
+    let onPlayResolved = applyGameCommand(onPlay, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+    })
+    const onPlayPayment = onPlayResolved.players['player-one'].supportArea[0]?.card.instanceId
+    if (!onPlayPayment) throw new Error('BS8-083 OnPlay payment is missing')
+    onPlayResolved = applyGameCommand(onPlayResolved, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      trigger: 'on-play',
+      paymentIds: [onPlayPayment],
+    })
+    onPlayResolved = applyGameCommand(onPlayResolved, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [onPlayTargets[0]!.card.instanceId],
+    })
+    expect(onPlayResolved.preventCookieActiveNextPhase).toEqual({
+      'player-two': [onPlayTargets[0]!.card.instanceId],
+    })
+    expect(onPlayResolved.players['player-two'].battleArea[0]?.rested).toBe(true)
+
+    const attack = createCardCheckDemoState('BS8-083', { normalAttack: 'payable' })
+    const attackSource = attack.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-083',
+    )
+    expect(attackSource).toBeDefined()
+    expect(attack.players['player-one'].hand).toHaveLength(2)
+    expect(attack.pendingBattle).toBeNull()
+    expect(attackSource?.card.attackEffects).toMatchObject([
+      { kind: 'draw-up-to', max: 3, untilHandSize: 3 },
+    ])
+
+    if (!attackSource) throw new Error('BS8-083 attack source is missing')
+    const attackTarget = attack.players['player-two'].battleArea[1]
+    let declared = applyGameCommand(attack, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: attackSource.card.instanceId,
+      targetInstanceId: attackTarget!.card.instanceId,
+      supportPaymentIds: attack.players['player-one'].supportArea
+        .slice(0, 3)
+        .map((support) => support.card.instanceId),
+    })
+    for (let step = 0; step < 8 && declared.pendingBattle?.stage !== 'attack-effect'; step += 1) {
+      declared = declared.pendingBattle?.stage === 'trap'
+        ? applyGameCommand(declared, { kind: 'skip-trap', playerId: 'player-two' })
+        : resolveNextDamage(declared)
+    }
+    expect(declared.pendingBattle?.stage).toBe('attack-effect')
+    const drawPending = applyGameCommand(declared, {
+      kind: 'resolve-attack-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(drawPending.pendingDrawUpTo).toMatchObject({
+      playerId: 'player-one',
+      max: 1,
+      sourceInstanceId: attackSource.card.instanceId,
+    })
+    const drawn = applyGameCommand(drawPending, {
+      kind: 'resolve-draw-up-to',
+      playerId: 'player-one',
+      drawCount: 1,
+    })
+    expect(drawn.players['player-one'].hand).toHaveLength(3)
+    expect(drawn.pendingDrawUpTo).toBeNull()
+    expect(drawn.pendingBattle).toBeNull()
+  })
+
+  it('builds BS8-085 with an official 1-HP target and filters higher-HP Cookies', () => {
+    const positive = createCardCheckDemoState('BS8-085')
+    const source = positive.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-085',
+    )
+    const target = positive.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-070',
+    )
+    const witness = positive.players['player-two'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-084',
+    )
+    const faintEffect = source?.card.skill?.effects.find(
+      (effect) => effect.kind === 'make-faint',
+    )
+
+    expect(source?.card).toMatchObject({
+      id: 'BS8-085',
+      name: 'Pinecone Cookie',
+      level: 2,
+    })
+    expect(target).toMatchObject({
+      card: { id: 'BS8-070', name: 'White Ghost Cookie' },
+      hpCards: [expect.anything()],
+    })
+    expect(witness).toMatchObject({
+      card: { id: 'BS8-084', name: 'Sherbet Cookie' },
+    })
+    expect(target?.hpCards).toHaveLength(1)
+    expect(witness?.hpCards.length).toBeGreaterThan(1)
+    expect(faintEffect).toMatchObject({
+      kind: 'make-faint',
+      target: { side: 'opponent', min: 0, max: 1, remainingHp: 1 },
+    })
+    if (!source || !faintEffect || faintEffect.kind !== 'make-faint' || !target || !witness) {
+      throw new Error('BS8-085 fixture is incomplete')
+    }
+
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: source.card.instanceId,
+    }
+    expect(
+      getEffectTargetCandidates(positive, context, faintEffect.target).map(
+        (entry) => entry.card.instanceId,
+      ),
+    ).toEqual([target.card.instanceId])
+
+    const discardHandIds = positive.players['player-one'].hand
+      .slice(0, 2)
+      .map((card) => card.instanceId)
+    expect(discardHandIds).toHaveLength(2)
+    const paid = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      discardHandIds,
+    })
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+
+    expect(resolved.players['player-two'].battleArea).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ card: expect.objectContaining({ id: 'BS8-070' }) }),
+      ]),
+    )
+    expect(resolved.players['player-two'].breakArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-070', name: 'White Ghost Cookie' }),
+      ]),
+    )
+
+    const negative = createCardNegativeDemoState('BS8-085')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-085',
+    )
+    expect(negative.players['player-two'].battleArea.every(
+      (entry) => entry.hpCards.length > 1,
+    )).toBe(true)
+    expect(negativeSource).toBeDefined()
+    expect(
+      getEffectTargetCandidates(
+        negative,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: negativeSource!.card.instanceId,
+        },
+        faintEffect.target,
+      ),
+    ).toEqual([])
+  })
+
   it('prepares BS8 static attack fixtures with their printed condition and cost boundary', () => {
     const chives = createCardCheckDemoState('BS8-061')
     expect(chives.players['player-one'].supportArea).toHaveLength(1)
@@ -1949,10 +2383,78 @@ describe('createCardCheckDemoState', () => {
       getEffectiveAttack(chivesNegative, chivesNegativeSource!.card.instanceId),
     ).toBe(1)
 
+    const ivory = createCardCheckDemoState('BS8-075')
+    const ivoryStage = ivory.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-075',
+    )!
+    const ivoryPlayerOneAttacker = ivory.players['player-one'].battleArea[0]!
+    const ivoryPlayerTwoAttacker = ivory.players['player-two'].battleArea[0]!
+    const playerOneCostBefore = getAttackEnergyCostForState(
+      ivory,
+      ivoryPlayerOneAttacker.card.instanceId,
+    )
+    const playerTwoCostBefore = getAttackEnergyCostForState(
+      ivory,
+      ivoryPlayerTwoAttacker.card.instanceId,
+    )
+    expect(ivory.players['player-one'].supportArea).toHaveLength(6)
+    expect(ivory.players['player-two'].supportArea).toHaveLength(6)
+    expect(ivory.players['player-two'].battleArea.map((entry) => entry.card.id)).toEqual([
+      'BS8-070',
+      'BS8-083',
+    ])
+    expect(ivory.players['player-two'].battleArea.map((entry) => ({
+      name: entry.card.name,
+      level: entry.card.level,
+      hp: entry.card.hp,
+      attackEnergyCost: entry.card.attackEnergyCost,
+      hpCards: entry.hpCards.length,
+    }))).toEqual([
+      {
+        name: 'White Ghost Cookie',
+        level: 1,
+        hp: 3,
+        attackEnergyCost: { neutral: 2 },
+        hpCards: 3,
+      },
+      {
+        name: 'Frost Queen Cookie',
+        level: 3,
+        hp: 5,
+        attackEnergyCost: { blue: 3 },
+        hpCards: 5,
+      },
+    ])
+
+    const ivoryPlaced = applyGameCommand(ivory, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: ivoryStage.instanceId,
+      paymentIds: [ivory.players['player-one'].supportArea[0]!.card.instanceId],
+    })
+    expect(
+      getAttackEnergyCostForState(
+        ivoryPlaced,
+        ivoryPlayerOneAttacker.card.instanceId,
+      ),
+    ).toEqual({
+      ...playerOneCostBefore,
+      neutral: (playerOneCostBefore.neutral ?? 0) + 1,
+    })
+    expect(
+      getAttackEnergyCostForState(
+        ivoryPlaced,
+        ivoryPlayerTwoAttacker.card.instanceId,
+      ),
+    ).toEqual({
+      ...playerTwoCostBefore,
+      neutral: (playerTwoCostBefore.neutral ?? 0) + 1,
+    })
+
     const cacao = createCardCheckDemoState('BS8-125')
     const cacaoSource = cacao.players['player-one'].battleArea[0]
     expect(cacaoSource?.card.name).toBe('Dark Cacao Cookie')
-    expect(cacaoSource?.card.attackEnergyCost).toEqual({ purple: 1 })
+    expect(cacaoSource?.card.attackEnergyCost).toEqual({ purple: 3 })
     expect(createCardNegativeDemoState('BS8-075').players['player-one'].supportArea)
       .toHaveLength(5)
     const cacaoNegative = createCardNegativeDemoState('BS8-125')
@@ -1974,7 +2476,7 @@ describe('createCardCheckDemoState', () => {
         afterStagePlacement,
         afterStagePlacement.players['player-one'].battleArea[0]!.card.instanceId,
       ),
-    ).toEqual({ purple: 1 })
+    ).toEqual({ purple: 3 })
   })
 
   it('sets the merged BS8 Cheesebird skill condition through a real break-entry teammate', () => {
@@ -3471,6 +3973,549 @@ describe('BS4 condition fixtures', () => {
     expect(negativeResolved.pendingOnPlay).toBeNull()
     expect(negativeResolved.pendingAbilityEffect).toBeUndefined()
     expect(negativeResolved.blockDisabledUntilTurn?.['player-two']).toBeUndefined()
+  })
+
+  it('prepares BS8-053 with one rested green support and removes it on the negative route', () => {
+    const positive = createCardCheckDemoState('BS8-053')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-053',
+    )
+    const positiveRested = positive.players['player-one'].supportArea.filter(
+      (support) => support.rested,
+    )
+
+    expect(positiveRested).toHaveLength(1)
+    expect(positiveRested[0]?.card.energyColor).toBe('green')
+    expect(positive.players['player-one'].supportArea.filter(
+      (support) => !support.rested,
+    )).toHaveLength(5)
+
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const positiveEffect = positiveQueued.pendingAbilityEffect?.effects[0]
+    expect(positiveEffect).toMatchObject({
+      kind: 'set-active',
+      energyColor: 'green',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    })
+    expect(
+      getEffectSelectionCandidates(
+        positiveQueued,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: positiveSource!.instanceId,
+        },
+        positiveEffect!,
+      ).map((card) => card.instanceId),
+    ).toEqual([positiveRested[0]!.card.instanceId])
+
+    const negative = createCardNegativeDemoState('BS8-053')
+    expect(negative.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-053',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    expect(canActivateCookieSkill(
+      negativeDeployed,
+      'player-one',
+      negativeSource!.instanceId,
+      'on-play',
+    )).toBe(true)
+    const negativeQueued = applyGameCommand(negativeDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const negativeEffect = negativeQueued.pendingAbilityEffect?.effects[0]
+    expect(getEffectSelectionCandidates(
+      negativeQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: negativeSource!.instanceId,
+      },
+      negativeEffect!,
+    )).toHaveLength(0)
+    const negativeResolved = applyGameCommand(negativeQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(negativeResolved.pendingAbilityEffect).toBeUndefined()
+    expect(negativeResolved.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+  })
+
+  it('prepares BS8-064 with two rested support targets and blocks the negative route', () => {
+    const positive = createCardCheckDemoState('BS8-064')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-064',
+    )
+    const positiveRested = positive.players['player-one'].supportArea.filter(
+      (support) => support.rested,
+    )
+
+    expect(positiveRested).toHaveLength(2)
+    expect(positive.players['player-one'].supportArea.filter(
+      (support) => !support.rested,
+    )).toHaveLength(4)
+
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const positiveEffect = positiveQueued.pendingAbilityEffect?.effects[0]
+    expect(positiveEffect).toMatchObject({
+      kind: 'set-active',
+      supportCount: 2,
+      selectable: true,
+      optional: true,
+    })
+    expect(getEffectSelectionCandidates(
+      positiveQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: positiveSource!.instanceId,
+      },
+      positiveEffect!,
+    ).map((card) => card.instanceId)).toEqual(
+      positiveRested.map((support) => support.card.instanceId),
+    )
+
+    const negative = createCardNegativeDemoState('BS8-064')
+    expect(negative.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-064',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    const negativeQueued = applyGameCommand(negativeDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const negativeEffect = negativeQueued.pendingAbilityEffect?.effects[0]
+    expect(getEffectSelectionCandidates(
+      negativeQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: negativeSource!.instanceId,
+      },
+      negativeEffect!,
+    )).toHaveLength(0)
+  })
+
+  it('prepares BS8-065 with a real support-count condition and blocks the tied route', () => {
+    const positive = createCardCheckDemoState('BS8-065')
+    const positiveSource = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-065',
+    )
+    expect(positive.players['player-one'].supportArea).toHaveLength(1)
+    expect(positive.players['player-one'].supportArea[0]?.rested).toBe(true)
+    expect(positive.players['player-two'].supportArea).toHaveLength(2)
+
+    const positiveDeployed = applyGameCommand(positive, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: positiveSource!.instanceId,
+    })
+    expect(canActivateCookieSkill(
+      positiveDeployed,
+      'player-one',
+      positiveSource!.instanceId,
+      'on-play',
+    )).toBe(true)
+    const positiveQueued = applyGameCommand(positiveDeployed, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: positiveSource!.instanceId,
+      trigger: 'on-play',
+      paymentIds: [],
+    })
+    const positiveEffect = positiveQueued.pendingAbilityEffect?.effects[0]
+    expect(positiveEffect).toMatchObject({
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: {
+        kind: 'support-count-less-than-opponent',
+        difference: 1,
+      },
+    })
+    expect(isEffectConditionMet(
+      positiveQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: positiveSource!.instanceId,
+      },
+      positiveEffect!,
+    )).toBe(true)
+    expect(getEffectSelectionCandidates(
+      positiveQueued,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: positiveSource!.instanceId,
+      },
+      positiveEffect!,
+    ).map((card) => card.instanceId)).toEqual([
+      positive.players['player-one'].supportArea[0]!.card.instanceId,
+    ])
+
+    const positiveResolved = applyGameCommand(positiveQueued, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [positive.players['player-one'].supportArea[0]!.card.instanceId],
+    })
+    expect(positiveResolved.players['player-one'].supportArea[0]?.rested).toBe(false)
+
+    const negative = createCardNegativeDemoState('BS8-065')
+    expect(negative.players['player-one'].supportArea).toHaveLength(2)
+    expect(negative.players['player-two'].supportArea).toHaveLength(2)
+    const negativeSource = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-065',
+    )
+    const negativeDeployed = applyGameCommand(negative, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: negativeSource!.instanceId,
+    })
+    expect(isEffectConditionMet(
+      negativeDeployed,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: negativeSource!.instanceId,
+      },
+      positiveEffect!,
+    )).toBe(false)
+    expect(canActivateCookieSkill(
+      negativeDeployed,
+      'player-one',
+      negativeSource!.instanceId,
+      'on-play',
+    )).toBe(false)
+    const negativeResolved = applyGameCommand(negativeDeployed, {
+      kind: 'skip-on-play',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource!.instanceId,
+    })
+    expect(negativeResolved.pendingOnPlay).toBeNull()
+    expect(negativeResolved.pendingAbilityEffect).toBeUndefined()
+    expect(negativeResolved.players['player-one'].supportArea).toHaveLength(2)
+  })
+
+  it('prepares BS8-068 with a faint support-rest target and blocks the tied route', () => {
+    const positive = createCardCheckDemoState('BS8-068')
+    const positiveFaint = positive.pendingFaintEffects?.[0]
+    const positiveOpponentSupport = positive.players['player-two'].supportArea[0]
+    expect(positive.players['player-one'].supportArea).toHaveLength(1)
+    expect(positive.players['player-two'].supportArea).toHaveLength(2)
+    expect(positiveFaint?.effect).toMatchObject({
+      kind: 'opponent-rests-support',
+      amount: 1,
+      activeOnly: true,
+      condition: {
+        kind: 'support-count-less-than-opponent',
+        difference: 1,
+      },
+    })
+    expect(isEffectConditionMet(
+      positive,
+      positiveFaint!.context,
+      positiveFaint!.effect,
+    )).toBe(true)
+
+    const positivePendingRest = resolveFaintEffect(positive, [])
+    expect(positivePendingRest.pendingOpponentRestSupport).toMatchObject({
+      playerId: 'player-two',
+      count: 1,
+      activeOnly: true,
+    })
+    const positiveResolved = applyGameCommand(positivePendingRest, {
+      kind: 'resolve-opponent-rest-support',
+      playerId: 'player-two',
+      cardIds: [positiveOpponentSupport!.card.instanceId],
+    })
+    expect(
+      positiveResolved.players['player-two'].supportArea[0]?.rested,
+    ).toBe(true)
+
+    const negative = createCardNegativeDemoState('BS8-068')
+    const negativeFaint = negative.pendingFaintEffects?.[0]
+    expect(negative.players['player-one'].supportArea).toHaveLength(2)
+    expect(negative.players['player-two'].supportArea).toHaveLength(2)
+    expect(isEffectConditionMet(
+      negative,
+      negativeFaint!.context,
+      negativeFaint!.effect,
+    )).toBe(false)
+    const negativeResolved = resolveFaintEffect(negative, [])
+    expect(negativeResolved.pendingFaintEffects).toBeUndefined()
+    expect(negativeResolved.pendingOpponentRestSupport).toBeUndefined()
+    expect(negativeResolved.players['player-two'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+  })
+
+  it('prepares BS8-071 with a real three-HP target and blocks the tied route', () => {
+    const positive = createCardCheckDemoState('BS8-071')
+    const positiveItem = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-071',
+    )
+    const positiveTarget = positive.players['player-one'].battleArea[0]
+    expect(positive.players['player-one'].supportArea).toHaveLength(1)
+    expect(positive.players['player-two'].supportArea).toHaveLength(2)
+    expect(positiveTarget?.hpCards).toHaveLength(3)
+    expect(canPlayItem(
+      positive,
+      'player-one',
+      positiveItem!.instanceId,
+    )).toBe(true)
+
+    const positivePending = applyGameCommand(positive, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: positiveItem!.instanceId,
+      paymentIds: ['support-pay-0'],
+    })
+    const positiveEffect = positivePending.pendingAbilityEffect?.effects[0]
+    expect(positiveEffect).toMatchObject({
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1, maxRemainingHp: 3 },
+      condition: {
+        kind: 'support-count-less-than-opponent',
+        difference: 1,
+      },
+    })
+    expect(getEffectSelectionCandidates(
+      positivePending,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: positiveItem!.instanceId,
+      },
+      positiveEffect!,
+    ).map((card) => card.instanceId)).toEqual([
+      positiveTarget!.card.instanceId,
+    ])
+    const positiveResolved = applyGameCommand(positivePending, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [positiveTarget!.card.instanceId],
+    })
+    expect(positiveResolved.players['player-one'].battleArea[0]?.hpCards).toHaveLength(4)
+    expect(positiveResolved.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS8-071' }),
+    )
+
+    const negative = createCardNegativeDemoState('BS8-071')
+    const negativeItem = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-071',
+    )
+    expect(negative.players['player-one'].supportArea).toHaveLength(2)
+    expect(negative.players['player-two'].supportArea).toHaveLength(2)
+    expect(negative.players['player-one'].battleArea[0]?.hpCards).toHaveLength(3)
+    expect(canPlayItem(
+      negative,
+      'player-one',
+      negativeItem!.instanceId,
+    )).toBe(false)
+    expect(() => applyGameCommand(negative, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: negativeItem!.instanceId,
+      paymentIds: ['support-pay-0'],
+    })).toThrow()
+  })
+
+  it('prepares BS8-072 with real Mystic Flour equipment and keeps the tied route reveal-free', () => {
+    const positive = createCardCheckDemoState('BS8-072')
+    const positiveItem = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-072',
+    )
+    const positiveTarget = positive.players['player-one'].battleArea[0]
+    expect(positiveTarget?.card).toMatchObject({
+      id: 'BS8-059',
+      name: 'Mystic Flour Cookie',
+    })
+    expect(positive.players['player-one'].supportArea).toHaveLength(2)
+    expect(positive.players['player-two'].supportArea).toHaveLength(3)
+    expect(canPlayItem(
+      positive,
+      'player-one',
+      positiveItem!.instanceId,
+    )).toBe(true)
+
+    const positivePending = applyGameCommand(positive, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: positiveItem!.instanceId,
+      paymentIds: positive.players['player-one'].supportArea.map(
+        (support) => support.card.instanceId,
+      ),
+    })
+    expect(positivePending.pendingAbilityEffect?.effects[0]).toMatchObject({
+      kind: 'choose-one',
+      condition: {
+        kind: 'support-count-less-than-opponent',
+        difference: 1,
+      },
+    })
+
+    const chosen = applyGameCommand(positivePending, {
+      kind: 'resolve-choose-one',
+      playerId: 'player-one',
+      modeIndex: 0,
+    })
+    const equipEffect = chosen.pendingAbilityEffect?.effects[0]
+    expect(equipEffect).toMatchObject({
+      kind: 'equip-source',
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+      },
+      requiredCookieId: 'BS8-059',
+    })
+    expect(getEffectSelectionCandidates(
+      chosen,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: positiveItem!.instanceId,
+      },
+      equipEffect!,
+    ).map((card) => card.instanceId)).toEqual([positiveTarget!.card.instanceId])
+
+    const positiveResolved = applyGameCommand(chosen, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [positiveTarget!.card.instanceId],
+    })
+    expect(positiveResolved.players['player-one'].battleArea[0]?.equippedCards)
+      .toEqual([expect.objectContaining({ id: 'BS8-072' })])
+
+    const negative = createCardNegativeDemoState('BS8-072')
+    const negativeItem = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-072',
+    )
+    expect(negative.players['player-one'].battleArea[0]?.card).toMatchObject({
+      id: 'BS8-059',
+    })
+    expect(negative.players['player-one'].supportArea).toHaveLength(3)
+    expect(negative.players['player-two'].supportArea).toHaveLength(3)
+    expect(canPlayItem(
+      negative,
+      'player-one',
+      negativeItem!.instanceId,
+    )).toBe(true)
+    const negativePending = applyGameCommand(negative, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: negativeItem!.instanceId,
+      paymentIds: negative.players['player-one'].supportArea
+        .slice(0, 2)
+        .map((support) => support.card.instanceId),
+    })
+    expect(negativePending.pendingInspectDeck).toBeUndefined()
+    expect(negativePending.pendingAbilityEffect?.effects[0]).toMatchObject({
+      kind: 'equip-source',
+      requiredCookieId: 'BS8-059',
+    })
+    const negativeResolved = applyGameCommand(negativePending, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [negative.players['player-one'].battleArea[0]!.card.instanceId],
+    })
+    expect(negativeResolved.players['player-one'].battleArea[0]?.equippedCards)
+      .toEqual([expect.objectContaining({ id: 'BS8-072' })])
+  })
+
+  it('prepares BS8-074 with conditional zero-cost payment and a payable tied route', () => {
+    const positive = createCardCheckDemoState('BS8-074')
+    const positiveTrap = positive.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-074',
+    )
+    const positiveAttacker = positive.pendingBattle?.attackerInstanceId
+    expect(positive.players['player-one'].supportArea).toHaveLength(2)
+    expect(positive.players['player-two'].supportArea).toHaveLength(4)
+    expect(getTrapCandidates(positive, 'player-one')).toContainEqual(positiveTrap)
+    expect(getTrapCostOptions(positiveTrap!.trap!, positive, 'player-one')).toEqual([
+      { energy: {} },
+    ])
+
+    const positiveResolved = playTrap(positive, 'player-one', {
+      trapInstanceId: positiveTrap!.instanceId,
+      paymentIds: [],
+      targetIds: [positiveAttacker!],
+    })
+    expect(positiveResolved.players['player-one'].supportArea.every(
+      (support) => !support.rested,
+    )).toBe(true)
+    expect(getEffectiveAttack(
+      positiveResolved,
+      positiveAttacker!,
+    )).toBe(5)
+
+    const negative = createCardNegativeDemoState('BS8-074')
+    const negativeTrap = negative.players['player-one'].hand.find(
+      (card) => card.id === 'BS8-074',
+    )
+    const negativeAttacker = negative.pendingBattle?.attackerInstanceId
+    const negativePayment = negative.players['player-one'].supportArea[0]
+    expect(negative.players['player-one'].supportArea).toHaveLength(3)
+    expect(negative.players['player-two'].supportArea).toHaveLength(4)
+    expect(getTrapCandidates(negative, 'player-one')).toContainEqual(negativeTrap)
+    expect(getTrapCostOptions(negativeTrap!.trap!, negative, 'player-one')).toEqual([
+      { energy: { green: 1 } },
+    ])
+
+    const negativeResolved = playTrap(negative, 'player-one', {
+      trapInstanceId: negativeTrap!.instanceId,
+      paymentIds: [negativePayment!.card.instanceId],
+      targetIds: [negativeAttacker!],
+    })
+    expect(negativeResolved.players['player-one'].supportArea.filter(
+      (support) => support.rested,
+    )).toHaveLength(1)
+    expect(getEffectiveAttack(
+      negativeResolved,
+      negativeAttacker!,
+    )).toBe(5)
   })
 
   it('keeps BS7-004 effect-damage condition and red payment on the real skill queue', () => {
@@ -5034,6 +6079,414 @@ describe('BS4 condition fixtures', () => {
     )
   })
 
+  it('provides BS8-095 faint discard cost and a real HP target, while Browser B lacks the hand cost', () => {
+    const positive = createCardCheckDemoState('BS8-095')
+    const positivePlayer = positive.players['player-one']
+    const source = positivePlayer.breakArea.find((card) => card.id === 'BS8-095')
+    const discardCostCard = positivePlayer.hand[0]
+    const target = positivePlayer.battleArea.find((entry) => entry.card.instanceId === 'self-extra-1')
+
+    expect(source).toMatchObject({ id: 'BS8-095', name: 'Herb Cookie' })
+    expect(positivePlayer.hand).toHaveLength(4)
+    expect(discardCostCard).toBeDefined()
+    expect(target).toBeDefined()
+    expect(positive.pendingFaintEffects).toMatchObject([
+      { cost: { discardHand: 1 }, effect: { kind: 'gain-hp' } },
+    ])
+
+    const resolved = resolveFaintEffect(
+      positive,
+      [target!.card.instanceId],
+      [],
+      { discardHandIds: [discardCostCard!.instanceId] },
+    )
+    expect(resolved.pendingFaintEffects).toBeUndefined()
+    expect(resolved.players['player-one'].hand).toHaveLength(3)
+    expect(resolved.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([expect.objectContaining({ instanceId: discardCostCard!.instanceId })]),
+    )
+    expect(resolved.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === target!.card.instanceId,
+    )?.hpCards).toHaveLength(target!.hpCards.length + 1)
+
+    const negative = createCardNegativeDemoState('BS8-095')
+    expect(negative.players['player-one'].hand).toEqual([])
+    expect(negative.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS8-095' })]),
+    )
+    const negativeTarget = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === target!.card.instanceId,
+    )
+    const skipped = resolveFaintEffect(negative, [negativeTarget!.card.instanceId])
+    expect(skipped.pendingFaintEffects).toBeUndefined()
+    expect(skipped.players['player-one'].hand).toEqual([])
+    expect(skipped.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === negativeTarget!.card.instanceId,
+    )?.hpCards).toHaveLength(negativeTarget!.hpCards.length)
+  })
+
+  it('provides BS8-098 positive and condition-blocked trap follow-up fixtures', () => {
+    const positive = createCardCheckDemoState('BS8-098')
+    const positivePlayer = positive.players['player-one']
+    const positiveTrap = positivePlayer.hand.find((card) => card.id === 'BS8-098')
+    const attacker = positive.pendingBattle?.attackerInstanceId
+    if (!positiveTrap || !attacker) throw new Error('BS8-098 positive fixture is incomplete')
+
+    expect(positivePlayer.hand).toHaveLength(2)
+    expect(getTrapCandidates(positive, 'player-one')).toEqual([positiveTrap])
+
+    const played = playTrap(positive, 'player-one', {
+      trapInstanceId: positiveTrap.instanceId,
+      paymentIds: positivePlayer.supportArea.slice(0, 2).map((support) => support.card.instanceId),
+      targetIds: [attacker],
+    })
+    expect(played.pendingAbilityEffect).toMatchObject({
+      effectIndex: 1,
+      battleContinuation: 'after-trap',
+    })
+    expect(played.players['player-one'].hand).toHaveLength(1)
+
+    const offered = applyGameCommand(played, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(offered.pendingOptionalCostAttack).toMatchObject({
+      playerId: 'player-one',
+      cost: { energy: { blue: 1 } },
+    })
+    const paid = resolveOptionalCostAttack(
+      offered,
+      'player-one',
+      'pay',
+      [],
+      [],
+      [positivePlayer.supportArea[2]!.card.instanceId],
+    )
+    const drawing = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(drawing.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 3 })
+
+    const negative = createCardNegativeDemoState('BS8-098')
+    const negativeTrap = negative.players['player-one'].hand.find((card) => card.id === 'BS8-098')
+    const negativeAttacker = negative.pendingBattle?.attackerInstanceId
+    if (!negativeTrap || !negativeAttacker) throw new Error('BS8-098 negative fixture is incomplete')
+
+    expect(negative.players['player-one'].hand).toHaveLength(4)
+    expect(negative.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    const negativePlayed = playTrap(negative, 'player-one', {
+      trapInstanceId: negativeTrap.instanceId,
+      paymentIds: negative.players['player-one'].supportArea.slice(0, 2).map((support) => support.card.instanceId),
+      targetIds: [negativeAttacker],
+    })
+    const negativeOffered = applyGameCommand(negativePlayed, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(negativeOffered.pendingOptionalCostAttack).toBeTruthy()
+    const conditionBlocked = resolveOptionalCostAttack(
+      negativeOffered,
+      'player-one',
+      'pay',
+      [],
+      [],
+      [negative.players['player-one'].supportArea[2]!.card.instanceId],
+    )
+    expect(conditionBlocked.pendingDrawUpTo).toBeUndefined()
+    expect(conditionBlocked.players['player-one'].hand).toHaveLength(3)
+  })
+
+  it('provides BS8-100 with real blue hand cards and equal discard-draw resolution', () => {
+    const initial = createCardCheckDemoState('BS8-100')
+    const initialPlayer = initial.players['player-one']
+    const stage = initialPlayer.hand.find((card) => card.id === 'BS8-100')
+    const blueHand = initialPlayer.hand.filter((card) => card.energyColor === 'blue' && card.type !== 'stage')
+    const nonBlueHand = initialPlayer.hand.find((card) => card.id === 'BS8-074')
+    if (!stage || !nonBlueHand) throw new Error('BS8-100 fixture is missing its real stage or non-blue witness')
+
+    expect(stage).toMatchObject({ id: 'BS8-100', name: 'Snowfall Lantern Tree', type: 'stage' })
+    expect(initialPlayer.hand.map((card) => card.name)).toEqual([
+      'Snowfall Lantern Tree',
+      'Tiger Lily Cookie',
+      'Herb Cookie',
+      'Warm Wind Flower',
+      'White Flour Fog',
+    ])
+    expect(blueHand).toHaveLength(3)
+    expect(blueHand.every((card) => card.id !== 'BS8-074')).toBe(true)
+
+    const placed = applyGameCommand(initial, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: stage.instanceId,
+      paymentIds: [initialPlayer.supportArea[0]!.card.instanceId],
+    })
+    const activated = applyGameCommand(placed, {
+      kind: 'begin-activate-stage',
+      playerId: 'player-one',
+      paymentIds: [placed.players['player-one'].supportArea[1]!.card.instanceId],
+    })
+    expect(activated.players['player-one'].stage).toBeNull()
+    expect(activated.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS8-100', name: 'Snowfall Lantern Tree' })]),
+    )
+    expect(activated.pendingAbilityEffect).toMatchObject({
+      sourceCardName: 'Snowfall Lantern Tree',
+      effects: [{ kind: 'discard-hand-then-draw-same', energyColor: 'blue' }],
+    })
+
+    const awaitingDiscard = applyGameCommand(activated, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(awaitingDiscard.pendingOpponentHandDiscard).toMatchObject({
+      count: 0,
+      atLeast: true,
+      energyColor: 'blue',
+      drawEqualDiscarded: true,
+    })
+
+    const beforeInvalid = structuredClone(awaitingDiscard)
+    expect(() => applyGameCommand(awaitingDiscard, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-one',
+      cardIds: [nonBlueHand.instanceId],
+    })).toThrow()
+    expect(awaitingDiscard).toEqual(beforeInvalid)
+
+    const selected = blueHand.slice(0, 2)
+    const resolved = applyGameCommand(awaitingDiscard, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-one',
+      cardIds: selected.map((card) => card.instanceId),
+    })
+    expect(resolved.pendingOpponentHandDiscard).toBeNull()
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.players['player-one'].hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS8-096', name: 'Warm Wind Flower' })]),
+    )
+    expect(resolved.players['player-one'].hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS8-074', name: 'White Flour Fog' })]),
+    )
+    expect(resolved.players['player-one'].hand).toHaveLength(initialPlayer.hand.length - 1)
+    expect(resolved.players['player-one'].deck).toHaveLength(
+      awaitingDiscard.players['player-one'].deck.length - selected.length,
+    )
+    expect(resolved.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-100', name: 'Snowfall Lantern Tree' }),
+        ...selected.map((card) => expect.objectContaining({ instanceId: card.instanceId })),
+      ]),
+    )
+
+    const negative = createCardNegativeDemoState('BS8-100')
+    const negativeStage = negative.players['player-one'].hand.find((card) => card.id === 'BS8-100')!
+    expect(negative.players['player-one'].hand.map((card) => card.name)).toEqual(
+      initialPlayer.hand.map((card) => card.name),
+    )
+    expect(negative.players['player-one'].supportArea.every((support) => support.rested)).toBe(true)
+    const beforeNegative = structuredClone(negative)
+    expect(() => applyGameCommand(negative, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: negativeStage.instanceId,
+      paymentIds: [negative.players['player-one'].supportArea[0]!.card.instanceId],
+    })).toThrow()
+    expect(negative).toEqual(beforeNegative)
+  })
+
+  it('provides BS8-107 with real purple Item hand candidates and a type/color-blocked route', () => {
+    const positive = createCardCheckDemoState('BS8-107')
+    const owner = positive.players['player-one']
+    const source = owner.battleArea.find((entry) => entry.card.id === 'BS8-107')?.card
+    const target = positive.players['player-two'].battleArea[0]
+    if (!source || source.type !== 'cookie' || !target) {
+      throw new Error('BS8-107 fixture is missing its real source or opponent target')
+    }
+
+    expect(source).toMatchObject({
+      id: 'BS8-107',
+      name: 'Wizard Cookie',
+      type: 'cookie',
+      energyColor: 'purple',
+    })
+    expect(owner.hand.map((card) => ({
+      id: card.id,
+      name: card.name,
+      type: card.type,
+      energyColor: card.energyColor,
+    }))).toEqual([
+      { id: 'BS8-121', name: 'Black Concoction', type: 'item', energyColor: 'purple' },
+      { id: 'BS8-122', name: 'Milk Cart', type: 'item', energyColor: 'purple' },
+      { id: 'BS8-096', name: 'Warm Wind Flower', type: 'item', energyColor: 'blue' },
+      { id: 'BS8-108', name: 'Blackberry Cookie', type: 'cookie', energyColor: 'purple' },
+    ])
+    expect(owner.hand.every((card) => card.imageUrl?.includes('cookierunbraverse.com'))).toBe(true)
+    expect(canActivateCookieSkill(positive, 'player-one', source.instanceId, 'activate')).toBe(true)
+
+    const legalCost = owner.hand[0]!
+    const paid = applyGameCommand(positive, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      discardHandIds: [legalCost.instanceId],
+    })
+    expect(paid.players['player-one'].hand).toEqual([
+      owner.hand[1],
+      owner.hand[2],
+      owner.hand[3],
+    ])
+    expect(paid.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'BS8-121',
+          name: 'Black Concoction',
+          instanceId: legalCost.instanceId,
+        }),
+      ]),
+    )
+
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+    expect(resolved.players['player-two'].battleArea[0]?.hpCards).toHaveLength(
+      target.hpCards.length - 1,
+    )
+
+    const negative = createCardNegativeDemoState('BS8-107')
+    const negativeSource = negative.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS8-107',
+    )?.card
+    if (!negativeSource || negativeSource.type !== 'cookie') {
+      throw new Error('BS8-107 negative fixture is missing its real source')
+    }
+    expect(negative.players['player-one'].hand.map((card) => card.id)).toEqual([
+      'BS8-096',
+      'BS8-108',
+    ])
+    expect(canActivateCookieSkill(
+      negative,
+      'player-one',
+      negativeSource.instanceId,
+      'activate',
+    )).toBe(false)
+    const beforeNegative = structuredClone(negative)
+    expect(() => applyGameCommand(negative, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })).toThrow()
+    expect(negative).toEqual(beforeNegative)
+  })
+
+  it('uses BS8-119 to move real BS8-103 Dark Cacao from trash, then resolves its OnPlay effect', () => {
+    const initial = createCardCheckDemoState('BS8-119', { preferSkillSurface: true })
+    const owner = initial.players['player-one']
+    const sourceEntry = owner.battleArea.find((entry) => entry.card.id === 'BS8-119')
+    const darkCacao = owner.discardPile.find((card) => card.id === 'BS8-103')
+    if (!sourceEntry || sourceEntry.card.type !== 'cookie' || !darkCacao || darkCacao.type !== 'cookie') {
+      throw new Error('BS8-119 fixture is missing its real source or Dark Cacao card')
+    }
+    const source = sourceEntry.card
+    const revivalEffect = source.skill?.effects[0]
+    if (!revivalEffect || revivalEffect.kind !== 'trash-to-battle') {
+      throw new Error('BS8-119 fixture is missing its trash-to-battle effect')
+    }
+
+    expect(source).toMatchObject({ id: 'BS8-119', name: 'Crunchy Chip Cookie', energyColor: 'purple' })
+    expect(darkCacao).toMatchObject({ id: 'BS8-103', name: 'Dark Cacao Cookie', energyColor: 'purple' })
+    expect(getTrashCookieCandidates(
+      initial,
+      { sourcePlayerId: 'player-one', sourceInstanceId: source.instanceId },
+      revivalEffect,
+    )).toEqual([darkCacao])
+    expect(canActivateCookieSkill(initial, 'player-one', source.instanceId, 'activate')).toBe(true)
+
+    const paid = applyGameCommand(initial, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      trigger: 'activate',
+      paymentIds: [owner.supportArea[0]!.card.instanceId],
+    })
+    expect(paid.players['player-one'].battleArea).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ card: expect.objectContaining({ id: 'BS8-119' }) })]),
+    )
+    expect(paid.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS8-119', name: 'Crunchy Chip Cookie' })]),
+    )
+
+    const moved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [darkCacao.instanceId],
+    })
+    const movedEntry = moved.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === darkCacao.instanceId,
+    )
+    expect(movedEntry).toMatchObject({
+      card: { id: 'BS8-103', name: 'Dark Cacao Cookie' },
+      enteredFrom: 'trash',
+    })
+    expect(moved.players['player-one'].discardPile).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ instanceId: darkCacao.instanceId })]),
+    )
+    expect(moved.pendingOnPlay).toEqual({
+      playerId: 'player-one',
+      sourceInstanceId: darkCacao.instanceId,
+      origin: 'trash',
+    })
+    expect(canActivateCookieSkill(moved, 'player-one', darkCacao.instanceId, 'on-play')).toBe(true)
+
+    const opponentCookies = moved.players['player-two'].battleArea
+    const onPlayPaid = applyGameCommand(moved, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: darkCacao.instanceId,
+      trigger: 'on-play',
+      paymentIds: [moved.players['player-one'].supportArea[1]!.card.instanceId],
+    })
+    expect(onPlayPaid.pendingOnPlay).toBeNull()
+    expect(onPlayPaid.pendingAbilityEffect).toMatchObject({
+      sourceCardName: 'Dark Cacao Cookie',
+      effects: [{ kind: 'hp-to-trash', amount: 1 }],
+    })
+    const resolved = applyGameCommand(onPlayPaid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: opponentCookies.map((entry) => entry.card.instanceId),
+    })
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.pendingOnPlay).toBeNull()
+    expect(resolved.players['player-two'].battleArea.map((entry) =>
+      entry.hpCards.length,
+    )).toEqual(opponentCookies.map((entry) => entry.hpCards.length - 1))
+
+    const negative = createCardNegativeDemoState('BS8-119', { preferSkillSurface: true })
+    const negativeSource = negative.players['player-one'].battleArea.find((entry) => entry.card.id === 'BS8-119')!.card
+    expect(canActivateCookieSkill(negative, 'player-one', negativeSource.instanceId, 'activate')).toBe(false)
+    const beforeNegative = structuredClone(negative)
+    expect(() => applyGameCommand(negative, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: negativeSource.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+    })).toThrow()
+    expect(negative).toEqual(beforeNegative)
+  })
+
   it('BS5-016 can be activated before its post-payment HP-card condition is known', () => {
     const state = createCardCheckDemoState('BS5-016')
     const source = state.players['player-one'].battleArea.find(
@@ -5474,4 +6927,222 @@ describe('createBs3SpecialVictoryDemoState', () => {
     expect(isSpecialVictoryConditionMet(state, 'player-one', condition!)).toBe(true)
     expect(canActivateStage(state, 'player-one')).toBe(true)
   })
+})
+
+describe('BS8 physical card-check fixtures', () => {
+  it('uses formal cards for BS8-122 cost witnesses and draw cards', () => {
+    const positive = createCardCheckDemoState('BS8-122')
+    const player = positive.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-122')!
+    const discardCost = player.hand.find((card) => card.id === 'BS8-121')!
+
+    expect(source).toMatchObject({
+      id: 'BS8-122',
+      name: 'Milk Cart',
+      type: 'item',
+      energyColor: 'purple',
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.hand.map((card) => card.id)).toEqual([
+      'BS8-122', 'BS8-121', 'BS8-046', 'BS8-105', 'BS8-097',
+    ])
+    expect(player.deck.slice(0, 2).map((card) => card.id)).toEqual(['BS8-097', 'BS8-046'])
+    expect(canPlayItem(positive, 'player-one', source.instanceId)).toBe(true)
+
+    const begun = applyGameCommand(positive, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId],
+      discardHandIds: [discardCost.instanceId],
+    })
+    expect(begun.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-122', name: 'Milk Cart' }),
+        expect.objectContaining({ id: 'BS8-121', name: 'Black Concoction' }),
+      ]),
+    )
+
+    const awaitingDraw = applyGameCommand(begun, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(awaitingDraw.pendingDrawUpTo).toMatchObject({ max: 2 })
+    const drawn = resolveDrawUpTo(awaitingDraw, 'player-one', 2)
+    expect(drawn.players['player-one'].hand).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-097', name: 'Heartfelt Light' }),
+        expect.objectContaining({ id: 'BS8-046', name: 'Surprise! Lassi Jar' }),
+      ]),
+    )
+  })
+
+  it('keeps BS8-122 blocked with only formal wrong-colour or wrong-type hand witnesses', () => {
+    const negative = createCardNegativeDemoState('BS8-122')
+    const player = negative.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-122')!
+    const before = structuredClone(negative)
+
+    expect(player.hand.map((card) => card.id)).toEqual([
+      'BS8-122', 'BS8-046', 'BS8-105', 'BS8-097',
+    ])
+    expect(player.hand.slice(1)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS8-046', type: 'item', energyColor: 'yellow' }),
+        expect.objectContaining({ id: 'BS8-105', type: 'cookie', energyColor: 'purple' }),
+        expect.objectContaining({ id: 'BS8-097', type: 'item', energyColor: 'blue' }),
+      ]),
+    )
+    expect(canPlayItem(negative, 'player-one', source.instanceId)).toBe(false)
+    expect(() => applyGameCommand(negative, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId],
+      discardHandIds: [source.instanceId],
+    })).toThrow()
+    expect(negative).toEqual(before)
+  })
+
+  it('proves BS8-125 with a formal stage, Dark Cacao, placement payment, and 15 real trash cards', () => {
+    const positive = createCardCheckDemoState('BS8-125')
+    const player = positive.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-125')!
+    const darkCacao = player.battleArea.find((entry) => entry.card.id === 'BS8-103')!
+
+    expect(source).toMatchObject({
+      id: 'BS8-125',
+      name: 'The Days of Resolution and Dignity',
+      type: 'stage',
+      imageUrl: expect.stringContaining('https://'),
+      stageAbility: {
+        placementCost: { purple: 2 },
+        staticAttackCostModifiers: [{
+          operation: 'reduce',
+          energyCost: { purple: 1 },
+          appliesTo: 'stage-owner',
+          targetCardName: 'Dark Cacao Cookie',
+          condition: { kind: 'trash-count-at-least', count: 15, player: 'stage-owner' },
+        }],
+      },
+    })
+    expect(darkCacao.card).toMatchObject({
+      id: 'BS8-103',
+      name: 'Dark Cacao Cookie',
+      level: 2,
+      hp: 4,
+      attack: 3,
+      attackCost: 3,
+      attackEnergyCost: { purple: 3 },
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.stage?.card).toMatchObject({
+      id: 'BS8-024',
+      name: 'Land of Fire & Ruin',
+      imageUrl: expect.stringContaining('https://'),
+    })
+    expect(player.supportArea.map((support) => support.card.id)).toEqual([
+      'BS8-121', 'BS8-122', 'BS8-121', 'BS8-122',
+    ])
+    expect(player.discardPile).toHaveLength(15)
+    expect(new Set(player.discardPile.map((card) => card.instanceId)).size).toBe(15)
+    expect(player.discardPile.every((card) => card.imageUrl)).toBe(true)
+    expect(getAttackEnergyCostForState(positive, darkCacao.card.instanceId)).toEqual({ purple: 3 })
+
+    const before = structuredClone(positive)
+    const placed = applyGameCommand(positive, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: player.supportArea.slice(0, 2).map((support) => support.card.instanceId),
+    })
+    expect(positive).toEqual(before)
+    expect(placed.players['player-one'].stage?.card).toEqual(source)
+    expect(placed.players['player-one'].discardPile).toHaveLength(16)
+    expect(placed.players['player-one'].supportArea.filter((support) => support.rested)).toHaveLength(2)
+    expect(getAttackEnergyCostForState(placed, darkCacao.card.instanceId)).toEqual({ purple: 2 })
+  })
+
+  it('keeps BS8-125 placement payable but leaves Dark Cacao at three purple when trash is below 15', () => {
+    const negative = createCardNegativeDemoState('BS8-125')
+    const player = negative.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS8-125')!
+    const darkCacao = player.battleArea.find((entry) => entry.card.id === 'BS8-103')!
+    const before = structuredClone(negative)
+
+    expect(player.discardPile).toHaveLength(13)
+    expect(player.discardPile.every((card) => card.imageUrl)).toBe(true)
+    expect(getAttackEnergyCostForState(negative, darkCacao.card.instanceId)).toEqual({ purple: 3 })
+
+    const placed = applyGameCommand(negative, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: source.instanceId,
+      paymentIds: [player.supportArea[0].card.instanceId, player.supportArea[1].card.instanceId],
+    })
+    expect(negative).toEqual(before)
+    expect(placed.players['player-one'].stage?.card).toEqual(source)
+    expect(placed.players['player-one'].discardPile).toHaveLength(14)
+    expect(placed.players['player-one'].supportArea.filter((support) => support.rested)).toHaveLength(2)
+    expect(getAttackEnergyCostForState(placed, darkCacao.card.instanceId)).toEqual({ purple: 3 })
+  })
+
+  it.each(['BS9-086', 'BS9-086@1'])(
+    'uses the printed Once Per Turn boundary for the BS9-086 negative fixture (%s)',
+    (cardNumber) => {
+      const positive = createCardCheckDemoState(cardNumber)
+      const negative = createCardNegativeDemoState(cardNumber)
+      const positiveEntry = positive.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS9-086',
+      )
+      const negativeEntry = negative.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS9-086',
+      )
+
+      expect(positiveEntry).toBeDefined()
+      expect(negativeEntry).toBeDefined()
+      if (!positiveEntry || !negativeEntry) return
+
+      expect(positiveEntry.card.skill).toMatchObject({
+        trigger: 'activate',
+        oncePerTurn: true,
+      })
+      expect(canActivateCookieSkill(
+        positive,
+        'player-one',
+        positiveEntry.card.instanceId,
+        'activate',
+      )).toBe(true)
+      expect(negative.skillUsesThisTurn).toContain(
+        negativeEntry.battleEntryId ?? negativeEntry.card.instanceId,
+      )
+      expect(canActivateCookieSkill(
+        negative,
+        'player-one',
+        negativeEntry.card.instanceId,
+        'activate',
+      )).toBe(false)
+
+      const before = structuredClone(negative)
+      expect(() => applyGameCommand(negative, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: negativeEntry.card.instanceId,
+        trigger: 'activate',
+        paymentIds: [],
+      })).toThrow()
+      expect(negative).toEqual(before)
+    },
+  )
+
+  it.each(['BS9-072', 'BS9-073', 'BS9-074', 'BS9-103', 'BS9-105', 'BS9-109'])('keeps the no-Then blocked attack fixture before declaration (%s)', (cardNumber) => {
+      const state = createCardNegativeDemoState(cardNumber, { normalAttack: 'blocked' })
+      const player = state.players['player-one']
+      const entry = player.battleArea.find((battleEntry) => battleEntry.card.id === cardNumber)
+
+      expect(entry).toMatchObject({ card: { id: cardNumber }, rested: true })
+      expect(state.pendingBattle).toBeNull()
+      expect(player.supportArea.every(({ rested }) => rested)).toBe(true)
+    })
 })

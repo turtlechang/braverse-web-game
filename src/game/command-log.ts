@@ -1,5 +1,6 @@
 import { getCookieEffectiveHp, getOpponentId } from './helpers'
 import { getForcedAttackTargetId, getFaintSourceCostUnavailableReason } from './battle'
+import { materializeExtraDeckCookie } from './extra-deck'
 import {
   getEnergyCostTotal,
   getRemainingEnergyCost,
@@ -27,7 +28,7 @@ import type {
 const playerName = (state: GameState, playerId: PlayerId): string =>
   state.players[playerId]?.name ?? playerId
 
-/** 在雙方手牌／牌庫／休息區／棄牌區／戰鬥區（含 HP 卡）／支援區／場景區裡找一張卡。 */
+/** 在雙方手牌／牌庫／休息區／棄牌區／戰鬥區（含 HP 卡）／支援區／場景區／EXTRA 區裡找一張卡。 */
 const findCard = (state: GameState, instanceId: string): GameCard | undefined => {
   for (const playerId of Object.keys(state.players) as PlayerId[]) {
     const player = state.players[playerId]
@@ -46,6 +47,17 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
     }
     if (player.stage?.card.instanceId === instanceId) {
       return player.stage.card
+    }
+    const extraCard = player.extraDeck?.find(
+      (card) => card.instanceId === instanceId,
+    )
+    if (extraCard) {
+      try {
+        return materializeExtraDeckCookie(extraCard)
+      } catch {
+        // Incomplete legacy EXTRA snapshots still produce a command log; keep
+        // the card association absent rather than inventing runtime fields.
+      }
     }
   }
   return undefined
@@ -769,7 +781,10 @@ const describeAttackEffectAction = (effect: CardEffect): string => {
     case 'modify-attack':
       return `使目標攻擊力 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-damage-received':
-      return `使目標受到的攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
+      if (effect.minimumDamage !== undefined && effect.setDamageTo !== undefined) {
+        return `${effect.duration === 'opponent-next-turn' ? '直到對手回合結束，' : ''}使目標每次受到 ${effect.minimumDamage} 點以上的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'}改為 ${effect.setDamageTo} 點`
+      }
+      return `使目標受到的${effect.damageType === 'all' ? '傷害' : effect.damageType === 'effect' ? '效果傷害' : '攻擊傷害'} ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
     case 'modify-attack-by-break-count':
       return '依休息區張數修改目標攻擊力'
     case 'break-to-battle':
@@ -1313,6 +1328,13 @@ export const describeCommand = (
         ? `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}；${outcome}`
         : `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}`
     }
+    case 'resolve-extra-deck-attack': {
+      const pending = previous.pendingExtraDeckAttack
+      if (!command.extraDeckInstanceId) {
+        return `${actor} 略過「${pending?.cardName ?? 'EXTRA 餅乾'}」的攻擊效果`
+      }
+      return `${actor} reveal 了「${findCardName(previous, command.extraDeckInstanceId)}」並啟動其攻擊效果`
+    }
     case 'resolve-next-damage': {
       const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
       const sequence = previous.pendingBattle?.effectDamageSequence
@@ -1439,6 +1461,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'declare-attack': 'attack',
   'resolve-optional-cost-attack': 'attack',
   'resolve-attack-effect': 'attack',
+  'resolve-extra-deck-attack': 'attack',
   'resolve-next-damage': 'damage',
   'resolve-battle': 'attack',
   'resolve-after-damage-effect': 'damage',
@@ -1545,7 +1568,32 @@ const describeChooseOneSteps = (chooseOneModes: number[] | undefined): LogStepDe
  * 其餘 kind（例如互動式的 begin-* 系列，步驟本來就分散在多筆各自的 log entry 裡）
  * 回傳 undefined，UI 端改用同一個 groupId 底下其他 entry 的 summary/card 當步驟。
  */
+/** Only newly attached, explicitly face-up HP may add card art to the public log. */
 export const describeCommandSteps = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): LogStepDetail[] | undefined => {
+  const steps = describeCommandCoreSteps(previous, next, command)
+  const placements = Object.values(next.players).flatMap((player) =>
+    player.battleArea.flatMap((cookie) => {
+      const before = previous.players[player.id].battleArea.find(
+        (entry) => entry.card.instanceId === cookie.card.instanceId,
+      )
+      return cookie.hpCards.flatMap((card, index) => {
+        if (!cookie.faceUpHpCardInstanceIds?.includes(card.instanceId) ||
+          before?.hpCards.some((entry) => entry.instanceId === card.instanceId)) return []
+        return [{
+          text: `HP 放置：將「${card.name}」正面朝上放到「${cookie.card.name}」HP ${index === 0 ? '最下方' : '最上方'}（目前 ${cookie.hpCards.length} 張）。`,
+          cards: [card, cookie.card],
+        }]
+      })
+    }),
+  )
+  return placements.length > 0 ? [...(steps ?? []), ...placements] : steps
+}
+
+const describeCommandCoreSteps = (
   previous: GameState,
   next: GameState,
   command: GameCommand,
@@ -2295,7 +2343,10 @@ export const resolveLogCard = (
     case 'replace-cookie':
       return findCard(previous, command.instanceId)
     case 'play-extra-deck-cookie':
-      return findCard(next, command.instanceId)
+      // A paid EXTRA entry is still pending in `previous.extraDeck`; after a
+      // cost prompt it may already be materialized in the battle area.  Check
+      // both states so the public trace retains the source card either way.
+      return findCard(previous, command.instanceId) ?? findCard(next, command.instanceId)
     case 'refresh-deck':
       return findCard(previous, command.cookieInstanceId)
     case 'attack':
@@ -2314,7 +2365,18 @@ export const resolveLogCard = (
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)
         : undefined
+    case 'resolve-extra-deck-attack':
+      return command.extraDeckInstanceId
+        ? findCard(previous, command.extraDeckInstanceId) ??
+            findCard(next, command.extraDeckInstanceId)
+        : previous.pendingExtraDeckAttack?.sourceInstanceId
+          ? findCard(previous, previous.pendingExtraDeckAttack.sourceInstanceId)
+          : undefined
     case 'resolve-ability-effect':
+      return previous.pendingAbilityEffect?.sourceInstanceId
+        ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
+        : undefined
+    case 'resolve-reorder-hp':
       return previous.pendingAbilityEffect?.sourceInstanceId
         ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
         : undefined
@@ -2338,13 +2400,39 @@ export const resolveLogCard = (
     case 'begin-activate-stage':
       return previous.players[command.playerId].stage?.card
     case 'resolve-next-damage':
+      // Sequential effect damage is attributed to its real effect source so a
+      // contract trace can prove every damage segment even when protection
+      // prevents the HP reveal (or when the revealed card is only a filler).
+      // Ordinary battle damage keeps the existing revealed-HP association.
+      if (previous.pendingBattle?.effectDamageSequence) {
+        const sourceId = previous.pendingBattle.attackerInstanceId
+        const source = sourceId ? findCard(previous, sourceId) : undefined
+        if (source) return source
+      }
       return resolveRevealedDamageCard(previous, next, command.playerId)
     case 'resolve-flip':
+      // BS9-030 activates a discarded Cookie's FLIP as part of the attacker's
+      // Then effect.  Attribute that nested decision to the attacking source
+      // so the BS9-030 contract trace proves the complete causal chain while
+      // preserving ordinary HP FLIP entries' revealed-card association.
+      if (
+        previous.pendingBattle?.detachedFlip &&
+        previous.pendingBattle.attackerInstanceId
+      ) {
+        return findCard(previous, previous.pendingBattle.attackerInstanceId)
+      }
       return previous.pendingBattle?.revealedHpCard ?? undefined
-    case 'resolve-draw-up-to':
-      return previous.pendingDrawUpTo
-        ? findCard(previous, previous.pendingDrawUpTo.sourceInstanceId)
-        : undefined
+    case 'resolve-draw-up-to': {
+      const pending = previous.pendingDrawUpTo
+      if (!pending) return undefined
+      if (
+        pending.battleContinuation === 'attack-effect' &&
+        previous.pendingBattle?.attackerInstanceId
+      ) {
+        return findCard(previous, previous.pendingBattle.attackerInstanceId)
+      }
+      return findCard(previous, pending.sourceInstanceId)
+    }
     case 'resolve-opponent-hand-discard': {
       const sourceId = previous.pendingOpponentHandDiscard?.sourceInstanceId
       return sourceId ? findCard(previous, sourceId) ?? findCard(next, sourceId) : undefined

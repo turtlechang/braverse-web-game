@@ -15,11 +15,12 @@ import type {
 } from './types'
 
 /**
- * 戰鬥區餅乾的可見資訊：HP 卡面朝下，雙方（含持有者）都只知道張數。
+ * HP 預設隱藏；卡文指定正面朝上的 HP 則公開牌面與位置。
  */
 export interface CookieInBattleView {
   card: CookieCard
   hpCount: number
+  faceUpHpCards?: { position: number; card: GameCard }[]
   rested: boolean
   battleEntryId?: string
 }
@@ -78,6 +79,10 @@ const toSideView = (
     battleArea: player.battleArea.map((cookie) => ({
       card: cookie.card,
       hpCount: cookie.hpCards.length,
+      ...(cookie.faceUpHpCardInstanceIds?.length ? {
+        faceUpHpCards: cookie.hpCards.flatMap((card, position) =>
+          cookie.faceUpHpCardInstanceIds?.includes(card.instanceId) ? [{ position, card }] : []),
+      } : {}),
       rested: cookie.rested,
       battleEntryId: cookie.battleEntryId,
     })),

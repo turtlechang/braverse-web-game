@@ -74,13 +74,12 @@ const mysticState = (hasAnotherMystic: boolean): GameState => {
   }
 }
 
-const activateMystic = (state: GameState, mode = 5): GameState =>
+const activateMystic = (state: GameState): GameState =>
   applyGameCommand(state, {
     kind: 'begin-activate-skill',
     playerId: 'player-one',
     sourceInstanceId: 'BS8-059:source',
     trigger: 'activate',
-    chooseOneModes: [mode],
     paymentIds: ['BS8-053:support-mystic-energy'],
     supportToHandIds: [
       'BS8-053:support-mystic-return-one',
@@ -106,24 +105,25 @@ describe('BS8-059 Mystic Flour Cookie', () => {
   })
 
   it.each([
-    { mode: 0, targets: [], hp: [3, 3] },
-    { mode: 1, targets: [0], hp: [2, 3] },
-    { mode: 1, targets: [1], hp: [3, 2] },
-    { mode: 2, targets: [0], hp: [1, 3] },
-    { mode: 2, targets: [1], hp: [3, 1] },
-    { mode: 3, targets: [0, 1], hp: [2, 2] },
-    { mode: 4, targets: [0, 1], hp: [1, 2] },
-    { mode: 4, targets: [1, 0], hp: [2, 1] },
-    { mode: 5, targets: [0, 1], hp: [1, 1] },
-  ])('chooses each opponent Cookie HP amount independently: $hp', ({ mode, targets, hp }) => {
+    { targets: [], amounts: [], hp: [3, 3] },
+    { targets: [0], amounts: [1], hp: [2, 3] },
+    { targets: [1], amounts: [1], hp: [3, 2] },
+    { targets: [0], amounts: [2], hp: [1, 3] },
+    { targets: [1], amounts: [2], hp: [3, 1] },
+    { targets: [0, 1], amounts: [1, 1], hp: [2, 2] },
+    { targets: [0, 1], amounts: [2, 1], hp: [1, 2] },
+    { targets: [1, 0], amounts: [1, 2], hp: [1, 2] },
+    { targets: [0, 1], amounts: [2, 2], hp: [1, 1] },
+  ])('chooses each opponent Cookie HP amount independently: $amounts', ({ targets, amounts, hp }) => {
     const initial = mysticState(false)
     const before = structuredClone(initial)
-    let state = activateMystic(initial, mode)
+    let state = activateMystic(initial)
     if (state.pendingAbilityEffect) {
       state = applyGameCommand(state, {
         kind: 'resolve-ability-effect',
         playerId: 'player-one',
         targetIds: targets.map(index => initial.players['player-two'].battleArea[index].card.instanceId),
+        amountByTargetIndex: amounts,
       })
     }
     expect(state.players['player-two'].battleArea.map(entry => entry.hpCards.length)).toEqual(hp)
@@ -137,12 +137,24 @@ describe('BS8-059 Mystic Flour Cookie', () => {
 
   it('rejects missing, repeated, or friendly targets without changing the paid state', () => {
     const initial = mysticState(false)
-    const paid = activateMystic(initial, 4)
+    const paid = activateMystic(initial)
     const before = structuredClone(paid)
     const opponent = initial.players['player-two'].battleArea[0].card.instanceId
-    for (const targetIds of [[], [opponent], [opponent, opponent], [opponent, 'BS8-059:source']]) {
+    const opponentTwo = initial.players['player-two'].battleArea[1].card.instanceId
+    const invalidCases: Array<{
+      targetIds: string[]
+      amountByTargetIndex: number[]
+    }> = [
+      { targetIds: [opponent, opponent], amountByTargetIndex: [1, 1] },
+      { targetIds: [opponent, 'BS8-059:source'], amountByTargetIndex: [1, 1] },
+      { targetIds: [opponent, opponentTwo], amountByTargetIndex: [2] },
+      { targetIds: [opponent], amountByTargetIndex: [0] },
+      { targetIds: [opponent], amountByTargetIndex: [3] },
+    ]
+    for (const { targetIds, amountByTargetIndex } of invalidCases) {
       expect(() => applyGameCommand(paid, {
         kind: 'resolve-ability-effect', playerId: 'player-one', targetIds,
+        amountByTargetIndex,
       })).toThrow()
       expect(paid).toEqual(before)
     }
@@ -152,10 +164,11 @@ describe('BS8-059 Mystic Flour Cookie', () => {
     for (const mode of [0, 1, 2]) {
       const initial = mysticState(false)
       initial.players['player-two'].battleArea = initial.players['player-two'].battleArea.slice(0, 1)
-      const paid = activateMystic(initial, mode)
+      const paid = activateMystic(initial)
       const state = paid.pendingAbilityEffect ? applyGameCommand(paid, {
         kind: 'resolve-ability-effect', playerId: 'player-one',
         targetIds: mode === 0 ? [] : [initial.players['player-two'].battleArea[0].card.instanceId],
+        amountByTargetIndex: mode === 0 ? [] : [mode],
       }) : paid
       expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(3 - mode)
     }

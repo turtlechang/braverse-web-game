@@ -66,7 +66,7 @@ describe('DeckEditorPage', () => {
       expect(confirm).not.toHaveBeenCalled()
       await click('[data-testid="deck-editor-filter-toggle"]')
       await change('[aria-label="卡牌類型"]','extra')
-      expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(15)
+      expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(26)
       await click('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-005@1 "]) .deck-editor-page-pool-card-button')
       await click('[data-testid="deck-editor-page-back"]')
       expect(confirm).toHaveBeenCalledTimes(1)

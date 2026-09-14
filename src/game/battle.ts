@@ -13,6 +13,7 @@ import {
   getTargetPlayerId,
   isEffectConditionMet,
   isEffectTargeted,
+  isOpponentDamagePrevented,
   requiresEffectCardSelection,
   selectEffectTargets,
   expandChooseOne,
@@ -30,7 +31,11 @@ import {
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
-import { getAwakenedFaintTrashCards } from './extra-deck'
+import {
+  getAwakenedFaintTrashCards,
+  getExtraDeckAttackCandidates,
+  materializeExtraDeckCookieAfterEntryCost,
+} from './extra-deck'
 import { hasPendingCardResolution } from './pending'
 import {
   canPayTrashBattleCookieCost,
@@ -110,15 +115,35 @@ export const hasActivatableFlipEffect = (
 ): boolean =>
   (flip.attachedHpBonus ?? 0) > 0 ||
   flip.effects.some(
-    (effect) =>
-      isEffectConditionMet(state, context, effect) &&
-      (effect.kind !== 'gain-hp' ||
+    (effect) => {
+      if (!isEffectConditionMet(state, context, effect)) return false
+      if (
+        effect.kind === 'transfer-hp' &&
+        effect.receiverTarget
+      ) {
+        // Explicit receiver transfers are an ordered donor/receiver pair.
+        // A single Cookie is not a legal pair, so do not open a FLIP prompt
+        // that can only fail with a partial-selection error.
+        const donors = getEffectTargetCandidates(state, context, effect.target)
+        const receivers = getEffectTargetCandidates(
+          state,
+          context,
+          effect.receiverTarget,
+        )
+        return donors.some((donor) =>
+          receivers.some(
+            (receiver) => receiver.card.instanceId !== donor.card.instanceId,
+          ),
+        )
+      }
+      return effect.kind !== 'gain-hp' ||
         isAttachedFlipGainHpTargetEligible(
           state,
           context,
           effect,
           attachedCookieInstanceId,
-        )),
+        )
+    },
   )
 
 const markCookieHpReducedThisTurn = (
@@ -358,7 +383,7 @@ const beginAttackInternal = (
       isEffectConditionMet(state, attackContext, effect),
   )
 
-  return {
+  const declaredState: GameState = {
     ...state,
     players: {
       ...state.players,
@@ -394,6 +419,44 @@ const beginAttackInternal = (
       attackEffectIndex: 0,
     },
   }
+
+  // BS9-095 Spire of Deceit: when your named Shadow Milk Cookie declares an
+  // attack, the Stage owner may resolve its optional draw effect.  Queue the
+  // trigger after the attack is actually declared (including any required
+  // discard cost), while retaining the battle pipeline for the trap window.
+  const attackStage = attackerPlayer.stage
+  const attackStageAbility = attackStage?.card.stageAbility
+  if (
+    attackStage &&
+    attackStageAbility?.triggered &&
+    attackStageAbility.triggerOnAttackCardName === attacker.card.name &&
+    (attackStageAbility.triggerOnAttackHandCountAtMost === undefined ||
+      attackerPlayer.hand.length <= attackStageAbility.triggerOnAttackHandCountAtMost)
+  ) {
+    const triggerContext: EffectContext = {
+      sourcePlayerId: attackerPlayer.id,
+      sourceInstanceId: attackStage.card.instanceId,
+      sourceCardName: attackStage.card.name,
+    }
+    const effects = attackStageAbility.effects.filter((effect) =>
+      isEffectConditionMet(declaredState, triggerContext, effect),
+    )
+    if (effects.length > 0) {
+      return {
+        ...declaredState,
+        pendingStageTrigger: {
+          playerId: attackerPlayer.id,
+          sourceInstanceId: attackStage.card.instanceId,
+          sourceCardName: attackStage.card.name,
+          effectText: attackStageAbility.text,
+          sourceKind: 'stage',
+          effects,
+        },
+      }
+    }
+  }
+
+  return declaredState
 }
 
 /** 公開攻擊入口：必要棄牌會先停在 pending decision，絕不提前橫置或付款。 */
@@ -454,6 +517,11 @@ const isTrapConditionMet = (
     // trash」的「your」。見 types.ts TrapCondition 上方註解；不要改成
     // getOpponentId(playerId)，那會破壞 BS2-080 等既有卡牌。
     return state.players[playerId].discardPile.length >= condition.count
+  }
+
+  if (condition.kind === 'attacker-trash-count-at-least') {
+    const attackerPlayerId = battle.attackerPlayerId
+    return state.players[attackerPlayerId].discardPile.length >= condition.count
   }
 
   if (condition.kind === 'trash-count-at-least') {
@@ -792,7 +860,9 @@ const validateTrapTargets = (
       effect.kind === 'redirect-attack' ||
       effect.kind === 'return-to-hand' ||
       effect.kind === 'return-to-deck-bottom' ||
+      effect.kind === 'transfer-hp' ||
       effect.kind === 'hp-to-hand' ||
+      effect.kind === 'hp-to-trash' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly)
 
   if (effects.every((effect) => !isTargetEffect(effect))) {
@@ -837,6 +907,16 @@ const validateTrapTargets = (
       explicitTargetIds !== undefined,
     )
     selectEffectTargets(state, context, target, effectiveIds)
+    if (effect.kind === 'transfer-hp' && effect.receiverTarget) {
+      const receiverIds = selfTargetIds ?? []
+      if (receiverIds.length < (effect.receiverTarget.min ?? 0) ||
+          receiverIds.length > effect.receiverTarget.max) {
+        throw new GameRuleError('Invalid battle action.')
+      }
+      if (receiverIds.length > 0) {
+        selectEffectTargets(state, context, effect.receiverTarget, receiverIds)
+      }
+    }
   }
 }
 
@@ -1791,6 +1871,17 @@ export const playTrap = (
       }
     }
 
+    const resolvedTargetIds = resolveTrapEffectTargetIds(
+      nextState,
+      context,
+      'target' in effect ? effect.target : undefined,
+      requestedTargetIds,
+      options.selfTargetIds,
+      hasExplicitTargetIds,
+    )
+    const executeTargetIds = effect.kind === 'transfer-hp' && effect.receiverTarget
+      ? [...resolvedTargetIds, ...(options.selfTargetIds ?? []).slice(0, 1)]
+      : resolvedTargetIds
     nextState = executeCardEffect(
       nextState,
       context,
@@ -1799,14 +1890,7 @@ export const playTrap = (
         effect.kind === 'deck-to-support' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
-        : resolveTrapEffectTargetIds(
-            nextState,
-            context,
-            'target' in effect ? effect.target : undefined,
-            requestedTargetIds,
-            options.selfTargetIds,
-            hasExplicitTargetIds,
-          ),
+        : executeTargetIds,
     )
     if (nextState.pendingRevealTopDeck) break
   }
@@ -2001,6 +2085,16 @@ const removeFaintedCookie = (
         ...(state.cookiesFaintedThisTurn ?? {}),
         [playerId]: (state.cookiesFaintedThisTurn?.[playerId] ?? 0) + 1,
       } as Record<PlayerId, number>,
+      cookiesFaintedThisTurnDetails: {
+        ...(state.cookiesFaintedThisTurnDetails ?? {}),
+        [playerId]: [
+          ...(state.cookiesFaintedThisTurnDetails?.[playerId] ?? []),
+          {
+            energyColor: target.card.energyColor,
+            level: target.card.level,
+          },
+        ],
+      },
     },
     playerId,
     1,
@@ -2176,11 +2270,12 @@ export const finishBattle = (state: GameState): GameState => {
       if (completedState.pendingDrawUpTo && remainingEffects.length > 0) {
         completedState = {
           ...completedState,
-          pendingDrawUpTo: {
-            ...completedState.pendingDrawUpTo,
-            afterEffects: remainingEffects,
-            afterEffectContext: context,
-          },
+            pendingDrawUpTo: {
+              ...completedState.pendingDrawUpTo,
+              afterEffects: remainingEffects,
+              afterEffectContext: context,
+              afterEffectSourceKind: 'trap',
+            },
         }
         break
       }
@@ -2256,6 +2351,7 @@ const hasApplicableOptionalAttackEffect = (
   context: EffectContext,
   effects: CardEffect[],
   cost?: AbilityCost,
+  payBeforeCondition = false,
 ): boolean => {
   // 「將此餅乾放到棄牌區／休息區／牌庫底」只能在攻擊來源仍位於自己的戰鬥區時
   // 支付。攻擊途中來源可能先被 FLIP 效果擊倒（BS7-026 對 BS3-006）；
@@ -2270,6 +2366,8 @@ const hasApplicableOptionalAttackEffect = (
   ) {
     return false
   }
+
+  if (payBeforeCondition) return true
 
   return effects.some(
     (effect) =>
@@ -2558,9 +2656,10 @@ const finishDamageSequence = (state: GameState): GameState => {
         damagePlayerId: nextDamagePlayerId,
         damageTargetInstanceId: nextTargetInstanceId,
         damagedInstanceIds: [],
-        effectDamageSequence: {
-          remainingTargetInstanceIds,
-          damage: sequence.damage,
+          effectDamageSequence: {
+            remainingTargetInstanceIds,
+            damageSourcePlayerId: sequence.damageSourcePlayerId,
+            damage: sequence.damage,
           originalAttackTargetInstanceId: sequence.originalAttackTargetInstanceId,
           ...(remainingTargets ? { remainingTargets } : {}),
           continuation: sequence.continuation,
@@ -2664,6 +2763,7 @@ export const resolveAttackEffect = (
         effectContext,
         effect.effects,
         effect.cost,
+        effect.payBeforeCondition,
       )
     ) {
       return advanceAttackEffect(state, battle)
@@ -2682,6 +2782,37 @@ export const resolveAttackEffect = (
       effectText: effect.effectText,
       sourceEnergy: effect.sourceEnergy,
       mandatory: effect.mandatory,
+      payBeforeCondition: effect.payBeforeCondition,
+      },
+    }
+  }
+
+  if (effect.kind === 'activate-extra-deck-attack') {
+    const candidates = getExtraDeckAttackCandidates(
+      state,
+      playerId,
+      effect.cardName,
+    )
+    if (candidates.length === 0) {
+      return advanceAttackEffect(state, battle)
+    }
+    const sourceCardName =
+      effectContext.sourceCardName ??
+      state.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+      )?.card.name ??
+      'Unknown'
+    return {
+      ...state,
+      pendingExtraDeckAttack: {
+        playerId,
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName,
+        cardName: effect.cardName,
+        candidateIds: candidates.map((card) => card.instanceId),
+        optional: effect.optional !== false,
+        battleContinuation: 'attack-effect',
       },
     }
   }
@@ -2844,8 +2975,107 @@ const resolveOptionalAbilityEffect = (
   hpToTrashIds: string[],
   trashToDeckIds: string[],
   hpToHandIds: string[],
+  supportToTrashIds: string[],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
+  if (pending?.extraDeckPlayInstanceId) {
+    if (pending.playerId !== playerId || pending.resolution !== 'ability') {
+      throw new GameRuleError('目前沒有待處理的 EXTRA 登場代價。')
+    }
+    if (action === 'skip') {
+      if (pending.mandatory) {
+        throw new GameRuleError('此 EXTRA 餅乾的登場代價必須支付。')
+      }
+      return { ...state, pendingOptionalCostAttack: null }
+    }
+
+    // EXTRA-030 目前只有能量與符合條件的手牌棄置代價；若未來新增
+    // 其他代價，必須先建立對應的支付狀態，不能在此默默忽略。
+    if (
+      (pending.cost.supportToTrash ?? 0) > 0 ||
+      (pending.cost.supportToHand ?? 0) > 0 ||
+      pending.cost.hpToTrash ||
+      pending.cost.hpToHand ||
+      pending.cost.trashToDeck ||
+      pending.cost.selfToTrash ||
+      pending.cost.selfToBreakArea ||
+      pending.cost.selfToDeckBottom ||
+      pending.cost.trashBattleCookie ||
+      pending.cost.battleCookieToHand ||
+      pending.cost.handToBreakArea
+    ) {
+      throw new GameRuleError('此 EXTRA 登場代價類型尚未支援。')
+    }
+    if (
+      targetIds.length > 0 ||
+      supportToTrashIds.length > 0 ||
+      supportToHandIds.length > 0 ||
+      hpToTrashIds.length > 0 ||
+      trashToDeckIds.length > 0 ||
+      hpToHandIds.length > 0
+    ) {
+      throw new GameRuleError('EXTRA 登場代價不接受額外目標或代價選擇。')
+    }
+
+    const player = state.players[playerId]
+    const uniqueDiscardIds = [...new Set(discardCardIds)]
+    const discardAmount = pending.cost.discardHand ?? 0
+    if (
+      uniqueDiscardIds.length !== discardCardIds.length ||
+      uniqueDiscardIds.length !== discardAmount
+    ) {
+      throw new GameRuleError(`必須棄置 ${discardAmount} 張手牌作為 EXTRA 登場代價。`)
+    }
+    const discardCandidates = new Set(
+      getDiscardHandCostCandidates(
+        pending.cost,
+        player.hand,
+        pending.sourceInstanceId,
+      ).map((card) => card.instanceId),
+    )
+    if (uniqueDiscardIds.some((id) => !discardCandidates.has(id))) {
+      throw new GameRuleError('手牌不符合 EXTRA 登場代價的棄牌條件。')
+    }
+
+    const uniquePaymentIds = [...new Set(paymentIds)]
+    if (uniquePaymentIds.length !== paymentIds.length) {
+      throw new GameRuleError('能量支付卡不能重複。')
+    }
+    const paymentValidation = validateEnergyPayment(
+      getRemainingEnergyCost(pending.cost.energy ?? {}, pending.sourceEnergy),
+      player.supportArea,
+      uniquePaymentIds,
+    )
+    if (!paymentValidation.valid) {
+      throw new GameRuleError(`EXTRA 登場代價能量支付無效：${paymentValidation.reason}`)
+    }
+
+    const discardSet = new Set(uniqueDiscardIds)
+    const paymentSet = new Set(uniquePaymentIds)
+    const discarded = player.hand.filter((card) => discardSet.has(card.instanceId))
+    const paidState: GameState = {
+      ...state,
+      pendingOptionalCostAttack: null,
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          hand: player.hand.filter((card) => !discardSet.has(card.instanceId)),
+          discardPile: [...player.discardPile, ...discarded],
+          supportArea: player.supportArea.map((support) =>
+            paymentSet.has(support.card.instanceId)
+              ? { ...support, rested: true }
+              : support,
+          ),
+        },
+      },
+    }
+    return materializeExtraDeckCookieAfterEntryCost(
+      paidState,
+      playerId,
+      pending.extraDeckPlayInstanceId,
+    )
+  }
   const pendingAbility = state.pendingAbilityEffect
   if (
     !pending ||
@@ -2878,11 +3108,9 @@ const resolveOptionalAbilityEffect = (
   }
 
   // Ability wrapper 的能量代價一律由支援區支付；只有卡文明確轉接
-  // `sourceEnergy` 時才會在下方扣除來源餅乾供能。其他代價欄位若出現在
-  // ability wrapper，不能默默當成已支付，避免產生不完整的規則解算。
+  // `sourceEnergy` 時才會在下方扣除來源餅乾供能。支援區棄牌／回手
+  // 代價與攻擊後續共用同一套選取與區域驗證。
   if (
-    (pending.cost.supportToTrash ?? 0) > 0 ||
-    (pending.cost.supportToHand ?? 0) > 0 ||
     pending.cost.hpToTrash ||
     pending.cost.hpToHand ||
     pending.cost.trashToDeck ||
@@ -2901,10 +3129,6 @@ const resolveOptionalAbilityEffect = (
     // 在玩家尚未確認支付前預先鎖定目標。
     throw new GameRuleError('技能 Then 的目標必須在支付後選擇。')
   }
-  if (supportToHandIds.length > 0 || hpToTrashIds.length > 0 || trashToDeckIds.length > 0 || hpToHandIds.length > 0) {
-    throw new GameRuleError('此技能 Then 不需要這類額外代價。')
-  }
-
   const player = state.players[playerId]
   const uniqueDiscardIds = [...new Set(discardCardIds)]
   const discardAmount = pending.cost.discardHand ?? 0
@@ -2922,6 +3146,52 @@ const resolveOptionalAbilityEffect = (
     throw new GameRuleError('手牌不符合技能 Then 棄牌代價。')
   }
 
+  const supportToTrashAmount = pending.cost.supportToTrash ?? 0
+  const uniqueSupportToTrashIds = [...new Set(supportToTrashIds)]
+  if (uniqueSupportToTrashIds.length !== supportToTrashIds.length) {
+    throw new GameRuleError('支援區棄牌代價不能重複選同一張卡。')
+  }
+  if (uniqueSupportToTrashIds.length !== supportToTrashAmount) {
+    throw new GameRuleError(
+      `必須將 ${supportToTrashAmount} 張支援卡送入棄牌區作為技能 Then 代價。`,
+    )
+  }
+  const supportToTrashCandidates = getSupportEffectCandidates(
+    state,
+    { sourcePlayerId: playerId, sourceInstanceId: pending.sourceInstanceId },
+    { side: 'self', keyword: pending.cost.supportToTrashKeyword },
+  )
+  if (uniqueSupportToTrashIds.some((id) =>
+    !supportToTrashCandidates.some((support) => support.card.instanceId === id),
+  )) {
+    throw new GameRuleError('選擇的支援區卡牌不符合技能 Then 棄牌代價。')
+  }
+
+  const supportToHandAmount = pending.cost.supportToHand ?? 0
+  const uniqueSupportToHandIds = [...new Set(supportToHandIds)]
+  if (uniqueSupportToHandIds.length !== supportToHandIds.length) {
+    throw new GameRuleError('支援區回手代價不能重複選同一張卡。')
+  }
+  if (uniqueSupportToHandIds.length !== supportToHandAmount) {
+    throw new GameRuleError(
+      `必須將 ${supportToHandAmount} 張支援卡返回手牌作為技能 Then 代價。`,
+    )
+  }
+  const supportToHandCandidates = player.supportArea.filter(
+    (support) =>
+      isSupportToHandCostCandidate(pending.cost, support) &&
+      uniqueSupportToHandIds.includes(support.card.instanceId),
+  )
+  if (supportToHandCandidates.length !== supportToHandAmount) {
+    throw new GameRuleError('選擇的支援區卡牌不符合技能 Then 回手代價。')
+  }
+  if (uniqueSupportToTrashIds.some((id) => uniqueSupportToHandIds.includes(id))) {
+    throw new GameRuleError('同一張支援卡不能同時支付棄牌與回手代價。')
+  }
+  if (hpToTrashIds.length > 0 || trashToDeckIds.length > 0 || hpToHandIds.length > 0) {
+    throw new GameRuleError('此技能 Then 不需要這類額外代價。')
+  }
+
   const source = player.battleArea.find(
     (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
   )
@@ -2937,6 +3207,13 @@ const resolveOptionalAbilityEffect = (
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('能量支付卡不能重複。')
   }
+  if (
+    uniquePaymentIds.some((id) =>
+      uniqueSupportToTrashIds.includes(id) || uniqueSupportToHandIds.includes(id),
+    )
+  ) {
+    throw new GameRuleError('同一張支援卡不能同時支付能量與技能 Then 代價。')
+  }
   const paymentValidation = validateEnergyPayment(
     energyCost,
     player.supportArea,
@@ -2947,16 +3224,36 @@ const resolveOptionalAbilityEffect = (
   }
 
   const paymentSet = new Set(uniquePaymentIds)
+  const supportToTrashSet = new Set(uniqueSupportToTrashIds)
+  const supportToHandSet = new Set(uniqueSupportToHandIds)
+  const trashedSupportCards = player.supportArea.filter((support) =>
+    supportToTrashSet.has(support.card.instanceId),
+  )
+  const returnedSupportCards = player.supportArea.filter((support) =>
+    supportToHandSet.has(support.card.instanceId),
+  )
   const discarded = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
   const nextPlayer = {
     ...player,
-    hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
-    discardPile: [...player.discardPile, ...discarded],
-    supportArea: player.supportArea.map((support) =>
-      paymentSet.has(support.card.instanceId)
-        ? { ...support, rested: true }
-        : support,
-    ),
+    hand: [
+      ...player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+      ...returnedSupportCards.map((support) => support.card),
+    ],
+    discardPile: [
+      ...player.discardPile,
+      ...discarded,
+      ...trashedSupportCards.map((support) => support.card),
+    ],
+    supportArea: player.supportArea
+      .filter((support) =>
+        !supportToTrashSet.has(support.card.instanceId) &&
+        !supportToHandSet.has(support.card.instanceId),
+      )
+      .map((support) =>
+        paymentSet.has(support.card.instanceId)
+          ? { ...support, rested: true }
+          : support,
+      ),
   }
   const expandedEffects = [
     ...pendingAbility.effects.slice(0, pendingAbility.effectIndex),
@@ -2964,7 +3261,7 @@ const resolveOptionalAbilityEffect = (
     ...pendingAbility.effects.slice(pendingAbility.effectIndex + 1),
   ]
 
-  return {
+  let nextState: GameState = {
     ...state,
     pendingOptionalCostAttack: null,
     players: { ...state.players, [playerId]: nextPlayer },
@@ -2974,6 +3271,13 @@ const resolveOptionalAbilityEffect = (
       effectIndex: pendingAbility.effectIndex,
     },
   }
+  if (returnedSupportCards.length > 0 || trashedSupportCards.length > 0) {
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: true,
+      trashedCount: trashedSupportCards.length,
+    })
+  }
+  return nextState
 }
 
 export const resolveOptionalCostAttack = (
@@ -2987,6 +3291,7 @@ export const resolveOptionalCostAttack = (
   hpToTrashIds: string[] = [],
   trashToDeckIds: string[] = [],
   hpToHandIds: string[] = [],
+  supportToTrashIds: string[] = [],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -3004,6 +3309,7 @@ export const resolveOptionalCostAttack = (
       hpToTrashIds,
       trashToDeckIds,
       hpToHandIds,
+      supportToTrashIds,
     )
   }
   if (action === 'skip') {
@@ -3027,6 +3333,16 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
+  const discardCandidateIds = new Set(
+    getDiscardHandCostCandidates(
+      pending.cost,
+      player.hand,
+      pending.sourceInstanceId,
+    ).map((card) => card.instanceId),
+  )
+  if (uniqueDiscardIds.some((id) => !discardCandidateIds.has(id))) {
+    throw new GameRuleError('選擇的手牌不符合攻擊後效果棄牌條件。')
+  }
   const supportToHandAmount = pending.cost.supportToHand ?? 0
   const uniqueSupportToHandIds = [...new Set(supportToHandIds)]
   if (uniqueSupportToHandIds.length !== supportToHandIds.length) {
@@ -3044,6 +3360,29 @@ export const resolveOptionalCostAttack = (
   )
   if (supportToHandCandidates.length !== supportToHandAmount) {
     throw new GameRuleError('只能選擇符合條件的支援區卡牌返回手牌。')
+  }
+  const supportToTrashAmount = pending.cost.supportToTrash ?? 0
+  const uniqueSupportToTrashIds = [...new Set(supportToTrashIds)]
+  if (uniqueSupportToTrashIds.length !== supportToTrashIds.length) {
+    throw new GameRuleError('支援區棄牌代價不能重複選同一張卡。')
+  }
+  if (uniqueSupportToTrashIds.length !== supportToTrashAmount) {
+    throw new GameRuleError(
+      `Must trash exactly ${supportToTrashAmount} support card(s) for this effect.`,
+    )
+  }
+  const supportToTrashCandidates = getSupportEffectCandidates(
+    state,
+    { sourcePlayerId: playerId, sourceInstanceId: pending.sourceInstanceId },
+    { side: 'self', keyword: pending.cost.supportToTrashKeyword },
+  )
+  if (uniqueSupportToTrashIds.some((id) =>
+    !supportToTrashCandidates.some((support) => support.card.instanceId === id),
+  )) {
+    throw new GameRuleError('選擇的支援區卡牌不符合攻擊後效果棄牌條件。')
+  }
+  if (uniqueSupportToTrashIds.some((id) => uniqueSupportToHandIds.includes(id))) {
+    throw new GameRuleError('同一張支援卡不能同時支付棄牌與返回手牌代價。')
   }
   const hpToTrashCost = pending.cost.hpToTrash
   const uniqueHpToTrashIds = [...new Set(hpToTrashIds)]
@@ -3135,6 +3474,9 @@ export const resolveOptionalCostAttack = (
   if (uniquePaymentIds.some((id) => uniqueSupportToHandIds.includes(id))) {
     throw new GameRuleError('同一張支援卡不能同時支付能量與返回手牌代價。')
   }
+  if (uniquePaymentIds.some((id) => uniqueSupportToTrashIds.includes(id))) {
+    throw new GameRuleError('同一張支援卡不能同時支付能量與棄牌代價。')
+  }
   const paymentValidation = validateEnergyPayment(
     energyCost,
     player.supportArea,
@@ -3151,7 +3493,7 @@ export const resolveOptionalCostAttack = (
   const applicableEffects = pending.effects.filter((effect) =>
     isEffectConditionMet(state, effectContext, effect),
   )
-  if (applicableEffects.length === 0) {
+  if (applicableEffects.length === 0 && !pending.payBeforeCondition) {
     const battle = requirePendingBattle(state)
     const nextIndex = battle.attackEffectIndex + 1
     const clearedState = { ...state, pendingOptionalCostAttack: null }
@@ -3281,11 +3623,15 @@ export const resolveOptionalCostAttack = (
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
   const paymentSet = new Set(uniquePaymentIds)
+  const supportToTrashSet = new Set(uniqueSupportToTrashIds)
   const supportToHandSet = new Set(uniqueSupportToHandIds)
   const playerAfterSourceCost = stateAfterSourceCost.players[playerId]
   const context = effectContext
   const returnedSupportCards = playerAfterSourceCost.supportArea.filter((support) =>
     supportToHandSet.has(support.card.instanceId),
+  )
+  const trashedSupportCards = playerAfterSourceCost.supportArea.filter((support) =>
+    supportToTrashSet.has(support.card.instanceId),
   )
   let nextState: GameState = {
     ...stateAfterSourceCost,
@@ -3298,9 +3644,16 @@ export const resolveOptionalCostAttack = (
           ...playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
           ...returnedSupportCards.map((support) => support.card),
         ],
-        discardPile: [...playerAfterSourceCost.discardPile, ...discardedCards],
+        discardPile: [
+          ...playerAfterSourceCost.discardPile,
+          ...discardedCards,
+          ...trashedSupportCards.map((support) => support.card),
+        ],
         supportArea: playerAfterSourceCost.supportArea
-          .filter((support) => !supportToHandSet.has(support.card.instanceId))
+          .filter((support) =>
+            !supportToHandSet.has(support.card.instanceId) &&
+            !supportToTrashSet.has(support.card.instanceId),
+          )
           .map((support) =>
             paymentSet.has(support.card.instanceId)
               ? { ...support, rested: true }
@@ -3313,8 +3666,11 @@ export const resolveOptionalCostAttack = (
   // BS1-078 Awakening Ancient Forest 在同一回合依條件發動。這裡是
   // 攻擊後代價的手動移動路徑，不能只依賴 executeCardEffect 的
   // support-to-hand 分支來更新回合旗標。
-  if (returnedSupportCards.length > 0) {
-    nextState = markSupportAreaDecreased(nextState, playerId)
+  if (returnedSupportCards.length > 0 || trashedSupportCards.length > 0) {
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: true,
+      trashedCount: trashedSupportCards.length,
+    })
   }
   if (trashToDeckCost) {
     nextState = executeCardEffect(
@@ -3333,6 +3689,28 @@ export const resolveOptionalCostAttack = (
       uniqueTrashToDeckIds,
     )
   }
+
+  const detachedFlipEffect = applicableEffects.find(
+    (effect) => effect.kind === 'activate-discarded-flip',
+  )
+  if (detachedFlipEffect) {
+    if (discardedCards.length !== 1 || !discardedCards[0]?.flip) {
+      throw new GameRuleError('必須棄置 1 張具有 FLIP 的 Cookie。')
+    }
+    const battle = requirePendingBattle(nextState)
+    return {
+      ...nextState,
+      pendingBattle: {
+        ...battle,
+        stage: 'flip',
+        revealedHpCard: discardedCards[0],
+        detachedFlip: true,
+        damagePlayerId: playerId,
+        damageTargetInstanceId: undefined,
+      },
+    }
+  }
+
   let usedSubmittedTargets = false
   for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
     const effect = applicableEffects[effectIndex]
@@ -3442,6 +3820,29 @@ export const resolveNextDamage = (state: GameState): GameState => {
   const target = defender.battleArea[targetIndex]
   if (!target) {
     return finishDamageSequence(state)
+  }
+
+  // BS9-018 is a continuous Your Turn effect.  A pending attack or effect
+  // damage may have been declared before the current decision was opened;
+  // re-check the source/turn at the actual damage point so the protection is
+  // applied to every own Cookie, without suppressing damage caused by its
+  // owner.
+  if (
+    isOpponentDamagePrevented(
+      state,
+      damageTargetInstanceId,
+      battle.effectDamageSequence?.damageSourcePlayerId ??
+        battle.attackerPlayerId,
+    )
+  ) {
+    return finishDamageSequence({
+      ...state,
+      pendingBattle: {
+        ...battle,
+        remainingDamage: 0,
+        revealedHpCard: null,
+      },
+    })
   }
 
   if (target.hpCards.length === 0) {
@@ -3599,6 +4000,8 @@ export interface ResolveFlipOptions {
   discardHandIds?: string[]
   chooseOneModeIndex?: number
   targetIds?: string[]
+  effectTargetIds?: string[]
+  thenTargetIds?: string[]
 }
 
 export const resolveFlip = (
@@ -3608,9 +4011,13 @@ export const resolveFlip = (
 ): GameState => {
   const battle = requirePendingBattle(state)
   const revealed = battle.revealedHpCard
+  const isDetachedFlip = battle.detachedFlip === true
+  const flipOwnerId = isDetachedFlip
+    ? battle.attackerPlayerId
+    : (battle.damagePlayerId ?? battle.defenderPlayerId)
   if (
     battle.stage !== 'flip' ||
-    (battle.damagePlayerId ?? battle.defenderPlayerId) !== playerId ||
+    flipOwnerId !== playerId ||
     !revealed?.flip
   ) {
     throw new GameRuleError('Invalid battle action.')
@@ -3629,9 +4036,35 @@ export const resolveFlip = (
       state,
       revealed.flip,
       flipContext,
-      battle.damageTargetInstanceId ?? battle.targetInstanceId,
+      isDetachedFlip
+        ? undefined
+        : battle.damageTargetInstanceId ?? battle.targetInstanceId,
     )
     if (!hasActivatableEffect) {
+      if (isDetachedFlip) {
+        return advanceAttackEffect(
+          {
+            ...state,
+            pendingBattle: {
+              ...battle,
+              stage: 'attack-effect',
+              attackEffectIndex: battle.attackEffectIndex,
+              revealedHpCard: null,
+              detachedFlip: undefined,
+              damagePlayerId: undefined,
+              damageTargetInstanceId: undefined,
+            },
+          },
+          {
+            ...battle,
+            stage: 'attack-effect',
+            revealedHpCard: null,
+            detachedFlip: undefined,
+            damagePlayerId: undefined,
+            damageTargetInstanceId: undefined,
+          },
+        )
+      }
       return {
         ...state,
         players: {
@@ -3665,6 +4098,16 @@ export const resolveFlip = (
     if (discarded.length !== discardIds.length) {
       throw new GameRuleError('Invalid battle action.')
     }
+    const flipDiscardCandidates = new Set(
+      getDiscardHandCostCandidates(
+        revealed.flip.cost,
+        player.hand,
+        revealed.instanceId,
+      ).map((card) => card.instanceId),
+    )
+    if (discardIds.some((id) => !flipDiscardCandidates.has(id))) {
+      throw new GameRuleError('選擇的手牌不符合 FLIP 代價條件。')
+    }
     nextState = {
       ...nextState,
       players: {
@@ -3679,10 +4122,60 @@ export const resolveFlip = (
       },
     }
 
+    // BS9-025 的專案採用語義：這張附著 HP 卡翻開後，+1 HP 預設給原
+    // 附著餅乾；若在持有者自己的回合發動，玩家可選另一隻自己的餅乾
+    // 作為受益者。選擇只改變 HP 的接收者，不會移動／重新附著 FLIP 卡。
+    const attachedHpSourceInstanceId = isDetachedFlip
+      ? undefined
+      : battle.damageTargetInstanceId ?? battle.targetInstanceId
+    let attachedHpRecipientInstanceId = attachedHpSourceInstanceId
+    const alternateTargetSelector = revealed.flip.attachedHpAlternateTarget
+    if (alternateTargetSelector) {
+      const canRedirectAttachedHp =
+        !isDetachedFlip &&
+        state.activePlayerId === playerId &&
+        Boolean(attachedHpSourceInstanceId)
+      const rawRequestedTargetIds = options.targetIds ?? []
+      const requestedTargetIds = [...new Set(rawRequestedTargetIds)]
+      if (requestedTargetIds.length !== rawRequestedTargetIds.length) {
+        throw new GameRuleError('選擇的另一隻餅乾不是合法的 HP 目標。')
+      }
+      if (!canRedirectAttachedHp) {
+        if (requestedTargetIds.length > 0) {
+          throw new GameRuleError('只能在自己的回合選擇另一隻餅乾接收 HP。')
+        }
+      } else {
+        const selectorContext: EffectContext = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: attachedHpSourceInstanceId!,
+          sourceCardName: revealed.name,
+        }
+        const candidates = getEffectTargetCandidates(
+          nextState,
+          selectorContext,
+          alternateTargetSelector,
+        )
+        const candidateIds = new Set(
+          candidates.map((cookie) => cookie.card.instanceId),
+        )
+        if (
+          requestedTargetIds.length > alternateTargetSelector.max ||
+          requestedTargetIds.some((id) => !candidateIds.has(id))
+        ) {
+          throw new GameRuleError('選擇的另一隻餅乾不是合法的 HP 目標。')
+        }
+        if (requestedTargetIds.length === 1) {
+          attachedHpRecipientInstanceId = requestedTargetIds[0]
+        }
+      }
+    }
+
     const chooseOneIndex = revealed.flip.effects.findIndex(
       (effect) => effect.kind === 'choose-one',
     )
-    const attachedHpBonus = revealed.flip.attachedHpBonus ?? 0
+    const attachedHpBonus = isDetachedFlip
+      ? 0
+      : revealed.flip.attachedHpBonus ?? 0
     const attachedHpEffect: CardEffect | null = attachedHpBonus > 0
       ? {
           kind: 'gain-hp',
@@ -3715,10 +4208,13 @@ export const resolveFlip = (
         continue
       }
 
-      if (effect.kind === 'gain-hp') {
+      if (
+        effect.kind === 'gain-hp' &&
+        (effect.target?.sourceOnly || effect.target === undefined)
+      ) {
+        if (nextState.preventHpGainThisTurn?.[playerId]) continue
         const owner = nextState.players[playerId]
-        const attachedCookieInstanceId =
-          battle.damageTargetInstanceId ?? battle.targetInstanceId
+        const attachedCookieInstanceId = attachedHpRecipientInstanceId
         const targetIndex = owner.battleArea.findIndex(
           (cookie) =>
             cookie.card.instanceId === attachedCookieInstanceId,
@@ -3755,11 +4251,12 @@ export const resolveFlip = (
             },
           },
         }
-      } else if (effect.kind === 'flip-to-support') {
-        flipToSupportChoice = { rested: effect.rested ?? true }
-      } else if (effect.kind === 'flip-to-break') {
-        flipToBreakChoice = true
-      } else {
+      } else if (effect.kind === 'gain-hp') {
+        // A normal targeted gain-hp effect (for example BS9-031's
+        // "one of your LV.3 Cookies") is a player selection.  Only the
+        // synthetic sourceOnly effect above represents the Cookie that held
+        // the revealed HP card; do not silently redirect arbitrary targets to
+        // the damaged Cookie.
         nextState = executeCardEffect(
           nextState,
           context,
@@ -3775,6 +4272,69 @@ export const resolveFlip = (
                 ...nextState.pendingDrawUpTo,
                 afterEffects: remainingEffects,
                 afterEffectContext: context,
+                afterEffectSourceKind: 'flip',
+              },
+            }
+          }
+
+          // Up-to remains a player decision even for FLIP; activation does
+          // not authorize choosing the maximum draw count on their behalf.
+          break
+        }
+      } else if (effect.kind === 'flip-to-support') {
+        flipToSupportChoice = { rested: effect.rested ?? true }
+      } else if (effect.kind === 'flip-to-break') {
+        flipToBreakChoice = true
+      } else {
+        const effectTargetIds =
+          effect.kind === 'support-to-hand'
+            ? options.effectTargetIds ?? options.targetIds ?? []
+            : options.targetIds ?? []
+        nextState = executeCardEffect(
+          nextState,
+          context,
+          effect,
+          effectTargetIds,
+        )
+        // FLIP effects normally resolve in this function rather than through
+        // the generic pending-ability queue. Expand an explicit support
+        // return Then here so cards such as BS9-053 preserve the printed
+        // same-number relationship while using the normal selection validator
+        // for both steps.
+        if (
+          effect.kind === 'support-to-hand' &&
+          effect.thenEffects?.length &&
+          effectTargetIds.length > 0
+        ) {
+          for (const thenEffect of effect.thenEffects) {
+            if (!isEffectConditionMet(nextState, context, thenEffect)) continue
+            const resolvedThenEffect =
+              thenEffect.kind === 'hand-to-support' &&
+              thenEffect.sameAmountAsPreviousEffect
+                ? {
+                    ...thenEffect,
+                    amount: effectTargetIds.length,
+                    sameAmountAsPreviousEffect: undefined,
+                  }
+                : thenEffect
+            nextState = executeCardEffect(
+              nextState,
+              context,
+              resolvedThenEffect,
+              options.thenTargetIds ?? [],
+            )
+          }
+        }
+        if (nextState.pendingDrawUpTo) {
+          const remainingEffects = flipEffects.slice(i + 1)
+          if (remainingEffects.length > 0) {
+            nextState = {
+              ...nextState,
+              pendingDrawUpTo: {
+                ...nextState.pendingDrawUpTo,
+                afterEffects: remainingEffects,
+                afterEffectContext: context,
+                afterEffectSourceKind: 'flip',
               },
             }
           }
@@ -3814,6 +4374,54 @@ export const resolveFlip = (
     }
   }
 
+  if (isDetachedFlip) {
+    // 攻擊後棄置的 FLIP Cookie 在付款時已進入棄牌區；這個決策只執行
+    // 其效果，不得再把同一張卡重複移動到支援／休息區，也不能走一般
+    // HP 翻牌的傷害收尾。
+    const activeBattle = requirePendingBattle(nextState)
+    const continuationBattle: PendingBattle = {
+      ...activeBattle,
+      stage: 'attack-effect',
+      attackEffectIndex: activeBattle.attackEffectIndex + 1,
+      revealedHpCard: null,
+      detachedFlip: undefined,
+      damagePlayerId: undefined,
+      damageTargetInstanceId: undefined,
+    }
+    if (!options.activate) {
+      return advanceAttackEffect(
+        {
+          ...nextState,
+          pendingBattle: {
+            ...continuationBattle,
+            attackEffectIndex: activeBattle.attackEffectIndex,
+          },
+        },
+        { ...continuationBattle, attackEffectIndex: activeBattle.attackEffectIndex },
+      )
+    }
+    if (nextState.pendingDrawUpTo) {
+      return {
+        ...nextState,
+        pendingBattle: continuationBattle,
+        pendingDrawUpTo: {
+          ...nextState.pendingDrawUpTo,
+          battleContinuation: 'attack-effect',
+        },
+      }
+    }
+    return advanceAttackEffect(
+      {
+        ...nextState,
+        pendingBattle: {
+          ...continuationBattle,
+          attackEffectIndex: activeBattle.attackEffectIndex,
+        },
+      },
+      { ...continuationBattle, attackEffectIndex: activeBattle.attackEffectIndex },
+    )
+  }
+
   // FLIP 的效果可能讓攻擊中的餅乾昏厥，甚至直接達成勝負條件；
   // 這時傷害效果會先清除 pendingBattle，仍須把翻開的牌送入對應區域，
   // 但不可再以原戰鬥要求 pendingBattle。
@@ -3838,6 +4446,28 @@ export const resolveFlip = (
 
   if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
     return nextState
+  }
+
+  // A normal HP FLIP can open a draw-up-to decision while an effect-damage
+  // sequence is waiting for this damage point to finish.  Preserve the
+  // sequence's continuation on that decision so resolve-draw-up-to can resume
+  // the same battle state machine after the player chooses 0..N cards.
+  if (nextState.pendingDrawUpTo && battle.effectDamageSequence) {
+    const continuation = battle.effectDamageSequence.continuation
+    nextState = {
+      ...nextState,
+      pendingDrawUpTo: {
+        ...nextState.pendingDrawUpTo,
+        battleContinuation:
+          continuation === 'finish-battle'
+            ? 'finish'
+            : continuation === 'after-trap'
+              ? 'after-trap'
+              : continuation === 'attack-effect'
+                ? 'attack-effect'
+                : undefined,
+      },
+    }
   }
 
   // Attack damage may depend on the attacker's current HP (for example,
@@ -3913,7 +4543,13 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const pending = nextState.pendingOptionalCostAttack
       const isAbilityResolution = pending.resolution === 'ability'
       const hand = nextState.players[pending.playerId].hand
-      const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
+      const discardCandidates = getDiscardHandCostCandidates(
+        pending.cost,
+        hand,
+        pending.sourceInstanceId,
+      )
+      const canPayHand =
+        discardCandidates.length >= (pending.cost.discardHand ?? 0)
       const effectiveEnergyCost = getRemainingEnergyCost(
         pending.cost.energy ?? pending.cost,
         pending.sourceEnergy,
@@ -3923,11 +4559,24 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState.players[pending.playerId].supportArea,
       )
       const canPayEnergy = Boolean(paymentIds)
+      const supportToTrashAmount = pending.cost.supportToTrash ?? 0
+      const supportToTrashIds = nextState.players[pending.playerId].supportArea
+        .filter(
+          (support) =>
+            !paymentIds?.includes(support.card.instanceId) &&
+            (pending.cost.supportToTrashKeyword === undefined ||
+              support.card.keywords?.includes(
+                pending.cost.supportToTrashKeyword,
+              )),
+        )
+        .slice(0, supportToTrashAmount)
+        .map((support) => support.card.instanceId)
       const supportToHandAmount = pending.cost.supportToHand ?? 0
       const supportToHandIds = nextState.players[pending.playerId].supportArea
         .filter(
           (support) =>
             !paymentIds?.includes(support.card.instanceId) &&
+            !supportToTrashIds.includes(support.card.instanceId) &&
             isSupportToHandCostCandidate(pending.cost, support),
         )
         .slice(0, supportToHandAmount)
@@ -4022,13 +4671,16 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       if (
         canPayHand &&
         canPayEnergy &&
+        supportToTrashIds.length >= supportToTrashAmount &&
         canPaySupportToHand &&
         canPayHpToTrash &&
         canPayHpToHand &&
         canPayTrashToDeck &&
         hasTarget
       ) {
-        const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
+        const discardIds = discardCandidates
+          .slice(0, pending.cost.discardHand ?? 0)
+          .map((c) => c.instanceId)
         nextState = resolveOptionalCostAttack(
           nextState,
           pending.playerId,
@@ -4040,6 +4692,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
           hpToTrashIds,
           trashToDeckIds,
           hpToHandIds,
+          supportToTrashIds,
         )
       } else {
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'skip')
@@ -4087,9 +4740,13 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
     if (battle.stage === 'trap') {
       nextState = skipTrap(nextState, battle.defenderPlayerId)
     } else if (battle.stage === 'flip') {
-      nextState = resolveFlip(nextState, battle.defenderPlayerId, {
+      nextState = resolveFlip(
+        nextState,
+        battle.detachedFlip ? battle.attackerPlayerId : battle.defenderPlayerId,
+        {
         activate: false,
-      })
+        },
+      )
     } else if (battle.stage === 'attack-effect') {
       const effect = battle.attackEffects[battle.attackEffectIndex]
       if (effect?.kind === 'optional-cost-attack') {
@@ -4151,7 +4808,9 @@ export const getTrapTargetCandidates = (
       effect.kind === 'redirect-attack' ||
       effect.kind === 'return-to-hand' ||
       effect.kind === 'return-to-deck-bottom' ||
-      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
+       effect.kind === 'transfer-hp' ||
+       effect.kind === 'hp-to-trash' ||
+       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   // The guided trap UI has separate channels for opponent/either targets and
   // explicit self targets. Prefer the former when a trap targets both sides
@@ -4187,10 +4846,11 @@ export const getTrapSelfTargetCandidates = (
     (effect) =>
       (effect.kind === 'damage' ||
         effect.kind === 'gain-hp' ||
-        effect.kind === 'hp-to-hand') &&
+        effect.kind === 'hp-to-hand' ||
+        (effect.kind === 'transfer-hp' && Boolean(effect.receiverTarget))) &&
       'target' in effect &&
-      effect.target?.side === 'self' &&
-      effect.target.max > 0,
+      ((effect.target?.side === 'self' && effect.target.max > 0) ||
+        (effect.kind === 'transfer-hp' && effect.receiverTarget?.side === 'self' && effect.receiverTarget.max > 0)),
   )
   const hasNonSelfTarget = card?.trap?.effects.some(
     (effect) =>
@@ -4204,7 +4864,9 @@ export const getTrapSelfTargetCandidates = (
   const firstSelfEffect = selfEffects[0]
   const target =
     firstSelfEffect && 'target' in firstSelfEffect
-      ? firstSelfEffect.target
+      ? firstSelfEffect.kind === 'transfer-hp'
+        ? firstSelfEffect.receiverTarget
+        : firstSelfEffect.target
       : undefined
   return target
     ? getEffectTargetCandidates(
@@ -4699,6 +5361,38 @@ export const resolveFaintEffect = (
       faint.effect,
       targetIds,
     )
+    if (
+      faint.effect.kind === 'hand-to-battle' &&
+      faint.effect.thenEffects?.length &&
+      targetIds.length > 0 &&
+      !nextState.pendingAbilityEffect
+    ) {
+      // A faint-triggered Cookie may have its own OnPlay decision.  Keep the
+      // faint effect's linked Then queue alive alongside pendingOnPlay so it
+      // resumes after the player resolves or skips that OnPlay.
+      nextState = {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId: faint.context.sourcePlayerId,
+          sourcePlayerId: faint.context.sourcePlayerId,
+          sourceInstanceId: faint.context.sourceInstanceId,
+          sourceCardName: faint.sourceCardName,
+          sourceKind: 'skill',
+          isFaintEffectContinuation: true,
+          effects: faint.effect.thenEffects,
+          effectIndex: 0,
+          previousEffectTargetIds: [...new Set(targetIds)],
+          // If the original battle is still open, keep its current stage.
+          // This Then may have been created before an attacker's
+          // choose-one/post-attack effect is resolved; calling finish here
+          // would silently skip that effect. The battle handler resumes
+          // naturally after the pending queue is cleared.
+          ...(nextState.pendingBattle
+            ? {}
+            : { battleContinuation: 'finish' as const }),
+        },
+      }
+    }
   }
 
   if (nextState.status !== 'playing') {

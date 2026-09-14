@@ -1,6 +1,7 @@
 import type { PlayerView } from '../../player-view'
 import type { EnergyCost, GameCard } from '../../types'
 import { getEnergyCostTotal, selectEnergyPayment } from '../../energy'
+import { materializeExtraDeckCookie } from '../../extra-deck'
 import { extractDeckCapabilities } from './capability-extractor'
 import type { CapabilityEvidence, CardCapabilityModel } from './capability-model'
 import { buildComboPlans, type ComboPlan, type ComboPlanValidity } from './combo-plan'
@@ -62,6 +63,7 @@ export interface Lv3StrategyContext {
 
 export const visibleSelfCards = (view: PlayerView): GameCard[] => [
   ...view.hand,
+  ...(view.extraDeck ?? []).map(materializeExtraDeckCookie),
   ...view.self.battleArea.map((cookie) => cookie.card),
   ...view.self.supportArea.map((support) => support.card),
   ...view.self.breakArea,

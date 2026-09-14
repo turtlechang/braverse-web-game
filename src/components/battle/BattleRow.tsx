@@ -3,6 +3,7 @@ import {
   canActivateStage,
   canAttack,
   canPlayExtraDeckCookie,
+  getExtraDeckCookieUnavailableReason,
   canSpecialPlayCookie,
   canPlayItem,
   canPlayStage,
@@ -174,11 +175,12 @@ export function BattleRow({
   // 攻擊能量選擇沿用原本的緊湊堆疊排版，不套用付款展開；其餘
   // 技能／代價／陷阱付款維持展開以保留完整點擊區（U2）。
   const isAttackPaymentActive = attackPaymentTargetIds.size > 0
+  const isSkillPaymentActive = skillPaymentTargetIds.size > 0
   const supportZone = (
     <div className={`support-zone${selectedHandCardCanSupport ? ' is-legal-target' : ''}`}>
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
-      <div className={`support-cards${isAttackPaymentActive ? ' is-attack-payment' : ''}`}>
+      <div className={`support-cards${isAttackPaymentActive ? ' is-attack-payment' : ''}${isSkillPaymentActive ? ' is-skill-payment' : ''}`}>
         {player.supportArea.map((support, supportIndex) => {
           const supportId = support.card.instanceId
           const canSelectSkillCost =
@@ -329,7 +331,7 @@ export function BattleRow({
                           從 EXTRA 登場
                         </button>
                       ) : (
-                        <small>目前無法登場</small>
+                        <small>目前無法登場：{getExtraDeckCookieUnavailableReason(game, playerId, card.instanceId) ?? '請先完成目前的操作。'}</small>
                       )}
                     </div>
                   </div>
@@ -593,6 +595,10 @@ export function BattleRow({
                 revealTargetId === cookie.card.instanceId
                   ? game.pendingBattle.revealedHpCard
                   : null
+              const awakenedUnderlay =
+                cookie.card.extraDeckOrigin === 'awakened'
+                  ? cookie.awakenedUnderlay ?? []
+                  : []
               const isPendingAttackTarget =
                 game.pendingBattle?.targetInstanceId === cookie.card.instanceId
               const battleSlotClass =
@@ -670,6 +676,28 @@ export function BattleRow({
                           : () => onInspectCard(cookie.card)
                     }
                   />
+                  {awakenedUnderlay.length > 0 && (
+                    <div
+                      className="awakened-underlay-preview"
+                      aria-label={`覺醒前卡牌：${awakenedUnderlay
+                        .map((card) => card.name)
+                        .join('、')}`}
+                    >
+                      <span className="awakened-underlay-label">覺醒前</span>
+                      {awakenedUnderlay.map((underlay) => (
+                        <CardFace
+                          key={underlay.instanceId}
+                          card={underlay}
+                          className="awakened-underlay-card"
+                          ariaLabel={`查看覺醒前卡牌：${underlay.name}`}
+                          onClick={() => onInspectCard(underlay)}
+                        />
+                      ))}
+                      <small className="awakened-underlay-card-name">
+                        {awakenedUnderlay.map((card) => card.name).join('、')}
+                      </small>
+                    </div>
+                  )}
                   <div className="card-badges">
                     <span
                       className="badge-hp"
@@ -729,9 +757,11 @@ export function BattleRow({
                       <CardFace
                         card={hpCard}
                         className="hp-card"
-                        concealed
+                        concealed={!cookie.faceUpHpCardInstanceIds?.includes(hpCard.instanceId)}
                         key={hpCard.instanceId}
-                        onClick={() => onInspectCard(cookie.card)}
+                        onClick={() => onInspectCard(
+                          cookie.faceUpHpCardInstanceIds?.includes(hpCard.instanceId) ? hpCard : cookie.card,
+                        )}
                       />
                     ))}
                   </div>

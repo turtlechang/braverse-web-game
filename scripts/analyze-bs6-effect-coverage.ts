@@ -9,7 +9,10 @@ import {
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from '../src/cards/official-effect-adapter'
-import { normalizeOfficialCardRecord } from '../src/cards/official-card-adapter'
+import {
+  convertOfficialCardToExtraDeckCard,
+  normalizeOfficialCardRecord,
+} from '../src/cards/official-card-adapter'
 import type { OfficialCardRecord } from '../src/cards/types'
 
 export const DEFAULT_BS6_FORMAL_INPUT =
@@ -76,6 +79,15 @@ const hasAttackThen = (card: OfficialCardRecord) =>
 const getAbilityConversion = (
   card: OfficialCardRecord,
 ): AbilityConversion => {
+  // EXTRA cards use the dedicated ExtraDeck adapter rather than the main-deck
+  // Cookie/FLIP/Item/Stage/Trap converters.  Keep coverage aligned with the
+  // runtime path so an exact EXTRA mapping is not reported as a false pending.
+  if (card.type === 'extra') {
+    return convertOfficialCardToExtraDeckCard(card).status === 'converted'
+      ? 'converted'
+      : 'pending'
+  }
+
   if (card.type === 'cookie') {
     if (!card.skill.text) return 'not-applicable'
     return convertOfficialCookieSkill(card) ? 'converted' : 'pending'

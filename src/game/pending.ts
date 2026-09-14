@@ -13,6 +13,7 @@ export const hasBlockingPending = (state: GameState): boolean =>
       state.pendingInspectDeck ||
       state.pendingRevealTopDeck ||
       state.pendingOptionalCostAttack ||
+      state.pendingExtraDeckAttack ||
       state.pendingDrawUpTo ||
       state.pendingStageTrigger ||
       state.pendingOpponentRestSupport,

@@ -33,6 +33,7 @@ export type PendingSelectionKind =
   | 'trap'
   | 'attack-response'
   | 'blocker'
+  | 'extra-deck-attack'
   | 'multi-stage'
 
 export interface PendingStrategyTelemetry {

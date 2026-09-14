@@ -425,6 +425,57 @@ describe('usePendingEffect Break area costs', () => {
 })
 
 describe('usePendingEffect cancelPendingSkill', () => {
+  it('opens a skill whose hand-count condition becomes true after its fixed discard cost', async () => {
+    const gameState = createCardCheckDemoState('BS9-033')
+    const setGameMock = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    const source = gameState.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.id === 'BS9-033',
+    )?.card
+    expect(source).toBeDefined()
+    expect(gameState.players['player-one'].hand).toHaveLength(7)
+
+    await act(() => captured!.beginCookieSkill(
+      gameState,
+      source,
+      'player-one',
+      'activate',
+      '主動技能',
+    ))
+
+    expect(captured!.pendingEffect?.effects).toEqual([
+      expect.objectContaining({ kind: 'draw-up-to', max: 2 }),
+    ])
+    expect(captured!.pendingEffect?.skillActivated).toBe(false)
+    await act(() => root.unmount())
+  })
+
   it('clears pendingEffect without modifying GameState when canceling activate cookie skill', async () => {
     const gameState = createDiscardHandSkillGameState()
     const gameStateSnapshot = JSON.parse(JSON.stringify(gameState))

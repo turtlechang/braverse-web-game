@@ -213,6 +213,12 @@ export interface BattleUiMatchLike {
   setSelectedOpponentDiscardIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  selectedOpponentDiscardPlacementById: Record<string, 'top' | 'bottom'>
+  setSelectedOpponentDiscardPlacementById: (
+    value:
+      | Record<string, 'top' | 'bottom'>
+      | ((current: Record<string, 'top' | 'bottom'>) => Record<string, 'top' | 'bottom'>),
+  ) => void
   // Opponent rest support (BS5-065 Petrification)
   selectedOpponentRestSupportIds: string[]
   setSelectedOpponentRestSupportIds: (
@@ -233,7 +239,16 @@ export interface BattleUiTrapEffectTargetStep {
   /** Select every candidate; click order is damage resolution order. */
   ordered?: boolean
   effectIndex: number
-  candidates: CookieInBattle[]
+  /**
+   * Most trap effects target Cookies, but card-selection effects such as
+   * `set-active` can target Support cards. Keep the shared projection broad
+   * enough for both while retaining the battle-entry metadata used by the UI.
+   */
+  candidates: Array<{
+    card: GameCard
+    hpCards: GameCard[]
+    rested: boolean
+  }>
   selectedTargetIds: string[]
   min: number
   max: number

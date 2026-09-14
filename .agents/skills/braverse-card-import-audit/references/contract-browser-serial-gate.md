@@ -4,6 +4,8 @@
 
 ## 必須通過的路徑
 
+先讀 [實體卡圖與獨立驗收方法](physical-card-verification.md)：逐張目視卡圖、在查看 adapter 前建立獨立預期。下列 A/B 是最低門檻；每個獨立條件、效果分支與必要邊界仍須各有案例。通用 trace 即使顯示 resolve 完成，也不能取代精確狀態差值與 UI 證據。現有 CLI 未強制檢查的證據仍須人工核對，缺證不可放行。
+
 ```text
 官方卡面／結構化資料
   -> parser／adapter shadow compile

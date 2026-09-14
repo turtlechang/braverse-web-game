@@ -1,6 +1,6 @@
 import { phaseLabels } from '../gameUiLabels'
 import { serializeReplayIssueBundle } from '../../game'
-import type { GameCard } from '../../game'
+import type { CookieCard, GameCard } from '../../game'
 import {
   DiscardRevealModal,
   CardDetailModal,
@@ -36,6 +36,23 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
     ? findCookieEquips(dialogs.inspectedCard)
     : undefined
 
+  const findAwakenedUnderlay = (
+    card: GameCard,
+  ): CookieCard[] | undefined => {
+    if (card.type !== 'cookie') return undefined
+    for (const player of Object.values(match.game.players)) {
+      const cookie = player.battleArea.find(
+        (entry) => entry.card.instanceId === card.instanceId,
+      )
+      if (cookie?.awakenedUnderlay?.length) return cookie.awakenedUnderlay
+    }
+    return undefined
+  }
+
+  const inspectedAwakenedUnderlay = dialogs.inspectedCard
+    ? findAwakenedUnderlay(dialogs.inspectedCard)
+    : undefined
+
   return (
     <>
       {ai.pendingAiDecision?.revealedCard && (
@@ -63,6 +80,8 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
           card={dialogs.inspectedCard}
           equippedCards={inspectedEquippedCards}
           onInspectEquip={dialogs.openCardDetail}
+          awakenedUnderlay={inspectedAwakenedUnderlay}
+          onInspectUnderlay={dialogs.openCardDetail}
           onClose={dialogs.closeCardDetail}
         />
       )}
@@ -97,10 +116,6 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
           phaseLabel={phaseLabels[match.game.phase]}
           deckConfig={match.deckConfig}
           aiActionCount={ai.aiActionCount}
-          onRunSimulation={() => {
-            dialogs.closePause()
-            ai.runSimulation()
-          }}
           onResume={dialogs.closePause}
           onCopyIssueBundle={() =>
             copyTextToClipboard(

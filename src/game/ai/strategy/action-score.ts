@@ -44,6 +44,7 @@ export interface ActionScoreContribution {
     | 'unsupported-effect'
     | 'unknown-information'
     | 'strategy-profile'
+    | 'tournament-experience'
   amount: number
   detail: string
 }

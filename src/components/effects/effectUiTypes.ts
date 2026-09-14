@@ -14,6 +14,8 @@ export interface PendingEffect {
   effects: CardEffect[]
   effectIndex: number
   selectedTargetIds: string[]
+  /** hp-to-trash 可逐目標選量時，與 selectedTargetIds 同順序的數量。 */
+  selectedTargetAmounts?: number[]
   selectedPaymentIds: string[]
   selectedCostSupportToTrashIds: string[]
   selectedDiscardHandIds: string[]

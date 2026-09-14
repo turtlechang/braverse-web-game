@@ -1,0 +1,26 @@
+{
+  "name": "BS9 綠｜Support Engine",
+  "entries": [
+    { "cardNumber": "BS9-048", "count": 4 },
+    { "cardNumber": "BS9-049", "count": 4 },
+    { "cardNumber": "BS9-050", "count": 4 },
+    { "cardNumber": "BS9-052", "count": 4 },
+    { "cardNumber": "BS9-054", "count": 4 },
+    { "cardNumber": "BS9-057", "count": 4 },
+    { "cardNumber": "BS9-058", "count": 4 },
+    { "cardNumber": "BS9-060", "count": 4 },
+    { "cardNumber": "BS9-061", "count": 4 },
+    { "cardNumber": "BS9-062", "count": 4 },
+    { "cardNumber": "BS9-063", "count": 4 },
+    { "cardNumber": "BS9-064", "count": 4 },
+    { "cardNumber": "BS9-065", "count": 4 },
+    { "cardNumber": "BS9-066", "count": 2 },
+    { "cardNumber": "BS9-067", "count": 2 },
+    { "cardNumber": "BS9-068", "count": 2 },
+    { "cardNumber": "BS9-069", "count": 2 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS9-055", "count": 4 }
+  ],
+  "format": "standard"
+}

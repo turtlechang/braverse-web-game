@@ -57,7 +57,7 @@
 | 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |
 | 承受傷害修正 | `modify-damage-received` | 增加或減少承受的攻擊傷害；可在指定門檻達成時固定為特定傷害，回合結束移除 |
 | 純抽牌 | `draw` | 從牌庫抽固定 N 張，牌庫耗盡觸發 pending Refresh |
-| 可選抽牌 | `draw-up-to` | 玩家選擇抽 0～N 張；選擇大於 0 時沿用逐張抽牌與 Refresh 流程 |
+| 可選抽牌 | `draw-up-to` | 玩家選擇抽 0～N 張；選擇大於 0 時沿用逐張抽牌與 Refresh 流程。若卡文後續 `Then` 需要目標，抽牌確認後保留來源／effect index 建立 `pendingAbilityEffect`，由同一效果面板接續選擇；條件不成立則略過該段。 |
 | 抽到與對手手牌相同 | `draw-until-hand-equals-opponent` | 僅在己方手牌較少時抽牌，抽到雙方手牌數相同；沿用 Refresh 流程 |
 | 場上卡→棄牌區 | `field-to-trash` | 依陣營、等級與剩餘 HP 上限篩選餅乾，文字允許時也可選場景；餅乾屬非昏厥離場，仍會清理修正並建立補位 |
 | 對手戰鬥區→棄牌區 | `opponent-battle-to-trash` | 移除符合條件的對手戰鬥區餅乾，屬非昏厥離場；可用 `min: 0` 表示「最多選 1 個」 |
@@ -65,15 +65,19 @@
 | 牌庫頂→支援區 | `deck-to-support` | 從牌庫頂取 N 張直立放入支援區（例：ST3-010 Aloe Cookie）；牌庫耗盡觸發 pending Refresh（remainingDraws=0）。僅接受等價於「Take N card(s) from the top your deck and place it/them in your support area as active」的文字 |
 | 牌庫頂→棄牌區 | `deck-to-trash` | 將己方或對手牌庫頂 N 張卡牌放入棄牌區；耗盡牌庫時由 Refresh 續接，最多 N 張的卡文另提供0–N數量選擇 |
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
-| 增加 HP | `gain-hp` | 從牌庫頂補入 HP 卡；牌庫耗盡時建立 pending Refresh，Refresh 後繼續剩餘數量 |
+| 增加 HP | `gain-hp` | 從牌庫頂補入 HP 卡；牌庫耗盡時建立 pending Refresh，Refresh 後繼續剩餘數量。`target.allMatching` 代表卡文已固定全部符合者，規則層與 UI 必須帶入完整目標集合，不允許只選部分（BS8-003、BS9-038）。 |
 | HP 下限保護 | `prevent-knockout` | 目前供 TRAP 使用，本次戰鬥保留至少 1 張 HP 卡。官方裁定（BS3-100 vs ST3-020）：這個保護擋的是「這次戰鬥中 HP 不會變 0」，不是只擋一般傷害——只要 `state.pendingBattle` 還在（戰鬥尚未結束）且目標在 `preventKnockoutTargetIds` 內，任何會讓 HP 卡歸零的移除都要擋下，包括攻擊後續效果的 `hp-to-trash`。`hp-to-trash` 執行器已對此加上檢查：保護生效且剩餘 HP 卡數 ≤ 欲移除數時直接不執行，回傳原狀態；不能算出 `removeCount=0` 後照舊呼叫 `slice(-removeCount)`——JS 的 `slice(-0)` 等同 `slice(0)`，會把整疊 HP 卡誤判成「被移除」，導致同一張卡同時留在 `hpCards` 又被複製進棄牌區 |
 | 效果傷害免疫 | `prevent-effect-damage` | 被影響餅乾在持續期間內不受任何效果傷害（技能、攻擊附加效果等），基本攻擊傷害仍正常結算。`damage`、`damage-all`、`split-damage` 執行器會檢查 `effectDamagePreventedUntilTurn`，受保護餅乾直接跳過（BS3-082） |
+| 對手傷害防止 | `prevent-opponent-damage` | BS9-018 的 `Your Turn` 持續效果；只在來源玩家屬對手、目標屬自己的 Cookie、Hero 仍在戰鬥區且目前為 Hero 擁有者回合時，將攻擊／效果傷害降為 0。逐段效果傷害在實際結算點重新檢查；自己的傷害、Hero 離場或對手回合不適用。 |
+| 對手效果增加 HP 防止 | `prevent-opponent-hp-gain` | BS9-035 的 Activate 效果；支付棄 1 張手牌後，到本回合結束前阻止對手透過卡牌效果把實際卡加入 Cookie HP。涵蓋 `gain-hp`、手牌／支援／其他 HP 的搬入及裝備／FLIP 補 HP，不影響一般登場時配置的印刷 HP，也不阻止來源玩家自己的效果。 |
 | 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |
 | 檢視 HP | `view-hp` | 查看目標餅乾的 HP 卡內容（可選） |
-| 重排 HP | `reorder-hp` | 先選擇最多 1 個己方餅乾，再以完整且不重複的順序重新排列其 HP 卡；不可遺漏、複製或混入其他卡（BS6-034） |
+| 重排 HP | `reorder-hp` | 依 selector 選擇至多 1 個己方或對手餅乾，再以完整且不重複的順序重新排列其全部 HP 卡；不可遺漏、複製或混入其他卡（BS6-034、BS9-034） |
+| 裝備→HP | `equipped-to-hp` | 選擇指定一方戰鬥區已裝備的卡，從宿主的裝備列移至同一宿主的 HP 最上方；`keyword` 篩選裝備，`faceUp` 保留公開 HP 標記（BS9-043）。 |
 | 戰鬥區→支援區 | `battle-to-support` | 將目標餅乾從戰鬥區移至支援區 |
 | 棄牌區→戰鬥區 | `trash-to-battle` | 從棄牌區將指定餅乾移至戰鬥區 |
 | 支援區→手牌 | `support-to-hand` | 將支援區卡牌移回手牌 |
+| 棄牌區→手牌 | `trash-to-hand` | 從來源玩家棄牌區選擇至多指定數量回手；可同時限制顏色、Cookie 與 runtime FLIP，所有篩選都由規則層與 UI 共用。可作為 Trap 的 `Then` 或 Stage Activate 的後續選擇，前段未呈現卡牌目標時不得以空目標陣列略過它（BS9-037、BS9-044、BS9-046、BS9-047）。 |
 | 對手手牌→棄牌區 | `opponent-discard-hand` | 對手必須選擇指定數量的手牌放入棄牌區；對手無手牌時效果直接完成 |
 | 整手牌→棄牌區 | `discard-hand-all` | 將來源玩家全部手牌放入棄牌區 |
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
@@ -85,11 +89,11 @@
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
 | HP 送棄牌區 | `hp-to-trash` | 選擇己方 1 隻餅乾，將指定數量的 HP 卡送入棄牌區；非傷害不觸發 FLIP/afterDamage，HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程 |
 | HP 交換 | `cycle-hp` | 取回目標餅乾最上方 1 張 HP，並可將 1 張手牌放回；取走最後 HP 時餅乾立即進入休息區，後續放回步驟不再執行（BS4-030） |
-| 手牌→HP | `hand-to-hp` | 可同時選擇目標餅乾與 0～1 張手牌，將手牌放到 HP 頂端（BS4-044）；不會先移除既有 HP |
+| 手牌→HP | `hand-to-hp` | 預設將手牌面朝下放到 HP 頂端（BS4-044），不會先移除既有 HP。BS9-010 以匿名位置選擇對手 0～1 張手牌，選定後正面朝上放到來源 HP 最下方；支援 `hpPlacement`／`faceUp` |
 | 支援區→HP | `support-to-hp` | 可同時選擇支援卡與目標餅乾，將符合顏色的支援卡放到 HP 頂端（BS4-066） |
 | 休息支援並造成傷害 | `rest-support-and-damage` | 最多選指定數量、符合顏色且目前活躍的支援卡改為疲勞，再依本次新增疲勞張數對最多 1 個目標造成傷害（BS4-062） |
 | 可選攻擊後續費用 | `optional-cost-attack` | 玩家可略過；來源餅乾先提供 `sourceEnergy` 中列出的指定能量，只有剩餘費用由支援區支付。目標步驟依子效果的對象與 `min` 呈現，支援己方／對手與「最多選 1 個」 |
-| HP 卡搬移 | `transfer-hp` | 在來源餅乾與選定的己方餅乾之間搬移 HP 頂端卡；`direction: 'to-source'` 由目標供牌（BS3-031），`'from-source'` 由來源供牌（BS3-089）。供牌方 HP 歸 0 時照常昏厥並沿用離場／補位／勝負流程。HP 卡屬卡主牌組，不支援跨玩家搬移 |
+| HP 卡搬移 | `transfer-hp` | 取供牌餅乾最上方 HP；`direction: 'to-source'` 由目標供牌（BS3-031），`'from-source'` 由來源供牌（BS3-089）。預設面朝下放至接收者最上方；BS9-010 指定對手目標、正面朝上與最下方。跨玩家取得的 HP 由 `foreignHpCardInstanceIds` 記錄；供牌方 HP 歸 0 時照常昏厥並沿用離場／補位／勝負流程 |
 | 餅乾設為活躍 | `set-cookie-active` | 解除選定餅乾的休息狀態；與只處理支援區的 `set-active` 不同。可用 `restedOnly` 目標篩選只列出休息中的餅乾（BS3-053） |
 | 依戰鬥區餅乾數抽牌 | `draw-up-to-battle-cookie-count` | 依雙方戰鬥區指定等級的餅乾數量計算抽牌上限，再沿用 `draw-up-to` 的可選抽牌流程；上限為 0 時直接略過（BS3-092） |
 | 棄牌區全部→牌庫 | `trash-to-deck-all` | 不需選擇，將棄牌區整批洗回牌庫。後續的「Then」必須放在 `thenEffects` 內嵌執行——本效果會清空棄牌區，同層的下一個效果若重掛同一個棄牌區條件，重新判定時必定失敗而被跳過（BS3-113） |
@@ -102,7 +106,7 @@
 | 對手休息區→棄牌區→休息區 | `opponent-break-to-trash-then-battle-to-break` | 先強制將對手休息區 1 張餅乾放進棄牌區，記錄該卡 LV；再可選擇對手戰鬥區中剛好高 1 LV 的餅乾放進對手休息區。第二段允許略過，且仍受「對手效果不能移動戰鬥區餅乾」保護（BS6-039） |
 | 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序），`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114） |
 
-| 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走目標選取流程。本機 UI、線上 UI、指令層（`resolve-choose-one`／`begin-*` 的 `chooseOneModes`）與 AI 必須共用同一份展開邏輯，否則四邊對「接下來處理哪個效果」會分歧；執行器遇到未展開的 `choose-one` 會直接丟錯而不是默默略過 |
+| 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068、BS9-036）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走代價／目標流程。每個模式先由規則層判定是否可支付，不可支付者在本機與線上 UI 均停用且指令層拒絕；若只剩一個可支付模式，玩家仍須明確確認。`resolve-choose-one`／`begin-*` 的 `chooseOneModes` 與 AI 共用同一份展開邏輯。 |
 | 休息區→戰鬥區（來源自己） | `break-source-to-battle` | 讓技能來源自己從休息區登場，HP 卡數固定為 `hpCount`（不是卡面 HP），照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定；戰鬥區已滿（2 隻）時執行器直接丟錯，`canActivateCookieSkill` 會提前擋下（BS3-025） |
 | FLIP→休息區 | `flip-to-break` | FLIP 卡翻開並滿足條件時放入持有者休息區，而非棄牌區（BS4-031） |
 

@@ -3,11 +3,14 @@ import {
   defaultShuffle,
   drawCards,
   findCardIndex,
+  getOpponentId,
   updatePlayer,
 } from './helpers'
 import { continuePendingReplacements } from './replacement'
 import { continueInspectDeckAfterRefresh } from './inspect-deck'
 import { executeDeckToTrash } from './effects/deck-to-trash'
+import { executeCardEffect } from './effects/execute'
+import { isEffectConditionMet, requiresEffectCardSelection } from './effects/targeting'
 import type {
   CookieCard,
   GameState,
@@ -23,6 +26,10 @@ type PendingHpSetups = NonNullable<
 
 type PendingHpGains = NonNullable<
   NonNullable<GameState['pendingRefresh']>['remainingHpGains']
+>
+
+type PendingAfterDrawContinuation = NonNullable<
+  NonNullable<GameState['pendingRefresh']>['afterDrawContinuation']
 >
 
 export const getRefreshCandidates = (
@@ -141,6 +148,58 @@ const continuePendingHpSetups = (
   return { state: nextState, remainingHpSetups }
 }
 
+/**
+ * Resume a draw-up-to Then chain after Refresh has supplied a new deck.
+ * This mirrors the normal `resolveDrawUpTo` continuation path, but lives here
+ * because Refresh is the command boundary that owns the interrupted state.
+ */
+const continueAfterDrawUpTo = (
+  state: GameState,
+  continuation: PendingAfterDrawContinuation,
+): GameState => {
+  let updatedState = state
+  for (let effectIndex = 0; effectIndex < continuation.effects.length; effectIndex += 1) {
+    const effect = continuation.effects[effectIndex]
+    if (!isEffectConditionMet(updatedState, continuation.context, effect)) continue
+    if (requiresEffectCardSelection(effect)) {
+      return {
+        ...updatedState,
+        pendingAbilityEffect: {
+          playerId: continuation.context.sourcePlayerId,
+          sourcePlayerId: continuation.context.sourcePlayerId,
+          sourceInstanceId: continuation.context.sourceInstanceId,
+          sourceCardName: continuation.context.sourceCardName,
+          sourceKind: continuation.sourceKind,
+          effects: continuation.effects,
+          effectIndex,
+          battleContinuation: continuation.battleContinuation,
+        },
+      }
+    }
+    updatedState = executeCardEffect(updatedState, continuation.context, effect, [])
+    if (updatedState.pendingOpponentHandDiscard) {
+      updatedState = {
+        ...updatedState,
+        pendingOpponentHandDiscard: {
+          ...updatedState.pendingOpponentHandDiscard,
+          chainedFromDrawUpTo: true,
+        },
+      }
+    }
+    if (
+      updatedState.pendingDrawUpTo ||
+      updatedState.pendingOpponentHandDiscard ||
+      updatedState.pendingInspectDeck ||
+      updatedState.pendingRevealTopDeck ||
+      updatedState.pendingOptionalCostAttack ||
+      updatedState.pendingStageTrigger
+    ) {
+      break
+    }
+  }
+  return resolveBasicVictory(updatedState)
+}
+
 export const refreshDeck = (
   state: GameState,
   playerId: PlayerId,
@@ -161,28 +220,37 @@ export const refreshDeck = (
     throw new GameRuleError('目前應由另一位玩家完成 Refresh。')
   }
 
-  const candidateIndex = findCardIndex(
-    player.discardPile,
-    cookieInstanceId,
-  )
-  const selectedCookie = player.discardPile[candidateIndex]
-
-  if (
-    !selectedCookie ||
-    selectedCookie.type !== 'cookie' ||
-    selectedCookie.level < 1
-  ) {
-    throw new GameRuleError('Refresh 必須選擇棄牌區內 LV1 以上的餅乾。')
+  const requiredCookieCount = getRefreshCookieBreakCount(state, playerId)
+  const eligible = getRefreshCandidates(state, playerId)
+  const selectedCookies: CookieCard[] = []
+  if (requiredCookieCount > 0) {
+    const candidateIndex = findCardIndex(player.discardPile, cookieInstanceId)
+    const selectedCookie = player.discardPile[candidateIndex]
+    if (!selectedCookie || selectedCookie.type !== 'cookie' || selectedCookie.level < 1) {
+      throw new GameRuleError('Refresh 必須選擇棄牌區內 LV1 以上的餅乾。')
+    }
+    selectedCookies.push(selectedCookie)
+    // The command protocol currently carries one selected instance.  For
+    // BS9-111, complete the second required Cookie deterministically from the
+    // remaining legal candidates; the selected card remains the first choice.
+    for (const candidate of eligible) {
+      if (selectedCookies.length >= requiredCookieCount) break
+      if (!selectedCookies.some((cookie) => cookie.instanceId === candidate.instanceId)) {
+        selectedCookies.push(candidate)
+      }
+    }
+    if (selectedCookies.length < requiredCookieCount) {
+      throw new GameRuleError(`Refresh 必須選擇 ${requiredCookieCount} 張 LV1 以上的餅乾。`)
+    }
   }
 
-  const remainingDiscard = player.discardPile.filter(
-    (_, index) => index !== candidateIndex,
-  )
+  const selectedIds = new Set(selectedCookies.map((cookie) => cookie.instanceId))
+  const remainingDiscard = player.discardPile.filter((card) => !selectedIds.has(card.instanceId))
   let updatedPlayer: PlayerState = {
     ...player,
     deck: shuffle(remainingDiscard),
     discardPile: [],
-    breakArea: [...player.breakArea, selectedCookie],
+    breakArea: [...player.breakArea, ...selectedCookies],
   }
   let updatedState = updatePlayer(state, updatedPlayer)
   updatedState = resolveBasicVictory(updatedState)
@@ -209,6 +277,10 @@ export const refreshDeck = (
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingDraws
       : 0
+  const afterDrawContinuation =
+    state.pendingRefresh?.playerId === playerId
+      ? state.pendingRefresh.afterDrawContinuation
+      : undefined
   const pendingHpGain =
     state.pendingRefresh?.playerId === playerId
       ? state.pendingRefresh.remainingHpGain
@@ -254,6 +326,7 @@ export const refreshDeck = (
       pendingRefresh: {
         playerId,
         remainingDraws: 0,
+        ...(afterDrawContinuation ? { afterDrawContinuation } : {}),
         remainingHpSetup: hpSetupResult.remainingHpSetups,
       },
     }
@@ -264,6 +337,32 @@ export const refreshDeck = (
     playerId,
     pendingHpGains,
   )
+
+function getRefreshCookieBreakCount(
+  state: GameState,
+  playerId: PlayerId,
+): number {
+  // Refresh replacement rules are split by their printed subject.  A
+  // controller's own passive (for example BS9-096) applies while that player
+  // refreshes, whereas BS9-111 explicitly changes the opponent's Refresh.
+  // Scan the refreshing player's area for self-scoped prevention first, then
+  // scan the opponent's area for opponent-scoped count overrides.
+  const player = state.players[playerId]
+  const ownPassiveEffects = player.battleArea.flatMap((entry) => {
+    const skill = entry.card.skill
+    if (!skill || skill.trigger !== 'passive') return []
+    return [...skill.effects, ...(skill.passiveEffects ?? [])]
+  })
+  if (ownPassiveEffects.some((effect) => effect.kind === 'prevent-refresh-cookie-break')) return 0
+
+  const opponentPassiveEffects = state.players[getOpponentId(playerId)].battleArea.flatMap((entry) => {
+    const skill = entry.card.skill
+    if (!skill || skill.trigger !== 'passive') return []
+    return [...skill.effects, ...(skill.passiveEffects ?? [])]
+  })
+  const override = opponentPassiveEffects.find((effect) => effect.kind === 'refresh-cookie-break-count')
+  return override?.kind === 'refresh-cookie-break-count' ? Math.max(1, override.count) : 1
+}
   if (hpGainsResult.remainingHpGains.length > 0) {
     if (getRefreshCandidates(hpGainsResult.state, playerId).length === 0) {
       return finishWithDefeat(hpGainsResult.state, playerId, 'refresh-unavailable')
@@ -273,6 +372,7 @@ export const refreshDeck = (
       pendingRefresh: {
         playerId,
         remainingDraws: 0,
+        ...(afterDrawContinuation ? { afterDrawContinuation } : {}),
         remainingHpGains: hpGainsResult.remainingHpGains,
       },
     }
@@ -300,6 +400,7 @@ export const refreshDeck = (
       pendingRefresh: {
         playerId,
         remainingDraws: 0,
+        ...(afterDrawContinuation ? { afterDrawContinuation } : {}),
         ...(pendingHpGain && remainingHpGain > 0
           ? {
               remainingHpGain: {
@@ -312,10 +413,13 @@ export const refreshDeck = (
     }
   }
 
-  const refreshedState = continueInspectDeckAfterRefresh({
+  let refreshedState = continueInspectDeckAfterRefresh({
     ...hpGainState,
     pendingRefresh: null,
   })
+  if (afterDrawContinuation) {
+    refreshedState = continueAfterDrawUpTo(refreshedState, afterDrawContinuation)
+  }
   const remainingMill = state.pendingRefresh?.remainingDeckToTrash
   if (remainingMill) {
     return continuePendingReplacements(executeDeckToTrash(refreshedState, remainingMill.context, remainingMill.effect, remainingMill.movedCards))

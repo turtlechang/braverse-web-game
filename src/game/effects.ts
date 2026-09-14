@@ -14,6 +14,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getEffectTargetSelectionLimits,
   getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
   getTargetPlayerId,
@@ -29,6 +30,8 @@ export {
   requiresEffectCardSelection,
   requiresTargetSelection,
   isEffectTargeted,
+  hasFixedModifierTargets,
+  getFixedModifierTargetIds,
   isEffectUntargeted,
   selectEffectTargets,
   validateBreakToTrashTargets,
@@ -38,6 +41,7 @@ export {
   getEffectDamageAmount,
   getEffectiveAttack,
   getEffectiveAttackBreakdown,
+  isOpponentDamagePrevented,
   type AttackModifierBreakdownEntry,
 } from './effects/combat'
 export {
@@ -51,4 +55,5 @@ export {
   asChooseOneEffect,
   expandChooseOne,
   expandChooseOneSequence,
+  isChooseOneModePlayable,
 } from './effects/choose-one'

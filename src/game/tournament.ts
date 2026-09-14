@@ -1,5 +1,5 @@
 import { getCardPoolEntry } from './card-pool'
-import { createCustomDeckFromRoster } from './tournament-deck'
+import { createCustomDeckPlayerSetup } from './custom-deck'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -8,19 +8,36 @@ import {
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import { simulateAiMatchDetailed } from './ai-detailed-sim'
 import type { CustomDeck } from './custom-deck'
-import type { AiDetailedResult } from './ai/types'
+import type { AiDetailedResult, AiExperienceProfileByPlayer } from './ai/types'
+import type { AiTournamentExperienceProfile } from './ai/strategy/tournament-experience'
 import type { GameState, PlayerId } from './types'
 
 export type TournamentColor = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+
+/** 對局安全上限；benchmark 的超限對局必須標記為失敗。 */
+export const MAX_TOURNAMENT_ACTIONS = 500
+
+export const validateTournamentMaxActions = (
+  value = MAX_TOURNAMENT_ACTIONS,
+): number => {
+  if (!Number.isInteger(value) || value <= 0 || value > MAX_TOURNAMENT_ACTIONS) {
+    throw new Error(`賽事單局 maxActions 必須是 1～${MAX_TOURNAMENT_ACTIONS}。`)
+  }
+  return value
+}
 
 export interface SwissRosterDeck extends CustomDeck {
   color: TournamentColor
   seedChoice?: string
   generation?: number
   profile?: {
-    bs6Cards: number
-    bs5Cards: number
-    legacyCards: number
+    bs6Cards?: number
+    bs5Cards?: number
+    legacyCards?: number
+    bs9Cards?: number
+    uniqueCards?: number
+    flipCards?: number
+    [series: string]: number | undefined
   }
 }
 export interface SwissTournamentProgress {
@@ -61,6 +78,7 @@ export interface SwissStanding {
   buchholz: number
   stuckMatches: number
   entries?: SwissRosterDeck['entries']
+  extraDeckEntries?: SwissRosterDeck['extraDeckEntries']
 }
 
 export interface SwissColorSummary {
@@ -132,6 +150,24 @@ export interface SwissTournamentOptions {
     record: SwissMatchRecord
     result: AiDetailedResult | null
   }) => void | Promise<void>
+  /** Lv.5 only; null explicitly runs a no-experience baseline. */
+  experienceProfile?: AiTournamentExperienceProfile | null
+  /** 若指定玩家欄位，會覆蓋 shared experienceProfile；null 代表明確停用。 */
+  experienceProfileByPlayer?: AiExperienceProfileByPlayer
+}
+
+export type CrossPlayStrategy = 'baseline' | 'trained'
+
+export const classifyCrossPlayWinner = (
+  winnerPlayerId: PlayerId | null,
+  assignment: {
+    baselinePlayerId: PlayerId
+    trainedPlayerId: PlayerId
+  },
+): CrossPlayStrategy | null => {
+  if (winnerPlayerId === assignment.trainedPlayerId) return 'trained'
+  if (winnerPlayerId === assignment.baselinePlayerId) return 'baseline'
+  return null
 }
 
 const COLORS: TournamentColor[] = [
@@ -174,16 +210,8 @@ export const createCustomDeckMatch = (
 ): GameState => {
   const stateShuffle = createSeededShuffle(seed)
   const initialState = createGame(
-    {
-      id: 'player-one',
-      name: playerOneDeck.name,
-      deck: createCustomDeckFromRoster(playerOneDeck, 'player-one'),
-    },
-    {
-      id: 'player-two',
-      name: playerTwoDeck.name,
-      deck: createCustomDeckFromRoster(playerTwoDeck, 'player-two'),
-    },
+    createCustomDeckPlayerSetup(playerOneDeck, 'player-one'),
+    createCustomDeckPlayerSetup(playerTwoDeck, 'player-two'),
     firstPlayerId,
     stateShuffle,
   )
@@ -283,6 +311,9 @@ const toStanding = (
   buchholz: standing.buchholz,
   stuckMatches: standing.stuckMatches,
   ...(includeEntries ? { entries: standing.deck.entries } : {}),
+  ...(includeEntries && standing.deck.extraDeckEntries
+    ? { extraDeckEntries: standing.deck.extraDeckEntries }
+    : {}),
 })
 
 const buildColorSummaries = (
@@ -323,7 +354,7 @@ const buildColorSummaries = (
       .map(([cardNumber, stats]) => ({
         cardNumber,
         name: stats.name,
-        series: cardNumber.match(/^BS[1-6]/)?.[0] ?? 'other',
+        series: cardNumber.match(/^(?:BS\d+|ST\d+|P)-/)?.[0]?.slice(0, -1) ?? 'other',
         appearances: stats.appearances,
         copies: stats.copies,
         averageCopies: stats.copies / Math.max(1, stats.appearances),
@@ -351,7 +382,7 @@ export const runSwissTournament = async (
 ): Promise<SwissTournamentReport> => {
   const rounds = options.rounds ?? 9
   const seed = options.seed ?? 20260813
-  const maxActions = options.maxActions ?? 2500
+  const maxActions = options.maxActions ?? MAX_TOURNAMENT_ACTIONS
   const aiLevel = options.aiLevel ?? 4
   const totalMatches = Math.floor(decks.length / 2) * rounds
   if (decks.length < 2 || decks.length % 2 !== 0) {
@@ -396,6 +427,8 @@ export const runSwissTournament = async (
               'player-two': aiLevel,
             },
             seed: matchSeed,
+            experienceProfile: options.experienceProfile,
+            experienceProfileByPlayer: options.experienceProfileByPlayer,
           },
         )
       } catch (caught) {

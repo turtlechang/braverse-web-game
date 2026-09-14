@@ -12,6 +12,7 @@ const snapshot = async (page) => ({
   sourceCount: await page.locator('.bottom-field .combat-card-wrap .card-face[title="Icicle Yeti Cookie"]').count(),
   restedSupport: await page.locator('.bottom-field .support-card-wrap .card-face.is-rested').count(),
   targetHp: await page.locator('[aria-label="opp-lv1 HP 卡 5 張"]').count(),
+  targetRested: await page.locator('.top-field .combat-card-wrap .card-face[title="opp-lv1"].is-rested').count(),
 })
 try {
   for (const viewport of [{ width: 1907, height: 863 }, { width: 1164, height: 777 }]) {
@@ -26,6 +27,7 @@ try {
           await page.goto(`${baseUrl}?test-state=card:${card}&contract-card=BS8-076`)
           await page.locator('.game-shell').waitFor()
           const before = await snapshot(page)
+          assert.equal(before.targetRested, 1, '攻擊前對手目標必須已橫置')
           await page.locator('.bottom-field .combat-card-wrap .card-face').first().click()
           await page.locator('.bottom-field .support-card-wrap .card-face').nth(0).click()
           await page.locator('.bottom-field .support-card-wrap .card-face').nth(1).click()
@@ -35,6 +37,7 @@ try {
           assert.equal(await optional.getByRole('button', { name: '支付', exact: true }).isEnabled(), true)
           const afterAttack = await snapshot(page)
           assert.equal(afterAttack.targetHp, 1, '先結算 1 點攻擊傷害')
+          assert.equal(afterAttack.targetRested, 1, '攻擊後效果選到的目標仍須保持橫置')
           assert.equal(afterAttack.restedSupport, before.restedSupport + 2, 'BB 先支付')
           const decisionText = await optional.innerText()
           await page.screenshot({ path: `test-results/bs8-076-attack-choice/${label}-decision.png` })
@@ -47,6 +50,7 @@ try {
           }
           await optional.waitFor({ state: 'hidden' })
           const after = await snapshot(page)
+          assert.equal(after.targetRested, 1, '攻擊後效果結算後，下一個 Active Phase 前仍須保持橫置')
           const trace = await page.evaluate(() => window.__braverseContractTrace)
           const resolved = trace.findLast((entry) => entry.commandKind === 'resolve-optional-cost-attack')
           assert.ok(resolved, '選擇必須留下正式 command 紀錄')
@@ -57,12 +61,58 @@ try {
           assert.equal(after.sourceCount, choice === 'pay' ? 0 : 1)
           if (choice === 'pay') {
             assert.match(resolved.steps.join('\n'), /抽 1 張牌；執行 prevent-cookie-active-next-phase/)
+            const replacement = page.locator('.decision-modal')
+            await replacement.getByRole('button', { name: '不補餅乾', exact: true }).click()
+            await replacement.waitFor({ state: 'hidden' })
           } else {
             assert.match(resolved.steps.join('\n'), /略過/)
             assert.doesNotMatch(resolved.steps.at(-1), /執行 prevent-cookie-active-next-phase|抽 1 張牌/)
           }
+          await page.getByRole('button', { name: '結束主要階段', exact: true }).click()
+          await page.getByRole('button', { name: '結束回合', exact: true }).click()
+          if (choice === 'pay') {
+            // AI hand-discard is publicly revealed and requires the viewer to
+            // confirm before the Active Phase can continue.
+            const discardReveal = page.locator('.discard-reveal-modal')
+            await discardReveal.waitFor()
+            await discardReveal.getByRole('button', { name: '確認並繼續', exact: true }).click()
+            await discardReveal.waitFor({ state: 'hidden' })
+          }
+          await page.waitForFunction(
+            ({ choice }) => {
+              const target = document.querySelector(
+                '.top-field .combat-card-wrap .card-face[title="opp-lv1"]',
+              )
+              const trace = window.__braverseContractTrace ?? []
+              const discardedTwo = trace.some(
+                (entry) =>
+                  entry.commandKind === 'resolve-opponent-hand-discard' &&
+                  entry.steps?.some((step) => /棄置 2 張手牌/.test(step)),
+              )
+              return (
+                target instanceof HTMLElement &&
+                !target.classList.contains('is-rested') &&
+                (choice === 'skip' || discardedTwo)
+              )
+            },
+            { choice },
+          )
+          const afterOpponentActive = await snapshot(page)
+          assert.equal(afterOpponentActive.targetRested, 0, '對手必須完成下一個 Active Phase')
+          if (choice === 'pay') {
+            const finalTrace = await page.evaluate(() => window.__braverseContractTrace ?? [])
+            assert.ok(
+              finalTrace.some(
+                (entry) =>
+                  entry.commandKind === 'resolve-opponent-hand-discard' &&
+                  entry.steps?.some((step) => /棄置 2 張手牌/.test(step)),
+              ),
+              '對手恢復 active 前必須留下棄置恰好 2 張手牌的正式 command 紀錄',
+            )
+          }
           assert.deepEqual(errors, [])
-          results.push({ label, viewport, card, choice, status: 'PASS', before, afterAttack, after, decisionText, trace, errors })
+          const finalTrace = await page.evaluate(() => window.__braverseContractTrace ?? [])
+          results.push({ label, viewport, card, choice, status: 'PASS', before, afterAttack, after, afterOpponentActive, decisionText, trace: finalTrace, errors })
           await page.screenshot({ path: `test-results/bs8-076-attack-choice/${label}-resolved.png` })
           console.log(`PASS ${label}`)
         } catch (error) {

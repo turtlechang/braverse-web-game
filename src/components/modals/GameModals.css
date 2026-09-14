@@ -932,6 +932,109 @@
   line-height: 1.6;
 }
 
+.hand-discard-card-option {
+  min-width: 112px;
+  flex: 0 0 112px;
+  display: grid;
+  gap: 4px;
+}
+
+.hand-discard-card-option > button:first-child {
+  min-width: 112px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #a5adba;
+  border-radius: 5px;
+  background: #fff;
+  color: #132038;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hand-discard-card-option > button:first-child.is-selected {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.hand-discard-placement {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.hand-discard-placement button {
+  padding: 4px 2px;
+  border: 1px solid rgba(113, 233, 255, 0.5);
+  border-radius: 4px;
+  background: rgba(3, 20, 53, 0.75);
+  color: #d9f5ff;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.hand-discard-placement button.is-selected {
+  border-color: #fff17c;
+  background: rgba(80, 74, 18, 0.9);
+  color: #fff17c;
+}
+
+.card-detail-underlay {
+  margin: 12px 0 16px;
+  padding: 10px;
+  border: 1px solid rgba(255, 230, 110, 0.44);
+  border-radius: 6px;
+  background: rgba(44, 34, 7, 0.28);
+}
+
+.card-detail-underlay > strong {
+  color: #fff0a3;
+  font-size: 0.78rem;
+}
+
+.card-detail-underlay-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.card-detail-underlay-entry {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  align-items: center;
+}
+
+.card-detail-underlay-entry .underlay-detail-card {
+  width: 64px;
+  border-width: 1px;
+  border-color: rgba(255, 230, 110, 0.76);
+}
+
+.card-detail-underlay-entry > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.card-detail-underlay-entry > div strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-detail-underlay-entry > div small,
+.card-detail-underlay > small {
+  color: #bbdaf3;
+  font-size: 0.66rem;
+}
+
 .special-play-modal {
   width: min(760px, 100%);
 }

@@ -388,8 +388,19 @@ describe('BS3-098 Kumiho Cookie: trash-to-deck cost', () => {
 describe('resolve-choose-one command', () => {
   it('rewrites the pending ability queue without executing anything', () => {
     const [effect] = effectsOf('BS3-068')
+    const base = createBattleState()
     const state: GameState = {
-      ...createBattleState(),
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          supportArea: [
+            ...base.players['player-two'].supportArea,
+            { card: item('choose-support-2'), rested: false },
+          ],
+        },
+      },
       pendingAbilityEffect: {
         playerId: 'player-two',
         sourcePlayerId: 'player-two',

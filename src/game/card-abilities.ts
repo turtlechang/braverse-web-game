@@ -14,7 +14,7 @@ import {
   isEffectConditionMet,
   isEffectTargeted,
 } from './effects'
-import { findCardIndex, updatePlayer } from './helpers'
+import { findCardIndex, getOpponentId, updatePlayer } from './helpers'
 import { hasBlockingPending } from './pending'
 import {
   clearDepartedCookieModifiers,
@@ -459,6 +459,43 @@ export const getStageAbility = (
 ): StageAbility | null =>
   card.type === 'stage' ? card.stageAbility ?? null : null
 
+export interface StageActivationSource {
+  ownerId: PlayerId
+  stage: NonNullable<PlayerState['stage']>
+  ability: StageAbility
+}
+
+/**
+ * Resolve the Stage card whose Activate effect is being used.  Most Stages
+ * belong to the activating player; BS9-118 explicitly allows either player
+ * to activate the effect, so the opponent's owner-independent Stage is also
+ * considered.  The returned owner is kept separate from the activator so the
+ * Stage itself is rested/trashed in the correct player's zone.
+ */
+export const getStageActivationSource = (
+  state: GameState,
+  playerId: PlayerId,
+): StageActivationSource | null => {
+  const candidateOwnerIds: PlayerId[] = [playerId, getOpponentId(playerId)]
+  for (const ownerId of candidateOwnerIds) {
+    const stage = state.players[ownerId].stage
+    const ability = stage?.card.stageAbility
+    if (
+      !stage ||
+      stage.rested ||
+      !ability ||
+      ability.triggered ||
+      ability.endPhase ||
+      (ability.oncePerTurn && state.skillUsesThisTurn.includes(stage.card.instanceId)) ||
+      (ownerId !== playerId && !ability.ownerIndependent)
+    ) {
+      continue
+    }
+    return { ownerId, stage, ability }
+  }
+  return null
+}
+
 /**
  * Some ability conditions are evaluated only after paying the ability cost.
  * In particular, BS6-084 discards one-or-more hand cards before checking
@@ -725,18 +762,17 @@ export const canActivateStage = (
 ): boolean => {
   try {
     assertMainAction(state, playerId)
-    const stage = state.players[playerId].stage
-    const ability = stage?.card.stageAbility
-    if (!stage || stage.rested || !ability || ability.triggered || ability.endPhase) return false
+    const source = getStageActivationSource(state, playerId)
+    if (!source) return false
     return (
-      canPayAbilityCost(state, playerId, ability.cost, stage.card.instanceId) &&
+      canPayAbilityCost(state, playerId, source.ability.cost, source.stage.card.instanceId) &&
       (
-        hasUsableEffect(state, playerId, stage.card.instanceId, ability) ||
-        (ability.specialVictory !== undefined &&
+        hasUsableEffect(state, playerId, source.stage.card.instanceId, source.ability) ||
+        (source.ability.specialVictory !== undefined &&
           isSpecialVictoryConditionMet(
             state,
             playerId,
-            ability.specialVictory,
+            source.ability.specialVictory,
           ))
       )
     )
@@ -758,9 +794,11 @@ export const activateStage = (
   if (!canActivateStage(state, playerId)) {
     throw new GameRuleError('目前無法啟動場景卡。')
   }
-  const player = state.players[playerId]
-  const stage = player.stage!
-  const ability = stage.card.stageAbility!
+  const source = getStageActivationSource(state, playerId)
+  if (!source) {
+    throw new GameRuleError('目前無法啟動場景卡。')
+  }
+  const ability = source.ability
   const paidState = payAbilityCost(state, playerId, ability.cost, {
     paymentIds,
     supportToTrashIds,
@@ -768,21 +806,31 @@ export const activateStage = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
-    sourceInstanceId: stage.card.instanceId,
+    sourceInstanceId: source.stage.card.instanceId,
   })
-  const paidPlayer = paidState.players[playerId]
+  const ownerPlayer = paidState.players[source.ownerId]
   const activatedState = updatePlayer(paidState, {
-    ...paidPlayer,
+    ...ownerPlayer,
     stage: ability.cost.stageSourceToTrash
       ? null
       : {
-          ...stage,
-          rested: ability.restSource ? true : stage.rested,
+          ...source.stage,
+          rested: ability.restSource ? true : source.stage.rested,
         },
   })
 
-  return ability.specialVictory &&
-    isSpecialVictoryConditionMet(activatedState, playerId, ability.specialVictory)
-    ? finishWithVictory(activatedState, playerId, 'special-victory')
+  const stateWithUse = ability.oncePerTurn
+    ? {
+        ...activatedState,
+        skillUsesThisTurn: [
+          ...activatedState.skillUsesThisTurn,
+          source.stage.card.instanceId,
+        ],
+      }
     : activatedState
+
+  return ability.specialVictory &&
+    isSpecialVictoryConditionMet(stateWithUse, playerId, ability.specialVictory)
+    ? finishWithVictory(stateWithUse, playerId, 'special-victory')
+    : stateWithUse
 }

@@ -1,16 +1,20 @@
 ---
 name: braverse-card-import-audit
-description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列匯入、parser／契約 shadow audit、候選資料驗證、效果覆蓋稽核、promote 到正式卡池，並以 test-state 與 Chrome Browser A/B 逐卡驗證卡面文字、UI、支付、代價、目標、Then、FLIP、陷阱與公開 effect trace；使用者要求新增系列、補卡牌效果、promote 候選卡，或重測尚未完整測試的卡牌時使用。
+description: 逐卡依實體卡圖驗證 Braverse 匯入、效果轉接、支付、目標、時機與 Browser UI；用於系列匯入或逐卡稽核。
 ---
 
 # Braverse 卡牌匯入與 Chrome 效果稽核
 
 ## 目標與邊界
 
+逐卡轉換／驗證開始前，必讀 [實體卡圖與獨立驗收方法](references/physical-card-verification.md)。
+這是跨模型的操作與判定標準，不指定模型、供應商或額外代理；工具只能協助取得證據。
+先依實體卡圖建立預期，再對照來源資料、轉接、規則與 UI；看不到圖或文字不清楚時不得填「已確認」。
+
 把「官方資料轉換」和「實際遊戲行為」串成可追溯的驗收流程。完成條件不是只有 JSON 通過 schema，也不是只有卡牌詳情能顯示；每張納入範圍的基礎卡都要有資料路由證據，以及依卡面文字驗證過的互動結果。
 
-- 先讀根目錄 `AGENTS.md`，再讀 `docs/game-rules.md`、`docs/card-data-import.md`、`docs/card-effects.md`、`docs/official-ui-reference.md`。
-- 以 `cardNumber` 去除 `@` 變體作為效果稽核單位；異圖／促銷變體至少做載入、卡面與路由掃描，只有文字或效果不同時才另列語意案例。
+- 以根目錄 `AGENTS.md` 為邊界，按目前範圍查閱 `docs/game-rules.md`、`docs/card-data-import.md`、`docs/card-effects.md`、`docs/official-ui-reference.md`；不預讀無關文件。
+- 每筆 `cardNumber`／`@` 變體先各自比對實體卡圖；確認文字、數值、標記與效果相同後才可共用語意案例，仍保留每筆卡圖、載入與路由證據。不得只因基本卡號相同就假定異圖文字相同。
 - 明確區分「瀏覽器載入 smoke test」和「逐卡效果驗證」；前者通過不得宣稱後者完成。
 - 規則文件標記 `[待確認]` 的行為不得自行猜測；記為阻塞／待官方確認並保留原文與依據。
 - 保留既有未提交修改；不要提交 `node_modules/`、`dist/`、`test-results/`、截圖、token 或個人設定。除非使用者明確要求，不要自動 commit 或 push。
@@ -18,7 +22,7 @@ description: 建立或更新 Braverse 官方卡牌資料轉接流程，從系列
 
 ## 先建立任務契約
 
-開始前記錄以下欄位，缺少會影響範圍的資訊才向使用者提問；否則依儲存庫現況合理推進：
+開始前先確認以下會影響範圍的欄位；缺少會影響成果或授權的資訊才向使用者提問，否則依儲存庫現況合理推進：
 
 - 系列／彈別、資料來源 URL、要納入的顏色（預設紅／綠／藍／紫）、卡號範圍與是否包含異圖變體。
 - 目標階段：只匯入候選、完成 adapter／規則轉接、promote 正式卡池，或包含 Chrome 效果驗證。

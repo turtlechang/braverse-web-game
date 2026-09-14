@@ -94,8 +94,14 @@ const getEnergyColor = (
 type ExtraDeckPlaySpec = {
   mode: 'enter-battle' | 'awaken'
   requirement?: EffectCondition
+  /** Cost printed in the EXTRA clause, paid before the card enters battle. */
+  playCost?: AbilityCost
   onPlayEffects?: CardEffect[]
   onPlayCost?: AbilityCost
+  /** An Activate skill printed on the EXTRA card after it enters battle. */
+  activateEffects?: CardEffect[]
+  activateCost?: AbilityCost
+  activateOncePerTurn?: boolean
   awakenRequirement?: ExtraDeckCard['awakenRequirement']
   awakenHpBonus?: number
   breakAreaSkill?: {
@@ -109,6 +115,59 @@ type ExtraDeckPlaySpec = {
  * Awaken 疊放。因此只對已有官方文字與規則裁決的卡號建立精確映射。
  */
 const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
+  'BS9-055': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'opponent-support-count-at-least', count: 3 },
+        { kind: 'support-cards-trashed-this-turn-at-least', count: 2 },
+      ],
+    },
+    activateEffects: [{
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: true,
+      condition: { kind: 'support-count-at-most', count: 5 },
+    }],
+    activateOncePerTurn: true,
+  },
+  'BS9-030': {
+    mode: 'enter-battle',
+    playCost: {
+      energy: {},
+      discardHand: 3,
+      discardHandColor: 'yellow',
+      discardHandType: 'cookie',
+      discardHandHasFlip: true,
+    },
+    onPlayEffects: [
+      {
+        kind: 'break-to-trash',
+        max: 1,
+        exactLevel: 1,
+      },
+    ],
+  },
+  'BS9-010': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'cookies-fainted-during-opponent-previous-turn-at-least',
+      side: 'self',
+      count: 2,
+      energyColor: 'red',
+      minLevel: 1,
+      maxLevel: 1,
+    },
+    onPlayEffects: [{
+      kind: 'hand-to-hp',
+      target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+      optional: true,
+      handSide: 'opponent',
+      hpPlacement: 'bottom',
+      faceUp: true,
+    }],
+  },
   'BS8-005': {
     mode: 'enter-battle',
     requirement: {
@@ -180,6 +239,47 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
     onPlayCost: { energy: {}, discardHand: 1 },
     onPlayEffects: [{ kind: 'trash-to-hand', max: 1, energyColor: 'purple' }],
   },
+  'BS9-088': {
+    mode: 'awaken',
+    requirement: {
+      kind: 'cookie-placed-from-battle-to-deck-this-turn',
+      side: 'self',
+    },
+    awakenRequirement: {
+      targetName: 'Pure Vanilla Cookie',
+      playedFrom: 'break',
+    },
+    awakenHpBonus: 2,
+    onPlayEffects: [{
+      kind: 'reveal-top-deck',
+      match: { type: 'cookie', energyColor: 'blue', level: 2 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          thenEffects: [{ kind: 'draw-up-to', max: 2 }],
+        },
+      ],
+    }],
+  },
+  'BS9-102': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'trash-count-at-least', count: 20 },
+        { kind: 'opponent-trash-count-at-least', count: 20 },
+      ],
+    },
+    activateCost: { energy: {}, discardHand: 1, discardHandColor: 'purple' },
+    activateEffects: [{
+      kind: 'opponent-discard-hand',
+      count: 1,
+      condition: { kind: 'opponent-hand-count-at-least', count: 4 },
+    }],
+    activateOncePerTurn: true,
+  },
 }
 
 const createExtraOnPlaySkill = (
@@ -197,7 +297,31 @@ const createExtraOnPlaySkill = (
         text,
         effects,
       }
-    : undefined
+      : undefined
+
+const createExtraSkill = (
+  text: string,
+  spec: ExtraDeckPlaySpec,
+): CardSkill | undefined => {
+  if (spec.activateEffects && spec.activateEffects.length > 0) {
+    return {
+      trigger: 'activate',
+      oncePerTurn: spec.activateOncePerTurn ?? false,
+      yourTurn: false,
+      restSource: false,
+      cost: spec.activateCost ?? { energy: {}, discardHand: 0 },
+      text,
+      effects: spec.activateEffects,
+      ...(spec.onPlayEffects && spec.onPlayEffects.length > 0
+        ? {
+            onPlayEffects: spec.onPlayEffects,
+            onPlayCost: spec.onPlayCost ?? { energy: {}, discardHand: 0 },
+          }
+        : {}),
+    }
+  }
+  return createExtraOnPlaySkill(text, spec.onPlayEffects, spec.onPlayCost)
+}
 
 export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
   const keywords = new Set<CardKeyword>()
@@ -589,11 +713,7 @@ export const convertOfficialCardToExtraDeckCard = (
   const spec = BS8_EXTRA_PLAY_SPECS[card.baseCardNumber] ?? {
     mode: 'awaken' as const,
   }
-  const onPlaySkill = createExtraOnPlaySkill(
-    card.skill.text ?? card.attackText ?? '',
-    spec.onPlayEffects,
-    spec.onPlayCost,
-  )
+  const onPlaySkill = createExtraSkill(card.skill.text ?? card.attackText ?? '', spec)
   const breakAreaSkill = spec.breakAreaSkill
     ? {
         trigger: 'activate' as const,
@@ -635,6 +755,7 @@ export const convertOfficialCardToExtraDeckCard = (
     ...(parsedText.attack ? { attackEnergyCost: parsedText.attack.cost } : {}),
     ...(card.attackText ? { attackText: card.attackText } : {}),
     ...(attackEffects ? { attackEffects } : {}),
+    ...(spec.playCost ? { extraDeckPlayCost: spec.playCost } : {}),
     ...(spec.requirement ? { playRequirement: spec.requirement } : {}),
     ...(spec.awakenRequirement
       ? { awakenRequirement: spec.awakenRequirement }

@@ -10,6 +10,7 @@ import {
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import type { CardSkill, ExtraDeckCard, GameState, PendingBattle } from '../../game'
 import { applyGameCommand } from '../../game'
+import { maskGameStateForViewer } from '../../game/masked-state'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
@@ -1297,6 +1298,31 @@ describe('awakened Cookie HP display', () => {
     expect(markup).toContain(`${cookie.hpCards.length}/${cookie.card.hp}`)
     expect(markup).not.toContain('覺醒HP')
   })
+
+  it.each(['BS8-027', 'BS8-104'] as const)(
+    'shows the previous Cookie card for every formal Awakened EXTRA route (%s)',
+    (cardNumber) => {
+      const initial = createCardCheckDemoState(cardNumber)
+      const extra = initial.players['player-one'].extraDeck?.[0]
+      expect(extra).toBeDefined()
+
+      const game = applyGameCommand(initial, {
+        kind: 'play-extra-deck-cookie',
+        playerId: 'player-one',
+        instanceId: extra!.instanceId,
+      })
+      const awakened = game.players['player-one'].battleArea[0]
+      const underlay = awakened.awakenedUnderlay?.[0]
+      expect(underlay).toBeDefined()
+
+      const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+      expect(markup).toContain('class="awakened-underlay-preview"')
+      expect(markup).toContain('class="awakened-underlay-label">覺醒前</span>')
+      expect(markup).toContain(`覺醒前卡牌：${underlay!.name}`)
+      expect(markup).toContain(`查看覺醒前卡牌：${underlay!.name}`)
+      expect(markup).toContain(`>${underlay!.name}</small>`)
+    },
+  )
 })
 
 describe('attack modifier tooltip', () => {
@@ -1330,6 +1356,29 @@ describe('attack modifier tooltip', () => {
 
     expect(markup).toContain('badge-atk')
     expect(markup).not.toContain('基礎攻擊力')
+  })
+})
+
+describe('BS9-010 permanent face-up HP display', () => {
+  it.each(['player-one', 'player-two'] as const)('renders only the public bottom HP for %s', (viewer) => {
+    let game = createCardCheckDemoState('BS9-010')
+    const sourceId = game.players['player-one'].extraDeck![0].instanceId
+    const publicCard = game.players['player-two'].hand[0]
+    game = applyGameCommand(game, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: sourceId })
+    game = applyGameCommand(game, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: sourceId,
+      trigger: 'on-play', paymentIds: [], effectTargets: [['player-two-hidden-hand-0']] })
+    const visibleGame = maskGameStateForViewer(game, viewer)
+    const sourceCookie = visibleGame.players['player-one'].battleArea.find((cookie) => cookie.card.instanceId === sourceId)!
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({
+      game: { ...visibleGame, players: { ...visibleGame.players, 'player-one': {
+        ...visibleGame.players['player-one'], battleArea: [sourceCookie],
+      } } }, playerId: 'player-one', position: viewer === 'player-one' ? 'bottom' : 'top',
+    })} />)
+    const hpButtons = [...markup.matchAll(/<button class="card-face hp-card[^>]*>[\s\S]*?<\/button>/g)].map((entry) => entry[0])
+    expect(hpButtons).toHaveLength(5)
+    expect(hpButtons[0]).toContain(`title="${publicCard.name}"`)
+    expect(hpButtons[0]).toContain(publicCard.imageUrl)
+    expect(hpButtons.slice(1).every((button) => button.includes('title="未公開卡牌"'))).toBe(true)
   })
 })
 

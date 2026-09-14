@@ -8,7 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import type { CardEffect, CardSkill, GameCard } from '../../game'
-import { isEffectUntargeted, requiresEffectCardSelection } from '../../game'
+import { hasFixedModifierTargets, isEffectUntargeted, requiresEffectCardSelection } from '../../game'
 import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
@@ -83,6 +83,10 @@ export interface EffectPanelProps {
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
   onChooseMode?: (modeIndex: number) => void
+  /** 規則層計算的各模式可執行性；未提供時維持向後相容，全部可選。 */
+  chooseOneModePlayable?: readonly boolean[]
+  /** 設定 hp-to-trash 目前選定目標的個別 HP 移除數量。 */
+  onSetTargetAmount?: (instanceId: string, amount: number) => void
 }
 
 function CandidateButtons({
@@ -92,6 +96,7 @@ function CandidateButtons({
   labels,
   onToggle,
   className,
+  readOnly = false,
 }: {
   cards: GameCard[]
   selectedIds: Set<string>
@@ -99,12 +104,13 @@ function CandidateButtons({
   labels?: Record<string, string>
   onToggle?: (instanceId: string) => void
   className: string
+  readOnly?: boolean
 }) {
   if (cards.length === 0) return null
 
   return (
     <div className={`effect-candidates ${className}`}>
-      {cards.map((card) => {
+      {cards.map((card, index) => {
         const selected = selectedIds.has(card.instanceId)
         const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
         return (
@@ -112,13 +118,91 @@ function CandidateButtons({
             type="button"
             className={selected ? 'is-selected' : ''}
             key={card.instanceId}
+            disabled={readOnly}
+            data-fixed-target={readOnly || undefined}
             onClick={() => onToggle?.(card.instanceId)}
           >
-            <CardFace card={card} selected={selected} />
-            <span>{card.name}</span>
+            <CardFace card={card} selected={selected} concealed={card.id === 'hidden'} />
+            <span>{card.id === 'hidden' ? `對手手牌 ${index + 1}（未公開）` : card.name}</span>
             {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
           </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function HpAmountCandidateButtons({
+  cards,
+  selectedIds,
+  selectedOrderIds,
+  selectedAmounts,
+  amountMin,
+  amountMax,
+  onToggle,
+  onSetAmount,
+}: {
+  cards: GameCard[]
+  selectedIds: Set<string>
+  selectedOrderIds?: string[]
+  selectedAmounts: number[]
+  amountMin: number
+  amountMax: number
+  onToggle?: (instanceId: string) => void
+  onSetAmount?: (instanceId: string, amount: number) => void
+}) {
+  if (cards.length === 0) return null
+
+  return (
+    <div className="effect-hp-amount-candidates">
+      {cards.map((card) => {
+        const selected = selectedIds.has(card.instanceId)
+        const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
+        const selectedAmount =
+          selectionOrder >= 0
+            ? (selectedAmounts[selectionOrder] ?? amountMax)
+            : null
+        return (
+          <div
+            className={`effect-hp-amount-candidate${selected ? ' is-selected' : ''}`}
+            key={card.instanceId}
+          >
+            <button
+              type="button"
+              className="effect-hp-amount-card"
+              onClick={() => onToggle?.(card.instanceId)}
+              aria-pressed={selected}
+            >
+              <CardFace card={card} selected={selected} />
+              <span>{card.name}</span>
+              {selectionOrder >= 0 && (
+                <small>第 {selectionOrder + 1} 隻</small>
+              )}
+            </button>
+            {selected && (
+              <div
+                className="effect-hp-amount-options"
+                role="group"
+                aria-label={`${card.name}移除 HP 張數`}
+              >
+                {Array.from(
+                  { length: amountMax - amountMin + 1 },
+                  (_, index) => amountMin + index,
+                ).map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    className={selectedAmount === amount ? 'is-selected' : ''}
+                    aria-pressed={selectedAmount === amount}
+                    onClick={() => onSetAmount?.(card.instanceId, amount)}
+                  >
+                    {amount} 張 HP
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )
       })}
     </div>
@@ -218,8 +302,11 @@ function EffectPanelContent({
   effectSelectionError = null,
   optionalCostAttack = null,
   onChooseMode,
+  chooseOneModePlayable,
+  onSetTargetAmount,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
+  const fixedTargets = hasFixedModifierTargets(currentEffect)
   const attackTextSections =
     pendingEffect?.sourceKind === 'attack'
       ? splitAttackText(pendingEffect.skill.text)
@@ -245,7 +332,9 @@ function EffectPanelContent({
     ) ?? [],
   )
   const selectionLimits =
-    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+    fixedTargets
+      ? { min: candidateCards.length, max: candidateCards.length }
+      : currentEffect?.kind === 'damage-all' && currentEffect.sequential
       ? { min: candidateCards.length, max: candidateCards.length }
       : currentEffect?.kind === 'break-to-trash' ||
       currentEffect?.kind === 'trash-to-hand' ||
@@ -257,6 +346,8 @@ function EffectPanelContent({
               : 0,
           max: currentEffect.max,
         }
+      : currentEffect?.kind === 'equipped-to-hp'
+        ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
@@ -301,6 +392,8 @@ function EffectPanelContent({
               : { min: currentEffect.optional ? 0 : 1, max: 1 }
           : currentEffect?.kind === 'cycle-hp'
             ? { min: 0, max: 2 }
+          : currentEffect?.kind === 'hand-to-battle'
+            ? { min: currentEffect.optional ? 0 : currentEffect.amount, max: currentEffect.amount }
           : currentEffect?.kind === 'rest-support-and-damage'
             ? currentEffect.target
             : currentEffect?.kind === 'set-active' && currentEffect.selectable
@@ -347,12 +440,30 @@ function EffectPanelContent({
         currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
         currentEffect.kind !== 'disable-block' &&
-        currentEffect.kind !== 'hand-to-battle' &&
         currentEffect.kind !== 'flip-to-support'
           ? 'target' in currentEffect
             ? currentEffect.target
             : null
           : null
+
+  const hpAmountSelection =
+    currentEffect?.kind === 'hp-to-trash'
+      ? currentEffect.selectableAmount
+      : undefined
+  const selectedTargetAmounts = pendingEffect?.selectedTargetAmounts ?? []
+  const hpAmountsReady =
+    !hpAmountSelection ||
+    Boolean(
+      pendingEffect &&
+        pendingEffect.selectedTargetIds.every((_, index) => {
+          const amount = selectedTargetAmounts[index]
+          return (
+            Number.isInteger(amount) &&
+            amount >= hpAmountSelection.min &&
+            amount <= hpAmountSelection.max
+          )
+        }),
+    )
 
   const energyPaid = totalEnergyCost > 0
     ? energyPaymentValid === true
@@ -418,7 +529,7 @@ function EffectPanelContent({
     currentEffect?.kind === 'break-to-hand-by-level-sum' &&
     currentEffect.targetSumMode === 'at-most'
 
-  const targetReady = !effectSelectionError && (
+  const targetReady = !effectSelectionError && hpAmountsReady && (
     !showTargetSelection ||
     (isRestSupportAndDamageEffect
       ? Boolean(
@@ -578,6 +689,7 @@ function EffectPanelContent({
   const hasNextPhase =
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
   const hasOptionalSkip =
+    !fixedTargets &&
     pendingEffect !== null &&
     ((pendingEffect.sourceKind === 'attack' &&
       currentEffect !== null &&
@@ -967,12 +1079,14 @@ function EffectPanelContent({
                 >
                   {chooseOneModes.map((mode, modeIndex) => {
                     const selected = selectedChooseOneMode === modeIndex
+                    const playable = chooseOneModePlayable?.[modeIndex] ?? true
                     return (
                       <button
                         key={`${chooseOneSignature}-${modeIndex}`}
                         type="button"
                         className={selected ? 'is-selected' : ''}
                         aria-pressed={selected}
+                        disabled={!playable}
                         onClick={() =>
                           setChooseOneSelection({
                             signature: chooseOneSignature,
@@ -985,6 +1099,7 @@ function EffectPanelContent({
                         </span>
                         <span className="effect-choice-option-label">
                           {mode.label}
+                          {!playable && <small>（目前無法支付）</small>}
                         </span>
                         {selected ? (
                           <Check aria-hidden="true" />
@@ -1030,41 +1145,65 @@ function EffectPanelContent({
                   <span>
                     {currentEffect.kind === 'rest-support-and-damage'
                       ? `選擇最多 ${currentEffect.target.max} 個對手餅乾；將造成 ${selectedRestSupportIds.size} 點效果傷害。`
+                      : currentEffect.kind === 'hp-to-trash' && hpAmountSelection
+                        ? `選擇最多 ${currentEffect.target.max} 隻對手餅乾，並為每隻選擇移除 ${hpAmountSelection.min}～${hpAmountSelection.max} 張 HP。`
                       : describeEffect(currentEffect)}
                   </span>
                 </div>
-                <CandidateButtons
-                  cards={
-                    currentEffect.kind === 'rest-support-and-damage'
-                      ? damageTargetCandidates
-                      : candidateCards
-                  }
-                  selectedIds={
-                    currentEffect.kind === 'rest-support-and-damage'
-                      ? selectedDamageTargetIds
-                      : new Set(pendingEffect.selectedTargetIds)
-                  }
-                  selectedOrderIds={
-                    (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
-                    (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
-                      ? pendingEffect.selectedTargetIds
-                      : undefined
-                  }
-                  onToggle={onToggleCandidate}
-                  className="effect-candidates-target"
-                  labels={candidateLabels}
-                />
+                {hpAmountSelection ? (
+                  <HpAmountCandidateButtons
+                    cards={candidateCards}
+                    selectedIds={new Set(pendingEffect.selectedTargetIds)}
+                    selectedOrderIds={pendingEffect.selectedTargetIds}
+                    selectedAmounts={selectedTargetAmounts}
+                    amountMin={hpAmountSelection.min}
+                    amountMax={hpAmountSelection.max}
+                    onToggle={onToggleCandidate}
+                    onSetAmount={onSetTargetAmount}
+                  />
+                ) : (
+                  <CandidateButtons
+                    cards={
+                      currentEffect.kind === 'rest-support-and-damage'
+                        ? damageTargetCandidates
+                        : candidateCards
+                    }
+                    selectedIds={
+                      currentEffect.kind === 'rest-support-and-damage'
+                        ? selectedDamageTargetIds
+                        : new Set(pendingEffect.selectedTargetIds)
+                    }
+                    selectedOrderIds={
+                      (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
+                      (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
+                        ? pendingEffect.selectedTargetIds
+                        : undefined
+                    }
+                    onToggle={onToggleCandidate}
+                    className="effect-candidates-target"
+                    readOnly={fixedTargets}
+                    labels={candidateLabels}
+                  />
+                )}
                 {currentEffect.kind === 'break-to-battle' && candidateCards.length === 0 && (
                   <small role="status">
                     目前沒有可登場的休息區餅乾；直接確認即可選擇 0 張並繼續。
                   </small>
                 )}
                 {effectSelectionError && <small role="status">{effectSelectionError}</small>}
-                {currentEffect.kind === 'hand-to-break-by-level-sum' ||
+                {fixedTargets ? (
+                  <small>固定套用 {candidateCards.length} 張餅乾，不需選取。</small>
+                ) : currentEffect.kind === 'hand-to-break-by-level-sum' ||
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>
                     已選等級總和 {selectedLevelSum}／
                     {isAtMostLevelSum ? '最多 ' : ''}{currentEffect.targetSum}
+                  </small>
+                ) : currentEffect.kind === 'hp-to-trash' && hpAmountSelection ? (
+                  <small>
+                    已選 {pendingEffect.selectedTargetIds.length}／
+                    {selectionLimits?.max ?? currentEffect.target.max} 隻；每隻移除{' '}
+                    {hpAmountSelection.min}～{hpAmountSelection.max} 張 HP
                   </small>
                 ) : currentEffect.kind === 'rest-support-and-damage' ? (
                   <small>

@@ -7,6 +7,24 @@ import type {
 } from '../../game'
 import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
 
+describe('BS9-017 fixed modifier instructions', () => {
+  it('distinguishes the Ancient condition from the source receiving attack damage', () => {
+    expect(describeEffect({ kind: 'modify-attack', amount: 2, duration: 'this-turn',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'battle-area-has-keyword', side: 'self', keyword: 'ancient', excludeSource: true },
+    })).toBe('若己方戰鬥區有另一張【Ancient】餅乾，這張餅乾本回合攻擊傷害 +2；不需選擇其他餅乾。')
+  })
+  it('describes the threshold replacement and its duration instead of +0 or up to four', () => {
+    const effect = { kind: 'modify-damage-received', amount: 0, duration: 'opponent-next-turn',
+      damageType: 'all', minimumDamage: 3, setDamageTo: 2,
+      target: { side: 'self', min: 0, max: 4, keyword: 'ancient', allMatching: true },
+    } as const
+    expect(describeEffect(effect)).toBe('直到對手的下一個回合結束，所有我方【Ancient】餅乾每次受到 3 點以上的傷害時，改為 2 點；自動套用全部符合條件的餅乾。')
+    expect(describeEffectResult(effect, ['Hollyberry Cookie', 'Golden Cheese Cookie']))
+      .toBe('Hollyberry Cookie、Golden Cheese Cookie：直到對手的下一個回合結束，每次受到 3 點以上的傷害時，改為 2 點。')
+  })
+})
+
 describe('hand-to-support selection instructions', () => {
   it('explains optional green hand selection, deselection and rested placement', () => {
     expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true,
@@ -172,6 +190,32 @@ describe('describeEffectResult for optional damage and support-to-battle', () =>
   })
 })
 
+describe('describeEffectResult for selectable set-active', () => {
+  it('does not claim a support card became active when the optional selection is empty', () => {
+    expect(describeEffectResult({
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    }, [])).toBe('未選擇疲勞支援卡，效果未生效。')
+  })
+
+  it('confirms the result when a selectable support card was chosen', () => {
+    expect(describeEffectResult({
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    }, ['support-pay-0'])).toBe('支援區卡已設為活躍。')
+  })
+
+  it('keeps automatic set-active effects successful without target names', () => {
+    expect(describeEffectResult({ kind: 'set-active', supportCount: 1 }, [])).toBe(
+      '支援區卡已設為活躍。',
+    )
+  })
+})
+
 describe('describeEffectResult for optional attack modification', () => {
   it('does not claim an attack modifier applied when no target was selected', () => {
     expect(
@@ -185,6 +229,37 @@ describe('describeEffectResult for optional attack modification', () => {
         [],
       ),
     ).toBe('未選擇攻擊力效果目標，未套用攻擊力修改。')
+  })
+})
+
+describe('received-damage channel labels', () => {
+  const target = { side: 'self' as const, min: 1, max: 1 }
+
+  it('distinguishes effect-only and all-damage modifiers in the UI', () => {
+    expect(describeEffect({
+      kind: 'modify-damage-received',
+      amount: -2,
+      duration: 'this-turn',
+      damageType: 'effect',
+      target,
+    })).toContain('受到的效果傷害 -2')
+    expect(describeEffect({
+      kind: 'modify-damage-received',
+      amount: -3,
+      duration: 'this-turn',
+      damageType: 'all',
+      target,
+    })).toContain('受到的傷害 -3')
+  })
+
+  it('keeps the channel in the resolved result text', () => {
+    expect(describeEffectResult({
+      kind: 'modify-damage-received',
+      amount: -3,
+      duration: 'this-turn',
+      damageType: 'all',
+      target,
+    }, ['Melted Choco Cookie'])).toBe('Melted Choco Cookie 受到的傷害 -3。')
   })
 })
 

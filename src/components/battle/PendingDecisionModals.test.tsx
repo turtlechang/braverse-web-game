@@ -249,3 +249,93 @@ describe('RevealTopDeckModal 的確認權', () => {
     await act(() => root.unmount())
   })
 })
+
+describe('BS9-079 Extra Deck attack ownership', () => {
+  const createExtraAttackView = (
+    viewerPlayerId: 'player-one' | 'player-two',
+  ) => {
+    const baseGame = createCardCheckDemoState('BS9-079', {
+      normalAttack: 'payable',
+    })
+    const source = baseGame.players['player-one'].battleArea[0]!.card
+    const candidate = baseGame.players['player-one'].extraDeck![0]!
+    const game = {
+      ...baseGame,
+      pendingExtraDeckAttack: {
+        playerId: 'player-one' as const,
+        sourcePlayerId: 'player-one' as const,
+        sourceInstanceId: source.instanceId,
+        sourceCardName: source.name,
+        cardName: candidate.name,
+        candidateIds: [candidate.instanceId],
+        optional: true,
+        battleContinuation: 'attack-effect' as const,
+      },
+    }
+    const dispatch = vi.fn<BattleUiMatchLike['dispatch']>()
+    const match = {
+      game,
+      viewerPlayerId,
+      opponentId: viewerPlayerId === 'player-one' ? 'player-two' : 'player-one',
+      dispatch,
+    } as unknown as BattleUiMatchLike
+    const pending = {
+      pendingEffect: null,
+      faintActive: false,
+      afterDamageActive: false,
+      handleOnPlayTrigger: vi.fn(),
+    } satisfies BattleUiPendingEffectLike
+    return { match, pending, candidate, dispatch }
+  }
+
+  it('shows the owner exact candidate and dispatches its instance id', async () => {
+    const { match, pending, candidate, dispatch } = createExtraAttackView('player-one')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(() =>
+        root.render(<PendingDecisionModals match={match} pending={pending} />),
+      )
+
+      expect(container.querySelector('.extra-deck-attack-modal')).not.toBeNull()
+      const option = container.querySelector<HTMLButtonElement>(
+        `[data-testid="extra-deck-attack-candidate-${candidate.instanceId}"]`,
+      )
+      expect(option).not.toBeNull()
+      expect(option?.getAttribute('aria-label')).toContain(candidate.instanceId)
+
+      await act(() => option!.click())
+      expect(dispatch).toHaveBeenCalledWith(
+        {
+          kind: 'resolve-extra-deck-attack',
+          playerId: 'player-one',
+          extraDeckInstanceId: candidate.instanceId,
+        },
+        expect.stringContaining(candidate.name),
+      )
+    } finally {
+      await act(() => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not reveal or offer the owner decision to the opponent', async () => {
+    const { match, pending, candidate, dispatch } = createExtraAttackView('player-two')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(() =>
+        root.render(<PendingDecisionModals match={match} pending={pending} />),
+      )
+
+      expect(container.querySelector('.extra-deck-attack-modal')).toBeNull()
+      expect(container.textContent).not.toContain(candidate.instanceId)
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally {
+      await act(() => root.unmount())
+      container.remove()
+    }
+  })
+})

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { OFFICIAL_RED_STARTER_DECK, type CustomDeck } from '../../src/game'
+import { createCardCheckDemoState } from '../../src/game/demo'
 import type { ServerMessage } from '../../src/net/onlineProtocol'
 import { ConnectionManager, type SocketLike } from './connection'
 import { RoomStore } from './rooms'
@@ -225,6 +226,86 @@ describe('ConnectionManager', () => {
 
     expect(hostSocket.last()).toMatchObject({ type: 'state-update' })
     expect(guestSocket.last()).toMatchObject({ type: 'state-update' })
+  })
+
+  it('轉送 BS9-079 Extra Deck 選擇並只在擁有者投影候選 instanceId', () => {
+    const store = new RoomStore()
+    const manager = new ConnectionManager(store)
+    const hostSocket = new MockSocket()
+    const guestSocket = new MockSocket()
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({ type: 'create-room', deck: createTestDeck('one') }),
+    )
+    const created = hostSocket.last()
+    if (created?.type !== 'room-created') throw new Error('unexpected message')
+    manager.handleMessage(
+      guestSocket,
+      JSON.stringify({
+        type: 'join-room',
+        code: created.code,
+        deck: createTestDeck('two'),
+      }),
+    )
+    completeOpening(manager, hostSocket, guestSocket)
+
+    const room = store.getRoom(created.code)
+    if (!room) throw new Error('missing room')
+    room.state = createCardCheckDemoState('BS9-079', {
+      normalAttack: 'payable',
+    })
+    const source = room.state.players['player-one'].battleArea[0]!.card
+    const candidate = room.state.players['player-one'].extraDeck![0]!
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-attack-effect',
+          playerId: 'player-one',
+          targetIds: [],
+        },
+      }),
+    )
+
+    const hostPending = hostSocket.last()
+    const guestPending = guestSocket.last()
+    if (hostPending?.type !== 'state-update' || guestPending?.type !== 'state-update') {
+      throw new Error('missing pending state update')
+    }
+    expect(hostPending.state.pendingExtraDeckAttack?.candidateIds).toEqual([
+      candidate.instanceId,
+    ])
+    expect(guestPending.state.pendingExtraDeckAttack?.candidateIds).toEqual([])
+    expect(hostPending.state.pendingExtraDeckAttack?.sourceInstanceId).toBe(
+      source.instanceId,
+    )
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-extra-deck-attack',
+          playerId: 'player-one',
+          extraDeckInstanceId: candidate.instanceId,
+        },
+      }),
+    )
+
+    const hostResolved = hostSocket.last()
+    const guestResolved = guestSocket.last()
+    if (hostResolved?.type !== 'state-update' || guestResolved?.type !== 'state-update') {
+      throw new Error('missing resolved state update')
+    }
+    expect(hostResolved.updatedBy).toBe('player-one')
+    expect(hostResolved.state.pendingExtraDeckAttack).toBeNull()
+    expect(hostResolved.state.pendingAbilityEffect?.sourceInstanceId).toBe(
+      candidate.instanceId,
+    )
+    expect(guestResolved.state.pendingExtraDeckAttack).toBeNull()
   })
 
   it('公開意圖會同步給雙方，成功指令後會清除發動者意圖', () => {
