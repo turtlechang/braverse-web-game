@@ -1,13 +1,17 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { MainMenu, type AiDeckChoice } from '../MainMenu'
+import { MainMenuMasterDuel } from '../MainMenuMasterDuel'
+import { MyDecksPage } from '../MyDecksPage'
+import { type AiDeckChoice } from '../MainMenu'
 const DeckEditorPage = lazy(async () => {
   const module = await import('../DeckEditorPage')
   return { default: module.DeckEditorPage }
 })
 import {
+  createCustomDeckId,
   deleteCustomDeck,
   duplicateCustomDeck,
   loadCustomDecks,
+  saveCustomDecks,
   validateCustomDeckDefinition,
   type CustomDeck,
 } from '../../game/custom-deck'
@@ -17,6 +21,10 @@ import {
   validateBs8CandidateStagingDeck,
   type AiLevel,
 } from '../../game'
+import {
+  OFFICIAL_DECK_RECIPES,
+  type StarterDeckChoice,
+} from '../../game/starter-deck'
 import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
 import type { useAiTurn } from '../../hooks/useAiTurn'
@@ -51,6 +59,16 @@ const testStateConfig = parseTestStateConfig(
   window.location.hostname,
 )
 
+type DeckEditorReturnView = 'main-menu' | 'my-decks'
+
+const starterDeckLabels: Record<StarterDeckChoice, string> = {
+  red: '紅色',
+  yellow: '黃色',
+  green: '綠色',
+  blue: '藍色',
+  purple: '紫色',
+}
+
 export interface MenuScreenProps {
   aiLevel: AiLevel
   onSelectAiLevel: (level: AiLevel) => void
@@ -81,6 +99,9 @@ export function MenuScreen({
   const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
   const [deckEditorMode, setDeckEditorMode] = useState<'standard' | 'bs8-candidate-staging'>('standard')
+  const [showMyDecks, setShowMyDecks] = useState(false)
+  const [deckEditorReturnView, setDeckEditorReturnView] =
+    useState<DeckEditorReturnView>('main-menu')
   const [showTestScenario, setShowTestScenario] = useState(false)
   const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
@@ -110,12 +131,75 @@ export function MenuScreen({
     )
   }
 
+  const openDeckEditor = (
+    deck: CustomDeck | null,
+    returnView: DeckEditorReturnView,
+  ) => {
+    setEditingDeck(deck)
+    setDeckEditorMode(
+      deck && isBs8CandidateStagingDeck(deck)
+        ? 'bs8-candidate-staging'
+        : 'standard',
+    )
+    setDeckEditorReturnView(returnView)
+    setShowMyDecks(false)
+    setShowDeckEditor(true)
+  }
+
   const handleDeckEditorSave = (deck: CustomDeck) => {
+    const returnView = deckEditorReturnView
     refreshSavedDecks()
     setSelectedDeckId(deck.id)
     setEditingDeck(null)
     setShowDeckEditor(false)
+    setShowMyDecks(returnView === 'my-decks')
+    setDeckEditorReturnView('main-menu')
     setBattleEntryError(null)
+  }
+
+  const handleDeckEditorClose = () => {
+    const returnView = deckEditorReturnView
+    setShowDeckEditor(false)
+    setEditingDeck(null)
+    setDeckEditorReturnView('main-menu')
+    setShowMyDecks(returnView === 'my-decks')
+    refreshSavedDecks()
+  }
+
+  const openStarterDeck = (choice: StarterDeckChoice) => {
+    const now = new Date().toISOString()
+    const starterDeck: CustomDeck = {
+      id: createCustomDeckId(),
+      name: `${starterDeckLabels[choice]} Starter`,
+      entries: OFFICIAL_DECK_RECIPES[choice].map(({ cardNumber, count }) => ({
+        cardNumber,
+        count,
+      })),
+      format: 'standard',
+      createdAt: now,
+      updatedAt: now,
+    }
+    openDeckEditor(starterDeck, 'my-decks')
+  }
+
+  const deleteDecks = (deckIds: string[]): boolean => {
+    const targets = savedDecks.filter((deck) => deckIds.includes(deck.id))
+    if (targets.length === 0) return false
+    const targetNames = targets.map((deck) => `「${deck.name}」`).join('、')
+    if (!window.confirm(`確定要刪除 ${targetNames} 嗎？此動作無法復原。`)) {
+      return false
+    }
+
+    const nextDecks = loadCustomDecks().filter((deck) => !deckIds.includes(deck.id))
+    saveCustomDecks(nextDecks)
+    setSavedDecks(nextDecks)
+    setSelectedDeckId((current) =>
+      current && nextDecks.some((deck) => deck.id === current)
+        ? current
+        : nextDecks[0]?.id ?? null,
+    )
+    setBattleEntryError(null)
+    return true
   }
 
   const startBattleFromMenu = () => {
@@ -154,8 +238,8 @@ export function MenuScreen({
 
   return (
     <>
-      {!showOnlineMatch && !showDeckEditor && (
-        <MainMenu
+      {!showOnlineMatch && !showDeckEditor && !showMyDecks && (
+        <MainMenuMasterDuel
           decks={savedDecks}
           selectedDeckId={selectedDeckId}
           selectedValidation={selectedDeckValidation}
@@ -171,19 +255,13 @@ export function MenuScreen({
           onStartBattle={startBattleFromMenu}
           onOpenOnlineMatch={() => setShowOnlineMatch(true)}
           onOpenTestScenario={() => setShowTestScenario(true)}
-          onCreateDeck={() => {
-            setEditingDeck(null)
-            setDeckEditorMode('standard')
-            setShowDeckEditor(true)
+          onOpenMyDecks={() => {
+            refreshSavedDecks()
+            setBattleEntryError(null)
+            setShowMyDecks(true)
           }}
           onEditDeck={(deck) => {
-            setEditingDeck(deck)
-            setDeckEditorMode(
-              isBs8CandidateStagingDeck(deck)
-                ? 'bs8-candidate-staging'
-                : 'standard',
-            )
-            setShowDeckEditor(true)
+            openDeckEditor(deck, 'main-menu')
           }}
           onDuplicateDeck={(deck) => {
             const { decks, newDeck } = duplicateCustomDeck(deck.id)
@@ -210,17 +288,39 @@ export function MenuScreen({
           onRefreshDecks={refreshSavedDecks}
         />
       )}
+      {!showOnlineMatch && !showDeckEditor && showMyDecks && (
+        <MyDecksPage
+          decks={savedDecks}
+          selectedDeckId={selectedDeckId}
+          onSelectDeck={(deckId) => {
+            setSelectedDeckId(deckId)
+            setBattleEntryError(null)
+          }}
+          onBack={() => {
+            setShowMyDecks(false)
+            setBattleEntryError(null)
+          }}
+          onCreateDeck={() => openDeckEditor(null, 'my-decks')}
+          onCreateStarterDeck={openStarterDeck}
+          onImportDeck={(deck) => openDeckEditor(deck, 'my-decks')}
+          onEditDeck={(deck) => openDeckEditor(deck, 'my-decks')}
+          onDuplicateDeck={(deck) => {
+            const { decks, newDeck } = duplicateCustomDeck(deck.id)
+            setSavedDecks(decks)
+            if (newDeck) {
+              setSelectedDeckId(newDeck.id)
+            }
+          }}
+          onDeleteDecks={deleteDecks}
+        />
+      )}
       {showDeckEditor && (
         <Suspense fallback={<PageLoadingFallback />}>
           <DeckEditorPage
             initialDeck={editingDeck ?? undefined}
             mode={deckEditorMode}
             onSave={handleDeckEditorSave}
-            onClose={() => {
-              setShowDeckEditor(false)
-              setEditingDeck(null)
-              refreshSavedDecks()
-            }}
+            onClose={handleDeckEditorClose}
           />
         </Suspense>
       )}
