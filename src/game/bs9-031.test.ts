@@ -39,7 +39,7 @@ const flipEffect = (state: GameState, index: number): CardEffect => {
 
 const resolveBs9031 = (initial: GameState, drawCount: number): GameState => {
   const opened = openOwnTurnFlip(initial)
-  const target = battleEntry(opened, 'bs9-bs9-031-trigger')
+  const target = battleEntry(opened, 'bs9-030-demo-extra')
   const discard = opened.players['player-one'].hand[0]
   if (!discard) throw new Error('BS9-031 fixture has no discard candidate')
   let state = applyGameCommand(opened, {
@@ -54,12 +54,10 @@ const resolveBs9031 = (initial: GameState, drawCount: number): GameState => {
     max: 1,
     sourceCardName: 'Alchemist Cookie',
     condition: { kind: 'activated-during-your-turn' },
-    // The FLIP is revealed inside P-018's effect-damage sequence; that
-    // sequence resumes after the explicit draw decision.
-    battleContinuation: undefined,
+    battleContinuation: 'attack-effect',
   })
-  expect(battleEntry(state, target.card.instanceId).hpCards).toHaveLength(5)
-  expect(state.players['player-one'].hand).toHaveLength(2)
+  expect(battleEntry(state, target.card.instanceId).hpCards).toHaveLength(7)
+  expect(state.players['player-one'].hand).toHaveLength(0)
   expect(state.players['player-one'].discardPile).toContainEqual(
     expect.objectContaining({ id: 'BS9-031' }),
   )
@@ -68,48 +66,40 @@ const resolveBs9031 = (initial: GameState, drawCount: number): GameState => {
     playerId: 'player-one',
     drawCount,
   })
-  // Finish the explicit effect-damage continuation, matching the Browser
-  // card-check auto-advance after the draw modal closes.
-  if (state.pendingBattle) {
-    state = applyGameCommand(state, {
-      kind: 'resolve-next-damage',
-      playerId: 'player-one',
-    })
-  }
   return state
 }
 
 const openOwnTurnFlip = (initial: GameState): GameState => {
-  const trigger = initial.players['player-one'].hand.find((card) => card.id === 'P-018')
-  if (!trigger) throw new Error('BS9-031 fixture has no Mustard Cookie trigger')
-  let state = applyGameCommand(initial, {
-    kind: 'deploy-cookie',
+  const detachedFlip = initial.players['player-one'].hand.find((card) => card.id === 'BS9-031')
+  if (!detachedFlip) throw new Error('BS9-031 fixture has no detached FLIP card')
+  const state = applyGameCommand(initial, {
+    kind: 'resolve-optional-cost-attack',
     playerId: 'player-one',
-    instanceId: trigger.instanceId,
-  })
-  const discard = state.players['player-one'].hand[0]
-  if (!discard) throw new Error('BS9-031 fixture has no On Play discard candidate')
-  state = applyGameCommand(state, {
-    kind: 'begin-activate-skill',
-    playerId: 'player-one',
-    sourceInstanceId: trigger.instanceId,
-    trigger: 'on-play',
+    action: 'pay',
+    discardCardIds: [detachedFlip.instanceId],
     paymentIds: [],
-    discardHandIds: [discard.instanceId],
-    targetIds: [],
   })
-  state = applyGameCommand(state, {
-    kind: 'resolve-ability-effect',
-    playerId: 'player-one',
-    targetIds: [],
-  })
-  return applyGameCommand(state, {
-    kind: 'resolve-next-damage',
-    playerId: 'player-one',
-  })
+  expect(state.pendingBattle?.detachedFlip).toBe(true)
+  expect(state.pendingBattle?.revealedHpCard?.id).toBe('BS9-031')
+  return state
 }
 
 describe('BS9-031 Alchemist Cookie FLIP candidate', () => {
+  it('opens BS9 FLIP verification from Shadow Milk Cookie attack-after', () => {
+    for (const cardNumber of ['BS9-031', 'BS9-031@1', 'BS9-031@2', 'BS9-032']) {
+      const state = createCardCheckDemoState(cardNumber)
+      expect(state.pendingBattle?.stage).toBe('attack-effect')
+      expect(state.pendingBattle?.attackerInstanceId).toBe('bs9-030-demo-extra')
+      expect(state.pendingOptionalCostAttack).toMatchObject({
+        sourceCardName: 'Shadow Milk Cookie',
+        effects: [{ kind: 'activate-discarded-flip' }],
+      })
+      expect(state.players['player-one'].hand).toContainEqual(
+        expect.objectContaining({ id: cardNumber.split('@')[0] }),
+      )
+    }
+  })
+
   it('converts the base card and both official variants with the printed boundaries', () => {
     for (const cardNumber of ['BS9-031', 'BS9-031@1', 'BS9-031@2']) {
       const card = candidate(cardNumber)
@@ -155,12 +145,13 @@ describe('BS9-031 Alchemist Cookie FLIP candidate', () => {
     expect(getEffectTargetCandidates(state, context, gainHp.target).map((entry) => ({
       id: entry.card.id,
       level: entry.card.level,
-    }))).toEqual([{ id: 'P-018', level: 3 }])
+    }))).toEqual([{ id: 'BS9-030', level: 3 }])
     expect(isEffectConditionMet(state, context, flipEffect(state, 1))).toBe(true)
     expect(isEffectConditionMet({ ...state, activePlayerId: 'player-two' }, context, flipEffect(state, 1))).toBe(false)
 
-    const target = battleEntry(state, 'bs9-bs9-031-trigger')
-    const lv2 = battleEntry(state, 'bs9-bs9-031-effect-target')
+    const target = battleEntry(state, 'bs9-030-demo-extra')
+    const opponentTarget = state.players['player-two'].battleArea[0]
+    if (!opponentTarget) throw new Error('BS9-031 test requires an opponent target')
     expect(() => resolveFlip(state, 'player-one', {
       activate: true,
       discardHandIds: [],
@@ -169,7 +160,7 @@ describe('BS9-031 Alchemist Cookie FLIP candidate', () => {
     expect(() => resolveFlip(state, 'player-one', {
       activate: true,
       discardHandIds: [state.players['player-one'].hand[0]!.instanceId],
-      targetIds: [lv2.card.instanceId],
+      targetIds: [opponentTarget.card.instanceId],
     })).toThrow()
   })
 
@@ -177,15 +168,15 @@ describe('BS9-031 Alchemist Cookie FLIP candidate', () => {
     const drawZero = resolveBs9031(createCardCheckDemoState('BS9-031'), 0)
     expect(drawZero.pendingDrawUpTo).toBeNull()
     expect(drawZero.pendingBattle).toBeNull()
-    expect(drawZero.players['player-one'].hand).toHaveLength(2)
-    expect(drawZero.players['player-one'].deck).toHaveLength(19)
+    expect(drawZero.players['player-one'].hand).toHaveLength(0)
+    expect(drawZero.players['player-one'].deck).toHaveLength(46)
 
     const drawOne = resolveBs9031(createCardCheckDemoState('BS9-031'), 1)
     expect(drawOne.pendingDrawUpTo).toBeNull()
     expect(drawOne.pendingBattle).toBeNull()
-    expect(drawOne.players['player-one'].hand).toHaveLength(3)
-    expect(drawOne.players['player-one'].deck).toHaveLength(18)
-    expect(battleEntry(drawOne, 'bs9-bs9-031-trigger').hpCards).toHaveLength(5)
+    expect(drawOne.players['player-one'].hand).toHaveLength(1)
+    expect(drawOne.players['player-one'].deck).toHaveLength(45)
+    expect(battleEntry(drawOne, 'bs9-030-demo-extra').hpCards).toHaveLength(7)
   })
 
   it('keeps the HP gain but skips Then when the FLIP owner is not taking their turn', () => {

@@ -8,8 +8,9 @@ import bs9Candidates from '../data/cards/official-a-game-of-truth-and-deceit-bs9
 
 /**
  * BS9-032 Yoga Cookie 的實卡 FLIP A/B Browser 驗證：
- * - 正向：正式 P-018 的 On Play 效果傷害翻開 BS9-032，先選擇抽 0／1，
- *   再確認 Then 只列出休息中的己方 Pomegranate Cookie；桌機選取目標，
+ * - 正向：先由真實 BS9-030 Shadow Milk Cookie 完成 EXTRA 登場、On Play
+ *   與攻擊，接著在攻擊後棄置手牌中的 BS9-032 FLIP，先選擇抽 0／1，
+ *   再確認 Then 只列出休息中的己方 Shadow Milk Cookie；桌機選取目標，
  *   平板選 0，兩條都驗證可選語意。
  * - 負向：保留相同卡片、休息目標與抽牌資源，只切到對手回合；第一段
  *   抽牌仍可處理，Then 不得顯示 Yoga Cookie 的目標面板或改變休息狀態。
@@ -145,31 +146,20 @@ const isRested = async (page, instanceId) => {
   )
 }
 
-const deployMustardAndOpenFlip = async (page) => {
-  const mustard = page.locator('.bottom-hand .hand-card[title="Mustard Cookie"]')
-  await mustard.waitFor({ state: 'visible' })
-  await mustard.click()
-  const deploy = page
-    .locator('.bottom-hand .hand-card-actions:visible')
-    .first()
-    .getByRole('button', { name: '登場', exact: true })
-  await deploy.waitFor({ state: 'visible' })
-  await deploy.click()
-
+const resolveShadowMilkAttackAfter = async (page, record) => {
   const panel = visibleEffect(page)
   await panel.waitFor({ state: 'visible' })
-  assert.match(await panel.innerText(), /Mustard Cookie/)
-  const discard = panel.locator('.effect-candidates-discard-hand button').first()
-  await discard.waitFor({ state: 'visible' })
-  await discard.click()
-  for (let step = 0; step < 3; step += 1) {
-    const current = visibleEffect(page)
-    if ((await current.count()) === 0) break
-    const primary = current.locator('.effect-panel-primary-action')
-    await primary.waitFor({ state: 'visible' })
-    await primary.click()
-    await page.waitForTimeout(100)
-  }
+  const text = await panel.innerText()
+  assert.match(text, /Shadow Milk Cookie/)
+  assert.match(text, /discard 1 Cookie that has FLIP/i)
+  await panel.getByRole('button', { name: '支付', exact: true }).click()
+  const cost = panel.locator('.optional-cost-col').filter({ hasText: '選擇 1 張手牌棄置' })
+  const candidates = cost.locator('button')
+  assert.equal(await candidates.count(), 1, 'BS9-032 should be the only detached FLIP candidate')
+  assert.ok((await candidates.first().innerText()).includes(record.name))
+  await candidates.first().click()
+  await panel.getByRole('button', { name: '確認', exact: true }).click()
+  await panel.waitFor({ state: 'hidden' })
   await visibleFlip(page).waitFor({ state: 'visible' })
 }
 
@@ -208,7 +198,7 @@ const resolveYogaThen = async (page, selectTarget) => {
   assert.match(text, /設為活躍|set.*active/i)
   const targets = panel.locator('.effect-candidates-target button:not(:disabled)')
   assert.equal(await targets.count(), 1, 'BS9-032 should expose only one rested friendly Cookie')
-  assert.match(await targets.first().innerText(), /Pomegranate Cookie/)
+  assert.match(await targets.first().innerText(), /Shadow Milk Cookie/)
   if (selectTarget) await targets.first().click()
   const primary = panel.locator('.effect-panel-primary-action')
   assert.equal(await primary.isEnabled(), true, 'up to 1 should allow selecting zero')
@@ -227,7 +217,7 @@ const resolveYogaThen = async (page, selectTarget) => {
   )
 }
 
-const settleMustardContinuation = async (page) => {
+const settleAttackContinuation = async (page) => {
   for (let step = 0; step < 4; step += 1) {
     const panel = visibleEffect(page)
     if ((await panel.count()) === 0) return
@@ -238,7 +228,7 @@ const settleMustardContinuation = async (page) => {
     await primary.click()
     await page.waitForTimeout(120)
   }
-  assert.equal(await visibleEffect(page).count(), 0, 'Mustard continuation should settle')
+  assert.equal(await visibleEffect(page).count(), 0, 'Shadow Milk attack continuation should settle')
 }
 
 const runPositive = async (browser, viewport, { drawCount, selectTarget }) => {
@@ -251,7 +241,7 @@ const runPositive = async (browser, viewport, { drawCount, selectTarget }) => {
   const errors = recordBrowserErrors(page)
   const route = 'bs9-card:BS9-032'
   const result = { route, viewport, drawCount, selectTarget, status: 'FAIL', actions: [] }
-  const targetId = 'bs9-bs9-032-effect-target'
+  const targetId = 'bs9-030-demo-extra'
   try {
     await page.goto(
       `${baseUrl}/?test-state=${encodeURIComponent(route)}&contract-card=BS9-032`,
@@ -260,8 +250,8 @@ const runPositive = async (browser, viewport, { drawCount, selectTarget }) => {
     await waitForGame(page)
     assert.equal(await isRested(page, targetId), true, 'target should start rested')
     const record = recordBy('BS9-032')
-    await deployMustardAndOpenFlip(page)
-    result.actions.push('deploy-mustard-on-play-effect-damage')
+    await resolveShadowMilkAttackAfter(page, record)
+    result.actions.push('resolve-bs9-030-attack-after-detached-flip')
     result.imageEvidence = await resolveFlipAndDraw(
       page,
       drawCount,
@@ -271,7 +261,7 @@ const runPositive = async (browser, viewport, { drawCount, selectTarget }) => {
     result.actions.push(`resolve-flip-draw-${drawCount}`)
     await resolveYogaThen(page, selectTarget)
     result.actions.push(selectTarget ? 'select-rested-cookie' : 'select-zero-cookie')
-    await settleMustardContinuation(page)
+    await settleAttackContinuation(page)
     await page.waitForTimeout(250)
 
     const restedAfter = await isRested(page, targetId)
@@ -281,6 +271,10 @@ const runPositive = async (browser, viewport, { drawCount, selectTarget }) => {
       selectTarget ? 'selected Cookie should become active' : 'choose-zero should keep Cookie rested',
     )
     const trace = await readTrace(page)
+    assert.ok(trace.some((entry) => entry.commandKind === 'play-extra-deck-cookie'))
+    assert.ok(trace.some((entry) => entry.commandKind === 'declare-attack'))
+    assert.ok(trace.some((entry) => entry.commandKind === 'resolve-attack-effect'))
+    assert.ok(trace.some((entry) => entry.commandKind === 'resolve-optional-cost-attack'))
     assert.ok(trace.some((entry) => entry.commandKind === 'resolve-flip'))
     assert.ok(trace.some((entry) => entry.commandKind === 'resolve-draw-up-to'))
     assert.ok(
@@ -353,7 +347,7 @@ const runNegative = async (browser, viewport, drawCount) => {
         'opponent-turn route must not expose Yoga Cookie Then targets',
       )
     }
-    await settleMustardContinuation(page)
+    await settleAttackContinuation(page)
     await page.waitForTimeout(250)
     assert.equal(await isRested(page, targetId), true, 'opponent-turn route must keep target rested')
     const trace = await readTrace(page)

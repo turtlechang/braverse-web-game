@@ -12,6 +12,8 @@
 
 2026-09-14 **BS9-022／BS9-023 card-check HP 公開資訊**：正向 test-state fixture 將被放入己方 Cookie HP 的對手卡標記為正面朝上，雙玩家 view 均可辨識；新增遮罩視角回歸，確保條件成立時才可依規則抽牌，未改動正式牌池資料。
 
+2026-09-14 **BS9-031／BS9-032 FLIP 攻擊後入口修正**：正向 card-check fixture 改由正式 BS9-030「Shadow Milk Cookie」完成 EXTRA 代價、On Play、三張黃色能量攻擊與攻擊後代價，再透過正式 FLIP pending 選擇 Alchemist／Yoga；分別驗證 Alchemist 的 LV.3 +1 HP＋抽牌，以及 Yoga 的抽牌＋設 active。負向仍保留 P-018 HP FLIP 的對手回合路徑，用來驗證 own-turn Then 不會誤觸發；規則回歸 11／11、完整 Vitest 324 檔／4,787 項通過，Browser 正向已進入正確 UI，但終端腳本仍受官方圖片載入環境限制。
+
 2026-09-13 **BS9 正式牌池與端到端收尾**：官方卡表與 Ver.1.8 未提供 BS9-025 專卡裁決；依使用者確認，FLIP 卡依正常規則進入 Trash、棄置 1 張手牌、+1 HP 預設給原附著 Cookie，且在持有者自己的回合可改選另一隻己方 Cookie（不轉移 FLIP 卡本身）。BS9 全 185 筆正式記錄已移入 `data/cards/`，候選 JSON 為 0；strict contract **185／185 verified、0 needs-review、0 blocked**。所有 BS9 專用 Browser 命令均 exit 0，合計執行 **864 lanes（含重疊的專卡加強矩陣）**，覆蓋雙尺寸正／負互動與官方卡圖載入；BS9-025 專用 **8／8** 通過。正式牌組編輯器四種視窗、雙瀏覽器好友房同步、線上 modal RWD（桌機／280px）均通過；`validate:cards`（17 檔／1,600 種卡號／1,574 張轉換）、`check:card-pool`、build 與完整 Vitest **323 檔／4,782 項**通過。AI Browser Smoke 已修正為驗證現行暫停資訊／恢復流程並通過；本機全域 lint 仍受 4 個既有未追蹤暫存／診斷檔錯誤阻塞，修改檔 scoped lint 通過。詳見 [BS9 進度報告](docs/bs9-progress-2026-09-10.md#2026-09-13-bs9-正式牌池端到端收尾)。
 
 （採用 BS9-025 前的歷史快照）2026-09-13 BS9-071～118 完成候選隔離 exact adapter、runtime hardening 與嚴格 Browser 驗收：依 76 筆官方實體卡圖（含異圖）建立獨立契約，補上 Refresh continuation、Shadow Milk discard provenance、陷阱 HP 目標／Then、檢視牌庫與牌庫移動回歸；新版 1907×863／1164×777 正／負矩陣 **352／352 全數通過**，含 210 條 command trace、152 條 substantive settlement、**352 條官方影像成功載入**與 176 條負向證據。BS9-071～118 strict contract **76／76 verified**；全檔為 183 verified／2 needs-review／0 blocked（兩筆均為 BS9-025），候選仍維持 inventory，尚未 promote，正式 registry 仍無 BS9。完整 Vitest **319 檔／4,757 項**、build、server typecheck 通過；全域 lint 僅剩 4 個既有無關診斷檔錯誤。正式牌組／多人／線上逐卡驗收與 BS9-025 官方裁決仍待。詳見 [BS9 驗證紀錄](docs/bs9-progress-2026-09-10.md#第十四批-bs9-071118候選全範圍通過)。
@@ -182,6 +184,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 - 2026-09-14 **BS9-022／BS9-023 正向 fixture 公開 HP**：card-check fixture 將對手持有且位於己方 Cookie HP 的卡以正面朝上標記，並以 `player-one`／`player-two` 遮罩視角回歸驗證；專用測試 **10／10** 通過。這仍是 localhost `test-state` 證據，不代表正式牌組／雙瀏覽器逐卡驗收。
 
+- 2026-09-14 **BS9-031／BS9-032 正向 FLIP 入口**：兩張 card-check fixture 均由正式 BS9-030 Shadow Milk Cookie 的 EXTRA 登場、On Play、三黃攻擊及攻擊後代價觸發 detached FLIP；Alchemist 只列 BS9-030 為 LV.3 目標並完成 6→7 HP、棄 1 與抽 0／1，Yoga 完成抽 0／1 後只列 BS9-030 為己方目標並可選 0 設 active。`src/game/bs9-031.test.ts` 6 項、`src/game/bs9-032.test.ts` 5 項通過；Chrome host 已實際走完正向 FLIP UI，終端 12／4 lanes 則在官方圖片 `naturalWidth` gate 受環境限制，未宣稱 Browser 全綠。負向仍保留 P-018 HP FLIP 的 opponent-turn Then 邊界。此仍是 `test-state` 局部證據，不代表正式雙瀏覽器逐卡線上驗收。
+
 - 2026-09-13 **BS9-025／`@1` 採用語義與 promotion**：依使用者確認採用「FLIP 進 Trash、棄 1 張手牌、原附著 Cookie +1 HP；持有者自己的回合可改選另一隻己方 Cookie，FLIP 卡不轉移」的專案規則。兩筆 exact adapter／runtime／UI／contract 均已完成；strict **185／185 verified、0／0／0**，專用 Browser（U/P × 1907×863／1164×777 × 正／負）**8／8** 通過。`promote:candidate` 已成功移入正式 `data/cards/`，`validate:cards` 17 檔／1,600 種卡號／1,574 張成功轉換；目前完整 Vitest **322 檔／4,780 項**、build 通過；正式 registry 已納入 BS9，本次變更尚未 push。終端整批影像 gate 仍受外部網路限制，Chrome host 已驗證兩張 exact 圖檔載入。
 
 - 2026-09-13 BS9-071～118 runtime hardening：在既有 BS9-017 驗證之上，補上抽牌耗盡後 Refresh continuation、Shadow Milk discard provenance、陷阱 HP 目標／Then 與牌庫檢視／移牌回歸；新增 runtime／UI／online 回歸，並修正好友房 Browser 腳本對已移除 `command-log-filters` selector 的等待。`test:online:browser` 桌機／280px **2／2**、`test:online:match:browser` 開房／同步／攻擊預覽／支付／拒絕／斷線情境通過；完整 Vitest 最新為 **319 檔／4,757 tests** 通過，build／server typecheck 通過。新版 071～118 嚴格 Browser 矩陣為 **352／352**（1907×863／1164×777），含 210 條 command trace、152 條 substantive settlement、**352 條官方影像載入**與 176 條負向證據；全域 lint 仍有既有未追蹤檔的 4 個錯誤，候選 test-state 與共用線上 gate 不代表正式牌組／雙瀏覽器逐卡驗收。
@@ -195,13 +199,13 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - 2026-09-12～13 BS9-018：Hero Cookie 的 Your Turn 對手傷害防止改以來源玩家、目標所有權與 Hero 是否仍在戰鬥區判定，攻擊／效果傷害逐段在實際傷害點重驗。正式 P-018 Mustard Cookie 來源與 Hero／Pomegranate 兩目標的正／負 Browser A/B 先以 effect-damage 完成 4／4；再以 Hero／Pomegranate 實際攻擊 BS1-007／BS8-007 翻出 BS1-002 Kumiho，兩尺寸與兩目標共 8／8 完成棄牌、效果目標、Hero 防止／Pomegranate 受擊及原攻擊續接；正向四條路徑並通過 Hero 候選 `imageUrl` exact request／render／load，負向四條明確標示來源在對手隱藏手牌。`src/game/bs9-018.test.ts` 9 項通過；候選 test-state 仍不代表正式牌組／雙瀏覽器逐卡驗收。
 
 - 2026-09-11 BS9-010：匿名對手手牌位置、正面 HP 最下方、Then 支援區 1 任意能量、0 目標／略過及 EXTRA 負向提示已修正；1907×863／1164×777 共 10／10 Browser 通過，實際 HP 4→5→6、對手 6→4→3，卡圖及公開紀錄皆驗證。規則／UI／RoomStore、完整 Vitest、build、scoped lint 與一般好友房驗證的最新結果及限制詳見 [BS9-010 修復驗證](docs/bs9-progress-2026-09-10.md#bs9-010-修復驗證)。候選仍未 promote。
-- 2026-09-11 BS9-031：正向以 P-018 On Play effect-damage 在自己的回合翻出真實 HP FLIP，完成 LV.3 目標、棄 1 與抽 0／1；負向切到對手回合後只保留 +1 HP，沒有 Then 抽牌。`src/game/bs9-031.test.ts` 5 項、基本版／`@1`／`@2` 在 1907×863／1164×777 Browser 12／12 通過；候選 test-state 仍不代表正式牌組／雙瀏覽器逐卡驗收。
+- 2026-09-14 BS9-031：正向改由正式 BS9-030 Shadow Milk Cookie 的 EXTRA／On Play／三黃攻擊／攻擊後代價，透過 detached FLIP 發動 Alchemist；只列 BS9-030 為合法 LV.3 目標，完成 6→7 HP、棄 1 與抽 0／1。`src/game/bs9-031.test.ts` 6 項通過；Chrome host 正向 UI 已走完，終端 12 lanes 在官方圖片 `naturalWidth` gate 受環境限制，未宣稱 Browser 通過。負向仍保留 P-018 HP FLIP 的 opponent-turn Then 邊界。
 
 - 2026-09-11 BS9-041：三筆官方 Pistachio Cookie FLIP 均保留抽 0／1、持有者自己回合 Then 與對手 0～1 Cookie 受 1 傷害；正向控制 fixture 實際完成 FLIP、目標傷害與 BS9-018 原攻擊續接，負向自然攻擊只抽牌。`src/game/bs9-041.test.ts` 4 項、三筆記錄在 1907×863／1164×777 Browser 12／12 通過；候選 test-state 仍不代表自然攻擊可在防守方回合發動或正式牌組／雙瀏覽器逐卡驗收。
 
 - 2026-09-12～13 BS9-021：`transfer-hp` exact adapter 補上跨所有權 donor／receiver 目標邊界、最下方放置與正面朝上；本機／線上陷阱 UI 共用最多 1 張 donor 上限，AI 可解析 receiver。規則／受影響回歸及 1907×863／1164×777 正／負 Browser 共 4／4 通過，四條路徑均完成候選 `imageUrl` exact request／render／load；候選 test-state 不代表正式牌組／雙瀏覽器逐卡驗收。
 
-- 2026-09-12～13 BS9-032：FLIP 抽 0／1 後的 own-turn Then 改由持有者回合判定，只列己方橫置 Cookie 且可選 0；本地／線上 pending 續接保留 FLIP 來源。規則與 hook 38 項、雙尺寸正／負 Browser 4／4 通過，四條路徑均通過候選 `imageUrl` exact request／render／load；候選 test-state 不代表正式牌組／雙瀏覽器逐卡驗收。
+- 2026-09-14 BS9-032：正向改由正式 BS9-030 Shadow Milk Cookie 的攻擊後代價，透過 detached FLIP 發動 Yoga；完成抽 0／1，Then 只列 BS9-030 為己方目標並可選 0 設 active。`src/game/bs9-032.test.ts` 5 項通過；Chrome host 正向 UI 已走完，終端 4 lanes 在官方圖片 `naturalWidth` gate 受環境限制，未宣稱 Browser 通過。負向仍保留 P-018 HP FLIP 的 opponent-turn Then 邊界；候選 test-state 不代表正式雙瀏覽器逐卡驗收。
 
 - 2026-09-12 BS9-033：Activate／Once Per Turn 先支付 1 黃色並棄唯一具有 runtime FLIP 的手牌，再以支付後手牌判定 6 張門檻與抽 0～2。7→6 正向、無 FLIP 負向及抽 0／2在雙尺寸 Browser 共 4／4 通過；基本版／`@1` strict 2／2 verified，候選 test-state 不代表正式牌組／雙瀏覽器逐卡驗收。
 
@@ -382,6 +386,8 @@ BS9-010 的隱藏手牌、HP 朝向／位置及付款已完成候選重驗；後
 
 BS9-022／BS9-023 的 test-state 已補上對手持有 HP 卡的正面公開標記與雙玩家遮罩回歸；後續若要宣稱正式功能，仍需在正式牌組與雙瀏覽器線上流程確認相同公開牌面及合法／不合法路徑。
 
+BS9-031／BS9-032 的正向 test-state 已改由 BS9-030 Shadow Milk Cookie 的真實攻擊後 detached FLIP 驗證，不再把 P-018 effect-damage 當成唯一正向入口；負向仍用 HP FLIP 覆核 opponent-turn Then 邊界。後續需在可載入官方圖片的環境重跑雙尺寸 Browser，並補正式牌組／雙瀏覽器線上逐卡驗收。
+
 BS9-001～118 與各批專項驗收已完成；BS9-051～070 的 140／140、BS9-071～118 的新版嚴格 Browser 352／352，以及 BS9-025／`@1` 專用 8／8 已納入正式卡池前驗證。這些 Browser 證據仍不等於完整多人或線上逐卡完成；BS9-025 已依使用者確認的專案語義解除 review-only／fail-closed 並完成 strict verified。promotion 已完成，本輪不 commit／push。
 
 後續逐卡任務依新版 Skill 留存卡圖、獨立預期、各限制負向案例與 UI 結算證據，分別追蹤初次缺陷及驗收後漏失，不以測試全綠推算卡牌正確率。
@@ -542,6 +548,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 | 2026-09-14 | `0.10.0`：正式主選單套用參考圖的左側垂直導覽；「管理牌組」進入 Master Duel 風格「我的牌組」，支援牌組管理操作並保留既有 `deck-editor` 排版；移除 `my-decks-disclaimer` 中多餘的正式風格說明。 |
 | 2026-09-14 | 修正 BS9 Lv.5 benchmark 的 500 步硬上限、超限失敗排除訓練，以及 baseline／訓練策略雙向交叉 holdout；完整 Swiss 實測 5,084／5,120 完成、36 場 FAIL，32 副×2 輪交叉 holdout 為訓練 35 勝／baseline 29 勝／0 失敗，並同步重生報告與 profile。 |
 | 2026-09-14 | BS9-022／BS9-023 正向 card-check fixture 補上對手持有 HP 卡的正面公開標記，並新增雙玩家遮罩視角回歸。 |
+| 2026-09-14 | BS9-031／BS9-032 正向 card-check fixture 改由 BS9-030 攻擊後 detached FLIP 驗證，補共同入口／攻擊續接與 Alchemist／Yoga FLIP 回歸；終端 Browser 重跑受官方圖片載入環境限制。 |
 | 2026-09-13 | BS9-025 基礎版／`@1` 依使用者確認採用 FLIP 進 Trash、棄 1 手牌、原附著 Cookie +1 HP，持有者自己的回合可改選另一隻己方 Cookie（不轉移 FLIP 卡）；接入 exact adapter／runtime／UI／contract，strict 185／185 verified，專用 Browser 8／8；依授權正式移入 `data/cards/`，`validate:cards` 17 檔／1,600 種卡號／1,574 張成功轉換，完整 Vitest 319／4,769、build 通過。終端整批 image gate 受官方影像網路限制，未 commit／push。 |
 | 2026-09-13 | （BS9-025 採用前快照）BS9 coverage analyzer 接入 EXTRA Deck 專用 adapter，5 張 EXTRA 由 pending 修正為 converted；全候選 coverage 更新為 73 supported／44 no-effect／1 pending，071～118 runtime hardening 後完整 Vitest 為 319 檔／4,757 項通過；修正好友房 Browser 腳本的 stale `command-log-filters` selector，線上 modal 2／2 與好友房同步 gate 通過；新版 Browser 嚴格矩陣 352／352（官方影像 352／352、負向證據 176／176），全候選 185 筆聚合為 852／852 lanes 通過、exact image loaded 848／852（018 負向隱藏手牌 4 條不適用）；新增全候選 evidence audit 與 BS9-068 對手攻擊 4／3→3／2 的實際 state witness；官方 English／Asia／韓文原始 JSON 與圖檔 metadata 仍未補足 BS9-025 選定後動作，台灣版 Ver.1.8 §3-10／§8-3-4／§10-1-2／§11-1 亦未定義選定後操作，FAQ／公告查無專卡裁決，採用語義前維持 strict needs-review。 |
 | 2026-09-12 | BS9-025 基礎版與 `@1` 異圖由官方卡表再次確認相同未完句 FLIP 原文；FAQ／公告查無專卡裁決，故保留卡圖 URL 綁定的 review-only 詳情與正／負 Browser fail-closed 路徑，納入 BS9-024～029 的雙尺寸共 56／56；全檔 strict 維持 183 verified／2 needs-review／0 blocked，候選仍為 inventory、未 promote。 |

@@ -1757,6 +1757,125 @@ function createBs9030ExtraDeckDemoState(
 }
 
 /**
+ * BS9 FLIP 的共同攻擊後驗證入口。以真實 BS9-030 Shadow Milk Cookie
+ * 完成 EXTRA 登場代價、On Play 與三點攻擊，停在「棄置 1 張具有 FLIP
+ * 的 Cookie」的攻擊後待處理狀態；指定的 BS9 FLIP 卡留在手牌，供玩家
+ * 透過正式 optional-cost／FLIP UI 支付並發動。這讓 BS9-031／032 的
+ * card-check 不再用 P-018 效果傷害捏造 HP 翻牌作為唯一正向入口。
+ */
+function createBs9ShadowMilkDetachedFlipDemoState(cardNumber: string): GameState {
+  const base = createBs9030ExtraDeckDemoState(true)
+  const extra = base.players['player-one'].extraDeck?.[0]
+  if (!extra) throw new Error('BS9 FLIP fixture requires the BS9-030 EXTRA card')
+
+  const detachedFlip = cardCheckOfficialCard(
+    cardNumber,
+    `bs9-${cardNumber.toLowerCase()}-detached-flip`,
+  )
+  if (detachedFlip.type !== 'cookie' || !detachedFlip.flip) {
+    throw new Error(`BS9 detached FLIP fixture requires a Cookie with FLIP: ${cardNumber}`)
+  }
+
+  // Keep the requested FLIP card at index 1.  The other three real yellow
+  // FLIP Cookies are consumed by BS9-030's EXTRA entry cost, leaving the
+  // requested card as the only legal detached-FLIP candidate.
+  const entryFlipCards = [
+    cardCheckOfficialCookie('BS9-026@1', 'bs9-030-detached-entry-1'),
+    cardCheckOfficialCookie('BS9-029', 'bs9-030-detached-entry-2'),
+    cardCheckOfficialCookie('BS9-029@1', 'bs9-030-detached-entry-3'),
+  ]
+  const flipDiscardCostCards = Array.from(
+    { length: detachedFlip.flip.cost.discardHand ?? 0 },
+    (_, index) => cardCheckOfficialCard(
+      'BS8-021',
+      `bs9-${cardNumber.toLowerCase()}-detached-cost-${index + 1}`,
+    ),
+  )
+  const prepared: GameState = {
+    ...base,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        hand: [entryFlipCards[0]!, detachedFlip, ...entryFlipCards.slice(1), ...flipDiscardCostCards],
+        // Leave Shadow Milk as the only friendly Cookie after it enters so
+        // each requested FLIP has one unambiguous target on the real board.
+        battleArea: [],
+      },
+    },
+  }
+
+  let state = applyGameCommand(prepared, {
+    kind: 'play-extra-deck-cookie',
+    playerId: 'player-one',
+    instanceId: extra.instanceId,
+  })
+  const entryPaymentIds = state.players['player-one'].hand
+    .filter((card) => card.instanceId !== detachedFlip.instanceId && card.flip)
+    .slice(0, 3)
+    .map((card) => card.instanceId)
+  if (entryPaymentIds.length !== 3) {
+    throw new Error(`BS9 detached FLIP fixture cannot pay BS9-030 entry: ${cardNumber}`)
+  }
+  state = applyGameCommand(state, {
+    kind: 'resolve-optional-cost-attack',
+    playerId: 'player-one',
+    action: 'pay',
+    discardCardIds: entryPaymentIds,
+    paymentIds: [],
+  })
+  state = applyGameCommand(state, {
+    kind: 'begin-activate-skill',
+    playerId: 'player-one',
+    sourceInstanceId: extra.instanceId,
+    trigger: 'on-play',
+    paymentIds: [],
+  })
+  const breakTarget = state.players['player-one'].breakArea[0]
+  if (!breakTarget) throw new Error(`BS9 detached FLIP fixture requires an LV.1 break target: ${cardNumber}`)
+  state = applyGameCommand(state, {
+    kind: 'resolve-ability-effect',
+    playerId: 'player-one',
+    targetIds: [breakTarget.instanceId],
+  })
+
+  const attacker = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.instanceId === extra.instanceId,
+  )
+  const target = state.players['player-two'].battleArea[0]
+  if (!attacker || !target) {
+    throw new Error(`BS9 detached FLIP fixture requires both attack entries: ${cardNumber}`)
+  }
+  state = applyGameCommand(state, {
+    kind: 'declare-attack',
+    playerId: 'player-one',
+    attackerInstanceId: attacker.card.instanceId,
+    targetInstanceId: target.card.instanceId,
+    supportPaymentIds: state.players['player-one'].supportArea.map(
+      (support) => support.card.instanceId,
+    ),
+  })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+  let damageSteps = 0
+  while (state.pendingBattle?.stage === 'damage' && damageSteps < 10) {
+    state = applyGameCommand(state, {
+      kind: 'resolve-next-damage',
+      playerId: 'player-two',
+    })
+    damageSteps += 1
+  }
+  state = applyGameCommand(state, {
+    kind: 'resolve-attack-effect',
+    playerId: 'player-one',
+    targetIds: [],
+  })
+  if (state.pendingOptionalCostAttack?.sourceInstanceId !== extra.instanceId) {
+    throw new Error(`BS9-030 attack-after did not expose detached FLIP: ${cardNumber}`)
+  }
+  return state
+}
+
+/**
  * BS9-055 Shadow Milk Cookie 的候選 EXTRA fixture。卡面是直接進入戰鬥區的
  * EXTRA（不是 Awaken）：登場條件使用本回合支援區送棄計數與對手支援張數，
  * 進場後的 Activate 則另外由同一張 ExtraDeckCard 的 `skill` 提供。
@@ -4106,10 +4225,9 @@ const bs9PhysicalDeck = (instancePrefix: string, count = 24): GameCard[] => {
 }
 
 /**
- * BS9-031 的 own-turn 見證：用正式 P-018 Mustard Cookie 的 On Play
- * 「對其他 Cookie 造成 1 點效果傷害」移除己方 HP，讓 BS9-031 從 HP
- * 堆翻出。這條路徑保留真正的 deploy／On Play／效果傷害／FLIP 續接，
- * 不把一般對手攻擊誤當成可以觸發「自己的回合」Then。
+ * BS9-031 的 opponent-turn 負向見證：用正式 P-018 Mustard Cookie 的
+ * On Play effect-damage 翻出 HP FLIP，再只切換目前回合，保留真正的
+ * deploy／On Play／效果傷害／FLIP 續接，以驗證 own-turn Then 被略過。
  */
 function createBs9031OwnTurnEffectDamageDemoState(
   cardNumber: string,
@@ -4177,10 +4295,10 @@ function createBs9031OwnTurnEffectDamageDemoState(
 }
 
 /**
- * BS9-032 的 own-turn 見證：用正式 P-018 Mustard Cookie 的 On Play
- * 效果傷害翻開 Yoga Cookie，讓第一段 0～1 抽牌完成後，第二段只列出
- * 休息中的己方 Cookie。負向只切換目前回合，保留同一張休息目標與抽牌
- * 資源，專門驗證 Then 的 `activated-during-your-turn` 邊界。
+ * BS9-032 的 opponent-turn 負向見證：用正式 P-018 Mustard Cookie 的
+ * On Play effect-damage 翻開 Yoga Cookie，讓第一段抽牌完成後只切換
+ * 目前回合，保留同一張休息目標與抽牌資源，驗證 Then 的
+ * `activated-during-your-turn` 邊界。
  */
 function createBs9032OwnTurnEffectDamageDemoState(
   cardNumber: string,
@@ -4901,11 +5019,11 @@ const createBs9PhysicalCardCheckDemoState = (
   }
 
   if (baseCardNumber === 'BS9-031') {
-    return createBs9031OwnTurnEffectDamageDemoState(cardNumber)
+    return createBs9ShadowMilkDetachedFlipDemoState(cardNumber)
   }
 
   if (baseCardNumber === 'BS9-032') {
-    return createBs9032OwnTurnEffectDamageDemoState(cardNumber)
+    return createBs9ShadowMilkDetachedFlipDemoState(cardNumber)
   }
 
   if (baseCardNumber === 'BS9-033') {

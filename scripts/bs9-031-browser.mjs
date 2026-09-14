@@ -8,9 +8,9 @@ import bs9Candidates from '../data/cards/official-a-game-of-truth-and-deceit-bs9
 
 /**
  * BS9-031 Alchemist Cookie 的實卡 A/B Browser 驗證：
- * - 正向：先用正式 P-018 Mustard Cookie 的 OnPlay 效果傷害移除己方
- *   HP，再由真實 HP FLIP 提供己方 LV.3 Cookie，支付棄 1 張手牌並驗證
- *   「自己回合」Then 抽牌可選 0 或 1 張。
+ * - 正向：先由真實 BS9-030 Shadow Milk Cookie 完成 EXTRA 登場、On Play
+ *   與攻擊，接著在攻擊後棄置手牌中的 BS9-031 FLIP；支付棄 1 張手牌、
+ *   選己方 LV.3 Cookie 並驗證「自己回合」Then 抽牌可選 0 或 1 張。
  * - 負向：同一張實卡與目標、棄牌資源保留，但切到對手回合；
  *   +1 HP 仍結算，Then 抽牌決策不應出現。
  *
@@ -149,34 +149,20 @@ const assertPhysicalFlipCard = async (flip, record, imageRequested) => {
   return assertPhysicalCardImage(reveal, record, imageRequested)
 }
 
-const deployMustardAndResolveOnPlay = async (page) => {
-  const mustard = page.locator('.bottom-hand .hand-card[title="Mustard Cookie"]')
-  await mustard.waitFor({ state: 'visible' })
-  await mustard.click()
-  const deploy = page.locator('.bottom-hand .hand-card-actions:visible').first().getByRole('button', {
-    name: '登場',
-    exact: true,
-  })
-  await deploy.waitFor({ state: 'visible' })
-  await deploy.click()
-
-  // P-018 has two un-targeted damage effects. The shared EffectPanel first
-  // collects its discard cost, then advances through both effects using the
-  // same UI confirmation path as a normal match.
+const resolveShadowMilkAttackAfter = async (page, record) => {
   const panel = page.locator('.effect-panel[role="alertdialog"]:visible').first()
   await panel.waitFor({ state: 'visible' })
-  assert.match(await panel.innerText(), /Mustard Cookie/)
-  const discard = panel.locator('.effect-candidates-discard-hand button').first()
-  await discard.waitFor({ state: 'visible' })
-  await discard.click()
-  for (let step = 0; step < 3; step += 1) {
-    const current = page.locator('.effect-panel[role="alertdialog"]:visible').first()
-    if (await current.count() === 0) break
-    const primary = current.locator('.effect-panel-primary-action')
-    await primary.waitFor({ state: 'visible' })
-    await primary.click()
-    await page.waitForTimeout(100)
-  }
+  const text = await panel.innerText()
+  assert.match(text, /Shadow Milk Cookie/)
+  assert.match(text, /discard 1 Cookie that has FLIP/i)
+  await panel.getByRole('button', { name: '支付', exact: true }).click()
+  const cost = panel.locator('.optional-cost-col').filter({ hasText: '選擇 1 張手牌棄置' })
+  const candidates = cost.locator('button')
+  assert.equal(await candidates.count(), 1, 'BS9-031 should be the only detached FLIP candidate')
+  assert.ok((await candidates.first().innerText()).includes(record.name))
+  await candidates.first().click()
+  await panel.getByRole('button', { name: '確認', exact: true }).click()
+  await panel.waitFor({ state: 'hidden' })
   await visibleFlip(page).waitFor({ state: 'visible' })
 }
 
@@ -192,12 +178,12 @@ const inspectFlipAndPay = async (page, record, imageRequested) => {
   const targetGroup = flip.getByRole('group', { name: 'FLIP 效果目標' })
   const targets = targetGroup.locator('button')
   assert.equal(await targets.count(), 1, 'BS9-031 should expose exactly one LV.3 target')
-  assert.match(await targets.first().innerText(), /Mustard Cookie/)
-  assert.doesNotMatch(await flip.innerText(), /Golden Cheese Cookie|Pomegranate Cookie/)
+  assert.match(await targets.first().innerText(), /Shadow Milk Cookie/)
+  assert.doesNotMatch(await flip.innerText(), /Golden Cheese Cookie|Pomegranate Cookie|Mustard Cookie/)
   await targets.first().click()
 
   const handOptions = flip.locator('.flip-card-page button')
-  assert.ok((await handOptions.count()) >= 3, 'BS9-031 should expose real hand cards for discard')
+  assert.equal(await handOptions.count(), 1, 'BS9-031 should expose its real discard-cost card')
   await handOptions.first().click()
   const activate = flip.getByRole('button', { name: '發動 FLIP', exact: true })
   assert.equal(await activate.isEnabled(), true, 'BS9-031 should be activatable after target and discard selection')
@@ -205,27 +191,27 @@ const inspectFlipAndPay = async (page, record, imageRequested) => {
   return imageEvidence
 }
 
-const assertBoardAfterResolution = async (page, { drawCount, activeTurn }) => {
+const assertBoardAfterResolution = async (page, { drawCount, activeTurn, detached }) => {
   const target = page.locator(
-    '.bottom-field [data-card-instance-id="bs9-bs9-031-trigger"] .badge-hp',
+    detached
+      ? '.bottom-field [data-card-instance-id="bs9-030-demo-extra"] .badge-hp'
+      : '.bottom-field [data-card-instance-id="bs9-bs9-031-trigger"] .badge-hp',
   )
   await target.waitFor({ state: 'visible' })
-  assert.match(await target.innerText(), /^5\//, 'LV.3 target should gain one HP card')
-  const handCount = drawCount
-    ? 3
-    : 2
+  assert.match(await target.innerText(), detached ? /^7\// : /^5\//, 'LV.3 target should gain one HP card')
+  const handCount = detached ? drawCount : drawCount ? 3 : 2
   assert.equal(
     await page.locator('.bottom-hand .hand-card-wrap').count(),
     handCount,
     `BS9-031 ${activeTurn} route should leave ${handCount} hand cards`,
   )
   assert.equal(
-    await page.getByLabel(`玩家牌庫 ${drawCount ? 18 : 19} 張`).count(),
+    await page.getByLabel(`玩家牌庫 ${detached ? (drawCount ? 45 : 46) : (drawCount ? 18 : 19)} 張`).count(),
     1,
     `BS9-031 ${activeTurn} route should expose the expected deck count`,
   )
   assert.equal(
-    await page.locator('.bottom-field [title="棄牌區 3 張"]').count(),
+    await page.locator(`.bottom-field [title="棄牌區 ${detached ? 6 : 3} 張"]`).count(),
     1,
     'BS9-031 should place the discarded hand card and revealed FLIP in discard',
   )
@@ -249,8 +235,8 @@ const runPositive = async (browser, viewport, drawCount, cardNumber) => {
     )
     await waitForGame(page)
     const record = recordBy(cardNumber)
-    await deployMustardAndResolveOnPlay(page)
-    result.actions.push('deploy-mustard-on-play-effect-damage')
+    await resolveShadowMilkAttackAfter(page, record)
+    result.actions.push('resolve-bs9-030-attack-after-detached-flip')
     result.imageEvidence = await inspectFlipAndPay(
       page,
       record,
@@ -272,9 +258,13 @@ const runPositive = async (browser, viewport, drawCount, cardNumber) => {
     result.actions.push(`resolve-draw-up-to-${drawCount}`)
     await draw.waitFor({ state: 'hidden' })
     await page.waitForTimeout(250)
-    await assertBoardAfterResolution(page, { drawCount, activeTurn: 'own-turn' })
+    await assertBoardAfterResolution(page, { drawCount, activeTurn: 'own-turn', detached: true })
 
     const trace = await readTrace(page)
+    assertTraceKind(trace, 'play-extra-deck-cookie', 'BS9-031 正向路徑應留下 BS9-030 EXTRA 登場')
+    assertTraceKind(trace, 'declare-attack', 'BS9-031 正向路徑應留下 Shadow Milk 攻擊宣告')
+    assertTraceKind(trace, 'resolve-attack-effect', 'BS9-031 正向路徑應留下攻擊後效果')
+    assertTraceKind(trace, 'resolve-optional-cost-attack', 'BS9-031 正向路徑應留下 detached FLIP 代價支付')
     assertTraceKind(trace, 'resolve-flip', 'BS9-031 正向路徑應留下 FLIP 結算')
     assertTraceKind(trace, 'resolve-draw-up-to', 'BS9-031 正向路徑應留下 Then 抽牌決策')
     await captureFinalState(page, result)
@@ -330,7 +320,7 @@ const runNegative = async (browser, viewport, cardNumber) => {
     result.actions.push('inspect-target-and-pay-discard')
     await page.waitForTimeout(300)
     assert.equal(await page.locator('.draw-up-to-modal:visible').count(), 0)
-    await assertBoardAfterResolution(page, { drawCount: 0, activeTurn: 'opponent-turn' })
+    await assertBoardAfterResolution(page, { drawCount: 0, activeTurn: 'opponent-turn', detached: false })
     const trace = await readTrace(page)
     assertTraceKind(trace, 'resolve-flip', 'BS9-031 負向路徑仍應留下 HP FLIP 結算')
     assertNoTraceKind(trace, 'resolve-draw-up-to', '對手回合不應送出 Then 抽牌決策')
