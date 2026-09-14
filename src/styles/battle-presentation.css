@@ -1,0 +1,215 @@
+/* Shared local/online tabletop polish, after the responsive geometry rules. */
+:root[data-theme="tactical-clean"] .game-shell {
+  background: radial-gradient(ellipse at 50% 40%, #183b5d, transparent 72%),
+    linear-gradient(135deg, #07192c, #0b2440);
+}
+
+:root[data-theme="tactical-clean"] .game-shell .board-texture {
+  opacity: 0.07;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .combat-zone:not(.is-legal-target) {
+  background: radial-gradient(ellipse at center, #193c583d, transparent 75%), #081b30;
+  border-width: 1px;
+  border-radius: 16px;
+  box-shadow: inset 0 1px #bddfff0a;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .support-zone:not(.is-legal-target) {
+  background: #0c2339;
+  border-width: 1px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .top-field .combat-zone:not(.is-legal-target),
+:root[data-theme="tactical-clean"] .game-shell .top-field .support-zone:not(.is-legal-target) {
+  border-color: #bb829c54;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .bottom-field .combat-zone:not(.is-legal-target),
+:root[data-theme="tactical-clean"] .game-shell .bottom-field .support-zone:not(.is-legal-target) {
+  border-color: #72bdd956;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .zone-watermark {
+  color: #b3cee14a;
+  font-size: clamp(12px, 1vw, 16px);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .is-legal-target > .zone-watermark {
+  color: #9ce8f4;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .support-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aac6da;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .phase-rail {
+  border: 1px solid #91c9e43b;
+  border-radius: 16px;
+  background: #071b2ff0;
+  box-shadow: 0 8px 24px #0004;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .turn-indicator {
+  box-shadow: none;
+  border-radius: 10px;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .next-phase-button:not(:disabled) {
+  border: 1px solid #ffe0a0;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #ffe0a0, #edbc65);
+  color: #382b17;
+  box-shadow: none;
+}
+
+:root[data-theme="tactical-clean"] .game-shell .row-meta {
+  background: #071c30ed;
+  box-shadow: 0 4px 16px #0003;
+}
+
+@container game-shell (min-width: 901px) {
+  :root[data-theme="tactical-clean"] .game-shell .top-field .support-count {
+    inset: 8px auto auto 12px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-field .support-count {
+    inset: 8px 12px auto auto;
+  }
+}
+
+/* Large screens reserve real space beneath the battlefield for the hand.
+ * Tablets and short windows retain their independently verified compact dock. */
+@container game-shell (min-width: 1281px) and (min-height: 621px) {
+  :root[data-theme="tactical-clean"] .game-shell .table-area {
+    width: 100%;
+    height: calc(100% - 64px - clamp(140px, 20vh, 192px) - 26px);
+    margin: 64px 0 0;
+    padding: 0 clamp(150px, 10vw, 192px);
+    row-gap: 12px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .battle-row {
+    height: auto;
+    grid-template-columns: 80px minmax(0, 1fr) 80px;
+    gap: 12px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .field-stack,
+  :root[data-theme="tactical-clean"] .game-shell .side-zones,
+  :root[data-theme="tactical-clean"] .game-shell .utility-zones {
+    top: 0;
+    height: 100%;
+    gap: 8px;
+    align-self: stretch;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .utility-zones {
+    width: 80px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .top-field .field-stack,
+  :root[data-theme="tactical-clean"] .game-shell .top-field .side-zones {
+    grid-template-rows: minmax(0, 34fr) minmax(0, 66fr);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-field .field-stack,
+  :root[data-theme="tactical-clean"] .game-shell .bottom-field .side-zones {
+    grid-template-rows: minmax(0, 66fr) minmax(0, 34fr);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .support-zone,
+  :root[data-theme="tactical-clean"] .game-shell .combat-zone {
+    transform: none;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .hand-fan.bottom-hand {
+    position: fixed;
+    inset: auto auto 12px 50%;
+    width: min(840px, calc(100% - 400px));
+    height: clamp(140px, 20vh, 192px);
+    transform: translateX(-50%);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-hand .hand-card-wrap {
+    bottom: 0;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-hand .hand-card-wrap:hover,
+  :root[data-theme="tactical-clean"] .game-shell .bottom-hand .hand-card-wrap:focus-within {
+    transform: translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 18px)) rotate(var(--fan-rotation)) scale(1.04);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-hand .hand-card-wrap.is-selected {
+    transform: translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 14px)) rotate(var(--fan-rotation)) scale(1.07);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .bottom-hand .hand-card {
+    height: clamp(120px, 18vh, 176px);
+    width: clamp(84px, 12.6vh, 123.2px);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .field-stack > .hand-fan.top-hand {
+    position: fixed;
+    inset: 0 auto auto 50%;
+    width: min(600px, 50vw);
+    height: 48px;
+    transform: translateX(-50%);
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .top-hand .opponent-hand-card {
+    top: -80px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .top-hand .hand-card {
+    width: 78px;
+    height: 112px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .phase-rail {
+    right: 20px;
+    width: 120px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-meta {
+    width: 144px;
+    max-width: 144px;
+    padding: 8px 10px;
+    transform: none;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-avatar {
+    display: none;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-meta-info {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-meta-info strong {
+    font-size: 14px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-role {
+    font-size: 9px;
+  }
+
+  :root[data-theme="tactical-clean"] .game-shell .row-status,
+  :root[data-theme="tactical-clean"] .game-shell .turn-order-badge {
+    font-size: 11px;
+  }
+
+}

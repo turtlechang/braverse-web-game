@@ -114,11 +114,12 @@
 
 @container game-shell (min-width: 901px) {
   .card-preview-panel {
-    top: clamp(108px, 14vh, 150px);
+    top: clamp(48px, 7vh, 76px);
     left: 8px;
-    width: min(280px, 19vw);
-    gap: 7px;
-    padding: 12px 10px;
+    width: clamp(320px, 25vw, 380px);
+    max-height: calc(100dvh - 96px);
+    gap: 12px;
+    padding: 16px;
     border: 2px solid rgba(126, 231, 240, 0.8);
     border-radius: 14px;
     background: rgba(2, 16, 45, 0.94);
@@ -126,11 +127,32 @@
   }
 
   .card-preview-panel .preview-card {
-    width: min(100%, 220px);
+    width: min(100%, 300px, max(80px, calc((100dvh - 300px) * 0.7)));
   }
 
   .card-preview-panel strong {
     color: #d9f7ff;
+    font-size: 18px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .card-preview-panel > div {
+    width: 100%;
+    min-height: 0;
+    gap: 6px;
+  }
+
+  .card-preview-panel small {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .card-preview-panel .card-preview-effect {
+    max-height: 112px;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
   }
 
   .card-preview-panel small,
