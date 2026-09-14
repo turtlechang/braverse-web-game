@@ -5476,6 +5476,9 @@ const createBs9PhysicalCardCheckDemoState = (
     const ownTrapCompanionEntry = {
       ...ownCompanionEntry,
       hpCards: [...ownCompanionHp.slice(0, -1), markerCard],
+      ...(baseCardNumber === 'BS9-022'
+        ? { faceUpHpCardInstanceIds: [markerCard.instanceId] }
+        : {}),
     }
     const attacker = cardCheckOfficialCookie('BS8-007', 'bs9-trap-attacker')
     const donor = cardCheckOfficialCookie('BS8-009', 'bs9-trap-donor')
@@ -5580,11 +5583,14 @@ const createBs9PhysicalCardCheckDemoState = (
       baseCardNumber === 'BS9-095' ? 'bs9-bs9-095-shadow-milk-attacker' : 'bs9-stage-cookie',
     )
     const markerCard = cardCheckOfficialCard('BS8-021', 'bs9-stage-opponent-owned-hp')
-    const stageCookieEntry = cardCheckBattleEntry(
-      stageCookie,
-      [...bs9PhysicalHpCards(stageCookie.instanceId, stageCookie.hp - 1, stageCookie.energyColor), markerCard],
-      4,
-    )
+    const stageCookieEntry = {
+      ...cardCheckBattleEntry(
+        stageCookie,
+        [...bs9PhysicalHpCards(stageCookie.instanceId, stageCookie.hp - 1, stageCookie.energyColor), markerCard],
+        4,
+      ),
+      faceUpHpCardInstanceIds: [markerCard.instanceId],
+    }
     const secondCookie = cardCheckOfficialCookie('BS8-002', 'bs9-stage-second-cookie')
     return {
       ...withCommonPlayers({

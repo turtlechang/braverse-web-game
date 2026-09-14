@@ -23,6 +23,7 @@ import {
 import { advancePhase } from './turn'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { describeCommandSteps } from './command-log'
+import { maskGameStateForViewer } from './masked-state'
 import type { GameCard, GameState, PlayerId } from './types'
 
 const records = bs9Candidates.cards as unknown as OfficialCardRecord[]
@@ -537,6 +538,36 @@ describe('BS9-010～023 second RED candidate batch', () => {
     expect(() => applyGameCommand(negativeStage, {
       kind: 'begin-activate-stage', playerId: 'player-one', paymentIds: [payOne(negativeStage)], targetIds: [],
     })).toThrow()
+  })
+
+  it('公開 BS9-022 正向 fixture 中對手持有的 HP 卡牌面', () => {
+    const state = createCardCheckDemoState('BS9-022')
+    const companion = battle(state, 'BS8-014')
+    const foreignHpIds = state.foreignHpCardInstanceIds?.[companion.card.instanceId]
+
+    expect(foreignHpIds).toEqual([companion.hpCards.at(-1)?.instanceId])
+    expect(companion.faceUpHpCardInstanceIds).toEqual(foreignHpIds)
+    for (const viewer of ['player-one', 'player-two'] as const) {
+      const visibleCompanion = maskGameStateForViewer(state, viewer)
+        .players['player-one'].battleArea.find((cookie) => cookie.card.id === 'BS8-014')
+      expect(visibleCompanion?.faceUpHpCardInstanceIds).toEqual(foreignHpIds)
+      expect(visibleCompanion?.hpCards.at(-1)).toEqual(companion.hpCards.at(-1))
+    }
+  })
+
+  it('公開 BS9-023 正向 fixture 中對手持有的 HP 卡牌面', () => {
+    const state = createCardCheckDemoState('BS9-023')
+    const stageCookie = battle(state, 'BS8-014')
+    const foreignHpIds = state.foreignHpCardInstanceIds?.[stageCookie.card.instanceId]
+
+    expect(foreignHpIds).toEqual([stageCookie.hpCards.at(-1)?.instanceId])
+    expect(stageCookie.faceUpHpCardInstanceIds).toEqual(foreignHpIds)
+    for (const viewer of ['player-one', 'player-two'] as const) {
+      const visibleStageCookie = maskGameStateForViewer(state, viewer)
+        .players['player-one'].battleArea.find((cookie) => cookie.card.id === 'BS8-014')
+      expect(visibleStageCookie?.faceUpHpCardInstanceIds).toEqual(foreignHpIds)
+      expect(visibleStageCookie?.hpCards.at(-1)).toEqual(stageCookie.hpCards.at(-1))
+    }
   })
 
   it('keeps the batch candidate-only and localhost-only', () => {
