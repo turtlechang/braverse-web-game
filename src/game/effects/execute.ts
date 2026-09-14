@@ -1,3 +1,4 @@
+import { recordPresentationStep, recordFaintPresentation } from '../presentation'
 import { collectAfterDamageEffectsFromIds } from '../afterDamage'
 import { GameRuleError } from '../errors'
 import { hiddenHandSlotId } from '../card-visibility'
@@ -217,6 +218,7 @@ const resolveDamageOutcome = (
 
   let faintState = faintedState
   for (const cookie of departedCookies) {
+    faintState = recordFaintPresentation(faintState, damagedPlayerId, cookie)
     const faintSkill = cookie.skill
     if (faintSkill?.faint && (!faintSkill.yourTurn || state.activePlayerId === damagedPlayerId)) {
       const faintCost = getFaintTriggeredCost(faintSkill)
@@ -362,7 +364,7 @@ const getExpirationTurn = (
     : state.turnNumber + 1
 }
 
-export const executeCardEffect = (
+const executeCardEffectCore = (
   state: GameState,
   context: EffectContext,
   effect: CardEffect,
@@ -4701,3 +4703,6 @@ export const placeHandCardOnHp = (
     ),
   })
 }
+
+export const executeCardEffect = (state: GameState, context: EffectContext, effect: CardEffect, selectedTargetIds: string[], shuffle: Shuffle = defaultShuffle): GameState =>
+  recordPresentationStep(state, executeCardEffectCore(state, context, effect, selectedTargetIds, shuffle))

@@ -165,7 +165,7 @@ function App() {
     game: match.game,
     setGame: match.setGame,
     setMessage: match.setMessage,
-    showPause: dialogs.showPause,
+    showPause: dialogs.showPause || match.animations.isPlaying,
     aiControlsCurrentState: match.aiControlsCurrentState,
     pendingEffect: pending.pendingEffect,
     faintActive: pending.faintActive,
@@ -216,7 +216,7 @@ function App() {
     return downloaded
   }
 
-  const interactionLocked = deriveInteractionLocked(
+  const interactionLocked = match.animations.isPlaying || deriveInteractionLocked(
     match.game,
     match.viewerPlayerId,
     Boolean(pending.pendingEffect),
@@ -232,6 +232,7 @@ function App() {
   const trapPaymentIdSet = new Set(match.selectedTrapPaymentIds)
 
   const phaseDisabled =
+    match.animations.isPlaying ||
     match.game.status === 'finished' ||
     Boolean(match.game.pendingReplacement) ||
     hasPendingCardResolution(match.game) ||
@@ -403,6 +404,7 @@ function App() {
   }
 
   const topBattleRowProps: BattleRowProps = {
+    openingHandPending: match.openingHandPending,
     game: match.game,
     playerId: match.opponentId,
     position: 'top',
@@ -435,6 +437,7 @@ function App() {
   }
 
   const bottomBattleRowProps: BattleRowProps = {
+    openingHandPending: match.openingHandPending,
     game: match.game,
     playerId: match.viewerPlayerId,
     position: 'bottom',
@@ -605,6 +608,7 @@ function App() {
   return (
     <main
       className="game-shell"
+      data-motion={match.animations.reducedMotion ? "reduced" : match.animations.speed}
       data-attention-state={attentionState}
       data-bs4-condition-card={
         testStateConfig?.kind === 'bs4-condition'
@@ -644,6 +648,7 @@ function App() {
       />
 
       <BattleTable
+        animation={match.animations}
         ariaLabel="Braverse 對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
@@ -719,7 +724,7 @@ function App() {
       )}
 
       <EffectPanel
-        pendingEffect={pending.pendingEffect}
+        pendingEffect={match.animations.isPlaying ? null : pending.pendingEffect}
         currentEffect={currentJsxEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
@@ -873,9 +878,10 @@ function App() {
         }
       />
 
-      {match.setupStep && (
+      {match.setupStep && (match.openingHandPending || !match.animations.isPlaying) && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <OpeningSetupModal
+            rpsResult={match.rpsResult}
             step={match.setupStep as OpeningSetupStep}
             message={match.setupMessage}
             hand={match.game.players[match.viewerPlayerId].hand}
@@ -894,11 +900,11 @@ function App() {
       )}
 
       <Suspense fallback={null}>
-        <BattleResponseModals match={match} />
+        {!match.animations.isPlaying && <BattleResponseModals match={match} />}
 
-        <DamageEffectModals match={match} pending={pending} />
+        {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
 
-        <PendingDecisionModals match={match} pending={pending} />
+        {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
 
         <InformationModals match={match} ai={ai} dialogs={dialogs} />
 
@@ -931,7 +937,7 @@ function App() {
         )}
       </Suspense>
 
-      {gameResult && battleLogReviewReason === null && (
+      {gameResult && !match.animations.isPlaying && battleLogReviewReason === null && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <ResultModal
             winnerName={resultWinnerName ?? ''}

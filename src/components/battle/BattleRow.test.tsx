@@ -9,7 +9,7 @@ import {
 } from '../../game/demo'
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import type { CardSkill, ExtraDeckCard, GameState, PendingBattle } from '../../game'
-import { applyGameCommand } from '../../game'
+import { applyGameCommand, createDemoSetupGame } from '../../game'
 import { maskGameStateForViewer } from '../../game/masked-state'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
@@ -1497,4 +1497,20 @@ describe('HP flip chain reveal indicator', () => {
     )
     expect(markup).not.toContain('hp-reveal-indicator')
   })
+})
+
+it('keeps both opening hands off the table until order confirmation without changing state', () => {
+  const game = createDemoSetupGame('player-one')
+  const before = JSON.stringify(game)
+  for (const playerId of ['player-one', 'player-two'] as const) {
+    const player = game.players[playerId]
+    const props = createProps({game,playerId,position:playerId === 'player-one' ? 'bottom' : 'top',openingHandPending:true})
+    const pending = renderToStaticMarkup(<BattleRow {...props} />)
+    expect(pending).not.toContain('data-hand-slot=')
+    expect(pending).toContain(`手牌 0`)
+    expect(pending).toContain(`牌庫剩餘 ${player.deck.length + player.hand.length} 張`)
+    const confirmed = renderToStaticMarkup(<BattleRow {...props} openingHandPending={false} />)
+    expect(confirmed.match(/data-hand-slot=/g)).toHaveLength(player.hand.length)
+  }
+  expect(JSON.stringify(game)).toBe(before)
 })

@@ -2610,6 +2610,8 @@ export interface LogStepDetail {
 }
 
 export interface CommandLogEntry {
+  /** Ordered, optional visual receipts; older replays need no migration. */
+  presentation?: import('./presentation').PresentationEvent[]
   id: number
   turnNumber: number
   phase: TurnPhase
@@ -2642,6 +2644,8 @@ export interface CommandLogEntry {
 }
 
 export interface GameState {
+  /** Internal command-scoped receipts. Removed before returning an accepted state. */
+  presentationSteps?: import('./presentation').PresentationEvent[]
   /** Cards moved by the current source's latest deck-to-trash effect, including Refresh continuation. */
   deckTrashResolution?: { sourcePlayerId: PlayerId; sourceInstanceId: string; cards: GameCard[] }
   players: Record<PlayerId, PlayerState>

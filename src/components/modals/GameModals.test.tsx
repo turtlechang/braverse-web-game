@@ -989,6 +989,28 @@ describe('FaintEffectResponseModal', () => {
 })
 
 describe('OpeningSetupModal', () => {
+  it('keeps step actions accessible and removes stale RPS results from the hand review', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onRps = vi.fn()
+    const onChooseFirstPlayer = vi.fn()
+    const onMulligan = vi.fn()
+    const props = {message:'準備開局',hand:[createHandCard(1)],deckConfig:{player:'red' as const,ai:'green' as const},onSelectDeck:vi.fn(),onRps,onChooseFirstPlayer,onMulligan,onSelectStartingCookie:vi.fn(),rpsResult:{player:'rock',opponent:'scissors',winner:'player' as const,round:1}}
+    await act(() => root.render(<OpeningSetupModal {...props} step="rps" />))
+    await click(findButton(container,'石頭'))
+    expect(onRps).toHaveBeenCalledWith('rock')
+    await act(() => root.render(<OpeningSetupModal {...props} step="choose-order" />))
+    await click(findButton(container,'選擇後攻'))
+    expect(onChooseFirstPlayer).toHaveBeenCalledWith(false)
+    await act(() => root.render(<OpeningSetupModal {...props} step="mulligan" />))
+    expect(container.querySelector('.match-rps-reveal')).toBeNull()
+    expect(container.querySelector('.setup-hand button')).toBeNull()
+    expect(container.querySelector('[role="dialog"]')?.getAttribute('aria-labelledby')).toBe(container.querySelector('h2')?.id)
+    await click(findButton(container,'保留手牌'))
+    await click(findButton(container,'全部調度'))
+    expect(onMulligan.mock.calls).toEqual([[false],[true]])
+    await act(() => root.unmount())
+  })
   it('starts by asking the player to choose one of the five decks', () => {
     const markup = renderToStaticMarkup(
       <OpeningSetupModal
@@ -1730,6 +1752,7 @@ describe('PauseModal', () => {
       ),
     )
 
+    await click(findButton(container, '問題回報與執行資訊'))
     await click(findButton(container, '複製問題包'))
     await act(async () => {})
 

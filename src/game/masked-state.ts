@@ -1,4 +1,5 @@
 import { getCookieEffectiveHp } from './helpers'
+import { maskPresentation } from './presentation'
 import { createHiddenCard, maskCards } from './card-visibility'
 import type {
   ExtraDeckCard,
@@ -57,7 +58,8 @@ export const maskGameStateForViewer = (
   state: GameState,
   viewerId: PlayerId,
 ): GameState => {
-  const { hpInspectionResults, ...publicState } = state
+  const { hpInspectionResults, presentationSteps, ...publicState } = state
+  void presentationSteps
   const reorderTarget = state.pendingAbilityEffect?.playerId === viewerId
     ? state.pendingAbilityEffect.pendingReorderHp
     : undefined
@@ -97,6 +99,7 @@ export const maskGameStateForViewer = (
     // contain private HP/deck ordering IDs or shuffle seeds even after masking.
     commandLog: state.commandLog?.map((entry) => ({
       ...entry,
+      ...(entry.presentation ? { presentation: maskPresentation(entry.presentation, viewerId) } : {}),
       payload: { kind: entry.commandKind, playerId: entry.playerId },
     })),
   }

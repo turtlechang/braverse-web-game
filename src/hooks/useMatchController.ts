@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { describeOpeningDeal } from '../game/presentation'
 import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import {
   applyGameCommand,
@@ -612,6 +613,7 @@ export function useMatchController(params: {
     onReplayRoot: captureReplayRoot,
   })
   const {
+    rpsResult,
     setupStep,
     setSetupStep,
     setupMessage,
@@ -626,7 +628,6 @@ export function useMatchController(params: {
     handleStartingCookie,
     resetSetup,
   } = setup
-  const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
   const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
@@ -704,6 +705,24 @@ export function useMatchController(params: {
       ? 'player-two'
       : 'player-one'
   const opponentId = opponentOfId(viewerPlayerId)
+  const animations = useMatchAnimations(viewerPlayerId)
+  const { observeTransition, enqueue, resetAnimations } = animations
+  const openingHandPending = setupStep === 'deck-selection' || setupStep === 'rps' || setupStep === 'choose-order'
+  const wasOpeningHandPending = useRef(openingHandPending)
+  const openingDealSequence = useRef(0)
+  const animationPreviousGame = useRef(game)
+  useLayoutEffect(() => {
+    if (openingHandPending) {
+      if (animationPreviousGame.current !== game) resetAnimations()
+    } else if (wasOpeningHandPending.current && setupStep === 'mulligan') {
+      resetAnimations()
+      enqueue(describeOpeningDeal(game, `opening-deal-${++openingDealSequence.current}`))
+    } else {
+      observeTransition(animationPreviousGame.current, game)
+    }
+    wasOpeningHandPending.current = openingHandPending
+    animationPreviousGame.current = game
+  }, [game, setupStep, openingHandPending, observeTransition, enqueue, resetAnimations])
   const activePlayer = game.players[game.activePlayerId]
 
   // 問題包（ReplayIssueBundleV1）素材：對局起點快照 + 最後一個失敗指令。
@@ -722,12 +741,12 @@ export function useMatchController(params: {
   } | null>(null)
 
   const runAction: RunGameAction = (action, successMessage, onSuccess) => {
+    if (animations.isBusy()) return
     try {
       const nextGame = action(game)
-      const prevGame = game
       setGame(nextGame)
       setMessage(successMessage)
-      animations.observeTransition(prevGame, nextGame)
+
       lastFailedCommandRef.current = null
 
       onSuccess?.(nextGame)
@@ -1786,7 +1805,9 @@ export function useMatchController(params: {
   return {
     game,
     setGame,
+    rpsResult,
     setupStep,
+    openingHandPending,
     setSetupStep,
     setupMessage,
     setSetupMessage,
@@ -1972,6 +1993,7 @@ export function useMatchController(params: {
     // Place hand HP (兩階段選擇第二階段)
     selectedPlaceHandHpId,
     setSelectedPlaceHandHpId,
+    animations,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

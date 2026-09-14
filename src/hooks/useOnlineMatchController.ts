@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { describeOpeningDeal } from '../game/presentation'
 import type {
   CookieCard,
   CookieInBattle,
@@ -69,9 +70,10 @@ export function useOnlineMatchController(params: {
   game: GameState
   viewerPlayerId: PlayerId
   sendCommand: (command: GameCommand) => void
+  synchronizing?: boolean
   seed?: number | null
 }) {
-  const { game, viewerPlayerId, sendCommand, seed = null } = params
+  const { game, viewerPlayerId, sendCommand, synchronizing = false, seed = null } = params
   const opponentId = opponentOfId(viewerPlayerId)
   const activePlayer = game.players[game.activePlayerId]
 
@@ -134,13 +136,26 @@ export function useOnlineMatchController(params: {
     string | undefined
   >(undefined)
 
-  const animations = useMatchAnimations()
+  const animations = useMatchAnimations(viewerPlayerId)
+  const initialOpening = useRef({game,synchronizing})
+  const openingDealSequence = useRef(0)
+  const enqueueOpening = animations.enqueue
+  const resetOpening = animations.resetAnimations
+  useLayoutEffect(() => {
+    // The server supplies the initial game only after opening order is accepted.
+    const initial = initialOpening.current
+    if (!initial.synchronizing && initial.game.status === 'setup') enqueueOpening(describeOpeningDeal(initial.game, `online-opening-deal-${++openingDealSequence.current}`))
+    return resetOpening
+  }, [enqueueOpening, resetOpening])
   const previousGameRef = useRef(game)
+  const wasSynchronizing = useRef(synchronizing)
   useEffect(() => {
-    animations.observeTransition(previousGameRef.current, game)
+    if (synchronizing || wasSynchronizing.current) animations.resetAnimations()
+    else animations.observeTransition(previousGameRef.current, game)
+    wasSynchronizing.current = synchronizing
     previousGameRef.current = game
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game])
+  }, [game, synchronizing])
 
   // 註冊問題包 provider 給 GameErrorBoundary。線上 game 已是伺服器遮罩版，
   // builder 的 online 模式會再遮罩一次（防禦性）並強制 initialState 為 null；
@@ -159,13 +174,17 @@ export function useOnlineMatchController(params: {
     )
   }, [game, viewerPlayerId, seed])
 
-  const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
+  const dispatchAutomatic: DispatchGameCommand = (command, successMessage, onSuccess) => {
     const commands = Array.isArray(command) ? command : [command]
     for (const cmd of commands) {
       sendCommand(cmd)
     }
     setMessage(successMessage)
     onSuccess?.(game)
+  }
+  const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
+    if (animations.isBusy()) return
+    dispatchAutomatic(command, successMessage, onSuccess)
   }
   const battleActions = useBattleActions({ game, dispatch })
 
@@ -195,7 +214,7 @@ export function useOnlineMatchController(params: {
     }
 
     const timer = window.setTimeout(() => {
-      dispatch(
+      dispatchAutomatic(
         { kind: 'advance-phase', playerId: viewerPlayerId },
         game.phase === 'active'
           ? '活躍動作已自動完成。'
@@ -218,7 +237,7 @@ export function useOnlineMatchController(params: {
       if (damagePlayerId !== viewerPlayerId) return
 
       const timer = window.setTimeout(() => {
-        dispatch(
+        dispatchAutomatic(
           { kind: 'resolve-next-damage', playerId: viewerPlayerId },
           '正在結算傷害。',
         )
@@ -249,7 +268,7 @@ export function useOnlineMatchController(params: {
       setSelectedTrapDiscardIds([])
       setSelectedTrapHandToBreakIds([])
       setSelectedTrapTargetId(null)
-      dispatch(
+      dispatchAutomatic(
         { kind: 'skip-trap', playerId: viewerPlayerId },
         '未發動回應，進入傷害結算。',
       )
@@ -1131,6 +1150,7 @@ export function useOnlineMatchController(params: {
     // Place hand HP (兩階段選擇第二階段)
     selectedPlaceHandHpId,
     setSelectedPlaceHandHpId,
+    animations,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

@@ -1,3 +1,4 @@
+import { mergePresentationSteps } from './presentation'
 import { GameRuleError } from './errors'
 import {
   advanceBattleAfterTrap,
@@ -1168,6 +1169,7 @@ export const appendCommandLogEntry = (
   const groupId =
     previousEntry && hasBlockingPending(previous) ? previousEntry.groupId : id
   const entry: CommandLogEntry = {
+    presentation: mergePresentationSteps(previous, next, command.kind, `command-${id}`, resolveLogCard(previous, next, command)),
     id,
     turnNumber: previous.turnNumber,
     phase: previous.phase,
@@ -1184,7 +1186,9 @@ export const appendCommandLogEntry = (
       'player-two': getBreakAreaLevel(next, 'player-two'),
     },
   }
-  return { ...next, commandLog: [...log, entry] }
+  const { presentationSteps, ...settled } = next
+  void presentationSteps
+  return { ...settled, commandLog: [...log, entry] }
 }
 
 export const applyGameCommand = (
@@ -1199,9 +1203,10 @@ export const applyGameCommand = (
           ...options,
           shuffle: createSeededShuffle(options.shuffleSeed),
         }
+  const executionState: GameState = { ...state, presentationSteps: [] }
   const commanded = isPendingDecisionCommand(command)
-    ? applyPendingDecisionCommand(state, command, effectiveOptions)
-    : applyPlayerActionCommand(state, command, effectiveOptions)
+    ? applyPendingDecisionCommand(executionState, command, effectiveOptions)
+    : applyPlayerActionCommand(executionState, command, effectiveOptions)
   const next = clearCompletedEffectOrder(commanded)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.

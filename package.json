@@ -67,6 +67,8 @@
     "lint": "eslint . --max-warnings=0",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
+    "test:animations:browser": "node scripts/match-animation-browser-validation.mjs",
+    "test:animations:online": "node scripts/online-match-browser-validation.mjs --animation-full-match",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
     "test:browser:smoke": "npm run test:ai:browser && npm run test:deck:browser && npm run test:online:match:browser",
     "test:deployment:browser": "node scripts/deployment-browser-validation.mjs",

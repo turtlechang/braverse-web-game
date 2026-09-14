@@ -179,6 +179,7 @@ const redactOnlineCommandLog = (
   entries.map((entry) => {
     const steps = entry.steps
     const withoutCardPresentation = { ...entry }
+    delete withoutCardPresentation.presentation
     delete withoutCardPresentation.card
     delete withoutCardPresentation.steps
     return {

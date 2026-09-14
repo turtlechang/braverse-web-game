@@ -137,6 +137,7 @@ export function OnlineBattleView({
     game,
     viewerPlayerId,
     sendCommand,
+    synchronizing: connectionMode === "syncing",
     seed,
   })
   const handleExportReplay = (): boolean => {
@@ -497,7 +498,7 @@ export function OnlineBattleView({
     localPublicIntentDraft,
     sendPublicIntent,
   ])
-  const interactionLocked = deriveInteractionLocked(
+  const interactionLocked = match.animations.isPlaying || deriveInteractionLocked(
     game,
     viewerPlayerId,
     Boolean(pending.pendingEffect),
@@ -506,6 +507,7 @@ export function OnlineBattleView({
   )
 
   const phaseDisabled =
+    match.animations.isPlaying ||
     game.status !== 'playing' ||
     Boolean(game.pendingReplacement) ||
     hasPendingCardResolution(game) ||
@@ -653,7 +655,7 @@ export function OnlineBattleView({
   }
 
   return (
-    <main className="game-shell" data-attention-state={attentionState}>
+    <main data-motion={match.animations.reducedMotion ? "reduced" : match.animations.speed} className="game-shell" data-attention-state={attentionState}>
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
@@ -672,6 +674,7 @@ export function OnlineBattleView({
       )}
 
       <BattleTable
+        animation={match.animations}
         ariaLabel="Braverse 線上對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
@@ -739,7 +742,7 @@ export function OnlineBattleView({
         }}
       />
 
-      {openingSnapshot && (
+      {openingSnapshot && !match.animations.isPlaying && (
         <OnlineOpeningOverlay
           opening={openingSnapshot}
           game={game}
@@ -752,7 +755,7 @@ export function OnlineBattleView({
       )}
 
       <EffectPanel
-        pendingEffect={pending.pendingEffect}
+        pendingEffect={match.animations.isPlaying ? null : pending.pendingEffect}
         currentEffect={pending.currentEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
@@ -874,9 +877,9 @@ export function OnlineBattleView({
         }
       />
 
-      <BattleResponseModals match={match} />
-      <DamageEffectModals match={match} pending={pending} />
-      <PendingDecisionModals match={match} pending={pending} />
+      {!match.animations.isPlaying && <BattleResponseModals match={match} />}
+      {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
+      {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
 
       {stagePlacementCard?.stageAbility && stagePlacement && (
         <StagePlacementModal
@@ -906,7 +909,7 @@ export function OnlineBattleView({
         />
       )}
 
-      {game.result && battleLogReviewReason === null && (
+      {game.result && !match.animations.isPlaying && battleLogReviewReason === null && (
         <ResultModal
           winnerName={game.players[game.result.winnerId].name}
           loserId={game.result.loserId}

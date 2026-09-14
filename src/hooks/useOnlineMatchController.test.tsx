@@ -1,9 +1,9 @@
 /// @vitest-environment jsdom
 
-import { act } from 'react'
+import { act, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { skipTrap, type GameCard, type GameCommand } from '../game'
+import { createDemoSetupGame, skipTrap, type GameCard, type GameCommand } from '../game'
 import {
   createBattleState,
   declareAttack,
@@ -14,6 +14,24 @@ import { useOnlineMatchController } from './useOnlineMatchController'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlineMatchController', () => {
+  it('finishes opening dealing under StrictMode without leaving decisions locked', async () => {
+    vi.useFakeTimers()
+    const game = createDemoSetupGame('player-one')
+    const sendCommand = vi.fn()
+    let current: ReturnType<typeof useOnlineMatchController> | undefined
+    function Harness() {
+      current = useOnlineMatchController({game,viewerPlayerId:'player-one',sendCommand})
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<StrictMode><Harness /></StrictMode>))
+    expect(current?.animations.isPlaying).toBe(true)
+    await act(() => vi.advanceTimersByTime(2000))
+    expect(current?.animations.isPlaying).toBe(false)
+    expect(current?.animations.isBusy()).toBe(false)
+    expect(sendCommand).not.toHaveBeenCalled()
+    await act(() => root.unmount())
+  })
   afterEach(() => {
     vi.useRealTimers()
   })

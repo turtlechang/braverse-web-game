@@ -335,11 +335,13 @@ try {
     hostOpeningHand.getByTestId('online-starting-cookie').first(),
   )
   assert.ok(await hostOpeningHand.getByTestId('online-starting-cookie').count() > 0)
+  await guestOpeningHand.getByTestId('online-starting-cookie').first().waitFor({ state: 'visible' })
   assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await hostOpeningHand.getByTestId('online-starting-cookie').first().click()
   await hostPage
     .getByText('起始餅乾已覆蓋，等待對手完成選擇…', { exact: true })
     .waitFor()
+  await guestOpeningHand.getByTestId('online-starting-cookie').first().waitFor({ state: 'visible' })
   assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await guestOpeningHand.getByTestId('online-starting-cookie').first().click()
 
@@ -572,11 +574,84 @@ try {
     /不是目前的回合玩家/,
   )
 
+  let animationFullMatch = null
+  if (process.argv.includes('--animation-full-match')) {
+    await hostPage.setViewportSize({width:1920,height:1080})
+    await guestPage.setViewportSize({width:1164,height:777})
+    await hostPage.getByLabel('動畫速度').selectOption('fast')
+    await guestPage.getByLabel('動畫速度').selectOption('reduced')
+    let commands = 0
+    let attacks = 0
+    const exerciseBattle = process.argv.includes('--animation-battle')
+    const deadline = Date.now() + 240000
+    while (Date.now() < deadline && commands < 500) {
+      if (await hostPage.locator('.result-modal').count() && await guestPage.locator('.result-modal').count()) break
+      for (const page of [hostPage, guestPage]) {
+        if (exerciseBattle) {
+          if (await page.getByRole('button',{name:'略過目前演出',exact:true}).count()) continue
+          const previewDismiss = page.getByTestId('card-preview-dismiss-layer')
+          if (await previewDismiss.count()) { await previewDismiss.click({position:{x:2,y:2}}); continue }
+          const skip = page.getByRole('button').filter({hasText:/^(不發動|略過(?!目前演出)|不使用|跳過)/,hasNotText:'支援階段'}).filter({visible:true}).first()
+          const choices = page.locator('.modal-card-options > button:not(:disabled)').filter({visible:true})
+          const confirm = page.getByRole('button').filter({hasText:/^(確認|完成|繼續|結算)/}).filter({visible:true}).first()
+          if (await skip.evaluateAll(nodes => nodes.some(node => node instanceof HTMLButtonElement && !node.disabled))) { await skip.click(); commands++; continue }
+          if (await choices.count()) { await choices.first().click(); commands++; continue }
+          if (await confirm.evaluateAll(nodes => nodes.some(node => node instanceof HTMLButtonElement && !node.disabled))) { await confirm.click(); commands++; continue }
+          if (await page.locator('.modal-backdrop:visible').count()) continue
+          const payment = page.locator('.attack-payment-panel')
+          if (await payment.count()) {
+            if (await page.locator('.attack-payment-panel.is-valid').count()) {
+              const target = page.getByRole('button',{name:/^選擇攻擊目標：/}).first()
+              if (await target.count()) { await target.click(); attacks++; commands++; continue }
+            }
+            const energy = page.locator('.bottom-field .support-card.is-targetable:not(.is-selected)').first()
+            if (await energy.count()) { await energy.click(); commands++; continue }
+          }
+          const attacker = page.locator('.bottom-field .combat-card-wrap .card-face.is-attackable').first()
+          if (await attacker.count()) { await attacker.click(); commands++; continue }
+          const phase = await page.locator('.phase-rail').innerText()
+          const ownPhaseButton = page.locator('.next-phase-button')
+          if (phase.includes('支援階段') && await ownPhaseButton.isEnabled()) {
+            const hand = page.locator('.bottom-hand .hand-card').last()
+            if (await hand.count()) {
+              await hand.click()
+              const support = page.locator('.bottom-hand .hand-card-action').filter({hasText:'支援'})
+              if (await support.count()) { await support.click(); commands++; continue }
+              if (await previewDismiss.count()) { await previewDismiss.click({position:{x:2,y:2}}) }
+            }
+          }
+        }
+        const button = page.locator('.next-phase-button')
+        if (await button.count() && await button.isEnabled()) {
+          await button.click()
+          commands++
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve,100))
+    }
+    await hostPage.locator('.result-modal').waitFor({state:'visible',timeout:5000})
+    await guestPage.locator('.result-modal').waitFor({state:'visible',timeout:5000})
+    const hostResult = await hostPage.locator('.result-modal h2').innerText()
+    const guestResult = await guestPage.locator('.result-modal h2').innerText()
+    assert.equal(hostResult,guestResult,'Both clients must agree on the winner')
+    await hostPage.screenshot({path:resolve(root,'test-results/animation-online-1920x1080.png')})
+    await guestPage.screenshot({path:resolve(root,'test-results/animation-online-1164x777.png')})
+    if (exerciseBattle) assert.ok(attacks > 0,'The full battle route must include a paid UI attack')
+    animationFullMatch = {completed:true,commands,attacks,hostResult,guestResult,hostSpeed:'fast',guestSpeed:'reduced',route:exerciseBattle ? 'Visible support payment, attacks, decisions and replacements to the result' : 'Normal turns and draws until Refresh determines the result'}
+    console.log('Animation full match:', JSON.stringify(animationFullMatch))
+  }
+
   await guestContext.close()
   guestContext = null
-  const disconnectNotice = hostPage.locator('.online-match-notice')
-  await disconnectNotice.waitFor({ state: 'visible' })
-  assert.match((await disconnectNotice.textContent()) ?? '', /對手已離線/)
+  if (animationFullMatch) {
+    // A completed room retains its result; disconnect banners apply to live matches.
+    await hostPage.locator('.result-modal').waitFor({state:'visible'})
+    assert.equal(await hostPage.locator('.result-modal h2').innerText(),animationFullMatch.hostResult)
+  } else {
+    const disconnectNotice = hostPage.locator('.online-match-notice')
+    await disconnectNotice.waitFor({ state: 'visible' })
+    assert.match((await disconnectNotice.textContent()) ?? '', /對手已離線/)
+  }
   assert.equal(host.errors.length, 0, `host errors: ${host.errors.join('; ')}`)
   assert.equal(guest.errors.length, 0, `guest errors: ${guest.errors.join('; ')}`)
 
@@ -622,6 +697,7 @@ try {
   console.log(JSON.stringify({
     roomCode,
     setupCompleted: true,
+    animationFullMatch,
     synchronizedPhase: 'main',
     synchronizedTurn: hostTurn,
     openingResponsive: true,
@@ -636,7 +712,8 @@ try {
     onlineResourcePopoversVisible: true,
     cardDetailClosable: true,
     commandRejectionVisible: true,
-    disconnectHandled: true,
+    disconnectHandled: !animationFullMatch,
+    finishedResultPreservedOnDisconnect: Boolean(animationFullMatch),
     connectionFailureHandled: true,
   }, null, 2))
 } catch (error) {

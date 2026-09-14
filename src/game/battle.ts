@@ -1,3 +1,4 @@
+import { recordPresentationStep, recordFaintPresentation } from './presentation'
 import { collectAfterDamageEffectsFromIds } from './afterDamage'
 import { GameRuleError } from './errors'
 import {
@@ -2100,6 +2101,8 @@ const removeFaintedCookie = (
     1,
   )
 
+  nextState = recordFaintPresentation(nextState, playerId, target.card)
+
   const faintSkill = target.card.skill
   if (faintSkill?.faint && (!faintSkill.yourTurn || state.activePlayerId === playerId)) {
     const context = {
@@ -3919,6 +3922,8 @@ export const resolveNextDamage = (state: GameState): GameState => {
           : 'damage',
     },
   }, defender.id, target.card.instanceId)
+
+  nextState = recordPresentationStep(state, nextState)
 
   if (battle.effectDamageSequence) {
     const effectSource = state.players[battle.attackerPlayerId].battleArea.find(

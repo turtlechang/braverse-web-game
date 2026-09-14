@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,6 +7,9 @@ import {
   Pencil,
   RefreshCw,
   Trash2,
+  Swords,
+  Users,
+  Layers,
 } from 'lucide-react'
 import { isBs8CandidateStagingDeck } from '../game'
 import { getDeckFormatLabel } from '../game/deck-rules'
@@ -57,12 +60,7 @@ export function MainMenuMasterDuel({
   onDeleteDeck,
   onRefreshDecks,
 }: MainMenuMasterDuelProps) {
-  const [devToolsOpen, setDevToolsOpen] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return true
-    }
-    return window.matchMedia('(min-width: 681px)').matches
-  })
+  const [devToolsOpen, setDevToolsOpen] = useState(false)
 
   const hasDecks = decks.length > 0
   const hasSelectedDeck =
@@ -95,39 +93,25 @@ export function MainMenuMasterDuel({
     onSelectDeck(decks[next].id)
   }
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return
-    }
-
-    const mediaQuery = window.matchMedia('(min-width: 681px)')
-    const handleViewportChange = (event: MediaQueryListEvent) => {
-      setDevToolsOpen(event.matches)
-    }
-
-    mediaQuery.addEventListener('change', handleViewportChange)
-    return () => mediaQuery.removeEventListener('change', handleViewportChange)
-  }, [])
 
   return (
     <main className="main-menu-shell main-menu-master-duel">
       <div className="main-menu-md-hero" aria-hidden="true">
+        <span className="main-menu-md-hero-label">YOUR DECK · 你的牌組</span>
         <div className="main-menu-md-hero-glow" />
-        {hasDecks && selectedDeck ? (
-          <img
-            className="main-menu-md-hero-card"
-            src={heroUrl}
-            alt={`${selectedDeck.name} 代表卡`}
-            loading="lazy"
-          />
-        ) : (
-          <img
-            className="main-menu-md-hero-card"
-            src={fallbackHero}
-            alt="勇敢餅乾"
-            loading="lazy"
-          />
-        )}
+        <img
+          key={heroUrl}
+          className="main-menu-md-hero-card"
+          src={heroUrl}
+          alt=""
+          onLoad={(event) => { event.currentTarget.style.backgroundImage = 'none' }}
+          onError={(event) => {
+            if (!event.currentTarget.src.endsWith('/card-back.png')) {
+              event.currentTarget.src = '/card-back.png'
+            }
+          }}
+        />
+        <div className="main-menu-md-hero-caption"><strong>{selectedDeck?.name ?? '從第一副牌組開始'}</strong><span>每一張卡，都是下一場對戰的可能。</span></div>
       </div>
 
       <div className="main-menu-md-left">
@@ -144,51 +128,6 @@ export function MainMenuMasterDuel({
           <span className="main-menu-md-brand-badge">BRAVERSE</span>
         </h1>
 
-        <nav className="main-menu-md-nav" aria-label="主選單">
-          <button
-            type="button"
-            className="main-menu-md-navitem lv1 primary"
-            onClick={onStartBattle}
-            disabled={!hasDecks}
-            data-testid="start-ai-battle"
-          >
-            AI 對戰
-            {selectedDeckMeta && !selectedDeckMeta.isValid && (
-              <span className="main-menu-md-badge" aria-hidden="true">
-                !
-              </span>
-            )}
-          </button>
-          {!hasDecks && (
-            <p className="main-menu-md-reason">
-              尚無自訂牌組，請先建立牌組後再開始對戰。
-            </p>
-          )}
-
-          <button
-            type="button"
-            className="main-menu-md-navitem lv2"
-            onClick={onOpenOnlineMatch}
-            disabled={!hasDecks}
-            data-testid="open-online-match"
-          >
-            線上對戰
-          </button>
-          {!hasDecks && (
-            <p className="main-menu-md-reason">
-              建立房間或加入房間，與好友進行對戰。
-            </p>
-          )}
-
-          <button
-            type="button"
-            className="main-menu-md-navitem lv2"
-            onClick={onOpenMyDecks}
-            data-testid="open-my-decks"
-          >
-            {hasDecks ? '管理牌組' : '建立第一副牌組'}
-          </button>
-        </nav>
 
         <section className="main-menu-md-loadout" aria-label="目前牌組">
           <div className="main-menu-md-loadout-head">
@@ -206,6 +145,7 @@ export function MainMenuMasterDuel({
                 <button
                   type="button"
                   className="main-menu-md-arrow"
+                  disabled={decks.length < 2}
                   aria-label="上一副牌組"
                   onClick={() => selectDeckByOffset(-1)}
                 >
@@ -229,6 +169,7 @@ export function MainMenuMasterDuel({
                 <button
                   type="button"
                   className="main-menu-md-arrow"
+                  disabled={decks.length < 2}
                   aria-label="下一副牌組"
                   onClick={() => selectDeckByOffset(1)}
                 >
@@ -304,7 +245,7 @@ export function MainMenuMasterDuel({
             <p className="main-menu-md-empty">尚未有自訂牌組。</p>
           )}
 
-          <div className="main-menu-md-ai">
+          <div className="main-menu-md-ai" role="group" aria-label="對手設定">
             <label>
               AI 牌組
               <select
@@ -343,6 +284,59 @@ export function MainMenuMasterDuel({
             </label>
           </div>
         </section>
+
+        <nav className="main-menu-md-nav" aria-label="主選單">
+          <button
+            type="button"
+            className="main-menu-md-navitem lv1 primary"
+            onClick={onStartBattle}
+            disabled={!hasDecks}
+            data-testid="start-ai-battle"
+            aria-label="AI 對戰"
+          >
+            <Swords aria-hidden="true" />
+            <span><strong>AI 對戰</strong><small>準備就緒，開始挑戰</small></span>
+            <ArrowRight className="main-menu-md-launch-arrow" aria-hidden="true" />
+            {selectedDeckMeta && !selectedDeckMeta.isValid && (
+              <span className="main-menu-md-badge" aria-hidden="true">
+                !
+              </span>
+            )}
+          </button>
+          {!hasDecks && (
+            <p className="main-menu-md-reason">
+              尚無自訂牌組，請先建立牌組後再開始對戰。
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="main-menu-md-navitem lv2"
+            onClick={onOpenOnlineMatch}
+            disabled={!hasDecks}
+            data-testid="open-online-match"
+            aria-label="線上對戰"
+          >
+            <Users aria-hidden="true" />
+            <span><strong>線上對戰</strong><small>建立或加入好友房</small></span>
+          </button>
+          {!hasDecks && (
+            <p className="main-menu-md-reason">
+              建立房間或加入房間，與好友進行對戰。
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="main-menu-md-navitem lv2"
+            onClick={onOpenMyDecks}
+            data-testid="open-my-decks"
+            aria-label={hasDecks ? '管理牌組' : '建立第一副牌組'}
+          >
+            <Layers aria-hidden="true" />
+            <span><strong>{hasDecks ? '管理牌組' : '建立第一副牌組'}</strong><small>編輯與整理收藏</small></span>
+          </button>
+        </nav>
 
         <footer className="main-menu-md-footer">
           <details
