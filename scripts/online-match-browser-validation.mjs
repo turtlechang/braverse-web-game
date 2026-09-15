@@ -600,6 +600,11 @@ try {
           if (await page.locator('.modal-backdrop:visible').count()) continue
           const payment = page.locator('.attack-payment-panel')
           if (await payment.count()) {
+            // Hovering a hand card during payment must not cover the supports.
+            const paymentHand = page.locator('.bottom-hand .hand-card').first()
+            if (await paymentHand.count()) await paymentHand.hover()
+            assert.equal(await page.locator('.card-preview-panel').count(), 0)
+            assert.equal(await page.locator('.card-preview-dismiss-layer').count(), 0)
             if (await page.locator('.attack-payment-panel.is-valid').count()) {
               const target = page.getByRole('button',{name:/^選擇攻擊目標：/}).first()
               if (await target.count()) { await target.click(); attacks++; commands++; continue }

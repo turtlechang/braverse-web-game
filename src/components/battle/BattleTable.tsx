@@ -47,7 +47,7 @@ export function BattleTable({
     <>
       {animation && <MatchAnimationLayer animation={animation} entering={topBattleRow.game.status === "setup"} />}
       <CardPreviewPanel
-        card={previewCard}
+        card={attackPaymentPanel ? null : previewCard}
         contextLabel={previewContextLabel}
         onDismiss={onDismissPreview}
       />

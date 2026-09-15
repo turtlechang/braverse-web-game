@@ -135,6 +135,25 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
+  it.each([false, true])('keeps support cards unobscured while attack payment validity is %s', async (isValid) => {
+    const { container, cleanup } = await render(baseProps({
+      previewCard,
+      onDismissPreview: vi.fn(),
+      attackPaymentPanel: {
+        attackerName: 'Attacker Cookie',
+        attackCost: { red: 1 },
+        selectedPaymentCount: isValid ? 1 : 0,
+        isValid,
+        validationReason: isValid ? '能量組合合法' : '尚未支付攻擊費用',
+        onCancel: vi.fn(),
+      },
+    }))
+    expect(container.querySelector('.card-preview-panel')).toBeNull()
+    expect(container.querySelector('.card-preview-dismiss-layer')).toBeNull()
+    expect(container.querySelector('.attack-payment-panel')).not.toBeNull()
+    await cleanup()
+  })
+
   it('renders the attack payment panel and forwards onCancel', async () => {
     const onCancel = vi.fn()
     const { container, cleanup } = await render(
