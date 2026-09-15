@@ -326,6 +326,17 @@ export function DeckEditorPage({
     editor.filterHp,
     editor.filterAttackPower,
   ].filter(Boolean).length
+  const clearPoolFilters = () => {
+    editor.setSearchText('')
+    editor.setFilterType(null)
+    editor.setFilterColor(null)
+    editor.setFilterSeries(null)
+    editor.setFilterRarity(null)
+    editor.setFilterLevel(null)
+    editor.setFilterHp(null)
+    editor.setFilterAttackPower(null)
+    editor.setFilterEffect(null)
+  }
   const deckCards = useMemo(
     () =>
       editor.deckEntries.flatMap((entry) => {
@@ -756,6 +767,11 @@ export function DeckEditorPage({
             </div>
             <strong>{deckStats.totalCards} / {DECK_SIZE_REQUIRED}</strong>
           </div>
+          <div className="deck-health" aria-label="牌組檢查">
+            <span>FLIP {deckStats.flipCards} / {MAX_FLIP_CARDS}</span>
+            <span>{deckValidation.valid ? '可進入對戰' : '可先儲存草稿，修正後再對戰'}</span>
+            {deckValidation.errors.length > 0 && <details open><summary>查看 {deckValidation.errors.length} 項需調整內容</summary><ul role="alert">{deckValidation.errors.map(error => <li key={error}>{error}</li>)}</ul></details>}
+          </div>
           <div className="deck-editor-page-deck-grid">
             {mainDeckSections.map((section) => (
               <section
@@ -878,13 +894,6 @@ export function DeckEditorPage({
               }
             </section>
           </div>
-          {deckValidation.errors.length > 0 && (
-            <div className="deck-editor-page-errors" role="alert">
-              {deckValidation.errors.map((error) => (
-                <span key={error}>{error}</span>
-              ))}
-            </div>
-          )}
           <div className="deck-editor-page-current-footer">
             <button type="button" onClick={handleClear}>
               <Trash2 aria-hidden="true" />
@@ -1010,6 +1019,7 @@ export function DeckEditorPage({
               </div>
             </div>
           )}
+          {(activePoolFilterCount > 0 || editor.searchText || editor.filterEffect) && <div className="deck-filter-summary"><span role="status">找到 {filteredPool.length} 張卡牌</span><button type="button" onClick={clearPoolFilters}>清除搜尋與篩選</button></div>}
           <div className="deck-editor-page-pool-grid">
             {filteredPool.map((entry) => {
               const baseCardNumber = normalizeCardNumber(entry.cardNumber)

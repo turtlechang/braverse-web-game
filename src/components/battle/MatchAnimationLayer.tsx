@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties } from 'r
 import type { PresentationAnchor } from '../../game/presentation'
 import type { MatchAnimations } from '../../hooks/useMatchAnimations'
 import { CardFace } from '../cards/CardVisuals'
+import { MatchSoundControl } from './MatchSoundControl'
 import './MatchAnimationLayer.css'
 
 const zoneSelectors = { deck: '.deck-zone', hand: '.hand-fan', battle: '.combat-zone', support: '.support-zone', break: '.break-zone', discard: '.discard-zone', stage: '.stage-zone', hp: '.hp-card-stack', extra: '.extra-zone', equipment: '.combat-zone' }
@@ -109,6 +110,7 @@ export function MatchAnimationLayer({ animation, entering = false }: { animation
   const spotlights = activeEvents.filter(event => event.kind === 'flip' || event.kind === 'trap' || event.kind === 'reveal' || event.kind === 'opening-reveal')
   return <>
     <div className="match-animation-controls">
+      <MatchSoundControl events={activeEvents} />
       <label>動畫 <select aria-label="動畫速度" value={speed} onChange={event => animation.setSpeed(event.target.value as MatchAnimations['speed'])}>
         <option value="standard">標準</option><option value="fast">快速</option><option value="reduced">減少動畫</option>
       </select></label>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { starterDeckGuide } from './help/starterDeckGuide'
 import {
   ArrowLeft,
   Check,
@@ -451,6 +452,7 @@ export function MyDecksPage({
                   }}
                 >
                   <strong>{label}</strong>
+                  <span>{starterDeckGuide[choice]}</span>
                   <span>{OFFICIAL_DECK_RECIPES[choice].length} 種卡片配方</span>
                 </button>
               ))}

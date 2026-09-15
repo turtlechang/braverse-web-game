@@ -2806,6 +2806,9 @@ export interface ResultModalProps {
   reason: GameEndReason
   onRestart: () => void
   onReviewLog?: (reasonText: string) => void
+  restartLabel?: string
+  deckSummary?: string
+  turnNumber?: number
 }
 
 export interface SpecialPlayModalProps {
@@ -3029,7 +3032,11 @@ export function ResultModal({
   reason,
   onRestart,
   onReviewLog,
+  restartLabel = '再來一局',
+  deckSummary,
+  turnNumber,
 }: ResultModalProps) {
+  const titleId = useId()
   const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
     reason === 'special-victory'
@@ -3042,10 +3049,12 @@ export function ResultModal({
 
   return (
     <div className="modal-backdrop result-backdrop" role="presentation">
-      <section className="result-modal" role="alertdialog">
+      <section className="result-modal" role="alertdialog" aria-modal="true" aria-labelledby={titleId}>
         <span>對局結束</span>
-        <h2>{winnerName}勝利</h2>
+        <h2 id={titleId}>{winnerName}勝利</h2>
         <p>{reasonText}</p>
+        {turnNumber !== undefined && <p>結束於第 {turnNumber} 回合</p>}
+        {deckSummary && <p className="result-deck-summary">使用牌組：{deckSummary}</p>}
         <div className="result-modal-actions">
           {onReviewLog && (
             <button
@@ -3062,7 +3071,7 @@ export function ResultModal({
             className="result-restart-button"
             onClick={onRestart}
           >
-            再來一局
+            {restartLabel}
           </button>
         </div>
       </section>

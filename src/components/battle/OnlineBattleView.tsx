@@ -915,6 +915,8 @@ export function OnlineBattleView({
           loserId={game.result.loserId}
           viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
+          turnNumber={game.turnNumber}
+          restartLabel="返回大廳"
           onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
           onRestart={onLeave}
         />

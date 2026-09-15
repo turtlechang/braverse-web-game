@@ -69,7 +69,7 @@ try {
 
   const results = []
   const viewports = process.env.BRAVERSE_DESKTOP_TABLET_ONLY === '1'
-    ? [{ width: 1366, height: 768 }, { width: 1164, height: 777 }]
+    ? [{ width: 1920, height: 1080 }, { width: 1366, height: 768 }, { width: 1164, height: 777 }]
     : [
     { width: 1366, height: 768 },
     { width: 622, height: 1040 },
@@ -95,10 +95,14 @@ try {
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
     await page.evaluate(() => localStorage.setItem('braverse-custom-decks', '[]'))
     await page.reload({ waitUntil: 'networkidle' })
-    await page.locator('[data-testid="open-deck-editor"]').click()
+    await page.getByRole('button', { name: '建立第一副牌組', exact: true }).click()
+    await page.getByRole('button', { name: '新增牌組', exact: true }).click()
 
     const editor = page.locator('[data-testid="deck-editor-page"]')
     await editor.waitFor({ state: 'visible' })
+    const saveBounds = await editor.getByTestId('deck-editor-page-save').boundingBox()
+    assert.ok(saveBounds && saveBounds.x >= 0 && saveBounds.x + saveBounds.width <= viewport.width,
+      'The entire save control must remain inside the viewport, even when the page clips overflow')
     assert.equal(await editor.locator('[data-testid="deck-editor-search"]').count(), 1)
     const filterToggle = editor.locator('[data-testid="deck-editor-filter-toggle"]')
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')

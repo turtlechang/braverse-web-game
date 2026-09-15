@@ -944,6 +944,8 @@ function App() {
             loserId={gameResult.loserId}
             viewerPlayerId={match.viewerPlayerId}
             reason={gameResult.reason}
+            turnNumber={match.game.turnNumber}
+            deckSummary={match.deckConfig.player === 'custom' ? match.selectedCustomDeck?.name : deckChoiceLabel[match.deckConfig.player]}
             onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
             onRestart={() => {
               resetGame(

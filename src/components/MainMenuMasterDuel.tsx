@@ -18,6 +18,7 @@ import type { AiLevel } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import type { AiDeckChoice } from './MainMenu'
+import { PlayerGuideButton } from './help/PlayerGuide'
 
 interface MainMenuMasterDuelProps {
   decks: CustomDeck[]
@@ -37,6 +38,7 @@ interface MainMenuMasterDuelProps {
   onDuplicateDeck: (deck: CustomDeck) => void
   onDeleteDeck: (deck: CustomDeck) => void
   onRefreshDecks: () => void
+  onStartPractice?: () => void
 }
 
 const fallbackHero = 'https://cookierunbraverse.com/data/en_storage/2HgB5QrG10BzWXr00hCI0w.webp'
@@ -59,6 +61,7 @@ export function MainMenuMasterDuel({
   onDuplicateDeck,
   onDeleteDeck,
   onRefreshDecks,
+  onStartPractice,
 }: MainMenuMasterDuelProps) {
   const [devToolsOpen, setDevToolsOpen] = useState(false)
 
@@ -275,14 +278,15 @@ export function MainMenuMasterDuel({
                   onSelectAiLevel(Number(event.target.value) as AiLevel)
                 }
               >
-                <option value={1}>Lv.1</option>
-                <option value={2}>Lv.2</option>
-                <option value={3}>Lv.3</option>
-                <option value={4}>Lv.4</option>
-                <option value={5}>Lv.5</option>
+                <option value={1}>Lv.1 熟悉操作</option>
+                <option value={2}>Lv.2 基礎練習</option>
+                <option value={3}>Lv.3 戰術挑戰</option>
+                <option value={4}>Lv.4 多步前瞻</option>
+                <option value={5}>Lv.5 進階練牌</option>
               </select>
             </label>
           </div>
+          <p className="main-menu-learning-hint">第一次遊玩可從紅色起始牌組與 Lv.1 開始；熟悉支付與 FLIP 後，再提高難度。</p>
         </section>
 
         <nav className="main-menu-md-nav" aria-label="主選單">
@@ -295,7 +299,7 @@ export function MainMenuMasterDuel({
             aria-label="AI 對戰"
           >
             <Swords aria-hidden="true" />
-            <span><strong>AI 對戰</strong><small>準備就緒，開始挑戰</small></span>
+            <span><strong>AI 對戰</strong><small>{!hasDecks ? '先建立或選擇牌組' : selectedDeckMeta?.isValid ? '準備就緒，開始挑戰' : '牌組需調整，請先檢查'}</small></span>
             <ArrowRight className="main-menu-md-launch-arrow" aria-hidden="true" />
             {selectedDeckMeta && !selectedDeckMeta.isValid && (
               <span className="main-menu-md-badge" aria-hidden="true">
@@ -339,6 +343,10 @@ export function MainMenuMasterDuel({
         </nav>
 
         <footer className="main-menu-md-footer">
+          <div className="main-menu-learning-actions">
+            <PlayerGuideButton />
+            {onStartPractice && <button type="button" className="player-guide-trigger" onClick={onStartPractice}>紅色起始牌組練習</button>}
+          </div>
           <details
             className="main-menu-md-dev-tools"
             open={devToolsOpen}

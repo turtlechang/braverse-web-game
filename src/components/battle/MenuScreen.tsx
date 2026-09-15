@@ -253,6 +253,16 @@ export function MenuScreen({
             setBattleEntryError(null)
           }}
           onStartBattle={startBattleFromMenu}
+          onStartPractice={() => {
+            setSelectedHandCardId(null)
+            dialogs.closeResourcePopover()
+            pending.resetEffectContext()
+            ai.resetAiCounts()
+            onSelectAiLevel(1)
+            match.handleDeckSelection('red', undefined, 'red')
+            setBattleEntryError(null)
+            onEnterBattle()
+          }}
           onOpenOnlineMatch={() => setShowOnlineMatch(true)}
           onOpenTestScenario={() => setShowTestScenario(true)}
           onOpenMyDecks={() => {

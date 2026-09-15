@@ -1,0 +1,33 @@
+/* Shared navy presentation: cards and actions retain priority over decoration. */
+:root { --ux-ink: #e7eef8; --ux-muted: #b0c2d6; --ux-border: #496079; --ux-focus: #f5d78a; }
+.deck-editor-page { grid-template-columns: minmax(0, 1fr); }
+.deck-editor-page .deck-editor-page-header { margin-inline: 0; }
+.main-menu-learning-hint { margin: 10px 0 0; color: var(--ux-muted); font-size: 13px; line-height: 1.6; }
+.main-menu-learning-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.main-menu-master-duel .main-menu-md-loadout { border-color: #354d67; box-shadow: 0 12px 32px #030b1733; }
+.main-menu-master-duel .main-menu-md-detail { color: var(--ux-muted); }
+.main-menu-master-duel .main-menu-md-ai select { min-height: 40px; }
+.main-menu-master-duel .main-menu-md-ai { grid-template-columns: minmax(0, 1.7fr) minmax(145px, 1fr); }
+.main-menu-master-duel button:focus-visible, .deck-editor-page button:focus-visible, .deck-editor-page input:focus-visible, .deck-editor-page select:focus-visible, .my-decks-page button:focus-visible { outline: 3px solid var(--ux-focus); outline-offset: 3px; }
+.deck-health { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 12px; color: var(--ux-muted); background: #0b2038; border-block: 1px solid #354d67; font-size: 13px; line-height: 1.5; }
+.deck-health details { width: 100%; }
+.deck-health summary { color: #f5d78a; cursor: pointer; min-height: 32px; }
+.deck-health ul { max-height: 115px; overflow: auto; margin: 4px 0; padding-left: 20px; color: #f0cad0; }
+.deck-filter-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 0; color: var(--ux-muted); font-size: 13px; }
+.deck-filter-summary button { min-height: 36px; padding: 6px 10px; color: var(--ux-ink); border: 1px solid var(--ux-border); border-radius: 7px; background: #18334f; cursor: pointer; }
+.deck-editor-page-detail .deck-editor-page-detail-copy p { font-size: 14px; line-height: 1.7; color: var(--ux-ink); }
+.deck-editor-page-deck-card-controls button { min-width: 32px; min-height: 32px; }
+.my-decks-starter-list button { white-space: normal; text-align: left; }
+.my-decks-starter-list button span { line-height: 1.6; }
+.phase-rail .phase-owner { color: #fff; font-size: 11px; }
+.phase-rail .player-guide-trigger { font-size: 11px; min-height: 32px; padding: 4px; }
+.result-deck-summary { overflow-wrap: anywhere; }
+.match-animation-controls button, .match-animation-controls label { min-height: 32px; display: inline-flex; align-items: center; }
+.match-animation-controls button:focus-visible, .match-animation-controls select:focus-visible { outline: 3px solid var(--ux-focus); outline-offset: 2px; }
+@container game-shell (max-width: 900px) { .phase-rail .player-guide-trigger { grid-row: 1; } }
+@media (min-width: 821px) and (max-width: 1250px) {
+  .deck-editor-page .deck-editor-page-header { min-width: 0; padding-inline: 16px; gap: 12px; }
+  .deck-editor-page .deck-editor-page-header-center { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .deck-editor-page .deck-editor-page-header-copy { gap: 10px; }
+}
+@media (max-width: 680px) { .main-menu-master-duel .main-menu-md-ai { grid-template-columns: 1fr; } }
