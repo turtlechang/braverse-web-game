@@ -4444,6 +4444,7 @@ export const createBs9041AttackDemoState = (
 /**
  * BS9-041 的合法 own-turn 效果傷害見證。
  *
+ * 正向使用 BS9-030 攻擊後棄置 FLIP；舊負向 P-018 路徑保留作回歸。
  * P-018 的 On Play 效果傷害讓己方持有 BS9-041 的 Cookie 翻牌；這條路徑
  * 讓玩家實際操作 FLIP、抽牌與對手 Cookie 目標，並可在同一張牌上切換
  * active player 驗證 `activated-during-your-turn`。BS9-018 留在己方戰鬥區
@@ -4456,6 +4457,7 @@ export const createBs9041OwnTurnDemoState = (
   if (cardNumber.split('@')[0] !== 'BS9-041') {
     throw new Error(`BS9-041 own-turn fixture requires BS9-041: ${cardNumber}`)
   }
+  if (!negative) return createBs9ShadowMilkDetachedFlipDemoState(cardNumber)
 
   const physical = createBs9PhysicalCardCheckDemoState('BS9-018')
   const trigger = cardCheckOfficialCookie('P-018', 'bs9-bs9-041-trigger')
@@ -5079,6 +5081,10 @@ const createBs9PhysicalCardCheckDemoState = (
     const yellowSupports = Array.from({ length: 3 }, (_, index) =>
       cardCheckOfficialCard('BS8-046', `bs9-bs9-035-yellow-support-${index + 1}`),
     )
+    const hpGainWitness = opponentBattleArea.map((entry, index) => index === 0
+      ? { ...entry, hpCards: [...entry.hpCards.slice(0, -1),
+          cardCheckOfficialCard('BS9-042', 'bs9-bs9-035-opponent-heal-flip')] }
+      : entry)
     const prepared = withCommonPlayers({
       'player-one': {
         hand: [flipCost, ...handFillers],
@@ -5093,7 +5099,8 @@ const createBs9PhysicalCardCheckDemoState = (
         ],
       },
       'player-two': {
-        battleArea: opponentBattleArea,
+        hand: [cardCheckOfficialCard('BS8-046', 'bs9-bs9-035-opponent-heal-cost')],
+        battleArea: options.normalAttack ? opponentBattleArea : hpGainWitness,
         stage: { card: opponentStage, rested: false },
       },
     })
@@ -5147,7 +5154,7 @@ const createBs9PhysicalCardCheckDemoState = (
     // The skill route starts after two real support cards have already been
     // trashed this turn. Keep one additional support rested so the selectable
     // set-active effect has a genuine target in the support area.
-    if (!options.normalAttack) {
+    if (options.preferSkillSurface && !options.normalAttack) {
       const skillSupports = Array.from({ length: 3 }, (_, index) =>
         cardCheckOfficialCard('BS8-021', `bs9-bs9-050-skill-support-${index + 1}`),
       )
@@ -5185,12 +5192,18 @@ const createBs9PhysicalCardCheckDemoState = (
       'player-one': {
         hand: handFillers,
         battleArea: [
-          cardCheckBattleEntry(source, sourceHpCards, 4, true),
+          cardCheckBattleEntry(source, sourceHpCards, 4, Boolean(options.normalAttack)),
           ownCompanionEntry,
         ],
         supportArea: attackSupports.map((card) => ({ card, rested: false })),
       },
       'player-two': { battleArea: opponentBattleArea },
+    })
+    if (!options.normalAttack) return updateDemoPlayer(prepared, 'player-two', {
+      battleArea: opponentBattleArea.map(entry => ({
+        ...entry,
+        hpCards: bs9PhysicalHpCards(entry.card.instanceId, 6, entry.card.energyColor),
+      })),
     })
     return {
       ...prepared,
@@ -6279,6 +6292,9 @@ export const createCardCheckDemoState = (
   const requestedBaseCardNumber = cardNumber.trim().split('@')[0]
   if (requestedBaseCardNumber === 'BS9-018' && options.normalAttack === undefined) {
     return createBs9018KumihoAttackDemoState(cardNumber as Bs9CandidateCardNumber)
+  }
+  if (requestedBaseCardNumber === 'BS9-041' && options.normalAttack === undefined) {
+    return createBs9ShadowMilkDetachedFlipDemoState(cardNumber)
   }
   if (
     isBs9CandidateCardNumber(requestedBaseCardNumber) &&
@@ -9164,6 +9180,9 @@ export const createCardNegativeDemoState = (
   }
   if (cardNumber.split('@')[0] === 'BS9-032') {
     return createBs9032OwnTurnEffectDamageDemoState(cardNumber, true)
+  }
+  if (cardNumber.split('@')[0] === 'BS9-041' && !options.normalAttack) {
+    return createBs9041AttackDemoState(cardNumber as Bs9CandidateCardNumber, false)
   }
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']

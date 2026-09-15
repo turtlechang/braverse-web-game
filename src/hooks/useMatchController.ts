@@ -512,6 +512,12 @@ export function useMatchController(params: {
         : '測試狀態：ST4-020 手牌不足，不能發動。'
     }
     if (testStateConfig?.kind === 'card-check') {
+      if (!testStateConfig.normalAttack && !testStateConfig.preferSkillSurface) {
+        const cardNumber = testStateConfig.cardNumber.split('@')[0]
+        if (cardNumber === 'BS9-035') return 'BS9-035：先棄手牌發動技能，再攻擊 Melon Bun Cookie；切換至防守方操作 BS9-042 補 HP FLIP。重載後不發動技能，可比較補 HP 是否被阻擋。'
+        if (cardNumber === 'BS9-041') return 'BS9-041：支付 BS9-030 攻擊後代價，棄置開心果餅乾並發動 FLIP；抽牌後選對手扣 1 HP。'
+        if (cardNumber === 'BS9-050') return 'BS9-050：支付三綠攻擊，再送兩張支援進棄牌區，使所有對手各受 1 傷害；接著啟動技能，重置一張橫置支援。'
+      }
       return testStateConfig.preferSkillSurface
         ? `測試狀態：卡片技能 strict 檢查 ${testStateConfig.cardNumber}。`
         : `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
@@ -688,6 +694,8 @@ export function useMatchController(params: {
     string | undefined
   >(undefined)
 
+  // BS9-035 lets the user operate both sides of the healing witness, keeping
+  // the opponent's FLIP visible instead of letting AI resolve it silently.
   // The BS9-041 attack fixture intentionally exposes the defender's FLIP
   // response in both A/B routes.  In a normal match the defender owns that
   // response; the localhost fixture switches the local control surface to
@@ -697,6 +705,8 @@ export function useMatchController(params: {
       ? testStateConfig.cardNumber.split('@')[0]
       : undefined
   const viewerPlayerId: PlayerId =
+    (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
+    (testCardBase === 'BS9-035' && isPlayerControllingState(game, 'player-two')) ||
     testStateConfig?.kind === 'bs9-041-attack' ||
     testStateConfig?.kind === 'bs9-018-kumiho' ||
     (testCardBase === 'BS9-082') ||
@@ -1557,6 +1567,8 @@ export function useMatchController(params: {
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
+    (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
+    testCardBase === 'BS9-035' ||
     testStateConfig?.kind === 'bs9-041-attack' ||
     testStateConfig?.kind === 'bs9-018-kumiho' ||
     (testStateConfig?.kind === 'bs9-candidate' &&
@@ -1637,6 +1649,8 @@ export function useMatchController(params: {
             return current
           }
           const preserveHumanDamageDecisions =
+            ((testStateConfig.kind === 'card-check' || testStateConfig.kind === 'card-negative') &&
+              testStateConfig.cardNumber.split('@')[0] === 'BS9-035') ||
             Boolean(current.pendingBattle.effectDamageSequence) ||
             (current.pendingBattle.attackerPlayerId === viewerPlayerId &&
               current.pendingBattle.attackEffects.length > 0)

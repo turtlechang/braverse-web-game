@@ -1,5 +1,41 @@
 # BS9 匯入、逐卡驗收與正式 promotion
 
+## 2026-09-15 手動驗證場景修復
+
+本次依使用者回報修復 BS9-035／041／050 的 `card:` 入口，使用正式卡池資料與原有命令；範圍是 localhost 場景及本機控制，不修改卡文、規則核心或線上協定。基線 HEAD `88dd51e`，保留既有未提交修改，未 commit／push。
+
+### 操作與預期
+
+| 入口 | 操作 | 可見結果 |
+|---|---|---|
+| `?test-state=card:BS9-035` | 棄一張手牌發動 Truth Seeker，支付三黃攻擊 Melon Bun Cookie；場景自動切至防守方，棄牌發動 BS9-042 FLIP；攻擊後效果選略過 | 對手原本 4 HP，三點攻擊後剩 1 HP，牌庫仍 24。重載後不發動技能，重複相同攻擊／FLIP，則剩 2 HP、牌庫 23，證明補 HP 被阻擋 |
+| `?test-state=card:BS9-041` | 場景已透過正式命令完成 BS9-030 登場與攻擊；支付攻擊後代價棄置 BS9-041，發動 FLIP、抽一張，再選對手 | 保持自己的回合；手牌增加一張、己方牌庫 47→46，Peperoncino Cookie HP 3→2 |
+| `?test-state=card-negative:BS9-041` | 自然對手回合的 HP FLIP，發動並抽一張 | 可以抽牌；Hero Cookie 維持 2 HP、Pomegranate Cookie 維持 4 HP，沒有自己回合追加傷害 |
+| `?test-state=card:BS9-050` | 初始技能因支援送棄未達兩張而停用；支付三綠攻擊，攻擊後送兩張支援進棄牌區、選全部對手；再啟動技能選一張橫置支援 | 對手 HP 6／6→3／6→2／5；支援 5→3、棄牌增加兩張；重置一張支援後，剩一張活躍／兩張橫置，技能受每回合一次限制 |
+
+BS9-050 對手以六張 HP 開始，避免第一名對手昏厥插入補位流程，讓本次攻擊後→技能的驗證保持連續。原有 `card-skill:` 技能專用與 `card-attack:` 攻擊後專用場景仍保留。
+
+BS9-035 原本沒有對手補 HP 的實卡見證；新增 BS9-042 HP 與對手棄牌代價。Browser 首次重現發現，切到防守方後 `resolve-battle` 捷徑會略過 FLIP，因此僅此場景改為逐點 `resolve-next-damage`，並停用 AI 接管、依決策所有者切換本機視角。新增 hook 回歸確認 FLIP 保持待處理，不能自行被略過。
+
+### 卡圖與 Browser 證據
+
+2026-09-15 主代理實際目視官方英文基本卡圖：
+
+- [BS9-035 Truthless Recluse](https://cookierunbraverse.com/data/en_storage/y7uAfYrr60xYW2yBa4o3Bw.webp)：Activate、Once Per Turn、棄一張手牌；本回合對手不能經卡牌效果增加 HP。
+- [BS9-030 Shadow Milk Cookie](https://cookierunbraverse.com/data/en_storage/CdFZqA3cNoc6OCoe6_vcdQ.webp)：三黃攻擊後棄一張有 FLIP 的 Cookie，發動該卡 FLIP。
+- [BS9-041 Pistachio Cookie](https://cookierunbraverse.com/data/en_storage/b1y1WA1RkEa3Ou8OqPuUcA.webp)：抽至多一張，Then 若自己回合發動，選至多一名對手造成一點傷害。
+- [BS9-050 Wind Archer Cookie](https://cookierunbraverse.com/data/en_storage/RwYYQACXldPCLvuIOWhK5g.webp)：Activate／Once Per Turn，當回合至少兩張支援送棄後重置至多一張支援；三綠攻擊後送棄兩張支援，全體對手一點傷害。
+
+Codex in-app Browser 於 `localhost:5173` 以 1280×720 與 1164×777 實際點擊。兩尺寸均完成三張卡正向、035 不發動比較、041 非自己回合、050 技能條件未達；平板另確認只選一張支援時「下一步」停用。卡圖、付款與結算畫面已在本次工具輸出目視確認；瀏覽器 error／warn 記錄為空。沒有用直接注入狀態或 force-click 代替操作。
+
+### 驗證邊界
+
+最終完整 `npm.cmd test -- --maxWorkers=1`：333 檔／4,866 項全部通過，exit 0，598.91 秒。執行環境 Windows PowerShell、專案根目錄；完整測試開始後僅更新文件，因此測試對最終程式碼仍有效。`git diff --check` 通過，stage 為空。
+
+相關 `bs9-035`／`bs9-041`／`bs9-050`／`bs9-manual-witness`／`useMatchController-auto-skip-trap` 共 5 檔／22 項通過（exit 0）；build 與修改檔 ESLint 通過。全域 lint exit 1：既有 `.tmp-bs9-030-ui9.mjs` parsing error、`.tmp-probe-deploy.ts` 一項 unused、`scripts/diagnose-lv5-conservatism.ts` 兩項 unused，共四項，未更動。
+
+僅 demo／test-state 局部驗證，尚未證明正式狀態已修改；正式牌組完整對局、線上同步、所有異圖及完整逐卡矩陣未在本次重驗。
+
 ## 範圍與目前結果
 
 使用者授權：官方資料與卡圖確認、候選匯入、新機制／轉接缺口盤點、逐卡支付／目標／Browser 正負驗收、正式 promotion，以及端到端完成後 commit；不含 push。
