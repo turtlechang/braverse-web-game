@@ -1564,7 +1564,11 @@ export interface InspectDeckModalProps {
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
   optionalPick?: boolean
-  onConfirm: (pickedCardIds: string[], restOrder: string[]) => void
+  onConfirm: (
+    pickedCardIds: string[],
+    restOrder: string[],
+    selectedRestDestination?: 'top' | 'bottom',
+  ) => void
 }
 
 const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
@@ -1572,6 +1576,7 @@ const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
   top: '牌庫頂',
   trash: '棄牌區',
   'support-rested': '支援區（橫置）',
+  'top-or-bottom': '牌庫頂或牌庫底',
 }
 
 export function InspectDeckModal({
@@ -1589,6 +1594,9 @@ export function InspectDeckModal({
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [pickedIds, setPickedIds] = useState<string[]>([])
+  const [selectedRestDestination, setSelectedRestDestination] = useState<
+    'top' | 'bottom' | null
+  >(null)
   // restOrder 只保存「未被選走」的卡，順序就是玩家決定的放回順序。
   const [restOrder, setRestOrder] = useState<string[]>(
     () => revealedCards.map((card) => card.instanceId),
@@ -1609,6 +1617,7 @@ export function InspectDeckModal({
   const resetPick = () => {
     setPickedIds([])
     setRestOrder(revealedCards.map((card) => card.instanceId))
+    setSelectedRestDestination(null)
   }
 
   const handlePick = (instanceId: string) => {
@@ -1640,12 +1649,14 @@ export function InspectDeckModal({
     setRestOrder(next)
   }
 
+  const needsRestDestination = restDestination === 'top-or-bottom'
   const canConfirm =
-    !canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0
+    (!canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0) &&
+    (!needsRestDestination || selectedRestDestination !== null)
 
   const handleConfirm = () => {
     if (!canConfirm) return
-    onConfirm(pickedIds, restOrder)
+    onConfirm(pickedIds, restOrder, selectedRestDestination ?? undefined)
   }
 
   if (minimized) {
@@ -1707,19 +1718,47 @@ export function InspectDeckModal({
             沒有符合條件的卡牌，將全部放入{restLabel}。
           </p>
         )}
-        {canPick && (
+        {canPick ? (
           <div className="inspect-deck-grid">
             {revealedCards.map((card) => (
               <button
                 type="button"
                 key={card.instanceId}
                 className={pickedIds.includes(card.instanceId) ? 'is-selected' : ''}
-                disabled={!isPickable(card) || (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)}
+                disabled={
+                  !isPickable(card) ||
+                  (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)
+                }
                 onClick={() => handlePick(card.instanceId)}
                 aria-label={`選擇${card.name}`}
               >
                 <CardFace card={card} />
                 <span>{card.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="inspect-deck-grid" aria-label="已查看的牌庫卡牌">
+            {revealedCards.map((card) => (
+              <div className="inspect-deck-card" key={card.instanceId}>
+                <CardFace card={card} />
+                <span>{card.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {needsRestDestination && (
+          <div className="inspect-deck-placement" aria-label="牌庫放置位置">
+            <strong>選擇檢視的牌要放回哪裡</strong>
+            {(['top', 'bottom'] as const).map((placement) => (
+              <button
+                type="button"
+                key={placement}
+                className={selectedRestDestination === placement ? 'is-selected' : ''}
+                aria-pressed={selectedRestDestination === placement}
+                onClick={() => setSelectedRestDestination(placement)}
+              >
+                {placement === 'top' ? '放回牌庫頂' : '放回牌庫底'}
               </button>
             ))}
           </div>

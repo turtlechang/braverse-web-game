@@ -1538,4 +1538,47 @@ describe('InspectDeckModal', () => {
     await act(() => root.unmount())
     container.remove()
   })
+
+  it('shows a non-pickable revealed card and requires its top-or-bottom placement', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const topCard = revealedCards[0]
+
+    await act(() =>
+      root.render(
+        <InspectDeckModal
+          sourceCardName="Butterfly Lantern"
+          revealedCards={[topCard]}
+          pickCount={0}
+          restDestination="top-or-bottom"
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.inspect-deck-card')).not.toBeNull()
+    expect(container.querySelector('.inspect-deck-card')?.textContent).toContain(topCard.name)
+
+    const confirmBtn = findButtonByText(container, '確認並放回')!
+    expect(confirmBtn.disabled).toBe(true)
+
+    const bottomButton = findButtonByText(container, '放回牌庫底')!
+    expect(bottomButton.getAttribute('aria-pressed')).toBe('false')
+    await act(() => {
+      bottomButton.click()
+    })
+
+    expect(confirmBtn.disabled).toBe(false)
+    expect(bottomButton.getAttribute('aria-pressed')).toBe('true')
+    await act(() => {
+      confirmBtn.click()
+    })
+
+    expect(onConfirm).toHaveBeenCalledWith([], [topCard.instanceId], 'bottom')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })

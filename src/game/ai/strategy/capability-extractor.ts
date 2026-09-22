@@ -229,7 +229,9 @@ const extractEffect = (
           ? 'deck-bottom'
           : effect.restDestination === 'top'
             ? 'deck-top'
-            : 'trash',
+            : effect.restDestination === 'top-or-bottom'
+              ? 'deck'
+              : 'trash',
         tags: ['deck-order'],
       })
       if (effect.pickDestination === 'battle') {

@@ -7512,7 +7512,14 @@ export const createCardCheckDemoState = (
         : card.id === 'BS5-042'
           ? ownBreakArea
         : undefined
-    const itemDeck = card.id === 'BS7-063'
+    const itemDeck = card.id === 'BS10-088'
+      ? [
+          // Butterfly Lantern 的檢視視窗要展示正式卡面，避免把牌庫頂牌
+          // 留成只有 fixture 名稱的 synthetic Item。
+          cardCheckOfficialCard('BS10-001', 'p1-deck-0'),
+          ...deckFiller('p1').slice(1),
+        ]
+      : card.id === 'BS7-063'
       ? [
           arenaSupportCookie('BS7-063-deck-arena', 1, 'green'),
           ...deckFiller('p1').slice(1),

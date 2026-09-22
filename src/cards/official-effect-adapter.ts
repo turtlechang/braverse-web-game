@@ -2517,10 +2517,12 @@ export const convertOfficialCardEffects = (
     'BS10-060': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'support-count-at-least', count: 5 } }],
     'BS10-105': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'refreshed-during-game' } }],
     'BS10-121': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'refreshed-during-game' } }],
-    'BS10-088': [{ kind: 'choose-one', modes: [
-      { label: '將檢視的牌放回牌庫頂', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'top' }, { kind: 'draw-up-to', max: 1 }] },
-      { label: '將檢視的牌放回牌庫底', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'bottom' }, { kind: 'draw-up-to', max: 1 }] },
-    ] }],
+    // BS10-088 必須先讓玩家看到牌庫頂牌，再決定放回牌庫頂或牌庫底；
+    // `top-or-bottom` 讓 inspect-deck modal 保留這張牌並在檢視後收取放置決定。
+    'BS10-088': [
+      { kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'top-or-bottom' },
+      { kind: 'draw-up-to', max: 1 },
+    ],
     'BS10-091': [{ kind: 'return-to-deck-bottom', target: { side: 'self', min: 1, max: 1, maxLevel: 2 } }, { kind: 'draw-up-to', max: 2 }],
     'BS10-092': [{ kind: 'draw-up-to', max: 1 }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'blue' } }],
     // BS10-011 Royal Berry Cookie：本回合對手曾有餅乾昏厥時，啟動後

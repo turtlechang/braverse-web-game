@@ -20,6 +20,8 @@
 
 2026-09-22 **BS10 正式收尾批次**：164 筆候選已完成 strict 轉接並 promote 至 `data/cards/`；正式卡池核對為 1,764 張卡號／1,726 張可轉換，BS10 靜態 contract 164／164 verified。非 EXTRA 卡逐卡 Browser 正向通用矩陣在 1280×720／1164×777 各 135／135、負向各 151／151；BS10-008 另以 1907×863／1164×777 完成獨立 FLIP 正負 16／16。12 張 EXTRA（含變體）各在 1280×720 與 1164×777 完成正負 12／12，並以官方卡圖驗證 024／073。正式牌組 Browser 四尺寸、online modal 兩尺寸與雙瀏覽器好友房完整流程通過；完整線上對局實際完成 108 個命令／14 次付款攻擊，雙端勝負一致，完成房間斷線後終局結果仍保留。完整 Vitest 348 檔／5,022 項全數通過、build 通過；全域 lint 的 4 個既有錯誤仍另列。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
 
+2026-09-22 **BS10-088 Butterfly Lantern 檢視流程修正**：效果改為先顯示正式 BS10-001 Princess Cookie，再由玩家選擇放回牌庫頂／底；補上 `pickCount=0` 的牌面、規則命令驗證與響應式放置選擇排版。BS10-088 實卡規則／modal／既有 inspect-deck 回歸共 4 檔／71 項通過，Browser 以 1280×777／1164×777 驗證頂／底與後續抽牌，負向路徑維持不可使用。
+
 2026-09-14 選牌提示框改善：候選卡可就地展開技能卡文，選取狀態與棄牌代價尚缺張數直接顯示，減少查看卡文時離開操作流程。
 
 2026-09-14 開始 BS10：新增官方英文候選匯入與缺口盤點，維持 inventory 隔離；依使用者指定由 Luna 實作、Astra 複核，首批5個基礎卡號／6筆通過卡圖、規則及36案候選Browser驗收，接續006～010。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
@@ -208,7 +210,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 - 技能提示框已加入候選卡文展開、選取／取消狀態及付款前提示；隱藏手牌維持匿名且不提供卡文。
 
-BS10 已正式完成本批驗收並 promote：`data/cards/` 現有 164 筆（123 個基礎卡號、41 筆變體），`check:card-pool`、`validate:cards` 與 strict contract 164／164 verified 通過；BS10 盤點為主效果 98 supported／25 no-effect-text／0 unsupported、能力 98 converted／0 pending、攻擊 Then 23／23。非 EXTRA 逐卡 Browser 雙尺寸正向 135／135、負向 151／151；BS10-008 另有獨立 FLIP 矩陣 16／16，12 張 EXTRA 各在 1280×720 與 1164×777 完成正負 12／12，含 024／073 官方卡圖核對。正式牌組四尺寸、online modal 兩尺寸與雙瀏覽器好友房完整流程通過；完整線上對局完成 108 個命令／14 次付款攻擊，雙端勝負一致，完成房間斷線後終局結果保留。完整 Vitest 348 檔／5,022 項全數通過、build 通過；全域 lint 四個既有錯誤另列。[驗證與範圍](docs/bs10-progress-2026-09-14.md)。
+BS10 已正式完成本批驗收並 promote：`data/cards/` 現有 164 筆（123 個基礎卡號、41 筆變體），`check:card-pool`、`validate:cards` 與 strict contract 164／164 verified 通過；BS10 盤點為主效果 98 supported／25 no-effect-text／0 unsupported、能力 98 converted／0 pending、攻擊 Then 23／23。非 EXTRA 逐卡 Browser 雙尺寸正向 135／135、負向 151／151；BS10-008 另有獨立 FLIP 矩陣 16／16，12 張 EXTRA 各在 1280×720 與 1164×777 完成正負 12／12，含 024／073 官方卡圖核對。正式牌組四尺寸、online modal 兩尺寸與雙瀏覽器好友房完整流程通過；完整線上對局完成 108 個命令／14 次付款攻擊，雙端勝負一致，完成房間斷線後終局結果保留。BS10-088 另已補上先檢視正式牌面、頂／底選擇與後續抽牌 Browser 證據。完整 Vitest 348 檔／5,022 項全數通過、build 通過；全域 lint 四個既有錯誤另列。[驗證與範圍](docs/bs10-progress-2026-09-14.md)。
 
 2026-09-14 **對戰桌視覺整理**：正式本機／線上共用低對比深藍桌墊、細邊框與縮小區域標籤，主要回合操作改為金色；桌機手牌保留獨立區域，選牌抬升不遮支援，支援張數留在區域內。卡牌快速預覽加寬至 320–380px，卡圖最大 300px、卡名 18px、效果文字 14px。提交前完整 Vitest 327 檔／4,802 項與 build 通過，全域 lint 仍有 4 個無關既有錯誤。驗證與缺圖限制見 [對戰桌整理](docs/ui-ux-redesign-plan.md#對戰桌視覺整理2026-09-14)。
 
@@ -598,6 +600,7 @@ BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與�
 | 日期 | 概要 |
 | --- | --- |
 | 2026-09-22 | BS10 正式收尾批次：候選 promote 至正式卡池；非 EXTRA Browser 正向135／135、負向151／151，BS10-008 FLIP 16／16，12 張 EXTRA 兩尺寸各正負12／12；正式牌組四尺寸、online modal 兩尺寸、好友房完整對局108命令／14次攻擊、完整 Vitest 348 檔／5,022 項與 build 通過。 |
+| 2026-09-22 | BS10-088 Butterfly Lantern：先顯示正式 BS10-001 Princess Cookie，再選擇牌庫頂／底；補 `pickCount=0` modal、規則驗證與響應式排版，4 檔／71 項 targeted 與兩尺寸 Browser 實卡流程通過。 |
 | 2026-09-21 | BS10 Luna批次整合：主效果98 supported／25 no-effect-text／0 unsupported，能力98 converted／0 pending，攻擊 Then 21／23，strict 158 verified／0 needs-review／6 blocked；受影響5檔／357項、完整Vitest 348檔／5,006項、build、scoped lint通過，Browser仍僅前十張88案。 |
 | 2026-09-21 | BS10-024／073 Awaken 收尾與語意修正：兩張 EXTRA（含異圖）補上 HP+1／同名本回合 Awaken、024 HP≤3 禁攻擊與 2R 攻擊 Then、073 1G／對手支援至少6張 On Play 與 Cookie 回手攻擊 Then；並修正 BS10-015／035／038／042 的代價、補 HP、Then 目標與條件。strict 164 verified／0 needs-review／0 blocked，攻擊 Then 23／23，受影響3檔／77項、完整Vitest 348檔／5,008項（475.29秒）、build、scoped lint通過，Browser仍88案，候選仍 inventory／converted=0。024／073 圖檔與 API 候選文字仍有差異，正式 promote 前須再核對。 |
 | 2026-09-21 | BS10第二批候選Browser累計52案：006／007核心、008 FLIP、009 HP代價與006／007／010普通攻擊均完成雙尺寸正負路徑；第三批011／012／025完成靜態 exact adapter；set/reduce與昏厥續接另有受影響回歸，正式牌組／online與剩餘卡號仍待完成。 |

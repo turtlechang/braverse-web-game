@@ -625,9 +625,15 @@ export const handleAiPendingDecision = (
         playerId,
         pickedCardIds: pickedIds,
         restOrder: restIds,
+        ...(pendingDecision.restDestination === 'top-or-bottom'
+          ? { restDestination: 'top' as const }
+          : {}),
       }),
       action: 'resolve-inspect-deck',
-      description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+      description:
+        pendingDecision.restDestination === 'top-or-bottom'
+          ? `${state.players[playerId].name}將檢視牌放回牌庫頂。`
+          : `${state.players[playerId].name}從檢視牌中選取卡片。`,
     }, 'multi-stage', pendingDecision.sourceInstanceId)
   }
 

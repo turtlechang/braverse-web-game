@@ -413,6 +413,8 @@ const commandShapes = {
   'resolve-opponent-rest-support': { requiredStringArrays: ['cardIds'] },
   'resolve-inspect-deck': {
     requiredStringArrays: ['pickedCardIds', 'restOrder'],
+    optionalStrings: ['restDestination'],
+    enumFields: { restDestination: ['top', 'bottom'] },
   },
   'resolve-optional-cost-attack': {
     optionalStringArrays: [

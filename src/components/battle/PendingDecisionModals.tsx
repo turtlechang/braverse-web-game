@@ -626,21 +626,28 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           filterType={pendingInspect.filterType}
           filterKeyword={pendingInspect.filterKeyword}
           optionalPick={pendingInspect.optionalPick}
-          onConfirm={(pickedCardIds, restOrder) => {
+          onConfirm={(pickedCardIds, restOrder, selectedRestDestination) => {
+            const effectiveRestDestination =
+              selectedRestDestination ?? pendingInspect.restDestination
             const restLabel =
-              pendingInspect.restDestination === 'trash'
+              effectiveRestDestination === 'trash'
                 ? '棄牌區'
-                : pendingInspect.restDestination === 'top'
+                : effectiveRestDestination === 'top'
                   ? '牌庫頂'
-                  : pendingInspect.restDestination === 'support-rested'
+                  : effectiveRestDestination === 'support-rested'
                     ? '支援區（橫置）'
-                    : '牌庫底'
+                    : effectiveRestDestination === 'top-or-bottom'
+                      ? '牌庫頂或牌庫底'
+                      : '牌庫底'
             match.dispatch(
               {
                 kind: 'resolve-inspect-deck',
                 playerId: match.viewerPlayerId,
                 pickedCardIds,
                 restOrder,
+                ...(selectedRestDestination
+                  ? { restDestination: selectedRestDestination }
+                  : {}),
               },
                   pickedCardIds.length > 0
                     ? `已選擇卡牌${

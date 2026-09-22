@@ -297,6 +297,8 @@ export interface ResolveInspectDeckCommand {
   playerId: PlayerId
   pickedCardIds: string[]
   restOrder: string[]
+  /** BS10-088：檢視後選擇將未選卡放回牌庫頂或牌庫底。 */
+  restDestination?: 'top' | 'bottom'
 }
 
 export interface ResolveRevealTopDeckCommand {
@@ -1321,7 +1323,13 @@ const applyPendingDecisionCommand = (
     case 'resolve-opponent-rest-support':
       return resolveOpponentRestSupport(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
-      return resolveInspectDeck(state, command.playerId, command.pickedCardIds, command.restOrder)
+      return resolveInspectDeck(
+        state,
+        command.playerId,
+        command.pickedCardIds,
+        command.restOrder,
+        command.restDestination,
+      )
     case 'resolve-reveal-top-deck': {
       const pending = state.pendingRevealTopDeck
       if (!pending || pending.playerId !== command.playerId) {

@@ -1671,8 +1671,16 @@ export interface EquippedToHpEffect {
   condition?: EffectCondition
 }
 
-/** 未被選走的檢視卡去向；`bottom`／`top` 由玩家決定順序，`trash` 直接棄置。 */
-export type InspectDeckRestDestination = 'bottom' | 'top' | 'trash' | 'support-rested'
+/**
+ * 未被選走的檢視卡去向；`bottom`／`top` 由玩家決定順序，`trash` 直接棄置，
+ * `top-or-bottom` 代表先揭示後由玩家決定單一放置位置。
+ */
+export type InspectDeckRestDestination =
+  | 'bottom'
+  | 'top'
+  | 'trash'
+  | 'support-rested'
+  | 'top-or-bottom'
 
 export interface InspectDeckEffect {
   kind: 'inspect-deck'

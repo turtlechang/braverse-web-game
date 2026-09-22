@@ -221,11 +221,25 @@ export const resolveInspectDeck = (
   playerId: PlayerId,
   pickedCardIds: string[],
   restOrder: string[],
+  selectedRestDestination?: 'top' | 'bottom',
 ): GameState => {
   const pending = state.pendingInspectDeck
   if (!pending || pending.playerId !== playerId) {
     throw new GameRuleError('目前沒有待處理的牌庫檢視效果。')
   }
+
+  if (pending.restDestination === 'top-or-bottom') {
+    if (selectedRestDestination !== 'top' && selectedRestDestination !== 'bottom') {
+      throw new GameRuleError('檢視的牌必須選擇放回牌庫頂或牌庫底。')
+    }
+  } else if (selectedRestDestination !== undefined) {
+    throw new GameRuleError('目前的牌庫檢視效果不接受額外的放置位置。')
+  }
+
+  const resolvedRestDestination =
+    pending.restDestination === 'top-or-bottom'
+      ? selectedRestDestination!
+      : pending.restDestination ?? 'bottom'
 
   const revealedIds = pending.revealedCards.map((card) => card.instanceId)
 
@@ -338,11 +352,11 @@ export const resolveInspectDeck = (
   }
 
   player =
-    pending.restDestination === 'trash'
+    resolvedRestDestination === 'trash'
       ? { ...player, discardPile: [...player.discardPile, ...restCards] }
-      : pending.restDestination === 'top'
+      : resolvedRestDestination === 'top'
         ? { ...player, deck: [...restCards, ...player.deck] }
-        : pending.restDestination === 'support-rested'
+        : resolvedRestDestination === 'support-rested'
           ? {
               ...player,
               supportArea: [

@@ -104,7 +104,7 @@
 | 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`energyCost` 需先由活躍支援卡支付；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
 | 對手棄牌區→對手休息區 | `opponent-trash-to-break` | 從對手棄牌區選餅乾放進**對手**休息區；會推進對手 break 等級，因此走與其他休息區移動相同的勝負判定（BS3-028） |
 | 對手休息區→棄牌區→休息區 | `opponent-break-to-trash-then-battle-to-break` | 先強制將對手休息區 1 張餅乾放進棄牌區，記錄該卡 LV；再可選擇對手戰鬥區中剛好高 1 LV 的餅乾放進對手休息區。第二段允許略過，且仍受「對手效果不能移動戰鬥區餅乾」保護（BS6-039） |
-| 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序），`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114） |
+| 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序）；`top-or-bottom` 會先顯示檢視卡，再由玩家決定放回牌庫頂或牌庫底。`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114、BS10-088） |
 
 | 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068、BS9-036）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走代價／目標流程。每個模式先由規則層判定是否可支付，不可支付者在本機與線上 UI 均停用且指令層拒絕；若只剩一個可支付模式，玩家仍須明確確認。`resolve-choose-one`／`begin-*` 的 `chooseOneModes` 與 AI 共用同一份展開邏輯。 |
 | 休息區→戰鬥區（來源自己） | `break-source-to-battle` | 讓技能來源自己從休息區登場，HP 卡數固定為 `hpCount`（不是卡面 HP），照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定；戰鬥區已滿（2 隻）時執行器直接丟錯，`canActivateCookieSkill` 會提前擋下（BS3-025） |
