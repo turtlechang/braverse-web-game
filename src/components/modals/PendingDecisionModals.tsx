@@ -847,6 +847,7 @@ export interface OptionalCostAttackModalProps {
   unmetConditionWarning?: string | null
   /** 支援區沒有足夠的合法能量支付攻擊後效果時的提示。 */
   paymentUnavailableWarning?: string | null
+  deckToTrashAvailable?: boolean
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -885,6 +886,7 @@ export function OptionalCostAttackModal({
   embedded = false,
   unmetConditionWarning = null,
   paymentUnavailableWarning = null,
+  deckToTrashAvailable = true,
 }: OptionalCostAttackModalProps) {
   const isAbilityResolution = resolution === 'ability'
   const sourceEnergyTotal = Object.values(sourceEnergy ?? {}).reduce(
@@ -927,6 +929,7 @@ export function OptionalCostAttackModal({
     hpToTrashCandidates.length >= hpToTrashCost &&
     hpToHandCandidates.length >= hpToHandCost &&
     trashToDeckCandidates.length >= trashToDeckCost &&
+    deckToTrashAvailable &&
     (!needsTarget || targetCandidates.length >= targetMin)
 
   const toggleDiscard = useCallback((instanceId: string) => {

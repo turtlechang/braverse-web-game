@@ -24,7 +24,14 @@ export type CardColor = EnergyColor
 
 export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
-export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block' | 'opponent-attack'
+export type SkillTrigger =
+  | 'activate'
+  | 'on-play'
+  | 'passive'
+  | 'block'
+  | 'opponent-attack'
+  /** Triggered whenever the Cookie leaves its battle area directly into trash. */
+  | 'departure'
 
 /** 回合結束效果是在來源玩家自己的回合，或對手的回合結束時觸發。 */
 export type EndPhaseScope = 'your-turn' | 'opponent-turn'
@@ -74,6 +81,8 @@ export interface CardSkill {
   onPlayFromBreakArea?: boolean
   fromTrashArea?: boolean
   fromSupportArea?: boolean
+  /** Dynamic restriction evaluated while this Cookie is in the battle area. */
+  cannotAttackCondition?: EffectCondition
 }
 
 export interface CardAbility {
@@ -134,7 +143,7 @@ export interface StageAbility extends CardAbility {
   ownerIndependent?: boolean
 }
 
-export type CardKeyword = 'ancient' | 'soul-jam' | 'dragon' | 'arena'
+export type CardKeyword = 'ancient' | 'soul-jam' | 'dragon' | 'arena' | 'beast'
 
 export interface DistinctNamedKeywordRequirement {
   keyword: CardKeyword
@@ -241,7 +250,10 @@ export interface ExtraDeckCard {
    */
   awakenRequirement?: {
     targetName: string
-    playedFrom: 'break' | 'trash'
+    /** Optional source-area restriction; omitted when the card accepts any battle-area copy. */
+    playedFrom?: 'break' | 'trash'
+    /** Optional printed maximum remaining HP for the Awaken target. */
+    maxRemainingHp?: number
   }
 }
 
@@ -351,6 +363,8 @@ export interface SupportCountAtLeastCondition {
   count: number
   /** Optional official keyword filter (for example Arena cards). */
   keyword?: CardKeyword
+  /** Only count rested support cards when the card text says "rested cards". */
+  restedOnly?: boolean
 }
 
 /** 支援區指定顏色張數達到門檻（BS4-048 的「support area contains 7 {G} cards or more」）。 */
@@ -375,6 +389,12 @@ export interface OpponentSupportCountAtLeastCondition {
 export interface ActiveSupportCountAtLeastCondition {
   kind: 'active-support-count-at-least'
   count: number
+}
+
+/** 指定一方的支援區全部為休息狀態（BS10-072）。空支援區視為成立。 */
+export interface AllSupportRestedCondition {
+  kind: 'all-support-rested'
+  side: EffectTargetSide
 }
 
 export interface TrashColorCountAtLeastCondition {
@@ -502,10 +522,17 @@ export interface ActivatedDuringYourTurnCondition {
   kind: 'activated-during-your-turn'
 }
 
+/** The source player has completed a deck Refresh earlier in this game. */
+export interface RefreshedDuringGameCondition {
+  kind: 'refreshed-during-game'
+}
+
 export interface BreakAreaCardCountAtLeastCondition {
   kind: 'break-area-card-count-at-least'
   side: EffectTargetSide
   count: number
+  /** 官方文字可限定休息區餅乾顏色（例如 BS10-025 的黃色餅乾）。 */
+  color?: EnergyColor
   keyword?: CardKeyword
   minLevel?: number
   maxLevel?: number
@@ -661,6 +688,11 @@ export interface PreviousEffectTargetRemainingHpCondition {
   remainingHp: number
 }
 
+/** 前一步選中的餅乾在結算時仍高於其原始 HP（BS10-038）。 */
+export interface PreviousEffectTargetHpAboveOriginalCondition {
+  kind: 'previous-effect-target-hp-above-original'
+}
+
 /** 本次攻擊宣告的目標等級達到上限（BS4-009 的「if the attacked Cookie is LV.2 or lower」）。 */
 export interface AttackTargetLevelAtMostCondition {
   kind: 'attack-target-level-at-most'
@@ -775,6 +807,7 @@ export type EffectCondition =
   | SupportCountAtMostCondition
   | OpponentSupportCountAtLeastCondition
   | ActiveSupportCountAtLeastCondition
+  | AllSupportRestedCondition
   | TrashColorCountAtLeastCondition
   | TrashKeywordCountAtLeastCondition
   | HandCountAtMostCondition
@@ -812,6 +845,7 @@ export type EffectCondition =
   | CookiePlayedFromTrashThisTurnCondition
   | CookiePlayedFromBreakThisTurnCondition
   | PreviousEffectTargetRemainingHpCondition
+  | PreviousEffectTargetHpAboveOriginalCondition
   | AttackTargetLevelAtMostCondition
   | AttackTargetLevelEqualsCondition
   | SupportKeywordAtLeastCondition
@@ -830,6 +864,7 @@ export type EffectCondition =
   | ArenaCookieDealtEffectDamageThisTurnCondition
   | BirthdayCondition
   | ActivatedDuringYourTurnCondition
+  | RefreshedDuringGameCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -938,6 +973,8 @@ export interface ModifyAttackCostEffect {
   kind: 'modify-attack-cost'
   target: EffectTargetSelector
   energyCost: EnergyCost
+  /** Legacy defaults to replacement; reduce applies a per-color decrement. */
+  operation?: 'set' | 'reduce' | 'increase'
   duration: EffectDuration
   condition?: EffectCondition
 }
@@ -1109,6 +1146,9 @@ export interface DisableTrapEffect {
 /** While the source is in battle, opponents cannot move Cookies out of battle by effects. */
 export interface PreventOpponentBattleMovementEffect {
   kind: 'prevent-opponent-battle-movement'
+  /** 只保護技能來源這張餅乾；未指定時維持舊版全戰鬥區封鎖。 */
+  sourceOnly?: boolean
+  condition?: EffectCondition
 }
 
 /** Your Cookies take no damage from your opponent while this passive is active (BS9-018). */
@@ -1218,6 +1258,8 @@ export interface HandToSupportEffect {
   amount: number
   rested?: boolean
   energyColor?: EnergyColor
+  /** Restrict the hand card to a printed card name. */
+  cardName?: string
   /** Restrict the hand cards by an official keyword (for example Arena). */
   keyword?: CardKeyword
   optional?: boolean
@@ -1759,6 +1801,8 @@ export interface TrashToSupportEffect {
   rested?: boolean
   optional?: boolean
   energyColor?: EnergyColor
+  /** Restrict the discard-pile card to a printed card name. */
+  cardName?: string
   minLevel?: number
   maxLevel?: number
   condition?: EffectCondition
@@ -2117,6 +2161,13 @@ export type AbilityCost = EnergyCost & {
   /** 限定棄置的手牌不是 Cookie，例如 BS8-122 的「non-Cookie card」。 */
   discardHandNonCookie?: boolean
   supportToTrash?: number
+  /**
+   * 從自己牌庫頂磨指定張數進棄牌區作為代價（例如 BS10-121）。
+   * 這是自動支付的公開牌庫代價，不需要玩家挑選卡牌。
+   */
+  deckToTrash?: {
+    amount: number
+  }
   /** 限定送入棄牌區的支援卡關鍵字（例如 BS7-049／051 的 Arena）。 */
   supportToTrashKeyword?: CardKeyword
   supportToHand?: number
@@ -2320,6 +2371,11 @@ export type TrapCondition =
       kind: 'support-count-less-than-opponent'
       difference: number
     }
+  | {
+      /** 陷阱文字檢查對手支援區至少達指定張數（BS10-063）。 */
+      kind: 'opponent-support-count-at-least'
+      count: number
+    }
 
 /** 依對戰當下狀態取代陷阱啟動費用（例如 BS8-074 的綠色費用減少）。 */
 export interface ConditionalTrapCost {
@@ -2354,6 +2410,8 @@ export interface AttackCostModifier {
   sourceInstanceId: string
   targetInstanceId: string
   energyCost: EnergyCost
+  /** Legacy modifiers omit this and therefore replace the current cost. */
+  operation?: 'set' | 'reduce' | 'increase'
   expiresAfterTurn: number | null
 }
 
@@ -2709,6 +2767,8 @@ export interface GameState {
   } | null
   effectDamagePreventedUntilTurn?: Record<string, number>
   cookiesFaintedThisTurn?: Record<PlayerId, number>
+  /** Whether each player has completed at least one deck Refresh this game. */
+  refreshedDuringGame?: Partial<Record<PlayerId, boolean>>
   /** 本回合昏厥餅乾的顏色／等級快照，供跨回合條件使用。 */
   cookiesFaintedThisTurnDetails?: Partial<Record<PlayerId, FaintedCookieRecord[]>>
   /** 最近結束的對手回合中昏厥餅乾快照（BS9-002）。 */
@@ -3069,5 +3129,4 @@ export interface PlayerSetup {
   /** Optional to preserve BS1–BS7 setup fixtures and replay snapshots. */
   extraDeck?: ExtraDeckCard[]
 }
-
 export type Shuffle = (cards: GameCard[]) => GameCard[]

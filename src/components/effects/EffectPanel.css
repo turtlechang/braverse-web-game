@@ -347,6 +347,15 @@
   width: 48px;
 }
 
+.effect-candidate-entry { min-width: 0; }
+.effect-candidate-status { grid-column: 2; color: inherit; }
+.effect-candidate-details { padding: 8px 10px; color: #d7e9ff; font-size: 0.8rem; line-height: 1.6; }
+.effect-candidate-details summary { cursor: pointer; color: #9aedff; }
+.effect-candidate-details[open] { background: rgba(0, 0, 0, 0.2); border-radius: 5px; }
+.effect-panel .effect-selection-instruction { color: #eef8ff; font-size: 0.9rem; line-height: 1.5; }
+.effect-panel .effect-candidates button:focus-visible,
+.effect-candidate-details summary:focus-visible { outline: 2px solid #ffe66e; outline-offset: 3px; }
+
 .effect-panel .effect-candidates button span {
   min-width: 0;
   overflow-wrap: anywhere;

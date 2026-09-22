@@ -303,8 +303,11 @@ const getAwakenTarget = (
     (target) =>
       target.card.extraDeckOrigin !== 'awakened' &&
       target.card.name === requirement.targetName &&
-      target.enteredFrom === requirement.playedFrom &&
-      target.enteredTurn === state.turnNumber,
+      (requirement.playedFrom === undefined ||
+        target.enteredFrom === requirement.playedFrom) &&
+      target.enteredTurn === state.turnNumber &&
+      (requirement.maxRemainingHp === undefined ||
+        target.hpCards.length <= requirement.maxRemainingHp),
   )
 }
 

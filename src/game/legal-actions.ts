@@ -2,7 +2,7 @@ import { getPendingDecision } from './commands'
 import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
 import { canPlayExtraDeckCookie } from './actions'
-import { getForcedAttackTargetId } from './battle'
+import { getForcedAttackTargetId, isCookieAttackRestricted } from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
@@ -137,7 +137,11 @@ export const getLegalTurnCommands = (
       const opponent = state.players[getOpponentId(playerId)]
       const forcedTargetId = getForcedAttackTargetId(state, playerId)
       for (const attacker of player.battleArea) {
-        if (attacker.rested || attacker.card.nonAttackable) continue
+        if (
+          attacker.rested ||
+          attacker.card.nonAttackable ||
+          isCookieAttackRestricted(state, playerId, attacker)
+        ) continue
         if (
           state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
           state.turnNumber

@@ -119,7 +119,8 @@ try {
     const standardType = editor.locator('[aria-label="卡牌類型"]')
     await standardType.selectOption('extra')
     const formalExtraCards = editor.locator('.deck-editor-page-pool-card-button')
-    assert.equal(await formalExtraCards.count(), 26)
+    // BS8 (15) + BS9 (11) + promoted BS10 (12) formal EXTRA cards.
+    assert.equal(await formalExtraCards.count(), 38)
     await formalExtraCards.first().click()
     assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /1\s*\/\s*6/)
     assert.equal((await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(), '0')

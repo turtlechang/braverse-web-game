@@ -12,6 +12,18 @@
 
 2026-09-15 **UI／UX 入門與深藍精修**：新增可跳過／重讀的操作教學與正式紅色起始牌組練習，補 AI 難度說明、牌組頂部合法性檢查、篩選清除、回合所有者、提示音與結果摘要；保留既有規則、卡圖及收藏。詳見 [盤點與驗證](docs/ui-ux-redesign-plan.md#2026-09-15-正式流程盤點與深藍介面精修)。
 
+2026-09-21 **BS10 第六～第九批靜態轉接**：補上 021／045／049／070／094／107／109／110／119／122 與 15 張攻擊 Then 的 exact adapter、Refresh／離場／攻擊費用／支援條件共用規則與 targeted 回歸；目前主效果 65 supported、58 無效果文字、0 unsupported，能力 65 converted／0 pending，攻擊 Then 18／18，strict 127／31／6。候選仍 inventory，新增卡片尚未 Browser／正式／online 驗收。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
+
+2026-09-21 **BS10 Luna 批次整合**：非 Cookie、攻擊 Then、062／063／067／068 共用機制，以及 042／045／116／048／098／123 的合約與 EXTRA 證據已整合；目前主效果 98 supported、25 無效果文字、0 unsupported，能力 98 converted／0 pending，攻擊 Then 21／23，strict 158／0／6。受影響回歸5檔／357項、完整 Vitest 348檔／5,006項、build、scoped lint通過；Browser 仍只有前十張的88案，024／073仍因資料缺口 blocked，候選維持 inventory／converted=0。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
+
+2026-09-21 **BS10-024／073 Awaken 收尾**：補上兩張 EXTRA（含異圖）的 `awakenHpBonus: 1`、同名本回合 Awaken、024 的 HP≤3 禁攻擊與 2R 攻擊 Then，以及 073 的 1G／對手支援至少6張 On Play 與支援 Cookie 回手攻擊 Then；並修正 BS10-015／035／038／042 的代價、補 HP、Then 目標與條件語意。最新主效果 98／25／0、能力 98／0、攻擊 Then 23／23，strict 164／0／0；3檔／77項 targeted、完整 Vitest 348檔／5,008項（475.29秒）、build、修改檔 scoped lint通過。候選仍 inventory／converted=0，Browser 維持既有88案，正式／online與新增卡逐卡 Browser仍待驗收；024／073 圖檔與 API 候選文字仍有文案差異，正式 promote 前須再核對。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
+
+2026-09-22 **BS10 正式收尾批次**：164 筆候選已完成 strict 轉接並 promote 至 `data/cards/`；正式卡池核對為 1,764 張卡號／1,726 張可轉換，BS10 靜態 contract 164／164 verified。非 EXTRA 卡逐卡 Browser 正向通用矩陣在 1280×720／1164×777 各 135／135、負向各 151／151；BS10-008 另以 1907×863／1164×777 完成獨立 FLIP 正負 16／16。12 張 EXTRA（含變體）各在 1280×720 與 1164×777 完成正負 12／12，並以官方卡圖驗證 024／073。正式牌組 Browser 四尺寸、online modal 兩尺寸與雙瀏覽器好友房完整流程通過；完整線上對局實際完成 108 個命令／14 次付款攻擊，雙端勝負一致，完成房間斷線後終局結果仍保留。完整 Vitest 348 檔／5,022 項全數通過、build 通過；全域 lint 的 4 個既有錯誤仍另列。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
+
+2026-09-14 選牌提示框改善：候選卡可就地展開技能卡文，選取狀態與棄牌代價尚缺張數直接顯示，減少查看卡文時離開操作流程。
+
+2026-09-14 開始 BS10：新增官方英文候選匯入與缺口盤點，維持 inventory 隔離；依使用者指定由 Luna 實作、Astra 複核，首批5個基礎卡號／6筆通過卡圖、規則及36案候選Browser驗收，接續006～010。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
+
 2026-09-14 **對戰桌視覺整理**：正式本機／線上共用低對比深藍桌墊、細邊框與縮小區域標籤，主要回合操作改為金色；桌機手牌保留獨立區域，選牌抬升不遮支援，支援張數留在區域內。卡牌快速預覽加寬至 320–380px，卡圖最大 300px、卡名 18px、效果文字 14px。提交前完整 Vitest 327 檔／4,802 項與 build 通過，全域 lint 仍有 4 個無關既有錯誤。驗證與缺圖限制見 [對戰桌整理](docs/ui-ux-redesign-plan.md#對戰桌視覺整理2026-09-14)。
 
 2026-09-14 **全流程對戰動畫**：AI／線上共用指令呈現事件、卡牌移動與支援／攻擊軌跡、HP／FLIP、昏厥與勝負，提供標準／快速／減少動畫及略過；先後攻確認前不顯示手牌，確認後逐張發牌，發完再開啟調度；開局面板採四步進度、手勢選項與深色手牌展示；暫停面板及工具選單統一深色風格，支援鍵盤操作與收合問題回報。主選單更新為左右雙欄對戰大廳，整合牌組／AI 設定、金色對戰入口與牌背載入替代。完整 Vitest 327 檔／4,802 項、AI Browser 及桌機／平板主選單操作通過；全域 lint 仍有無關未追蹤檔的 4 個錯誤。動畫不改變規則，事件卡面與私密 ID 依觀看者遮罩。驗證範圍與環境限制見 [全流程動畫](docs/ui-ux-redesign-plan.md#2026-09-14-全流程動畫)。
@@ -193,6 +205,10 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - 攻擊付款預覽遮擋：相關 2 檔／15 項、build、修改檔 lint 通過；詳見 [修復驗證](docs/ui-ux-redesign-plan.md#2026-09-15-攻擊付款預覽遮擋修復)。
 
 - **2026-09-15 UI／UX**：完整 Vitest 332 檔／4,859 項、最後受影響回歸 3 檔／33 項、build、修改檔 lint、AI Browser、三尺寸組牌與好友房核心通過。有攻擊好友房完整對局 99 次操作／11 次攻擊、雙方結果一致；另有 149 次命令的 Refresh 決勝路徑。全域 lint 仍有 4 個無關既有錯誤；逐卡 FLIP 矩陣及真機觸控未驗收。來源及重跑邊界見 [本批報告](docs/ui-ux-redesign-plan.md#2026-09-15-正式流程盤點與深藍介面精修)。
+
+- 技能提示框已加入候選卡文展開、選取／取消狀態及付款前提示；隱藏手牌維持匿名且不提供卡文。
+
+BS10 已正式完成本批驗收並 promote：`data/cards/` 現有 164 筆（123 個基礎卡號、41 筆變體），`check:card-pool`、`validate:cards` 與 strict contract 164／164 verified 通過；BS10 盤點為主效果 98 supported／25 no-effect-text／0 unsupported、能力 98 converted／0 pending、攻擊 Then 23／23。非 EXTRA 逐卡 Browser 雙尺寸正向 135／135、負向 151／151；BS10-008 另有獨立 FLIP 矩陣 16／16，12 張 EXTRA 各在 1280×720 與 1164×777 完成正負 12／12，含 024／073 官方卡圖核對。正式牌組四尺寸、online modal 兩尺寸與雙瀏覽器好友房完整流程通過；完整線上對局完成 108 個命令／14 次付款攻擊，雙端勝負一致，完成房間斷線後終局結果保留。完整 Vitest 348 檔／5,022 項全數通過、build 通過；全域 lint 四個既有錯誤另列。[驗證與範圍](docs/bs10-progress-2026-09-14.md)。
 
 2026-09-14 **對戰桌視覺整理**：正式本機／線上共用低對比深藍桌墊、細邊框與縮小區域標籤，主要回合操作改為金色；桌機手牌保留獨立區域，選牌抬升不遮支援，支援張數留在區域內。卡牌快速預覽加寬至 320–380px，卡圖最大 300px、卡名 18px、效果文字 14px。提交前完整 Vitest 327 檔／4,802 項與 build 通過，全域 lint 仍有 4 個無關既有錯誤。驗證與缺圖限制見 [對戰桌整理](docs/ui-ux-redesign-plan.md#對戰桌視覺整理2026-09-14)。
 
@@ -382,7 +398,7 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
 - **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。BS8 候選 staging 的卡池可切換 `EXTRA` 類型搜尋 EXTRA 餅乾，選取後會在主要牌組捲動區下方以實際卡面、卡號、張數與加減控制呈現六槽額外牌組；Standard 模式仍不提供 EXTRA 選項。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），Lv.5 為可選的實驗 challenger；所有等級只讀 `PlayerView` 保證資訊邊界。Lv.5 已加入通用 ComboPlan、同 plan 跨步記憶、資源預留及牌庫耗盡／Refresh／空場敗北預測，但全 corpus 尚未證明勝率優於 Lv.4。效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。Lv.5 戰鬥區已有一張餅乾時預設保留第二張手牌，公開 Combo／斬殺／有效 OnPlay／補防例外才允許第二張；Lv.2–4 維持原有手牌品質與 FLIP 保留策略。等級 benchmark 強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率；見 [docs/ai-levels.md](docs/ai-levels.md)。
-- **卡牌池**：BS1～BS9、五色起始牌組與 P-0XX 特典卡均已匯入正式 `data/cards/`；正式卡池共 17 個資料檔、1,600 種卡號（1,574 張可轉接記錄，另 26 筆 EXTRA 保留於 registry），其中 BS7 143 筆、BS8 171 筆、BS9 185 筆與 P-0XX 全量 153 筆（含異圖變體）皆已完成對應 strict／Browser gate 與 promote。BS8-005 的 localhost `card:`／`card-negative:` fixture 會沿用獨立 `ExtraDeckCard`，不再以一般 `GameCard`／物品卡承載；BattleRow 會依同一規則裁決器顯示 EXTRA 可登場高光，開啟玩家自己的 EXTRA Deck 時呈現卡圖，對手仍只看到私密提示；BS8-008 Blocker 則要求在 modal 選取合法紅色支援支付。詳見 [BS7 匯入盤點](docs/bs7-card-inventory.md)、[BS7 效果稽核](docs/bs7-effect-coverage.md)、[BS8 匯入盤點](docs/bs8-card-inventory.md)、[BS8 效果稽核](docs/bs8-effect-coverage.md)、[BS9 卡牌盤點](docs/bs9-card-inventory.md)、[BS9 效果稽核](docs/bs9-effect-coverage.md)、[P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及高風險卡語意契約。
+- **卡牌池**：BS1～BS10、五色起始牌組與 P-0XX 特典卡均已匯入正式 `data/cards/`；正式卡池共 18 個資料檔、1,764 種卡號（1,726 張可轉接記錄，另 38 筆 EXTRA 保留於 registry），其中 BS7 143 筆、BS8 171 筆、BS9 185 筆與 BS10 164 筆（含異圖變體）皆已完成對應 strict／Browser gate 與 promote。BS8-005 的 localhost `card:`／`card-negative:` fixture 會沿用獨立 `ExtraDeckCard`，不再以一般 `GameCard`／物品卡承載；BattleRow 會依同一規則裁決器顯示 EXTRA 可登場高光，開啟玩家自己的 EXTRA Deck 時呈現卡圖，對手仍只看到私密提示；BS8-008 Blocker 則要求在 modal 選取合法紅色支援支付。詳見 [BS7 匯入盤點](docs/bs7-card-inventory.md)、[BS7 效果稽核](docs/bs7-effect-coverage.md)、[BS8 匯入盤點](docs/bs8-card-inventory.md)、[BS8 效果稽核](docs/bs8-effect-coverage.md)、[BS9 卡牌盤點](docs/bs9-card-inventory.md)、[BS9 效果稽核](docs/bs9-effect-coverage.md)、[BS10 卡牌盤點](docs/bs10-card-inventory.md)、[BS10 效果稽核](docs/bs10-effect-coverage.md)、[P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及高風險卡語意契約。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1164×777 平板與 1366×768、1440×900、1920×1080 通用桌面 viewport 均以實際卡面邊界驗證，短高度桌面的手牌高度依 viewport 縮放並完整留在畫布內；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；BS6-057 的綠色能量、自身送棄牌區與支援區 Cookie 回手三項代價會在抽牌前逐項呈現；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **戰鬥區卡槽**：中央「戰鬥區」文字固定不位移；單張餅乾落在左槽，雙張餅乾以放大的左右間隔排開。HP 卡 dock 置於卡片下緣；能量不足與技能提示以所屬卡片外側的垂直中線排列，左卡向左、右卡向右，本機與線上對戰共用。
 - **戰場視覺同步**：`/?mockup=battlefield` 直接重用正式戰場元件與桌面 `tactical-clean` 樣式；對手紅框、我方青框、深藍戰鬥區與次深藍支援區、支援張數與休息區等級文字均同步套用。平板橫向正式對戰與 mockup 共用 `src/styles/tablet-layout.css`，本機與 mockup 都已移除會穿過手牌的全畫面裝飾框；responsive gate 同時檢查手牌實際卡面，不只檢查手牌 dock 容器。
@@ -401,6 +417,10 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 - 攻擊付款遮擋已修復；持續以長卡文、真機觸控及其他付款情境檢查預覽與操作區的互動。
 
 - UI／UX：以本批正式流程證據為基礎，後續補逐卡 FLIP／多目標矩陣與真機觸控；教學目前為正常對局搭配五段操作說明，逐步判定的練習關卡另行設計。排位、配對、觀戰與雲端戰績未納入本批。
+
+持續檢查不同效果的提示與卡牌詳情銜接；本次先改善技能面板中的選牌與閱讀流程，獨立卡牌詳情視窗維持既有行為。
+
+BS10 的卡牌轉接、逐卡 Browser、候選 promote、正式牌組與 online 完整流程已完成本批驗收；後續僅需在官方卡圖網路可載入環境重跑 BS10-008 專用 FLIP 的 1 個受阻起始 lane，並保留全域 lint 的 4 個既有診斷檔錯誤。詳見 [BS10 進度](docs/bs10-progress-2026-09-14.md)。
 
 對戰桌後續在正式卡圖可載入環境補驗大量支援與多張手牌、長卡名及長局的視覺辨識，維持本機／線上共用樣式。
 
@@ -569,13 +589,21 @@ BS4 已完成首次 promote；正式資料以 `data/cards/official-age-of-heroes
 
 BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json` 為準，覆蓋報表由 `cards:analyze:bs5-candidate` 依正式檔案產生。後續官方更新仍先輸出至 `data/candidates/`，完成陷阱／攻擊後 `Then` 的效果稽核、測試與 Chrome 實戰驗證後，才可改為 `promotion-ready` 並 promote。
 
+BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與完整牌組／線上驗證；正式資料以 `data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json` 為準，盤點可用 `npm run cards:analyze:bs10-candidate` 重建。
+
 ## 變更記錄
 
 目前發布版本 **`0.10.0`**（2026-09-14，git tag `0.10.0`）。完整變更記錄見 [CHANGELOG.md](CHANGELOG.md#0100---2026-09-14)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-22 | BS10 正式收尾批次：候選 promote 至正式卡池；非 EXTRA Browser 正向135／135、負向151／151，BS10-008 FLIP 16／16，12 張 EXTRA 兩尺寸各正負12／12；正式牌組四尺寸、online modal 兩尺寸、好友房完整對局108命令／14次攻擊、完整 Vitest 348 檔／5,022 項與 build 通過。 |
+| 2026-09-21 | BS10 Luna批次整合：主效果98 supported／25 no-effect-text／0 unsupported，能力98 converted／0 pending，攻擊 Then 21／23，strict 158 verified／0 needs-review／6 blocked；受影響5檔／357項、完整Vitest 348檔／5,006項、build、scoped lint通過，Browser仍僅前十張88案。 |
+| 2026-09-21 | BS10-024／073 Awaken 收尾與語意修正：兩張 EXTRA（含異圖）補上 HP+1／同名本回合 Awaken、024 HP≤3 禁攻擊與 2R 攻擊 Then、073 1G／對手支援至少6張 On Play 與 Cookie 回手攻擊 Then；並修正 BS10-015／035／038／042 的代價、補 HP、Then 目標與條件。strict 164 verified／0 needs-review／0 blocked，攻擊 Then 23／23，受影響3檔／77項、完整Vitest 348檔／5,008項（475.29秒）、build、scoped lint通過，Browser仍88案，候選仍 inventory／converted=0。024／073 圖檔與 API 候選文字仍有差異，正式 promote 前須再核對。 |
+| 2026-09-21 | BS10第二批候選Browser累計52案：006／007核心、008 FLIP、009 HP代價與006／007／010普通攻擊均完成雙尺寸正負路徑；第三批011／012／025完成靜態 exact adapter；set/reduce與昏厥續接另有受影響回歸，正式牌組／online與剩餘卡號仍待完成。 |
+| 2026-09-21 | BS10第三～第九批完成 65 張主效果、65 張能力與 18／18 攻擊 Then 的結構化轉接；strict 127 verified／31 needs-review／6 blocked，受影響回歸與 build 通過。新增卡片尚未 Browser，候選維持 inventory／converted=0。 |
 | 2026-09-15 | 修復 BS9-035／041／050 手動驗證場景；修正攻擊付款預覽遮擋；深藍介面與新手操作教學精修，驗證範圍見各任務報告。 |
+| 2026-09-14 | BS10候選164筆／123基礎卡保持隔離；Luna實作、Astra驗收首批001～005及異圖，36案候選Browser通過，接續006。 |
 | 2026-09-14 | 優化對戰桌資訊層級與桌機手牌獨立區域；加入全流程對戰動畫、速度／略過、開局與暫停面板優化及雙欄對戰大廳；`0.10.0`：正式主選單套用參考圖的左側垂直導覽；「管理牌組」進入 Master Duel 風格「我的牌組」，支援牌組管理操作並保留既有 `deck-editor` 排版；移除 `my-decks-disclaimer` 中多餘的正式風格說明。 |
 | 2026-09-14 | 修正 BS9 Lv.5 benchmark 的 500 步硬上限、超限失敗排除訓練，以及 baseline／訓練策略雙向交叉 holdout；完整 Swiss 實測 5,084／5,120 完成、36 場 FAIL，32 副×2 輪交叉 holdout 為訓練 35 勝／baseline 29 勝／0 失敗，並同步重生報告與 profile。 |
 | 2026-09-14 | BS9-022／BS9-023 正向 card-check fixture 補上對手持有 HP 卡的正面公開標記，並新增雙玩家遮罩視角回歸。 |

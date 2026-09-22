@@ -66,6 +66,9 @@ describe.each(['BS8-034', 'BS8-034@1'])('%s real cost and Golden summon', (id) =
     expect(paid.players['player-one'].breakArea).toEqual(expect.arrayContaining([source.card, handCost]))
     expect(paid.players['player-one'].hand).not.toContainEqual(handCost)
     expect(paid.pendingAbilityEffect?.effectIndex).toBe(0)
+    expect(paid.cookiesFaintedThisTurn?.['player-one'] ?? 0).toBe(0)
+    expect(paid.pendingFaintEffects ?? []).toEqual([])
+    expect(paid.departedCookieCounts?.['player-one']).toBe(1)
   })
 
   it('requires a preexisting Break Cookie and cannot satisfy the condition with its own cost', () => {

@@ -102,6 +102,8 @@ type ExtraDeckPlaySpec = {
   activateEffects?: CardEffect[]
   activateCost?: AbilityCost
   activateOncePerTurn?: boolean
+  /** Passive attack restriction printed on an EXTRA card. */
+  cannotAttackCondition?: Extract<CardSkill['cannotAttackCondition'], { kind: string }>
   awakenRequirement?: ExtraDeckCard['awakenRequirement']
   awakenHpBonus?: number
   breakAreaSkill?: {
@@ -115,6 +117,55 @@ type ExtraDeckPlaySpec = {
  * Awaken 疊放。因此只對已有官方文字與規則裁決的卡號建立精確映射。
  */
 const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
+  // BS10-024／073 are Awakened EXTRA cards.  The official feed stores their
+  // printed HP+1 as a non-numeric value, so the runtime keeps the bonus in
+  // `awakenHpBonus` while materializing the card with a concrete HP value.
+  // Their Awaken target is same-name and has no source-area qualifier.
+  'BS10-024': {
+    mode: 'awaken',
+    awakenRequirement: { targetName: 'Hollyberry Cookie', maxRemainingHp: 3 },
+    awakenHpBonus: 1,
+    playCost: { energy: {}, discardHand: 1 },
+    onPlayEffects: [{
+      kind: 'modify-damage-received',
+      amount: -1,
+      duration: 'opponent-next-turn',
+      damageType: 'all',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+  },
+  'BS10-073': {
+    mode: 'awaken',
+    awakenRequirement: { targetName: 'White Lily Cookie' },
+    awakenHpBonus: 1,
+    requirement: { kind: 'support-count-at-least', count: 8 },
+  },
+  'BS10-048': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'break-level-at-least', level: 5 },
+        { kind: 'cookie-gained-hp-this-turn' },
+      ],
+    },
+    activateCost: { energy: { yellow: 1 }, discardHand: 0 },
+    activateOncePerTurn: true,
+    activateEffects: [{ kind: 'damage-all', amount: 1, side: 'either', sequential: true, target: { side: 'either', min: 0, max: 4 } }],
+  },
+  'BS10-098': {
+    mode: 'enter-battle',
+    requirement: { kind: 'hand-count-at-least', count: 7 },
+    playCost: { energy: {}, discardHand: 2, discardHandColor: 'blue' },
+    activateCost: { energy: {}, discardHand: 1 },
+    activateOncePerTurn: true,
+    activateEffects: [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 1 } }],
+  },
+  'BS10-123': {
+    mode: 'enter-battle',
+    requirement: { kind: 'refreshed-during-game' },
+    playCost: { energy: {}, discardHand: 2 },
+  },
   'BS9-055': {
     mode: 'enter-battle',
     requirement: {
@@ -320,6 +371,18 @@ const createExtraSkill = (
         : {}),
     }
   }
+  if (spec.cannotAttackCondition) {
+    return {
+      trigger: 'passive',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text,
+      effects: [],
+      cannotAttackCondition: spec.cannotAttackCondition,
+    }
+  }
   return createExtraOnPlaySkill(text, spec.onPlayEffects, spec.onPlayCost)
 }
 
@@ -332,6 +395,13 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
 
   if (card.keywords.some((keyword) => keyword.replace(/[{}]/g, '').trim().toLowerCase() === 'dragon')) {
     keywords.add('dragon')
+  }
+
+  if (
+    card.keywords.some((keyword) => keyword.replace(/[{}]/g, '').trim().toLowerCase() === 'beast') ||
+    /beast/i.test(`${card.skill.text ?? ''} ${card.attackText ?? ''} ${card.flipText ?? ''}`)
+  ) {
+    keywords.add('beast')
   }
 
   if (

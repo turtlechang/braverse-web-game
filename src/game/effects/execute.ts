@@ -174,7 +174,8 @@ const damagePlayerCookie = (
   }
 }
 
-const resolveDamageOutcome = (
+/** Apply one or more Cookie departures and the shared faint aftermath queue. */
+export const resolveDamageOutcome = (
   state: GameState,
   damagedPlayerId: PlayerId,
   departedCount: number,
@@ -325,14 +326,50 @@ const resolveNonFaintDepartureOutcome = (
   state: GameState,
   playerId: PlayerId,
   departedCount: number,
-): GameState =>
-  resolveBreakLevelVictory(
-    recordCookieDepartures(
-      clearDepartedCookieModifiers(state),
-      playerId,
-      departedCount,
-    ),
+  departedCookieCards: CookieCard[] = [],
+): GameState => {
+  let nextState = recordCookieDepartures(
+    clearDepartedCookieModifiers(state),
+    playerId,
+    departedCount,
   )
+
+  // A departure trigger is distinct from faint: it fires only when the
+  // Cookie itself was moved from battle directly into its owner's trash.
+  // Keep the effect on the normal executeCardEffect path so deck exhaustion
+  // can open the existing Refresh continuation instead of losing the mill.
+  for (const cookie of departedCookieCards) {
+    const skill = cookie.skill
+    if (
+      !skill ||
+      skill.trigger !== 'departure' ||
+      (skill.yourTurn && nextState.activePlayerId !== playerId)
+    ) {
+      continue
+    }
+    const context: EffectContext = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: cookie.instanceId,
+      sourceCardName: cookie.name,
+    }
+    for (const effect of skill.effects) {
+      if (!isEffectConditionMet(nextState, context, effect)) continue
+      nextState = executeCardEffect(nextState, context, effect, [])
+      if (
+        nextState.status !== 'playing' ||
+        nextState.pendingRefresh ||
+        nextState.pendingDrawUpTo ||
+        nextState.pendingOpponentHandDiscard ||
+        nextState.pendingRevealTopDeck
+      ) {
+        break
+      }
+    }
+    if (nextState.status !== 'playing' || nextState.pendingRefresh) break
+  }
+
+  return resolveBreakLevelVictory(nextState)
+}
 
 /**
  * `either` 目標可能同時包含雙方的餅乾，離場結算必須依擁有者分別套用，
@@ -765,7 +802,11 @@ const executeCardEffectCore = (
     )
     if (
       sourceFromBattle &&
-      isOpponentBattleMovementPrevented(state, context.sourcePlayerId)
+      isOpponentBattleMovementPrevented(
+        state,
+        context.sourcePlayerId,
+        context.sourceInstanceId,
+      )
     ) {
       return { ...state }
     }
@@ -1755,7 +1796,14 @@ const executeCardEffectCore = (
     if (isOpponentBattleMovementPrevented(state, context.sourcePlayerId)) {
       return { ...state }
     }
-    const targets = selectEffectTargets(state, context, effect.target, selectedTargetIds)
+    const targets = selectEffectTargets(state, context, effect.target, selectedTargetIds).filter(
+      (cookie) =>
+        !isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
+    )
     if (targets.length === 0) return { ...state }
     let nextState = state
     for (const [ownerId, ownedTargets] of groupTargetsByOwner(state, targets)) {
@@ -2416,6 +2464,15 @@ const executeCardEffectCore = (
     const targetPlayer = state.players[targetPlayerId]
     const candidates = targetPlayer.battleArea.filter((cookie) => {
       if (
+        isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        )
+      ) {
+        return false
+      }
+      if (
         isBlockedByOpponentEffectProtection(
           cookie,
           targetPlayerId,
@@ -2464,6 +2521,7 @@ const executeCardEffectCore = (
       nextState,
       targetPlayerId,
       departedCount,
+      toBreak ? [] : movedCards,
     )
     return checkWindsweptValleyTrigger(
       afterDeparture,
@@ -2529,13 +2587,18 @@ const executeCardEffectCore = (
     const targetPlayer = state.players[targetPlayerId]
 
     const stageOnly = effect.stageOnly ?? false
-    const battleMovementPrevented =
-      !effect.target.sourceOnly &&
-      isOpponentBattleMovementPrevented(state, context.sourcePlayerId)
     const battleCandidates =
-      stageOnly || battleMovementPrevented
+      stageOnly
         ? []
         : targetPlayer.battleArea.filter((cookie) => {
+      const battleMovementPrevented =
+        !effect.target.sourceOnly &&
+        isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        )
+      if (battleMovementPrevented) return false
       if (
         effect.target.sourceOnly &&
         cookie.card.instanceId !== context.sourceInstanceId
@@ -2628,16 +2691,21 @@ const executeCardEffectCore = (
       return updatePlayer(state, updatedPlayer)
     }
 
-    if (battleMovementPrevented) {
-      return { ...state }
-    }
-
     if (stageOnly) {
       throw new GameRuleError('此效果只能選擇場景卡。')
     }
 
     const selectedCookie = battleCandidates.find((c) => c.card.instanceId === selectedId)
     if (!selectedCookie) throw new GameRuleError('選擇的卡牌不是合法目標。')
+    if (
+      isOpponentBattleMovementPrevented(
+        state,
+        context.sourcePlayerId,
+        selectedCookie.card.instanceId,
+      )
+    ) {
+      return { ...state }
+    }
 
     const movedIds = new Set([selectedCookie.card.instanceId])
     const hpCards = selectedCookie.hpCards
@@ -2647,7 +2715,12 @@ const executeCardEffectCore = (
       discardPile: [...targetPlayer.discardPile, selectedCookie.card, ...hpCards],
     }
     const nextState = updatePlayer(state, updatedPlayer)
-    const afterDeparture = resolveNonFaintDepartureOutcome(nextState, targetPlayerId, 1)
+    const afterDeparture = resolveNonFaintDepartureOutcome(
+      nextState,
+      targetPlayerId,
+      1,
+      [selectedCookie.card],
+    )
     return checkWindsweptValleyTrigger(
       afterDeparture,
       targetPlayerId,
@@ -2663,6 +2736,15 @@ const executeCardEffectCore = (
     for (const playerId of playerIds) {
       const player = nextState.players[playerId]
       const matching = player.battleArea.filter((cookie) => {
+        if (
+          isOpponentBattleMovementPrevented(
+            nextState,
+            context.sourcePlayerId,
+            cookie.card.instanceId,
+          )
+        ) {
+          return false
+        }
         if (
           isBlockedByOpponentEffectProtection(
             cookie,
@@ -2689,7 +2771,12 @@ const executeCardEffectCore = (
         ],
       }
       nextState = updatePlayer(nextState, updatedPlayer)
-      nextState = resolveNonFaintDepartureOutcome(nextState, playerId, matching.length)
+      nextState = resolveNonFaintDepartureOutcome(
+        nextState,
+        playerId,
+        matching.length,
+        matching.map((cookie) => cookie.card),
+      )
       nextState = checkWindsweptValleyTrigger(nextState, playerId)
     }
     return nextState
@@ -2704,6 +2791,15 @@ const executeCardEffectCore = (
     for (const playerId of playerIds) {
       const player = nextState.players[playerId]
       const matching = player.battleArea.filter((cookie) => {
+        if (
+          isOpponentBattleMovementPrevented(
+            nextState,
+            context.sourcePlayerId,
+            cookie.card.instanceId,
+          )
+        ) {
+          return false
+        }
         if (
           isBlockedByOpponentEffectProtection(
             cookie,
@@ -3197,6 +3293,13 @@ const executeCardEffectCore = (
       context,
       effect.target,
       selectedTargetIds,
+    ).filter(
+      (cookie) =>
+        !isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
     )
     if (targets.length === 0) {
       return { ...state }
@@ -3423,7 +3526,14 @@ const executeCardEffectCore = (
   }
 
   if (effect.kind === 'return-to-hand') {
-    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const candidates = getEffectTargetCandidates(state, context, effect.target).filter(
+      (cookie) =>
+        !isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
+    )
     // 昏厥技能（When this Cookie faints）的「Return this Cookie to your
     // hand」：來源已離場躺在休息區，戰鬥區沒有候選，直接從休息區返回手牌
     // （BS5-026 DJ Cookie 的第二個昏厥效果）。
@@ -3458,6 +3568,17 @@ const executeCardEffectCore = (
       effect.target,
       selectedTargetIds,
     )
+    if (
+      selected.some((cookie) =>
+        isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
+      )
+    ) {
+      return { ...state }
+    }
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     if (targetPlayer.battleArea.length - selected.length < 1) {
@@ -3488,7 +3609,14 @@ const executeCardEffectCore = (
     if (isOpponentBattleMovementPrevented(state, context.sourcePlayerId)) {
       return { ...state }
     }
-    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const candidates = getEffectTargetCandidates(state, context, effect.target).filter(
+      (cookie) =>
+        !isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
+    )
     if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {
       return { ...state }
     }
@@ -3498,6 +3626,17 @@ const executeCardEffectCore = (
       effect.target,
       selectedTargetIds,
     )
+    if (
+      selected.some((cookie) =>
+        isOpponentBattleMovementPrevented(
+          state,
+          context.sourcePlayerId,
+          cookie.card.instanceId,
+        ),
+      )
+    ) {
+      return { ...state }
+    }
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     if (targetPlayer.battleArea.length - selected.length < 1) {
@@ -3557,7 +3696,13 @@ const executeCardEffectCore = (
         (cookie) => cookie.card.instanceId === selectedId,
       )
       if (target) {
-        if (isOpponentBattleMovementPrevented(state, context.sourcePlayerId)) {
+        if (
+          isOpponentBattleMovementPrevented(
+            state,
+            context.sourcePlayerId,
+            target.card.instanceId,
+          )
+        ) {
           return { ...state }
         }
         const updated = updatePlayer(state, {
@@ -4434,6 +4579,7 @@ const executeCardEffectCore = (
           sourceInstanceId: context.sourceInstanceId,
           targetInstanceId: target.card.instanceId,
           energyCost: { ...effect.energyCost },
+          ...(effect.operation ? { operation: effect.operation } : {}),
           expiresAfterTurn: getExpirationTurn(state, effect.duration),
         })),
       ],

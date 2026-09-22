@@ -37,6 +37,7 @@ import {
   isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
+  getActingPlayerId,
   isEffectConditionMet,
   requiresEffectCardSelection,
   requiresTargetSelection,
@@ -52,6 +53,7 @@ import {
   createBs8011DoubleSkillDemoState,
   createBs8011FaintContinuationDemoState,
   createBs8ExtraDeckDemoState,
+  createBs10ExtraDeckDemoState,
   createAiDiscardRevealDemoState,
   createBlockerResponseDemoState,
   createBlueActivateSkillDemoState,
@@ -99,6 +101,9 @@ import {
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
   createBs9ActualDamageDemoState,
+  createBs1008FlipPreviewDemoState,
+  createBs1009HpCostPreviewDemoState,
+  createBs10ConditionDemoState,
   createBs6ConditionDemoState,
   createCardNegativeDemoState,
   createP082TrapDemoState,
@@ -198,10 +203,28 @@ export function useMatchController(params: {
         testStateConfig.orderedTargets,
       )
     }
+    if (testStateConfig?.kind === 'bs10-extra-deck') {
+      return createBs10ExtraDeckDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
     if (testStateConfig?.kind === 'bs9-candidate') {
       return createBs9CandidatePreviewDemoState(
         testStateConfig.cardNumber,
         testStateConfig.negative,
+      )
+    }
+    if (testStateConfig?.kind === 'bs10-008-flip') {
+      return createBs1008FlipPreviewDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs10-009-hp-cost') {
+      return createBs1009HpCostPreviewDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs10-condition') {
+      return createBs10ConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
       )
     }
     if (testStateConfig?.kind === 'bs9-damage') {
@@ -462,6 +485,20 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'attack-effect') {
       return '測試狀態：Wizard Cookie 攻擊後續效果。'
     }
+    if (testStateConfig?.kind === 'bs10-008-flip') {
+      return `測試狀態：BS10-008 Cherry Cookie FLIP（${testStateConfig.scenario}）已由正式攻擊指令開啟，等待玩家處理。`
+    }
+    if (testStateConfig?.kind === 'bs10-009-hp-cost') {
+      return `測試狀態：BS10-009 Cranberry Cookie HP 代價（${testStateConfig.scenario}），等待正常技能／攻擊指令。`
+    }
+    if (testStateConfig?.kind === 'bs10-condition') {
+      return `測試狀態：${testStateConfig.cardNumber} BS10 條件${testStateConfig.conditionMet ? '成立' : '不成立'}，等待正常 UI 驗收。`
+    }
+    if (testStateConfig?.kind === 'bs10-extra-deck') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} BS10 EXTRA 登場條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} BS10 EXTRA 登場條件不成立。`
+    }
     if (testStateConfig?.kind === 'bs8-extra-deck') {
       return testStateConfig.conditionMet
         ? `測試狀態：${testStateConfig.cardNumber} 已滿足從 EXTRA Deck 登場條件。`
@@ -707,6 +744,7 @@ export function useMatchController(params: {
   const viewerPlayerId: PlayerId =
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
     (testCardBase === 'BS9-035' && isPlayerControllingState(game, 'player-two')) ||
+    (testStateConfig?.kind === 'bs10-008-flip' && getActingPlayerId(game) === 'player-two') ||
     testStateConfig?.kind === 'bs9-041-attack' ||
     testStateConfig?.kind === 'bs9-018-kumiho' ||
     (testCardBase === 'BS9-082') ||
@@ -1239,21 +1277,37 @@ export function useMatchController(params: {
           ) {
             return []
           }
-          const candidates = requiresTargetSelection(effect)
-            ? getEffectTargetCandidatesForEffect(
-                game,
-                trapEffectTargetContext,
-                effect,
-              )
-            : getEffectSelectionCandidates(
-                game,
-                trapEffectTargetContext,
-                effect,
-              ).map((card) => ({
-                card,
-                hpCards: [],
-                rested: false,
-              }))
+          // support-to-hp with selectTarget is a paired selection: the
+          // player must choose one legal Cookie and one matching support card
+          // together.  Keep both card types in the same per-effect step so
+          // the trap command can pass the exact ordered pair to the rules
+          // engine.  Other targeted effects still expose battle Cookies only.
+          const candidates =
+            effect.kind === 'support-to-hp' && effect.selectTarget
+              ? getEffectSelectionCandidates(
+                  game,
+                  trapEffectTargetContext,
+                  effect,
+                ).map((card) => ({
+                  card,
+                  hpCards: [],
+                  rested: false,
+                }))
+              : requiresTargetSelection(effect)
+                ? getEffectTargetCandidatesForEffect(
+                    game,
+                    trapEffectTargetContext,
+                    effect,
+                  )
+                : getEffectSelectionCandidates(
+                    game,
+                    trapEffectTargetContext,
+                    effect,
+                  ).map((card) => ({
+                    card,
+                    hpCards: [],
+                    rested: false,
+                  }))
           if (candidates.length === 0) return []
           const limits = getEffectTargetSelectionLimits(effect)
           const ordered = effect.kind === 'damage-all' && effect.sequential === true
@@ -1567,6 +1621,7 @@ export function useMatchController(params: {
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
+    testStateConfig?.kind === 'bs10-008-flip' ||
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
     testCardBase === 'BS9-035' ||
     testStateConfig?.kind === 'bs9-041-attack' ||
@@ -1574,7 +1629,8 @@ export function useMatchController(params: {
     (testStateConfig?.kind === 'bs9-candidate' &&
       ['BS9-031', 'BS9-032'].includes(testStateConfig.cardNumber.split('@')[0])) ||
     ((testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative') &&
-      ['BS9-077', 'BS9-081', 'BS9-082', 'BS9-096', 'BS9-100', 'BS9-111'].includes(testStateConfig.cardNumber.split('@')[0]))
+      (['BS9-077', 'BS9-081', 'BS9-082', 'BS9-096', 'BS9-100', 'BS9-111'].includes(testStateConfig.cardNumber.split('@')[0]) ||
+        (testStateConfig.cardNumber.split('@')[0] === 'BS10-003' && testStateConfig.normalAttack === undefined)))
       ? false
       : isPlayerControllingState(game, 'player-two')
 
@@ -1637,6 +1693,7 @@ export function useMatchController(params: {
       testStateConfig &&
       battle?.stage === 'damage' &&
       !getPendingDecision(game) &&
+      !game.pendingRefresh &&
       game.pendingAbilityEffect?.sourceKind !== 'flip'
     ) {
       const timer = window.setTimeout(() => {
@@ -1644,11 +1701,13 @@ export function useMatchController(params: {
           if (
             current.pendingBattle?.stage !== 'damage' ||
             getPendingDecision(current) ||
+            current.pendingRefresh ||
             current.pendingAbilityEffect?.sourceKind === 'flip'
           ) {
             return current
           }
           const preserveHumanDamageDecisions =
+            testStateConfig.kind === 'bs10-008-flip' ||
             ((testStateConfig.kind === 'card-check' || testStateConfig.kind === 'card-negative') &&
               testStateConfig.cardNumber.split('@')[0] === 'BS9-035') ||
             Boolean(current.pendingBattle.effectDamageSequence) ||

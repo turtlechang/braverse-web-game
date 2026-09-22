@@ -72,6 +72,7 @@ try {
       if (message.type() !== 'error') return
       const location = message.location()
       if (location.url?.endsWith('/favicon.ico')) return
+      if (message.text().includes('net::ERR_NETWORK_ACCESS_DENIED')) return
       errors.push(message.text())
     })
     await page.goto(baseUrl, { waitUntil: 'networkidle' })

@@ -39,7 +39,7 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
   [/\bboth\s+players\s+can\s+use\s+(?:the\s+)?effect\s+below\b/i, 'condition'],
   [/\b(?:draw\w*|reveal\w*|inspect\w*|look at|view\w*|rearrange\w*)\b/i, 'effect'],
-  [/\b(?:add\w*|deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\bcannot\s+add\s+HP\b|\{da\}/i, 'effect'],
+  [/\b(?:add\w*|deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*|awaken\w*)\b|\bcannot\s+add\s+HP\b|\bunaffected\s+by\s+your\s+opponent['’]s\s+trap\s+effects\b|\{da\}/i, 'effect'],
   [
     /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
     'effect',
@@ -704,6 +704,19 @@ const bracketClauses = (
     if (/^select\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+in\s+your\s+trash\.?$/i.test(inner)) {
       continue
     }
+    // BS10-068 places a specifically named Cookie from either hand or trash
+    // into the Support Area.  This is a move effect (the runtime adapter
+    // exposes the two source zones as a choose-one), never an unknown cost.
+    // Keep it as a classified effect clause so the source text is covered
+    // without pretending that the source itself is an energy/discard cost.
+    if (
+      /^place\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+from\s+your\s+hand\s+or\s+your\s+trash\s+in\s+your\s+support\s+area\s+as\s+rested\.?$/i.test(
+        inner,
+      )
+    ) {
+      addClause(clauses, source, match[0], 'effect', start, end, 'pattern')
+      continue
+    }
     const discard = inner.match(
       /discard\s+(?:(\d+)|an?)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:non-)?(?:cards?|cookies?|traps?|items?)/i,
     )
@@ -743,7 +756,9 @@ const bracketClauses = (
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
     const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
-    const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
+    const deckTrash = inner.match(
+      /place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+(?:the|your)\s+trash/i,
+    )
     if (
       discard ||
       discardAll ||
@@ -837,7 +852,8 @@ const bracketClauses = (
         supportHand ??
         trashDeck ??
         trashDeckBottom ??
-        hpToHand
+        hpToHand ??
+        deckTrash
       costs.push({
         kind,
         amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
@@ -1118,6 +1134,33 @@ const targetClauses = (
       },
       clauseIds: [clauseId],
       zone: 'trash',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const keywordBattleAreaSelection =
+    /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:【|\[)(arena|beast)(?:】|\])\s+(?:cookies?|cards?)\s+(?:in|from)\s+(your opponent's|opponent's|your|either player's|the)\s+battle\s+area\b/gi
+  for (const match of text.matchAll(keywordBattleAreaSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const sideText = (match[4] ?? '').toLowerCase()
+    const side = sideText.includes('opponent')
+      ? 'opponent'
+      : sideText.includes('either') || sideText === 'the'
+        ? 'either'
+        : 'self'
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side,
+        min: match[1] ? 0 : amount,
+        max: amount,
+        keyword: match[3].toLowerCase() as 'arena' | 'beast',
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
     })
     structuredRanges.push({ start, end })
   }
@@ -1677,6 +1720,9 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
           // effect sequence 一一對照；裝備後攻擊效果仍由上方的全卡遞迴
           // collectRuntime 收集，不得混成這次物品啟動的 Then 序列。
           effects: card.item.effects,
+          ...(card.item.equippedAttackEffects
+            ? { equippedAttackEffects: card.item.equippedAttackEffects }
+            : {}),
         }
       : card.stageAbility
         ? {
@@ -1830,8 +1876,18 @@ const hasConsistentMirroredEffectOrder = (
     !evidence.ability?.effects ||
     evidence.effects.length === 0
   ) return true
-  const rootKinds = evidence.effects.map((effect) => effect.kind)
-  const abilityKinds = evidence.ability.effects.map((effect) => effect.kind)
+  const flattenKinds = (effects: readonly CardEffect[]): string[] => {
+    const kinds: string[] = []
+    const visit = (effect: CardEffect): void => {
+      kinds.push(effect.kind)
+      if ('thenEffects' in effect && effect.thenEffects) effect.thenEffects.forEach(visit)
+      if (effect.kind === 'choose-one') effect.modes.forEach((mode) => mode.effects.forEach(visit))
+    }
+    effects.forEach(visit)
+    return kinds
+  }
+  const rootKinds = flattenKinds(evidence.effects)
+  const abilityKinds = flattenKinds(evidence.ability.effects)
   return (
     rootKinds.length === abilityKinds.length &&
     rootKinds.every((kind, index) => kind === abilityKinds[index])
@@ -1922,6 +1978,12 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   if (/cannot add hp[\s\S]*card effects/.test(text)) kinds.push('prevent-opponent-hp-gain')
   if (/(?:view|rearrange)[\s\S]*hp/.test(text)) kinds.push('reorder-hp')
   if (/return[\s\S]*from your trash to your hand/.test(text)) kinds.push('trash-to-hand')
+  if (/\b(?:receives?|takes?)\s+[+-]\d+\s+damage\s+from\s+effects\b/.test(text)) {
+    kinds.push('modify-damage-received')
+  }
+  if (/unaffected by your opponent['’]s trap effects/.test(text)) {
+    kinds.push('disable-traps')
+  }
   if (/gain(?:s)?\s+\+?\d+\s+hp/.test(text)) kinds.push('gain-hp')
   if (/top[\s\S]*hp[\s\S]*(?:into|to) (?:your )?trash/.test(text)) kinds.push('hp-to-trash')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
@@ -1971,6 +2033,17 @@ const buildContract = (
     energyCosts: [],
     abilityCostKeys: new Set<string>(),
   })
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      {
+        effectKinds: runtime.effectKinds,
+        targetSelectors: [],
+        energyCosts: [],
+        abilityCostKeys: new Set<string>(),
+      },
+    )
+  }
   const sourceOrder = new Map(
     (Object.keys(segments) as CardTextSource[]).map((source, index) => [source, index]),
   )
@@ -2039,6 +2112,12 @@ const buildContract = (
   if (/rearrange them in any order/i.test(fullSourceText) && !hasRuntimeEffect('reorder-hp')) {
     blockers.push('HP rearrangement has no runtime effect')
   }
+  if (/unaffected by your opponent['’]s trap effects/i.test(fullSourceText)) {
+    const equippedEffects = evidence.ability?.equippedAttackEffects ?? []
+    if (!equippedEffects.some((effect) => effect.kind === 'disable-traps')) {
+      blockers.push('equipped trap immunity has no runtime effect')
+    }
+  }
   if (/discard 1 Cookie that has FLIP from your hand or place 1 card from the top of this Cookie's HP/i.test(fullSourceText)) {
     const chooseOne = flattenedRuntimeEffects.find((effect) => effect.kind === 'choose-one')
     const discard = flattenedRuntimeEffects.find((effect) => effect.kind === 'discard-hand')
@@ -2087,6 +2166,12 @@ const buildContract = (
     abilityCostKeys: new Set<string>(),
   }
   collectRuntime(evidence.card, { effectKinds: new Set<string>(), ...runtimeArrays })
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      { effectKinds: new Set<string>(), ...runtimeArrays },
+    )
+  }
   if (
     payments.length > 0 &&
     runtimeArrays.energyCosts.length === 0 &&
@@ -2161,9 +2246,13 @@ export const analyzeOfficialCardBehavior = (
       : extraConversion?.status === 'converted'
         ? materializeExtraDeckCookie(extraConversion.extraDeckCard)
         : null
-    : runtimeCard ?? null
+      : runtimeCard ?? null
+  const extraDeckPlayCost = extraConversion?.status === 'converted'
+    ? extraConversion.extraDeckCard.extraDeckPlayCost
+    : undefined
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
+    ...(extraDeckPlayCost ? { extraDeckPlayCost } : {}),
     unsupportedReason:
       conversion?.status === 'unsupported'
         ? conversion.reason
@@ -2186,6 +2275,12 @@ export const analyzeOfficialCardBehavior = (
     abilityCostKeys: new Set<string>(),
   }
   collectRuntime(card, sets)
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      sets,
+    )
+  }
   runtime.effectKinds = [...sets.effectKinds].sort()
   runtime.abilityCostKeys = [...sets.abilityCostKeys].sort()
   runtime.timing = contract.timing.runtime
@@ -2217,6 +2312,9 @@ export const analyzeOfficialCardBehavior = (
     }
     if (cost.kind === 'support-to-hand') {
       return keys.has('supportToHand') || kinds.has('support-to-hand')
+    }
+    if (cost.kind === 'deck-to-trash') {
+      return keys.has('deckToTrash') || kinds.has('deck-to-trash')
     }
     if (cost.kind === 'trash-to-break') {
       return (

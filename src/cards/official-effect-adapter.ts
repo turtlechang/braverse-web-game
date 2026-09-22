@@ -2418,6 +2418,358 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
       },
     ],
+    // BS10-009 Cranberry Cookie：支付己方任一 LV.2 以上 Cookie 的最上方
+    // 1 張 HP 後，本回合僅降低這張來源 Cookie 的 1R 攻擊費用；HP 代價
+    // 由 exactCookieSkillCosts 提供，不能把來源限定誤套到支付目標。
+    'BS10-009': [
+      {
+        kind: 'modify-attack-cost',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        energyCost: { red: 1 },
+        operation: 'reduce',
+        duration: 'this-turn',
+      },
+    ],
+    'BS10-013': [
+      { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 } },
+    ],
+    'BS10-015': [
+      { kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-016': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 2, maxRemainingHp: 3 } }],
+    'BS10-017': [
+      { kind: 'draw-up-to', max: 1 },
+      { kind: 'hp-to-trash', amount: 2, target: { side: 'self', min: 0, max: 1 } },
+    ],
+    'BS10-018': [
+      { kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-037': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-041': [{ kind: 'draw-up-to', max: 2, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-042': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'break-level-at-least', level: 5 } }] }],
+    'BS10-038': [{
+      kind: 'modify-attack',
+      amount: -2,
+      duration: 'this-turn',
+      target: { side: 'opponent', min: 0, max: 1 },
+      thenEffects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+        condition: { kind: 'previous-effect-target-hp-above-original' },
+      }],
+    }],
+    'BS10-062': [{ kind: 'support-to-hp', target: { side: 'self', min: 0, max: 1 }, energyColor: 'green', selectTarget: true, optional: true }],
+    'BS10-063': [
+      { kind: 'support-to-trash', amount: 1, side: 'self', condition: { kind: 'opponent-support-count-at-least', count: 7 } },
+      { kind: 'support-to-trash', amount: 1, side: 'opponent', condition: { kind: 'opponent-support-count-at-least', count: 7 } },
+    ],
+    'BS10-064': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 3 }, condition: { kind: 'support-count-at-least', count: 7 } }],
+    'BS10-065': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, energyColor: 'green', rested: false, optional: true },
+    ],
+    'BS10-066': [{ kind: 'draw-up-to-then-discard', max: 3, discardCount: 1, condition: { kind: 'support-count-at-least', count: 7 } }],
+    // BS10-068 A Single Lily：指定 White Lily 可從手牌或棄牌區擇一，
+    // 橫置放入支援區後再抽最多 1；不能把任意綠色卡誤當成合法目標。
+    'BS10-068': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place White Lily Cookie from your hand in your support area as rested.',
+            effects: [{ kind: 'hand-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+          },
+          {
+            label: 'Place White Lily Cookie from your trash in your support area as rested.',
+            effects: [{ kind: 'trash-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+          },
+        ],
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS10-086': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    'BS10-087': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    'BS10-090': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 2 } }] }],
+    'BS10-111': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 2 }, condition: { kind: 'refreshed-during-game' } }],
+    'BS10-112': [{ kind: 'deck-to-trash', amount: 5, side: 'self' }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS10-113': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'refreshed-during-game' } }] }],
+    'BS10-114': [{ kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] }],
+    'BS10-116': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'field-to-trash', target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' } }] }],
+    // BS10-120 的「磨 5」位於昏厥效果最前段。以效果佇列表達可讓
+    // 牌庫耗盡時沿用既有 Refresh 續接；不能掛在 CardSkill.cost，因為
+    // 直接技能代價支付器不會處理牌庫磨牌的 Refresh。
+    'BS10-120': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'draw', amount: 1 },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-123': [],
+    'BS10-030': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-035': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'break-level-higher-than-opponent' } }],
+    'BS10-043': [{ kind: 'modify-attack', amount: 2, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-054': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'support-count-at-least', count: 7 } }],
+    'BS10-060': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'support-count-at-least', count: 5 } }],
+    'BS10-105': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'refreshed-during-game' } }],
+    'BS10-121': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'refreshed-during-game' } }],
+    'BS10-088': [{ kind: 'choose-one', modes: [
+      { label: '將檢視的牌放回牌庫頂', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'top' }, { kind: 'draw-up-to', max: 1 }] },
+      { label: '將檢視的牌放回牌庫底', effects: [{ kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'bottom' }, { kind: 'draw-up-to', max: 1 }] },
+    ] }],
+    'BS10-091': [{ kind: 'return-to-deck-bottom', target: { side: 'self', min: 1, max: 1, maxLevel: 2 } }, { kind: 'draw-up-to', max: 2 }],
+    'BS10-092': [{ kind: 'draw-up-to', max: 1 }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'blue' } }],
+    // BS10-011 Royal Berry Cookie：本回合對手曾有餅乾昏厥時，啟動後
+    // 對手至多一張餅乾受到1傷害；條件沿用BS10-007的公開回合旗標。
+    'BS10-011': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'opponent',
+        count: 1,
+      },
+    }],
+    // BS10-012 Devil Cookie：來源昏厥後，對手至多一張餅乾受到1傷害。
+    'BS10-012': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS10-025 Carrot Cookie：登場時若己方Break區有至少3張黃色餅乾，
+    // 抽最多2張；以Break card count與yellow keyword保留條件邊界。
+    'BS10-025': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: {
+        kind: 'break-area-card-count-at-least',
+        side: 'self',
+        count: 3,
+        color: 'yellow',
+      },
+    }],
+    // BS10-079 Eggnog Cookie：昏厥後抽最多 3 張，無額外門檻。
+    'BS10-079': [{ kind: 'draw-up-to', max: 3 }],
+    // BS10-084 Plum Cookie：登場時只能把己方戰鬥區 LV.1 餅乾回手，
+    // 不可誤放寬成任意等級或對手目標。
+    'BS10-084': [{
+      kind: 'return-to-hand',
+      target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+    }],
+    // BS10-093 Orange Cookie：昏厥時僅在手牌至多 7 張才抽最多 2 張。
+    'BS10-093': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 7 },
+    }],
+    // BS10-095 Lime Cookie：先抽最多 1 張，再以抽牌後手牌張數判定
+    // 是否可再抽最多 1 張；陣列順序保留 Then 的結算順序。
+    'BS10-095': [
+      { kind: 'draw-up-to', max: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+    ],
+    // BS10-102 Alchemist：支付自己進棄牌後，磨自己牌庫頂 3 張。
+    'BS10-102': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    // BS10-108 Black Garlic：棄 1 張手牌後，從自己的棄牌區回收紫色 LV.1
+    // Cookie；目標限制不能被泛化成任意卡牌。
+    'BS10-108': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      energyColor: 'purple',
+      cookieOnly: true,
+      maxLevel: 1,
+    }],
+    // BS10-118 Pastry：支付自己進棄牌，只有己方棄牌區至少 15 張才抽 1 張。
+    'BS10-118': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }],
+    // BS10-058 Clover：先回手 1 張支援，再可把手牌中的綠色卡放入
+    // 支援區並橫置；保留前後效果順序與可選性。
+    'BS10-058': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, energyColor: 'green', rested: true, optional: true },
+    ],
+    // BS10-059 Yeast Spores：支付綠色能量與 1 張支援後，來源進支援區橫置。
+    'BS10-059': [{ kind: 'place-source-to-support', rested: true }],
+    // BS10-061 Carameleon：己方支援比對手少 1 張時，手牌至多放 1 張進
+    // 支援區並橫置；這是每回合一次的主動效果。
+    'BS10-061': [{
+      kind: 'hand-to-support',
+      amount: 1,
+      rested: true,
+      optional: true,
+      condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+    }],
+    // BS10-069 White Lily：對手支援區至少 6 張時，從牌庫頂放 1 張支援
+    // 並橫置；登場能量由 exactCookieSkillCosts 保留。
+    'BS10-069': [{
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: true,
+      condition: { kind: 'opponent-support-count-at-least', count: 6 },
+    }],
+    // BS10-074 Candy Diver：把來源放牌庫底後，手牌至多 7 張才抽最多 1 張。
+    'BS10-074': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'hand-count-at-most', count: 7 },
+    }],
+    // BS10-044 Angel：支付來源自己的 1 張 HP 後，選其他黃色 Cookie +1 HP。
+    'BS10-044': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        excludeSource: true,
+        energyColor: 'yellow',
+      },
+    }],
+    // BS10-046 Sugarfly：手牌至多 6 張且本回合己方餅乾曾補 HP 時抽 1。
+    'BS10-046': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'hand-count-at-most', count: 6 },
+          { kind: 'cookie-gained-hp-this-turn' },
+        ],
+      },
+    }],
+    // BS10-050 Gim：己方支援區至少 7 張時，選至多 1 張支援轉為 active。
+    'BS10-050': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: { kind: 'support-count-at-least', count: 7 },
+    }],
+    // BS10-071 Mercurial Knight：主技能只處理回收綠色 Cookie 與來源進
+    // 支援區；攻擊 Then 的綠色能量與牌庫支援另由 attack-Then 盤點保留。
+    'BS10-071': [{ kind: 'place-source-to-support', rested: true }],
+    // BS10-072 Elder Faerie：對手支援至少 6 張時橫置 1 張。
+    'BS10-072': [{
+      kind: 'rest-support',
+      side: 'opponent',
+      amount: 1,
+      activeOnly: true,
+      condition: { kind: 'opponent-support-count-at-least', count: 6 },
+    }],
+    // BS10-097 Manju：棄 1 張手牌後，對手手牌至少 6 張才棄 1 張。
+    'BS10-097': [{
+      kind: 'opponent-discard-hand',
+      count: 1,
+      condition: { kind: 'opponent-hand-count-at-least', count: 6 },
+    }],
+    // BS10-117 Seaweed：支付紫色 LV.2 以下其他 Cookie 進棄牌後磨 3 張。
+    'BS10-117': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    // BS10-023 Wildberry：支付紅色能量後，選至多 1 張對手場景送棄；
+    // 攻擊 Then 的棄牌／補 HP 另列待轉接。
+    'BS10-023': [{
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 0, max: 1 },
+      stageOnly: true,
+      allowStage: true,
+    }],
+    // BS10-021 Hollyberry：動態攻擊限制由 CardSkill 的條件欄位保存；
+    // 不把它折成一次性 disable-attack，否則 HP 回復後仍會錯誤封鎖攻擊。
+    'BS10-021': [],
+    // BS10-045 Light of Sloth：先選黃色 LV.3 餅乾補 1 HP；Then 可另付
+    // 1Y 裝備到 Eternal Sugar，裝備後的陷阱免疫由 item 的 equipped effects
+    // 保存，不能把第二段能量誤併入第一段啟動費用。
+    'BS10-045': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          energyColor: 'yellow',
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      },
+      {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { yellow: 1 }, discardHand: 0 },
+        effectText: 'Then, <{Y}> You can Equip this card to your [Eternal Sugar Cookie].',
+        effects: [{
+          kind: 'equip-source',
+          target: { side: 'self', min: 0, max: 1 },
+          requiredCookieId: 'BS10-049',
+        }],
+      },
+    ],
+    // BS10-049 的全場被動攻擊費用與攻擊 Then 分開保存。
+    'BS10-049': [],
+    // BS10-070 的移動封鎖必須隨支援區張數即時重算。
+    'BS10-070': [{
+      kind: 'prevent-opponent-battle-movement',
+      sourceOnly: true,
+      condition: { kind: 'support-count-at-most', count: 4 },
+    }],
+    // BS10-094：On Play 先把另一張己方藍色 LV.1 Cookie 放牌庫底，
+    // 再抽最多 1；場上移動效果順序會保留這個先後。
+    'BS10-094': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, energyColor: 'blue', maxLevel: 1, excludeSource: true },
+        battleSide: 'self',
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS10-107 White Ghost：Refresh 歷史成立才抽牌，然後由對手選 1 張手牌棄置。
+    'BS10-107': [
+      { kind: 'draw-up-to', max: 2, condition: { kind: 'refreshed-during-game' } },
+      { kind: 'opponent-discard-hand', count: 1 },
+    ],
+    // BS10-110 Candlelight：只在來源玩家曾 Refresh 時抽最多 1 張。
+    'BS10-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'refreshed-during-game' } }],
+    // BS10-119 Light of Silence：Refresh 後才造成 1 傷；Then 可另付 1P
+    // 裝備到 Silent Salt，裝備攻擊加成由 item metadata 保存。
+    'BS10-119': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'refreshed-during-game' },
+      },
+      {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { purple: 1 }, discardHand: 0 },
+        effectText: 'Then, <{P}> You can Equip this card to [Silent Salt Cookie].',
+        effects: [{
+          kind: 'equip-source',
+          target: { side: 'self', min: 0, max: 1 },
+          requiredCookieId: 'BS10-122',
+        }],
+      },
+    ],
+    // BS10-122 On Play 的尖括號是固定磨牌步驟，接著抽最多 2 張；同樣
+    // 放入效果佇列以保留牌庫耗盡時的 Refresh 續接。
+    'BS10-122': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    // BS10-109 Licorice：從戰鬥區直接進棄牌區時磨自己牌庫頂 3 張；
+    // 觸發時機由 exactCookieSkillTriggers 分離保存，避免被誤判成 passive。
+    'BS10-109': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
     // BS5-020 Crimson Dragon Mask（item）：<{R}{R}> If there are 2 Cookies
     // whose remaining HP is 1 in your battle area, 對所有對手餅乾 2 傷害。
     'BS5-020': [
@@ -4845,6 +5197,19 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS10-007 Jungleberry Cookie：Activate／Once Per Turn；本回合對手
+    // 餅乾昏厥後抽至多一張。條件與 BS9-009 相同，保留在 CardEffect。
+    'BS10-007': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'cookies-fainted-this-turn-at-least',
+          side: 'opponent',
+          count: 1,
+        },
+      },
+    ],
     // BS9-011 Devil Cookie：本回合己方至少兩張紅色 LV.1 餅乾昏厥後，
     // 登場時可對對手一張餅乾造成 1 傷害。
     'BS9-011': [
@@ -6060,6 +6425,8 @@ export const convertOfficialItemAbility = (
     'BS9-115': { energy: { purple: 1 }, discardHand: 0 },
     'BS9-019': { energy: { red: 2 }, discardHand: 0 },
     'BS9-020': { energy: { red: 1 }, discardHand: 0 },
+    'BS10-045': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS10-119': { energy: { purple: 1 }, discardHand: 0 },
   // BS9-027 Vampire Cookie：技能本身沒有額外印刷代價；手牌置入 HP
   // 是效果，不是 cost，避免 generic parser 將它誤當成棄牌代價。
     'BS9-027': { energy: {}, discardHand: 0 },
@@ -6072,6 +6439,11 @@ export const convertOfficialItemAbility = (
         condition: { kind: 'break-level-at-least', level: 8 },
       },
     ],
+    // Soul Jam: Light of Sloth makes the equipped Eternal Sugar immune to
+    // opposing Trap effects for each battle it attacks in.
+    'BS10-045': [{ kind: 'disable-traps', duration: 'current-battle' }],
+    // Light of Silence grants Silent Salt +1 attack damage while equipped.
+    'BS10-119': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
   }
   const parsedCost = parseAbilityCost(abilityText)
   const hasSpecialCost =
@@ -6131,6 +6503,19 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    'BS10-019': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 1, cardName: 'Hollyberry Cookie' } }],
+    'BS10-040': [{ kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, energyColor: 'yellow' } }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, previousEffectTargetOnly: true } }],
+    // BS10-067 Mossy Silver Bridge：回合結束時只計算休息中的支援卡，
+    // 並讓至多一張已休息支援恢復 active。
+    'BS10-067': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: { kind: 'support-count-at-least', count: 7, restedOnly: true },
+    }],
+    'BS10-089': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 6 } }],
+    'BS10-115': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }, { kind: 'stage-source-to-trash' }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'refreshed-during-game' } }],
     'ST3-022': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw-up-to', max: 1 },
@@ -6711,6 +7096,9 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    // BS10-019 requires both the red activation energy and one hand discard;
+    // the stage itself is rested separately through `restSource`.
+    'BS10-019': { energy: { red: 1 }, discardHand: 1 },
     'BS1-026': {
       energy: {},
       discardHand: 0,
@@ -6946,6 +7334,192 @@ export const convertOfficialAttackEffects = (
           'Then, <can be used as {N}.> Select up to 1 of your opponent\'s Cookies. Add 1 card from the top of that Cookie\'s HP face-up to the bottom of this Cookie\'s HP.',
       },
     ],
+    // BS10-122 Silent Salt：Refresh 後才把對手每張餅乾最上方 1 張 HP
+    // 送入棄牌區；`hp-to-trash-all` 逐張處理 FLIP／昏厥與續接。
+    'BS10-122': [{
+      kind: 'hp-to-trash-all',
+      amount: 1,
+      side: 'opponent',
+      condition: { kind: 'refreshed-during-game' },
+    }],
+    // BS10-049 Eternal Sugar：攻擊後可棄 1 張手牌，選己方至多 1 張
+    // 剩餘 HP 不超過 5 的 Cookie 補 1 HP。
+    'BS10-049': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+      }],
+      effectText: "Then, <discard 1 card.> Select up to 1 of your Cookies with 5 or less HP. That Cookie gains +1 HP.",
+    }],
+    // BS10-048 Warden of the Heart：攻擊後直到對手回合結束，己方所有
+    // Cookie 所受的效果傷害各減 1。
+    'BS10-048': [{
+      kind: 'modify-damage-received',
+      amount: -1,
+      duration: 'opponent-next-turn',
+      damageType: 'effect',
+      target: { side: 'self', min: 0, max: 4, allMatching: true },
+    }],
+    // BS10-098 Jagae：攻擊後選對手至多 1 張 Cookie 造成 1 傷害。
+    'BS10-098': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS10-123 Spectral Warmaster：攻擊後將來源自己送入棄牌區。
+    'BS10-123': [{
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS10-020 Tiger Lily：對手餅乾因本次攻擊昏厥後，抽 1 再棄 1。
+    'BS10-020': [
+      { kind: 'draw', amount: 1, condition: { kind: 'opponent-cookie-fainted-in-current-battle' } },
+      { kind: 'discard-hand', count: 1, condition: { kind: 'opponent-cookie-fainted-in-current-battle' } },
+    ],
+    // BS10-022 Raspberry：可支付其他己方餅乾 1 張 HP，支付後來源進棄牌區。
+    'BS10-022': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1, excludeSource: true } },
+      effects: [{
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      }],
+      effectText: "Then, <place 1 card from the top of one of your other Cookies' HP into your trash.> Place this Cookie in the trash.",
+    }],
+    // BS10-023 Wildberry：棄 1 張手牌後，只有本次攻擊造成昏厥才補來源 HP。
+    'BS10-023': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      }],
+      effectText: "Then, <discard 1 card.> If your opponent's Cookie faints from this Cookie's attack, this Cookie gains +1 HP.",
+    }],
+    // BS10-024 Hollyberry EXTRA：攻擊後可支付 2R，選對手至多一張餅乾
+    // 造成 2 傷害；這段付款沿用 optional-cost-attack 的支援區支付管道。
+    'BS10-024': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { red: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+      effectText: "Then, <{R}{R}> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+    }],
+    // BS10-034 Overjoyed：本回合己方任一餅乾補 HP 後抽最多 1 張。
+    'BS10-034': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'cookie-gained-hp-this-turn' },
+    }],
+    // BS10-036 Adventurer：選己方戰鬥區至多一張 LV.1 餅乾補 1 HP。
+    'BS10-036': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+    }],
+    // BS10-046 Sugarfly：來源剩餘 HP 至多 3 時補 1 HP。
+    'BS10-046': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'source-hp-at-most', amount: 3 },
+    }],
+    // BS10-047 Pavlova：可支付任一己方餅乾 1 張 HP，再選己方餅乾補 1 HP。
+    'BS10-047': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1 } },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+      }],
+      effectText: "Then, <place 1 card from the top of your Cookie's HP into the trash.> Select up to 1 of your Cookies. That Cookie gains +1 HP.",
+    }],
+    // BS10-052 Beet：對手支援區至少 7 張時，雙方各棄 1 張支援卡。
+    'BS10-052': [
+      {
+        kind: 'support-to-trash',
+        amount: 1,
+        side: 'self',
+        condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      },
+      {
+        kind: 'support-to-trash',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      },
+    ],
+    // BS10-071 Mercurial Knight：可支付 2G；己方支援至多 5 張時磨 1 張進休息支援。
+    'BS10-071': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-count-at-most', count: 5 },
+      }],
+      effectText: "Then, <{G}{G}> If your support area contains 5 cards or less, place up to 1 card from the top of your deck in your support area as rested.",
+    }],
+    // BS10-073 White Lily EXTRA：返回一張支援區 Cookie 作為可略過的
+    // Then 代價，再將牌庫頂牌以休息狀態放入支援區。
+    'BS10-073': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+      effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+      effectText: 'Then, <return 1 Cookie from your support area to your hand.> Place up to 1 card from the top of your deck in your support area as rested.',
+    }],
+    // BS10-072 Elder Faerie：對手支援區全部休息時造成 1 傷害。
+    'BS10-072': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'all-support-rested', side: 'opponent' },
+    }],
+    // BS10-075 Peppermint：己方手牌至少 7 張時選對手餅乾造成 1 傷害。
+    'BS10-075': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'hand-count-at-least', count: 7 },
+    }],
+    // BS10-096 Grapefruit：可支付 1B 並將來源放牌庫底；手牌至多 7 張時抽最多 2。
+    'BS10-096': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+      effects: [{
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 7 },
+      }],
+      effectText: "Then, <{B}> <Place this Cookie on the bottom of your deck.> If there are 7 cards or less in your hand, draw up to 2 cards from your deck.",
+    }],
+    // BS10-097 Manju：手牌至多 4 張時抽最多 2 張。
+    'BS10-097': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 4 },
+    }],
+    // BS10-106 Pumpkin Pie：攻擊後固定磨自己牌庫頂 5 張。
+    'BS10-106': [{ kind: 'deck-to-trash', amount: 5, side: 'self' }],
+    // BS10-121 Charcoal：可支付磨牌代價後造成 1 傷害。牌庫代價是
+    // `AbilityCost.deckToTrash`，不是把磨牌誤當成支付後的固定效果，
+    // 這樣付款、Refresh 與後續傷害會保留正確順序。
+    'BS10-121': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, deckToTrash: { amount: 5 } },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+      effectText: 'Then, <place 5 cards from the top of your deck into the trash.> Deals 1 damage.',
+    }],
     // BS9-024 Golden Cheese Cookie：攻擊後可支付「將自身最上方 1 張 HP
     // 回手」的代價，再對原本被攻擊的 Cookie 造成 1 傷害。HP 回手是可略過
     // 的 Then 代價，不能降成沒有代價的固定傷害。
@@ -8990,6 +9564,18 @@ export const convertOfficialAttackEffects = (
       target: { side: 'opponent', min: 0, max: 1 },
       condition: { kind: 'opponent-support-count-at-least', count: 6 },
     }],
+    // BS10-006 Blueberry Cookie：主攻擊結算後，若對手本回合曾有 Cookie
+    // 昏厥，選至多 1 張對手 Cookie 追加 1 傷害。
+    'BS10-006': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'opponent',
+        count: 1,
+      },
+    }],
     // BS9-062 Carameleon Cookie：攻擊後必須將兩張支援卡送入棄牌區。
     'BS9-062': [{ kind: 'support-to-trash', amount: 2 }],
     // BS9-065 Pure Vanilla Cookie：攻擊後支付兩張支援卡，再讓己方至多
@@ -10003,6 +10589,91 @@ export const convertOfficialTrapAbility = (
         { kind: 'damage-all', amount: 1, side: 'opponent' },
       ],
     },
+    'BS10-013': {
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 } },
+      ],
+    },
+    'BS10-014': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      conditionalCost: {
+        condition: { kind: 'friendly-cookie-fainted-this-battle' },
+        cost: { energy: {}, discardHand: 0 },
+      },
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }],
+    },
+    'BS10-015': {
+      // The discard is the optional Then payment, not part of the initial
+      // trap activation cost. Keep it in the effect chain and pay only 3R.
+      cost: { energy: { red: 3 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'discard-hand', count: 1 },
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+      ],
+    },
+    'BS10-062': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [{ kind: 'support-to-hp', target: { side: 'self', min: 0, max: 1 }, energyColor: 'green', selectTarget: true, optional: true }],
+    },
+    'BS10-063': {
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      effects: [
+        { kind: 'support-to-trash', amount: 1, side: 'self' },
+        { kind: 'support-to-trash', amount: 1, side: 'opponent' },
+      ],
+    },
+    'BS10-042': {
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [{
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'break-level-at-least', level: 5 },
+          }],
+        },
+      ],
+    },
+    'BS10-086': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    },
+    'BS10-038': {
+      effects: [{
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'previous-effect-target-hp-above-original' },
+        }],
+      }],
+    },
+    'BS10-087': {
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    },
+    'BS10-090': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 2 } }] }],
+    },
+    'BS10-113': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'refreshed-during-game' } }] }],
+    },
+    'BS10-114': {
+      effects: [{ kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] }],
+    },
+    'BS10-116': {
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'field-to-trash', target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' } }] }],
+    },
     'BS8-023': {
       effects: [
         { kind: 'damage-all', amount: 1, side: 'either', sequential: true, minRemainingHp: 2,
@@ -10981,6 +11652,53 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   },
   'BS8-119': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
   'BS8-120': { energy: {}, discardHand: 1 },
+  // BS10-009 Cranberry Cookie：從己方任一 LV.2 以上 Cookie 的 HP 頂端
+  // 支付 1 張；不能誤設 sourceOnly，因來源以外的符合條件 Cookie 也合法。
+  'BS10-009': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, minLevel: 2 },
+  },
+  // BS10-102 Alchemist／BS10-118 Pastry 都把來源自己送進棄牌作為技能代價；
+  // 通用 parser 對「Place this Cookie in the trash」不可靠，明確保留紫色費用。
+  'BS10-102': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  'BS10-118': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  // BS10-108 Black Garlic 的 On Play 只需要棄一張手牌，目標限制由
+  // exactStarterEffects 的 trash-to-hand effect 提供。
+  'BS10-108': { energy: {}, discardHand: 1 },
+  // BS10-058 Clover 的尖括號是回手支援成本；通用 parser 不把 Return
+  // support → hand 句式轉成 AbilityCost。
+  'BS10-058': { energy: {}, discardHand: 0 },
+  'BS10-120': { energy: {}, discardHand: 0 },
+  'BS10-121': { energy: {}, discardHand: 1 },
+  'BS10-122': { energy: {}, discardHand: 0 },
+  'BS10-059': { energy: { green: 1 }, discardHand: 0, supportToTrash: 1 },
+  'BS10-069': { energy: { green: 1 }, discardHand: 0 },
+  'BS10-074': { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+  'BS10-044': {
+    energy: { yellow: 1 },
+    discardHand: 0,
+    hpToTrash: { amount: 1, sourceOnly: true },
+  },
+  'BS10-071': {
+    energy: { green: 2 },
+    discardHand: 0,
+    supportToHand: 1,
+    supportToHandType: 'cookie',
+    supportToHandColor: 'green',
+  },
+  'BS10-097': { energy: {}, discardHand: 1 },
+  'BS10-117': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: {
+      count: 1,
+      maxLevel: 2,
+      energyColor: 'purple',
+      excludeSource: true,
+    },
+  },
+  'BS10-023': { energy: { red: 1 }, discardHand: 0 },
   // BS9-014 Candy Apple Cookie：On Play 代價是從自己「其他」Cookie
   // 的 HP 頂端移除 2 張，不能用來源卡自身支付。
   'BS9-014': {
@@ -11370,6 +12088,34 @@ const exactCookieSkillPassiveEffects: Partial<Record<string, CardEffect[]>> = {
       },
     },
   ],
+  // BS10-049 Eternal Sugar：Break LV.5+ 且己方戰鬥區沒有另一張同名卡時，
+  // 對手所有餅乾攻擊費用增加 1N。energy.ts 會把這個被動即時套用到攻擊者，
+  // 不寫入一次性 modifier，避免來源離場／條件變化後殘留。
+  'BS10-049': [{
+    kind: 'modify-attack-cost',
+    target: { side: 'opponent', min: 0, max: 1 },
+    energyCost: { neutral: 1 },
+    operation: 'increase',
+    duration: 'persistent',
+    condition: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'break-level-at-least', level: 5 },
+        {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Eternal Sugar Cookie',
+          excludeSource: true,
+          negate: true,
+        },
+      ],
+    },
+  }],
+}
+
+/** 動態攻擊限制不能轉為一次性 state flag，必須隨 HP 即時判定。 */
+const exactCookieSkillAttackRestrictions: Partial<Record<string, EffectCondition>> = {
+  'BS10-021': { kind: 'source-hp-at-most', amount: 3 },
 }
 
 /** 卡面同時有獨立 On Play 與 Activate 子句時，保留登場效果的單次時機。 */
@@ -11434,6 +12180,8 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS7-044': 'on-play',
   'BS7-045': 'on-play',
   'BS7-046': 'on-play',
+  // BS10-109 Licorice：Cookie 從戰鬥區直接進棄牌區時觸發。
+  'BS10-109': 'departure',
 }
 
 /**
@@ -11516,6 +12264,9 @@ export const convertOfficialCookieSkill = (
     ...(cardKey === 'BS8-003' ? { effectConditionsAtResolution: true } : {}),
     ...(exactCookieSkillPassiveEffects[cardKey]
       ? { passiveEffects: exactCookieSkillPassiveEffects[cardKey] }
+      : {}),
+    ...(exactCookieSkillAttackRestrictions[cardKey]
+      ? { cannotAttackCondition: exactCookieSkillAttackRestrictions[cardKey] }
       : {}),
     ...(exactCookieSkillOnPlayEffects[cardKey]
       ? { onPlayEffects: exactCookieSkillOnPlayEffects[cardKey] }

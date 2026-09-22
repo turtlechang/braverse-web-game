@@ -121,6 +121,7 @@ export interface CardBehaviorContract {
 export interface RuntimeCardEvidence {
   card: GameCard | null
   effects: CardEffect[]
+  extraDeckPlayCost?: AbilityCost
   skill?: {
     trigger?: string
     oncePerTurn?: boolean
@@ -143,6 +144,7 @@ export interface RuntimeCardEvidence {
     oncePerTurn?: boolean
     sourceEnergy?: EnergyCost
     effects?: CardEffect[]
+    equippedAttackEffects?: CardEffect[]
   }
   unsupportedReason?: string
 }

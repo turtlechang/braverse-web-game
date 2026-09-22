@@ -168,6 +168,32 @@ describe('getOptionalCostAttackPrompt', () => {
     expect(getOptionalCostAttackPrompt(state, 'player-two')?.costText).toBe('無')
   })
 
+  it('shows BS10-121 deck-mill cost and blocks payment without a deck or Refresh', () => {
+    const state = createBattleState()
+    state.players['player-two'].deck = []
+    state.players['player-two'].discardPile = []
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Charcoal Cookie',
+      cost: { energy: {}, deckToTrash: { amount: 5 } },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+      effectText: 'Then, <place 5 cards from the top of your deck into the trash.> Deals 1 damage.',
+    }
+
+    expect(getOptionalCostAttackPrompt(state, 'player-two')).toMatchObject({
+      costText: '將牌庫頂 5 張卡放入棄牌區',
+      deckToTrashAvailable: false,
+      paymentUnavailableWarning: '目前牌庫不足以支付磨牌代價，且沒有可用的 Refresh，無法執行攻擊後效果，請選擇「略過」。',
+    })
+  })
+
   it('returns self battle candidates and an optional target minimum', () => {
     const state = createBattleState()
     state.pendingOptionalCostAttack = {

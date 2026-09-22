@@ -28,10 +28,11 @@ export interface CardContractAttestation {
  */
 export const buildCardContractActionTrace = (
   entries: readonly CommandLogEntry[],
-  cardId: string,
-): CardContractActionTraceEntry[] =>
-  entries
-    .filter((entry) => entry.card?.id === cardId)
+  cardId: string | readonly string[],
+): CardContractActionTraceEntry[] => {
+  const cardIds = new Set(Array.isArray(cardId) ? cardId : [cardId])
+  return entries
+    .filter((entry) => entry.card?.id !== undefined && cardIds.has(entry.card.id))
     .map((entry) => ({
       id: entry.id,
       ...(entry.groupId !== undefined ? { groupId: entry.groupId } : {}),
@@ -40,6 +41,7 @@ export const buildCardContractActionTrace = (
       ...(entry.summary ? { summary: entry.summary } : {}),
       steps: (entry.steps ?? []).map((step) => step.text),
     }))
+}
 
 export const traceContainsCommandKinds = (
   trace: readonly CardContractActionTraceEntry[],

@@ -125,7 +125,14 @@ export const validateCardEffectSemantics = (
   )
 
   if (entry.type === 'cookie' && entry.skill.text) {
-    if (!hasFlavorOnlySkill && (!card.skill || card.skill.effects.length === 0)) {
+    const hasStaticSkillPayload = Boolean(
+      card.skill?.passiveEffects?.length ||
+        card.skill?.cannotAttackCondition,
+    )
+    if (
+      !hasFlavorOnlySkill &&
+      (!card.skill || (card.skill.effects.length === 0 && !hasStaticSkillPayload))
+    ) {
       errors.push(`${label}: 技能文字必須轉出含至少 1 個效果的 skill`)
     }
 

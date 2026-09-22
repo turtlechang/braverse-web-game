@@ -26,6 +26,7 @@ import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingd
 import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
+import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -51,6 +52,7 @@ import type {
   PendingFaintEffect,
   PlayerId,
   PlayerState,
+  SupportCard,
   TurnPhase,
 } from './types'
 
@@ -185,6 +187,24 @@ export const BS8_EXTRA_DECK_CARD_NUMBERS = [
 ] as const
 export type Bs8ExtraDeckCardNumber =
   (typeof BS8_EXTRA_DECK_CARD_NUMBERS)[number]
+
+/** BS10 candidate EXTRA records covered by the isolated staging Browser flow. */
+export const BS10_EXTRA_DECK_CARD_NUMBERS = [
+  'BS10-024',
+  'BS10-024@1',
+  'BS10-024@2',
+  'BS10-048',
+  'BS10-048@1',
+  'BS10-073',
+  'BS10-073@1',
+  'BS10-073@2',
+  'BS10-098',
+  'BS10-098@1',
+  'BS10-123',
+  'BS10-123@1',
+] as const
+export type Bs10ExtraDeckCardNumber =
+  (typeof BS10_EXTRA_DECK_CARD_NUMBERS)[number]
 
 export const BS8_GREEN_CONDITION_CARD_NUMBERS = [
   'BS8-059',
@@ -386,6 +406,52 @@ export const BS9_CANDIDATE_CARD_NUMBERS = [
 export type Bs9CandidateCardNumber =
   (typeof BS9_CANDIDATE_CARD_NUMBERS)[number]
 
+/** BS10 首批已完成卡圖核對、僅供 localhost preview 的精確卡號。 */
+export const BS10_FIRST_BATCH_CARD_NUMBERS = [
+  'BS10-001',
+  'BS10-002',
+  'BS10-003',
+  'BS10-004',
+  'BS10-005',
+  'BS10-005@1',
+] as const
+export type Bs10FirstBatchCardNumber =
+  (typeof BS10_FIRST_BATCH_CARD_NUMBERS)[number]
+
+/** BS10 第二批已完成卡圖核對、僅供 localhost preview 的精確卡號。 */
+export const BS10_REVIEWED_PREVIEW_CARD_NUMBERS = [
+  ...BS10_FIRST_BATCH_CARD_NUMBERS,
+  'BS10-006',
+  'BS10-007',
+  'BS10-010',
+] as const
+export type Bs10PreviewCardNumber =
+  (typeof BS10_REVIEWED_PREVIEW_CARD_NUMBERS)[number]
+
+/** BS10-008 的 FLIP 驗證情境；只由專用 localhost preview route 接受。 */
+export const BS10_008_FLIP_PREVIEW_SCENARIOS = [
+  'nonlethal',
+  'last-hp',
+  'no-hand',
+  'two-damage',
+  'refresh-one',
+  'refresh-two',
+] as const
+export type Bs1008FlipPreviewScenario =
+  (typeof BS10_008_FLIP_PREVIEW_SCENARIOS)[number]
+
+/** BS10-009 HP-cost preview cases; only the dedicated localhost route accepts these. */
+export const BS10_009_HP_PREVIEW_SCENARIOS = [
+  'normal',
+  'source-last-hp',
+  'ally-last-hp',
+  'mixed-support',
+  'wrong-target',
+  'once-used',
+] as const
+export type Bs1009HpPreviewScenario =
+  (typeof BS10_009_HP_PREVIEW_SCENARIOS)[number]
+
 /** BS9-018 Kumiho FLIP 的 localhost 攻擊見證可選擇的正式目標餅乾。 */
 export type Bs9018KumihoTargetCardNumber = 'BS1-007' | 'BS8-007'
 
@@ -394,10 +460,32 @@ const isBs8ExtraDeckCardNumber = (
 ): value is Bs8ExtraDeckCardNumber =>
   (BS8_EXTRA_DECK_CARD_NUMBERS as readonly string[]).includes(value)
 
+const isBs10ExtraDeckCardNumber = (
+  value: string,
+): value is Bs10ExtraDeckCardNumber =>
+  (BS10_EXTRA_DECK_CARD_NUMBERS as readonly string[]).includes(value)
+
 const isBs9CandidateCardNumber = (
   value: string,
 ): value is Bs9CandidateCardNumber =>
   (BS9_CANDIDATE_CARD_NUMBERS as readonly string[]).includes(value)
+
+const isBs10PreviewCardNumber = (
+  value: string,
+): value is Bs10PreviewCardNumber =>
+  /^BS10-\d{3}(?:@\d+)?$/i.test(value)
+
+const isBs1008FlipPreviewScenario = (
+  value: string | null,
+): value is Bs1008FlipPreviewScenario =>
+  value !== null &&
+  (BS10_008_FLIP_PREVIEW_SCENARIOS as readonly string[]).includes(value)
+
+const isBs1009HpPreviewScenario = (
+  value: string | null,
+): value is Bs1009HpPreviewScenario =>
+  value !== null &&
+  (BS10_009_HP_PREVIEW_SCENARIOS as readonly string[]).includes(value)
 
 const isBs9ExtraDeckCardNumber = (value: string): boolean =>
   value === 'BS9-010' || value === 'BS9-030' || value === 'BS9-055' ||
@@ -433,10 +521,18 @@ export const parseTestStateConfig = (
       orderedTargets?: boolean
     }
   | {
+      kind: 'bs10-extra-deck'
+      cardNumber: Bs10ExtraDeckCardNumber
+      conditionMet: boolean
+    }
+  | {
       kind: 'bs9-candidate'
       cardNumber: Bs9CandidateCardNumber
       negative: boolean
     }
+  | { kind: 'bs10-008-flip'; scenario: Bs1008FlipPreviewScenario }
+  | { kind: 'bs10-009-hp-cost'; scenario: Bs1009HpPreviewScenario }
+  | { kind: 'bs10-condition'; cardNumber: string; conditionMet: boolean }
   | {
       kind: 'bs9-damage'
       cardNumber: Bs9CandidateCardNumber
@@ -560,6 +656,32 @@ export const parseTestStateConfig = (
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
   const testState = params.get('test-state')
+  if (testState === 'bs10-008-flip') {
+    const scenario = params.get('scenario')
+    return isBs1008FlipPreviewScenario(scenario)
+      ? { kind: 'bs10-008-flip', scenario }
+      : null
+  }
+  if (testState === 'bs10-009-hp-cost') {
+    const scenario = params.get('scenario')
+    return isBs1009HpPreviewScenario(scenario)
+      ? { kind: 'bs10-009-hp-cost', scenario }
+      : null
+  }
+  if (testState?.startsWith('bs10-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isBs10PreviewCardNumber(cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs10-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
   if (testState === 'break-to-trash-lv1') {
     return { kind: 'break-to-trash', level: 1 }
   }
@@ -722,6 +844,19 @@ export const parseTestStateConfig = (
     if (isBs8ExtraDeckCardNumber(cardNumber)) {
       return {
         kind: 'bs8-extra-deck',
+        cardNumber,
+        conditionMet: status === 'met',
+      }
+    }
+  }
+  const bs10ExtraDeckMatch = testState?.match(
+    /^bs10-extra-deck:(BS10-(?:024(?:@(?:1|2))?|048(?:@1)?|073(?:@(?:1|2))?|098(?:@1)?|123(?:@1)?)):(met|unmet)$/,
+  )
+  if (bs10ExtraDeckMatch) {
+    const [, cardNumber, status] = bs10ExtraDeckMatch
+    if (isBs10ExtraDeckCardNumber(cardNumber)) {
+      return {
+        kind: 'bs10-extra-deck',
         cardNumber,
         conditionMet: status === 'met',
       }
@@ -1476,6 +1611,171 @@ export const createBs8ExtraDeckDemoState = (
     },
     pendingRefresh: null,
     pendingBattle: null,
+  }
+}
+
+/**
+ * Isolated BS10 EXTRA Deck staging fixtures.  The candidate records stay in
+ * `data/candidates`; this route only places the adapter output into a local
+ * GameState so the real EXTRA readiness, payment, and Awaken commands can be
+ * exercised in Browser tests.
+ */
+export const createBs10ExtraDeckDemoState = (
+  cardNumber: Bs10ExtraDeckCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  if (!isBs10ExtraDeckCardNumber(cardNumber)) {
+    throw new Error(`BS10 EXTRA fixture does not support ${cardNumber}`)
+  }
+  const source = (bs10CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === cardNumber,
+  )
+  if (!source) throw new Error(`BS10 EXTRA fixture requires ${cardNumber}`)
+  const conversion = convertOfficialCardToExtraDeckCard(
+    source,
+    `bs10-${cardNumber.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-demo`,
+  )
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS10 EXTRA fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  const instanceId = `bs10-${cardNumber.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-demo-extra`
+  const extraCard: ExtraDeckCard = {
+    ...conversion.extraDeckCard,
+    instanceId,
+  }
+  const base = createBs8ExtraDeckDemoState(false)
+  const player = base.players['player-one']
+  const opponent = base.players['player-two']
+  const baseCardNumber = cardNumber.split('@')[0]
+  const hpWitness = (prefix: string, count: number): GameCard[] =>
+    Array.from({ length: count }, (_, index) =>
+      cardCheckOfficialCard('BS6-047', `${prefix}-hp-${index + 1}`),
+    )
+  const supportWitness = (
+    prefix: string,
+    count: number,
+    color: EnergyColor,
+  ): SupportCard[] =>
+    Array.from({ length: count }, (_, index) => ({
+      card: testSupportCard(`${prefix}-${index + 1}`, color),
+      rested: false,
+    }))
+
+  let playerUpdate: Partial<PlayerState> = {
+    extraDeck: [extraCard],
+  }
+  let stateUpdate: Partial<GameState> = {
+    extraDeckPlayUsedThisTurn: false,
+    pendingOnPlay: null,
+    pendingBattle: null,
+    commandLog: [],
+  }
+
+  if (baseCardNumber === 'BS10-024') {
+    const target = cardCheckOfficialCookie('BS10-021', 'bs10-024-awaken-target')
+    playerUpdate = {
+      ...playerUpdate,
+      hand: [testSupportCard('bs10-024-discard-cost', 'red')],
+      battleArea: [
+        {
+          ...cardCheckBattleEntry(
+            target,
+            hpWitness('bs10-024-target', conditionMet ? 3 : 4),
+            1,
+          ),
+          enteredFrom: 'hand',
+          enteredTurn: base.turnNumber,
+        },
+      ],
+      // Awaken consumes one card from the deck for the printed HP+1.
+      deck: [
+        cardCheckOfficialCard('BS6-047', 'bs10-024-awaken-deck-hp'),
+        ...player.deck,
+      ],
+    }
+  } else if (baseCardNumber === 'BS10-073') {
+    const target = cardCheckOfficialCookie('BS10-069', 'bs10-073-awaken-target')
+    playerUpdate = {
+      ...playerUpdate,
+      battleArea: [
+        {
+          ...cardCheckBattleEntry(target, hpWitness('bs10-073-target', 2), 1),
+          enteredFrom: 'hand',
+          enteredTurn: base.turnNumber,
+        },
+      ],
+      supportArea: supportWitness(
+        'bs10-073-support',
+        conditionMet ? 8 : 7,
+        'green',
+      ),
+      deck: [
+        cardCheckOfficialCard('BS6-047', 'bs10-073-awaken-deck-hp'),
+        ...player.deck,
+      ],
+    }
+  } else if (baseCardNumber === 'BS10-048') {
+    playerUpdate = {
+      ...playerUpdate,
+      breakArea: conditionMet
+        ? [
+            { ...cardCheckOfficialCookie('BS8-014', 'bs10-048-break-1'), level: 3 },
+            { ...cardCheckOfficialCookie('BS8-014', 'bs10-048-break-2'), level: 2 },
+          ]
+        : [{ ...cardCheckOfficialCookie('BS8-014', 'bs10-048-break-1'), level: 3 }],
+      supportArea: supportWitness('bs10-048-support', 3, 'yellow'),
+    }
+    stateUpdate = {
+      ...stateUpdate,
+      cookiesGainedHpThisTurn: {
+        'player-one': conditionMet,
+        'player-two': false,
+      },
+    }
+  } else if (baseCardNumber === 'BS10-098') {
+    const hand = [
+      testSupportCard('bs10-098-blue-cost-1', 'blue'),
+      testSupportCard('bs10-098-blue-cost-2', 'blue'),
+      ...Array.from(
+        { length: conditionMet ? 5 : 4 },
+        (_, index) => testSupportCard(`bs10-098-hand-${index + 1}`, 'red'),
+      ),
+    ]
+    playerUpdate = {
+      ...playerUpdate,
+      hand,
+    }
+  } else if (baseCardNumber === 'BS10-123') {
+    playerUpdate = {
+      ...playerUpdate,
+      hand: [
+        testSupportCard('bs10-123-discard-1', 'purple'),
+        testSupportCard('bs10-123-discard-2', 'purple'),
+      ],
+      supportArea: supportWitness('bs10-123-support', 3, 'purple'),
+    }
+    stateUpdate = {
+      ...stateUpdate,
+      refreshedDuringGame: {
+        'player-one': conditionMet,
+        'player-two': false,
+      },
+    }
+  }
+
+  return {
+    ...base,
+    ...stateUpdate,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...player,
+        ...playerUpdate,
+      },
+      'player-two': {
+        ...opponent,
+      },
+    },
   }
 }
 
@@ -4126,6 +4426,65 @@ const getBs9CandidateTestCard = (cardNumber: string): GameCard | null => {
   }
 }
 
+/**
+ * BS10 remains inventory-only. The localhost candidate route may load every
+ * exact non-EXTRA BS10 record from the inventory document, while the formal
+ * card pool remains untouched until the promotion gate passes. EXTRA records
+ * deliberately fail closed here and use their dedicated staging fixtures.
+ */
+const getBs10CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  if (!isBs10PreviewCardNumber(trimmed)) return null
+  const source = (bs10CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === trimmed,
+  )
+  if (!source || source.flags.extra) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS10 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
+/**
+ * BS10-008 is intentionally excluded from the generic candidate preview
+ * allowlist.  The dedicated FLIP route is the only localhost fixture allowed
+ * to load this exact candidate record.
+ */
+const getBs1008FlipCandidateCard = (): GameCard => {
+  const source = (bs10CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === 'BS10-008',
+  )
+  if (!source || source.flags.extra) {
+    throw new Error('BS10-008 FLIP preview candidate is missing')
+  }
+
+  const conversion = convertOfficialCardToGameCard(source, 'bs10-008-preview')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS10-008 FLIP preview candidate cannot convert: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: 'bs10-008-preview-flip',
+  }
+}
+
+const getBs1009HpCostCandidateCard = (): CookieCard => {
+  const source = (bs10CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === 'BS10-009',
+  )
+  if (!source || source.flags.extra) throw new Error('BS10-009 HP-cost preview candidate is missing')
+  const conversion = convertOfficialCardToGameCard(source, 'bs10-009-preview')
+  if (conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error(`BS10-009 HP-cost preview candidate cannot convert: ${conversion.status === 'converted' ? 'not a Cookie' : conversion.reason}`)
+  }
+  return { ...conversion.gameCard, instanceId: 'bs10-009-preview-source' }
+}
+
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
   // BS6-091 is represented only by variants in the formal API. Resolve it
@@ -4152,6 +4511,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     if (bs8Candidate) return bs8Candidate
     const bs9Candidate = getBs9CandidateTestCard(trimmed)
     if (bs9Candidate) return bs9Candidate
+    const bs10Candidate = getBs10CandidateTestCard(trimmed)
+    if (bs10Candidate) return bs10Candidate
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -6287,9 +6648,22 @@ const createBs8042EntryDemoState = (card: CookieCard): GameState => {
 
 export const createCardCheckDemoState = (
   cardNumber: string,
-  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip' } = {},
+  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean } = {},
 ): GameState => {
   const requestedBaseCardNumber = cardNumber.trim().split('@')[0]
+  if (
+    isBs10PreviewCardNumber(cardNumber.trim()) &&
+    !options.bs10PreviewBypass &&
+    options.normalAttack === undefined
+  ) {
+    return createBs10CandidatePreviewDemoState(cardNumber.trim() as Bs10PreviewCardNumber, false)
+  }
+  // BS10-008 keeps its FLIP witness behind the dedicated route even after
+  // the card is promoted into the formal pool; the generic card-check URL
+  // must not silently open a weaker fixture.
+  if (requestedBaseCardNumber === 'BS10-008') {
+    throw new Error('BS10-008 requires its dedicated FLIP preview route')
+  }
   if (requestedBaseCardNumber === 'BS9-018' && options.normalAttack === undefined) {
     return createBs9018KumihoAttackDemoState(cardNumber as Bs9CandidateCardNumber)
   }
@@ -6991,6 +7365,86 @@ export const createCardCheckDemoState = (
   if (options.normalAttack) {
     if (card.type !== 'cookie') throw new Error('Normal attack fixture requires a Cookie')
     const state = baseState()
+    const isBs10OrdinaryAttack =
+      card.id === 'BS10-006' || card.id === 'BS10-007' || card.id === 'BS10-010'
+    const ordinaryAttackSupports = isBs10OrdinaryAttack
+      ? Array.from({ length: 6 }, (_, index) => {
+          const supportNumber = card.id === 'BS10-010'
+            ? index % 2 === 0 ? 'BS6-002' : 'BS6-047'
+            : index < 3 ? 'BS6-002' : 'BS6-004'
+          const required = card.attackCost
+          return {
+            card: cardCheckOfficialCard(
+              supportNumber,
+              `BS10-${card.id}-attack-support-${index + 1}`,
+            ),
+            // Keep exactly cost - 1 active in the blocked fixture. This
+            // leaves the source and the actual support cards in the same
+            // pre-declaration surface as the legal route.
+            rested: options.normalAttack === 'blocked' && index >= Math.max(0, required - 1),
+          }
+        })
+      : null
+    const normalAttackSupports = card.id === 'BS10-003'
+      ? Array.from({ length: 6 }, (_, index) => ({
+          card: cardCheckOfficialCard(
+            index < 3 ? 'BS6-002' : 'BS6-004',
+            `BS10-003-attack-support-${index + 1}`,
+          ),
+          rested: options.normalAttack === 'blocked',
+        }))
+      : ordinaryAttackSupports ?? energySupports.map((support) => ({
+          card: support,
+          rested: options.normalAttack === 'blocked',
+        }))
+    const ordinaryOpponentBattleArea = isBs10OrdinaryAttack
+      ? (() => {
+          const targetNumber = card.id === 'BS10-010' ? 'BS6-079' : 'BS6-080'
+          const target = cardCheckOfficialCookie(
+            targetNumber,
+            `BS10-${card.id}-attack-target`,
+          )
+          const targetRemainingHp = card.id === 'BS10-006'
+            ? 2
+            : card.id === 'BS10-007'
+              ? 3
+              : 5
+          const targetHp = Array.from({ length: targetRemainingHp }, (_, index) =>
+            cardCheckOfficialCard(
+              'BS6-047',
+              `BS10-${card.id}-attack-target-hp-${index + 1}`,
+            ),
+          )
+          const entries = [cardCheckBattleEntry(target, targetHp, 1)]
+          if (card.id !== 'BS10-010') {
+            const survivor = cardCheckOfficialCookie(
+              'BS6-079',
+              `BS10-${card.id}-attack-survivor`,
+            )
+            entries.push(cardCheckBattleEntry(
+              survivor,
+              Array.from({ length: survivor.hp }, (_, index) =>
+                cardCheckOfficialCard(
+                  'BS6-047',
+                  `BS10-${card.id}-attack-survivor-hp-${index + 1}`,
+                ),
+              ),
+              2,
+            ))
+          }
+          return entries
+        })()
+      : opponentBattleArea
+    const sourceHpCards = isBs10OrdinaryAttack
+      ? Array.from({ length: card.hp }, (_, index) =>
+          cardCheckOfficialCard(
+            'BS6-047',
+            `BS10-${card.id}-attack-source-hp-${index + 1}`,
+          ),
+        )
+      : Array.from({ length: card.hp }, (_, index) =>
+          testSupportCard(`${card.id}-attack-hp-${index + 1}`, payColor),
+        )
     // Keep every printed ability, but start before declaration rather than in
     // a FLIP/faint window. Payment and damage still use normal game commands.
     return {
@@ -6999,11 +7453,10 @@ export const createCardCheckDemoState = (
         'player-one': {
           ...state.players['player-one'],
           ...(card.id === 'BS8-083' ? { hand: handFillers.slice(0, 2) } : {}),
-          battleArea: [cardCheckBattleEntry(card, Array.from({ length: card.hp }, (_, index) =>
-            testSupportCard(`${card.id}-attack-hp-${index + 1}`, payColor)), 4)],
-          supportArea: energySupports.map(card => ({ card, rested: options.normalAttack === 'blocked' })),
+          battleArea: [cardCheckBattleEntry(card, sourceHpCards, 4)],
+          supportArea: normalAttackSupports,
         },
-        'player-two': { ...state.players['player-two'], battleArea: opponentBattleArea },
+        'player-two': { ...state.players['player-two'], battleArea: ordinaryOpponentBattleArea },
       },
     }
   }
@@ -9167,8 +9620,29 @@ export const createCardNegativeDemoState = (
     preferSkillSurface?: boolean
     sourceHpCount?: number
     normalAttack?: 'payable' | 'blocked'
+    bs10PreviewBypass?: boolean
   } = {},
 ): GameState => {
+  if (
+    cardNumber.trim().split('@')[0] === 'BS10-003' &&
+    options.normalAttack === 'blocked' &&
+    !options.bs10PreviewBypass
+  ) {
+    return createBs1003WrongColorPreviewDemoState(cardNumber)
+  }
+  if (
+    options.normalAttack === undefined &&
+    ['BS10-002', 'BS10-005'].includes(cardNumber.trim().split('@')[0])
+  ) {
+    return createBs10VanillaNegativeDemoState(cardNumber)
+  }
+  if (
+    isBs10PreviewCardNumber(cardNumber.trim()) &&
+    !options.bs10PreviewBypass &&
+    options.normalAttack === undefined
+  ) {
+    return createBs10CandidatePreviewDemoState(cardNumber.trim() as Bs10PreviewCardNumber, true)
+  }
   if (cardNumber.split('@')[0] === 'BS9-018') {
     return createBs9018KumihoAttackDemoState(
       cardNumber as Bs9CandidateCardNumber,
@@ -9188,6 +9662,15 @@ export const createCardNegativeDemoState = (
   const player = state.players['player-one']
   const baseCardNumber = cardNumber.split('@')[0]
   const baseNumberValue = Number(baseCardNumber.split('-')[1])
+  if (
+    options.normalAttack === 'blocked' &&
+    (baseCardNumber === 'BS10-006' || baseCardNumber === 'BS10-007' || baseCardNumber === 'BS10-010')
+  ) {
+    // The ordinary second-batch fixture already leaves exactly cost - 1
+    // supports active. Preserve that surface instead of the generic negative
+    // fallback, which rests every support and hides the real shortfall.
+    return state
+  }
   // `card-attack-negative` is a payment-blocked declaration witness.  It must
   // stop before the attack continuation, even when the printed attack has a
   // mandatory Then effect; otherwise the Browser lane starts from a fabricated
@@ -11632,6 +12115,715 @@ export const createBs9CandidatePreviewDemoState = (
 ): GameState => negative
   ? createCardNegativeDemoState(cardNumber)
   : createCardCheckDemoState(cardNumber)
+
+const createBs1003FlipPreviewDemoState = (lethal: boolean): GameState => {
+  const cardNumber = 'BS10-003' as const
+  const base = createCardCheckDemoState(cardNumber, {
+    normalAttack: 'payable',
+    bs10PreviewBypass: true,
+  })
+  const target = base.players['player-one'].battleArea[0]
+  if (!target) throw new Error('BS10-003 FLIP fixture target is missing')
+  const defender = cardCheckOfficialCookie('BS6-047', 'BS10-003-defender')
+  const revealed = {
+    ...target.card,
+    instanceId: `BS10-003-hp-${lethal ? 'lethal' : 'nonlethal'}`,
+  }
+  const targetHpCards = lethal
+    ? [revealed]
+    : [
+        cardCheckOfficialCard('BS6-047', 'BS10-003-target-hp-remaining'),
+        revealed,
+      ]
+  const attacker = cardCheckOfficialCookie('BS6-017', 'BS10-003-real-attacker')
+  const attackerHp = cardCheckOfficialCard('BS6-047', 'BS10-003-real-attacker-hp')
+  const attackerSupport = cardCheckOfficialCard('BS6-002', 'BS10-003-real-attack-support')
+  const replacement = cardCheckOfficialCookie('BS6-079', 'BS10-003-replacement')
+  let prepared: GameState = {
+    ...base,
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        hand: lethal ? [replacement] : base.players['player-one'].hand,
+        // The reviewed candidate exists only as the revealed HP card. The
+        // defender itself is a real official Cookie with printed HP >= 2.
+        battleArea: [cardCheckBattleEntry(defender, targetHpCards, 4)],
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        battleArea: [cardCheckBattleEntry(attacker, [attackerHp], 5)],
+        supportArea: [{ card: attackerSupport, rested: false }],
+      },
+    },
+  }
+  prepared = applyGameCommand(prepared, {
+    kind: 'declare-attack',
+    playerId: 'player-two',
+    attackerInstanceId: attacker.instanceId,
+    targetInstanceId: defender.instanceId,
+    supportPaymentIds: [attackerSupport.instanceId],
+  })
+  if (prepared.pendingBattle?.stage === 'trap') {
+    prepared = applyGameCommand(prepared, {
+      kind: 'skip-trap',
+      playerId: 'player-one',
+    })
+  }
+  return applyGameCommand(prepared, {
+    kind: 'resolve-next-damage',
+    playerId: 'player-one',
+  })
+}
+
+const createBs1003WrongColorPreviewDemoState = (cardNumber: string): GameState => {
+  const state = createCardCheckDemoState(cardNumber, {
+    normalAttack: 'payable',
+    bs10PreviewBypass: true,
+  })
+  const blueSupports = Array.from({ length: 6 }, (_, index) => ({
+    card: cardCheckOfficialCard(
+      index < 3 ? 'BS6-079' : 'BS6-080',
+      `BS10-003-blue-support-${index + 1}`,
+    ),
+    rested: false,
+  }))
+  return updateDemoPlayer(state, 'player-one', {
+    battleArea: state.players['player-one'].battleArea.map((entry) => ({
+      ...entry,
+      rested: false,
+    })),
+    supportArea: blueSupports,
+  })
+}
+
+/**
+ * 首批 BS10 候選卡的 localhost-only Browser fixtures。每張卡只接受已看過
+ * 卡圖的精確卡號；EXTRA 與尚未納入本批的卡號會在 loader 邊界 fail closed。
+ */
+export const createBs10CandidatePreviewDemoState = (
+  cardNumber: Bs10PreviewCardNumber,
+  negative = false,
+): GameState => {
+  const baseCardNumber = cardNumber.split('@')[0]
+  if (!isBs10PreviewCardNumber(cardNumber)) {
+    throw new Error(`BS10 reviewed preview fixture does not support ${cardNumber}`)
+  }
+
+  if (baseCardNumber === 'BS10-006' || baseCardNumber === 'BS10-007') {
+    const state = createCardCheckDemoState(cardNumber, { bs10PreviewBypass: true })
+    const sourceCard = cardCheckOfficialCookie(baseCardNumber, `BS10-${baseCardNumber}-preview-source`)
+    const sourceHp = Array.from({ length: sourceCard.hp }, (_, index) =>
+      cardCheckOfficialCard('BS6-047', `BS10-${baseCardNumber}-preview-source-hp-${index + 1}`),
+    )
+    const setupAttacker = baseCardNumber === 'BS10-007'
+      ? cardCheckOfficialCookie('BS6-017', 'BS10-007-preview-setup-attacker')
+      : null
+    const setupHp = setupAttacker
+      ? Array.from({ length: setupAttacker.hp }, (_, index) =>
+          cardCheckOfficialCard('BS6-047', `BS10-007-preview-setup-hp-${index + 1}`),
+        )
+      : []
+    const targetCard = cardCheckOfficialCookie('BS1-007', `BS10-${baseCardNumber}-preview-target`)
+    const survivorCard = cardCheckOfficialCookie('BS6-079', `BS10-${baseCardNumber}-preview-survivor`)
+
+    const redSupports = Array.from({ length: 6 }, (_, index) => ({
+      card: cardCheckOfficialCard(
+        index < 3 ? 'BS6-002' : 'BS6-004',
+        `BS10-${baseCardNumber}-preview-support-${index + 1}`,
+      ),
+      rested: false,
+    }))
+    const targetHp = Array.from(
+      { length: baseCardNumber === 'BS10-007' ? (negative ? 2 : 1) : (negative ? 3 : 2) },
+      (_, index) => cardCheckOfficialCard(
+        'BS6-047',
+        `BS10-${baseCardNumber}-preview-target-hp-${index + 1}`,
+      ),
+    )
+    let prepared: GameState = {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: null,
+      pendingReplacement: null,
+      pendingOnPlay: null,
+      pendingAbilityEffect: undefined,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            cardCheckBattleEntry(sourceCard, sourceHp, 1),
+            ...(setupAttacker ? [cardCheckBattleEntry(setupAttacker, setupHp, 2)] : []),
+          ],
+          supportArea: redSupports,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            cardCheckBattleEntry(targetCard, targetHp, 3),
+            cardCheckBattleEntry(survivorCard, Array.from({ length: survivorCard.hp }, (_, index) =>
+              cardCheckOfficialCard('BS6-047', `BS10-${baseCardNumber}-preview-survivor-hp-${index + 1}`),
+            ), 4),
+          ],
+        },
+      },
+    }
+    if (setupAttacker) {
+      prepared = applyGameCommand(prepared, {
+        kind: 'declare-attack',
+        playerId: 'player-one',
+        attackerInstanceId: setupAttacker.instanceId,
+        targetInstanceId: targetCard.instanceId,
+        supportPaymentIds: [redSupports[0]!.card.instanceId],
+      })
+      if (prepared.pendingBattle?.stage === 'trap') {
+        prepared = applyGameCommand(prepared, { kind: 'skip-trap', playerId: 'player-two' })
+      }
+      if (prepared.pendingBattle?.stage === 'damage') {
+        prepared = applyGameCommand(prepared, { kind: 'resolve-next-damage', playerId: 'player-two' })
+      }
+      if (prepared.pendingReplacement) {
+        prepared = applyGameCommand(prepared, { kind: 'skip-replacement', playerId: 'player-two' })
+      }
+    }
+    return prepared
+  }
+
+  if (baseCardNumber === 'BS10-001') {
+    const state = createCardCheckDemoState(cardNumber, { bs10PreviewBypass: true })
+    const realHand = [
+      cardCheckOfficialCard('BS6-079', 'BS10-001-hand-1'),
+      cardCheckOfficialCard('BS6-080', 'BS10-001-hand-2'),
+    ]
+    const realSupports = Array.from({ length: 6 }, (_, index) => ({
+      ...cardCheckOfficialCard(
+        index < 3 ? 'BS6-002' : 'BS6-004',
+        `BS10-001-support-${index + 1}`,
+      ),
+    }))
+    return updateDemoPlayer(state, 'player-one', {
+      // Princess's Pride requires exactly two hand cards and two active red
+      // supports remain available for the later 2R attack witness.
+      hand: negative ? realHand.slice(0, 1) : realHand,
+      supportArea: realSupports.map((card) => ({ card, rested: false })),
+    })
+  }
+
+  if (baseCardNumber === 'BS10-004') {
+    const state = createCardCheckDemoState(cardNumber, { bs10PreviewBypass: true })
+    const realRedSupports = Array.from({ length: 6 }, (_, index) => ({
+      card: cardCheckOfficialCard(
+        index < 3 ? 'BS6-002' : 'BS6-004',
+        `BS10-004-support-${index + 1}`,
+      ),
+      rested: false,
+    }))
+    const supportState = updateDemoPlayer(state, 'player-one', { supportArea: realRedSupports })
+    const realTarget = cardCheckOfficialCookie('BS1-007', 'BS10-004-opponent-target')
+    const realTargetHp = Array.from({ length: realTarget.hp }, (_, index) =>
+      cardCheckOfficialCard('BS6-047', `BS10-004-opponent-target-hp-${index + 1}`),
+    )
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === cardNumber.split('@')[0],
+    )
+    const faintAttacker = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id !== cardNumber.split('@')[0],
+    )
+    const target = state.players['player-two'].battleArea[0]
+    if (!source || !faintAttacker || !target || target.hpCards.length === 0) {
+      throw new Error('BS10-004 fixture requires a source, fainting Cookie, and target with HP')
+    }
+    const realFaintAttacker = cardCheckOfficialCookie('BS6-017', 'BS10-004-fainting-attacker')
+    const paymentIds = supportState.players['player-one'].supportArea
+      .slice(0, realFaintAttacker.attackCost)
+      .map((support) => support.card.instanceId)
+    if (paymentIds.length !== realFaintAttacker.attackCost) {
+      throw new Error('BS10-004 fixture has insufficient attack payment')
+    }
+
+    let prepared: GameState = {
+      ...supportState,
+      players: {
+        ...supportState.players,
+        'player-one': {
+          ...supportState.players['player-one'],
+          // Another real Cookie performs the setup attack; BS10-004 remains
+          // active with its own 2R attack payment available.
+          battleArea: state.players['player-one'].battleArea.map((entry) =>
+            entry.card.instanceId === faintAttacker.card.instanceId
+              ? {
+                  ...entry,
+                  card: realFaintAttacker,
+                  hpCards: Array.from({ length: realFaintAttacker.hp }, (_, index) =>
+                    cardCheckOfficialCard('BS6-047', `BS10-004-fainting-attacker-hp-${index + 1}`),
+                  ),
+                }
+              : entry,
+          ),
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          // One real HP card makes the ordinary 1-damage attack genuinely
+          // faint the opponent Cookie through the command path. The negative
+          // route keeps two HP cards so the same attack leaves one remaining.
+          battleArea: [{
+            ...target,
+            card: realTarget,
+            hpCards: negative ? realTargetHp.slice(0, 2) : [realTargetHp[0]],
+          }, ...state.players['player-two'].battleArea.slice(1)],
+        },
+      },
+    }
+    prepared = applyGameCommand(prepared, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: realFaintAttacker.instanceId,
+      targetInstanceId: realTarget.instanceId,
+      supportPaymentIds: paymentIds,
+    })
+    if (prepared.pendingBattle?.stage === 'trap') {
+      prepared = applyGameCommand(prepared, { kind: 'skip-trap', playerId: 'player-two' })
+    }
+    prepared = applyGameCommand(prepared, {
+      kind: 'resolve-next-damage',
+      playerId: 'player-two',
+    })
+    // A real attack against the one-HP positive witness may leave an overflow
+    // continuation; close it before exposing the skill condition.
+    if (prepared.pendingBattle) {
+      prepared = applyGameCommand(prepared, {
+        kind: 'resolve-next-damage',
+        playerId: 'player-two',
+      })
+    }
+    if (prepared.pendingReplacement) {
+      prepared = applyGameCommand(prepared, {
+        kind: 'skip-replacement',
+        playerId: 'player-two',
+      })
+    }
+    return prepared
+  }
+
+  if (baseCardNumber === 'BS10-003') {
+    return createBs1003FlipPreviewDemoState(negative)
+  }
+
+  // All remaining BS10 records use the shared card-check fixture according to
+  // their actual converted surface.  Skill/item/trap/stage/FLIP records must
+  // open their real effect UI here; only Cookie records with an attack-Then
+  // and no skill use the ordinary-attack witness below.
+  const candidateCard = getBs10CandidateTestCard(cardNumber)
+  const attackOnly = Boolean(
+    candidateCard?.type === 'cookie' &&
+    !candidateCard.skill &&
+    !candidateCard.flip,
+  )
+  if (!attackOnly) {
+    const sharedOptions = {
+      bs10PreviewBypass: true,
+      ...(candidateCard?.skill ? { preferSkillSurface: true } : {}),
+    }
+    const sharedState = negative
+      ? createCardNegativeDemoState(cardNumber, sharedOptions)
+      : createCardCheckDemoState(cardNumber, sharedOptions)
+    return !negative && isBs10ConditionCardNumber(baseCardNumber)
+      ? applyBs10ConditionFixture(sharedState, cardNumber, true)
+      : sharedState
+  }
+
+  // BS10-002, BS10-005 and BS10-005@1 (and the later attack-Then Cookies)
+  // share only the ordinary attack entry surface; their negative fixture
+  // blocks exactly the energy payment.
+  const state = negative
+    ? createCardNegativeDemoState(cardNumber, {
+        normalAttack: 'blocked',
+        bs10PreviewBypass: true,
+      })
+    : createCardCheckDemoState(cardNumber, { normalAttack: 'payable', bs10PreviewBypass: true })
+  const printedAttackColor = candidateCard?.type === 'cookie'
+    ? (Object.entries(candidateCard.attackEnergyCost ?? {}) as [EnergyColor, number][])
+        .find(([color, amount]) => String(color) !== 'neutral' && amount > 0)?.[0]
+    : undefined
+  const attackSupportCardNumber = printedAttackColor === 'yellow'
+    ? 'BS8-037'
+    : printedAttackColor === 'blue'
+      ? 'BS8-096'
+      : printedAttackColor === 'purple'
+        ? 'BS8-105'
+        : printedAttackColor === 'green'
+          ? 'BS6-047'
+          : 'BS6-002'
+  const attackSupports = Array.from({ length: 6 }, (_, index) => ({
+    card: {
+      ...cardCheckOfficialCard(
+        printedAttackColor ? attackSupportCardNumber : index < 3 ? 'BS6-002' : 'BS6-047',
+        `BS10-${baseCardNumber}-support-${index + 1}`,
+      ),
+    },
+    rested: negative && index >= Math.max(0, state.players['player-one'].battleArea[0].card.attackCost - 1),
+  }))
+  return updateDemoPlayer(state, 'player-one', {
+    // Keep the Cookie itself active on both A/B routes; the negative route
+    // differs only by having fewer active energy cards than the attack cost.
+    battleArea: state.players['player-one'].battleArea.map((entry) => ({
+      ...entry,
+      rested: false,
+    })),
+    supportArea: attackSupports,
+  })
+}
+
+/**
+ * Browser-only negative surface for vanilla BS10 attack Cookies.  The UI
+ * audit must deploy the reviewed Cookie from hand before proving that the
+ * printed attack cannot be paid; pure fixture tests use the in-battle
+ * `normalAttack: 'blocked'` state above instead.
+ */
+const createBs10VanillaNegativeDemoState = (cardNumber: string): GameState => {
+  const state = createCardCheckDemoState(cardNumber, {
+    normalAttack: 'payable',
+    bs10PreviewBypass: true,
+  })
+  const source = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === cardNumber.split('@')[0],
+  )
+  if (!source) throw new Error(`BS10 vanilla negative fixture source is missing: ${cardNumber}`)
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    pendingReplacement: null,
+    pendingOnPlay: null,
+    pendingAbilityEffect: undefined,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: [source.card, ...state.players['player-one'].hand],
+        battleArea: state.players['player-one'].battleArea.filter(
+          (entry) => entry.card.instanceId !== source.card.instanceId,
+        ),
+        supportArea: state.players['player-one'].supportArea.map((support) => ({
+          ...support,
+          rested: true,
+        })),
+      },
+    },
+  }
+}
+
+/** BS10 condition cards that need an explicit Browser A/B state witness. */
+export const BS10_CONDITION_CARD_NUMBERS = [
+  'BS10-011', 'BS10-021', 'BS10-025', 'BS10-030', 'BS10-035', 'BS10-037',
+  'BS10-039', 'BS10-041', 'BS10-043', 'BS10-050', 'BS10-054', 'BS10-061',
+  'BS10-062', 'BS10-063', 'BS10-066', 'BS10-067', 'BS10-069', 'BS10-070',
+  'BS10-081', 'BS10-105', 'BS10-107', 'BS10-109', 'BS10-110', 'BS10-111',
+  'BS10-118', 'BS10-122',
+] as const
+
+const isBs10ConditionCardNumber = (value: string): boolean =>
+  (BS10_CONDITION_CARD_NUMBERS as readonly string[]).includes(value)
+
+const cloneBreakCookie = (card: CookieCard, instanceId: string, level = card.level): CookieCard => ({
+  ...card,
+  instanceId,
+  level,
+})
+
+/** Build the real board conditions for BS10 Browser A/B routes. */
+const applyBs10ConditionFixture = (
+  state: GameState,
+  cardNumber: string,
+  conditionMet: boolean,
+): GameState => {
+  const baseCardNumber = cardNumber.split('@')[0]
+  const player = state.players['player-one']
+  const opponent = state.players['player-two']
+  const breakTemplate = player.breakArea[0] ?? {
+    ...cardCheckOfficialCookie('BS8-014', 'BS10-condition-break-template'),
+    energyColor: 'yellow' as EnergyColor,
+  }
+  if (baseCardNumber === 'BS10-011') {
+    return {
+      ...state,
+      cookiesFaintedThisTurn: {
+        'player-one': state.cookiesFaintedThisTurn?.['player-one'] ?? 0,
+        'player-two': conditionMet ? 1 : 0,
+      },
+    }
+  }
+  if (baseCardNumber === 'BS10-021') {
+    return updateDemoPlayer(state, 'player-one', { battleArea: player.battleArea.map((entry) => entry.card.id === baseCardNumber ? { ...entry, hpCards: conditionMet ? entry.hpCards.slice(0, Math.min(3, entry.hpCards.length)) : Array.from({ length: Math.min(entry.card.hp, 4) }, (_, index) => cardCheckOfficialCard('BS8-046', `BS10-021-unmet-hp-${index + 1}`)) } : entry) })
+  }
+  if (baseCardNumber === 'BS10-025') {
+    return updateDemoPlayer(state, 'player-one', { breakArea: conditionMet ? [...player.breakArea, cloneBreakCookie(breakTemplate, 'BS10-025-yellow-break-3')] : player.breakArea.slice(0, 2) })
+  }
+  if (baseCardNumber === 'BS10-030' || baseCardNumber === 'BS10-037' || baseCardNumber === 'BS10-041' || baseCardNumber === 'BS10-043') {
+    return { ...state, cookiesGainedHpThisTurn: { ...(state.cookiesGainedHpThisTurn ?? {}), 'player-one': conditionMet } }
+  }
+  if (baseCardNumber === 'BS10-035' || baseCardNumber === 'BS10-039') {
+    const currentLevel = player.breakArea.reduce((total, card) => total + card.level, 0)
+    const opponentLevel = opponent.breakArea.reduce((total, card) => total + card.level, 0)
+    const targetLevel = baseCardNumber === 'BS10-039' ? 8 : opponentLevel + 1
+    const extra = Math.max(0, Math.ceil((targetLevel - currentLevel) / breakTemplate.level))
+    return updateDemoPlayer(state, 'player-one', { breakArea: conditionMet ? [...player.breakArea, ...Array.from({ length: extra }, (_, index) => cloneBreakCookie(breakTemplate, `BS10-${baseCardNumber}-break-${index + 3}`))] : player.breakArea.slice(0, 2) })
+  }
+  if (baseCardNumber === 'BS10-050' || baseCardNumber === 'BS10-054' || baseCardNumber === 'BS10-066') {
+    return updateDemoPlayer(state, 'player-one', { supportArea: scenarioSupports(`BS10-${baseCardNumber}-condition-support`, conditionMet ? 7 : 6, 'green') })
+  }
+  if (baseCardNumber === 'BS10-061') {
+    return { ...state, players: { ...state.players, 'player-one': { ...player, supportArea: scenarioSupports('BS10-061-self-support', conditionMet ? 1 : 2, 'green') }, 'player-two': { ...opponent, supportArea: scenarioSupports('BS10-061-opponent-support', conditionMet ? 2 : 1, 'green') } } }
+  }
+  if (baseCardNumber === 'BS10-062') {
+    return updateDemoPlayer(state, 'player-one', { supportArea: scenarioSupports('BS10-062-green-support', 6, 'green') })
+  }
+  if (baseCardNumber === 'BS10-063') {
+    return { ...state, players: { ...state.players, 'player-one': { ...player, supportArea: scenarioSupports('BS10-063-own-support', 2, 'green') }, 'player-two': { ...opponent, supportArea: scenarioSupports('BS10-063-opponent-support', conditionMet ? 7 : 6, 'green') } } }
+  }
+  if (baseCardNumber === 'BS10-067') {
+    return updateDemoPlayer(state, 'player-one', { supportArea: Array.from({ length: 8 }, (_, index) => ({ card: testSupportCard(`BS10-067-stage-support-${index + 1}`, 'green'), rested: conditionMet ? index > 0 : false })) })
+  }
+  if (baseCardNumber === 'BS10-069') {
+    return { ...state, players: { ...state.players, 'player-one': { ...player, supportArea: scenarioSupports('BS10-069-own-support', 6, 'green') }, 'player-two': { ...opponent, supportArea: scenarioSupports('BS10-069-opponent-support', conditionMet ? 6 : 5, 'green') } } }
+  }
+  if (baseCardNumber === 'BS10-070') {
+    return updateDemoPlayer(state, 'player-one', { supportArea: scenarioSupports('BS10-070-condition-support', conditionMet ? 4 : 5, 'green') })
+  }
+  if (baseCardNumber === 'BS10-081') {
+    return updateDemoPlayer(state, 'player-one', { hand: conditionMet ? [...player.hand, ...Array.from({ length: 3 }, (_, index) => cardCheckOfficialCard('BS8-096', `BS10-081-hand-${index + 1}`))] : player.hand.slice(0, 4) })
+  }
+  if (baseCardNumber === 'BS10-105' || baseCardNumber === 'BS10-107' || baseCardNumber === 'BS10-110' || baseCardNumber === 'BS10-111' || baseCardNumber === 'BS10-122') {
+    return { ...state, refreshedDuringGame: { ...(state.refreshedDuringGame ?? {}), 'player-one': conditionMet } }
+  }
+  if (baseCardNumber === 'BS10-109') {
+    const source = player.battleArea.find((entry) => entry.card.id === baseCardNumber)
+    if (!source || source.card.type !== 'cookie' || !source.card.skill) return state
+    const pendingFaintEffects: PendingFaintEffect[] = source.card.skill.effects.map((effect) => ({ sourcePlayerId: 'player-one', sourceInstanceId: source.card.instanceId, sourceCardName: source.card.name, effect, context: { sourcePlayerId: 'player-one', sourceInstanceId: source.card.instanceId, sourceCardName: source.card.name } }))
+    return { ...state, players: { ...state.players, 'player-one': { ...player, battleArea: player.battleArea.filter((entry) => entry.card.instanceId !== source.card.instanceId), discardPile: [...player.discardPile, source.card] } }, pendingFaintEffects }
+  }
+  if (baseCardNumber === 'BS10-118') {
+    return updateDemoPlayer(state, 'player-one', { discardPile: conditionMet ? Array.from({ length: 15 }, (_, index) => cardCheckOfficialCard('BS8-121', `BS10-118-trash-${index + 1}`)) : player.discardPile.slice(0, 2) })
+  }
+  return state
+}
+
+/** Public localhost-only condition fixture used by the BS10 Browser matrix. */
+export const createBs10ConditionDemoState = (cardNumber: string, conditionMet: boolean): GameState => {
+  if (!isBs10PreviewCardNumber(cardNumber) || !isBs10ConditionCardNumber(cardNumber.split('@')[0]!)) throw new Error(`BS10 condition fixture does not support ${cardNumber}`)
+  // BS10-122 carries both an OnPlay skill and an attack-Then clause.  Its
+  // dedicated condition audit must open the real attack-Then surface, so the
+  // tested Cookie is already the declared attacker rather than remaining in
+  // hand behind the generic skill fixture.
+  const state = createCardCheckDemoState(cardNumber, {
+    bs10PreviewBypass: true,
+    ...(cardNumber.split('@')[0] === 'BS10-122' ? {} : { preferSkillSurface: true }),
+  })
+  return applyBs10ConditionFixture(state, cardNumber, conditionMet)
+}
+
+/**
+ * BS10-008 專用 localhost FLIP witness。
+ *
+ * The state is deliberately opened by the same public commands used by a
+ * normal attack.  The candidate exists only as the real revealed HP card;
+ * it is never added to the formal card pool or the generic `card:` route.
+ */
+export const createBs1008FlipPreviewDemoState = (
+  scenario: Bs1008FlipPreviewScenario,
+): GameState => {
+  if (!isBs1008FlipPreviewScenario(scenario)) {
+    throw new Error(`BS10-008 FLIP preview does not support scenario ${scenario}`)
+  }
+
+  const flipCard = getBs1008FlipCandidateCard()
+  if (!flipCard.flip) {
+    throw new Error('BS10-008 FLIP preview candidate is not a FLIP card')
+  }
+
+  const twoDamage = scenario === 'two-damage' || scenario === 'refresh-two'
+  const refresh = scenario === 'refresh-one' || scenario === 'refresh-two'
+  const noHand = scenario === 'no-hand'
+  const nonlethal = scenario === 'nonlethal'
+  const attackCard = cardCheckOfficialCookie(
+    twoDamage ? 'BS6-015' : 'BS6-017',
+    `bs10-008-${scenario}-attacker`,
+  )
+  const bearer = cardCheckOfficialCookie(
+    'BS6-047',
+    `bs10-008-${scenario}-bearer`,
+  )
+  const survivor = cardCheckOfficialCookie(
+    'BS6-079',
+    `bs10-008-${scenario}-survivor`,
+  )
+  const attackSupports = Array.from(
+    { length: attackCard.attackCost },
+    (_, index) => ({
+      card: cardCheckOfficialCard(
+        'BS6-002',
+        `bs10-008-${scenario}-attack-payment-${index + 1}`,
+      ),
+      rested: false,
+    }),
+  )
+  const hand = noHand
+    ? []
+    : [cardCheckOfficialCard('BS6-004', `bs10-008-${scenario}-flip-payment`)]
+  const deckTop = cardCheckOfficialCard(
+    'BS6-047',
+    `bs10-008-${scenario}-deck-top`,
+  )
+  const deck = refresh
+    ? [deckTop]
+    : [
+        deckTop,
+        cardCheckOfficialCard('BS6-004', `bs10-008-${scenario}-deck-bottom`),
+      ]
+  const refreshCookie = refresh
+    ? cardCheckOfficialCookie('BS6-004', `bs10-008-${scenario}-refresh-cookie`)
+    : null
+  const remainingHp = cardCheckOfficialCard(
+    'BS6-047',
+    `bs10-008-${scenario}-remaining-hp`,
+  )
+  const survivorHp = cardCheckOfficialCard(
+    'BS6-047',
+    `bs10-008-${scenario}-survivor-hp`,
+  )
+  const attackerHp = cardCheckOfficialCard(
+    'BS6-047',
+    `bs10-008-${scenario}-attacker-hp`,
+  )
+  const base = baseTestState('player-two', 'main')
+  let state: GameState = {
+    ...base,
+    firstPlayerId: 'player-one',
+    turnNumber: 2,
+    activePlayerId: 'player-two',
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        deck,
+        hand,
+        discardPile: refreshCookie ? [refreshCookie] : [],
+        battleArea: [
+          cardCheckBattleEntry(
+            bearer,
+            nonlethal ? [remainingHp, flipCard] : [flipCard],
+            1,
+          ),
+          cardCheckBattleEntry(survivor, [survivorHp], 2),
+        ],
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        battleArea: [cardCheckBattleEntry(attackCard, [attackerHp], 3)],
+        supportArea: attackSupports,
+      },
+    },
+  }
+
+  state = applyGameCommand(state, {
+    kind: 'declare-attack',
+    playerId: 'player-two',
+    attackerInstanceId: attackCard.instanceId,
+    targetInstanceId: bearer.instanceId,
+    supportPaymentIds: attackSupports.map(({ card }) => card.instanceId),
+  })
+  state = applyGameCommand(state, {
+    kind: 'skip-trap',
+    playerId: 'player-one',
+  })
+  state = applyGameCommand(state, {
+    kind: 'resolve-next-damage',
+    playerId: 'player-one',
+  })
+
+  if (
+    state.pendingBattle?.stage !== 'flip' ||
+    state.pendingBattle.revealedHpCard?.id !== 'BS10-008'
+  ) {
+    throw new Error(`BS10-008 ${scenario} fixture did not reveal the candidate FLIP`)
+  }
+  return state
+}
+
+/**
+ * Dedicated localhost fixture for BS10-009's real HP-cost activation.
+ * The source and at most one ally are real Cookies; all HP payment choices are
+ * left to the normal command/UI path rather than inserted as pending state.
+ */
+export const createBs1009HpCostPreviewDemoState = (
+  scenario: Bs1009HpPreviewScenario,
+): GameState => {
+  if (!isBs1009HpPreviewScenario(scenario)) {
+    throw new Error(`BS10-009 HP-cost preview does not support scenario ${scenario}`)
+  }
+  const source = getBs1009HpCostCandidateCard()
+  const sourceHp = Array.from({ length: scenario === 'source-last-hp' ? 1 : 2 }, (_, index) =>
+    cardCheckOfficialCard('BS6-047', `bs10-009-${scenario}-source-hp-${index + 1}`),
+  )
+  const ally = cardCheckOfficialCookie(
+    scenario === 'ally-last-hp' ? 'BS6-071' : scenario === 'wrong-target' ? 'BS6-017' : 'BS6-079',
+    `bs10-009-${scenario}-ally`,
+  )
+  const allyHp = [cardCheckOfficialCard('BS6-047', `bs10-009-${scenario}-ally-hp`)]
+  const opponent = cardCheckOfficialCookie('BS6-079', `bs10-009-${scenario}-opponent`)
+  const support = Array.from({ length: 2 }, (_, index) => ({
+    card: cardCheckOfficialCard(
+      scenario === 'mixed-support' && index === 1 ? 'BS6-047' : 'BS6-002',
+      `bs10-009-${scenario}-support-${index + 1}`,
+    ),
+    rested: false,
+  }))
+  const base = baseTestState('player-one', 'main')
+  const state: GameState = {
+    ...base,
+    activePlayerId: 'player-one',
+    turnNumber: 3,
+    phase: 'main',
+    skillUsesThisTurn: base.skillUsesThisTurn,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        hand: [cardCheckOfficialCard('BS6-004', `bs10-009-${scenario}-hand`)],
+        deck: [
+          cardCheckOfficialCard('BS6-047', `bs10-009-${scenario}-deck-1`),
+          cardCheckOfficialCard('BS6-047', `bs10-009-${scenario}-deck-2`),
+        ],
+        supportArea: support,
+        battleArea: [
+          cardCheckBattleEntry(source, sourceHp, 1),
+          cardCheckBattleEntry(ally, allyHp, 2),
+        ],
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        battleArea: [cardCheckBattleEntry(opponent, Array.from({ length: 5 }, (_, index) =>
+          cardCheckOfficialCard('BS6-079', `bs10-009-${scenario}-opponent-hp-${index + 1}`),
+        ), 3)],
+      },
+    },
+  }
+  if (scenario === 'once-used') {
+    const paid = applyGameCommand(state, {
+      kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId,
+      trigger: 'activate', paymentIds: [], hpToTrashTargetIds: [source.instanceId],
+    })
+    return applyGameCommand(paid, {
+      kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [source.instanceId],
+    })
+  }
+  return state
+}
 
 /**
  * Local Browser A/B fixture for BS6-079's OnPlay movement target.

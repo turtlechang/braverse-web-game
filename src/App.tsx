@@ -106,9 +106,11 @@ const testStateConfig = parseTestStateConfig(
   window.location.hostname,
 )
 
-const contractTraceCardId = new URLSearchParams(window.location.search).get(
-  'contract-card',
-)
+const contractTraceCardIds = new URLSearchParams(window.location.search)
+  .get('contract-card')
+  ?.split(',')
+  .map((cardId) => cardId.trim())
+  .filter(Boolean)
 
 function App() {
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
@@ -130,10 +132,10 @@ function App() {
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
   useEffect(() => {
-    if (!contractTraceCardId) return
+    if (!contractTraceCardIds?.length) return
     const trace = buildCardContractActionTrace(
       match.game.commandLog ?? [],
-      contractTraceCardId,
+      contractTraceCardIds.length === 1 ? contractTraceCardIds[0]! : contractTraceCardIds,
     )
     // Browser attestation exposes only the public command summary/steps.  It
     // deliberately omits command payloads, hand contents, deck order and HP

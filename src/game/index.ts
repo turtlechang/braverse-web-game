@@ -272,6 +272,7 @@ export {
   beginAttack,
   hasActivatableFlipEffect,
   getForcedAttackTargetId,
+  isCookieAttackRestricted,
   getFaintEffectCardCandidates,
   getFaintEffectCandidateLabel,
   getAfterDamageEffectCandidates,

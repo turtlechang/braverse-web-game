@@ -25,6 +25,27 @@ describe('BS9-017 fixed modifier instructions', () => {
   })
 })
 
+describe('modify-attack-cost operation instructions', () => {
+  it('shows the explicit amount for a legacy neutral replacement', () => {
+    expect(describeEffect({
+      kind: 'modify-attack-cost',
+      target: { side: 'self', min: 1, max: 1 },
+      energyCost: { neutral: 1 },
+      duration: 'this-turn',
+    })).toBe('符合條件的餅乾本回合攻擊費用改為 1 任意能量。')
+  })
+
+  it('describes a source-only colored reduction and its duration', () => {
+    expect(describeEffect({
+      kind: 'modify-attack-cost',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      energyCost: { red: 1 },
+      operation: 'reduce',
+      duration: 'this-turn',
+    })).toBe('這張餅乾本回合攻擊費用減少 1 紅色能量。')
+  })
+})
+
 describe('hand-to-support selection instructions', () => {
   it('explains optional green hand selection, deselection and rested placement', () => {
     expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true,

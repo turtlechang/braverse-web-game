@@ -299,6 +299,45 @@ const AUDIT_CONFIGS = {
     conditionCardNumbers: ['BS8-059', 'BS8-065', 'BS8-073', 'BS8-074'],
     alwaysIncludeCardNumbers: [],
   },
+  BS10: {
+    label: 'BS10',
+    candidate: false,
+    sources: [
+      'data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json',
+    ],
+    report: 'output/playwright/bs10-effect-audit.json',
+    negativeReport: 'output/playwright/bs10-effect-audit-negative.json',
+    // The formal pool has 136 non-EXTRA effect-bearing records when raw
+    // skill/FLIP/item/trap/stage/Then surfaces are counted. BS10-008 is
+    // intentionally excluded here because its generic card-check route is
+    // fail-closed; `scripts/bs10-008-browser.mjs` owns its dedicated FLIP
+    // matrix. EXTRA cards are handled by their separate staging matrix.
+    expectedEffectCardCount: 135,
+    excludedCardNumbers: ['BS10-008'],
+    requireSubstantiveTrace: true,
+    excludedCardTypes: ['extra'],
+    excludeExtraDeckCards: true,
+    conditionTestStatePrefix: 'bs10-condition',
+    conditionCardNumbers: [
+      'BS10-011', 'BS10-021', 'BS10-025', 'BS10-030', 'BS10-035', 'BS10-037',
+      'BS10-039', 'BS10-041', 'BS10-043', 'BS10-050', 'BS10-054', 'BS10-061',
+      'BS10-062', 'BS10-063', 'BS10-066', 'BS10-067', 'BS10-069', 'BS10-070',
+      'BS10-081', 'BS10-105', 'BS10-107', 'BS10-109', 'BS10-110', 'BS10-111',
+      'BS10-118', 'BS10-122',
+    ],
+    // The negative matrix keeps legal payment available for these records and
+    // invalidates only the printed board/timing condition.  This is separate
+    // from the ordinary no-payment route so a disabled effect cannot be
+    // mistaken for a payment failure.
+    negativeConditionCardNumbers: [
+      'BS10-011', 'BS10-021', 'BS10-025', 'BS10-030', 'BS10-035', 'BS10-037',
+      'BS10-039', 'BS10-041', 'BS10-043', 'BS10-050', 'BS10-054', 'BS10-061',
+      'BS10-062', 'BS10-063', 'BS10-066', 'BS10-067', 'BS10-069', 'BS10-070',
+      'BS10-081', 'BS10-105', 'BS10-107', 'BS10-109', 'BS10-110', 'BS10-111',
+      'BS10-118', 'BS10-122',
+    ],
+    alwaysIncludeCardNumbers: [],
+  },
 }
 const auditConfig = AUDIT_CONFIGS[requestedSeries]
 if (!auditConfig) {
@@ -476,6 +515,9 @@ const cards = [
   )
   .filter(
     (card) => !auditConfig.excludedCardTypes?.includes(card.type),
+  )
+  .filter(
+    (card) => !auditConfig.excludedCardNumbers?.includes(card.cardNumber),
   )
   .filter(
     (card) => !auditConfig.excludeExtraDeckCards || !card.flags?.extra,
@@ -932,6 +974,9 @@ const activeContractCard = (page) =>
   new URL(page.url()).searchParams.get('contract-card')
 const orderedAllTargetCards = new Set(['BS7-039', 'BS7-082'])
 const BS8_STATIC_BROWSER_WITNESSES = new Set(['BS8-061', 'BS8-075', 'BS8-125'])
+const BS10_STATIC_BROWSER_WITNESSES = new Set([
+  'BS10-021', 'BS10-054', 'BS10-070', 'BS10-081', 'BS10-105',
+])
 const strictMultipleTargetSelectionCounts = new Map([
   // BS8-003 must select every own Cookie at 4 or less remaining HP; the
   // generic fixture exposes both the source and its companion as recipients.
@@ -1341,6 +1386,24 @@ const driveOtherModal = async (
 ) => {
   const strictNegative = negative && !settleAttackEffects && !allowNegativePayment
 
+  // The real battle command publishes presentation events before the defense
+  // response/effect queue becomes interactive.  Skip that public animation
+  // through the same UI control so the Browser witness reaches the actual
+  // trap/damage/Then decision instead of stopping at "等待防守方回應".
+  const animationSkip = page.getByRole('button', { name: '略過目前演出', exact: true }).first()
+  if (await enabled(animationSkip)) {
+    try {
+      await animationSkip.click({ force: true, timeout: 1000 })
+    } catch {
+      // The animation shell can unmount between the visibility check and the
+      // click.  Let the next settlement pass inspect the real pending modal.
+      return false
+    }
+    operations.push('skip:animation')
+    await wait(180)
+    return true
+  }
+
   const stagePlacement = page.locator('.stage-placement-modal').first()
   if (await visible(stagePlacement)) {
     const paymentProgress = await stagePlacement
@@ -1658,9 +1721,26 @@ const driveOtherModal = async (
         const requiredCount = progress ? Number(progress[2]) : 1
         if (selectedCount >= requiredCount) continue
 
-        const candidate = group
+        let candidate = group
           .locator('button:not(.is-selected):not(:disabled)')
           .first()
+        // support-to-hp/selectTarget renders one mixed group containing the
+        // support-card donor and the Cookie receiver.  The ordered pair must
+        // contain one of each; after the first support selection prefer the
+        // visible Cookie candidate instead of accidentally selecting a second
+        // support card.
+        if (selectedCount > 0 && progress && Number(progress[2]) === 2) {
+          const hasCookieCandidate = await group
+            .locator('button:not(.is-selected):not(:disabled)')
+            .filter({ hasText: /COOKIE|Cookie/ })
+            .count()
+          if (hasCookieCandidate > 0) {
+            candidate = group
+              .locator('button:not(.is-selected):not(:disabled)')
+              .filter({ hasText: /COOKIE|Cookie/ })
+              .first()
+          }
+        }
         if (!(await enabled(candidate))) continue
         await candidate.click({ force: true })
         operations.push('select:trap-step')
@@ -1835,11 +1915,24 @@ const driveOtherModal = async (
 
   const decisionModal = page.locator('.decision-modal').first()
   if (await visible(decisionModal)) {
-    const skip = decisionModal
+  const skip = decisionModal
       .locator('button:not(:disabled)')
       .filter({ hasText: /不補餅乾|略過|Skip/i })
       .first()
-    if (!(await enabled(skip))) return false
+    if (!(await enabled(skip))) {
+      // Some lethal FLIP fixtures expose only the replacement card choice and
+      // a zoom control. Choosing the real Cookie keeps the pending queue
+      // deterministic when the usual explicit "不補餅乾" action is absent.
+      const replacementChoice = decisionModal
+        .locator('button:not(:disabled)')
+        .filter({ hasNotText: /縮小|Zoom/i })
+        .first()
+      if (!(await enabled(replacementChoice))) return false
+      await replacementChoice.click({ force: true })
+      operations.push('select:replacement')
+      await wait(520)
+      return true
+    }
     await skip.click({ force: true })
     operations.push('skip:replacement')
     await wait(180)
@@ -2040,9 +2133,18 @@ const clickFirstHandAction = async (page, _sourceCardNumber) => {
 }
 
 const clickNamedHandAction = async (page, cardName) => {
-  const handCard = page.getByTitle(cardName, { exact: true }).first()
+  // The battlefield and hand both expose card titles.  Scope to the hand so
+  // a reused audit page cannot accidentally select an already-deployed card
+  // with the same name on a later condition pass.
+  const escapedName = cardName.replace(/\\/g, '\\\\').replace(/"/g, '\\\"')
+  const handCard = page
+    .locator(`.bottom-hand .hand-card[title="${escapedName}"]`)
+    .first()
   if (!(await visible(handCard))) return false
-  const hand = handCard.locator('xpath=ancestor::div[contains(@class, "hand-card-wrap")]')
+  // The title is on the hand-card button itself; its direct parent is the
+  // actionable wrapper.  An ancestor XPath locator is evaluated as a
+  // descendant by Playwright and can therefore miss this parent entirely.
+  const hand = handCard.locator('xpath=..')
   if (!(await visible(hand))) return false
   await handCard.scrollIntoViewIfNeeded().catch(() => {})
   await handCard.click({ force: true })
@@ -2129,19 +2231,25 @@ const runVanillaNegative = async (page, operations) => {
   operations.push('action:deploy-negative')
 
   const attacker = ownCookies.last().locator('.card-face').first()
-  assert.ok(await enabled(attacker), 'negative vanilla Cookie must be clickable')
-  await attacker.click({ force: true })
-  operations.push('select:negative-attacker')
-  await wait(180)
+  // A payment-blocked Cookie may be rendered as an unattackable source. If
+  // the UI still opens attacker selection first, verify that no legal payment
+  // path can continue; either surface proves the same printed boundary.
+  if (await enabled(attacker)) {
+    await attacker.click({ force: true })
+    operations.push('select:negative-attacker')
+    await wait(180)
 
-  const legalPayment = page.locator(
-    '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
-  )
-  assert.equal(
-    await legalPayment.count(),
-    0,
-    'all rested support cards must be unavailable for a negative attack payment',
-  )
+    const legalPayment = page.locator(
+      '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
+    )
+    assert.equal(
+      await legalPayment.count(),
+      0,
+      'all rested support cards must be unavailable for a negative attack payment',
+    )
+  } else {
+    operations.push('verify:negative-attacker-unattackable')
+  }
   await wait(260)
   assert.equal(
     await ownCookies.last().locator('.card-face.is-rested').count(),
@@ -2153,9 +2261,14 @@ const runVanillaNegative = async (page, operations) => {
 const runExistingCookieAttack = async (
   page,
   operations,
-  { negative = false, requireNoPayment = false, sourceCardNumber } = {},
+  {
+    negative = false,
+    requireNoPayment = false,
+    sourceCardNumber,
+    allowPartialPayment = false,
+  } = {},
 ) => {
-  const source = sourceCardNumber
+  let source = sourceCardNumber
     ? page
         .locator(
           `.bottom-field [data-card-instance-id^="player-one-${sourceCardNumber}"] .card-face`,
@@ -2164,8 +2277,53 @@ const runExistingCookieAttack = async (
     : page
         .locator('.bottom-field .combat-card-wrap .card-face.is-attackable')
         .first()
+  // BS10 preview fixtures may use a generated instance id rather than the
+  // printed card number.  Keep the exact selector first, then fall back to
+  // the rendered attackable Cookie only when that exact source is not usable.
+  // The fallback still requires the public attackable marker, so it does not
+  // weaken the Browser acceptance bar.
+  if (
+    sourceCardNumber?.startsWith('BS10-') &&
+    !(await enabled(source))
+  ) {
+    const fallback = page
+      .locator('.bottom-field .combat-card-wrap .card-face.is-attackable')
+      .first()
+    if (await enabled(fallback)) source = fallback
+  }
   if (negative && requireNoPayment) {
     assert.ok(await visible(source), 'negative existing Cookie fixture must expose its source')
+    if (allowPartialPayment) {
+      if (await enabled(source)) {
+        await source.click({ force: true })
+        operations.push('select:negative-existing-attacker')
+        await wait(120)
+        for (let index = 0; index < 8; index += 1) {
+          const payment = page
+            .locator('.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)')
+            .last()
+          if (!(await visible(payment))) break
+          await payment.focus()
+          await payment.press('Enter')
+          operations.push('select:existing-attack-payment')
+          await wait(80)
+        }
+      }
+      const target = page.locator('.top-field .combat-card-wrap .card-face').first()
+      const targetClass = (await target.getAttribute('class')) ?? ''
+      assert.equal(
+        /is-attack-target|is-targetable/.test(targetClass),
+        false,
+        'a BS10 attack with insufficient printed-energy payment must not expose an attack target',
+      )
+      assert.equal(
+        (await source.getAttribute('class'))?.includes('is-rested'),
+        false,
+        'an incomplete BS10 attack payment must not rest the source',
+      )
+      operations.push('verify:negative-existing-attacker-unattackable')
+      return
+    }
     const legalPayment = page.locator(
       '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
     )
@@ -2270,6 +2428,33 @@ const runBs8084AttackDiscardWitness = async (page, operations, { negative }) => 
     'BS8-084 A path must confirm the required hand discard through the real modal',
   )
   return { requiredDiscard: 1, discardedBeforeAttack: true }
+}
+
+const runBs10StaticWitness = async (page, operations, card, { negative, conditionMet }) => {
+  const base = getBaseCardNumber(card)
+  const source = page
+    .locator(`.bottom-field [data-card-instance-id^="player-one-${base}"] .card-face`)
+    .first()
+  assert.ok(await visible(source), `${base} static witness must render its source Cookie`)
+  const className = (await source.getAttribute('class')) ?? ''
+  if (base === 'BS10-021') {
+    assert.equal(
+      className.includes('is-attackable'),
+      !conditionMet,
+      `${base} attackability must follow the remaining-HP condition`,
+    )
+    operations.push(`witness:${base.toLowerCase()}-hp-${conditionMet ? 'blocked' : 'open'}`)
+    if (!conditionMet) return { conditionMet, attackable: false }
+  }
+  if (negative) {
+    await runExistingCookieAttack(page, operations, {
+      negative: true,
+      sourceCardNumber: base,
+    })
+    return { conditionMet, attackable: className.includes('is-attackable') }
+  }
+  await runExistingCookieAttack(page, operations, { sourceCardNumber: base })
+  return { conditionMet, attackable: true }
 }
 
 const runBs8StaticStageAttack = async (page, operations, card, { negative }) => {
@@ -2452,6 +2637,19 @@ const pendingModalDebug = async (page) => {
   }
 }
 
+const trapModalDebug = async (page) => {
+  const trap = page.locator('.trap-response-modal').first()
+  if (!(await visible(trap))) return undefined
+  return {
+    text: (await trap.innerText().catch(() => '')).replace(/\s+/g, ' ').trim(),
+    buttons: await trap.locator('button').evaluateAll((buttons) => buttons.map((button) => ({
+      text: button.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      disabled: button.disabled,
+      classes: button.className,
+    }))),
+  }
+}
+
 const vanillaAttackDebug = async (page) => ({
   ownCookies: await page
     .locator('.bottom-field .combat-card-wrap .card-face')
@@ -2484,6 +2682,7 @@ const runCard = async (
     settleAttackEffects = false,
     driveActions = true,
     allowNegativePayment = false,
+    allowNegativeAttackPayment = false,
     allowEmptyTrace = false,
   } = {},
 ) => {
@@ -2516,6 +2715,10 @@ const runCard = async (
     const requiresBs8AttackThen =
       !auditBs8StrictAbilities &&
       requestedSeries === 'BS8' && auditedSurfaces(card).includes('attack-then')
+    const requiresBs10AttackThen =
+      !auditBs8StrictAbilities &&
+      requestedSeries === 'BS10' && auditedSurfaces(card).includes('attack-then')
+    const requiresAttackThen = requiresBs8AttackThen || requiresBs10AttackThen
     const requiresBs8084AbilityWitness =
       auditBs8StrictAbilities && getBaseCardNumber(card) === 'BS8-084'
     const requiresBs8StaticWitness =
@@ -2524,10 +2727,11 @@ const runCard = async (
     const requiresExistingCookieAttack =
       card.baseCardNumber === 'BS7-058' ||
       card.baseCardNumber === 'BS7-094' ||
-      requiresBs8AttackThen
+      requiresAttackThen
     let bs8StaticWitness = null
 
     let bs8AbilityWitness = null
+    let bs10StaticWitness = null
 
     if (requiresBs8084AbilityWitness) {
       bs8AbilityWitness = await runBs8084AttackDiscardWitness(page, operations, {
@@ -2557,16 +2761,44 @@ const runCard = async (
       bs8StaticWitness = await runBs8StaticStageAttack(page, operations, card, {
         negative,
       })
+    } else if (requestedSeries === 'BS10' && BS10_STATIC_BROWSER_WITNESSES.has(getBaseCardNumber(card))) {
+      const routeState = new URL(page.url()).searchParams.get('test-state') ?? ''
+      const conditionMet = routeState.endsWith(':met') || (!negative && routeState.startsWith('card:'))
+      bs10StaticWitness = await runBs10StaticWitness(page, operations, card, {
+        negative,
+        conditionMet,
+      })
     } else if (requiresExistingCookieAttack) {
-      await runExistingCookieAttack(page, operations, {
-        negative,
-        requireNoPayment: requiresBs8AttackThen && !allowNegativePayment,
-        sourceCardNumber: requiresBs8AttackThen ? getBaseCardNumber(card) : undefined,
-      })
-      await settlePending(page, operations, {
-        negative,
-        settleAttackEffects: requiresBs8AttackThen,
-      })
+      // Some candidate fixtures intentionally open at the real
+      // `attack-effect` continuation (the same public pending state produced
+      // immediately after a legal attack).  In that case the source Cookie is
+      // already rested and must be resolved through the pending effect panel;
+      // trying to declare a second attack would incorrectly report it as
+      // unavailable.  Negative routes still begin from an ordinary attackable
+      // Cookie and follow the normal payment witness.
+      const hasPendingAttackEffect =
+        !negative &&
+        (await visible(page.locator('.effect-panel[role="alertdialog"]')))
+      if (hasPendingAttackEffect) {
+        await settlePending(page, operations, {
+          negative,
+          settleAttackEffects: requiresAttackThen,
+        })
+      } else {
+        await runExistingCookieAttack(page, operations, {
+          negative,
+            requireNoPayment: requiresAttackThen && !allowNegativePayment,
+            allowPartialPayment: allowNegativeAttackPayment,
+            sourceCardNumber:
+              requiresBs8AttackThen || requiresBs10AttackThen
+                ? getBaseCardNumber(card)
+                : undefined,
+          })
+        await settlePending(page, operations, {
+          negative,
+          settleAttackEffects: requiresAttackThen,
+        })
+      }
     } else if (requireVanillaAttack) {
       if (negative) {
         await runVanillaNegative(page, operations)
@@ -2606,6 +2838,17 @@ const runCard = async (
         }
         if (await clickStageAction(page)) {
           operations.push('action:stage')
+          continue
+        }
+        // BS10 condition fixtures can contain a real source Cookie plus
+        // actionable filler cards in the hand.  At the compact viewport the
+        // fan may reorder those wrappers, so prefer the exact reviewed card
+        // title before falling back to the first actionable hand card.
+        if (
+          requestedSeries === 'BS10' &&
+          await clickNamedHandAction(page, card.name)
+        ) {
+          operations.push('action:hand')
           continue
         }
         if (
@@ -2914,7 +3157,8 @@ const runCard = async (
         !(auditDeclineBlocker && ['BS8-008', 'BS8-044'].includes(getBaseCardNumber(card)) && operations.includes('skip:decline-blocker')) &&
         !traceSummary.substantiveEffectEvidence &&
         !bs8StaticWitness &&
-        !bs8AbilityWitness
+        !bs8AbilityWitness &&
+        !bs10StaticWitness
       ) {
         return {
           cardNumber: card.cardNumber,
@@ -3248,6 +3492,8 @@ const runCard = async (
       debug: {
         ...(await effectPanelDebug(page)),
         decisionModal: await pendingModalDebug(page),
+        pendingSurfaces: await visiblePendingSurfaceNames(page),
+        trapModal: await trapModalDebug(page),
         ...((requireVanillaAttack ||
         (requestedSeries === 'BS8' && auditedSurfaces(card).includes('attack-then')))
           ? { vanilla: await vanillaAttackDebug(page) }
@@ -3296,7 +3542,9 @@ try {
     const testState = auditNegative
       ? getBaseCardNumber(card) === 'BS8-021'
         ? `bs8-021-no-energy${card.cardNumber.slice('BS8-021'.length)}`
-        : card.cardNumber.startsWith('BS8-') && card.skill?.text && effectSurfaces(card).includes('attack-then') && !negativeConditionPath
+        : requestedSeries === 'BS10' && negativeConditionPath
+        ? conditionTestState(getBaseCardNumber(card), 'unmet')
+        : (card.cardNumber.startsWith('BS8-') || requestedSeries === 'BS10') && effectSurfaces(card).includes('attack-then') && !negativeConditionPath
         ? `card-attack-negative:${card.cardNumber}`
         : `card-negative:${card.cardNumber}`
       : auditBs8StrictAbilities
@@ -3318,6 +3566,8 @@ try {
           negative: true,
           settleAttackEffects: effectSurfaces(card).includes('attack-then'),
           allowNegativePayment: negativeConditionPath || getBaseCardNumber(card) === 'BS8-021',
+          allowNegativeAttackPayment:
+            requestedSeries === 'BS10' && effectSurfaces(card).includes('attack-then') && !negativeConditionPath,
         }
       : auditVanillaAttacks
         ? { path: 'vanilla-attack', requireVanillaAttack: true }

@@ -29,8 +29,8 @@ describe('AI capability promotion audit', () => {
       generatedAt: '2026-08-22T00:00:00.000Z',
     })
     expect(report.cardCount).toBeGreaterThan(500)
-    expect(report.inventoryEntryCount).toBe(1_574)
-    expect(report.cardCount).toBe(1_200)
+    expect(report.inventoryEntryCount).toBe(1_726)
+    expect(report.cardCount).toBe(1_318)
     expect(report.comboCandidateCount).toBeGreaterThan(0)
     expect(report.conversionFailures).toEqual([])
     expect(report.unsupportedCardIds).toEqual([

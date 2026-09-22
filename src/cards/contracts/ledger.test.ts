@@ -142,6 +142,103 @@ describe('card behavior contract shadow ledger', () => {
     expect(analyzeOfficialCardBehavior(source, runtime).checks.targetCovered).toBe(true)
   })
 
+  it('binds bracketed Beast battle-area selectors to the keyword runtime target', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-116',
+      baseCardNumber: 'BS10-116',
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: {
+        name: 'Beast trap',
+        text: 'Select up to 1 【Beast】 Cookie in your opponent\'s battle area. Place that Cookie in the trash.',
+      },
+    })
+    const runtime = makeCard({
+      type: 'trap',
+      effects: [{
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' },
+      }],
+      trap: {
+        text: source.skill.text ?? '',
+        cost: {},
+        effects: [{
+          kind: 'field-to-trash',
+          target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' },
+        }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
+  it('audits equipped trap immunity against the item equipped-attack runtime effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-045',
+      baseCardNumber: 'BS10-045',
+      type: 'item',
+      officialType: 'ITEM',
+      skill: {
+        name: 'Trap immunity',
+        text: "That Cookie is unaffected by your opponent's trap effects.",
+      },
+    })
+    const runtime = makeCard({
+      type: 'item',
+      effects: [],
+      item: {
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [],
+        equippedAttackEffects: [{ kind: 'disable-traps', duration: 'current-battle' }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('accepts a non-cookie trap Then when the root effect nests its continuation', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-042',
+      baseCardNumber: 'BS10-042',
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: {
+        name: 'Nested trap',
+        text: 'During this turn, that Cookie deals -1 attack damage. Then, draw up to 1 card from your deck.',
+      },
+    })
+    const nestedEffects = [{
+      kind: 'modify-attack' as const,
+      amount: -1,
+      duration: 'this-turn' as const,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+      thenEffects: [{ kind: 'draw-up-to' as const, max: 1 }],
+    }]
+    const runtime = makeCard({
+      type: 'trap',
+      effects: nestedEffects,
+      trap: {
+        text: source.skill.text ?? '',
+        cost: {},
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'draw-up-to', max: 1 },
+        ],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.errors).not.toContain('resolution order evidence missing')
+  })
+
   it('binds an LV-qualified trash-to-break cost before a fixed bounded-sum return', () => {
     const source = makeRecord({
       skill: {
@@ -687,6 +784,78 @@ describe('card behavior contract shadow ledger', () => {
         ],
       },
     }))
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('classifies named hand-or-trash Support placement as an effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-068',
+      baseCardNumber: 'BS10-068',
+      type: 'item',
+      officialType: 'ITEM',
+      skill: {
+        name: 'White Lily placement',
+        text: '<{G}{G}> <Place 1 [White Lily Cookie] from your hand or your trash in your support area as rested.> Draw up to 1 card from your deck.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard({
+      type: 'item',
+      item: {
+        cost: { energy: { green: 2 }, discardHand: 0 },
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'choose-one',
+          modes: [
+            {
+              label: 'from hand',
+              effects: [{ kind: 'hand-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+            },
+            {
+              label: 'from trash',
+              effects: [{ kind: 'trash-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+            },
+          ],
+        }, { kind: 'draw-up-to', max: 1 }],
+      },
+    }))
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.contract.clauses.find((clause) => clause.text.includes('White Lily'))?.role).toBe('effect')
+    expect(audit.errors).not.toContain('cost evidence missing')
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('classifies an EXTRA Awaken clause without an If prefix as an effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-024',
+      baseCardNumber: 'BS10-024',
+      type: 'extra',
+      officialType: 'EXTRA',
+      skill: {
+        name: 'Hollyberry Awaken',
+        text: 'EXTRA <Discard 1 card.> You can Awaken your [Hollyberry Cookie] with 3 or less HP remaining.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, {
+      id: 'BS10-024',
+      instanceId: 'bs10-024-contract',
+      name: 'Hollyberry Cookie',
+      type: 'cookie',
+      officialType: 'cookie',
+      level: 3,
+      hp: 1,
+      attack: 2,
+      attackCost: 2,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 1 },
+        text: source.skill.text ?? '',
+        effects: [],
+      },
+    })
     expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
     expect(audit.errors).not.toContain('source contains unclassified clause')
   })

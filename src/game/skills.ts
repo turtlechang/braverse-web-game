@@ -35,7 +35,9 @@ import {
 } from './replacement'
 import { defaultShuffle, getCookieEffectiveHp } from './helpers'
 import { resolveBreakLevelVictory } from './victory'
+import { getAwakenedFaintTrashCards } from './extra-deck'
 import type { Shuffle } from './types'
+import { resolveDamageOutcome } from './effects/execute'
 
 export const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
@@ -764,6 +766,7 @@ export const payHpToTrashCost = (
 ): {
   player: PlayerState
   departedCount: number
+  faintedCookieCards?: CookieCard[]
   costRecord?: GameState['costRecord']
 } => {
   const uniqueIds = [...new Set(selectedIds)]
@@ -820,9 +823,14 @@ export const payHpToTrashCost = (
         ...player,
         battleArea: player.battleArea.filter((_, index) => index !== targetIndex),
         breakArea: [...player.breakArea, target.card],
-        discardPile: [...player.discardPile, ...removedHpCards],
+        discardPile: [
+          ...player.discardPile,
+          ...removedHpCards,
+          ...getAwakenedFaintTrashCards(target, false),
+        ],
       },
       departedCount: 1,
+      faintedCookieCards: [target.card],
       costRecord: {
         hpTrashCookieInstanceId: target.card.instanceId,
         hpTrashTopCardInstanceId:
@@ -1926,7 +1934,6 @@ export const activateCookieSkill = (
   }
 
   const totalDepartedCount =
-    hpToTrashPayment.departedCount +
     trashBattlePayment.departedCount +
     selfToBreakDepartedCount +
     selfToDeckBottomDepartedCount +
@@ -1983,6 +1990,14 @@ export const activateCookieSkill = (
       triggerSkill: true,
       trashedCount: trashedCards.length,
     })
+  }
+  if (hpToTrashPayment.faintedCookieCards?.length) {
+    paidState = resolveDamageOutcome(
+      paidState,
+      playerId,
+      hpToTrashPayment.faintedCookieCards.length,
+      hpToTrashPayment.faintedCookieCards,
+    )
   }
   return resolveBreakLevelVictory(paidState)
 }

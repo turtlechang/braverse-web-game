@@ -14,6 +14,7 @@ import {
   getActingPlayerId,
   getForcedAttackTargetId,
   getCookieSkillUnavailableReason,
+  isCookieAttackRestricted,
   selectEnergyPayment,
   type GameState,
   type PlayerId,
@@ -556,7 +557,8 @@ export function BattleRow({
                 game.phase === 'main' &&
                 canAttack(game) &&
                 !cookie.rested &&
-                !cookie.card.nonAttackable
+                !cookie.card.nonAttackable &&
+                !isCookieAttackRestricted(game, playerId, cookie)
               const attackEnergyCost = getAttackEnergyCostForState(
                 game,
                 cookie.card.instanceId,

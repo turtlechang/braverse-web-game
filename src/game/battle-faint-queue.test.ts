@@ -542,7 +542,9 @@ describe('faint effect queue', () => {
         ...base.players,
         'player-one': {
           ...base.players['player-one'],
-          deck: [item('healed-hp')],
+          // Keep a second card so this case proves normal sequential
+          // continuation without entering Refresh.
+          deck: [item('healed-hp'), item('healed-hp-2')],
           battleArea: [
             { ...first, hpCards: [healingFlip] },
             second,
@@ -607,6 +609,60 @@ describe('faint effect queue', () => {
     expect(completed.players['player-one'].battleArea.map((cookie) => cookie.card.instanceId))
       .not.toContain('second-target')
     expect(completed.pendingBattle).toBeNull()
+  })
+
+  it('defeats on an attached gain-HP Refresh with no Cookie candidate before the next target', () => {
+    const base = createFaintState()
+    const first = base.players['player-one'].battleArea[0]
+    const second = {
+      ...first,
+      card: { ...first.card, id: 'second-target', instanceId: 'second-target', name: 'Second target', skill: undefined },
+      hpCards: [item('second-target-hp')],
+      battleEntryId: 'second-target:battle:2',
+    }
+    const healingFlip = {
+      ...item('first-target-flip-no-refresh'),
+      name: 'Healing FLIP no Refresh',
+      flip: {
+        text: 'Gain 1 HP.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'gain-hp' as const, amount: 1 }],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('healed-hp-no-refresh')],
+          discardPile: [],
+          battleArea: [{ ...first, hpCards: [healingFlip] }, second],
+        },
+      },
+    }
+    const context = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Fire Spirit Cookie',
+    }
+    const effect = {
+      kind: 'damage-all' as const,
+      amount: 1,
+      side: 'opponent' as const,
+      sequential: true,
+      target: { side: 'opponent' as const, min: 1, max: 2 },
+    }
+    let pending = executeCardEffect(state, context, effect, ['faint-cookie', 'second-target'])
+    pending = resolveNextDamage(pending)
+    expect(pending.pendingBattle?.stage).toBe('flip')
+    const defeated = resolveFlip(pending, 'player-one', { activate: true })
+    expect(defeated.status).toBe('finished')
+    expect(defeated.result).toMatchObject({ loserId: 'player-one', reason: 'refresh-unavailable' })
+    expect(defeated.players['player-one'].battleArea.map((entry) => entry.card.instanceId)).toContain('second-target')
+    expect(defeated.players['player-one'].battleArea.find((entry) => entry.card.instanceId === 'second-target')?.hpCards)
+      .toEqual(second.hpCards)
+    expect(defeated.pendingBattle).toBeNull()
   })
 
   it('does not queue BS4-011 when the attacked opponent survives', () => {

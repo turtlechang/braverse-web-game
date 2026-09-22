@@ -50,7 +50,21 @@ export const describeEffect = (effect: CardEffect) => {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
   }
   if (effect.kind === 'modify-attack-cost') {
-    return '選擇符合條件的餅乾，令其本回合攻擊費用改為任意能量。'
+    const duration = effect.duration === 'this-turn'
+      ? '本回合'
+      : effect.duration === 'opponent-next-turn'
+        ? '直到對手的下一個回合結束，'
+        : '持續'
+    const target = effect.target.sourceOnly ? '這張餅乾' : '符合條件的餅乾'
+    const cost = Object.entries(effect.energyCost)
+      .filter(([, amount]) => typeof amount === 'number' && amount > 0)
+      .map(([color, amount]) => color === 'neutral'
+        ? `${amount} 任意能量`
+        : `${amount} ${energyColorLabel[color] ?? color}能量`)
+      .join('、')
+    return (effect.operation ?? 'set') === 'reduce'
+      ? `${target}${duration}攻擊費用減少 ${cost}。`
+      : `${target}${duration}攻擊費用改為 ${cost}。`
   }
   if (effect.kind === 'multiply-attack-damage') {
     return `符合條件時攻擊傷害乘以 ${effect.multiplier}。`

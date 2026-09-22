@@ -253,6 +253,17 @@ export const refreshDeck = (
     breakArea: [...player.breakArea, ...selectedCookies],
   }
   let updatedState = updatePlayer(state, updatedPlayer)
+  // Keep a per-player history bit for cards whose text checks whether that
+  // player has refreshed at any point in the game (BS10-107/110/119/122).
+  // This is distinct from `pendingRefresh`: the latter is only a temporary
+  // command boundary and is cleared as soon as the deck is rebuilt.
+  updatedState = {
+    ...updatedState,
+    refreshedDuringGame: {
+      ...(updatedState.refreshedDuringGame ?? {}),
+      [playerId]: true,
+    },
+  }
   updatedState = resolveBasicVictory(updatedState)
 
   if (updatedState.status === 'finished') {

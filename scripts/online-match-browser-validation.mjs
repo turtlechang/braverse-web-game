@@ -602,7 +602,7 @@ try {
           if (await payment.count()) {
             // Hovering a hand card during payment must not cover the supports.
             const paymentHand = page.locator('.bottom-hand .hand-card').first()
-            if (await paymentHand.count()) await paymentHand.hover()
+            if (await paymentHand.count()) await paymentHand.hover({ force: true })
             assert.equal(await page.locator('.card-preview-panel').count(), 0)
             assert.equal(await page.locator('.card-preview-dismiss-layer').count(), 0)
             if (await page.locator('.attack-payment-panel.is-valid').count()) {

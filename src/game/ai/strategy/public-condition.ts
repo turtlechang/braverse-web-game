@@ -94,7 +94,8 @@ export const assessPublicCondition = (
     }
     case 'support-count-at-least': {
       const count = view.self.supportArea.filter((support) =>
-        !condition.keyword || includesKeyword(support.card, condition.keyword),
+        (!condition.restedOnly || support.rested) &&
+        (!condition.keyword || includesKeyword(support.card, condition.keyword)),
       ).length
       return count >= condition.count
         ? met('己方支援區張數已達門檻。')
@@ -120,6 +121,12 @@ export const assessPublicCondition = (
       return view.self.supportArea.filter((support) => !support.rested).length >= condition.count
         ? met('己方活躍支援數已達門檻。')
         : unmet('己方活躍支援數尚未達門檻。')
+    case 'all-support-rested': {
+      const side = sideFor(view, condition.side)
+      return side.supportArea.every((support) => support.rested)
+        ? met('指定支援區全部已休息。')
+        : unmet('指定支援區仍有活躍卡。')
+    }
     case 'support-keyword-at-least':
       return view.self.supportArea.filter((support) => includesKeyword(support.card, condition.keyword)).length >= condition.count
         ? met('己方指定關鍵字支援數已達門檻。')

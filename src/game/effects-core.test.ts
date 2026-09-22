@@ -426,6 +426,67 @@ describe('card effect engine', () => {
     expect(controllerCanMove.players['player-two'].battleArea).toHaveLength(0)
   })
 
+  it('source-only movement protection blocks only its own Cookie', () => {
+    const base = createDemoGame()
+    const protectedCookie = {
+      ...base.players['player-one'].battleArea[0],
+      card: {
+        ...base.players['player-one'].battleArea[0].card,
+        id: 'BS10-070',
+        skill: {
+          trigger: 'passive' as const,
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: {},
+          text: '',
+          effects: [{
+            kind: 'prevent-opponent-battle-movement' as const,
+            sourceOnly: true,
+          }],
+        },
+      },
+    }
+    const otherCookie = {
+      ...base.players['player-one'].battleArea[0],
+      card: {
+        ...base.players['player-one'].battleArea[0].card,
+        instanceId: 'movable-ally',
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [protectedCookie, otherCookie],
+        },
+      },
+    }
+    const opponentContext = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: base.players['player-two'].battleArea[0].card.instanceId,
+    }
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+
+    expect(getEffectTargetCandidatesForEffect(state, opponentContext, effect).map((cookie) => cookie.card.instanceId)).toEqual([
+      otherCookie.card.instanceId,
+    ])
+    const moved = executeCardEffect(state, opponentContext, effect, [otherCookie.card.instanceId])
+    expect(moved.players['player-one'].battleArea.map((cookie) => cookie.card.instanceId)).toEqual([
+      protectedCookie.card.instanceId,
+    ])
+    expect(moved.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([expect.objectContaining({ instanceId: otherCookie.card.instanceId })]),
+    )
+
+    expect(() => executeCardEffect(state, opponentContext, effect, [protectedCookie.card.instanceId])).toThrow('合法目標')
+  })
+
   it('applies a passive no-damage condition only while its controller has fewer supports', () => {
     let state = createDemoGame()
     const attacker = state.players['player-two'].battleArea[0]

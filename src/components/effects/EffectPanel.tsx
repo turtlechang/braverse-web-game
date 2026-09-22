@@ -114,10 +114,11 @@ function CandidateButtons({
         const selected = selectedIds.has(card.instanceId)
         const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
         return (
+          <div className="effect-candidate-entry" key={card.instanceId}>
           <button
             type="button"
             className={selected ? 'is-selected' : ''}
-            key={card.instanceId}
+            aria-pressed={selected}
             disabled={readOnly}
             data-fixed-target={readOnly || undefined}
             onClick={() => onToggle?.(card.instanceId)}
@@ -126,7 +127,15 @@ function CandidateButtons({
             <span>{card.id === 'hidden' ? `對手手牌 ${index + 1}（未公開）` : card.name}</span>
             {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
+            {!readOnly && <small className="effect-candidate-status">{selected ? '✓ 已選取 · 點擊取消' : '點擊選取'}</small>}
           </button>
+          {card.id !== 'hidden' && (card.skill?.text || card.effectText) && (
+            <details className="effect-candidate-details">
+              <summary>查看 {card.name} 卡文</summary>
+              <CardEffectText text={card.skill?.text || card.effectText || ''} />
+            </details>
+          )}
+          </div>
         )
       })}
     </div>
@@ -967,7 +976,11 @@ function EffectPanelContent({
                 )}
                 {discardHandCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價棄置的手牌</small>
+                    <p className="effect-selection-instruction" role="status">
+                      {selectedDiscardHandIds.size < discardHandCost
+                        ? `選擇 ${discardHandCost} 張手牌棄置，還需選 ${discardHandCost - selectedDiscardHandIds.size} 張。`
+                        : `已選擇 ${selectedDiscardHandIds.size} 張手牌，確認發動後才會棄置。`}
+                    </p>
                     <CandidateButtons
                       cards={discardHandCandidates}
                       selectedIds={selectedDiscardHandIds}
