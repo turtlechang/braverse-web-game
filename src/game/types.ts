@@ -1787,6 +1787,10 @@ export interface BreakSourceToTrashEffect {
 export interface RevealHandEffect {
   kind: 'reveal-hand'
   amount: number
+  /** Defaults to the source player's hand; opponent is used by view-all effects. */
+  side?: 'self' | 'opponent'
+  /** View the whole selected hand without creating a card-selection step. */
+  viewAll?: boolean
   /** 展示屬角括號代價，begin 指令需連同付款原子確認首段選牌。 */
   asCost?: boolean
   /** 是否要求玩家指定實際展示的手牌；未指定時維持既有的純條件檢查。 */
@@ -1926,6 +1930,8 @@ export interface DrawUntilHandEqualsOpponentEffect {
 export interface FieldToDeckBottomEffect {
   kind: 'field-to-deck-bottom'
   target: EffectTargetSelector
+  /** Move only the selected Cookie's top HP card, not the whole Cookie. */
+  hpOnly?: boolean
   allowStage?: boolean
   /** When `target.side` is `either`, restrict Cookie targets without restricting stages. */
   battleSide?: EffectTargetSide
@@ -2883,6 +2889,13 @@ export interface GameState {
       targetCardName: string
       cards: GameCard[]
     }>
+  }>>
+  /** Last completed view-all opponent-hand result, visible only to the viewer. */
+  handInspectionResults?: Partial<Record<PlayerId, {
+    sequence: number
+    sourceInstanceId: string
+    targetPlayerId: PlayerId
+    cards: GameCard[]
   }>>
   pendingInspectDeck?: {
     playerId: PlayerId

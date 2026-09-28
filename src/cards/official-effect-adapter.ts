@@ -5761,6 +5761,13 @@ export const convertOfficialCardEffects = (
     // BS9-064 Clover Cookie：昏厥時由對手選擇一張自己的支援卡送入
     // 棄牌區；side: opponent 讓目標玩家與操作玩家分離。
     'BS9-064': [{ kind: 'support-to-trash', amount: 1, side: 'opponent' }],
+    // BS11-061 Candy Apple Cookie：支付 2B 後，把對手至多一張 Cookie
+    // 的最上方 HP 放到對手牌庫底；沒有目標時整段可略過。
+    'BS11-061': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'opponent', min: 0, max: 1 },
+      hpOnly: true,
+    }],
   }
   const exactEffects =
     exactStarterEffects[card.cardNumber] ??
@@ -7065,6 +7072,13 @@ export const convertOfficialStageAbility = (
       amount: 1,
       target: { side: 'opponent', min: 0, max: 1 },
     }],
+    // BS11-062：啟動時把來源場景送入棄牌區，再查看對手整副手牌。
+    'BS11-062': [{
+      kind: 'reveal-hand',
+      amount: 0,
+      side: 'opponent',
+      viewAll: true,
+    }],
   }
   // 無 Activate 標記的 Stage 持續效果不能塞進 `effects`：它們沒有被玩家啟動
   // 的單一結算點，必須在每次攻擊費用查詢時由目前場面重新計算。
@@ -7184,6 +7198,8 @@ export const convertOfficialStageAbility = (
       discardHandKeyword: 'arena',
     },
     'BS7-107': { energy: {}, discardHand: 0 },
+    // BS11-062：將來源場景送入棄牌區是啟動代價，不是結算效果。
+    'BS11-062': { energy: {}, discardHand: 0, stageSourceToTrash: true },
   }
   const stageEffects =
     exactStageEffects[card.cardNumber] ??
@@ -11574,6 +11590,37 @@ export const convertOfficialTrapAbility = (
         }],
       }],
     },
+    // BS11-063 Sea's Protection：選填減傷後，己方有 Sea Fairy 或 Ancient 時抽最多 1 張。
+    'BS11-063': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Sea Fairy Cookie',
+              },
+              {
+                kind: 'battle-area-has-keyword',
+                side: 'self',
+                keyword: 'ancient',
+              },
+            ],
+          },
+        },
+      ],
+    },
   }
 
   const exactTrap =
@@ -12062,6 +12109,7 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHand: 0,
     trashToDeck: { count: 3, energyColor: 'purple', excludeFlip: true, cookieOnly: true },
   },
+  'BS11-061': { energy: { blue: 2 }, discardHand: 0 },
 }
 
 /** 卡面同時含靜態被動句與 Activate 技能時，分開保留靜態效果。 */

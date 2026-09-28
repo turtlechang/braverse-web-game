@@ -27,6 +27,7 @@ import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.e
 import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
+import bs11CandidateDocument from '../../data/candidates/official-dark-enchantress-war-bs11.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -911,6 +912,17 @@ export const parseTestStateConfig = (
   }
   if (testState === 'blue-st4-020-unpayable') {
     return { kind: 'blue-st4-020', payable: false }
+  }
+  const bs11TrapNoCondition = /^bs11-063-no-condition:(BS11-063(?:@1)?)$/.exec(
+    testState ?? '',
+  )
+  if (bs11TrapNoCondition) {
+    return {
+      kind: 'card-check',
+      cardNumber: bs11TrapNoCondition[1]!,
+      faintSourceMoved: true,
+      preferSkillSurface: true,
+    }
   }
   if (testState?.startsWith('p-condition:')) {
     const [, cardNumber, result] = testState.split(':')
@@ -4451,6 +4463,28 @@ const getBs10CandidateTestCard = (cardNumber: string): GameCard | null => {
 }
 
 /**
+ * BS11 remains inventory-only. This loader is reachable only from the
+ * localhost generic card-check fixture; it never contributes to the formal
+ * generated card pool or Standard deck construction.
+ */
+const getBs11CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  const records = bs11CandidateDocument.cards as OfficialCardRecord[]
+  const source = records.find((record) => record.cardNumber === trimmed) ??
+    records.find((record) => record.baseCardNumber === trimmed)
+  if (!source || source.flags.extra) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS11 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
+/**
  * BS10-008 is intentionally excluded from the generic candidate preview
  * allowlist.  The dedicated FLIP route is the only localhost fixture allowed
  * to load this exact candidate record.
@@ -4485,6 +4519,36 @@ const getBs1009HpCostCandidateCard = (): CookieCard => {
   return { ...conversion.gameCard, instanceId: 'bs10-009-preview-source' }
 }
 
+const getBs11CandidateCookie = (
+  cardNumber: string,
+  instanceId: string,
+): CookieCard => {
+  const source = (bs11CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === cardNumber,
+  )
+  if (!source) throw new Error(`BS11 candidate fixture requires ${cardNumber}`)
+  const conversion = convertOfficialCardToGameCard(source, instanceId)
+  if (conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error(`BS11 candidate fixture cannot convert ${cardNumber}`)
+  }
+  return { ...conversion.gameCard, instanceId }
+}
+
+const getBs11CandidateStage = (
+  cardNumber: string,
+  instanceId: string,
+): GameCard => {
+  const source = (bs11CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === cardNumber,
+  )
+  if (!source) throw new Error(`BS11 candidate fixture requires ${cardNumber}`)
+  const conversion = convertOfficialCardToGameCard(source, instanceId)
+  if (conversion.status !== 'converted' || conversion.gameCard.type !== 'stage') {
+    throw new Error(`BS11 candidate fixture cannot convert ${cardNumber} to a Stage`)
+  }
+  return conversion.gameCard
+}
+
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
   // BS6-091 is represented only by variants in the formal API. Resolve it
@@ -4513,6 +4577,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     if (bs9Candidate) return bs9Candidate
     const bs10Candidate = getBs10CandidateTestCard(trimmed)
     if (bs10Candidate) return bs10Candidate
+    const bs11Candidate = getBs11CandidateTestCard(trimmed)
+    if (bs11Candidate) return bs11Candidate
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -6648,8 +6714,29 @@ const createBs8042EntryDemoState = (card: CookieCard): GameState => {
 
 export const createCardCheckDemoState = (
   cardNumber: string,
-  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean } = {},
+  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean; bs11SixteenthFixtureBypass?: boolean } = {},
 ): GameState => {
+  const sixteenthBaseNumber = cardNumber.trim().split('@')[0]
+  if (!options.bs11SixteenthFixtureBypass) {
+    if (sixteenthBaseNumber === 'BS11-060' && options.normalAttack === 'payable') {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '060-attack-payable')
+    }
+    if (sixteenthBaseNumber === 'BS11-061' && options.preferSkillSurface) {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '061-activate-payable')
+    }
+    if (sixteenthBaseNumber === 'BS11-062') {
+      return createBs11SixteenthBatchDemoState(
+        cardNumber as Bs11SixteenthBatchCardNumber,
+        options.preferSkillSurface ? '062-stage-empty' : '062-stage-payable',
+      )
+    }
+    if (sixteenthBaseNumber === 'BS11-063' && options.preferSkillSurface) {
+      return createBs11SixteenthBatchDemoState(
+        cardNumber as Bs11SixteenthBatchCardNumber,
+        options.faintSourceMoved ? '063-trap-no-condition' : '063-trap-payable',
+      )
+    }
+  }
   const requestedBaseCardNumber = cardNumber.trim().split('@')[0]
   if (
     isBs10PreviewCardNumber(cardNumber.trim()) &&
@@ -9628,8 +9715,24 @@ export const createCardNegativeDemoState = (
     sourceHpCount?: number
     normalAttack?: 'payable' | 'blocked'
     bs10PreviewBypass?: boolean
+    bs11SixteenthFixtureBypass?: boolean
   } = {},
 ): GameState => {
+  const sixteenthBaseNumber = cardNumber.trim().split('@')[0]
+  if (!options.bs11SixteenthFixtureBypass) {
+    if (sixteenthBaseNumber === 'BS11-060' && options.normalAttack === 'blocked') {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '060-attack-blocked')
+    }
+    if (sixteenthBaseNumber === 'BS11-061' && options.preferSkillSurface) {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '061-activate-blocked')
+    }
+    if (sixteenthBaseNumber === 'BS11-062') {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '062-stage-blocked')
+    }
+    if (sixteenthBaseNumber === 'BS11-063' && options.preferSkillSurface) {
+      return createBs11SixteenthBatchDemoState(cardNumber as Bs11SixteenthBatchCardNumber, '063-trap-blocked')
+    }
+  }
   if (
     cardNumber.trim().split('@')[0] === 'BS10-003' &&
     options.normalAttack === 'blocked' &&
@@ -14799,4 +14902,193 @@ export const createSoulJam115ProtectionDemoState = (): GameState => {
     pendingRefresh: null,
     pendingBattle: null,
   }
+}
+
+type Bs11SixteenthBatchCardNumber =
+  | 'BS11-060'
+  | 'BS11-061'
+  | 'BS11-062'
+  | 'BS11-063'
+  | 'BS11-063@1'
+
+type Bs11SixteenthBatchScenario =
+  | '060-attack-payable'
+  | '060-attack-blocked'
+  | '061-activate-payable'
+  | '061-activate-blocked'
+  | '062-stage-payable'
+  | '062-stage-blocked'
+  | '062-stage-empty'
+  | '063-trap-payable'
+  | '063-trap-no-condition'
+  | '063-trap-blocked'
+
+/**
+ * Candidate-only BS11 sixteenth-batch test-state witnesses. The scenarios
+ * reuse the real UI entry points while changing only the card under test and
+ * the one payment/condition boundary required by each route.
+ */
+export const createBs11SixteenthBatchDemoState = (
+  cardNumber: Bs11SixteenthBatchCardNumber,
+  scenario: Bs11SixteenthBatchScenario,
+): GameState => {
+  const base = scenario.startsWith('063-trap')
+    ? createCardCheckDemoState(cardNumber, {
+        preferSkillSurface: true,
+        bs11SixteenthFixtureBypass: true,
+      })
+    : createCardCheckDemoState('BS3-063')
+  const player = base.players['player-one']
+  const supportArea = (
+    count: number,
+    activeCount: number,
+    color: 'blue' | 'red' = 'blue',
+  ) =>
+    Array.from({ length: count }, (_, index) => ({
+      card: testSupportCard(
+        `bs11-${cardNumber.toLowerCase()}-${scenario}-${color}-${index + 1}`,
+        color,
+      ),
+      rested: index >= activeCount,
+    }))
+
+  if (scenario.startsWith('060-attack')) {
+    const source = getBs11CandidateCookie(cardNumber, 'bs11-060-attack-source')
+    const positive = scenario === '060-attack-payable'
+    return {
+      ...base,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: null,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...player,
+          battleArea: [
+            cardCheckBattleEntry(
+              source,
+              Array.from({ length: source.hp }, (_, index) =>
+                testSupportCard(`bs11-060-attack-hp-${index + 1}`, 'blue'),
+              ),
+              1601,
+            ),
+          ],
+          supportArea: supportArea(1, positive ? 1 : 0, 'red'),
+        },
+      },
+    }
+  }
+
+  if (scenario.startsWith('061-activate')) {
+    const source = getBs11CandidateCookie(cardNumber, 'bs11-061-activate-source')
+    const positive = scenario === '061-activate-payable'
+    return {
+      ...base,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: null,
+      skillUsesThisTurn: [],
+      players: {
+        ...base.players,
+        'player-one': {
+          ...player,
+          battleArea: [
+            cardCheckBattleEntry(
+              source,
+              Array.from({ length: source.hp }, (_, index) =>
+                testSupportCard(`bs11-061-activate-hp-${index + 1}`, 'blue'),
+              ),
+              1602,
+            ),
+          ],
+          supportArea: supportArea(4, positive ? 4 : 1),
+        },
+      },
+    }
+  }
+
+  if (scenario.startsWith('062-stage')) {
+    const source = getBs11CandidateStage(cardNumber, 'bs11-062-stage-source')
+    const positive = scenario !== '062-stage-blocked'
+    return {
+      ...base,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: null,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...player,
+          hand: [source, ...player.hand.filter((card) => card.id !== source.id)],
+          stage: null,
+          supportArea: supportArea(2, positive ? 2 : 1),
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          hand: scenario === '062-stage-empty'
+            ? []
+            : Array.from({ length: 3 }, (_, index) =>
+                testSupportCard(`bs11-062-opponent-hand-${index + 1}`, 'blue'),
+              ),
+        },
+      },
+    }
+  }
+
+  if (scenario.startsWith('063-trap')) {
+    const positivePayment = scenario !== '063-trap-blocked'
+    const conditionMet = scenario !== '063-trap-no-condition'
+    const currentPlayer = base.players['player-one']
+    const originalDefender = currentPlayer.battleArea[0]
+    const pendingBattle = base.pendingBattle
+    if (!originalDefender || pendingBattle?.stage !== 'trap') {
+      throw new Error(`BS11 ${cardNumber} Trap fixture requires the defending Cookie`)
+    }
+    const attackerPlayer = base.players['player-two']
+    const attackerInstanceId = pendingBattle.attackerInstanceId
+    const oneDamageBattle: GameState = {
+      ...base,
+      pendingBattle: {
+        ...pendingBattle,
+        declaredDamage: 1,
+        remainingDamage: 1,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...attackerPlayer,
+          battleArea: attackerPlayer.battleArea.map((entry) =>
+            entry.card.instanceId === attackerInstanceId
+              ? { ...entry, card: { ...entry.card, attack: 1 } }
+              : entry,
+          ),
+        },
+      },
+    }
+    const battleArea = conditionMet
+      ? [
+          originalDefender,
+          cardCheckBattleEntry(
+            getBs11CandidateCookie('BS11-069', 'bs11-063-sea-fairy-witness'),
+            Array.from({ length: 3 }, (_, index) =>
+              testSupportCard(`bs11-063-sea-fairy-hp-${index + 1}`, 'blue'),
+            ),
+            1603,
+          ),
+        ]
+      : currentPlayer.battleArea
+    return {
+      ...oneDamageBattle,
+      players: {
+        ...oneDamageBattle.players,
+        'player-one': {
+          ...currentPlayer,
+          battleArea,
+          supportArea: supportArea(1, positivePayment ? 1 : 0),
+        },
+      },
+    }
+  }
+
+  throw new Error(`Unsupported BS11 sixteenth-batch scenario: ${scenario}`)
 }

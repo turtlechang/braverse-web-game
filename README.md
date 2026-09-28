@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-28 **BS11-060～063 candidate-only Browser 輕度驗收**：Luna 完成 BS11-060～063，Astra 依 inline 實作與結果摘要唯讀複核，未發現重大阻擋，並指出快照後續變化、零目標／略過 Then 抽牌仍未覆核。1280×720／1164×777 共 26／26 通過；062 手牌快照僅效果擁有者可見且 trace 不含卡身分。完整 Vitest 443 檔／5,577 項（517.37 秒）、build、scoped lint、candidate validation、BS11 strict 159／159 通過。官方卡圖 CDN 受本機網路限制未載入；候選仍 `inventory`，正式牌組／formal battle／online 未驗收。
+
 2026-09-15 修復 BS9-035／041／050 手動場景：加入補 HP 阻擋比較、BS9-030 攻擊後觸發 FLIP，以及攻擊後送棄支援接技能的連續操作。見 [場景修復](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
 
 2026-09-15 修正攻擊付款時大卡預覽遮住支援區；付款與選目標期間自動收起快速預覽，本機／線上共用。
@@ -201,6 +203,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- **BS11-060～063 candidate-only Browser 輕度驗收（2026-09-28）**：060 紅色支援支付任意 1 能量攻擊、061 2B 移動對手 HP 頂牌、062 2B 場景放置／自我送棄／擁有者限定手牌快照（含空手牌）、063／@1 1B 陷阱減傷與 Sea Fairy／Ancient 條件 Then 抽牌；兩尺寸正向／阻擋／條件不成立共 26／26。Astra 依 inline 證據輕度複核無重大阻擋；快照後續變化、零目標與略過抽牌等邊界仍未覆核。完整 Vitest 443 檔／5,577 項（517.37 秒）、build、scoped lint、candidate validation、strict 159／159 通過。官方圖像 26 筆均未載入（168 次 CDN 請求遭網路拒絕），候選仍 `inventory`，正式牌組／formal battle／online 未完成。
 
 - BS9-035／041／050：最終完整 Vitest 333 檔／4,866 項、相關回歸 5 檔／22 項、build、修改檔 lint 與桌機／平板手動正反操作通過；屬 localhost 場景驗證，完整證據見 [報告](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
 
@@ -414,6 +418,8 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
+- BS11-060～063 已完成兩尺寸 candidate-only Browser 26／26；下一批從 BS11-064 起依共用機制分 3～5 張推進。完整 Vitest 443／5,577、build、scoped lint 通過。候選仍隔離為 `inventory`，正式牌組／formal battle／online 未完成；062 快照後續變化與 063 零目標／略過 Then 抽牌仍未覆核，官方圖資亦未載入，不 promote。
+
 - BS9-035／041／050 已補可操作的場景見證；正式牌組完整對局與線上逐卡驗證仍須另行驗收。
 
 - 攻擊付款遮擋已修復；持續以長卡文、真機觸控及其他付款情境檢查預覽與操作區的互動。
@@ -599,6 +605,7 @@ BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-28 | BS11-060～063 candidate Browser 兩尺寸 26／26；062 viewer-only 手牌快照與 063／@1 條件陷阱路徑通過，Astra inline 輕度複核無重大阻擋。完整 Vitest 443／5,577、build、scoped lint、候選驗證與 strict 159／159 通過；官方圖資未載入，候選未 promote。 |
 | 2026-09-22 | BS10 正式收尾批次：候選 promote 至正式卡池；非 EXTRA Browser 正向135／135、負向151／151，BS10-008 FLIP 16／16，12 張 EXTRA 兩尺寸各正負12／12；正式牌組四尺寸、online modal 兩尺寸、好友房完整對局108命令／14次攻擊、完整 Vitest 348 檔／5,022 項與 build 通過。 |
 | 2026-09-22 | BS10-088 Butterfly Lantern：先顯示正式 BS10-001 Princess Cookie，再選擇牌庫頂／底；補 `pickCount=0` modal、規則驗證與響應式排版，4 檔／71 項 targeted 與兩尺寸 Browser 實卡流程通過。 |
 | 2026-09-21 | BS10 Luna批次整合：主效果98 supported／25 no-effect-text／0 unsupported，能力98 converted／0 pending，攻擊 Then 21／23，strict 158 verified／0 needs-review／6 blocked；受影響5檔／357項、完整Vitest 348檔／5,006項、build、scoped lint通過，Browser仍僅前十張88案。 |

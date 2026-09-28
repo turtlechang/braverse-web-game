@@ -58,7 +58,12 @@ export const maskGameStateForViewer = (
   state: GameState,
   viewerId: PlayerId,
 ): GameState => {
-  const { hpInspectionResults, presentationSteps, ...publicState } = state
+  const {
+    hpInspectionResults,
+    handInspectionResults,
+    presentationSteps,
+    ...publicState
+  } = state
   void presentationSteps
   const reorderTarget = state.pendingAbilityEffect?.playerId === viewerId
     ? state.pendingAbilityEffect.pendingReorderHp
@@ -94,6 +99,9 @@ export const maskGameStateForViewer = (
     pendingExtraDeckAttack: maskedExtraDeckAttack,
     ...(hpInspectionResults?.[viewerId]
       ? { hpInspectionResults: { [viewerId]: hpInspectionResults[viewerId] } }
+      : {}),
+    ...(handInspectionResults?.[viewerId]
+      ? { handInspectionResults: { [viewerId]: handInspectionResults[viewerId] } }
       : {}),
     // Command payloads are replay inputs, not public battle history. They may
     // contain private HP/deck ordering IDs or shuffle seeds even after masking.

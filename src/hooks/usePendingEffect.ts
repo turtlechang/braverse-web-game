@@ -6,6 +6,7 @@ import type {
   GameCard,
   GameState,
   PlayerId,
+  StageAbility,
   SkillTrigger,
 } from '../game'
 import {
@@ -1302,7 +1303,7 @@ export function usePendingEffect(params: {
 
   const beginCardAbility = (
     card: GameCard,
-    ability: CardAbility,
+    ability: CardAbility | StageAbility,
     sourceKind: 'item' | 'stage',
     triggerLabel: string,
   ) => {
@@ -1330,7 +1331,10 @@ export function usePendingEffect(params: {
         trigger: 'activate',
         oncePerTurn: false,
         yourTurn: true,
-        restSource: sourceKind === 'stage',
+        restSource:
+          sourceKind === 'stage' && 'restSource' in ability
+            ? ability.restSource
+            : false,
         cost: effectiveCost,
         text: ability.text,
         effects,

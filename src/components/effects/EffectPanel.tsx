@@ -597,6 +597,9 @@ function EffectPanelContent({
     ? []
     : [
         ...(skill?.restSource ? ['將效果來源卡橫置'] : []),
+        ...(skill?.cost.stageSourceToTrash
+          ? ['將效果來源場景卡置入棄牌區']
+          : []),
         ...(skill?.cost.hpToTrash &&
         skill.cost.hpToTrash.untilRemainingHp === undefined
           ? [`棄置 ${skill.cost.hpToTrash.amount ?? 1} 張 HP 卡`]

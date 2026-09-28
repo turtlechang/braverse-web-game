@@ -69,6 +69,11 @@ const PendingDecisionModals = lazy(async () => {
   return { default: module.PendingDecisionModals }
 })
 
+const HandInspectionModal = lazy(async () => {
+  const module = await import('./components/battle/HandInspectionModal')
+  return { default: module.HandInspectionModal }
+})
+
 const ResultModal = lazy(async () => {
   const module = await import('./components/modals/GameModals')
   return { default: module.ResultModal }
@@ -242,6 +247,7 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const handInspectionResult = match.game.handInspectionResults?.[match.viewerPlayerId]
   const stagePlacementCard = stagePlacement
     ? playerHand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
     : null
@@ -907,6 +913,10 @@ function App() {
         {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
 
         {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
+
+        {handInspectionResult && (
+          <HandInspectionModal result={handInspectionResult} />
+        )}
 
         <InformationModals match={match} ai={ai} dialogs={dialogs} />
 

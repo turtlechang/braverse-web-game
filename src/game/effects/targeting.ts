@@ -1073,7 +1073,10 @@ export const getEffectSelectionCandidates = (
     )
   }
   if (effect.kind === 'reveal-hand') {
-    return state.players[context.sourcePlayerId].hand.filter(
+    const handOwnerId = effect.side === 'opponent'
+      ? getOpponentId(context.sourcePlayerId)
+      : context.sourcePlayerId
+    return state.players[handOwnerId].hand.filter(
       (card) =>
         (effect.cookieOnly !== true || card.type === 'cookie') &&
         (effect.cardName === undefined || card.name === effect.cardName) &&
@@ -1163,7 +1166,7 @@ export const getEffectSelectionCandidates = (
         : effect.battleSide === 'self'
           ? context.sourcePlayerId
           : getOpponentId(context.sourcePlayerId)
-    const battleCards = isOpponentBattleMovementPrevented(
+    const battleCards = !effect.hpOnly && isOpponentBattleMovementPrevented(
       state,
       context.sourcePlayerId,
     )
@@ -1171,7 +1174,8 @@ export const getEffectSelectionCandidates = (
       : getEffectTargetCandidates(state, context, effect.target)
           .filter(
             (cookie) =>
-              !isOpponentBattleMovementPrevented(
+              (!effect.hpOnly || cookie.hpCards.length > 0) &&
+              (effect.hpOnly || !isOpponentBattleMovementPrevented(
                 state,
                 context.sourcePlayerId,
                 cookie.card.instanceId,

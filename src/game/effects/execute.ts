@@ -3697,6 +3697,7 @@ const executeCardEffectCore = (
       )
       if (target) {
         if (
+          !effect.hpOnly &&
           isOpponentBattleMovementPrevented(
             state,
             context.sourcePlayerId,
@@ -3704,6 +3705,46 @@ const executeCardEffectCore = (
           )
         ) {
           return { ...state }
+        }
+        if (effect.hpOnly) {
+          const movedHpCard = target.hpCards.at(-1)
+          if (!movedHpCard) {
+            throw new GameRuleError('Invalid field target.')
+          }
+          const remainingHpCards = target.hpCards.slice(0, -1)
+          const faceUpHpCardInstanceIds = (target.faceUpHpCardInstanceIds ?? [])
+            .filter((instanceId) => instanceId !== movedHpCard.instanceId)
+          if (remainingHpCards.length === 0) {
+            const faintedState = updatePlayer(state, {
+              ...owner,
+              battleArea: owner.battleArea.filter(
+                (cookie) => cookie.card.instanceId !== selectedId,
+              ),
+              breakArea: [...owner.breakArea, target.card],
+              deck: [...owner.deck, movedHpCard],
+              discardPile: [
+                ...owner.discardPile,
+                ...(target.equippedCards ?? []),
+                ...getAwakenedFaintTrashCards(target, false),
+              ],
+            })
+            return resolveDamageOutcome(faintedState, ownerId, 1, [target.card])
+          }
+          return updatePlayer(state, {
+            ...owner,
+            battleArea: owner.battleArea.map((cookie) =>
+              cookie.card.instanceId === selectedId
+                ? {
+                    ...cookie,
+                    hpCards: remainingHpCards,
+                    ...(faceUpHpCardInstanceIds.length > 0
+                      ? { faceUpHpCardInstanceIds }
+                      : { faceUpHpCardInstanceIds: undefined }),
+                  }
+                : cookie,
+            ),
+            deck: [...owner.deck, movedHpCard],
+          })
         }
         const updated = updatePlayer(state, {
           ...owner,
@@ -4136,7 +4177,25 @@ const executeCardEffectCore = (
 
   if (effect.kind === 'reveal-hand') {
     const candidates = getEffectSelectionCandidates(state, context, effect)
-    if (!effect.selectCard) return state
+    if (!effect.selectCard) {
+      if (effect.viewAll && effect.side === 'opponent') {
+        const viewerId = context.sourcePlayerId
+        const targetPlayerId = getOpponentId(viewerId)
+        return {
+          ...state,
+          handInspectionResults: {
+            ...state.handInspectionResults,
+            [viewerId]: {
+              sequence: (state.handInspectionResults?.[viewerId]?.sequence ?? 0) + 1,
+              sourceInstanceId: context.sourceInstanceId,
+              targetPlayerId,
+              cards: [...candidates],
+            },
+          },
+        }
+      }
+      return state
+    }
     const selectedIds = [...new Set(selectedTargetIds)]
     if (
       selectedIds.length !== effect.amount ||

@@ -68,6 +68,7 @@
 
 ### 測試
 
+- 2026-09-28 BS11-060～063 candidate-only Browser：060～063／@1 在 1280×720／1164×777 共 26／26 通過；062 viewer-only 手牌快照與 trace 隱私掃描通過。focused 5 檔／107 項、完整 Vitest 443 檔／5,577 項（517.37 秒）、build、scoped ESLint、candidate validation 與 strict 159／159 通過。全域 lint 仍有 4 個與本批無關的既有錯誤（`.tmp-bs9-030-ui9.mjs`、`.tmp-probe-deploy.ts`、`scripts/diagnose-lv5-conservatism.ts`）；官方卡圖 CDN 受網路阻擋、未完成視覺驗收，候選維持 inventory，正式牌組／formal battle／online 未完成。Astra 依 inline 證據輕度複核無重大阻擋；062 快照跨後續手牌變動與 063 零目標／略過抽牌仍未覆核。此項紀錄同步於 README 更新日誌。
 - 2026-09-15 BS9-035／041／050 手動場景修復：最終完整 Vitest 333 檔／4,866 項、相關回歸 5 檔／22 項、build、修改檔 lint 與 1280×720／1164×777 局部 Browser 正反操作通過；全域 lint 仍有四個無關既有錯誤。正式完整對局／線上／異圖未重驗，見 [場景報告](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。

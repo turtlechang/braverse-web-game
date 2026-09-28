@@ -34,6 +34,7 @@ import { getOptionalCostAttackPrompt } from '../modals/optionalCostAttackPrompt'
 import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
+import { HandInspectionModal } from './HandInspectionModal'
 import {
   CardDetailModal,
   CardPileModal,
@@ -178,6 +179,7 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+  const handInspectionResult = game.handInspectionResults?.[viewerPlayerId]
   const stagePlacementCard = stagePlacement
     ? viewerPlayer.hand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
     : null
@@ -880,6 +882,10 @@ export function OnlineBattleView({
       {!match.animations.isPlaying && <BattleResponseModals match={match} />}
       {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
       {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
+
+      {handInspectionResult && (
+        <HandInspectionModal result={handInspectionResult} />
+      )}
 
       {stagePlacementCard?.stageAbility && stagePlacement && (
         <StagePlacementModal

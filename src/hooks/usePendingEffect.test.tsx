@@ -280,6 +280,52 @@ describe('usePendingEffect BS8-042 support selection', () => {
   })
 })
 
+describe('usePendingEffect Stage activation metadata', () => {
+  it.each([false, true])('preserves the Stage rest-source instruction when it is %s', async (restSource) => {
+    const initial = createCardCheckDemoState('BS11-062')
+    const card = initial.players['player-one'].hand.find(
+      (candidate) => candidate.id === 'BS11-062',
+    )
+    if (card?.type !== 'stage' || !card.stageAbility) {
+      throw new Error('BS11-062 card-check fixture requires its Stage ability')
+    }
+    const ability = { ...card.stageAbility, restSource }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: initial,
+        setGame: () => {},
+        dispatch: createDispatch(initial, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginCardAbility(card, ability, 'stage', '啟動場景'))
+      expect(captured!.pendingEffect?.skill.restSource).toBe(restSource)
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
+})
+
 describe('usePendingEffect Break area costs', () => {
   it('BS8-022 pays the faint cost before offering the discarded HP Cookie for recovery', async () => {
     const initial = createCardCheckDemoState('BS8-022')
