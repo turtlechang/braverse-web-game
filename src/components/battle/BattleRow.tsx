@@ -14,6 +14,7 @@ import {
   getActingPlayerId,
   getForcedAttackTargetId,
   getCookieSkillUnavailableReason,
+  getCookieEffectiveLevel,
   isCookieAttackRestricted,
   selectEnergyPayment,
   type GameState,
@@ -709,6 +710,15 @@ export function BattleRow({
                     </div>
                   )}
                   <div className="card-badges">
+                    {cookie.levelOverride !== undefined &&
+                      getCookieEffectiveLevel(cookie) !== cookie.card.level && (
+                        <span
+                          className="badge-level"
+                          title={`目前 LV ${getCookieEffectiveLevel(cookie)}；卡面 LV ${cookie.card.level}`}
+                        >
+                          LV {getCookieEffectiveLevel(cookie)}
+                        </span>
+                      )}
                     <span
                       className="badge-hp"
                       title={cookie.card.extraDeckOrigin === 'awakened'
@@ -1001,6 +1011,7 @@ export function BattleRow({
                   : canSupport
                     ? '支援'
                     : null
+            const hasAction = Boolean(actionLabel) || canSpecialPlay
             const isSelected = selectedHandCardId === card.instanceId
             const count = player.hand.length
             const { fanX, fanY, fanRotation } = computePlayerHandFan(count, index)
@@ -1008,7 +1019,7 @@ export function BattleRow({
             return (
               <div
                 data-card-instance-id={card.instanceId}
-                className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${actionLabel ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
+                className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${hasAction ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
                 data-hand-slot={index}
                 key={card.instanceId}
                 style={{
@@ -1027,26 +1038,28 @@ export function BattleRow({
                   className="hand-card"
                   ariaPressed={isSelected}
                   onClick={
-                    actionLabel && onSelectHandCard
+                    hasAction && onSelectHandCard
                       ? () => onSelectHandCard(card.instanceId)
                       : () => onInspectCard(card)
                   }
                 />
-                {isSelected && actionLabel && (
+                {isSelected && hasAction && (
                   <div className="hand-card-actions">
-                    <button
-                      className="hand-card-action"
-                      type="button"
-                      onClick={() => {
-                        onSelectHandCard?.(null)
-                        if (canDeploy) onDeployCookie?.(card.instanceId)
-                        else if (canUseItem) onPlayItem?.(card.instanceId)
-                        else if (canPlaceStage) onPlayStage?.(card.instanceId)
-                        else onPlaceSupport?.(card.instanceId)
-                      }}
-                    >
-                      {actionLabel}
-                    </button>
+                    {actionLabel && (
+                      <button
+                        className="hand-card-action"
+                        type="button"
+                        onClick={() => {
+                          onSelectHandCard?.(null)
+                          if (canDeploy) onDeployCookie?.(card.instanceId)
+                          else if (canUseItem) onPlayItem?.(card.instanceId)
+                          else if (canPlaceStage) onPlayStage?.(card.instanceId)
+                          else onPlaceSupport?.(card.instanceId)
+                        }}
+                      >
+                        {actionLabel}
+                      </button>
+                    )}
                     {canSpecialPlay && (
                       <button
                         className="hand-card-action"

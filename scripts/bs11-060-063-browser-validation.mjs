@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import { routeBs11OfficialArt } from './bs11-official-art-route.mjs'
+
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const require = createRequire(import.meta.url)
 const playwrightEntry = require.resolve('playwright', {
@@ -39,9 +41,13 @@ const cases = [
   { id: '063-trap-positive', cardNumber: 'BS11-063', route: 'card-skill:BS11-063', kind: 'trap-positive' },
   { id: '063-trap-blocked', cardNumber: 'BS11-063', route: 'card-skill-negative:BS11-063', kind: 'trap-blocked' },
   { id: '063-trap-no-condition', cardNumber: 'BS11-063', route: 'bs11-063-no-condition:BS11-063', kind: 'trap-no-condition' },
+  { id: '063-trap-zero-target', cardNumber: 'BS11-063', route: 'card-skill:BS11-063', kind: 'trap-zero-target' },
+  { id: '063-trap-skip-draw', cardNumber: 'BS11-063', route: 'card-skill:BS11-063', kind: 'trap-skip-draw' },
   { id: '063-variant-positive', cardNumber: 'BS11-063@1', route: 'card-skill:BS11-063@1', kind: 'trap-positive' },
   { id: '063-variant-blocked', cardNumber: 'BS11-063@1', route: 'card-skill-negative:BS11-063@1', kind: 'trap-blocked' },
   { id: '063-variant-no-condition', cardNumber: 'BS11-063@1', route: 'bs11-063-no-condition:BS11-063@1', kind: 'trap-no-condition' },
+  { id: '063-variant-zero-target', cardNumber: 'BS11-063@1', route: 'card-skill:BS11-063@1', kind: 'trap-zero-target' },
+  { id: '063-variant-skip-draw', cardNumber: 'BS11-063@1', route: 'card-skill:BS11-063@1', kind: 'trap-skip-draw' },
 ]
 
 const requestedCases = process.env.BS11_BROWSER_CASES
@@ -71,7 +77,7 @@ if (requestedWidths?.some((width) => !viewports.some((viewport) => viewport.widt
 }
 
 const candidate = JSON.parse(await readFile(
-  resolve(root, 'data/candidates/official-dark-enchantress-war-bs11.en.json'),
+  resolve(root, 'data/cards/official-dark-enchantress-war-bs11.en.json'),
   'utf8',
 ))
 const selectedCardNumbers = [...new Set(selectedCases.map((testCase) => testCase.cardNumber))]
@@ -553,21 +559,21 @@ const confirmTrap = async (modal, cardNumber) => {
   throw new Error(cardNumber + ' Trap did not reach its confirmation step')
 }
 
-const resolveTrapThen = async (page, expectedDraw, evidence) => {
+const resolveTrapThen = async (page, expectedDraw, evidence, drawCount = 1) => {
   let drawResolved = false
   for (let step = 0; step < 12; step += 1) {
     const draw = page.locator('.draw-up-to-modal:visible').first()
     if (await isVisible(draw)) {
       assert.equal(expectedDraw, true, '063 no-condition route must not open a draw decision')
-      const option = draw.locator('.draw-up-to-option').nth(1)
+      const option = draw.locator('.draw-up-to-option').nth(drawCount)
       await option.waitFor({ state: 'visible' })
       await option.click()
       await clickEnabled(
         draw.locator('.draw-up-to-actions button').last(),
-        '063 confirm draw one',
+        '063 confirm optional draw',
       )
       await waitForCommand(page, 'resolve-draw-up-to')
-      evidence.drawCount = 1
+      evidence.drawCount = drawCount
       drawResolved = true
       break
     }
@@ -648,13 +654,20 @@ const run063 = async (page, testCase, evidence) => {
   await clickEnabled(payment, cardNumber + ' blue Trap payment')
   const next = modal.getByRole('button', { name: '下一步', exact: true }).first()
   if (await isVisible(next)) await clickEnabled(next, cardNumber + ' continue to target')
-  const attackerTarget = modal.locator('.trap-target-options button.is-attacker').first()
-  await clickEnabled(attackerTarget, cardNumber + ' attacking Cookie target')
+  if (testCase.kind !== 'trap-zero-target') {
+    const attackerTarget = modal.locator('.trap-target-options button.is-attacker').first()
+    await clickEnabled(attackerTarget, cardNumber + ' attacking Cookie target')
+  }
   await confirmTrap(modal, cardNumber)
   await waitForCommand(page, 'play-trap')
   evidence.trace = await trace(page)
   assert.ok(evidence.trace.some((entry) => entry.commandKind === 'play-trap'))
-  await resolveTrapThen(page, testCase.kind === 'trap-positive', evidence)
+  await resolveTrapThen(
+    page,
+    testCase.kind !== 'trap-no-condition',
+    evidence,
+    testCase.kind === 'trap-skip-draw' ? 0 : 1,
+  )
   await waitForAttackSettlement(page)
   await skipAnimations(page)
   evidence.after = await readState(page)
@@ -662,18 +675,27 @@ const run063 = async (page, testCase, evidence) => {
   const defenderAfter = evidence.after.bottom.battle.find((entry) => entry.id === defenderBefore.id)
   assert.ok(defenderAfter, cardNumber + ' defender must remain visible after the attack')
   evidence.damageReceived = defenderBefore.hp - defenderAfter.hp
-  assert.equal(evidence.damageReceived, 0, cardNumber + ' Trap must reduce the 1-damage attack to zero')
+  assert.equal(
+    evidence.damageReceived,
+    testCase.kind === 'trap-zero-target' ? 1 : 0,
+    cardNumber + ' must apply attack reduction only when a target was selected',
+  )
   const trapCommand = evidence.trace.find((entry) => entry.commandKind === 'play-trap')
   assert.ok(trapCommand, cardNumber + ' must publish its Trap payment command')
   assert.ok(
     trapCommand.steps.some((step) => step.includes(evidence.paymentId)),
     cardNumber + ' Trap command must show the selected blue support payment',
   )
-  if (testCase.kind === 'trap-positive') {
-    assert.equal(evidence.drawCount, 1, cardNumber + ' satisfied Then must draw one card')
-    assert.equal(evidence.after.bottom.handCount, before.bottom.handCount + 2, cardNumber + ' includes the two normal turn-draw cards and one Then draw after paying the Trap')
-    assert.equal(evidence.after.bottom.deckCount, before.bottom.deckCount - 3, cardNumber + ' must draw one Then card plus two normal turn-draw cards')
-    evidence.result = 'Paid 1B, reduced the attack to zero damage, chose one Then draw, and reached the next turn draw.'
+  if (testCase.kind !== 'trap-no-condition') {
+    const chosenDraw = testCase.kind === 'trap-skip-draw' ? 0 : 1
+    assert.equal(evidence.drawCount, chosenDraw, cardNumber + ' satisfied Then must honor the chosen 0/1 draw')
+    assert.equal(evidence.after.bottom.handCount, before.bottom.handCount + 1 + chosenDraw, cardNumber + ' must distinguish the optional Then draw from two normal turn draws')
+    assert.equal(evidence.after.bottom.deckCount, before.bottom.deckCount - 2 - chosenDraw, cardNumber + ' must consume only the selected Then draw plus normal turn draws')
+    evidence.result = testCase.kind === 'trap-zero-target'
+      ? 'Paid 1B, selected zero attack targets, drew one from Then, and took one attack damage.'
+      : testCase.kind === 'trap-skip-draw'
+        ? 'Paid 1B, reduced the attack to zero, explicitly drew zero from Then, and continued the turn.'
+        : 'Paid 1B, reduced the attack to zero damage, chose one Then draw, and reached the next turn draw.'
   } else {
     assert.equal(evidence.drawCount, undefined, cardNumber + ' no-condition path must not draw from the Trap Then')
     assert.equal(evidence.after.bottom.handCount, before.bottom.handCount + 1, cardNumber + ' includes the two normal turn-draw cards after paying the Trap')
@@ -689,6 +711,7 @@ const run063 = async (page, testCase, evidence) => {
 
 const runCase = async (browser, viewport, testCase) => {
   const page = await browser.newPage({ viewport })
+  await routeBs11OfficialArt(page)
   page.setDefaultTimeout(15000)
   const privateTokens = new Set()
   const evidence = {
@@ -756,8 +779,8 @@ const artifactPath = resolve(artifactDir, 'bs11-060-063-browser-' + Date.now() +
 const artifact = {
   generatedAt: new Date().toISOString(),
   baseUrl,
-  routeFormat: 'candidate-only test-state routes for BS11-060～063 and BS11-063@1',
-  scope: 'Local candidate-only Browser evidence at desktop/tablet sizes. No formal deck, multiplayer, or online acceptance is claimed. Hand identities are not serialized.',
+  routeFormat: 'promoted-pool test-state routes for BS11-060～063 and BS11-063@1',
+  scope: 'Local promoted-pool Browser evidence at desktop/tablet sizes. No formal deck, multiplayer, or online acceptance is claimed. Hand identities are not serialized.',
   viewports: selectedViewports,
   summary: {
     total: results.length,

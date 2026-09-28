@@ -122,6 +122,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           cardName={pendingExtraDeckAttack.cardName}
           candidates={extraDeckAttackCandidates}
           optional={pendingExtraDeckAttack.optional}
+          resolution={pendingExtraDeckAttack.resolution}
           onSelect={(extraDeckInstanceId) => {
             const selectedCard = extraDeckAttackCandidates.find(
               (card) => card.instanceId === extraDeckInstanceId,
@@ -132,7 +133,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 playerId: match.viewerPlayerId,
                 extraDeckInstanceId,
               },
-              `已選擇「${selectedCard?.name ?? pendingExtraDeckAttack.cardName}」的攻擊效果。`,
+              `已選擇「${selectedCard?.name ?? pendingExtraDeckAttack.cardName}」的${pendingExtraDeckAttack.resolution === 'play' ? '登場' : pendingExtraDeckAttack.resolution === 'skill' ? '技能' : '攻擊'}效果。`,
             )
           }}
           onSkip={() => {
@@ -142,7 +143,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 kind: 'resolve-extra-deck-attack',
                 playerId: match.viewerPlayerId,
               },
-              '已略過額外牌組攻擊效果。',
+              `已略過額外牌組${pendingExtraDeckAttack.resolution === 'play' ? '登場' : pendingExtraDeckAttack.resolution === 'skill' ? '技能' : '攻擊'}效果。`,
             )
           }}
         />
@@ -285,10 +286,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               : null
           const hand = descriptorCandidates
             ? match.game.players[match.viewerPlayerId].hand.filter((card) =>
-                descriptorCandidates.has(card.instanceId),
+                descriptorCandidates.has(card.instanceId) &&
+                !(handDiscard.excludedCardIds ?? []).includes(card.instanceId),
               )
             : match.game.players[match.viewerPlayerId].hand.filter(
                 (card) =>
+                  !(handDiscard.excludedCardIds ?? []).includes(card.instanceId) &&
                   (handDiscard.energyColor === undefined ||
                     card.energyColor === handDiscard.energyColor) &&
                   (!handDiscard.cookieOnly || card.type === 'cookie') &&
@@ -625,6 +628,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
           filterKeyword={pendingInspect.filterKeyword}
+          filterHasSpecialPlay={pendingInspect.filterHasSpecialPlay}
           optionalPick={pendingInspect.optionalPick}
           onConfirm={(pickedCardIds, restOrder, selectedRestDestination) => {
             const effectiveRestDestination =

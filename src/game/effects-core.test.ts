@@ -781,6 +781,164 @@ describe('card effect engine', () => {
     ).toBe(false)
   })
 
+  it('keeps BS11-009 level and remaining-HP conditions on the same Cookie', () => {
+    const base = createDemoGame()
+    const source = base.players['player-one'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 3,
+      condition: {
+        kind: 'battle-area-has-cookie-with-level-and-remaining-hp',
+        side: 'self',
+        minLevel: 2,
+        remainingHp: 1,
+      },
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+
+    const matching = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            ...source,
+            card: { ...source.card, level: 2 },
+            hpCards: source.hpCards.slice(0, 1),
+          }],
+        },
+      },
+    }
+    expect(isEffectConditionMet(matching, context, effect)).toBe(true)
+
+    const splitAcrossCookies = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              ...source,
+              card: { ...source.card, instanceId: 'level-cookie', level: 2 },
+              hpCards: source.hpCards.slice(0, 2),
+            },
+            {
+              ...source,
+              card: { ...source.card, instanceId: 'hp-cookie', level: 1 },
+              hpCards: source.hpCards.slice(0, 1),
+            },
+          ],
+        },
+      },
+    }
+    expect(isEffectConditionMet(splitAcrossCookies, context, effect)).toBe(false)
+  })
+
+  it('supports an exact upper LV bound for battle-area level and remaining-HP conditions', () => {
+    const base = createDemoGame()
+    const source = base.players['player-one'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      condition: {
+        kind: 'battle-area-has-cookie-with-level-and-remaining-hp',
+        side: 'self',
+        minLevel: 3,
+        maxLevel: 3,
+        remainingHp: 1,
+      },
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+
+    const matching = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            ...source,
+            card: { ...source.card, level: 3 },
+            hpCards: source.hpCards.slice(0, 1),
+          }],
+        },
+      },
+    }
+    expect(isEffectConditionMet(matching, context, effect)).toBe(true)
+
+    const higherLevel = {
+      ...matching,
+      players: {
+        ...matching.players,
+        'player-one': {
+          ...matching.players['player-one'],
+          battleArea: [{
+            ...matching.players['player-one'].battleArea[0],
+            card: { ...matching.players['player-one'].battleArea[0].card, level: 4 },
+          }],
+        },
+      },
+    }
+    expect(isEffectConditionMet(higherLevel, context, effect)).toBe(false)
+  })
+
+  it('records the opponent On Play lock for the current turn', () => {
+    const state = createDemoGame()
+    const locked = executeCardEffect(
+      state,
+      context,
+      { kind: 'prevent-opponent-on-play', duration: 'this-turn' },
+      [],
+    )
+
+    expect(locked.onPlayDisabledUntilTurn).toEqual({
+      'player-two': state.turnNumber,
+    })
+
+    const nextTurn = advancePhase(reachEndOfTurn(locked))
+    expect(nextTurn.onPlayDisabledUntilTurn).toEqual({})
+  })
+
+  it('only applies the On Play lock when the current attack fainted an opponent Cookie', () => {
+    const state = createDemoGame()
+    const attacker = state.players['player-one'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'prevent-opponent-on-play',
+      duration: 'this-turn',
+      condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+    }
+    const pendingBattle = {
+      attackerPlayerId: 'player-one' as const,
+      defenderPlayerId: 'player-two' as const,
+      attackerInstanceId: attacker.card.instanceId,
+      targetInstanceId: state.players['player-two'].battleArea[0].card.instanceId,
+      declaredDamage: attacker.card.attack,
+      remainingDamage: attacker.card.attack,
+      stage: 'attack-effect' as const,
+      trapUsed: true,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: ['red' as const],
+      attackEffects: [effect],
+      attackEffectIndex: 0,
+    }
+    const faintedState = { ...state, pendingBattle }
+
+    expect(isEffectConditionMet(faintedState, context, effect)).toBe(true)
+    expect(executeCardEffect(faintedState, context, effect, []).onPlayDisabledUntilTurn).toEqual({
+      'player-two': state.turnNumber,
+    })
+
+    const noFaintState = {
+      ...faintedState,
+      pendingBattle: { ...pendingBattle, faintedColors: [] },
+    }
+    expect(isEffectConditionMet(noFaintState, context, effect)).toBe(false)
+    expect(() => executeCardEffect(noFaintState, context, effect, [])).toThrow('尚未滿足')
+  })
+
   it('attaches supported official effects to demo cards', () => {
     const state = createDemoGame()
     const cards = Object.values(state.players).flatMap((player) => [

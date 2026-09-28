@@ -102,6 +102,8 @@ type ExtraDeckPlaySpec = {
   activateEffects?: CardEffect[]
   activateCost?: AbilityCost
   activateOncePerTurn?: boolean
+  /** Passive effects that remain active while an EXTRA Cookie is in battle. */
+  passiveEffects?: CardEffect[]
   /** Passive attack restriction printed on an EXTRA card. */
   cannotAttackCondition?: Extract<CardSkill['cannotAttackCondition'], { kind: string }>
   awakenRequirement?: ExtraDeckCard['awakenRequirement']
@@ -165,6 +167,34 @@ const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
     mode: 'enter-battle',
     requirement: { kind: 'refreshed-during-game' },
     playCost: { energy: {}, discardHand: 2 },
+  },
+  'BS11-091': {
+    mode: 'enter-battle',
+    requirement: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'break-level-at-least', level: 6 },
+        { kind: 'opponent-break-level-at-least', level: 6 },
+        { kind: 'hand-count-at-most', count: 3 },
+        { kind: 'opponent-hand-count-at-most', count: 3 },
+      ],
+    },
+  },
+  'BS11-116': {
+    mode: 'awaken',
+    requirement: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'break-level-at-least', level: 7 },
+        { kind: 'stage-has-card', side: 'self', cardName: "Dark Enchantress's Castle" },
+      ],
+    },
+    awakenRequirement: {
+      targetName: 'Dark Enchantress Cookie',
+      requiresSpecialPlay: true,
+    },
+    awakenHpBonus: 2,
+    passiveEffects: [{ kind: 'prevent-opponent-battle-movement', sourceOnly: true }],
   },
   'BS9-055': {
     mode: 'enter-battle',
@@ -371,7 +401,7 @@ const createExtraSkill = (
         : {}),
     }
   }
-  if (spec.cannotAttackCondition) {
+  if (spec.passiveEffects?.length || spec.cannotAttackCondition) {
     return {
       trigger: 'passive',
       oncePerTurn: false,
@@ -380,7 +410,10 @@ const createExtraSkill = (
       cost: { energy: {}, discardHand: 0 },
       text,
       effects: [],
-      cannotAttackCondition: spec.cannotAttackCondition,
+      ...(spec.passiveEffects?.length ? { passiveEffects: spec.passiveEffects } : {}),
+      ...(spec.cannotAttackCondition
+        ? { cannotAttackCondition: spec.cannotAttackCondition }
+        : {}),
     }
   }
   return createExtraOnPlaySkill(text, spec.onPlayEffects, spec.onPlayCost)

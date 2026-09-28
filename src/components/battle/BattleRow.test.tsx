@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
+  createBs11115SpecialPlayDemoState,
+  createBs11092ActivateDemoState,
   createBs8011DoubleSkillDemoState,
   createCardCheckDemoState,
   createCardNegativeDemoState,
@@ -477,6 +479,25 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('hand-card-wrap is-selected')
     expect(markup).toContain('hand-card-actions')
     expect(markup).toContain('>使用<')
+    expect(markup).toContain('>詳情<')
+  })
+
+  it('keeps Special Play reachable when the battle area is full', () => {
+    const game = createBs11115SpecialPlayDemoState('BS11-115', false)
+    const sourceId = game.players['player-one'].hand[0].instanceId
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          selectedHandCardId: sourceId,
+          onSelectHandCard: () => undefined,
+          onSpecialPlayCookie: () => undefined,
+        })}
+      />,
+    )
+
+    expect(markup).toContain('hand-card-wrap is-selected is-actionable')
+    expect(markup).toContain('>特殊登場<')
     expect(markup).toContain('>詳情<')
   })
 
@@ -1379,6 +1400,21 @@ describe('BS9-010 permanent face-up HP display', () => {
     expect(hpButtons[0]).toContain(`title="${publicCard.name}"`)
     expect(hpButtons[0]).toContain(publicCard.imageUrl)
     expect(hpButtons.slice(1).every((button) => button.includes('title="未公開卡牌"'))).toBe(true)
+  })
+})
+
+describe('temporary Cookie level display', () => {
+  it('shows the effective LV only while Licorice is level-shifted in battle', () => {
+    const before = renderToStaticMarkup(<BattleRow {...createProps({
+      game: createBs11092ActivateDemoState(false), playerId: 'player-one', position: 'bottom',
+    })} />)
+    const after = renderToStaticMarkup(<BattleRow {...createProps({
+      game: createBs11092ActivateDemoState(true), playerId: 'player-one', position: 'bottom',
+    })} />)
+    expect(before).not.toContain('class="badge-level"')
+    expect(after).toContain('class="badge-level"')
+    expect(after).toContain('目前 LV 1；卡面 LV 2')
+    expect(after).toContain('LV 1')
   })
 })
 

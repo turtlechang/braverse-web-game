@@ -68,7 +68,12 @@
 
 ### 測試
 
-- 2026-09-28 BS11-060～063 candidate-only Browser：060～063／@1 在 1280×720／1164×777 共 26／26 通過；062 viewer-only 手牌快照與 trace 隱私掃描通過。focused 5 檔／107 項、完整 Vitest 443 檔／5,577 項（517.37 秒）、build、scoped ESLint、candidate validation 與 strict 159／159 通過。全域 lint 仍有 4 個與本批無關的既有錯誤（`.tmp-bs9-030-ui9.mjs`、`.tmp-probe-deploy.ts`、`scripts/diagnose-lv5-conservatism.ts`）；官方卡圖 CDN 受網路阻擋、未完成視覺驗收，候選維持 inventory，正式牌組／formal battle／online 未完成。Astra 依 inline 證據輕度複核無重大阻擋；062 快照跨後續手牌變動與 063 零目標／略過抽牌仍未覆核。此項紀錄同步於 README 更新日誌。
+- 2026-09-28 BS11 正式收尾與 promote：159 筆官方資料（116 基礎卡號／43 變體）已移入正式卡池；正式卡池 19 檔／1,923 筆／1,881 converted，BS11 strict 159／159、攻擊 Then 27／27。115／116 新補 Browser 42／42、035 16／16，正式牌組編輯器四尺寸通過；正式 AI 牌組對局第 15 回合結算，雙瀏覽器 BS11 線上全對局 157 命令／16 次攻擊、兩端結果一致並保留。完整 Vitest 481 檔／5,715 項（537.51 秒）、BS11 scoped lint 與 build 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連及線上逐卡技能矩陣仍未驗收，詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。同日期較早 BS11 條目為歷史快照。
+- 2026-09-28 BS11-088／@1 On Play 補驗：新增獨立候選 fixture 與 Browser 驅動，兩尺寸正反 8／8 通過，核對紫色 LV.1 戰鬥區代價、LV.2 以上紫色棄牌區回收、缺代價阻擋及來源卡圖；focused 7／7、build、scoped lint 及最新完整 Vitest **481 檔／5,702 項（531.02 秒）** 通過。原攻擊 Then 12／12 證據另計；115、116 仍有印刷分支待補，正式牌組／online／promote 未完成。
+
+- 2026-09-28 BS11 EXTRA／Awaken 補驗：090／091 含異圖 12／12、116／@1 8／8，以本輪 build 在 1280×720／1164×777 候選 Browser 重跑通過；另計於下述 344 案之外。仍是 `test-state` 局部證據，正式牌組／online 與直連 CDN 待驗。
+
+- 2026-09-28 BS11 實圖補驗前段快照：候選 159 筆、strict 159／159、攻擊 Then 27／27；159 張官方 WebP 已本機取得、逐張目視並在 Browser 159／159 解碼成功。既有候選 Browser 以本機原始圖重跑 344／344，041 再次啟動與 042 超選防護兩尺寸補驗通過；其他局部技能／攻擊／Then／FLIP 證據見進度報告。當時完整 Vitest **481 檔／5,700 項（542.50 秒）**、build、BS11 scoped lint、candidate validation、coverage analyzer、BS11 strict 通過；全域 lint 仍有 4 個既有無關錯誤。逐卡完整印刷分支與獨立預期矩陣未收齊，本機 CDN 直連受阻；候選維持 inventory／0 converted，正式牌組／formal battle／online、正式環境卡圖與 promote 未完成。詳見 README 與 BS11 進度。
 - 2026-09-15 BS9-035／041／050 手動場景修復：最終完整 Vitest 333 檔／4,866 項、相關回歸 5 檔／22 項、build、修改檔 lint 與 1280×720／1164×777 局部 Browser 正反操作通過；全域 lint 仍有四個無關既有錯誤。正式完整對局／線上／異圖未重驗，見 [場景報告](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import bs11CandidateDocument from '../../data/candidates/official-dark-enchantress-war-bs11.en.json'
+import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { applyGameCommand } from './commands'
@@ -23,6 +23,84 @@ const entry = (card: GameCard, hpCount: number): CookieInBattle => ({
   hpCards: Array.from({ length: hpCount }, (_, index) => item(`${card.instanceId}:hp-${index}`)),
   rested: false,
   battleEntryId: `${card.instanceId}:battle`,
+})
+
+describe('BS11-059 Seltzer Cookie FLIP runtime', () => {
+  it('pays one hand card and gives the attached Cookie one HP', () => {
+    const base = createBattleState()
+    const flip = candidate('BS11-059', 'flip')
+    const discard = item('BS11-059:discard')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [discard],
+          battleArea: [{
+            ...base.players['player-one'].battleArea[0]!,
+            hpCards: [item('BS11-059:hp-bottom'), flip],
+          }],
+        },
+      },
+    }
+
+    let current = applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: 'player-two',
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    })
+    current = applyGameCommand(current, { kind: 'skip-trap', playerId: 'player-one' })
+    current = applyGameCommand(current, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    expect(current.pendingBattle?.stage).toBe('flip')
+
+    current = applyGameCommand(current, {
+      kind: 'resolve-flip',
+      playerId: 'player-one',
+      activate: true,
+      discardHandIds: [discard.instanceId],
+    })
+
+    expect(current.players['player-one'].battleArea[0]?.hpCards).toHaveLength(2)
+    expect(current.players['player-one'].discardPile).toContainEqual(discard)
+    expect(current.players['player-one'].discardPile).toContainEqual(flip)
+  })
+
+  it('rejects activation without the printed discard payment', () => {
+    const base = createBattleState()
+    const flip = candidate('BS11-059', 'missing-payment')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [],
+          battleArea: [{
+            ...base.players['player-one'].battleArea[0]!,
+            hpCards: [item('BS11-059:hp-bottom'), flip],
+          }],
+        },
+      },
+    }
+    let current = applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: 'player-two',
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      supportPaymentIds: ['p2-support'],
+    })
+    current = applyGameCommand(current, { kind: 'skip-trap', playerId: 'player-one' })
+    current = applyGameCommand(current, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    expect(() => applyGameCommand(current, {
+      kind: 'resolve-flip',
+      playerId: 'player-one',
+      activate: true,
+      discardHandIds: [],
+    })).toThrow()
+  })
 })
 
 describe('BS11-060 Hero Cookie BLUE MIX runtime', () => {
@@ -191,6 +269,20 @@ describe('BS11-062 Top of the Spire of Deceit runtime', () => {
       cards: opponentHand,
     })
     expect(maskGameStateForViewer(activated, 'player-two')).not.toHaveProperty('handInspectionResults')
+
+    const afterHandChanges = applyGameCommand({
+      ...activated,
+      activePlayerId: 'player-two',
+      phase: 'support',
+    }, {
+      kind: 'place-support',
+      playerId: 'player-two',
+      instanceId: opponentHand[0]!.instanceId,
+    })
+    expect(afterHandChanges.players['player-two'].hand).toEqual([opponentHand[1]])
+    expect(maskGameStateForViewer(afterHandChanges, 'player-one').handInspectionResults?.['player-one']?.cards)
+      .toEqual(opponentHand)
+    expect(maskGameStateForViewer(afterHandChanges, 'player-two')).not.toHaveProperty('handInspectionResults')
   })
 })
 

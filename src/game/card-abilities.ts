@@ -517,7 +517,10 @@ const hasUsableEffect = (
   playerId: PlayerId,
   sourceInstanceId: string,
   ability: CardAbility,
-  options: { deferHandCountConditionUntilAfterDiscard?: boolean } = {},
+  options: {
+    deferHandCountConditionUntilAfterDiscard?: boolean
+    allowInactiveConditionalEffects?: boolean
+  } = {},
 ): boolean => {
   const context = {
     sourcePlayerId: playerId,
@@ -546,7 +549,20 @@ const hasUsableEffect = (
     // Some item costs can reduce the hand before the effect condition is
     // checked.  BS6-084 must therefore be allowed to open its discard-cost
     // flow even while the pre-payment hand is still above the threshold.
-    if (!conditionMet && !conditionDeferred) return false
+    // Selected Stage abilities use the same cost-first semantics as items: a
+    // conditional effect may be paid and then resolve to no effect when its
+    // condition is false (for example BS11-083 before the player has
+    // Refreshed).
+    if (!conditionMet && !conditionDeferred) {
+      if (
+        options.allowInactiveConditionalEffects === true &&
+        'condition' in effect &&
+        effect.condition !== undefined
+      ) {
+        return true
+      }
+      return false
+    }
     if (isEffectTargeted(effect) && effect.target?.costSelected) {
       // The Cookie selected for an HP cost is not written to costRecord until
       // the ability is finally confirmed. Availability checks must still see
@@ -767,7 +783,16 @@ export const canActivateStage = (
     return (
       canPayAbilityCost(state, playerId, source.ability.cost, source.stage.card.instanceId) &&
       (
-        hasUsableEffect(state, playerId, source.stage.card.instanceId, source.ability) ||
+        hasUsableEffect(
+          state,
+          playerId,
+          source.stage.card.instanceId,
+          source.ability,
+          {
+            allowInactiveConditionalEffects:
+              source.ability.allowInactiveConditionalEffects === true,
+          },
+        ) ||
         (source.ability.specialVictory !== undefined &&
           isSpecialVictoryConditionMet(
             state,

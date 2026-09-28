@@ -1120,6 +1120,40 @@ describe('activate skill with discardHand cost', () => {
     ).toBe(false)
   })
 
+  it('rejects Cookie On Play activation while the opponent On Play lock is active', () => {
+    const skill: CardSkill = {
+      trigger: 'on-play',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'Draw 1 card from your deck.',
+      effects: [{ kind: 'draw', amount: 1 }],
+    }
+    let state = withSkill(createDemoGame(), 'player-one', skill)
+    const source = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: source.card.instanceId,
+      },
+      onPlayDisabledUntilTurn: { 'player-one': state.turnNumber },
+    }
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', source.card.instanceId, 'on-play'),
+    ).toBe(false)
+
+    const expired = {
+      ...state,
+      onPlayDisabledUntilTurn: { 'player-one': state.turnNumber - 1 },
+    }
+    expect(
+      canActivateCookieSkill(expired, 'player-one', source.card.instanceId, 'on-play'),
+    ).toBe(true)
+  })
+
   it('allows BS4-077 to pay its self-to-deck-bottom cost while Timekeeper is in battle', () => {
     const skill: CardSkill = {
       trigger: 'activate',

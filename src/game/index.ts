@@ -26,6 +26,7 @@ export {
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   findBreakToHandBySumSelection,
+  findRevealHandSelection,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
@@ -74,11 +75,17 @@ export {
   createStageUsageDemoState,
 } from './demo'
 export type { DeckConfig } from './demo'
-export { createSeededRandom, createSeededShuffle, getCookieEffectiveHp } from './helpers'
+export {
+  createSeededRandom,
+  createSeededShuffle,
+  getCookieEffectiveHp,
+  getCookieEffectiveLevel,
+} from './helpers'
 export {
   EXTRA_DECK_MAX_CARDS,
   EXTRA_DECK_MAX_COPIES_PER_CARD,
   getExtraDeckAttackCandidates,
+  getExtraDeckPlayCandidates,
   reorderExtraDeck,
   validateExtraDeck,
 } from './extra-deck'
@@ -342,6 +349,7 @@ export {
 } from './setup'
 export { advancePhase, canAttack, processEndPhaseEffects, TURN_PHASES } from './turn'
 export {
+  activateOnPlayReplacement,
   activateCookieSkill,
   canActivateCookieSkill,
   getCookieSkillUnavailableReason,
@@ -356,6 +364,7 @@ export {
   getCookieSkillCost,
   getHandCountAfterFixedSkillCost,
   getCookieSkillEffects,
+  getActiveOnPlayReplacement,
   isSupportToHandCostCandidate,
   hasCookieOnPlayEffects,
   getHpToHandCostCandidates,
@@ -448,6 +457,7 @@ export type {
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
   NonCookieCard,
+  OnPlayReplacement,
   OpponentBattleToTrashEffect,
   OpponentDiscardHandEffect,
   OpponentRandomDiscardEffect,

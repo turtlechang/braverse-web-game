@@ -9,6 +9,7 @@ import type {
   SupportCard,
   EffectCondition,
 } from './types'
+import { getCookieEffectiveHp } from './helpers'
 import { getBreakAreaLevel } from './victory'
 
 const ENERGY_COLORS: EnergyColor[] = [
@@ -139,6 +140,12 @@ const passiveAttackCostConditionMet = (
   }
   if (condition.kind === 'support-count-at-most') {
     return state.players[sourcePlayerId].supportArea.length <= condition.count
+  }
+  if (condition.kind === 'source-hp-at-most') {
+    const source = state.players[sourcePlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    return source !== undefined && getCookieEffectiveHp(source) <= condition.amount
   }
   if (condition.kind === 'battle-area-has-named-cookie') {
     const playerId = condition.side === 'self'

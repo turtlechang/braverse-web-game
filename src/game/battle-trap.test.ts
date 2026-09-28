@@ -21,6 +21,93 @@ import {
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 
 describe('TRAP response window', () => {
+  it('requires the same LV.3 Cookie to have exactly 1 remaining HP for BS11-013', () => {
+    const trap: GameCard = {
+      id: 'BS11-013',
+      instanceId: 'BS11-013-instance',
+      name: 'Roaring Destruction',
+      type: 'trap',
+      officialType: 'trap',
+      energyColor: 'red',
+      trap: {
+        text: 'If one of your LV.3 Cookies has 1 HP remaining.',
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        condition: {
+          kind: 'battle-area-has-cookie-with-level-and-remaining-hp',
+          minLevel: 3,
+          maxLevel: 3,
+          remainingHp: 1,
+        },
+        effects: [{
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+      },
+    }
+    const base = createBattleState()
+    const exactLevel = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [trap],
+          battleArea: [{
+            ...base.players['player-one'].battleArea[0],
+            card: { ...base.players['player-one'].battleArea[0].card, level: 3 },
+            hpCards: [item('defender-last-hp')],
+          }],
+        },
+      },
+    }
+    expect(getTrapCandidates(declareAttack(exactLevel), 'player-one')).toEqual([trap])
+
+    const applied = playTrap(declareAttack(exactLevel), 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-support-a'],
+      targetIds: ['attacker'],
+    })
+    expect(applied.attackModifiers).toContainEqual(
+      expect.objectContaining({
+        sourceInstanceId: trap.instanceId,
+        targetInstanceId: 'attacker',
+        amount: -3,
+      }),
+    )
+
+    const extraHp = {
+      ...exactLevel,
+      players: {
+        ...exactLevel.players,
+        'player-one': {
+          ...exactLevel.players['player-one'],
+          battleArea: [{
+            ...exactLevel.players['player-one'].battleArea[0],
+            hpCards: [item('defender-last-hp'), item('defender-extra-hp')],
+          }],
+        },
+      },
+    }
+    expect(getTrapCandidates(declareAttack(extraHp), 'player-one')).toEqual([])
+
+    const higherLevel = {
+      ...exactLevel,
+      players: {
+        ...exactLevel.players,
+        'player-one': {
+          ...exactLevel.players['player-one'],
+          battleArea: [{
+            ...exactLevel.players['player-one'].battleArea[0],
+            card: { ...exactLevel.players['player-one'].battleArea[0].card, level: 4 },
+          }],
+        },
+      },
+    }
+    expect(getTrapCandidates(declareAttack(higherLevel), 'player-one')).toEqual([])
+  })
+
   it('BS6-008 prevents the defender from activating Traps only for an attack at 4 HP or less', () => {
     const trap: GameCard = {
       id: 'trap-response',

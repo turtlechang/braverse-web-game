@@ -4,6 +4,7 @@ export {
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   findBreakToHandBySumSelection,
+  findRevealHandSelection,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getCookieOwnerId,

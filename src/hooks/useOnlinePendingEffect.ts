@@ -3,6 +3,7 @@ import {
   canActivateCookieSkill,
   canPlayItem,
   canActivateStage,
+  getActiveOnPlayReplacement,
   compileEffectDecisionDescriptor,
   executeCardEffect,
   GameRuleError,
@@ -1122,20 +1123,35 @@ export function useOnlinePendingEffect(params: {
     card: GameCard,
     trigger: 'activate' | 'on-play',
   ) => {
-    if (!card.skill || card.skill.trigger !== trigger) return
+    if (
+      !card.skill ||
+      (card.skill.trigger !== trigger &&
+        !(trigger === 'on-play' && Boolean(card.skill.onPlayEffects?.length)))
+    ) return
     if (!canActivateCookieSkill(game, viewerPlayerId, card.instanceId, trigger)) {
       if (trigger === 'on-play' && game.pendingOnPlay) {
         skipOnPlay(card.instanceId)
       }
       return
     }
-    const cost = card.skill.cost
-    if (!hasRequiredEffectTargets(card.instanceId, card.skill.effects)) {
+    const replacement = trigger === 'on-play'
+      ? getActiveOnPlayReplacement(game, viewerPlayerId)
+      : undefined
+    const ability: CardSkill = replacement
+      ? {
+          ...card.skill,
+          cost: replacement.cost,
+          restSource: false,
+          effects: replacement.effects,
+        }
+      : card.skill
+    const cost = ability.cost
+    if (!hasRequiredEffectTargets(card.instanceId, ability.effects)) {
       if (trigger === 'on-play' && game.pendingOnPlay) skipOnPlay(card.instanceId)
       return
     }
-    if (trigger === 'on-play' || requiresManualCostSelection(card.skill)) {
-      openAbilityCostDraft('cookie', card, card.skill, trigger)
+    if (trigger === 'on-play' || requiresManualCostSelection(ability)) {
+      openAbilityCostDraft('cookie', card, ability, trigger)
       return
     }
     const paymentIds = selectEnergyPayment(

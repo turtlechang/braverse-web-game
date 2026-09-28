@@ -1,16 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import bs10 from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
+import bs11 from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { getAttackEnergyCostForState } from './energy'
 import { createBattleState } from './test-helpers/battle-helpers'
 import { getCardPoolEntry } from './card-pool'
-import type { AttackCostModifier, GameState } from './types'
+import type { AttackCostModifier, CookieInBattle, GameState } from './types'
 
 const bs10Records = bs10.cards as unknown as OfficialCardRecord[]
+const bs11Records = bs11.cards as unknown as OfficialCardRecord[]
 
 const officialBs10 = (id: string, suffix: string) => {
   const record = bs10Records.find((card) => card.cardNumber === id)
+  if (!record) throw new Error(`Missing candidate ${id}`)
+  const result = convertOfficialCardToGameCard(record, `attack-cost-${suffix}`)
+  if (result.status !== 'converted') throw new Error(`${id}: ${result.reason}`)
+  return { ...result.gameCard, instanceId: `${id}:${suffix}` }
+}
+
+const candidateBs11 = (id: string, suffix: string) => {
+  const record = bs11Records.find((card) => card.cardNumber === id)
   if (!record) throw new Error(`Missing candidate ${id}`)
   const result = convertOfficialCardToGameCard(record, `attack-cost-${suffix}`)
   if (result.status !== 'converted') throw new Error(`${id}: ${result.reason}`)
@@ -148,5 +158,41 @@ describe('turn-scoped attack cost set/reduce modifiers', () => {
       },
     }
     expect(getAttackEnergyCostForState(disabled, 'attacker')).toEqual({ red: 2, green: 1 })
+  })
+
+  it('applies BS11-017 Firm Conviction only while the source has 3 or less HP', () => {
+    const sourceCard = candidateBs11('BS11-017', 'source')
+    if (sourceCard.type !== 'cookie') throw new Error('BS11-017 did not convert to a Cookie')
+
+    const stateAtHp = (hp: number): GameState => {
+      const state = createBattleState()
+      const source: CookieInBattle = {
+        card: sourceCard,
+        hpCards: Array.from({ length: hp }, (_, index) => ({
+          ...sourceCard,
+          instanceId: `BS11-017:source-hp-${hp}-${index}`,
+        })),
+        rested: false,
+        battleEntryId: `${sourceCard.instanceId}:battle`,
+      }
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          'player-two': {
+            ...state.players['player-two'],
+            battleArea: [source],
+          },
+        },
+      }
+    }
+
+    expect(getAttackEnergyCostForState(stateAtHp(4), sourceCard.instanceId)).toEqual({
+      red: 1,
+      neutral: 2,
+    })
+    expect(getAttackEnergyCostForState(stateAtHp(3), sourceCard.instanceId)).toEqual({
+      neutral: 2,
+    })
   })
 })

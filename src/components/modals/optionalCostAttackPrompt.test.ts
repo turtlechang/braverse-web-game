@@ -115,6 +115,27 @@ describe('getOptionalCostAttackPrompt', () => {
     )
   })
 
+  it.each([
+    ['without energy', { energy: {}, selfToTrash: true }, '將此餅乾送入棄牌區'],
+    [
+      'alongside green energy',
+      { energy: { green: 1 }, selfToTrash: true },
+      '支付支援區 1 點綠色能量、將此餅乾送入棄牌區',
+    ],
+  ] as const)('includes the source Cookie trash cost %s', (_case, cost, expected) => {
+    const state = createBattleState()
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Mystic Flour Cookie',
+      cost,
+      effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+      effectText: 'Place this Cookie in your trash, then place the top card of your deck into your support area.',
+    }
+
+    expect(getOptionalCostAttackPrompt(state, 'player-two')?.costText).toBe(expected)
+  })
+
   it('exposes BS4-075 Black Pearl Cookie as a skippable discard-2 attack choice', () => {
     const state = createBattleState()
     state.players['player-two'].hand = [
@@ -362,7 +383,7 @@ describe('getOptionalCostAttackPrompt', () => {
     const prompt = getOptionalCostAttackPrompt(state, 'player-two')
 
     expect(prompt?.energyCostTotal).toBe(1)
-    expect(prompt?.costText).toBe('支付支援區 1 點紫色能量')
+    expect(prompt?.costText).toBe('支付支援區 1 點紫色能量、將此餅乾送入棄牌區')
     expect(prompt?.targetCandidates).toEqual([
       { card: purpleLevelOne, instanceId: 'purple-lv1' },
     ])

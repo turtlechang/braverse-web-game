@@ -6,6 +6,7 @@ import {
   defaultShuffle,
   drawCards,
   getCookieEffectiveHp,
+  getCookieEffectiveLevel,
   getOpponentId,
   updatePlayer,
 } from '../helpers'
@@ -22,6 +23,8 @@ import { getRefreshCandidates } from '../refresh'
 import {
   getAwakenedFaintTrashCards,
   getExtraDeckAttackCandidates,
+  getExtraDeckPlayCandidates,
+  getExtraDeckSkillCandidates,
 } from '../extra-deck'
 import type {
   CardEffect,
@@ -542,7 +545,7 @@ const executeCardEffectCore = (
     const matchingCookies = [
       ...sourcePlayer.battleArea,
       ...state.players[opponentId].battleArea,
-    ].filter((cookie) => cookie.card.level === effect.level).length
+    ].filter((cookie) => getCookieEffectiveLevel(cookie) === effect.level).length
     const max = matchingCookies * effect.amountPerCookie
     if (max === 0) return { ...state }
     const supportCard = sourcePlayer.supportArea.find(
@@ -1660,6 +1663,90 @@ const executeCardEffectCore = (
     }
   }
 
+  if (effect.kind === 'require-cookie-activate-discard-hand') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) return { ...state }
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const existing = state.cookieActivateDiscardRequirements?.[targetPlayerId] ?? []
+    const selectedIds = new Set(targets.map((target) => target.card.instanceId))
+    const sourceCardName =
+      context.sourceCardName ??
+      state.players[context.sourcePlayerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
+    const effectText =
+      `Until the end of your opponent's next turn, that Cookie's Activate cannot be activated unless your opponent discards ${effect.count} cards from their hand.`
+    const retained = existing.filter(
+      (entry) => !selectedIds.has(entry.cookieInstanceId),
+    )
+    return {
+      ...state,
+      cookieActivateDiscardRequirements: {
+        ...(state.cookieActivateDiscardRequirements ?? {}),
+        [targetPlayerId]: [
+          ...retained,
+          ...targets.map((target) => ({
+            cookieInstanceId: target.card.instanceId,
+            count: effect.count,
+            expiresAfterTurn: state.turnNumber + 1,
+            sourcePlayerId: context.sourcePlayerId,
+            sourceInstanceId: context.sourceInstanceId,
+            sourceCardName,
+            effectText,
+          })),
+        ],
+      },
+    }
+  }
+
+  if (effect.kind === 'require-cookie-attack-discard-hand') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) return { ...state }
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const existing = state.cookieAttackDiscardRequirements?.[targetPlayerId] ?? []
+    const selectedIds = new Set(targets.map((target) => target.card.instanceId))
+    const sourceCardName =
+      context.sourceCardName ??
+      state.players[context.sourcePlayerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
+    const effectText =
+      `Until the end of your opponent's next turn, that Cookie cannot attack unless your opponent discards ${effect.count} cards from their hand.`
+    const retained = existing.filter(
+      (entry) => !selectedIds.has(entry.cookieInstanceId),
+    )
+    return {
+      ...state,
+      cookieAttackDiscardRequirements: {
+        ...(state.cookieAttackDiscardRequirements ?? {}),
+        [targetPlayerId]: [
+          ...retained,
+          ...targets.map((target) => ({
+            cookieInstanceId: target.card.instanceId,
+            count: effect.count,
+            expiresAfterTurn: state.turnNumber + 1,
+            sourcePlayerId: context.sourcePlayerId,
+            sourceInstanceId: context.sourceInstanceId,
+            sourceCardName,
+            effectText,
+          })),
+        ],
+      },
+    }
+  }
+
   if (effect.kind === 'prevent-support-active-next-phase') {
     const targetSide = effect.target.side === 'opponent' ? 'opponent' : 'self'
     const targetPlayerId =
@@ -1701,15 +1788,19 @@ const executeCardEffectCore = (
   }
 
   if (effect.kind === 'trash-to-deck-all') {
-    const player = state.players[context.sourcePlayerId]
-    let nextState =
-      player.discardPile.length === 0
-        ? { ...state }
-        : updatePlayer(state, {
-            ...player,
-            discardPile: [],
-            deck: shuffle([...player.deck, ...player.discardPile]),
-          })
+    const playerIds = effect.side === 'both'
+      ? [context.sourcePlayerId, getOpponentId(context.sourcePlayerId)]
+      : [context.sourcePlayerId]
+    let nextState = state
+    for (const playerId of playerIds) {
+      const player = nextState.players[playerId]
+      if (player.discardPile.length === 0) continue
+      nextState = updatePlayer(nextState, {
+        ...player,
+        discardPile: [],
+        deck: shuffle([...player.deck, ...player.discardPile]),
+      })
+    }
     for (const thenEffect of effect.thenEffects ?? []) {
       nextState = executeCardEffect(
         nextState,
@@ -2189,7 +2280,7 @@ const executeCardEffectCore = (
             context.sourcePlayerId,
           ) &&
           (!effect.energyColor || cookie.card.energyColor === effect.energyColor) &&
-          (!effect.minLevel || cookie.card.level >= effect.minLevel),
+          (!effect.minLevel || getCookieEffectiveLevel(cookie) >= effect.minLevel),
       )
       .map((cookie) => ({
         sourceInstanceId: context.sourceInstanceId,
@@ -2481,8 +2572,8 @@ const executeCardEffectCore = (
       ) {
         return false
       }
-      if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
-      if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+      if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
+      if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
       if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
       return true
     })
@@ -2630,8 +2721,8 @@ const executeCardEffectCore = (
       ) {
         return false
       }
-      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
+      if (effect.target.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.target.maxLevel) return false
+      if (effect.target.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.target.minLevel) return false
       if (
         effect.target.remainingHp !== undefined &&
         cookie.hpCards.length > effect.target.remainingHp
@@ -2754,8 +2845,8 @@ const executeCardEffectCore = (
         ) {
           return false
         }
-        if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
-        if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+        if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
+        if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
         return true
       })
       if (matching.length === 0) continue
@@ -2809,8 +2900,8 @@ const executeCardEffectCore = (
         ) {
           return false
         }
-        if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
-        if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+        if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
+        if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
         return true
       })
       if (matching.length === 0) continue
@@ -3087,6 +3178,13 @@ const executeCardEffectCore = (
         ...updated.cookiesPlayedFromBreakThisTurn,
         [context.sourcePlayerId]: true,
       },
+      cookieLevelsPlayedFromBreakThisTurn: {
+        ...updated.cookieLevelsPlayedFromBreakThisTurn,
+        [context.sourcePlayerId]: [
+          ...(updated.cookieLevelsPlayedFromBreakThisTurn?.[context.sourcePlayerId] ?? []),
+          cookie.level,
+        ],
+      },
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
         hasCookieOnPlayEffects(cookie)
@@ -3228,6 +3326,13 @@ const executeCardEffectCore = (
       cookiesPlayedFromBreakThisTurn: {
         ...updated.cookiesPlayedFromBreakThisTurn,
         [context.sourcePlayerId]: true,
+      },
+      cookieLevelsPlayedFromBreakThisTurn: {
+        ...updated.cookieLevelsPlayedFromBreakThisTurn,
+        [context.sourcePlayerId]: [
+          ...(updated.cookieLevelsPlayedFromBreakThisTurn?.[context.sourcePlayerId] ?? []),
+          sourceInBreak.level,
+        ],
       },
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
@@ -3932,6 +4037,42 @@ const executeCardEffectCore = (
     return state
   }
 
+  if (effect.kind === 'play-extra-deck-cookie') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getExtraDeckPlayCandidates(
+      state,
+      context.sourcePlayerId,
+      effect.cardName,
+    )
+    if (candidates.length === 0) return state
+    const sourceCardName =
+      context.sourceCardName ??
+      player.battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
+    return {
+      ...state,
+      pendingExtraDeckAttack: {
+        playerId: context.sourcePlayerId,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName,
+        cardName: effect.cardName,
+        candidateIds: candidates.map((card) => card.instanceId),
+        optional: effect.optional === true,
+        resolution: 'play',
+        ...(effect.ignorePlayRequirements
+          ? { ignorePlayRequirements: true }
+          : {}),
+        ...(effect.gainHp !== undefined ? { extraHp: effect.gainHp } : {}),
+        ...(state.pendingBattle
+          ? { battleContinuation: 'attack-effect' as const }
+          : {}),
+      },
+    }
+  }
+
   if (effect.kind === 'activate-extra-deck-attack') {
     const player = state.players[context.sourcePlayerId]
     const candidates = getExtraDeckAttackCandidates(
@@ -3964,12 +4105,56 @@ const executeCardEffectCore = (
     }
   }
 
-  if (effect.kind === 'inspect-deck') {
+  if (effect.kind === 'activate-extra-deck-skill') {
     const player = state.players[context.sourcePlayerId]
+    const candidates = getExtraDeckSkillCandidates(
+      state,
+      context.sourcePlayerId,
+      effect.cardName,
+      effect.skillTrigger,
+    )
+    if (candidates.length === 0) return state
+    const sourceCardName =
+      context.sourceCardName ??
+      player.battleArea.find(
+        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
+    return {
+      ...state,
+      pendingExtraDeckAttack: {
+        playerId: context.sourcePlayerId,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName,
+        cardName: effect.cardName,
+        candidateIds: candidates.map((card) => card.instanceId),
+        optional: effect.optional !== false,
+        resolution: 'skill',
+        skillTrigger: effect.skillTrigger,
+        ...(state.pendingBattle
+          ? { battleContinuation: 'attack-effect' as const }
+          : {}),
+      },
+    }
+  }
+
+  if (effect.kind === 'inspect-deck') {
+    const deckPlayerId =
+      effect.side === 'opponent'
+        ? getOpponentId(context.sourcePlayerId)
+        : context.sourcePlayerId
+    const player = state.players[deckPlayerId]
     const deckCards = player.deck.slice(0, effect.lookCount)
     const remainingDeck = player.deck.slice(effect.lookCount)
     const updatedPlayer = { ...player, deck: remainingDeck }
-    const nextState = updatePlayer(state, updatedPlayer)
+    const nextState = {
+      ...updatePlayer(state, updatedPlayer),
+      players: {
+        ...state.players,
+        [deckPlayerId]: updatedPlayer,
+      },
+    }
     const sourceCardName =
       context.sourceCardName ??
       state.players[context.sourcePlayerId].battleArea.find(
@@ -3978,15 +4163,16 @@ const executeCardEffectCore = (
       'Unknown'
 
     if (deckCards.length < effect.lookCount && !nextState.pendingRefresh) {
-      const candidates = getRefreshCandidates(nextState, context.sourcePlayerId)
+      const candidates = getRefreshCandidates(nextState, deckPlayerId)
       if (candidates.length === 0) {
-        return finishWithDefeat(nextState, context.sourcePlayerId, 'refresh-unavailable')
+        return finishWithDefeat(nextState, deckPlayerId, 'refresh-unavailable')
       }
       return {
         ...nextState,
-        pendingRefresh: { playerId: context.sourcePlayerId, remainingDraws: 0 },
+        pendingRefresh: { playerId: deckPlayerId, remainingDraws: 0 },
         pendingInspectDeck: {
           playerId: context.sourcePlayerId,
+          ...(deckPlayerId !== context.sourcePlayerId ? { deckPlayerId } : {}),
           sourceInstanceId: context.sourceInstanceId,
           sourceCardName,
           revealedCards: deckCards,
@@ -3998,6 +4184,7 @@ const executeCardEffectCore = (
           filterColor: effect.filterColor,
           filterType: effect.filterType,
           filterKeyword: effect.filterKeyword,
+          filterHasSpecialPlay: effect.filterHasSpecialPlay,
           optionalPick: effect.optionalPick,
           extraHp: effect.extraHp,
         },
@@ -4008,6 +4195,7 @@ const executeCardEffectCore = (
       ...nextState,
       pendingInspectDeck: {
         playerId: context.sourcePlayerId,
+        ...(deckPlayerId !== context.sourcePlayerId ? { deckPlayerId } : {}),
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
         revealedCards: deckCards,
@@ -4019,6 +4207,7 @@ const executeCardEffectCore = (
         filterColor: effect.filterColor,
         filterType: effect.filterType,
         filterKeyword: effect.filterKeyword,
+        filterHasSpecialPlay: effect.filterHasSpecialPlay,
         optionalPick: effect.optionalPick,
         extraHp: effect.extraHp,
       },
@@ -4095,6 +4284,46 @@ const executeCardEffectCore = (
     return state
   }
 
+  if (effect.kind === 'prevent-opponent-on-play') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    if (effect.minLevel !== undefined) {
+      const previous = state.onPlayDisabledMinLevelUntilTurn?.[targetPlayerId]
+      const minLevel = previous?.turn === state.turnNumber
+        ? Math.min(previous.minLevel, effect.minLevel)
+        : effect.minLevel
+      return {
+        ...state,
+        onPlayDisabledMinLevelUntilTurn: {
+          ...(state.onPlayDisabledMinLevelUntilTurn ?? {}),
+          [targetPlayerId]: { turn: state.turnNumber, minLevel },
+        },
+      }
+    }
+    return {
+      ...state,
+      onPlayDisabledUntilTurn: {
+        ...(state.onPlayDisabledUntilTurn ?? {}),
+        [targetPlayerId]: state.turnNumber,
+      },
+    }
+  }
+
+  if (effect.kind === 'replace-opponent-on-play') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    return {
+      ...state,
+      onPlayReplacementUntilTurn: {
+        ...(state.onPlayReplacementUntilTurn ?? {}),
+        [targetPlayerId]: {
+          turn: state.turnNumber,
+          cost: effect.cost,
+          effects: effect.effects,
+          effectText: effect.effectText,
+        },
+      },
+    }
+  }
+
   if (effect.kind === 'prevent-opponent-hp-gain') {
     const targetPlayerId = getOpponentId(context.sourcePlayerId)
     return {
@@ -4107,13 +4336,35 @@ const executeCardEffectCore = (
   }
 
   if (effect.kind === 'hp-to-trash-all') {
-    const targetPlayerId =
-      effect.side === 'self'
-        ? context.sourcePlayerId
-        : getOpponentId(context.sourcePlayerId)
-    const targetIds = state.players[targetPlayerId].battleArea.map(
-      (cookie) => cookie.card.instanceId,
-    )
+    // Keep the legacy no-selector path byte-for-byte equivalent in terms of
+    // candidates: older cards intentionally processed every Cookie in the
+    // selected side, including cards protected from a newly introduced
+    // selector-based effect.  New cards may opt into the shared selector
+    // pipeline (for example BS11-053's minRemainingHp: 5).
+    const hasExplicitTarget = effect.target !== undefined
+    const targetSelector = effect.target ?? {
+      side: effect.side,
+      min: 0,
+      max: 4,
+    }
+    const targetIds = hasExplicitTarget
+      ? getEffectTargetCandidates(state, context, targetSelector).map(
+          (cookie) => cookie.card.instanceId,
+        )
+      : state.players[
+          effect.side === 'self'
+            ? context.sourcePlayerId
+            : getOpponentId(context.sourcePlayerId)
+        ].battleArea.map((cookie) => cookie.card.instanceId)
+    const singleTargetSelector = hasExplicitTarget
+      ? {
+          ...targetSelector,
+          min: 1,
+          max: 1,
+          allMatching: false,
+          countPerPlayer: undefined,
+        }
+      : { side: effect.side, min: 1, max: 1 }
     let nextState = state
     for (const targetId of targetIds) {
       nextState = executeCardEffect(
@@ -4122,7 +4373,7 @@ const executeCardEffectCore = (
         {
           kind: 'hp-to-trash',
           amount: effect.amount,
-          target: { side: effect.side, min: 1, max: 1 },
+          target: singleTargetSelector,
         },
         [targetId],
         shuffle,
@@ -4197,13 +4448,23 @@ const executeCardEffectCore = (
       return state
     }
     const selectedIds = [...new Set(selectedTargetIds)]
+    const minAmount = effect.minAmount ?? effect.amount
+    const maxAmount = effect.maxAmount ?? effect.amount
+    const selectedCards = selectedIds.map((instanceId) =>
+      candidates.find((card) => card.instanceId === instanceId),
+    )
     if (
-      selectedIds.length !== effect.amount ||
+      selectedIds.length < minAmount ||
+      selectedIds.length > maxAmount ||
       selectedIds.length !== selectedTargetIds.length ||
-      selectedIds.some(
-        (instanceId) =>
-          !candidates.some((card) => card.instanceId === instanceId),
-      )
+      selectedCards.some((card) => card === undefined) ||
+      (effect.levelSum !== undefined && (
+        selectedCards.some((card) => card?.type !== 'cookie') ||
+        selectedCards.reduce(
+          (sum, card) => sum + (card?.type === 'cookie' ? card.level : 0),
+          0,
+        ) !== effect.levelSum
+      ))
     ) {
       throw new GameRuleError('展示的手牌不符合卡牌效果條件。')
     }
@@ -4246,6 +4507,26 @@ const executeCardEffectCore = (
   const targetPlayerId = effect.target.side === 'either'
     ? undefined
     : getTargetPlayerId(context, effect.target)
+
+  if (effect.kind === 'set-cookie-level') {
+    if (targets.length === 0) return state
+
+    let nextState = state
+    for (const [ownerId, ownedTargets] of groupTargetsByOwner(state, targets)) {
+      const selectedIds = new Set(
+        ownedTargets.map((target) => target.card.instanceId),
+      )
+      nextState = updatePlayer(nextState, {
+        ...nextState.players[ownerId],
+        battleArea: nextState.players[ownerId].battleArea.map((cookie) =>
+          selectedIds.has(cookie.card.instanceId)
+            ? { ...cookie, levelOverride: effect.level }
+            : cookie,
+        ),
+      })
+    }
+    return nextState
+  }
 
   if (
     effect.kind === 'damage' ||
@@ -4561,7 +4842,7 @@ const executeCardEffectCore = (
     }
     if (
       effect.trashSourceIfTargetLevel !== undefined &&
-      targets.some((target) => target.card.level === effect.trashSourceIfTargetLevel)
+      targets.some((target) => getCookieEffectiveLevel(target) === effect.trashSourceIfTargetLevel)
     ) {
       const sourcePlayer = nextState.players[context.sourcePlayerId]
       const sourceStage = sourcePlayer.stage

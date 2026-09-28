@@ -20,6 +20,18 @@ export const isChooseOneModePlayable = (
 ): boolean =>
   effects.every((effect) => {
     if (!isEffectConditionMet(state, context, effect)) return false
+    if (effect.kind === 'activate-extra-deck-skill') {
+      return (state.players[context.sourcePlayerId].extraDeck ?? []).some((card) => {
+        if (card.name !== effect.cardName || !card.skill) return false
+        if (effect.skillTrigger === 'on-play' && card.skill.onPlayEffects) {
+          return card.skill.onPlayEffects.length > 0
+        }
+        return (
+          card.skill.trigger === effect.skillTrigger &&
+          card.skill.effects.length > 0
+        )
+      })
+    }
     if (effect.kind === 'discard-hand') {
       return state.players[context.sourcePlayerId].hand.filter(
         (card) =>

@@ -81,6 +81,7 @@ export interface ExtraDeckAttackModalProps {
   cardName: string
   candidates: ExtraDeckCard[]
   optional: boolean
+  resolution?: 'attack' | 'skill' | 'play'
   onSelect: (instanceId: string) => void
   onSkip?: () => void
 }
@@ -97,9 +98,22 @@ export function ExtraDeckAttackModal({
   cardName,
   candidates,
   optional,
+  resolution = 'attack',
   onSelect,
   onSkip,
 }: ExtraDeckAttackModalProps) {
+  const isSkillResolution = resolution === 'skill'
+  const isPlayResolution = resolution === 'play'
+  const resolutionLabel = isPlayResolution
+    ? '登場'
+    : isSkillResolution
+      ? '技能'
+      : '攻擊'
+  const selectionText = isPlayResolution
+    ? '直接將其放置到戰鬥區。'
+    : isSkillResolution
+      ? '發動其指定技能效果。'
+      : '發動其攻擊效果。'
   return (
     <div className="modal-backdrop" role="presentation">
       <section
@@ -107,12 +121,12 @@ export function ExtraDeckAttackModal({
         role="alertdialog"
         aria-labelledby="extra-deck-attack-modal-title"
       >
-        <span>額外牌組攻擊效果</span>
+        <span>額外牌組{resolutionLabel}效果</span>
         <h2 id="extra-deck-attack-modal-title">
           {sourceCardName}：選擇「{cardName}」
         </h2>
         <p className="faint-effect-text">
-          從你的額外牌組選擇最多 1 張同名卡，發動其攻擊效果。
+          從你的額外牌組選擇最多 1 張同名卡，{selectionText}
           {optional ? '你也可以略過。' : '這是必要選擇。'}
         </p>
         {candidates.length > 0 ? (
@@ -132,9 +146,17 @@ export function ExtraDeckAttackModal({
                 <CardFace card={card} />
                 <strong>{card.name}</strong>
                 <small>實體 ID：{card.instanceId}</small>
-                {card.attackText && (
+                {(isSkillResolution || isPlayResolution
+                  ? card.effectText
+                  : card.attackText) && (
                   <span className="extra-deck-attack-text">
-                    <CardEffectText text={card.attackText} />
+                    <CardEffectText
+                      text={
+                        isSkillResolution || isPlayResolution
+                          ? card.effectText!
+                          : card.attackText!
+                      }
+                    />
                   </span>
                 )}
               </button>
@@ -357,6 +379,12 @@ export function HandDiscardResponseModal({
     ? selectedIds.length >= requiredCount
     : selectedIds.length === requiredCount
   const placementRequired = destination === 'deck-top-or-bottom'
+  const deckDestination = destination === 'deck-top'
+    ? '牌庫頂'
+    : destination === 'deck-bottom'
+      ? '牌庫底'
+      : null
+  const actionVerb = destination && destination !== 'trash' ? '放置' : '棄置'
   const placementComplete = !placementRequired || selectedIds.every(
     (id) => placementByCardId[id] === 'top' || placementByCardId[id] === 'bottom',
   )
@@ -390,7 +418,7 @@ export function HandDiscardResponseModal({
           type="button"
           className="minimize-reveal"
           onClick={() => setMinimized(true)}
-          title="縮小棄置手牌提示"
+          title={`縮小${actionVerb}手牌提示`}
         >
           <Minimize2 aria-hidden="true" />
           縮小
@@ -399,13 +427,13 @@ export function HandDiscardResponseModal({
           <GuidedPhaseSteps
             phases={[
               { id: 'draw', label: '抽牌', complete: true },
-              { id: 'discard', label: '棄牌', complete: false },
+            { id: 'discard', label: actionVerb === '棄置' ? '棄牌' : '放置', complete: false },
             ]}
             activePhase="discard"
           />
         )}
-        <span>棄置手牌</span>
-        <h2>{sourceCardName} 要求你棄置手牌</h2>
+        <span>{actionVerb}手牌</span>
+        <h2>{sourceCardName} 要求你{actionVerb}手牌{deckDestination ? `到${deckDestination}` : ''}</h2>
         <div className="draw-up-to-source-card hand-discard-source-card">
           {sourceCard && <CardFace card={sourceCard} />}
           <div className="draw-up-to-source-info">
@@ -419,10 +447,10 @@ export function HandDiscardResponseModal({
         </div>
         <p className="faint-target-hint">
           {optional
-            ? `可以選擇不棄置；若要讓目標餅乾成為活躍，必須恰好棄置 ${requiredCount} 張手牌。`
+            ? `可以選擇不${actionVerb}；若要讓目標餅乾成為活躍，必須恰好${actionVerb} ${requiredCount} 張手牌。`
             : atLeast
-            ? `至少選擇 ${requiredCount} 張手牌棄置。`
-            : `必須選擇 ${requiredCount} 張手牌棄置。`}
+            ? `至少選擇 ${requiredCount} 張手牌${actionVerb}${deckDestination ? `到${deckDestination}` : ''}。`
+            : `必須選擇 ${requiredCount} 張手牌${actionVerb}${deckDestination ? `到${deckDestination}` : ''}。`}
           {placementRequired && ' 選定後請逐張指定放到牌庫頂或牌庫底。'}
         </p>
         <div className="modal-card-options hand-discard-options">
@@ -463,7 +491,7 @@ export function HandDiscardResponseModal({
         </div>
         <div className="modal-actions hand-discard-actions">
           <button type="button" disabled={!canSubmit} onClick={onConfirm}>
-            確認棄置 ({selectedIds.length})
+            確認{actionVerb} ({selectedIds.length})
           </button>
         </div>
       </section>
@@ -1563,6 +1591,7 @@ export interface InspectDeckModalProps {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
+  filterHasSpecialPlay?: boolean
   optionalPick?: boolean
   onConfirm: (
     pickedCardIds: string[],
@@ -1589,6 +1618,7 @@ export function InspectDeckModal({
   filterColor,
   filterType,
   filterKeyword,
+  filterHasSpecialPlay,
   optionalPick,
   onConfirm,
 }: InspectDeckModalProps) {
@@ -1606,7 +1636,9 @@ export function InspectDeckModal({
   const isPickable = (card: GameCard) =>
     (filterColor == null || card.energyColor === filterColor) &&
     (filterType == null || card.type === filterType) &&
-    (filterKeyword == null || card.keywords?.includes(filterKeyword))
+    (filterKeyword == null || card.keywords?.includes(filterKeyword)) &&
+    (!filterHasSpecialPlay ||
+      (card.type === 'cookie' && card.skill?.specialPlayCost !== undefined))
   const hasNoPickableCard = !revealedCards.some(isPickable)
   const restLabel = REST_DESTINATION_LABEL[restDestination]
   const showReorder =

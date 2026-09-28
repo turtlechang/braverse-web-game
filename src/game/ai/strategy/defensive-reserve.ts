@@ -1,4 +1,8 @@
-import { getCookieEffectiveHp, getOpponentId } from '../../helpers'
+import {
+  getCookieEffectiveHp,
+  getCookieEffectiveLevel,
+  getOpponentId,
+} from '../../helpers'
 import { getEnergyCostTotal, selectEnergyPayment } from '../../energy'
 import { isEffectConditionMet } from '../../effects'
 import type { PlayerActionCommand } from '../../commands'
@@ -293,7 +297,7 @@ const canImmediatelyWin = (
 
   const breakGain = state.players[opponentId].battleArea
     .filter((cookie) => lethalTargets.has(cookie.card.instanceId))
-    .reduce((total, cookie) => total + cookie.card.level, 0)
+    .reduce((total, cookie) => total + getCookieEffectiveLevel(cookie), 0)
   return lethalTargets.size > 0 && getBreakAreaLevel(state, opponentId) + breakGain >= 10
 }
 

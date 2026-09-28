@@ -266,7 +266,7 @@ CI 會執行 `npm run check:card-pool`，只讀檢查 `data/cards/*.json` 與 ge
 `npm run validate:cards` 會對正式卡池執行下列檢查：
 
 1. 每張啟用中的可玩卡必須能轉換為 `GameCard`。
-2. 有技能、FLIP、物品、陷阱或場景文字時，對應 ability 必須包含至少 1 個可執行效果，不能只有空殼物件。
+2. 有技能、FLIP、物品、陷阱或場景文字時，對應 ability 必須包含至少 1 個可執行效果，不能只有空殼物件；Cookie 的分段 On Play 效果可放在 `skill.onPlayEffects`。
 3. `{mob}`／`{ap}`／`{t1}`／`{mt}`、`You can draw` 與來源橫置文字必須轉為對應 runtime 語意。
 4. ST2-018、ST5-007、ST5-022、BS2-056、BS2-058、BS2-077、BS2-079、BS2-080 另以人工覆核的高風險契約鎖定複合效果、特殊代價、條件與可選性。
 

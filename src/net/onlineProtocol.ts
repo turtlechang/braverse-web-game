@@ -442,6 +442,7 @@ const commandShapes = {
   'place-support': { requiredStrings: ['instanceId'] },
   'deploy-cookie': {
     requiredStrings: ['instanceId'],
+    optionalStringArrays: ['specialPlayCookieInstanceIds'],
     optionalStrings: ['specialPlayCookieInstanceId'],
   },
   'declare-attack': {

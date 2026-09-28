@@ -67,7 +67,11 @@ const compareCardNumber = (left: string, right: string) =>
   left.localeCompare(right, 'en')
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
-  if (card.type === 'cookie') return card.skill.text
+  if (card.type === 'cookie') {
+    // Keep raw inventory text untouched, but let coverage reflect an exact
+    // image-backed Cookie skill override used by the runtime adapter.
+    return card.skill.text ?? convertOfficialCookieSkill(card)?.text ?? null
+  }
   if (card.type === 'flip') return card.flipText ?? card.skill.text
   // 官方 Item／Stage／Trap records keep their primary text in skill.text;
   // attackText is only a legacy fallback for older imports.  Looking only at
@@ -92,8 +96,9 @@ const getAbilityConversion = (
   }
 
   if (card.type === 'cookie') {
-    if (!card.skill.text) return 'not-applicable'
-    return convertOfficialCookieSkill(card) ? 'converted' : 'pending'
+    const ability = convertOfficialCookieSkill(card)
+    if (!card.skill.text && !ability) return 'not-applicable'
+    return ability ? 'converted' : 'pending'
   }
 
   if (card.type === 'flip') {

@@ -834,6 +834,104 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('checks an ability Then condition from its source when the pending battle attacker is the opponent', () => {
+    const base = createBattleState()
+    const windArcher = { ...cookie('wind-archer'), name: 'Wind Archer Cookie' }
+    const effect: CardEffect = {
+      kind: 'rest-support',
+      side: 'opponent',
+      amount: 1,
+      activeOnly: true,
+      optional: true,
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Wind Archer Cookie',
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            {
+              card: windArcher,
+              hpCards: [item('wind-archer-hp')],
+              rested: false,
+              battleEntryId: 'wind-archer:battle:3',
+            },
+          ],
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+      pendingOptionalCostAttack: {
+        playerId: 'player-one',
+        sourceInstanceId: 'wind-protection',
+        sourceCardName: "Wind's Protection",
+        resolution: 'ability',
+        cost: { energy: { neutral: 1 }, discardHand: 0 },
+        effects: [effect],
+        effectText: 'Then, pay 1 neutral energy to rest an opponent support.',
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'wind-protection',
+        sourceCardName: "Wind's Protection",
+        sourceKind: 'trap',
+        trigger: 'activate',
+        effects: [effect],
+        effectIndex: 1,
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingOptionalCostAttack: null,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          supportArea: previous.players['player-one'].supportArea.map((support, index) =>
+            index === 0 ? { ...support, rested: true } : support,
+          ),
+        },
+      },
+    }
+    const command = {
+      kind: 'resolve-optional-cost-attack' as const,
+      playerId: 'player-one' as const,
+      action: 'pay' as const,
+      paymentIds: ['p1-support-a'],
+      targetIds: [],
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      '等待後續傷害／FLIP 或巢狀效果結算',
+    )
+    expect(describeCommand(previous, next, command)).not.toMatch(
+      /條件不成立|效果未執行/,
+    )
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toContain(
+      '技能 Then 結果：等待後續傷害／FLIP 或巢狀效果結算',
+    )
+  })
+
   it('records that an attack-after effect is waiting for the optional-cost decision', () => {
     const base = createBattleState()
     const effect: CardEffect = {
@@ -2338,5 +2436,130 @@ describe('resolveRevealedDamageCard (resolve-next-damage / resolve-flip)', () =>
 
     expect(describeCommand(base, base, command)).toBe('防守玩家 結算了下一段傷害')
     expect(resolveLogCard(base, base, command)).toBeUndefined()
+  })
+})
+
+describe('hp-to-trash-all result logs', () => {
+  const makeResolution = (targetHp: number, removeHp: boolean) => {
+    const base = createBattleState()
+    const targetCard = { ...cookie('threshold-target', 1, targetHp), name: 'Threshold Cookie' }
+    const hpCards = Array.from({ length: targetHp }, (_, index) =>
+      item(`hidden-hp-${index + 1}`),
+    )
+    const targetEntry = {
+      card: targetCard,
+      hpCards,
+      rested: false,
+      battleEntryId: 'threshold-target:battle:1',
+    }
+    const effect: CardEffect = {
+      kind: 'hp-to-trash-all',
+      amount: 1,
+      side: 'opponent',
+      target: { side: 'opponent', min: 0, max: 4, minRemainingHp: 5 },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-two',
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Mystic Flour Cookie',
+        sourceKind: 'skill',
+        trigger: 'activate',
+        effects: [effect],
+        effectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [targetEntry],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: [{
+            ...targetEntry,
+            hpCards: removeHp ? hpCards.slice(1) : hpCards,
+          }],
+        },
+      },
+    }
+
+    return {
+      previous,
+      next,
+      command: {
+        kind: 'resolve-ability-effect' as const,
+        playerId: 'player-two' as const,
+        targetIds: [],
+      },
+      targetCard,
+    }
+  }
+
+  it('records each Cookie HP count changed without revealing removed HP card identities', () => {
+    const { previous, next, command, targetCard } = makeResolution(5, true)
+    const steps = describeCommandSteps(previous, next, command)
+
+    expect(steps?.map(({ text }) => text)).toEqual([
+      'HP 移除結果：「Threshold Cookie」HP 張數 5→4。',
+    ])
+    expect(steps?.[0]?.cards).toEqual([targetCard])
+    expect(JSON.stringify(steps)).not.toContain('hidden-hp-1')
+  })
+
+  it('explains when no Cookie meets the HP threshold', () => {
+    const { previous, next, command } = makeResolution(4, false)
+
+    expect(describeCommandSteps(previous, next, command)?.map(({ text }) => text)).toEqual([
+      'HP 移除結果：沒有符合效果目標條件（剩餘 HP 至少 5 張）的餅乾，未移除 HP 卡。',
+    ])
+  })
+
+  it('does not attribute HP changes outside the effect target to this result', () => {
+    const { previous, next, command } = makeResolution(5, true)
+    const unrelatedHpCards = Array.from({ length: 3 }, (_, index) =>
+      item(`unrelated-hidden-hp-${index + 1}`),
+    )
+    const unrelatedCookie = {
+      card: { ...cookie('unrelated-cookie', 1, 3), name: 'Unrelated Cookie' },
+      hpCards: unrelatedHpCards,
+      rested: false,
+      battleEntryId: 'unrelated-cookie:battle:1',
+    }
+    const previousWithUnrelated: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: [unrelatedCookie],
+        },
+      },
+    }
+    const nextWithUnrelated: GameState = {
+      ...next,
+      players: {
+        ...next.players,
+        'player-two': {
+          ...next.players['player-two'],
+          battleArea: [{ ...unrelatedCookie, hpCards: unrelatedHpCards.slice(1) }],
+        },
+      },
+    }
+
+    expect(
+      describeCommandSteps(previousWithUnrelated, nextWithUnrelated, command)?.map(
+        ({ text }) => text,
+      ),
+    ).toEqual(['HP 移除結果：「Threshold Cookie」HP 張數 5→4。'])
   })
 })

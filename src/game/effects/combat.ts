@@ -1,5 +1,9 @@
 import { GameRuleError } from '../errors'
-import { getCookieEffectiveHp, getOpponentId } from '../helpers'
+import {
+  getCookieEffectiveHp,
+  getCookieEffectiveLevel,
+  getOpponentId,
+} from '../helpers'
 import type {
   CookieInBattle,
   EffectContext,
@@ -10,10 +14,15 @@ import type {
   PlayerId,
   PlayerState,
 } from '../types'
-import { isBlockedByOpponentEffectProtection, isEffectConditionMet } from './targeting'
+import {
+  getEffectTargetCandidates,
+  isBlockedByOpponentEffectProtection,
+  isEffectConditionMet,
+} from './targeting'
 
 /**
- * `modify-all-attack` 掛在 `trigger: 'passive'` 技能上時（例如 BS3-006「若這張
+ * `modify-all-attack` 或指定卡名的 `modify-attack` 掛在 `trigger: 'passive'`
+ * 技能上時（例如 BS3-006「若這張
  * 餅乾在戰鬥區，你的紅色 LV.2 以上餅乾 +1 攻擊力」），是持續依附在來源餅乾
  * 是否仍在戰鬥區的條件式光環，不會像一般觸發效果那樣被 `executeAbilityEffects`
  * 執行、寫進 `state.attackModifiers`——被動技能從未走過那條指令派送路徑。
@@ -36,25 +45,50 @@ const getAuraAttackBonus = (
         sourcePlayerId: sourcePlayer.id,
         sourceInstanceId: source.card.instanceId,
       }
-      return subtotal + skill.effects.reduce((sum, effect) => {
-        if (effect.kind !== 'modify-all-attack') return sum
-        const auraPlayerId =
-          effect.side === 'self'
-            ? sourcePlayer.id
-            : getOpponentId(sourcePlayer.id)
-        if (auraPlayerId !== owner.id) return sum
-        if (effect.energyColor && target.card.energyColor !== effect.energyColor) {
-          return sum
-        }
-        if (effect.minLevel && target.card.level < effect.minLevel) return sum
-        if (
-          isBlockedByOpponentEffectProtection(target, owner.id, sourcePlayer.id)
-        ) {
-          return sum
-        }
-        if (!isEffectConditionMet(state, context, effect)) return sum
-        return sum + effect.amount
-      }, 0)
+      return [...skill.effects, ...(skill.passiveEffects ?? [])].reduce(
+        (sum, effect) => {
+          if (effect.kind === 'modify-all-attack') {
+            const auraPlayerId =
+              effect.side === 'self'
+                ? sourcePlayer.id
+                : getOpponentId(sourcePlayer.id)
+            if (auraPlayerId !== owner.id) return sum
+            if (
+              effect.energyColor &&
+              target.card.energyColor !== effect.energyColor
+            ) {
+              return sum
+            }
+            if (effect.minLevel && getCookieEffectiveLevel(target) < effect.minLevel) return sum
+            if (
+              isBlockedByOpponentEffectProtection(target, owner.id, sourcePlayer.id)
+            ) {
+              return sum
+            }
+            if (!isEffectConditionMet(state, context, effect)) return sum
+            return sum + effect.amount
+          }
+
+          if (effect.kind !== 'modify-attack' || !effect.target.cardName) {
+            return sum
+          }
+          const targetCandidates = getEffectTargetCandidates(
+            state,
+            context,
+            effect.target,
+          )
+          if (
+            !targetCandidates.some(
+              (candidate) => candidate.card.instanceId === target.card.instanceId,
+            )
+          ) {
+            return sum
+          }
+          if (!isEffectConditionMet(state, context, effect)) return sum
+          return sum + effect.amount
+        },
+        0,
+      )
     }, 0)
     return total + auraTotal
   }, 0)
@@ -111,7 +145,7 @@ export const getEffectDamageAmount = (
         ) {
           return effectTotal
         }
-        if (effect.minLevel && sourceCookie.card.level < effect.minLevel) {
+        if (effect.minLevel && getCookieEffectiveLevel(sourceCookie) < effect.minLevel) {
           return effectTotal
         }
         if (!isEffectConditionMet(state, auraContext, effect)) return effectTotal
@@ -466,17 +500,35 @@ export const getEffectiveAttackBreakdown = (
         sourcePlayerId: sourcePlayer.id,
         sourceInstanceId: source.card.instanceId,
       }
-      for (const effect of skill.effects) {
-        if (effect.kind !== 'modify-all-attack') continue
-        const auraPlayerId =
-          effect.side === 'self' ? sourcePlayer.id : getOpponentId(sourcePlayer.id)
-        if (auraPlayerId !== owner.id) continue
-        if (effect.energyColor && target.card.energyColor !== effect.energyColor) {
+      for (const effect of [...skill.effects, ...(skill.passiveEffects ?? [])]) {
+        if (effect.kind === 'modify-all-attack') {
+          const auraPlayerId =
+            effect.side === 'self' ? sourcePlayer.id : getOpponentId(sourcePlayer.id)
+          if (auraPlayerId !== owner.id) continue
+          if (effect.energyColor && target.card.energyColor !== effect.energyColor) {
+            continue
+          }
+          if (effect.minLevel && getCookieEffectiveLevel(target) < effect.minLevel) continue
+          if (
+            isBlockedByOpponentEffectProtection(target, owner.id, sourcePlayer.id)
+          ) {
+            continue
+          }
+          if (!isEffectConditionMet(state, context, effect)) continue
+          entries.push({ sourceCardName: source.card.name, amount: effect.amount })
           continue
         }
-        if (effect.minLevel && target.card.level < effect.minLevel) continue
+
+        if (effect.kind !== 'modify-attack' || !effect.target.cardName) continue
+        const targetCandidates = getEffectTargetCandidates(
+          state,
+          context,
+          effect.target,
+        )
         if (
-          isBlockedByOpponentEffectProtection(target, owner.id, sourcePlayer.id)
+          !targetCandidates.some(
+            (candidate) => candidate.card.instanceId === target.card.instanceId,
+          )
         ) {
           continue
         }

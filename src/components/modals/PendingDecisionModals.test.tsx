@@ -361,6 +361,29 @@ describe('HandDiscardResponseModal', () => {
       '《{B}》 During this battle, if 1 of your {B} Cookies faints, you can draw up to 3 cards from your deck and discard 1 card from your hand.',
   }
 
+  it('labels a deck-top hand placement as placement rather than discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(() => root.render(
+      <HandDiscardResponseModal
+        sourceCardName="Black Raisin Cookie"
+        hand={[createHandCard(1)]}
+        requiredCount={1}
+        selectedIds={['test-hand-1']}
+        destination="deck-top"
+        onToggleCard={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    ))
+    expect(container.textContent).toContain('要求你放置手牌到牌庫頂')
+    expect(container.textContent).toContain('必須選擇 1 張手牌放置到牌庫頂')
+    expect(container.textContent).toContain('確認放置 (1)')
+    expect(container.textContent).not.toContain('棄置手牌')
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('uses the same battle response modal style for the discard step', async () => {
     const onToggleCard = vi.fn()
     const onConfirm = vi.fn()

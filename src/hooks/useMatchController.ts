@@ -103,12 +103,86 @@ import {
   createBs9ActualDamageDemoState,
   createBs1008FlipPreviewDemoState,
   createBs1009HpCostPreviewDemoState,
+  createBs11FlipPreviewDemoState,
+  createBs11TwelfthBatchDemoState,
+  createBs11ThirteenthBatchDemoState,
+  createBs11064ReplacementDemoState,
+  createBs11066TrapDemoState,
+  createBs11067AttackDemoState,
+  createBs11068FaintDemoState,
+  createBs11069ResponseDemoState,
+  createBs11070OnPlayDemoState,
+  createBs11070AttackDemoState,
+  createBs11071AttackDemoState,
+  createBs11072SkillDemoState,
+  createBs11073AttackDemoState,
+  createBs11074AttackDemoState,
+  createBs11077AuraDemoState,
+  createBs11078AttackDemoState,
+  createBs11079OnPlayDemoState,
+  createBs11080ItemDemoState,
+  createBs11081ItemDemoState,
+  createBs11082TrapDemoState,
+  createBs11083StageDemoState,
+  createBs11083ReplacementDemoState,
+  createBs11VanillaAttackDemoState,
+  createBs11RedSkillDemoState,
+  createBs11006OnPlayDemoState,
+  createBs11RedConditionalItemDemoState,
+  createBs11011StageDemoState,
+  createBs11013TrapDemoState,
+  createBs11010TrapDemoState,
+  createBs11014AttackDemoState,
+  createBs11015AttackDemoState,
+  createBs11092ActivateDemoState,
+  createBs11094BlockerDemoState,
+  createBs11108StageDemoState,
+  createBs11017AttackDemoState,
+  createBs11ConditionalActivateDemoState,
+  createBs11018AttackDemoState,
+  createBs11018SkillDemoState,
+  createBs11025AttackDemoState,
+  createBs11024FaintDemoState,
+  createBs11026SkillDemoState,
+  createBs11YellowItemDemoState,
+  createBs11027TrapDemoState,
+  createBs11028StageDemoState,
+  createBs11029TrapDemoState,
+  createBs11033AttackDemoState,
+  createBs11036SkillDemoState,
+  createBs11036AttackDemoState,
+  createBs11032AttackDemoState,
+  createBs11032EndTurnDemoState,
+  createBs11034BreakSkillDemoState,
+  createBs11034AttackDemoState,
+  createBs11035OnPlayDemoState,
+  createBs11035AttackDemoState,
+  createBs11BlackAttackThenDemoState,
+  createBs11089AttackDemoState,
+  createBs11031ActivateContinuationDemoState,
+  createBs11027AttackCostContinuationDemoState,
+  createBs11FourteenthBatchDemoState,
   createBs10ConditionDemoState,
   createBs6ConditionDemoState,
   createCardNegativeDemoState,
   createP082TrapDemoState,
   createP084ItemConditionDemoState,
   createP147SpecialPlayDemoState,
+  createBs11097To099SpecialPlayGateDemoState,
+  createBs11103104109InspectDemoState,
+  createBs11106107110ConditionDemoState,
+  createBs11088105AttackThenDemoState,
+  createBs11088OnPlayDemoState,
+  createBs11084TrapDemoState,
+  createBs11016HpTotalDemoState,
+  createBs11086087AttackThenDemoState,
+  createBs111113SpecialPlayDemoState,
+  createBs11114OnPlayDemoState,
+  createBs11089OnPlayDemoState,
+  createBs11090ExtraDeckDemoState,
+  createBs11115SpecialPlayDemoState,
+  createBs11116ExtraDeckDemoState,
+  createBs11116MovementProtectionDemoState,
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -220,6 +294,198 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs10-009-hp-cost') {
       return createBs1009HpCostPreviewDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-flip') {
+      return createBs11FlipPreviewDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-071-hp-no-flip') {
+      return createBs11FlipPreviewDemoState('BS11-071@2', false)
+    }
+    if (testStateConfig?.kind === 'bs11-twelfth-batch') {
+      return createBs11TwelfthBatchDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-thirteenth-batch') {
+      return createBs11ThirteenthBatchDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.scenario,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-064-replacement') {
+      return createBs11064ReplacementDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-066-trap') {
+      return createBs11066TrapDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-067-attack') {
+      return createBs11067AttackDemoState(testStateConfig.cardNumber, testStateConfig.thenPayable)
+    }
+    if (testStateConfig?.kind === 'bs11-068-faint') {
+      return createBs11068FaintDemoState(testStateConfig.cardNumber, testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-069-response') {
+      return createBs11069ResponseDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-070-on-play') {
+      return createBs11070OnPlayDemoState(testStateConfig.cardNumber, testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-070-attack') {
+      return createBs11070AttackDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-071-attack') {
+      return createBs11071AttackDemoState(testStateConfig.cardNumber, testStateConfig.thenPayable)
+    }
+    if (testStateConfig?.kind === 'bs11-072-skill') {
+      return createBs11072SkillDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-073-attack') {
+      return createBs11073AttackDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-074-attack') {
+      return createBs11074AttackDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-077-aura') {
+      return createBs11077AuraDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-078-attack') {
+      return createBs11078AttackDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-079-on-play') {
+      return createBs11079OnPlayDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-080-item') {
+      return createBs11080ItemDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-081-item') {
+      return createBs11081ItemDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-082-trap') {
+      return createBs11082TrapDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-083-stage') {
+      return createBs11083StageDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-083-replacement') {
+      return createBs11083ReplacementDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-vanilla-attack') {
+      return createBs11VanillaAttackDemoState(testStateConfig.cardNumber, testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-red-skill') {
+      return createBs11RedSkillDemoState(testStateConfig.cardNumber, testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-006-on-play') {
+      return createBs11006OnPlayDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-red-conditional-item') {
+      return createBs11RedConditionalItemDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-011-stage') {
+      return createBs11011StageDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-013-trap') {
+      return createBs11013TrapDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-010-trap') {
+      return createBs11010TrapDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-014-attack') {
+      return createBs11014AttackDemoState(testStateConfig.cardNumber, testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-015-attack') {
+      return createBs11015AttackDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-092-activate') {
+      return createBs11092ActivateDemoState(testStateConfig.alreadyUsed)
+    }
+    if (testStateConfig?.kind === 'bs11-094-blocker') {
+      return createBs11094BlockerDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-108-stage') {
+      return createBs11108StageDemoState(testStateConfig.specialPlay, testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs11-017-attack') {
+      return createBs11017AttackDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-conditional-activate') {
+      return createBs11ConditionalActivateDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-018-attack') {
+      return createBs11018AttackDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs11-018-skill') {
+      return createBs11018SkillDemoState(testStateConfig.cardNumber, testStateConfig.alreadyUsed)
+    }
+    if (testStateConfig?.kind === 'bs11-025-attack') {
+      return createBs11025AttackDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-024-faint') {
+      return createBs11024FaintDemoState(testStateConfig.hasLv3)
+    }
+    if (testStateConfig?.kind === 'bs11-026-skill') {
+      return createBs11026SkillDemoState(testStateConfig.hasFlip)
+    }
+    if (testStateConfig?.kind === 'bs11-yellow-item') {
+      return createBs11YellowItemDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-031-activate-continuation') {
+      return createBs11031ActivateContinuationDemoState(testStateConfig.canDiscardTwo)
+    }
+    if (testStateConfig?.kind === 'bs11-027-trap') {
+      return createBs11027TrapDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'bs11-027-attack-cost-continuation') {
+      return createBs11027AttackCostContinuationDemoState(testStateConfig.canPayExtra)
+    }
+    if (testStateConfig?.kind === 'bs11-028-stage') {
+      return createBs11028StageDemoState(testStateConfig.hasYellowCookie)
+    }
+    if (testStateConfig?.kind === 'bs11-029-trap') {
+      return createBs11029TrapDemoState(testStateConfig.cardNumber, testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-033-attack') {
+      return createBs11033AttackDemoState(testStateConfig.cardNumber, testStateConfig.gainedHp)
+    }
+    if (testStateConfig?.kind === 'bs11-036-skill') {
+      return createBs11036SkillDemoState(testStateConfig.cardNumber, testStateConfig.hasOther)
+    }
+    if (testStateConfig?.kind === 'bs11-036-attack') {
+      return createBs11036AttackDemoState(testStateConfig.cardNumber, testStateConfig.lowHp)
+    }
+    if (testStateConfig?.kind === 'bs11-032-attack') {
+      return createBs11032AttackDemoState(testStateConfig.cardNumber, testStateConfig.hasOther)
+    }
+    if (testStateConfig?.kind === 'bs11-032-end-turn') {
+      return createBs11032EndTurnDemoState(testStateConfig.cardNumber, testStateConfig.playedLevelThree)
+    }
+    if (testStateConfig?.kind === 'bs11-034-break-skill') {
+      return createBs11034BreakSkillDemoState(testStateConfig.cardNumber, testStateConfig.hasLevelSum)
+    }
+    if (testStateConfig?.kind === 'bs11-034-attack') {
+      return createBs11034AttackDemoState(testStateConfig.cardNumber, testStateConfig.hasAncients)
+    }
+    if (testStateConfig?.kind === 'bs11-035-on-play') {
+      return createBs11035OnPlayDemoState(testStateConfig.cardNumber, testStateConfig.hasHandCost)
+    }
+    if (testStateConfig?.kind === 'bs11-035-attack') {
+      return createBs11035AttackDemoState(testStateConfig.cardNumber, testStateConfig.hasFlip)
+    }
+    if (testStateConfig?.kind === 'bs11-black-attack-then') {
+      return createBs11BlackAttackThenDemoState(testStateConfig.cardNumber, testStateConfig.hasThenCost)
+    }
+    if (testStateConfig?.kind === 'bs11-089-attack') {
+      return createBs11089AttackDemoState(testStateConfig.cardNumber, testStateConfig.refreshed)
+    }
+    if (testStateConfig?.kind === 'bs11-fourteenth-batch') {
+      return createBs11FourteenthBatchDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.scenario,
+      )
     }
     if (testStateConfig?.kind === 'bs10-condition') {
       return createBs10ConditionDemoState(
@@ -357,6 +623,91 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'p147-special-play') {
       return createP147SpecialPlayDemoState()
     }
+    if (testStateConfig?.kind === 'bs11-097-099-special-play') {
+      return createBs11097To099SpecialPlayGateDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-103-104-109-inspect') {
+      return createBs11103104109InspectDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-106-107-110-condition') {
+      return createBs11106107110ConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-088-105-attack-then') {
+      return createBs11088105AttackThenDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-088-on-play') {
+      return createBs11088OnPlayDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-084-trap') {
+      return createBs11084TrapDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs11-016-hp-total') {
+      return createBs11016HpTotalDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-086-087-attack-then') {
+      return createBs11086087AttackThenDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-111-113-special-play') {
+      return createBs111113SpecialPlayDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-114-on-play') {
+      return createBs11114OnPlayDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-089-on-play') {
+      return createBs11089OnPlayDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-115-special-play') {
+      return createBs11115SpecialPlayDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.negative,
+        testStateConfig.supportConditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-116-movement-protection') {
+      return createBs11116MovementProtectionDemoState()
+    }
+    if (testStateConfig?.kind === 'bs11-090-extra-deck') {
+      return createBs11090ExtraDeckDemoState(
+        testStateConfig.conditionMet, testStateConfig.sourceCardNumber, testStateConfig.extraCardNumber,
+      )
+    }
+    if (testStateConfig?.kind === 'bs11-116-extra-deck') {
+      return createBs11116ExtraDeckDemoState(
+        testStateConfig.conditionMet,
+        testStateConfig.cardNumber,
+        testStateConfig.missingRequirement,
+      )
+    }
     if (testStateConfig?.kind === 'bs2-015-cost') {
       return createBs2015CostDepartureDemoState(
         testStateConfig.replacementAvailable,
@@ -491,6 +842,12 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs10-009-hp-cost') {
       return `測試狀態：BS10-009 Cranberry Cookie HP 代價（${testStateConfig.scenario}），等待正常技能／攻擊指令。`
     }
+    if (testStateConfig?.kind === 'bs11-flip') {
+      return `測試狀態：${testStateConfig.cardNumber} BLACK FLIP 已由正式攻擊指令開啟，等待 FLIP ${testStateConfig.conditionMet ? '正向付款／效果' : '負向路徑'}。`
+    }
+    if (testStateConfig?.kind === 'bs11-twelfth-batch') {
+      return `測試狀態：${testStateConfig.cardNumber} 第十二批候選卡已載入，等待${testStateConfig.conditionMet ? '正向條件／效果' : '負向條件'} Browser 驗收。`
+    }
     if (testStateConfig?.kind === 'bs10-condition') {
       return `測試狀態：${testStateConfig.cardNumber} BS10 條件${testStateConfig.conditionMet ? '成立' : '不成立'}，等待正常 UI 驗收。`
     }
@@ -498,6 +855,90 @@ export function useMatchController(params: {
       return testStateConfig.conditionMet
         ? `測試狀態：${testStateConfig.cardNumber} BS10 EXTRA 登場條件成立。`
         : `測試狀態：${testStateConfig.cardNumber} BS10 EXTRA 登場條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-116-extra-deck') {
+      if (testStateConfig.missingRequirement) {
+        const failedRequirement = {
+          castle: 'Dark Enchantress\'s Castle',
+          break: 'Break Area LV.7',
+          'special-play': '具 Special Play 的 LV.3 Dark Enchantress Cookie',
+        }[testStateConfig.missingRequirement]
+        return `測試狀態：BS11-116 Awaken 的 ${failedRequirement} 條件未成立，其餘條件成立。`
+      }
+      return testStateConfig.conditionMet
+        ? '測試狀態：BS11-116 Dark Enchantress Awaken 條件成立。'
+        : '測試狀態：BS11-116 Dark Enchantress Awaken 條件不成立。'
+    }
+    if (testStateConfig?.kind === 'bs11-097-099-special-play') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 的 Special Play Cookie 門檻成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 的 Special Play Cookie 門檻不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-103-104-109-inspect') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 正向篩選與支付條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 反向路徑移除對應合法條件。`
+    }
+    if (testStateConfig?.kind === 'bs11-106-107-110-condition') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 戰鬥區條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 戰鬥區條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-088-105-attack-then') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 攻擊後 Then 條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 攻擊後 Then 條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-088-on-play') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} On Play 有紫色 LV.1 代價與紫色 LV.2 以上回收目標。`
+        : `測試狀態：${testStateConfig.cardNumber} On Play 缺少紫色 LV.1 戰鬥區代價。`
+    }
+    if (testStateConfig?.kind === 'bs11-084-trap') {
+      return testStateConfig.conditionMet
+        ? '測試狀態：BS11-084 Trap 已完成 Refresh，攻擊後抽 1 張 Then 條件成立。'
+        : '測試狀態：BS11-084 Trap 未完成 Refresh，攻擊後抽牌 Then 應不執行。'
+    }
+    if (testStateConfig?.kind === 'bs11-016-hp-total') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 紅色 Cookie 合計 HP 代價成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 紅色 Cookie 合計 HP 不足，技能應被阻擋。`
+    }
+    if (testStateConfig?.kind === 'bs11-086-087-attack-then') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} 攻擊後跨區條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} 攻擊後跨區條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-111-113-special-play') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} Special Play／On Play 條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} Special Play 代價條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-114-on-play') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} On Play 棄牌後手牌門檻成立，可抽最多 2 張。`
+        : `測試狀態：${testStateConfig.cardNumber} On Play 棄牌後手牌仍超過 5 張。`
+    }
+    if (testStateConfig?.kind === 'bs11-089-on-play') {
+      return testStateConfig.conditionMet
+        ? `測試狀態：${testStateConfig.cardNumber} On Play 磨牌／抽牌／棄牌後，Refresh HP 條件成立。`
+        : `測試狀態：${testStateConfig.cardNumber} On Play 磨牌／抽牌／棄牌可完成，但 Refresh HP 條件不成立。`
+    }
+    if (testStateConfig?.kind === 'bs11-115-special-play') {
+      if (!testStateConfig.supportConditionMet) {
+        return `測試狀態：${testStateConfig.cardNumber} 有兩張合格 Special Play 代價 Cookie，但對手支援區只有 3 張；On Play 條件未成立。`
+      }
+      return testStateConfig.negative
+        ? `測試狀態：${testStateConfig.cardNumber} 只有一張符合條件的 Special Play Cookie，應阻擋特殊登場。`
+        : `測試狀態：${testStateConfig.cardNumber} 有兩張符合條件的 Special Play Cookie，確認鈕應在選滿後啟用。`
+    }
+    if (testStateConfig?.kind === 'bs11-116-movement-protection') {
+      return '測試狀態：BS11-116 已 Awaken；ST5-015 On Play 必須排除受保護 Cookie，並可移動另一隻合法目標。'
+    }
+    if (testStateConfig?.kind === 'bs11-090-extra-deck') {
+      return testStateConfig.conditionMet
+        ? '測試狀態：BS11-090 White Lily 可在主要階段支付自我昏厥代價，直接從 EXTRA 登場 BS11-091。'
+        : '測試狀態：BS11-090 White Lily 位於非主要階段，Activate 應被阻擋。'
     }
     if (testStateConfig?.kind === 'bs8-extra-deck') {
       return testStateConfig.conditionMet
@@ -743,6 +1184,9 @@ export function useMatchController(params: {
       : undefined
   const viewerPlayerId: PlayerId =
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
+    (testStateConfig?.kind === 'bs11-thirteenth-batch' &&
+      testStateConfig.cardNumber === 'BS11-047' &&
+      testStateConfig.scenario === 'replacement') ||
     (testCardBase === 'BS9-035' && isPlayerControllingState(game, 'player-two')) ||
     (testStateConfig?.kind === 'bs10-008-flip' && getActingPlayerId(game) === 'player-two') ||
     testStateConfig?.kind === 'bs9-041-attack' ||
@@ -750,7 +1194,7 @@ export function useMatchController(params: {
     (testCardBase === 'BS9-082') ||
     (testCardBase === 'BS9-096' && testStateConfig?.kind === 'card-negative') ||
     (testCardBase === 'BS9-111' && testStateConfig?.kind === 'card-check')
-      ? 'player-two'
+    ? 'player-two'
       : 'player-one'
   const opponentId = opponentOfId(viewerPlayerId)
   const animations = useMatchAnimations(viewerPlayerId)
@@ -1622,6 +2066,11 @@ export function useMatchController(params: {
 
   const aiControlsCurrentState: boolean =
     testStateConfig?.kind === 'bs10-008-flip' ||
+    (testStateConfig?.kind === 'bs11-flip' || testStateConfig?.kind === 'bs11-071-hp-no-flip') ||
+    testStateConfig?.kind === 'bs11-twelfth-batch' ||
+    (testStateConfig?.kind === 'bs11-thirteenth-batch' &&
+      testStateConfig.cardNumber === 'BS11-047' &&
+      testStateConfig.scenario === 'replacement') ||
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
     testCardBase === 'BS9-035' ||
     testStateConfig?.kind === 'bs9-041-attack' ||
@@ -1681,6 +2130,14 @@ export function useMatchController(params: {
   // auto-skip trap
   useEffect(() => {
     const battle = game.pendingBattle
+    const allowCandidateOpponentTrapSkip =
+      testStateConfig?.kind === 'bs11-twelfth-batch' &&
+      (testStateConfig.cardNumber === 'BS11-043' ||
+        testStateConfig.cardNumber === 'BS11-044')
+    const trapControllerId =
+      allowCandidateOpponentTrapSkip && battle?.stage === 'trap'
+        ? battle.defenderPlayerId
+        : viewerPlayerId
     // Card-check test states normally auto-finish the attack after a trap is
     // played. A trap Then effect may create a real pending decision first
     // (for example BS5-087's draw up to 2), so wait until that decision is
@@ -1708,6 +2165,8 @@ export function useMatchController(params: {
           }
           const preserveHumanDamageDecisions =
             testStateConfig.kind === 'bs10-008-flip' ||
+            testStateConfig.kind === 'bs11-flip' ||
+            testStateConfig.kind === 'bs11-071-hp-no-flip' ||
             ((testStateConfig.kind === 'card-check' || testStateConfig.kind === 'card-negative') &&
               testStateConfig.cardNumber.split('@')[0] === 'BS9-035') ||
             Boolean(current.pendingBattle.effectDamageSequence) ||
@@ -1740,16 +2199,17 @@ export function useMatchController(params: {
       // 對著一個待處理決策再送一次 skip-trap，被規則層的 assertNoPendingDecision
       // 擋下拋錯，把整個 App 炸掉。
       battle.trapUsed ||
-      battle.defenderPlayerId !== viewerPlayerId ||
+      (battle.defenderPlayerId !== viewerPlayerId &&
+        !allowCandidateOpponentTrapSkip) ||
       // 陷阱被卡牌效果禁止時，要先讓防守方看見原因並確認；不能悄悄
       // 自動略過，否則線上對手只會誤以為手牌中的陷阱沒有被讀到。
       battle.trapsDisabled ||
       // A nested decision owns the turn. It must reach its own UI before the
       // response window can be closed automatically.
       getPendingDecision(game) ||
-      getTrapCandidates(game, viewerPlayerId).length > 0 ||
-      getBlockerCandidates(game, viewerPlayerId).length > 0 ||
-      getAttackResponseSkillCandidates(game, viewerPlayerId).length > 0
+      getTrapCandidates(game, trapControllerId).length > 0 ||
+      getBlockerCandidates(game, trapControllerId).length > 0 ||
+      getAttackResponseSkillCandidates(game, trapControllerId).length > 0
     ) {
       return
     }
@@ -1759,17 +2219,17 @@ export function useMatchController(params: {
     // 每次都印會把主控台灌滿假警報，真的出問題時反而看不見。
     const unexplainedTraps = explainUnavailableTraps(
       game,
-      viewerPlayerId,
+      trapControllerId,
     ).filter((entry) => entry.reason === 'unknown')
     if (unexplainedTraps.length > 0) {
       console.warn(
         '[auto-skip-trap] 陷阱卡通過所有已知可用性檢查卻仍不在候選名單，即將自動略過。診斷資訊：',
         {
           traps: unexplainedTraps,
-          breakArea: game.players[viewerPlayerId].breakArea.map(
+          breakArea: game.players[trapControllerId].breakArea.map(
             (c) => ({ id: c.id, level: c.level }),
           ),
-          supportArea: game.players[viewerPlayerId].supportArea.map(
+          supportArea: game.players[trapControllerId].supportArea.map(
             (s) => ({ id: s.card.id, energyColor: s.card.energyColor, rested: s.rested }),
           ),
           declaredDamage: battle.declaredDamage,
@@ -1791,21 +2251,27 @@ export function useMatchController(params: {
       setSelectedTrapSelfTargetId(null)
       setGame((current: GameState) => {
         const currentBattle = current.pendingBattle
+        const currentTrapControllerId =
+          allowCandidateOpponentTrapSkip && currentBattle?.stage === 'trap'
+            ? currentBattle.defenderPlayerId
+            : viewerPlayerId
         if (
           currentBattle?.stage !== 'trap' ||
           currentBattle.trapUsed ||
-          currentBattle.defenderPlayerId !== viewerPlayerId ||
+          (currentBattle.defenderPlayerId !== viewerPlayerId &&
+            !allowCandidateOpponentTrapSkip) ||
           currentBattle.trapsDisabled ||
           getPendingDecision(current) ||
-          getTrapCandidates(current, viewerPlayerId).length > 0 ||
-          getBlockerCandidates(current, viewerPlayerId).length > 0 ||
-          getAttackResponseSkillCandidates(current, viewerPlayerId).length > 0
+          getTrapCandidates(current, currentTrapControllerId).length > 0 ||
+          getBlockerCandidates(current, currentTrapControllerId).length > 0 ||
+          getAttackResponseSkillCandidates(current, currentTrapControllerId)
+            .length > 0
         ) {
           return current
         }
         return applyGameCommand(current, {
           kind: 'skip-trap',
-          playerId: viewerPlayerId,
+          playerId: currentTrapControllerId,
         })
       })
     })

@@ -1,3 +1,4 @@
+import { getCookieEffectiveLevel } from '../helpers'
 import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from '../types'
 import {
   estimateAttackThreatValue,
@@ -520,7 +521,7 @@ export const scoreAttackTarget = (
 
   if (canKillInOneTurn) {
     // R1: 擊倒能直接致勝（break ≥10）— 最高優先
-    const projectedBreak = opponentBreak + cookie.card.level
+    const projectedBreak = opponentBreak + getCookieEffectiveLevel(cookie)
     if (projectedBreak >= 10) {
       raceBonus += 300
     } else if (projectedBreak >= 8) {
@@ -546,7 +547,7 @@ export const scoreAttackTarget = (
 
   // --- R1: 高 Level 目標在 break 高壓時更有價值 ---
   // 擊倒 Lv.3 目標對 break area 的貢獻比 Lv.1 大3倍
-  const levelBreakValue = cookie.card.level * 15
+  const levelBreakValue = getCookieEffectiveLevel(cookie) * 15
   const breakPressureBonus = opponentBreak >= 8
     ? levelBreakValue
     : opponentBreak >= 6

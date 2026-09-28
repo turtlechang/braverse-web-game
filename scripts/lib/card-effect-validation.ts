@@ -129,9 +129,14 @@ export const validateCardEffectSemantics = (
       card.skill?.passiveEffects?.length ||
         card.skill?.cannotAttackCondition,
     )
+    const hasOnPlayPayload = Boolean(card.skill?.onPlayEffects?.length)
     if (
       !hasFlavorOnlySkill &&
-      (!card.skill || (card.skill.effects.length === 0 && !hasStaticSkillPayload))
+      (!card.skill || (
+        card.skill.effects.length === 0 &&
+        !hasOnPlayPayload &&
+        !hasStaticSkillPayload
+      ))
     ) {
       errors.push(`${label}: 技能文字必須轉出含至少 1 個效果的 skill`)
     }

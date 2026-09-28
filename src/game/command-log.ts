@@ -1,4 +1,8 @@
-import { getCookieEffectiveHp, getOpponentId } from './helpers'
+import {
+  getCookieEffectiveHp,
+  getCookieEffectiveLevel,
+  getOpponentId,
+} from './helpers'
 import { getForcedAttackTargetId, getFaintSourceCostUnavailableReason } from './battle'
 import { materializeExtraDeckCookie } from './extra-deck'
 import {
@@ -10,6 +14,7 @@ import {
   getBattleToBreakBlocker,
   getEffectSelectionLimits,
   getFieldToDeckBottomBlocker,
+  getEffectTargetCandidates,
   getOpponentBattleMovementPreventer,
   isEffectConditionMet,
   isProtectedBySoulJamResolution,
@@ -17,6 +22,7 @@ import {
 import type { GameCommand } from './commands'
 import type {
   CardEffect,
+  EffectContext,
   EffectTargetSelector,
   GameCard,
   GameState,
@@ -344,13 +350,13 @@ const getOpponentBattleToTrashBlocker = (
   const eligibleTargets = opponent.battleArea.filter((cookie) => {
     if (
       effect.maxLevel !== undefined &&
-      cookie.card.level > effect.maxLevel
+      getCookieEffectiveLevel(cookie) > effect.maxLevel
     ) {
       return false
     }
     if (
       effect.minLevel !== undefined &&
-      cookie.card.level < effect.minLevel
+      getCookieEffectiveLevel(cookie) < effect.minLevel
     ) {
       return false
     }
@@ -819,6 +825,8 @@ const describeAttackEffectAction = (effect: CardEffect): string => {
       return `從 ${effect.modes.length} 個效果中選擇一項`
     case 'optional-cost-attack':
       return effect.effectText
+    case 'prevent-opponent-on-play':
+      return '本回合對手不能發動 On Play'
     default:
       return `執行 ${effect.kind}`
   }
@@ -843,20 +851,33 @@ const getAttackEffectSourceCard = (
  * 規則引擎會直接跳到下一段效果，不會留下可供玩家操作的目標。紀錄層
  * 必須沿用同一個條件判定，避免把原始卡面文字誤記成「效果已結算」。
  */
+const getOptionalCostAttackConditionContext = (
+  state: GameState,
+): EffectContext | undefined => {
+  const pending = state.pendingOptionalCostAttack
+  if (pending?.resolution !== 'ability') return undefined
+  const pendingAbility = state.pendingAbilityEffect
+  return {
+    sourcePlayerId: pendingAbility?.sourcePlayerId ?? pending.playerId,
+    sourceInstanceId: pendingAbility?.sourceInstanceId ?? pending.sourceInstanceId,
+  }
+}
+
 const isAttackEffectConditionUnmet = (
   state: GameState,
   effects: CardEffect[],
+  conditionContext?: EffectContext,
 ): boolean => {
   const battle = state.pendingBattle
   const effect = effects[0]
-  if (!battle || !effect || !('condition' in effect) || !effect.condition) {
+  if ((!battle && !conditionContext) || !effect || !('condition' in effect) || !effect.condition) {
     return false
   }
   return !isEffectConditionMet(
     state,
-    {
-      sourcePlayerId: battle.attackerPlayerId,
-      sourceInstanceId: battle.attackerInstanceId,
+    conditionContext ?? {
+      sourcePlayerId: battle!.attackerPlayerId,
+      sourceInstanceId: battle!.attackerInstanceId,
     },
     effect,
   )
@@ -968,8 +989,9 @@ const describeAttackEffectResultStep = (
   commandPlayerId: PlayerId,
   effects: CardEffect[],
   label = '攻擊後效果',
+  conditionContext?: EffectContext,
 ): LogStepDetail => {
-  if (isAttackEffectConditionUnmet(previous, effects)) {
+  if (isAttackEffectConditionUnmet(previous, effects, conditionContext)) {
     return { text: `${label}結果：條件不成立，效果未執行` }
   }
   const flatEffects = flattenAttackEffects(effects)
@@ -1330,10 +1352,15 @@ export const describeCommand = (
     }
     case 'resolve-extra-deck-attack': {
       const pending = previous.pendingExtraDeckAttack
+      const resolutionLabel = pending?.resolution === 'play'
+        ? '登場'
+        : pending?.resolution === 'skill'
+          ? '技能'
+          : '攻擊'
       if (!command.extraDeckInstanceId) {
-        return `${actor} 略過「${pending?.cardName ?? 'EXTRA 餅乾'}」的攻擊效果`
+        return `${actor} 略過「${pending?.cardName ?? 'EXTRA 餅乾'}」的${resolutionLabel}效果`
       }
-      return `${actor} reveal 了「${findCardName(previous, command.extraDeckInstanceId)}」並啟動其攻擊效果`
+      return `${actor} reveal 了「${findCardName(previous, command.extraDeckInstanceId)}」並啟動其${resolutionLabel}效果`
     }
     case 'resolve-next-damage': {
       const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
@@ -1410,6 +1437,7 @@ export const describeCommand = (
           command.playerId,
           pending?.effects ?? [],
           isAbilityResolution ? '技能 Then' : '攻擊後效果',
+          getOptionalCostAttackConditionContext(previous),
         ).text
         return `${actor} 支付「${sourceName}」的${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}並結算效果：${effectText}；${outcome.replace(/^(?:攻擊後效果|技能 Then)\s*結果：/, '')}`
       }
@@ -1712,6 +1740,8 @@ const describeCommandCoreSteps = (
     case 'activate-skill':
     case 'begin-activate-skill': {
       const steps: LogStepDetail[] = []
+      const skillSource = findCard(state, command.sourceInstanceId)
+      const faintCost = skillSource?.skill?.cost.trashBattleCookie?.faint ?? false
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
       if (paymentStep) steps.push(paymentStep)
       const supportTrashStep = describeCardListStep(
@@ -1735,7 +1765,9 @@ const describeCommandCoreSteps = (
       if (selfToDeckBottomStep) steps.push(selfToDeckBottomStep)
       const trashBattleStep = describeCardListStep(
         state,
-        '額外代價：戰鬥區送入棄牌區',
+        faintCost
+          ? '額外代價：使餅乾昏厥並送入休息區'
+          : '額外代價：戰鬥區送入棄牌區',
         command.trashBattleCookieIds,
       )
       if (trashBattleStep) steps.push(trashBattleStep)
@@ -2082,6 +2114,7 @@ const describeCommandCoreSteps = (
           command.playerId,
           pending.effects,
           isAbilityResolution ? '技能 Then ' : '攻擊後效果',
+          getOptionalCostAttackConditionContext(previous),
         ),
       )
       return steps
@@ -2126,6 +2159,51 @@ const describeCommandCoreSteps = (
               })
             }
             const steps: LogStepDetail[] = []
+            if (effect.kind === 'hp-to-trash-all') {
+              const pending = previous.pendingAbilityEffect
+              const targetSelector = effect.target ?? {
+                side: effect.side,
+                min: 0,
+                max: 4,
+              }
+              const candidates = getEffectTargetCandidates(
+                previous,
+                {
+                  sourcePlayerId: pending?.sourcePlayerId ?? command.playerId,
+                  sourceInstanceId: pending?.sourceInstanceId ?? '',
+                },
+                targetSelector,
+              )
+              const candidateIds = new Set(
+                candidates.map((cookie) => cookie.card.instanceId),
+              )
+              const hpChanges = Object.values(previous.players).flatMap((player) =>
+                player.battleArea.flatMap((beforeCookie) => {
+                  if (!candidateIds.has(beforeCookie.card.instanceId)) return []
+                  const afterCookie = next.players[player.id].battleArea.find(
+                    (cookie) => cookie.card.instanceId === beforeCookie.card.instanceId,
+                  )
+                  const hpBefore = beforeCookie.hpCards.length
+                  const hpAfter = afterCookie?.hpCards.length ?? 0
+                  return hpAfter < hpBefore
+                    ? [{
+                        text: `HP 移除結果：「${beforeCookie.card.name}」HP 張數 ${hpBefore}→${hpAfter}。`,
+                        cards: [beforeCookie.card],
+                      }]
+                    : []
+                }),
+              )
+              if (hpChanges.length > 0) return hpChanges
+              if (candidates.length === 0) {
+                const minimumHp = effect.target?.minRemainingHp
+                return [{
+                  text: minimumHp === undefined
+                    ? 'HP 移除結果：沒有符合效果目標條件的餅乾，未移除 HP 卡。'
+                    : `HP 移除結果：沒有符合效果目標條件（剩餘 HP 至少 ${minimumHp} 張）的餅乾，未移除 HP 卡。`,
+                }]
+              }
+              return [{ text: 'HP 移除結果：符合效果目標的餅乾 HP 未改變，未移除 HP 卡。' }]
+            }
             if (effect.kind === 'hand-to-break' && effect.revealedCardOnly) {
               const moved = next.players[command.playerId].breakArea.filter((card) =>
                 previous.costRecord?.revealedHandCardInstanceIds?.includes(card.instanceId) &&

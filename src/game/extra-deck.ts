@@ -6,6 +6,7 @@ import { clearDepartedCookieModifiers } from './replacement'
 import { hasCookieOnPlayEffects } from './skills'
 import { finishWithDefeat } from './victory'
 import type {
+  CardEffect,
   CookieCard,
   CookieInBattle,
   ExtraDeckCard,
@@ -36,6 +37,43 @@ export const getExtraDeckAttackCandidates = (
 ): ExtraDeckCard[] =>
   (state.players[playerId].extraDeck ?? []).filter(
     (card) => card.name === cardName && (card.attackEffects?.length ?? 0) > 0,
+  )
+
+/** Return eligible EXTRA cards for a named direct-play resolution. */
+export const getExtraDeckPlayCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+  cardName: string,
+): ExtraDeckCard[] =>
+  (state.players[playerId].extraDeck ?? []).filter(
+    (card) => card.name === cardName,
+  )
+
+export type ExtraDeckSkillTrigger = 'on-play' | 'activate'
+
+/** Return one EXTRA card's effects for the requested printed skill timing. */
+export const getExtraDeckSkillEffects = (
+  card: ExtraDeckCard,
+  trigger: ExtraDeckSkillTrigger,
+): CardEffect[] => {
+  if (!card.skill) return []
+  if (trigger === 'on-play' && card.skill.onPlayEffects) {
+    return card.skill.onPlayEffects
+  }
+  return card.skill.trigger === trigger ? card.skill.effects : []
+}
+
+/** Return eligible EXTRA cards for a named skill-resolution choice. */
+export const getExtraDeckSkillCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+  cardName: string,
+  trigger: ExtraDeckSkillTrigger,
+): ExtraDeckCard[] =>
+  (state.players[playerId].extraDeck ?? []).filter(
+    (card) =>
+      card.name === cardName &&
+      getExtraDeckSkillEffects(card, trigger).length > 0,
   )
 
 /**
@@ -94,7 +132,12 @@ export const materializeExtraDeckCookieAfterEntryCost = (
   state: GameState,
   playerId: PlayerId,
   instanceId: string,
+  extraHp = 0,
 ): GameState => {
+  if (extraHp < 0) {
+    throw new GameRuleError('EXTRA 登場的額外 HP 不能是負數。')
+  }
+
   const player = state.players[playerId]
   const extraDeckCard = (player.extraDeck ?? []).find(
     (candidate) => candidate.instanceId === instanceId,
@@ -116,7 +159,10 @@ export const materializeExtraDeckCookieAfterEntryCost = (
           target.enteredFrom === requirement.playedFrom) &&
         target.enteredTurn === state.turnNumber &&
         (requirement.maxRemainingHp === undefined ||
-          target.hpCards.length <= requirement.maxRemainingHp),
+          target.hpCards.length <= requirement.maxRemainingHp) &&
+        (requirement.requiresSpecialPlay === undefined ||
+          requirement.requiresSpecialPlay ===
+            (target.card.skill?.specialPlayCost !== undefined)),
     )
   }
 
@@ -131,7 +177,8 @@ export const materializeExtraDeckCookieAfterEntryCost = (
       throw new GameRuleError('Awakened 餅乾缺少 HP+N 資料。')
     }
 
-    const availableHpCards = player.deck.slice(0, hpBonus)
+    const hpCardCount = hpBonus + extraHp
+    const availableHpCards = player.deck.slice(0, hpCardCount)
     const replacedBattleArea = player.battleArea.map((cookie) =>
       cookie.card.instanceId === target.card.instanceId
         ? {
@@ -158,7 +205,7 @@ export const materializeExtraDeckCookieAfterEntryCost = (
     const updatedState = clearDepartedCookieModifiers(
       updatePlayer(state, {
         ...player,
-        deck: player.deck.slice(hpBonus),
+        deck: player.deck.slice(hpCardCount),
         extraDeck: (player.extraDeck ?? []).filter(
           (candidate) => candidate.instanceId !== instanceId,
         ),
@@ -183,15 +230,16 @@ export const materializeExtraDeckCookieAfterEntryCost = (
       playerId,
       {
         targetInstanceId: deploymentCard.instanceId,
-        amount: hpBonus - availableHpCards.length,
+        amount: hpCardCount - availableHpCards.length,
       },
     )
   }
 
-  const availableHpCards = player.deck.slice(0, deploymentCard.hp)
+  const hpCardCount = deploymentCard.hp + extraHp
+  const availableHpCards = player.deck.slice(0, hpCardCount)
   const updatedState = updatePlayer(state, {
     ...player,
-    deck: player.deck.slice(deploymentCard.hp),
+    deck: player.deck.slice(hpCardCount),
     extraDeck: (player.extraDeck ?? []).filter(
       (candidate) => candidate.instanceId !== instanceId,
     ),
@@ -226,7 +274,7 @@ export const materializeExtraDeckCookieAfterEntryCost = (
     playerId,
     {
       targetInstanceId: deploymentCard.instanceId,
-      amount: deploymentCard.hp - availableHpCards.length,
+      amount: hpCardCount - availableHpCards.length,
     },
   )
 }

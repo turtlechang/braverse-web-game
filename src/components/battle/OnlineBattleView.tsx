@@ -123,7 +123,7 @@ export function OnlineBattleView({
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
-  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [specialPlayCandidateIds, setSpecialPlayCandidateIds] = useState<string[]>([])
   const [battleLogReviewReason, setBattleLogReviewReason] = useState<string | null>(null)
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
@@ -240,12 +240,27 @@ export function OnlineBattleView({
           viewerPlayer.battleArea,
         )
       : []
+  const specialPlayCandidateCount =
+    specialPlaySourceCard?.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1
+  const toggleSpecialPlayCandidate = (instanceId: string) => {
+    setSpecialPlayCandidateIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      return current.length < specialPlayCandidateCount
+        ? [...current, instanceId]
+        : current
+    })
+  }
   const handleSpecialPlayConfirm = () => {
     if (
       !specialPlaySourceCard ||
-      !specialPlayCandidateId ||
-      !specialPlayCandidates.some(
-        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      specialPlayCandidateIds.length !== specialPlayCandidateCount ||
+      specialPlayCandidateIds.some(
+        (candidateId) =>
+          !specialPlayCandidates.some(
+            (candidate) => candidate.card.instanceId === candidateId,
+          ),
       ) ||
       !canSpecialPlayCookie(game, viewerPlayerId, specialPlaySourceCard.instanceId)
     ) {
@@ -257,12 +272,12 @@ export function OnlineBattleView({
         kind: 'deploy-cookie',
         playerId: viewerPlayerId,
         instanceId: specialPlaySourceCard.instanceId,
-        specialPlayCookieInstanceId: specialPlayCandidateId,
+        specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
       '特殊登場已支付，等待處理 On Play。',
     )
     setSpecialPlaySourceId(null)
-    setSpecialPlayCandidateId(null)
+    setSpecialPlayCandidateIds([])
   }
   const { activeSelectedHandCardId, setSelectedHandCardId } =
     useHandSelectionDismissal(viewerPlayer.hand, closeResourcePopover)
@@ -638,7 +653,7 @@ export function OnlineBattleView({
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
-      setSpecialPlayCandidateId(null)
+      setSpecialPlayCandidateIds([])
     },
     onPlayItem: (instanceId) => {
       const card = viewerPlayer.hand.find(
@@ -905,11 +920,12 @@ export function OnlineBattleView({
         <SpecialPlayModal
           sourceCard={specialPlaySourceCard}
           candidates={specialPlayCandidates}
-          selectedCandidateId={specialPlayCandidateId}
-          onSelectCandidate={setSpecialPlayCandidateId}
+          requiredCandidateCount={specialPlayCandidateCount}
+          selectedCandidateIds={specialPlayCandidateIds}
+          onToggleCandidate={toggleSpecialPlayCandidate}
           onCancel={() => {
             setSpecialPlaySourceId(null)
-            setSpecialPlayCandidateId(null)
+            setSpecialPlayCandidateIds([])
           }}
           onConfirm={handleSpecialPlayConfirm}
         />

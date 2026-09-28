@@ -79,6 +79,10 @@ export const getOpponentId = (playerId: PlayerId): PlayerId =>
 export const getCookieEffectiveHp = (cookie: CookieInBattle): number =>
   cookie.publicHp ?? cookie.hpCards.length
 
+/** 回傳規則判定使用的有效 LV；卡面 LV 只在沒有暫時覆寫時使用。 */
+export const getCookieEffectiveLevel = (cookie: CookieInBattle): number =>
+  cookie.levelOverride ?? cookie.card.level
+
 export const updatePlayer = (
   state: GameState,
   player: PlayerState,

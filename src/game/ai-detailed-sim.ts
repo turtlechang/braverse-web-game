@@ -1,4 +1,5 @@
 import { getActingPlayerId } from './controller'
+import { getCookieEffectiveLevel } from './helpers'
 import { getLegalTurnCommands } from './legal-actions'
 import { getAttackDamageAgainst } from './effects'
 import type { AttackCommand } from './commands'
@@ -205,7 +206,7 @@ const detectReplacement = (
     player: playerId,
     cardId: newCookie.card.instanceId,
     cardName: newCookie.card.name,
-    level: newCookie.card.level,
+    level: getCookieEffectiveLevel(newCookie),
     hp: newCookie.card.hp,
     score,
     candidateCount,
@@ -240,7 +241,7 @@ const buildAttackStartInfo = (
     defenderPlayerId: battle.defenderPlayerId,
     attackerInstanceId: battle.attackerInstanceId,
     attackerName: attackerCookie?.card.name ?? 'unknown',
-    attackerLevel: attackerCookie?.card.level ?? 0,
+    attackerLevel: attackerCookie ? getCookieEffectiveLevel(attackerCookie) : 0,
     declaredTargetInstanceId: battle.targetInstanceId,
     targetHpBefore: targetCookie?.hpCards.length ?? 0,
     breakAreaBefore: prevState.players[battle.defenderPlayerId].breakArea.length,
@@ -285,7 +286,11 @@ const finalizeAttackEvent = (
     declaredTargetId: startInfo.declaredTargetInstanceId,
     finalTargetId: pendingBattle.targetInstanceId,
     targetName: targetCookieBefore?.card.name ?? finalTargetCookie?.card.name ?? 'unknown',
-    targetLevel: targetCookieBefore?.card.level ?? finalTargetCookie?.card.level ?? 0,
+    targetLevel: targetCookieBefore
+      ? getCookieEffectiveLevel(targetCookieBefore)
+      : finalTargetCookie
+        ? getCookieEffectiveLevel(finalTargetCookie)
+        : 0,
     damage: rawDamage,
     targetHpBefore: startInfo.targetHpBefore,
     targetHpAfter,

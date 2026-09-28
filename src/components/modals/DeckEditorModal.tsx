@@ -98,6 +98,9 @@ const SERIES_OPTIONS = [
   { value: 'BS5', label: 'BS5' },
   { value: 'BS6', label: 'BS6' },
   { value: 'BS7', label: 'BS7' },
+  { value: 'BS8', label: 'BS8' },
+  { value: 'BS9', label: 'BS9' },
+  { value: 'BS10', label: 'BS10' },
   { value: 'PROMOTION CARD', label: '特典卡' },
 ]
 

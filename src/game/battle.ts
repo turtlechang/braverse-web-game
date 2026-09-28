@@ -27,7 +27,12 @@ import {
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'
-import { defaultShuffle, getCookieEffectiveHp, getOpponentId } from './helpers'
+import {
+  defaultShuffle,
+  getCookieEffectiveHp,
+  getCookieEffectiveLevel,
+  getOpponentId,
+} from './helpers'
 import {
   clearDepartedCookieModifiers,
   continuePendingReplacements,
@@ -37,6 +42,7 @@ import {
 import {
   getAwakenedFaintTrashCards,
   getExtraDeckAttackCandidates,
+  getExtraDeckSkillCandidates,
   materializeExtraDeckCookieAfterEntryCost,
 } from './extra-deck'
 import { getRefreshCandidates } from './refresh'
@@ -273,13 +279,14 @@ export const isCookieAttackRestricted = (
 const getAttackDiscardRequirement = (
   state: GameState,
   attackerPlayerId: PlayerId,
+  attackerInstanceId: string,
 ): {
   count: number
   sourceInstanceId: string
   sourceCardName: string
 } | null => {
   const defenderPlayerId = getOpponentId(attackerPlayerId)
-  const requirements = state.players[defenderPlayerId].battleArea.flatMap(
+  const passiveRequirements = state.players[defenderPlayerId].battleArea.flatMap(
     (cookie) => {
       const skill = cookie.card.skill
       if (!skill) return []
@@ -302,6 +309,13 @@ const getAttackDiscardRequirement = (
       )
     },
   )
+  const targetedRequirements = (state.cookieAttackDiscardRequirements?.[attackerPlayerId] ?? [])
+    .filter(
+      (requirement) =>
+        requirement.cookieInstanceId === attackerInstanceId &&
+        requirement.expiresAfterTurn >= state.turnNumber,
+    )
+  const requirements = [...passiveRequirements, ...targetedRequirements]
   if (requirements.length === 0) return null
   return {
     count: requirements.reduce((total, requirement) => total + requirement.count, 0),
@@ -369,7 +383,7 @@ const beginAttackInternal = (
 
   const discardRequirement = skipRequiredHandDiscard
     ? null
-    : getAttackDiscardRequirement(state, attackerPlayer.id)
+    : getAttackDiscardRequirement(state, attackerPlayer.id, attackerInstanceId)
   if (discardRequirement) {
     if (attackerPlayer.hand.length < discardRequirement.count) {
       throw new GameRuleError(
@@ -573,7 +587,24 @@ const isTrapConditionMet = (
   if (condition.kind === 'battle-area-has-cookie-with-level') {
     // 陷阱擁有者自己的戰鬥區（官方文字的「your battle area」）。
     return state.players[playerId].battleArea.some(
-      (cookie) => cookie.card.level === condition.level,
+      (cookie) => getCookieEffectiveLevel(cookie) === condition.level,
+    )
+  }
+
+  if (condition.kind === 'battle-area-has-level-or-special-play-cookie') {
+    return state.players[playerId].battleArea.some(
+      (cookie) =>
+        getCookieEffectiveLevel(cookie) >= 5 ||
+        cookie.card.skill?.specialPlayCost !== undefined,
+    )
+  }
+
+  if (condition.kind === 'battle-area-has-cookie-with-level-and-remaining-hp') {
+    return state.players[playerId].battleArea.some(
+      (cookie) =>
+        getCookieEffectiveLevel(cookie) >= condition.minLevel &&
+        (condition.maxLevel === undefined || getCookieEffectiveLevel(cookie) <= condition.maxLevel) &&
+        getCookieEffectiveHp(cookie) === condition.remainingHp,
     )
   }
 
@@ -895,6 +926,7 @@ const validateTrapTargets = (
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-attack-cost' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
@@ -2117,7 +2149,7 @@ const removeFaintedCookie = (
           {
             playerId,
             energyColor: target.card.energyColor,
-            level: target.card.level,
+            level: getCookieEffectiveLevel(target),
           },
         ],
       },
@@ -2131,7 +2163,7 @@ const removeFaintedCookie = (
           ...(state.cookiesFaintedThisTurnDetails?.[playerId] ?? []),
           {
             energyColor: target.card.energyColor,
-            level: target.card.level,
+            level: getCookieEffectiveLevel(target),
           },
         ],
       },
@@ -2859,6 +2891,39 @@ export const resolveAttackEffect = (
     }
   }
 
+  if (effect.kind === 'activate-extra-deck-skill') {
+    const candidates = getExtraDeckSkillCandidates(
+      state,
+      playerId,
+      effect.cardName,
+      effect.skillTrigger,
+    )
+    if (candidates.length === 0) {
+      return advanceAttackEffect(state, battle)
+    }
+    const sourceCardName =
+      effectContext.sourceCardName ??
+      state.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+      )?.card.name ??
+      'Unknown'
+    return {
+      ...state,
+      pendingExtraDeckAttack: {
+        playerId,
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName,
+        cardName: effect.cardName,
+        candidateIds: candidates.map((card) => card.instanceId),
+        optional: effect.optional !== false,
+        resolution: 'skill',
+        skillTrigger: effect.skillTrigger,
+        battleContinuation: 'attack-effect',
+      },
+    }
+  }
+
   if (effect.kind === 'discard-hand') {
     // 攻擊後續效果的棄牌代價（BS5-080 的「Then, <discard 2 cards.>」）：
     // 交由既有的 pendingOpponentHandDiscard 通道讓玩家選牌，但保留
@@ -2938,6 +3003,47 @@ export const resolveAttackEffect = (
     }
 
     return advanceAttackEffect(resolved, nextBattle)
+  }
+
+  if (effect.kind === 'battle-to-break' && effect.thenEffects?.length) {
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    const limits = getEffectSelectionLimits(effect)
+    const candidates = getEffectSelectionCandidates(state, effectContext, effect)
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (
+      !limits ||
+      uniqueIds.length !== selectedTargetIds.length ||
+      uniqueIds.length < limits.min ||
+      uniqueIds.length > limits.max ||
+      uniqueIds.some((id) => !candidateIds.has(id))
+    ) {
+      throw new GameRuleError('攻擊後移動效果目標不合法。')
+    }
+
+    // 032 的 Then 只有在真的把另一張 Cookie 送入 break area 後才會
+    // 開啟抽牌；玩家選 0 或沒有合法目標時，整段後續效果略過。
+    if (uniqueIds.length === 0) return advanceAttackEffect(state, battle)
+
+    const resolved = executeCardEffect(state, effectContext, effect, uniqueIds)
+    if (resolved.status !== 'playing') {
+      return { ...resolved, pendingBattle: null }
+    }
+    const nextBattle = requirePendingBattle(resolved)
+    const sourceCard = getBattleCookie(resolved, battle.attackerInstanceId)?.card
+    return {
+      ...resolved,
+      pendingAbilityEffect: {
+        playerId,
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName: sourceCard?.name,
+        sourceKind: 'skill',
+        effects: effect.thenEffects,
+        effectIndex: 0,
+        battleContinuation: 'attack-effect',
+      },
+      pendingBattle: nextBattle,
+    }
   }
 
   const hasCondition = 'condition' in effect && Boolean(effect.condition)
@@ -3532,8 +3638,23 @@ export const resolveOptionalCostAttack = (
     sourceInstanceId: pending.sourceInstanceId,
     sourceCardName: pending.sourceCardName,
   }
+  // Attack Then clauses resolve after their declared costs. Conditions based
+  // on hand size must therefore see the hand after this payment's discard,
+  // not the pre-payment hand (for example BS11-052's 6 -> 5 threshold).
+  const conditionState = uniqueDiscardIds.length > 0
+    ? {
+        ...state,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...player,
+            hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+          },
+        },
+      }
+    : state
   const applicableEffects = pending.effects.filter((effect) =>
-    isEffectConditionMet(state, effectContext, effect),
+    isEffectConditionMet(conditionState, effectContext, effect),
   )
   if (applicableEffects.length === 0 && !pending.payBeforeCondition) {
     const battle = requirePendingBattle(state)
@@ -3800,6 +3921,23 @@ export const resolveOptionalCostAttack = (
   for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
     const effect = applicableEffects[effectIndex]
     if (nextState.status !== 'playing') break
+    if (effect.kind === 'choose-one') {
+      // 付款後的二選一不能直接交給 executeCardEffect；保留整條攻擊
+      // Then 佇列，讓 resolve-choose-one 與一般技能效果共用同一條展開路徑。
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: pending.sourceInstanceId,
+          sourceCardName: pending.sourceCardName,
+          sourceKind: 'skill',
+          effects: applicableEffects,
+          effectIndex,
+          battleContinuation: 'attack-effect',
+        },
+      }
+    }
     const automaticSourceTarget = isAutomaticSourceTarget(effect)
     const needsPlayerTarget =
       requiresEffectCardSelection(effect) && !automaticSourceTarget
@@ -3825,6 +3963,9 @@ export const resolveOptionalCostAttack = (
         : []
     if (needsPlayerTarget) usedSubmittedTargets = true
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    if (nextState.pendingExtraDeckAttack) {
+      return nextState
+    }
     if (nextState.pendingBattle?.effectDamageSequence) {
       return {
         ...nextState,
@@ -4779,9 +4920,9 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
           (selectableEffect.energyColor === undefined ||
             source.card.energyColor === selectableEffect.energyColor) &&
           (selectableEffect.exactLevel === undefined ||
-            source.card.level === selectableEffect.exactLevel) &&
+            getCookieEffectiveLevel(source) === selectableEffect.exactLevel) &&
           (selectableEffect.maxLevel === undefined ||
-            source.card.level <= selectableEffect.maxLevel) &&
+            getCookieEffectiveLevel(source) <= selectableEffect.maxLevel) &&
           (selectableEffect.maxHp === undefined ||
             source.card.hp <= selectableEffect.maxHp)
         const selectableCards =

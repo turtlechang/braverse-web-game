@@ -30,6 +30,7 @@ import {
   CardEffectText,
   EnergyCostIcons,
 } from '../cards/CardVisuals'
+import { getCookieEffectiveLevel } from '../../game'
 import { deckChoiceLabel } from '../gameUiLabels'
 import {
   GuidedPhaseSteps,
@@ -2814,8 +2815,9 @@ export interface ResultModalProps {
 export interface SpecialPlayModalProps {
   sourceCard: GameCard
   candidates: CookieInBattle[]
-  selectedCandidateId: string | null
-  onSelectCandidate: (instanceId: string) => void
+  requiredCandidateCount?: number
+  selectedCandidateIds: string[]
+  onToggleCandidate: (instanceId: string) => void
   onCancel: () => void
   onConfirm: () => void
 }
@@ -2823,8 +2825,9 @@ export interface SpecialPlayModalProps {
 export function SpecialPlayModal({
   sourceCard,
   candidates,
-  selectedCandidateId,
-  onSelectCandidate,
+  requiredCandidateCount = sourceCard.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1,
+  selectedCandidateIds,
+  onToggleCandidate,
   onCancel,
   onConfirm,
 }: SpecialPlayModalProps) {
@@ -2833,7 +2836,7 @@ export function SpecialPlayModal({
       <section className="battle-response-modal special-play-modal" role="dialog" aria-modal="true">
         <span className="modal-eyebrow">Special Play 特殊登場</span>
         <h2>{sourceCard.name}</h2>
-        <p>選擇 1 張符合條件的戰鬥區餅乾放置到棄牌區，完成特殊登場。</p>
+        <p>選擇 {requiredCandidateCount} 張符合條件的戰鬥區餅乾放置到棄牌區，完成特殊登場。</p>
         <div className="special-play-source">
           <CardFace card={sourceCard} className="special-play-source-card" />
           <div>
@@ -2844,19 +2847,19 @@ export function SpecialPlayModal({
         <div className="special-play-candidates" role="list" aria-label="特殊登場代價餅乾">
           {candidates.map((candidate) => {
             const id = candidate.card.instanceId
-            const selected = selectedCandidateId === id
+            const selected = selectedCandidateIds.includes(id)
             return (
               <button
                 key={id}
                 type="button"
                 className={`special-play-candidate${selected ? ' is-selected' : ''}`}
                 aria-pressed={selected}
-                onClick={() => onSelectCandidate(id)}
+                onClick={() => onToggleCandidate(id)}
               >
                 <CardFace card={candidate.card} className="special-play-candidate-card" />
                 <span>
                   <strong>{candidate.card.name}</strong>
-                  <small>LV.{candidate.card.level}／HP {candidate.card.hp}</small>
+                  <small>LV.{getCookieEffectiveLevel(candidate)}／HP {candidate.card.hp}</small>
                 </span>
               </button>
             )
@@ -2864,7 +2867,11 @@ export function SpecialPlayModal({
         </div>
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>取消</button>
-          <button type="button" disabled={!selectedCandidateId} onClick={onConfirm}>
+          <button
+            type="button"
+            disabled={selectedCandidateIds.length !== requiredCandidateCount}
+            onClick={onConfirm}
+          >
             確認特殊登場
           </button>
         </div>

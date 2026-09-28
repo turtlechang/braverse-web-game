@@ -113,6 +113,7 @@ const describeCost = (
   supportToTrashCost: number,
   hpToTrashCost: number,
   hpToHandCost: number,
+  selfToTrashCost: boolean,
   selfToBreakAreaCost: boolean,
   selfToDeckBottomCost: boolean,
   trashToDeckCost: number,
@@ -148,6 +149,7 @@ const describeCost = (
   }
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
   if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
+  if (selfToTrashCost) parts.push('將此餅乾送入棄牌區')
   if (selfToBreakAreaCost) parts.push('將此餅乾放入休息區')
   if (selfToDeckBottomCost) parts.push('將此餅乾放到牌庫底')
   if (trashToDeckCost > 0) {
@@ -407,6 +409,7 @@ export function getOptionalCostAttackPrompt(
       supportToTrashCost,
       hpToTrashCost,
       hpToHandCost,
+      pending.cost.selfToTrash === true,
       pending.cost.selfToBreakArea === true,
       pending.cost.selfToDeckBottom === true,
       trashToDeckCost,

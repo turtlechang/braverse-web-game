@@ -117,6 +117,12 @@ export const assessPublicCondition = (
       return view.opponent.supportArea.length >= condition.count
         ? met('對手支援區張數已達門檻。')
         : unmet('對手支援區張數尚未達門檻。')
+    case 'stage-has-card': {
+      const side = sideFor(view, condition.side)
+      return side.stage?.card.name === condition.cardName
+        ? met('指定場景區存在指定卡名。')
+        : unmet('指定場景區沒有指定卡名。')
+    }
     case 'active-support-count-at-least':
       return view.self.supportArea.filter((support) => !support.rested).length >= condition.count
         ? met('己方活躍支援數已達門檻。')
@@ -184,6 +190,29 @@ export const assessPublicCondition = (
       return side.battleArea.some((cookie) => cookie.card.level === condition.level)
         ? met('指定戰鬥區存在指定 LV 餅乾。')
         : unmet('指定戰鬥區沒有指定 LV 餅乾。')
+    }
+    case 'battle-area-has-cookie-with-min-level': {
+      const side = sideFor(view, condition.side)
+      return side.battleArea.some((cookie) => cookie.card.level >= condition.minLevel)
+        ? met('指定戰鬥區存在達到最低 LV 的餅乾。')
+        : unmet('指定戰鬥區沒有達到最低 LV 的餅乾。')
+    }
+    case 'battle-area-cookie-level-sum-at-least': {
+      const side = sideFor(view, condition.side)
+      const levelSum = side.battleArea.reduce((total, cookie) => total + cookie.card.level, 0)
+      return levelSum >= condition.level
+        ? met('指定戰鬥區 LV 總和已達門檻。')
+        : unmet('指定戰鬥區 LV 總和尚未達門檻。')
+    }
+    case 'battle-area-has-cookie-with-level-and-remaining-hp': {
+      const side = sideFor(view, condition.side)
+      return side.battleArea.some((cookie) =>
+        cookie.card.level >= condition.minLevel &&
+        (condition.maxLevel === undefined || cookie.card.level <= condition.maxLevel) &&
+        cookie.hpCount === condition.remainingHp,
+      )
+        ? met('指定戰鬥區存在符合 LV 與剩餘 HP 的餅乾。')
+        : unmet('指定戰鬥區沒有符合 LV 與剩餘 HP 的餅乾。')
     }
     case 'battle-area-has-color': {
       if (condition.excludeSource) return unknown('條件需要辨識來源實體。')

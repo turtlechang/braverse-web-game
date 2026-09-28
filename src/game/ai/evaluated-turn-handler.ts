@@ -1,5 +1,6 @@
 import type { AttackCommand, PlayerActionCommand } from '../commands'
 import { getAttackDamageAgainst, getEffectiveAttack } from '../effects'
+import { getCookieEffectiveLevel } from '../helpers'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
@@ -87,7 +88,7 @@ const attackBonus = (
   const damage = getEffectiveAttack(state, command.attackerInstanceId)
   const lethal = target.hpCards.length <= damage
   const bonus = lethal
-    ? 350 + target.card.level * 30
+    ? 350 + getCookieEffectiveLevel(target) * 30
     : Math.min(damage, target.hpCards.length) * 30
   const priorDamage = Math.max(0, target.card.hp - target.hpCards.length)
   const focusFireBonus = lethal ? 0 : Math.min(priorDamage, 3)
@@ -200,7 +201,7 @@ const lethalDetectionBonus = (
   const oppBreakLevel = state.players[opponentId].breakArea.reduce(
     (sum, c) => sum + c.level, 0,
   )
-  const projectedBreak = oppBreakLevel + target.card.level
+  const projectedBreak = oppBreakLevel + getCookieEffectiveLevel(target)
   if (isLethal && projectedBreak >= 10) {
     bonus += 500
   } else if (isLethal && projectedBreak >= 8) {
@@ -729,7 +730,7 @@ export const responseRiskPenalty = (
       (c) => c.card.instanceId === command.attackerInstanceId,
     )
     // 攻擊者若已破壞則無後續反擊窗口；F1 只關心「活著但休息且高價值」的 attacker
-    if (postAttacker && postAttacker.rested && postAttacker.card.level >= 2) {
+    if (postAttacker && postAttacker.rested && getCookieEffectiveLevel(postAttacker) >= 2) {
       const oppUnrestedAtk = postState.players[opponentId].battleArea
         .filter((c) => !c.rested)
         .reduce((s, c) => s + c.card.attack, 0)
@@ -747,7 +748,7 @@ export const responseRiskPenalty = (
       ) {
         // 罰分幅度刻意保守：基礎 12、level>=3 再加 6、opp 手牌每多 1 張加 2（最多 +6）
         penalty -= 12
-        penalty -= (postAttacker.card.level - 2) * 6
+        penalty -= (getCookieEffectiveLevel(postAttacker) - 2) * 6
         penalty -= Math.min(oppHandCount - 3, 3) * 2
         r10ExposureRiskCount++
       }

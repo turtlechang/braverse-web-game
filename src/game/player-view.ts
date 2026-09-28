@@ -13,6 +13,7 @@ import type {
   SupportCard,
   TurnPhase,
 } from './types'
+import { getCookieEffectiveLevel } from './helpers'
 
 /**
  * HP 預設隱藏；卡文指定正面朝上的 HP 則公開牌面與位置。
@@ -77,7 +78,10 @@ const toSideView = (
     deckCount: player.deck.length,
     extraDeckCount: player.extraDeck?.length ?? 0,
     battleArea: player.battleArea.map((cookie) => ({
-      card: cookie.card,
+      // BS11-092 changes the effective LV for the current turn.  The public
+      // projection must expose that rules value without mutating the printed
+      // card stored in the authoritative state.
+      card: { ...cookie.card, level: getCookieEffectiveLevel(cookie) },
       hpCount: cookie.hpCards.length,
       ...(cookie.faceUpHpCardInstanceIds?.length ? {
         faceUpHpCards: cookie.hpCards.flatMap((card, position) =>

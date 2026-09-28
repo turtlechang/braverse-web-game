@@ -112,6 +112,7 @@ const EFFECT_VALUE: Partial<Record<CardEffect['kind'], number>> = {
   'prevent-knockout': 22,
   'disable-block': 14,
   'disable-flip': 14,
+  'prevent-opponent-on-play': 14,
 }
 
 const isUniversalLevel = (level: AiLevel | undefined): boolean =>

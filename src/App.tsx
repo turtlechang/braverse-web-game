@@ -125,7 +125,7 @@ function App() {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
-  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [specialPlayCandidateIds, setSpecialPlayCandidateIds] = useState<string[]>([])
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
     paymentIds: string[]
@@ -203,7 +203,7 @@ function App() {
     setBattleLogReviewReason(null)
     setSelectedHandCardId(null)
     setSpecialPlaySourceId(null)
-    setSpecialPlayCandidateId(null)
+    setSpecialPlayCandidateIds([])
     setStagePlacement(null)
     dialogs.closeResourcePopover()
     match.resetMatchState(nextConfig)
@@ -308,12 +308,27 @@ function App() {
           match.game.players[match.viewerPlayerId].battleArea,
         )
       : []
+  const specialPlayCandidateCount =
+    specialPlaySourceCard?.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1
+  const toggleSpecialPlayCandidate = (instanceId: string) => {
+    setSpecialPlayCandidateIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      return current.length < specialPlayCandidateCount
+        ? [...current, instanceId]
+        : current
+    })
+  }
   const handleSpecialPlayConfirm = () => {
     if (
       !specialPlaySourceCard ||
-      !specialPlayCandidateId ||
-      !specialPlayCandidates.some(
-        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      specialPlayCandidateIds.length !== specialPlayCandidateCount ||
+      specialPlayCandidateIds.some(
+        (candidateId) =>
+          !specialPlayCandidates.some(
+            (candidate) => candidate.card.instanceId === candidateId,
+          ),
       ) ||
       !canSpecialPlayCookie(
         match.game,
@@ -325,18 +340,17 @@ function App() {
     }
 
     const sourceInstanceId = specialPlaySourceCard.instanceId
-    const sacrificeInstanceId = specialPlayCandidateId
     match.dispatch(
       {
         kind: 'deploy-cookie',
         playerId: match.viewerPlayerId,
         instanceId: sourceInstanceId,
-        specialPlayCookieInstanceId: sacrificeInstanceId,
+        specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
       '特殊登場已支付，等待處理 On Play。',
       (nextGame) => {
         setSpecialPlaySourceId(null)
-        setSpecialPlayCandidateId(null)
+        setSpecialPlayCandidateIds([])
         if (nextGame.pendingRefresh) return
         pending.beginCookieSkill(
           nextGame,
@@ -561,7 +575,7 @@ function App() {
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
-      setSpecialPlayCandidateId(null)
+      setSpecialPlayCandidateIds([])
     },
     onPlayItem: (instanceId) => {
       if (!canPlayItem(match.game, match.activePlayer.id, instanceId)) {
@@ -809,6 +823,8 @@ function App() {
         selectedHpToTrashTargetIds={pending.selectedSkillHpToTrashTargetIds}
         onToggleHpToTrash={pending.toggleSkillHpToTrash}
         hpToTrashCost={pending.hpToTrashCost}
+        hpToTrashSharedTotal={pending.hpToTrashSharedTotal}
+        hpToTrashSelectionSatisfied={pending.hpToTrashSelectionSatisfied}
         showCancelSkill={showCancelSkill}
         energyPaymentValid={pending.skillEnergyPaymentValid}
         paymentCandidates={
@@ -938,11 +954,12 @@ function App() {
           <SpecialPlayModal
             sourceCard={specialPlaySourceCard}
             candidates={specialPlayCandidates}
-            selectedCandidateId={specialPlayCandidateId}
-            onSelectCandidate={setSpecialPlayCandidateId}
+            requiredCandidateCount={specialPlayCandidateCount}
+            selectedCandidateIds={specialPlayCandidateIds}
+            onToggleCandidate={toggleSpecialPlayCandidate}
             onCancel={() => {
               setSpecialPlaySourceId(null)
-              setSpecialPlayCandidateId(null)
+              setSpecialPlayCandidateIds([])
             }}
             onConfirm={handleSpecialPlayConfirm}
           />

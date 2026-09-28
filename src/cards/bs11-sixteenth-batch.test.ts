@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import bs11CandidateDocument from '../../data/candidates/official-dark-enchantress-war-bs11.en.json'
+import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardToGameCard,
@@ -93,10 +93,10 @@ const EXPECTED = {
 } as const
 
 describe('BS11-060 to BS11-063 candidate source contract', () => {
-  it('keeps the six requested records and preserves source data', () => {
-    expect(bs11CandidateDocument.source.candidateStatus).toBe('inventory')
+  it('keeps the five requested records and preserves source data', () => {
+    expect(bs11CandidateDocument.source.candidateStatus).toBe('promotion-ready')
     expect(bs11CandidateDocument.source.imagesDownloaded).toBe(false)
-    expect(records.filter((card) => cardNumbers.includes(card.cardNumber as typeof cardNumbers[number]))).toHaveLength(6)
+    expect(records.filter((card) => cardNumbers.includes(card.cardNumber as typeof cardNumbers[number]))).toHaveLength(cardNumbers.length)
 
     for (const cardNumber of cardNumbers) {
       const expected = EXPECTED[cardNumber]
