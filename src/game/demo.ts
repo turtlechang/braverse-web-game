@@ -7718,6 +7718,21 @@ export const createCardCheckDemoState = (
       ? createBs9030ExtraDeckDemoState(true, cardNumber)
       : createBs9010ExtraDeckDemoState(true, cardNumber)
   }
+  if (baseCardNumber === 'BS11-091') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs11090ExtraDeckDemoState(
+      true,
+      'BS11-090',
+      cardNumber.trim() as 'BS11-091' | 'BS11-091@1',
+    )
+  }
+  if (baseCardNumber === 'BS11-116') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs11116ExtraDeckDemoState(
+      true,
+      cardNumber.trim() as 'BS11-116' | 'BS11-116@1',
+    )
+  }
   // The strict ability surface has an explicit duplicate-card fixture for
   // BS8-011. It proves Once Per Turn is tracked per physical battle entry;
   // the ordinary skill card-check route also exposes two real copies below.
@@ -7781,7 +7796,7 @@ export const createCardCheckDemoState = (
     card.id === 'BS5-005' ? 2 : card.id === 'BS8-043' ? 3 : 1,
     4,
     0,
-    card.id === 'BS5-005' ? 'red' : payColor,
+    card.id === 'BS5-005' || card.id === 'BS11-092' ? 'red' : payColor,
   )
   const selfExtra1 = card.id === 'BS9-016'
     ? {
@@ -7904,9 +7919,14 @@ export const createCardCheckDemoState = (
           ? [testSupportCard(`${card.id}-support-cost-${supportToHandColor}`, supportCostColor)]
           : []
   // Hand filler cards for discard-hand style costs, beyond the tested card.
-  const handFillers = Array.from({ length: 4 }, (_, i) =>
-    testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
-  )
+  const handFillers = [
+    ...(card.id === 'BS11-092'
+      ? [getBs11CandidateCookie('BS11-111', 'bs11-092-special-play-hand')]
+      : []),
+    ...Array.from({ length: 4 }, (_, i) =>
+      testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
+    ),
+  ]
   // Some OnPlay effects require an additional Cookie in hand (for example,
   // BS3-038 places a level-2-or-higher Cookie from hand into the break area).
   // Keep that legal candidate in the browser card-check fixture without
@@ -10667,9 +10687,25 @@ export const createCardNegativeDemoState = (
   if (cardNumber.split('@')[0] === 'BS9-041' && !options.normalAttack) {
     return createBs9041AttackDemoState(cardNumber as Bs9CandidateCardNumber, false)
   }
+  const normalizedCardNumber = cardNumber.trim()
+  const baseCardNumber = normalizedCardNumber.split('@')[0]
+  if (baseCardNumber === 'BS11-091') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs11090ExtraDeckDemoState(
+      false,
+      'BS11-090',
+      normalizedCardNumber as 'BS11-091' | 'BS11-091@1',
+    )
+  }
+  if (baseCardNumber === 'BS11-116') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs11116ExtraDeckDemoState(
+      false,
+      normalizedCardNumber as 'BS11-116' | 'BS11-116@1',
+    )
+  }
   const state = createCardCheckDemoState(cardNumber, options)
   const player = state.players['player-one']
-  const baseCardNumber = cardNumber.split('@')[0]
   const baseNumberValue = Number(baseCardNumber.split('-')[1])
   if (
     options.normalAttack === 'blocked' &&

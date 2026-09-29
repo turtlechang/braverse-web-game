@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { canActivateCookieSkill } from './skills'
 import {
+  createCardCheckDemoState,
+  createCardNegativeDemoState,
   createBs11090ExtraDeckDemoState,
   parseTestStateConfig,
 } from './demo'
+import { canActivateCookieSkill } from './skills'
 
 describe('BS11-090 Browser fixture', () => {
+  it.each(['BS11-091', 'BS11-091@1'] as const)(
+    'keeps generic %s test-state in EXTRA Deck on positive and negative routes',
+    (cardNumber) => {
+      const positive = createCardCheckDemoState(cardNumber)
+      const negative = createCardNegativeDemoState(cardNumber)
+
+      expect(positive.players['player-one'].extraDeck?.map((card) => card.id)).toEqual(['BS11-091'])
+      expect(negative.players['player-one'].extraDeck?.map((card) => card.id)).toEqual(['BS11-091'])
+      expect(positive.players['player-one'].hand.some((card) => card.id === 'BS11-091')).toBe(false)
+      expect(negative.players['player-one'].hand.some((card) => card.id === 'BS11-091')).toBe(false)
+    },
+  )
+
   it('parses the positive and negative EXTRA routes', () => {
     expect(parseTestStateConfig(
       '?test-state=bs11-090-extra-deck%3Apositive',

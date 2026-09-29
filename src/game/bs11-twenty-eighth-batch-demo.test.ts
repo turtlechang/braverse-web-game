@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { canPlayExtraDeckCookie } from './actions'
 import {
+  createCardCheckDemoState,
+  createCardNegativeDemoState,
   createBs11116ExtraDeckDemoState,
   createBs11116MovementProtectionDemoState,
   parseTestStateConfig,
@@ -11,6 +13,22 @@ import {
 } from './effects/targeting'
 
 describe('BS11-116 localhost fixture', () => {
+  it.each(['BS11-116', 'BS11-116@1'] as const)(
+    'keeps generic %s test-state in EXTRA Deck on both positive and negative paths',
+    (cardNumber) => {
+      const positive = createCardCheckDemoState(cardNumber)
+      const negative = createCardNegativeDemoState(cardNumber)
+      const extraId = 'bs11-116-demo-extra'
+
+      expect(positive.players['player-one'].extraDeck?.map((card) => card.id)).toEqual(['BS11-116'])
+      expect(negative.players['player-one'].extraDeck?.map((card) => card.id)).toEqual(['BS11-116'])
+      expect(positive.players['player-one'].hand.some((card) => card.id === 'BS11-116')).toBe(false)
+      expect(negative.players['player-one'].hand.some((card) => card.id === 'BS11-116')).toBe(false)
+      expect(canPlayExtraDeckCookie(positive, 'player-one', extraId)).toBe(true)
+      expect(canPlayExtraDeckCookie(negative, 'player-one', extraId)).toBe(false)
+    },
+  )
+
   it('parses explicit positive and negative routes', () => {
     expect(parseTestStateConfig(
       '?test-state=bs11-116-extra-deck:positive',

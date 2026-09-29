@@ -76,6 +76,7 @@
 - 2026-09-28 BS11 實圖補驗前段快照：候選 159 筆、strict 159／159、攻擊 Then 27／27；159 張官方 WebP 已本機取得、逐張目視並在 Browser 159／159 解碼成功。既有候選 Browser 以本機原始圖重跑 344／344，041 再次啟動與 042 超選防護兩尺寸補驗通過；其他局部技能／攻擊／Then／FLIP 證據見進度報告。當時完整 Vitest **481 檔／5,700 項（542.50 秒）**、build、BS11 scoped lint、candidate validation、coverage analyzer、BS11 strict 通過；全域 lint 仍有 4 個既有無關錯誤。逐卡完整印刷分支與獨立預期矩陣未收齊，本機 CDN 直連受阻；候選維持 inventory／0 converted，正式牌組／formal battle／online、正式環境卡圖與 promote 未完成。詳見 README 與 BS11 進度。
 - 2026-09-15 BS9-035／041／050 手動場景修復：最終完整 Vitest 333 檔／4,866 項、相關回歸 5 檔／22 項、build、修改檔 lint 與 1280×720／1164×777 局部 Browser 正反操作通過；全域 lint 仍有四個無關既有錯誤。正式完整對局／線上／異圖未重驗，見 [場景報告](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
 
+- 2026-09-29 BS11 generic test-state 收尾：BS11-091／116（含 @1）正反路徑都將 EXTRA 保留在 EXTRA Deck；BS11-092 fixture 提供官方黑色 LV.2 BS11-111，Browser 實際以降為 LV.1 的 Licorice 支付 Special Play，完成 BS11-111 On Play。focused 19／19、完整 Vitest 481 檔／5,720 項（581.78 秒）、build、修改檔 scoped lint 通過；全域 lint 的 4 個錯誤仍在未追蹤臨時檔及無關診斷腳本。這是 localhost fixture 證據，不代表線上逐卡技能矩陣完成。
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
 - 需要選擇驗證層級時，查 [驗證分級](.agents/skills/braverse-workflow/references/verification-levels.md)；目前進度及歷史測試結果依 `README.md` 所連結的任務報告核對，不預讀完整歷史清單。
 - 本機單元測試、lint 與 build 屬任務內驗證；需要時直接執行，修正本次變更造成的失敗並重跑，不必逐次詢問。會改變遠端／正式狀態的命令仍依授權邊界。

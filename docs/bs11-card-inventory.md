@@ -1,7 +1,7 @@
 # BS11 The Dark Enchantress War 卡牌盤點（正式卡池）
 
 來源：[官方英文卡表](https://cookierunbraverse.com/data/json/cardList_en.json)。抓取時間：2026-09-22T01:13:07.997Z。
-由 `npm run cards:analyze:bs11-candidate` 產生；官方資料已位於正式卡池；原始文字與卡圖 URL 保留於 `data/cards/official-dark-enchantress-war-bs11.en.json`。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
+由 `npm run cards:analyze:bs11-candidate` 產生；官方資料已位於正式卡池；原始文字與卡圖 URL 保留於 `data/cards/official-dark-enchantress-war-bs11.en.json`。下表逐筆列出技能、攻擊與 FLIP 文字（含印刷變體）；實作轉接狀態見 [BS11 轉接覆蓋盤點](bs11-effect-coverage.md)。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
 
 ## 來源與數量
 

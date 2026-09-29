@@ -6,7 +6,9 @@
 
 ## 開發背景
 
-2026-09-29 **BS11 官方範圍與驗收狀態校正**：使用桌面瀏覽器核對官方 Asia 卡表的 The Dark Enchantress War 篩選，Duplicated Card 開啟為 150 張，關閉為 116 張，確認此 booster 範圍是 116 個基礎卡號＋34 個重複印刷。正式卡池的 159 筆 BS11 前綴資料跨三個官方產品：booster 150、Eternal Farewell promotion pack 8、Time for Deceit Promotion Pack 1；9 筆跨產品促銷印刷不是漏掉的 booster 卡，且保留於正式卡池。116／116 基礎卡均在官方清單。正式卡池驗證為 19 檔／1,923 筆／1,881 筆成功轉換；BS11 strict contract 159／159，主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27。局部 test-state Browser A/B 覆核 344／344，另有 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18、035 16／16。正式 BS11 牌組編輯器四尺寸、正式 AI 對局（第 15 回合結算）、雙瀏覽器 BS11 線上全對局（157 命令／16 次攻擊／兩端結果一致）均通過；這些整合流程不等於線上逐卡技能矩陣。完整 Vitest 481 檔／5,715 項（537.51 秒）、build、BS11 scoped lint 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連仍受本機網路限制。詳細分層見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
+BS11 逐筆效果清單可查 [官方卡牌盤點](docs/bs11-card-inventory.md)（159 筆含技能、攻擊、FLIP 及印刷變體）與 [效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)（116 張基礎卡逐卡實作狀態）。
+
+2026-09-29 **BS11 官方範圍與驗收狀態校正**：使用桌面瀏覽器核對官方 Asia 卡表的 The Dark Enchantress War 篩選，Duplicated Card 開啟為 150 張，關閉為 116 張，確認此 booster 範圍是 116 個基礎卡號＋34 個重複印刷。正式卡池的 159 筆 BS11 前綴資料跨三個官方產品：booster 150、Eternal Farewell promotion pack 8、Time for Deceit Promotion Pack 1；9 筆跨產品促銷印刷不是漏掉的 booster 卡，且保留於正式卡池。116／116 基礎卡均在官方清單。正式卡池驗證為 19 檔／1,923 筆／1,881 筆成功轉換；BS11 strict contract 159／159，主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27。局部 test-state Browser A/B 覆核 344／344，另有 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18、035 16／16。正式 BS11 牌組編輯器四尺寸、正式 AI 對局（第 15 回合結算）、雙瀏覽器 BS11 線上全對局（157 命令／16 次攻擊／兩端結果一致）均通過；這些整合流程不等於線上逐卡技能矩陣。完整 Vitest 481 檔／5,720 項（581.78 秒）、build、BS11 scoped lint 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連仍受本機網路限制。詳細分層見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 下列同日 BS11 摘要保留 promote 前的工作快照；目前卡池與驗收狀態以上段及 [BS11 進度](docs/bs11-progress-2026-09-22.md) 為準。
 
@@ -58,7 +60,7 @@
 
 2026-09-23 **BS11-084～087 localhost Browser 輕度驗收**：Luna 完成 inventory-only route／fixture 與 1 檔／6 項回歸；Astra 以本地 Playwright 對 084、085／085@1、086／086@1、087／087@1 在 1280×720／1164×777 各完成 positive／negative，共 28 條路徑。正向實際完成 Trap 紫色付款／目標、Refresh 後抽 1、085 來源自我送 trash、086 指定 Dark Cacao 從 trash 登場及 +2 HP、087 Ancient 條件隨機棄手；負向驗證 Refresh／支付／命名候選／Ancient 條件不成立。官方圖資受本機網路限制時保留命名 fallback，未宣稱 `naturalWidth` 載入；候選仍 `inventory`，正式牌組／formal battle／online／promote 仍待。
 
-> BS11 最新驗證狀態以本頁首段與「目前進度」為準：完整 Vitest **481 檔／5,715 項（537.51 秒）全綠**。下方長摘要保留歷史批次結果；060～063 原有 26 條 Browser 路徑，本輪 063 邊界新增 8 條、064～070 新增 66 條、071～073（base／@1）新增 16 條、071@2 另補 4 條、074／077／078 新增 12 條、079～083 新增 28 條，前段與通用攻擊另新增 86 條。正式 AI 牌組對局與 BS11 雙瀏覽器線上全對局已另完成；線上逐卡技能矩陣與正式 CDN 直連仍未驗。
+> BS11 最新驗證狀態以本頁首段與「目前進度」為準：完整 Vitest **481 檔／5,720 項（581.78 秒）全綠**。下方長摘要保留歷史批次結果；060～063 原有 26 條 Browser 路徑，本輪 063 邊界新增 8 條、064～070 新增 66 條、071～073（base／@1）新增 16 條、071@2 另補 4 條、074／077／078 新增 12 條、079～083 新增 28 條，前段與通用攻擊另新增 86 條。正式 AI 牌組對局與 BS11 雙瀏覽器線上全對局已另完成；線上逐卡技能矩陣與正式 CDN 直連仍未驗。
 
 2026-09-23 **BS11 候選與前三十七批轉接**：由 Luna 建立官方英文候選匯入／靜態盤點，159 筆／116 個基礎卡號／43 個變體維持 `inventory`；BS11-001～015、017～047、048～102、103～116 完成 adapter 與核心回歸。第二十三批 090～091 接入 White Lily Cookie 自我昏厥後忽略條件登場 Avatar of Destiny 並增加 3 HP，以及雙方 Break Area／手牌 EXTRA 條件；第二十四批 097～099 接入 Special Play 戰鬥區條件、1K／棄牌／目標限制與自我送 trash；第二十五批 111～113 接入共用黑色 LV.1 Special Play 代價、On Play 效果、LV.2+ On Play 封鎖與攻擊 Then；第二十六批 114 接入黑色手牌代價、手牌門檻抽牌與指定 Dark Enchantress Cookie 回收；第二十七批 115 接入兩張具 Special Play 的黑色 LV.2 Cookie 多選代價、代價後容量檢查、支援區門檻全體傷害與 2 黑色能量攻擊 Then；第二十八批 116 接入 Break Area LV.7、Dark Enchantress's Castle、同回合具 Special Play 的 LV.3 Dark Enchantress Awaken 條件、`awakenHpBonus: 2` 與被動 `sourceOnly` 移動防止；第二十九批 106／107／110 接入黑色陷阱費用條件、戰鬥區 Cookie 等級合計門檻 2 傷害，以及同一目標的攻擊下降 Then；第三十批 103／104／109 接入手牌至多 5 張時回收棄牌區 Special Play Cookie、昏厥後檢視 3 張選黑色卡，以及支付 1 黑色後檢視 5 張選 Special Play Cookie，並補上牌庫／棄牌區共同篩選與 UI／AI／decision path；第三十一批 088／105 接入攻擊 Then 的對手棄牌區 15 張與己方 Special Play Cookie 條件；第三十二批 094 接入黑色付款的 Blocker 攻擊轉向，沿用既有陷阱視窗與 source-only redirect 核心；第三十三批 108（base／@1）接入 Dark Enchantress's Castle 的黑色放置、休息自身、Special Play 回合條件與抽 1／棄 1，新增逐玩家回合旗標並接入既有補位／pending 流程；第三十四批 092 接入 Licorice Cookie 的 Activate／Once Per Turn 有效 LV.1 覆寫，保留印刷 LV.2 並在回合切換清除覆寫，且同步接入目標、戰鬥、技能代價、AI、PlayerView 與 UI；第三十五批 093／096／100／101 接入黑色 LV.1 FLIP 的棄牌代價、附著 Cookie +1 HP 與抽最多 1 張，並補上實際攻擊後 FLIP runtime；第三十六批 095／102 接入 095 的免費抽最多 1 張 BLACK FLIP 與 102 的 BLACK MIX vanilla Cookie；第三十七批 047 接入 Dumpling Censer 的 `{G}`＋支援回手啟動代價與本回合對手 Cookie On Play 的 `{N}`＋支援回手 replacement。官方卡圖與 runtime 正／負條件已由 Astra 輕度驗收，另以 inventory-only localhost test-state 實際驗證 047 的正向兩段付款／replacement 註冊與負向付款阻擋。本地／online Special Play modal 與 deploy command 已支援多張代價。候選仍 `inventory`，最新主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27、strict **159 verified／0 needs-review／0 blocked**；第二十九批 focused 2 檔／5 項、第三十批 focused 2 檔／6 項、第三十一批 focused 2 檔／7 項、第三十二批 focused 2 檔／4 項、第三十三批 focused 2 檔／4 項、第三十四批 focused 2 檔／4 項、第三十五批 focused 2 檔／14 項、第三十六批 focused 2 檔／4 項、第三十七批 focused 2 檔／4 項，另有第二十九批 Browser fixture 3 檔／10 項、第二十四批 3 檔／16 項、第三十一批 1 檔／5 項、第四十批 1 檔／20 項與第四十一批 1 檔／6 項 focused contract／runtime／fixture；第二十九～三十一批各有 12 條、第四十批另有 24 條、第四十一批另有 8 條 Browser 路徑，完整 Vitest 436 檔／5,510 項（478.54 秒）全數通過。092／103／104／109／088／088@1／094／105／108／111／111@1／112／112@1／113／113@1／114／114@1 已完成 shared UI／AI／decision path、effective-LV、attack-effect 或 On Play 的靜態接線，其中 106／107／110、103／104／109、088／088@1／105 與 111～114（含 @1）已完成本地 Browser A/B／continuation；第四十五批已補上 016／016@1 的跨 Cookie HP 核心、UI／fixture 與 Browser 證據；整體仍未完成正式牌組／online 與 promote。BS11-016／016@1 的跨 Cookie HP 核心與 candidate Browser 已完成；BS11-062 卡圖 404 仍保留，正式牌組／online／promote 仍待。詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
@@ -257,6 +259,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- **BS11 generic test-state 修正（2026-09-29）**：BS11-091／116 的通用 `card:` 路由將 EXTRA 正確放在 EXTRA Deck；092 場景加入官方黑色 LV.2 Special Play BS11-111。Browser 實際發動 Licorice 使其當前 LV 降至 1、以其支付登場 BS11-111，再棄 1 張手牌並對對手造成 1 傷害；focused 19／19、完整 Vitest 481 檔／5,720 項（581.78 秒）、修改檔 scoped lint、build 通過。這是 localhost fixture 證據，不代表線上逐卡技能矩陣完成。
 
 > 下方較早批次摘要保留各批完成當時的驗證快照；最新測試總數與 Browser 範圍以本節上方最新批次及 [BS11 進度報告](docs/bs11-progress-2026-09-22.md) 為準。
 
@@ -505,7 +509,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-- BS11 159 筆跨產品官方記錄已 promote；官方 booster 範圍已由瀏覽器確認為 150 筆、116 個基礎卡號，9 筆其他產品促銷印刷保留為系列變體。正式 AI 牌組對局與雙瀏覽器線上全對局已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，線上逐卡技能矩陣也未另行驗收。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
+- BS11 159 筆跨產品官方記錄已 promote；官方 booster 範圍已由瀏覽器確認為 150 筆、116 個基礎卡號，9 筆其他產品促銷印刷保留為系列變體。通用 test-state 已修正 BS11-091／116 EXTRA 分區及 BS11-092／111 Special Play 見證；逐筆效果文字與 116 張轉接狀態見 [BS11 卡牌盤點](docs/bs11-card-inventory.md)及[效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)。正式 AI 牌組對局與雙瀏覽器線上全對局已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，線上逐卡技能矩陣也未另行驗收。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 - BS9-035／041／050 已補可操作的場景見證；正式牌組完整對局與線上逐卡驗證仍須另行驗收。
 
@@ -692,7 +696,7 @@ BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-09-29 | 以桌面瀏覽器核對 BS11 官方 booster 150 筆（116 基礎卡號＋34 重複印刷）；釐清正式卡池 159 筆含 9 筆其他產品促銷印刷，更新 BS11 驗收範圍說明。 |
+| 2026-09-29 | 核對 BS11 官方 booster／跨產品範圍，修正 EXTRA generic test-state 分區及 BS11-092 Special Play 見證；整理 159 筆逐筆效果文字與 116 張轉接覆蓋連結。 |
 | 2026-09-28 | BS11 159 筆官方資料 promote 至正式卡池；19 檔／1,923 筆／1,881 converted，strict 159／159、攻擊 Then 27／27。完成局部 Browser A/B、牌組編輯器四尺寸、正式 AI 對局及雙瀏覽器 BS11 線上全對局（157 命令／16 次付款攻擊／雙端結果一致），完整 Vitest 481 檔／5,715 項（537.51 秒）、build；全域 lint 仍有 4 個無關既有錯誤。正式 CDN 直連及線上逐卡技能矩陣仍未驗。 |
 | 2026-09-27 | BS11-040～058 candidate Browser：040 加入後 simple FLIP 60／60；041～044 共 16／16、045～049 含 replacement 共 26／26、050～053 base／@1 兩尺寸共 40／40、054～058 新增 24／24（另重用 057 FLIP 4／4）。修正 048 Then 條件來源、050／053 self-trash／公開 trace 與 056／058 negative route precedence；完整 Vitest 441／5,565（522.12 秒）、build、scoped lint 通過。候選仍 inventory，圖資及正式／online 驗收仍有缺口。 |
 | 2026-09-23 | BS11-003／005／019／020／039 simple FLIP candidate Browser 補驗：Luna 擴充共用 route／fixture，Astra 以 1280×720／1164×777 對五張卡各完成 positive／negative，新增 20 條路徑，累計 simple FLIP 56／56；確認 003／020 抽最多 1 張、005／019／039 棄 1 張後附著 Cookie +1 HP、負向代價不足／不發動與官方圖 URL／alt 或命名 fallback／公開 trace。strict 159／0／0，主效果 93／23／0、能力 93／0、攻擊 Then 27／27；完整 Vitest 437／5,524（480.81 秒）、build、candidate validation、coverage analyzer、scoped lint 通過。候選仍 inventory，正式牌組／formal battle／online／promote 未完成。 |

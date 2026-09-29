@@ -119,7 +119,7 @@ export const createBs11InventoryMarkdown = ({
   return `# BS11 The Dark Enchantress War 卡牌盤點（${promoted ? '正式卡池' : '候選資料'}）
 
 來源：[官方英文卡表](${source.datasetUrl})。抓取時間：${source.fetchedAt}。
-由 \`npm run cards:analyze:bs11-candidate\` 產生；${promoted ? '官方資料已位於正式卡池' : `候選狀態：\`${source.candidateStatus ?? 'inventory'}\``}；原始文字與卡圖 URL 保留於 \`${input}\`。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
+由 \`npm run cards:analyze:bs11-candidate\` 產生；${promoted ? '官方資料已位於正式卡池' : `候選狀態：\`${source.candidateStatus ?? 'inventory'}\``}；原始文字與卡圖 URL 保留於 \`${input}\`。下表逐筆列出技能、攻擊與 FLIP 文字（含印刷變體）；實作轉接狀態見 [BS11 轉接覆蓋盤點](bs11-effect-coverage.md)。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
 
 ## 來源與數量
 
@@ -207,7 +207,7 @@ export const createBs11EffectCoverageMarkdown = (
 
   return `# BS11 轉接覆蓋盤點（${promoted ? '正式卡池' : '候選資料'}）
 
-由 \`npm run cards:analyze:bs11-candidate\` 產生。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；${promoted ? '正式卡池中的 BS11 記錄仍須分層回報其瀏覽器、牌組與 online 證據。' : '候選維持 `inventory`，不得由本報告推導 promote。'}
+由 \`npm run cards:analyze:bs11-candidate\` 產生。逐筆卡面技能、攻擊與 FLIP 原文（159 筆記錄含 43 個變體）見 [BS11 卡牌盤點](bs11-card-inventory.md)；下表列出 116 張基礎卡的主效果、額外能力與攻擊 Then 轉接狀態。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；${promoted ? '正式卡池中的 BS11 記錄仍須分層回報其瀏覽器、牌組與 online 證據。' : '候選維持 `inventory`，不得由本報告推導 promote。'}
 
 ## 摘要
 

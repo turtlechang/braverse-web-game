@@ -1,6 +1,6 @@
 # BS11 轉接覆蓋盤點（正式卡池）
 
-由 `npm run cards:analyze:bs11-candidate` 產生。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；正式卡池中的 BS11 記錄仍須分層回報其瀏覽器、牌組與 online 證據。
+由 `npm run cards:analyze:bs11-candidate` 產生。逐筆卡面技能、攻擊與 FLIP 原文（159 筆記錄含 43 個變體）見 [BS11 卡牌盤點](bs11-card-inventory.md)；下表列出 116 張基礎卡的主效果、額外能力與攻擊 Then 轉接狀態。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；正式卡池中的 BS11 記錄仍須分層回報其瀏覽器、牌組與 online 證據。
 
 ## 摘要
 
