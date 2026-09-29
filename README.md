@@ -6,7 +6,7 @@
 
 ## 開發背景
 
-2026-09-28 **BS11 全系列正式收尾與 promote**：官方英文資料 159 筆（116 個基礎卡號、43 個變體；155 張一般卡與 4 張 EXTRA）已完成轉接並 promote。正式卡池驗證為 19 檔／1,923 筆／1,881 筆成功轉換；BS11 strict contract 159／159，主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27。Browser 局部 A/B 覆核累計 344／344，另有 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18、035 16／16。正式 BS11 牌組編輯器四尺寸、正式 AI 對局（第 15 回合結算）、雙瀏覽器 BS11 線上全對局（157 命令／16 次攻擊／兩端結果一致）均通過；線上結果在離線前保留。完整 Vitest 481 檔／5,715 項（537.51 秒）、build、BS11 scoped lint 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連仍受本機網路限制；線上逐卡技能未另跑完整矩陣。詳細分層見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
+2026-09-29 **BS11 官方範圍與驗收狀態校正**：使用桌面瀏覽器核對官方 Asia 卡表的 The Dark Enchantress War 篩選，Duplicated Card 開啟為 150 張，關閉為 116 張，確認此 booster 範圍是 116 個基礎卡號＋34 個重複印刷。正式卡池的 159 筆 BS11 前綴資料跨三個官方產品：booster 150、Eternal Farewell promotion pack 8、Time for Deceit Promotion Pack 1；9 筆跨產品促銷印刷不是漏掉的 booster 卡，且保留於正式卡池。116／116 基礎卡均在官方清單。正式卡池驗證為 19 檔／1,923 筆／1,881 筆成功轉換；BS11 strict contract 159／159，主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27。局部 test-state Browser A/B 覆核 344／344，另有 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18、035 16／16。正式 BS11 牌組編輯器四尺寸、正式 AI 對局（第 15 回合結算）、雙瀏覽器 BS11 線上全對局（157 命令／16 次攻擊／兩端結果一致）均通過；這些整合流程不等於線上逐卡技能矩陣。完整 Vitest 481 檔／5,715 項（537.51 秒）、build、BS11 scoped lint 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連仍受本機網路限制。詳細分層見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 下列同日 BS11 摘要保留 promote 前的工作快照；目前卡池與驗收狀態以上段及 [BS11 進度](docs/bs11-progress-2026-09-22.md) 為準。
 
@@ -260,7 +260,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 > 下方較早批次摘要保留各批完成當時的驗證快照；最新測試總數與 Browser 範圍以本節上方最新批次及 [BS11 進度報告](docs/bs11-progress-2026-09-22.md) 為準。
 
-- **BS11 正式卡池狀態（2026-09-28）**：159 筆官方資料已 promote；正式卡池核對 19 檔／1,923 筆／1,881 converted，BS11 strict contract 159／159、攻擊 Then 27／27。候選 Browser 實圖路徑 344／344，另完成 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18 與 035 16／16；牌組編輯器四尺寸已能篩選、加入及移除 BS11 主牌與 EXTRA。正式 AI 牌組實戰第 15 回合完成結算；雙瀏覽器線上 BS11 牌組以 157 命令、16 次付款攻擊走到 Refresh 勝負，雙端結果一致且完成後離線仍保留結果。正式 CDN 直連與線上逐卡技能矩陣仍未驗。
+- **BS11 正式卡池狀態（2026-09-29）**：官方 booster 清單經桌面瀏覽器核對為 150 張（116 基礎＋34 重複印刷）；正式卡池 159 筆是 BS11 前綴跨產品資料，另含 Eternal Farewell promo 8 筆、Time for Deceit promo 1 筆，並非 9 張漏卡。正式卡池核對 19 檔／1,923 筆／1,881 converted，BS11 strict contract 159／159、攻擊 Then 27／27。局部 test-state Browser A/B 路徑 344／344，另完成 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18 與 035 16／16；牌組編輯器四尺寸已能篩選、加入及移除 BS11 主牌與 EXTRA。正式 AI 牌組實戰第 15 回合完成結算；雙瀏覽器線上 BS11 牌組以 157 命令、16 次付款攻擊走到 Refresh 勝負，雙端結果一致且完成後離線仍保留結果。strict 與整合對局通過不等於線上逐卡技能矩陣；正式 CDN 直連及該矩陣仍未驗。
 
 - **BS11-074～078 candidate-only Browser 與 071@2 補驗（2026-09-28）**：074／077／078 正反兩尺寸新增 12／12，075／076 前輪 FLIP 正反 8／8，071@2 官方異圖攻擊 Then／EXTRA 技能另補 4／4。077 被動依官方圖文字讓具名 Dark Choco 在 15 張己方棄牌區門檻造成 4 傷害，14 張時造成 3；078 追加 1P 與 HP 送棄只在 15 張門檻成立時出現。完整 Vitest 447 檔／5,601 項（518.51 秒）、build、修改檔 lint 通過。071@2 作為 HP 的無效果揭示待覆核。候選仍 `inventory`／0 converted，079 起 Browser、正式牌組／formal battle／online／promote 未完成。詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
@@ -505,7 +505,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-- BS11 已 promote，正式 AI 牌組對局與雙瀏覽器線上全對局均已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，並可另補線上逐卡技能矩陣。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
+- BS11 159 筆跨產品官方記錄已 promote；官方 booster 範圍已由瀏覽器確認為 150 筆、116 個基礎卡號，9 筆其他產品促銷印刷保留為系列變體。正式 AI 牌組對局與雙瀏覽器線上全對局已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，線上逐卡技能矩陣也未另行驗收。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 - BS9-035／041／050 已補可操作的場景見證；正式牌組完整對局與線上逐卡驗證仍須另行驗收。
 
@@ -692,6 +692,7 @@ BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-29 | 以桌面瀏覽器核對 BS11 官方 booster 150 筆（116 基礎卡號＋34 重複印刷）；釐清正式卡池 159 筆含 9 筆其他產品促銷印刷，更新 BS11 驗收範圍說明。 |
 | 2026-09-28 | BS11 159 筆官方資料 promote 至正式卡池；19 檔／1,923 筆／1,881 converted，strict 159／159、攻擊 Then 27／27。完成局部 Browser A/B、牌組編輯器四尺寸、正式 AI 對局及雙瀏覽器 BS11 線上全對局（157 命令／16 次付款攻擊／雙端結果一致），完整 Vitest 481 檔／5,715 項（537.51 秒）、build；全域 lint 仍有 4 個無關既有錯誤。正式 CDN 直連及線上逐卡技能矩陣仍未驗。 |
 | 2026-09-27 | BS11-040～058 candidate Browser：040 加入後 simple FLIP 60／60；041～044 共 16／16、045～049 含 replacement 共 26／26、050～053 base／@1 兩尺寸共 40／40、054～058 新增 24／24（另重用 057 FLIP 4／4）。修正 048 Then 條件來源、050／053 self-trash／公開 trace 與 056／058 negative route precedence；完整 Vitest 441／5,565（522.12 秒）、build、scoped lint 通過。候選仍 inventory，圖資及正式／online 驗收仍有缺口。 |
 | 2026-09-23 | BS11-003／005／019／020／039 simple FLIP candidate Browser 補驗：Luna 擴充共用 route／fixture，Astra 以 1280×720／1164×777 對五張卡各完成 positive／negative，新增 20 條路徑，累計 simple FLIP 56／56；確認 003／020 抽最多 1 張、005／019／039 棄 1 張後附著 Cookie +1 HP、負向代價不足／不發動與官方圖 URL／alt 或命名 fallback／公開 trace。strict 159／0／0，主效果 93／23／0、能力 93／0、攻擊 Then 27／27；完整 Vitest 437／5,524（480.81 秒）、build、candidate validation、coverage analyzer、scoped lint 通過。候選仍 inventory，正式牌組／formal battle／online／promote 未完成。 |

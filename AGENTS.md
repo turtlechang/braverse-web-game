@@ -68,7 +68,7 @@
 
 ### 測試
 
-- 2026-09-28 BS11 正式收尾與 promote：159 筆官方資料（116 基礎卡號／43 變體）已移入正式卡池；正式卡池 19 檔／1,923 筆／1,881 converted，BS11 strict 159／159、攻擊 Then 27／27。115／116 新補 Browser 42／42、035 16／16，正式牌組編輯器四尺寸通過；正式 AI 牌組對局第 15 回合結算，雙瀏覽器 BS11 線上全對局 157 命令／16 次攻擊、兩端結果一致並保留。完整 Vitest 481 檔／5,715 項（537.51 秒）、BS11 scoped lint 與 build 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連及線上逐卡技能矩陣仍未驗收，詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。同日期較早 BS11 條目為歷史快照。
+- 2026-09-29 BS11 官方範圍與驗收狀態校正：Computer Use 實際檢查官方 Asia 系列篩選，The Dark Enchantress War 顯示 150 張（116 基礎卡號＋34 重複印刷）；關閉 Duplicated Card 後為 116 張。正式 BS11 資料按 `BS11-` 卡號前綴匯入 159 筆、涵蓋多產品：booster 150、Eternal Farewell promo 8、Time for Deceit promo 1；因此 9 筆跨產品印刷不是 booster 缺卡，保留在正式卡池。116／116 基礎卡均在官方清單；strict 159／159 是跨產品靜態契約結果，不等同逐卡完整效果矩陣。正式卡池 19 檔／1,923 筆／1,881 converted，攻擊 Then 27／27；另有局部 Browser、正式牌組編輯器、AI 對局與 BS11 線上完整對局證據。官方 CDN 直連及線上逐卡技能矩陣仍未驗收，詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。同日期較早 BS11 條目為歷史快照。
 - 2026-09-28 BS11-088／@1 On Play 補驗：新增獨立候選 fixture 與 Browser 驅動，兩尺寸正反 8／8 通過，核對紫色 LV.1 戰鬥區代價、LV.2 以上紫色棄牌區回收、缺代價阻擋及來源卡圖；focused 7／7、build、scoped lint 及最新完整 Vitest **481 檔／5,702 項（531.02 秒）** 通過。原攻擊 Then 12／12 證據另計；115、116 仍有印刷分支待補，正式牌組／online／promote 未完成。
 
 - 2026-09-28 BS11 EXTRA／Awaken 補驗：090／091 含異圖 12／12、116／@1 8／8，以本輪 build 在 1280×720／1164×777 候選 Browser 重跑通過；另計於下述 344 案之外。仍是 `test-state` 局部證據，正式牌組／online 與直連 CDN 待驗。
