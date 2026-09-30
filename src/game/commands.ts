@@ -3258,7 +3258,7 @@ const applyPlayerActionCommand = (
         thenTargetIds: command.thenTargetIds,
       })
     case 'resolve-attack-effect':
-      return resolveAttackEffect(state, command.playerId, command.targetIds)
+      return resolveAttackEffect(state, command.playerId, command.targetIds, options.shuffle)
     case 'resolve-next-damage': {
       const battle = state.pendingBattle
       if (

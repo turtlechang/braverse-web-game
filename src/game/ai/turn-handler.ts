@@ -15,11 +15,11 @@ import {
   getActivatableSkillSources,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
-  getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
 } from '../skills'
 import { createSeededShuffle } from '../helpers'
+import { chooseAiHpToTrashIds } from './hp-cost-selection'
 import { simulateAbilityEffects } from './ability-effects'
 import type {
   CardEffect,
@@ -46,6 +46,7 @@ import {
 } from './deployment-policy'
 
 export interface AiTurnStrategy {
+  searchNow?: () => number
   currentLevel?: AiLevel
   /** Lv.5 fallback 仍保留「先下一張」節奏；Lv.4 對照組維持原策略。 */
   conservativeDeployment?: boolean
@@ -188,16 +189,8 @@ export const chooseAiStageCostIds = (
     return null
   }
 
-  const hpToTrashCandidateIds = cost.hpToTrash
-    ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .map((cookie) => cookie.card.instanceId)
-    : []
-  const hpToTrashTargetIds = cost.hpToTrash
-    ? universal?.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    : []
-  if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
+  const hpToTrashTargetIds = chooseAiHpToTrashIds(cost, player.battleArea, sourceInstanceId, universal)
+  if (!hpToTrashTargetIds) return null
 
   const trashBattleCookieCandidateIds = cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(

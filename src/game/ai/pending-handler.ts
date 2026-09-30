@@ -21,10 +21,10 @@ import {
   canActivateCookieSkill,
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
-  getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
 } from '../skills'
+import { chooseAiHpToTrashIds } from './hp-cost-selection'
 import { chooseAiEffectMode } from './choose-one-mode'
 import { createPlayerView } from '../player-view'
 import {
@@ -729,20 +729,12 @@ export const handleAiPendingDecision = (
       Boolean(paymentIds) &&
       supportToTrashIds.length >= supportToTrashAmount &&
       supportToHandIds.length >= supportToHandAmount
-    const hpToTrashCandidateIds = pendingDecision.cost.hpToTrash
-      ? getHpToTrashCostCandidates(
-          pendingDecision.cost,
-          state.players[playerId].battleArea,
-          pendingDecision.sourceInstanceId,
-        )
-          .map((cookie) => cookie.card.instanceId)
-      : []
-    const hpToTrashIds = universal.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    const canPayHpToTrash = pendingDecision.cost.hpToTrash
-      ? hpToTrashIds.length === 1
-      : true
+    const selectedHpToTrashIds = chooseAiHpToTrashIds(
+      pendingDecision.cost, state.players[playerId].battleArea,
+      pendingDecision.sourceInstanceId, universal,
+    )
+    const hpToTrashIds = selectedHpToTrashIds ?? []
+    const canPayHpToTrash = selectedHpToTrashIds !== null
     const hpToHandCandidateIds = pendingDecision.cost.hpToHand
       ? getHpToHandCostCandidates(
           pendingDecision.cost,

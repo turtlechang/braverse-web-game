@@ -1,0 +1,80 @@
+{
+  "id": "bs11-black-seed",
+  "name": "黑色｜魔女特殊登場",
+  "color": "black",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-092",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-094",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-095",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-098",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-100",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-102",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-103",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-104",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-106",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-108",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-109",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-111",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-112",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-113",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-115",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-116",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-091",
+      "count": 2
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}

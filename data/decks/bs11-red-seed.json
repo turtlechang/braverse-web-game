@@ -1,0 +1,76 @@
+{
+  "id": "bs11-red-seed",
+  "name": "紅色｜樂隊烈焰",
+  "color": "red",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-001",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-002",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-003",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-005",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-006",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-007",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-008",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-009",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-010",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-011",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-014",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-016",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-017",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-018",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-090",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-091",
+      "count": 4
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}

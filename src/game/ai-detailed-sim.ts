@@ -500,6 +500,7 @@ export const simulateAiMatchDetailed = (
       seed: options.seed,
       memory: strategyMemories[controller],
       experienceProfile,
+      searchNow: options.searchNow,
     })
     recordDecisionProfile(
       decisionProfileByPlayer,

@@ -65,6 +65,7 @@ import {
 } from './skills'
 import { canAttack } from './turn'
 import type {
+  Shuffle,
   AbilityCost,
   CardEffect,
   CookieInBattle,
@@ -951,6 +952,9 @@ const validateTrapTargets = (
   }
   for (const [effectIndex, effect] of effects.entries()) {
     if (!isTargetEffect(effect)) continue
+    // Inactive conditional Then effects are skipped by playTrap as well.
+    // Their selection validation must not attempt to execute them first.
+    if (!isEffectConditionMet(state, context, effect)) continue
     if (effect.kind === 'damage-all' && effect.sequential) {
       const ids = effectTargets?.[effectIndex] ?? targetIds
       const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
@@ -2693,7 +2697,14 @@ const finishDamageSequence = (state: GameState): GameState => {
         const keepBattle = sequence.resumeBattleAfterAbility === true
         const resumedState: GameState = {
           ...completedState,
-          pendingBattle: keepBattle ? completedBattle : null,
+          pendingBattle: keepBattle
+            ? {
+                ...completedBattle,
+                ...(pendingAbility.battleContinuation === 'attack-effect'
+                  ? { stage: 'attack-effect' as const }
+                  : {}),
+              }
+            : null,
           pendingAbilityEffect: nextPendingAbility,
         }
 
@@ -2805,6 +2816,7 @@ export const resolveAttackEffect = (
   state: GameState,
   playerId: PlayerId,
   selectedTargetIds: string[],
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   const battle = requirePendingBattle(state)
   if (
@@ -2975,6 +2987,7 @@ export const resolveAttackEffect = (
       effectContext,
       effect,
       uniqueIds,
+      shuffle,
     )
     if (resolved.status !== 'playing') {
       return { ...resolved, pendingBattle: null }
@@ -3024,7 +3037,7 @@ export const resolveAttackEffect = (
     // 開啟抽牌；玩家選 0 或沒有合法目標時，整段後續效果略過。
     if (uniqueIds.length === 0) return advanceAttackEffect(state, battle)
 
-    const resolved = executeCardEffect(state, effectContext, effect, uniqueIds)
+    const resolved = executeCardEffect(state, effectContext, effect, uniqueIds, shuffle)
     if (resolved.status !== 'playing') {
       return { ...resolved, pendingBattle: null }
     }
@@ -3054,6 +3067,7 @@ export const resolveAttackEffect = (
       effectContext,
       effect,
       selectedTargetIds,
+      shuffle,
     )
     if (nextState.status !== 'playing') {
       return { ...nextState, pendingBattle: null }
@@ -3082,6 +3096,7 @@ export const resolveAttackEffect = (
     effectContext,
     effect,
     selectedTargetIds,
+    shuffle,
   )
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }

@@ -1,0 +1,76 @@
+{
+  "id": "bs11-yellow-seed",
+  "name": "黃色｜魔法休息區",
+  "color": "yellow",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-019",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-020",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-021",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-023",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-024",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-025",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-026",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-028",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-029",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-030",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-032",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-034",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-035",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-036",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-090",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-091",
+      "count": 4
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}

@@ -1,0 +1,76 @@
+{
+  "id": "bs11-purple-seed",
+  "name": "紫色｜暗可可循環",
+  "color": "purple",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-072",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-074",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-075",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-076",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-077",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-078",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-079",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-082",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-083",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-084",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-086",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-087",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-088",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-089",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-090",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-091",
+      "count": 4
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}

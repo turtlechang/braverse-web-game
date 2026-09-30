@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+2026-09-30 建立 BS10／BS11 可重跑自動驗證入口：正式來源 323 筆／239 基礎卡，來源片段盤點、獨立官方原圖預期、雙尺寸正常 UI 點擊、精確公開狀態及指令順序分開記錄；指定 FLIP 小批次 30／30 通過。六色 BS11 種子牌組生成 1024 個不同合法構築，10 輪不重賽 Swiss 5120 場與 TOP 8 淘汰賽 7 場全部完成；黑色「魔女特殊登場 #062」奪冠。六色／八強牌表與圓餅圖見 [賽事報告](docs/bs11-1024-tournament-2026-09-30.md)，測試範圍、已修正缺陷及完整效果矩陣缺口見 [本輪方法與證據](docs/bs10-bs11-automatic-validation-2026-09-30.md)。
+
 BS11 逐筆效果清單可查 [官方卡牌盤點](docs/bs11-card-inventory.md)（159 筆含技能、攻擊、FLIP 及印刷變體）與 [效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)（116 張基礎卡逐卡實作狀態）。
 
 CI 的 Vitest 使用單 worker，避免 seeded AI simulation 在共享 runner 的併行負載下超過單項逾時；應用入口 gzip 預算為 180 KiB，AI 策略與 Browser Swiss 對戰模組採延遲載入。
@@ -262,6 +264,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+- **BS10／BS11 自動驗證與六色賽事（2026-09-30）**：新增來源／程式／原圖／獨立預期指紋與執行前後新鮮度檢查；指定 FLIP 雙尺寸 30／30、Wind Archer 的 FLIP 插入續接正反 8／8 通過。最新完整 Vitest **489 檔／5,765 項（828.92 秒）**、全域 lint、build、AI Browser 通過。1024 副不同構築的 **5120 場 Swiss＋7 場淘汰賽 PASS**，0 重賽／0 未完成，獨立積分、對手分、配對與來源指紋稽核通過；冠軍黑色 #062，TOP 8／四強皆黑色。BS10／BS11 靜態 strict 為 164／164、159／159；610 個來源片段尚未接入新的獨立預期格式，正式／線上逐卡與 CDN 直連仍分開列缺口。賽事與牌表入口見 [本輪報告](docs/bs10-bs11-automatic-validation-2026-09-30.md)。
+
 - **PR #123 CI 修復（2026-09-30）**：AI 策略改為 AI 回合／模擬請求時載入，Browser Swiss 頁面改為直接引用 tournament 模組，使主入口 gzip 回到 144.24 KiB（180 KiB 預算內）。CI Vitest 改用單 worker；完整測試 481 檔／5,720 項、AI Browser 6 項、typecheck、lint、build 與 bundle gate 均在本機通過；GitHub Actions 會以 runner 環境重跑相同 gates。
 
 - **BS11 generic test-state 修正（2026-09-29）**：BS11-091／116 的通用 `card:` 路由將 EXTRA 正確放在 EXTRA Deck；092 場景加入官方黑色 LV.2 Special Play BS11-111。Browser 實際發動 Licorice 使其當前 LV 降至 1、以其支付登場 BS11-111，再棄 1 張手牌並對對手造成 1 傷害；focused 19／19、完整 Vitest 481 檔／5,720 項（581.78 秒）、修改檔 scoped lint、build 通過。這是 localhost fixture 證據，不代表線上逐卡技能矩陣完成。
@@ -513,6 +517,8 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
+- 按 3～5 張共用機制批次補齊 BS10／BS11 的獨立原圖預期、條件／付款／目標／FLIP／印刷分支，再補正式與線上逐卡矩陣；保留失敗、程式與資料變更造成的過期證據，避免由舊腳本引用或大量完成對局推定全卡正確。六色模擬結果另以更多固定種子及真人對戰覆核。
+
 - CI 持續保留單 worker Vitest 與 180 KiB 主入口 gzip 門檻；新增 AI 或 tournament 功能時，確認依賴仍只在需要的流程載入。
 
 - BS11 159 筆跨產品官方記錄已 promote；官方 booster 範圍已由瀏覽器確認為 150 筆、116 個基礎卡號，9 筆其他產品促銷印刷保留為系列變體。通用 test-state 已修正 BS11-091／116 EXTRA 分區及 BS11-092／111 Special Play 見證；逐筆效果文字與 116 張轉接狀態見 [BS11 卡牌盤點](docs/bs11-card-inventory.md)及[效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)。正式 AI 牌組對局與雙瀏覽器線上全對局已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，線上逐卡技能矩陣也未另行驗收。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
@@ -702,6 +708,7 @@ BS10 已完成候選匯入、轉接盤點、逐卡 Browser、正式 promote 與�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-09-30 | 建立 BS10／BS11 指紋與獨立預期自動驗證；六色 BS11 1024 副賽事 5127 場完成，黑色 #062 奪冠，附牌表與比例圖；修正付款、效果續接、種子亂數與重賽配對。 |
 | 2026-09-29 | 核對 BS11 官方 booster／跨產品範圍，修正 EXTRA generic test-state 分區及 BS11-092 Special Play 見證；整理 159 筆逐筆效果文字與 116 張轉接覆蓋連結。 |
 | 2026-09-28 | BS11 159 筆官方資料 promote 至正式卡池；19 檔／1,923 筆／1,881 converted，strict 159／159、攻擊 Then 27／27。完成局部 Browser A/B、牌組編輯器四尺寸、正式 AI 對局及雙瀏覽器 BS11 線上全對局（157 命令／16 次付款攻擊／雙端結果一致），完整 Vitest 481 檔／5,715 項（537.51 秒）、build；全域 lint 仍有 4 個無關既有錯誤。正式 CDN 直連及線上逐卡技能矩陣仍未驗。 |
 | 2026-09-27 | BS11-040～058 candidate Browser：040 加入後 simple FLIP 60／60；041～044 共 16／16、045～049 含 replacement 共 26／26、050～053 base／@1 兩尺寸共 40／40、054～058 新增 24／24（另重用 057 FLIP 4／4）。修正 048 Then 條件來源、050／053 self-trash／公開 trace 與 056／058 negative route precedence；完整 Vitest 441／5,565（522.12 秒）、build、scoped lint 通過。候選仍 inventory，圖資及正式／online 驗收仍有缺口。 |

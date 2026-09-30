@@ -6,6 +6,7 @@ import {
 } from '../effects'
 import type { CardEffect, EffectContext, GameState } from '../types'
 import type { PendingSelectionStrategy } from './strategy/pending-selection'
+import { isChooseOneModePlayable } from '../effects/choose-one'
 
 export interface SharedEffectTargetSelection {
   valid: boolean
@@ -26,6 +27,10 @@ export const chooseSharedEffectTargets = (
   effects: readonly CardEffect[],
   universal?: PendingSelectionStrategy,
 ): SharedEffectTargetSelection => {
+  if (effects.some((effect) =>
+    effect.kind === 'choose-one' &&
+    !effect.modes.some((mode) => isChooseOneModePlayable(state, context, mode.effects)),
+  )) return { valid: false }
   const selectableEffects = effects.filter(
     (effect) =>
       isEffectConditionMet(state, context, effect) &&

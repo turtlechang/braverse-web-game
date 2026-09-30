@@ -515,6 +515,8 @@ export type Bs11FourteenthBatchCardNumber =
 export type Bs11FourteenthBatchScenario =
   | 'positive'
   | 'negative'
+  | 'flip-positive'
+  | 'flip-negative'
   | 'activate-positive'
   | 'activate-negative'
 
@@ -582,6 +584,8 @@ const isBs11FourteenthBatchScenario = (
 ): value is Bs11FourteenthBatchScenario =>
   value === 'positive' ||
   value === 'negative' ||
+  value === 'flip-positive' ||
+  value === 'flip-negative' ||
   value === 'activate-positive' ||
   value === 'activate-negative'
 
@@ -1276,14 +1280,16 @@ export const parseTestStateConfig = (
     refreshed: bs11089AttackMatch[2] === 'positive',
   }
   const bs11FourteenthBatchMatch = testState?.match(
-    /^bs11-fourteenth-batch:(BS11-(?:050|051|052|053)(?:@1)?):(positive|negative|activate-positive|activate-negative)$/,
+    /^bs11-fourteenth-batch:(BS11-(?:050|051|052|053)(?:@1)?):(positive|negative|flip-positive|flip-negative|activate-positive|activate-negative)$/,
   )
   if (bs11FourteenthBatchMatch) {
     const [, cardNumber, scenario] = bs11FourteenthBatchMatch
     if (
       isBs11FourteenthBatchCardNumber(cardNumber) &&
       isBs11FourteenthBatchScenario(scenario) &&
-      (scenario === 'positive' || scenario === 'negative' || cardNumber.startsWith('BS11-053'))
+      (scenario === 'positive' || scenario === 'negative' ||
+        (scenario.startsWith('activate-') && cardNumber.startsWith('BS11-053')) ||
+        (scenario.startsWith('flip-') && cardNumber.startsWith('BS11-052')))
     ) {
       return { kind: 'bs11-fourteenth-batch', cardNumber, scenario }
     }
@@ -17404,7 +17410,9 @@ export const createBs11FourteenthBatchDemoState = (
   }
 
   const baseCardNumber = cardNumber.split('@')[0]
-  const isPositive = scenario === 'positive' || scenario === 'activate-positive'
+  const isFlipScenario = scenario.startsWith('flip-')
+  if (isFlipScenario && baseCardNumber !== 'BS11-052') throw new Error('FLIP continuation fixture requires BS11-052')
+  const isPositive = scenario === 'positive' || scenario === 'activate-positive' || scenario === 'flip-positive'
   const prefix = `bs11-${baseCardNumber.toLowerCase()}-fourteenth`
   const base = createCardCheckDemoState(cardNumber, { normalAttack: 'payable' })
   const player = base.players['player-one']
@@ -17476,6 +17484,8 @@ export const createBs11FourteenthBatchDemoState = (
         ? 4
         : 5
   const target = opponentCookie('attack-target', targetHp)
+  // Normal attack removes two plain HP; the optional Then reveals this real FLIP.
+  if (isFlipScenario) target.hpCards[2] = cardCheckOfficialCard('BS11-095', `${prefix}-then-flip`)
   const hand = baseCardNumber === 'BS11-052'
     ? isPositive
       ? [

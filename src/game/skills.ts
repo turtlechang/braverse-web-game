@@ -1549,7 +1549,8 @@ export const canActivateCookieSkill = (
     }
     if (
       effect.kind === 'break-source-to-battle' &&
-      player.battleArea.length >= 2
+      (player.battleArea.length >= 2 ||
+        !player.breakArea.some((card) => card.instanceId === sourceInstanceId))
     ) {
       return false
     }

@@ -430,7 +430,6 @@ const selectTrapEffectTargets = (
   universal: PendingSelectionStrategy,
 ): string[] => {
   if (
-    effect.kind === 'support-to-trash' ||
     effect.kind === 'support-to-hand' ||
     effect.kind === 'hand-to-support'
   ) {
@@ -440,6 +439,7 @@ const selectTrapEffectTargets = (
   }
 
   const cardSelection =
+    effect.kind === 'support-to-trash' ||
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
     effect.kind === 'trash-to-battle' ||
@@ -492,6 +492,7 @@ export const handleAiPendingBattle = (
   playerId: PlayerId,
   level?: AiLevel,
   knowledgeState?: KnowledgeState,
+  shuffleSeed?: number,
 ): AiDecision | null => {
   if (
     !state.pendingBattle ||
@@ -566,7 +567,7 @@ export const handleAiPendingBattle = (
         kind: 'resolve-attack-effect',
         playerId,
         targetIds,
-      }),
+      }, { shuffleSeed }),
       action: 'resolve-attack-effect',
       description:
         targetIds.length > 0
@@ -1110,6 +1111,7 @@ export const handleAiPendingBattle = (
       // set-active，造成「不在合法範圍」或「Invalid support target」。
       const hasIndependentTrapSelection = trapCard.trap.effects.some(
         (effect) =>
+          effect.kind === 'support-to-trash' ||
           effect.kind === 'break-to-battle' ||
           effect.kind === 'support-to-battle' ||
           effect.kind === 'trash-to-battle' ||
