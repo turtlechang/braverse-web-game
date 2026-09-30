@@ -8,6 +8,8 @@
 
 BS11 逐筆效果清單可查 [官方卡牌盤點](docs/bs11-card-inventory.md)（159 筆含技能、攻擊、FLIP 及印刷變體）與 [效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)（116 張基礎卡逐卡實作狀態）。
 
+CI 的 Vitest 使用單 worker，避免 seeded AI simulation 在共享 runner 的併行負載下超過單項逾時；應用入口 gzip 預算為 180 KiB，AI 策略與 Browser Swiss 對戰模組採延遲載入。
+
 2026-09-29 **BS11 官方範圍與驗收狀態校正**：使用桌面瀏覽器核對官方 Asia 卡表的 The Dark Enchantress War 篩選，Duplicated Card 開啟為 150 張，關閉為 116 張，確認此 booster 範圍是 116 個基礎卡號＋34 個重複印刷。正式卡池的 159 筆 BS11 前綴資料跨三個官方產品：booster 150、Eternal Farewell promotion pack 8、Time for Deceit Promotion Pack 1；9 筆跨產品促銷印刷不是漏掉的 booster 卡，且保留於正式卡池。116／116 基礎卡均在官方清單。正式卡池驗證為 19 檔／1,923 筆／1,881 筆成功轉換；BS11 strict contract 159／159，主效果 93 supported／23 no-effect-text／0 unsupported、能力 93 converted／0 pending、攻擊 Then 27／27。局部 test-state Browser A/B 覆核 344／344，另有 EXTRA／Awaken 20／20、088 On Play 8／8、115 24／24、116 18／18、035 16／16。正式 BS11 牌組編輯器四尺寸、正式 AI 對局（第 15 回合結算）、雙瀏覽器 BS11 線上全對局（157 命令／16 次攻擊／兩端結果一致）均通過；這些整合流程不等於線上逐卡技能矩陣。完整 Vitest 481 檔／5,720 項（581.78 秒）、build、BS11 scoped lint 通過；全域 lint 有 4 個既有無關錯誤。正式環境官方 CDN 直連仍受本機網路限制。詳細分層見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 下列同日 BS11 摘要保留 promote 前的工作快照；目前卡池與驗收狀態以上段及 [BS11 進度](docs/bs11-progress-2026-09-22.md) 為準。
@@ -260,6 +262,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+- **PR #123 CI 修復（2026-09-30）**：AI 策略改為 AI 回合／模擬請求時載入，Browser Swiss 頁面改為直接引用 tournament 模組，使主入口 gzip 回到 144.24 KiB（180 KiB 預算內）。CI Vitest 改用單 worker；完整測試 481 檔／5,720 項、AI Browser 6 項、typecheck、lint、build 與 bundle gate 均在本機通過；GitHub Actions 會以 runner 環境重跑相同 gates。
+
 - **BS11 generic test-state 修正（2026-09-29）**：BS11-091／116 的通用 `card:` 路由將 EXTRA 正確放在 EXTRA Deck；092 場景加入官方黑色 LV.2 Special Play BS11-111。Browser 實際發動 Licorice 使其當前 LV 降至 1、以其支付登場 BS11-111，再棄 1 張手牌並對對手造成 1 傷害；focused 19／19、完整 Vitest 481 檔／5,720 項（581.78 秒）、修改檔 scoped lint、build 通過。這是 localhost fixture 證據，不代表線上逐卡技能矩陣完成。
 
 > 下方較早批次摘要保留各批完成當時的驗證快照；最新測試總數與 Browser 範圍以本節上方最新批次及 [BS11 進度報告](docs/bs11-progress-2026-09-22.md) 為準。
@@ -508,6 +512,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+- CI 持續保留單 worker Vitest 與 180 KiB 主入口 gzip 門檻；新增 AI 或 tournament 功能時，確認依賴仍只在需要的流程載入。
 
 - BS11 159 筆跨產品官方記錄已 promote；官方 booster 範圍已由瀏覽器確認為 150 筆、116 個基礎卡號，9 筆其他產品促銷印刷保留為系列變體。通用 test-state 已修正 BS11-091／116 EXTRA 分區及 BS11-092／111 Special Play 見證；逐筆效果文字與 116 張轉接狀態見 [BS11 卡牌盤點](docs/bs11-card-inventory.md)及[效果轉接覆蓋盤點](docs/bs11-effect-coverage.md)。正式 AI 牌組對局與雙瀏覽器線上全對局已走到結算；仍待在可連線環境確認官方 CDN 卡圖載入，線上逐卡技能矩陣也未另行驗收。各驗收層級與限制見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
