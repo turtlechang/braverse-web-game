@@ -4,7 +4,7 @@ import {
   type SwissRosterDeck,
   type SwissTournamentProgress,
   type SwissTournamentReport,
-} from '../game'
+} from '../game/tournament'
 
 const ROSTER_STORAGE_KEY = 'braverse-swiss-roster-v1'
 

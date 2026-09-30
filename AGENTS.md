@@ -68,13 +68,31 @@
 
 ### 測試
 
+- 2026-09-29 BS11 官方範圍與驗收狀態校正：Computer Use 實際檢查官方 Asia 系列篩選，The Dark Enchantress War 顯示 150 張（116 基礎卡號＋34 重複印刷）；關閉 Duplicated Card 後為 116 張。正式 BS11 資料按 `BS11-` 卡號前綴匯入 159 筆、涵蓋多產品：booster 150、Eternal Farewell promo 8、Time for Deceit promo 1；因此 9 筆跨產品印刷不是 booster 缺卡，保留在正式卡池。116／116 基礎卡均在官方清單；strict 159／159 是跨產品靜態契約結果，不等同逐卡完整效果矩陣。正式卡池 19 檔／1,923 筆／1,881 converted，攻擊 Then 27／27；另有局部 Browser、正式牌組編輯器、AI 對局與 BS11 線上完整對局證據。官方 CDN 直連及線上逐卡技能矩陣仍未驗收，詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。同日期較早 BS11 條目為歷史快照。
+- 2026-09-28 BS11-088／@1 On Play 補驗：新增獨立候選 fixture 與 Browser 驅動，兩尺寸正反 8／8 通過，核對紫色 LV.1 戰鬥區代價、LV.2 以上紫色棄牌區回收、缺代價阻擋及來源卡圖；focused 7／7、build、scoped lint 及最新完整 Vitest **481 檔／5,702 項（531.02 秒）** 通過。原攻擊 Then 12／12 證據另計；115、116 仍有印刷分支待補，正式牌組／online／promote 未完成。
+
+- 2026-09-28 BS11 EXTRA／Awaken 補驗：090／091 含異圖 12／12、116／@1 8／8，以本輪 build 在 1280×720／1164×777 候選 Browser 重跑通過；另計於下述 344 案之外。仍是 `test-state` 局部證據，正式牌組／online 與直連 CDN 待驗。
+
+- 2026-09-28 BS11 實圖補驗前段快照：候選 159 筆、strict 159／159、攻擊 Then 27／27；159 張官方 WebP 已本機取得、逐張目視並在 Browser 159／159 解碼成功。既有候選 Browser 以本機原始圖重跑 344／344，041 再次啟動與 042 超選防護兩尺寸補驗通過；其他局部技能／攻擊／Then／FLIP 證據見進度報告。當時完整 Vitest **481 檔／5,700 項（542.50 秒）**、build、BS11 scoped lint、candidate validation、coverage analyzer、BS11 strict 通過；全域 lint 仍有 4 個既有無關錯誤。逐卡完整印刷分支與獨立預期矩陣未收齊，本機 CDN 直連受阻；候選維持 inventory／0 converted，正式牌組／formal battle／online、正式環境卡圖與 promote 未完成。詳見 README 與 BS11 進度。
+- 2026-09-15 BS9-035／041／050 手動場景修復：最終完整 Vitest 333 檔／4,866 項、相關回歸 5 檔／22 項、build、修改檔 lint 與 1280×720／1164×777 局部 Browser 正反操作通過；全域 lint 仍有四個無關既有錯誤。正式完整對局／線上／異圖未重驗，見 [場景報告](docs/bs9-progress-2026-09-10.md#2026-09-15-手動驗證場景修復)。
+
+- 2026-09-29 BS11 generic test-state 收尾：BS11-091／116（含 @1）正反路徑都將 EXTRA 保留在 EXTRA Deck；BS11-092 fixture 提供官方黑色 LV.2 BS11-111，Browser 實際以降為 LV.1 的 Licorice 支付 Special Play，完成 BS11-111 On Play。focused 19／19、完整 Vitest 481 檔／5,720 項（581.78 秒）、build、修改檔 scoped lint 通過；全域 lint 的 4 個錯誤仍在未追蹤臨時檔及無關診斷腳本。這是 localhost fixture 證據，不代表線上逐卡技能矩陣完成。
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
 - 需要選擇驗證層級時，查 [驗證分級](.agents/skills/braverse-workflow/references/verification-levels.md)；目前進度及歷史測試結果依 `README.md` 所連結的任務報告核對，不預讀完整歷史清單。
 - 本機單元測試、lint 與 build 屬任務內驗證；需要時直接執行，修正本次變更造成的失敗並重跑，不必逐次詢問。會改變遠端／正式狀態的命令仍依授權邊界。
 - BS9-010 的最新測試與雙尺寸 Browser 範圍見 [修復驗證](docs/bs9-progress-2026-09-10.md#bs9-010-修復驗證)；舊 HP 張數測試不涵蓋匿名選牌、正面朝上與最下方的語義。
+- 2026-09-21 BS10第二批006～010：候選Browser雙尺寸累計52案通過（006／007核心12、008 FLIP 16、009 HP代價12、006／007／010普通攻擊12）；009含source／ally昏厥與抽牌續接，006含faint後攻擊追加傷害，010含真紅綠Mix付款。最新完整Vitest336檔／4,904項歷史結果為4,902通過、2失敗（讀到009草稿departure斷言）；修正並補測後以受影響回歸、build、scoped lint及Browser分開核對，未宣稱目前全套全綠。全域lint仍4個既有錯誤；候選仍inventory／converted=0，正式／線上未完成。見 [本批報告](docs/bs10-progress-2026-09-14.md)。
+- 2026-09-21 BS10第三～第九批靜態轉接：011／012／025、079／084／093／095、102／108／118、058／059／061／069／074、021／045／049／070／094／107／109／110／119／122，以及 15 張攻擊 Then 新增 exact adapter 與規則／單元回歸；候選主效果目前65 supported／58 no-effect-text／0 unsupported，能力65 converted／0 pending，攻擊 Then 18／18，strict 127 verified／31 needs-review／6 blocked。這些仍是靜態／單元證據，尚未增加新增卡片的 Browser 通過案數，候選維持inventory／converted=0，正式／線上未完成。見 [本批報告](docs/bs10-progress-2026-09-14.md)。
+- 2026-09-21 BS10 Luna整合後：分析器已納入非 Cookie skill text、EXTRA Then、062／063／067／068 共用機制，以及 042／045／116／048／098／123 的合約與 EXTRA 證據；最新主效果98 supported／25 no-effect-text／0 unsupported，能力98 converted／0 pending，攻擊 Then 21／23，strict 158 verified／0 needs-review／6 blocked；受影響5檔／357項、完整Vitest 348檔／5,006項、build、scoped lint通過。Browser仍只有前十張88案；024／073資料缺口仍 blocked，候選維持inventory／converted=0。
+- 2026-09-21 BS10-024／073 Awaken 收尾與語意修正：兩張 EXTRA（含異圖）補上 `awakenHpBonus: 1`、同名本回合 Awaken、BS10-024 HP≤3 禁攻擊／2R 攻擊 Then，以及 BS10-073 1G／對手支援至少6張 On Play／支援 Cookie 回手攻擊 Then；並修正 BS10-015／035／038／042 的代價、補 HP、Then 目標與條件語意。最新靜態契約164 verified／0 needs-review／0 blocked，主效果98／25／0、能力98／0、攻擊 Then23／23；受影響3檔／77項、完整 Vitest 348檔／5,008項（475.29秒）、build、修改檔 scoped lint通過。Browser仍僅88案，候選維持inventory／converted=0，正式／online未完成；兩張圖檔與 API 候選文案差異需在 promote 前再核對。
+- 2026-09-22 BS10正式收尾：候選164筆已 promote 至正式卡池，正式卡池核對1,764筆／1,726 converted，BS10 strict contract 164／164 verified。非EXTRA逐卡 Browser 正向135／135、負向151／151（1280×720、1164×777），BS10-008獨立FLIP矩陣16／16，12張EXTRA兩尺寸各正負12／12；正式牌組四尺寸、online modal兩尺寸、好友房完整108命令／14次付款攻擊與斷線後結果保留均通過。完整Vitest 348檔／5,022項、build通過；全域lint仍4個既有錯誤。BS10-008重跑有1個起始lane受官方圖片網路限制，詳見進度報告。
+- BS10首批001～005及異圖的最新驗證見 [首批結果](docs/bs10-progress-2026-09-14.md#首批最終結果)：候選Browser 36案通過；完整Vitest基線330檔／4,839項通過，最後普通攻擊fixture補丁另補5檔／47項回歸與完整36案Browser通過。全套數字屬補丁前結果，不能宣稱正式或線上BS10完成。
+- 對戰動畫的指令事件、遮罩、速度／略過及最新驗證範圍見 [全流程動畫](docs/ui-ux-redesign-plan.md#2026-09-14-全流程動畫)；2026-09-14 提交前完整 Vitest 327 檔／4,802 項、AI Browser 與三尺寸正式大廳操作通過，全域 lint 的無關未追蹤檔錯誤仍另列。完整好友房至勝負與逐卡攻擊／FLIP 矩陣須分開報告。
 - AI 完整對戰驗證仍以固定種子範圍確認可正常結束，不得用特製種子或硬編碼起始卡掩蓋規則或 AI 問題。
 - 完整 `npm run test:ai:browser` 目前有既有 1920×1080 版面基線限制；修正版面前不得宣稱完整 Playwright 全綠。
+- 2026-09-15 攻擊付款預覽遮擋修復：相關 2 檔／15 項、build、修改檔 lint 通過；正式好友房 87 次操作／9 次攻擊含付款 hover 防遮擋檢查通過，完整 Vitest 未重跑。見 [修復驗證](docs/ui-ux-redesign-plan.md#2026-09-15-攻擊付款預覽遮擋修復)。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
+- 2026-09-15 UI／UX 精修：完整 Vitest 332 檔／4,859 項，最後受影響回歸 3 檔／33 項通過；好友房有攻擊完整對局 99 次操作／11 次攻擊，另有 Refresh 決勝路徑。全域 lint 仍為 4 個無關既有錯誤，逐卡 FLIP 矩陣與真機觸控未驗收；最後樣式補修與三尺寸驗證依 [本批報告](docs/ui-ux-redesign-plan.md#2026-09-15-正式流程盤點與深藍介面精修) 為準。
 - demo／`test-state` 僅能作為局部驗證；回報時必須明確標示「僅 demo，尚未證明正式狀態已修改」。只有真實牌組資料、正式狀態流程與瀏覽器操作均通過後，才能宣稱正式功能完成。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
 

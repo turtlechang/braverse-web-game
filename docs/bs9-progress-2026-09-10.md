@@ -1,5 +1,41 @@
 # BS9 匯入、逐卡驗收與正式 promotion
 
+## 2026-09-15 手動驗證場景修復
+
+本次依使用者回報修復 BS9-035／041／050 的 `card:` 入口，使用正式卡池資料與原有命令；範圍是 localhost 場景及本機控制，不修改卡文、規則核心或線上協定。基線 HEAD `88dd51e`，保留既有未提交修改，未 commit／push。
+
+### 操作與預期
+
+| 入口 | 操作 | 可見結果 |
+|---|---|---|
+| `?test-state=card:BS9-035` | 棄一張手牌發動 Truth Seeker，支付三黃攻擊 Melon Bun Cookie；場景自動切至防守方，棄牌發動 BS9-042 FLIP；攻擊後效果選略過 | 對手原本 4 HP，三點攻擊後剩 1 HP，牌庫仍 24。重載後不發動技能，重複相同攻擊／FLIP，則剩 2 HP、牌庫 23，證明補 HP 被阻擋 |
+| `?test-state=card:BS9-041` | 場景已透過正式命令完成 BS9-030 登場與攻擊；支付攻擊後代價棄置 BS9-041，發動 FLIP、抽一張，再選對手 | 保持自己的回合；手牌增加一張、己方牌庫 47→46，Peperoncino Cookie HP 3→2 |
+| `?test-state=card-negative:BS9-041` | 自然對手回合的 HP FLIP，發動並抽一張 | 可以抽牌；Hero Cookie 維持 2 HP、Pomegranate Cookie 維持 4 HP，沒有自己回合追加傷害 |
+| `?test-state=card:BS9-050` | 初始技能因支援送棄未達兩張而停用；支付三綠攻擊，攻擊後送兩張支援進棄牌區、選全部對手；再啟動技能選一張橫置支援 | 對手 HP 6／6→3／6→2／5；支援 5→3、棄牌增加兩張；重置一張支援後，剩一張活躍／兩張橫置，技能受每回合一次限制 |
+
+BS9-050 對手以六張 HP 開始，避免第一名對手昏厥插入補位流程，讓本次攻擊後→技能的驗證保持連續。原有 `card-skill:` 技能專用與 `card-attack:` 攻擊後專用場景仍保留。
+
+BS9-035 原本沒有對手補 HP 的實卡見證；新增 BS9-042 HP 與對手棄牌代價。Browser 首次重現發現，切到防守方後 `resolve-battle` 捷徑會略過 FLIP，因此僅此場景改為逐點 `resolve-next-damage`，並停用 AI 接管、依決策所有者切換本機視角。新增 hook 回歸確認 FLIP 保持待處理，不能自行被略過。
+
+### 卡圖與 Browser 證據
+
+2026-09-15 主代理實際目視官方英文基本卡圖：
+
+- [BS9-035 Truthless Recluse](https://cookierunbraverse.com/data/en_storage/y7uAfYrr60xYW2yBa4o3Bw.webp)：Activate、Once Per Turn、棄一張手牌；本回合對手不能經卡牌效果增加 HP。
+- [BS9-030 Shadow Milk Cookie](https://cookierunbraverse.com/data/en_storage/CdFZqA3cNoc6OCoe6_vcdQ.webp)：三黃攻擊後棄一張有 FLIP 的 Cookie，發動該卡 FLIP。
+- [BS9-041 Pistachio Cookie](https://cookierunbraverse.com/data/en_storage/b1y1WA1RkEa3Ou8OqPuUcA.webp)：抽至多一張，Then 若自己回合發動，選至多一名對手造成一點傷害。
+- [BS9-050 Wind Archer Cookie](https://cookierunbraverse.com/data/en_storage/RwYYQACXldPCLvuIOWhK5g.webp)：Activate／Once Per Turn，當回合至少兩張支援送棄後重置至多一張支援；三綠攻擊後送棄兩張支援，全體對手一點傷害。
+
+Codex in-app Browser 於 `localhost:5173` 以 1280×720 與 1164×777 實際點擊。兩尺寸均完成三張卡正向、035 不發動比較、041 非自己回合、050 技能條件未達；平板另確認只選一張支援時「下一步」停用。卡圖、付款與結算畫面已在本次工具輸出目視確認；瀏覽器 error／warn 記錄為空。沒有用直接注入狀態或 force-click 代替操作。
+
+### 驗證邊界
+
+最終完整 `npm.cmd test -- --maxWorkers=1`：333 檔／4,866 項全部通過，exit 0，598.91 秒。執行環境 Windows PowerShell、專案根目錄；完整測試開始後僅更新文件，因此測試對最終程式碼仍有效。`git diff --check` 通過，stage 為空。
+
+相關 `bs9-035`／`bs9-041`／`bs9-050`／`bs9-manual-witness`／`useMatchController-auto-skip-trap` 共 5 檔／22 項通過（exit 0）；build 與修改檔 ESLint 通過。全域 lint exit 1：既有 `.tmp-bs9-030-ui9.mjs` parsing error、`.tmp-probe-deploy.ts` 一項 unused、`scripts/diagnose-lv5-conservatism.ts` 兩項 unused，共四項，未更動。
+
+僅 demo／test-state 局部驗證，尚未證明正式狀態已修改；正式牌組完整對局、線上同步、所有異圖及完整逐卡矩陣未在本次重驗。
+
 ## 範圍與目前結果
 
 使用者授權：官方資料與卡圖確認、候選匯入、新機制／轉接缺口盤點、逐卡支付／目標／Browser 正負驗收、正式 promotion，以及端到端完成後 commit；不含 push。
@@ -27,7 +63,18 @@
 - 修正 holdout 的比較方法：同一 fixed pairing 以 baseline／訓練 profile 做兩種策略座位交叉對戰，依實際 `winnerPlayerId` 歸屬勝場；不再將單邊 replay 的 winner-change 當成訓練勝場。
 - benchmark 與正式 Swiss 使用 500 步硬上限；本次固定 seed 的 1,024 副／10 輪 Swiss 完成 **5,084／5,120**，36 場卡住／超限標記 FAIL，訓練 profile 僅收錄 5,084 場完成決勝資料。Top cut 仍產生冠軍藍色 `#005`、四強 `#005`／`#183`／`#040`／`#201`。
 - 32 副×2 輪縮小 holdout 共 64 場雙向交叉對戰，訓練策略 35 勝、baseline 29 勝、0 失敗；完整 256 副×8 輪版本可由同一腳本參數重跑，本次報告的實測規模已在產物中標明。
-- CI 對應修正：BS9-071～118 長稽核測試設 30 秒 suite timeout；AI Browser 改驗證現行「暫停資訊／繼續對戰」流程，不再等待已移除的 20 場 AI 按鈕。完整 Vitest **323 檔／4,782 項**、build、AI Browser Smoke 與修改檔 scoped lint 通過；本機全域 lint 的 4 個錯誤仍只來自既有未追蹤暫存／診斷檔。
+- CI 對應修正：BS9-071～118 長稽核測試設 30 秒 suite timeout；AI Browser 改驗證現行「暫停資訊／繼續對戰」流程，不再等待已移除的 20 場 AI 按鈕。當時完整 Vitest **323 檔／4,782 項**、build、AI Browser Smoke 與修改檔 scoped lint 通過；本輪加入 BS9-031／032 回歸後，完整 Vitest 更新為 **324 檔／4,787 項**。本機全域 lint 的 4 個錯誤仍只來自既有未追蹤暫存／診斷檔。
+
+## 2026-09-14 BS9-031／032 FLIP 攻擊後入口修正
+
+本輪依官方 BS9-031「Alchemist Cookie」、BS9-032「Yoga Cookie」與 BS9-030「Shadow Milk Cookie」卡圖／卡文，修正 card-check 正向驗證入口。BS9-030 的攻擊後文字明確要求從手牌棄置 1 張具有 FLIP 的 Cookie，再發動該張卡的 FLIP；因此 BS9-031／032 的正向路徑應由這條 detached FLIP 續接，而不是只用 P-018 effect-damage 模擬 HP 翻牌。
+
+- **共同 fixture**：以正式 BS9-030 完成 3 張黃色 FLIP 的 EXTRA 登場代價、On Play、3 張黃色能量攻擊與攻擊後 optional cost；指定的 BS9-031 或 BS9-032 留在手牌，支付後成為唯一的 detached-FLIP 候選。FLIP 面板只列 BS9-030 為己方目標，避免把不相關 Cookie 混入驗證。
+- **BS9-031**：實際棄置 Alchemist 後發動 FLIP，唯一 LV.3 目標為 Shadow Milk，HP 由 6→7；再棄 1 張手牌並完成抽 0／1，外層 BS9-030 攻擊後續接正確收尾。基本版、`@1`、`@2` 共用同一入口。
+- **BS9-032**：實際棄置 Yoga 後先完成抽 0／1，Then 只列己方橫置的 Shadow Milk，並可選 0；正向選擇後攻擊後續接回。負向仍保留 P-018 HP FLIP 的 opponent-turn 路徑，專門驗證 `activated-during-your-turn` 不建立 Then。
+- **規則回歸**：`src/game/bs9-031.test.ts` 6 項、`src/game/bs9-032.test.ts` 5 項通過；BS9-031 的共同 fixture 也檢查 BS9-032，確認兩張 BS9 FLIP 都必須從 BS9-030 攻擊後效果進入正向驗證。完整 Vitest 為 **324 檔／4,787 項**，exit 0。
+- **Chrome host 操作**：兩張卡均實際走過 BS9-030 攻擊後支付、指定卡棄置、FLIP 目標與 Then／抽牌 UI，並完成結算；這是 localhost `test-state` 的功能證據。
+- **終端 Browser**：`test:bs9-031:browser` 嘗試 12 lanes、`test:bs9-032:browser` 嘗試 4 lanes；正向 lanes 已到達正確的 BS9-030／Alchemist 或 Yoga FLIP UI，負向 lanes 保留既有 P-018 HP FLIP 邊界，之後均在官方圖片 `naturalWidth > 0` 載入閘門受環境網路限制。未放寬 gate，也未宣稱 Browser 全綠；正式牌組／雙瀏覽器線上逐卡驗收仍另列。
 
 ## 2026-09-13 BS9 正式牌池端到端收尾
 
@@ -197,9 +244,9 @@ Browser 報告：[report.json](../test-results/bs9-017/report.json)；[桌機固
 本輪核對官方 BS9-031「Alchemist Cookie」實卡與英文卡文：黃色、LV.1、HP 2、FLIP；普通攻擊支付 1 點黃色能量、造成 1 點傷害。FLIP 卡文為「棄置 1 張手牌；己方 1 張 LV.3 Cookie 增加 1 張 HP；Then，若在自己的回合發動，從牌庫抽最多 1 張牌」。本輪同時核對基本版、`@1` 異圖與 `@2` 促銷記錄，三者沿用相同 runtime 效果邊界。
 
 - 獨立預期：發動 FLIP 前必須恰好棄置 1 張手牌；第一段只能選己方 1 張 LV.3 Cookie，成功後先增加 HP；Then 的條件是 FLIP 實際發動者正在自己的回合，才開啟抽 0～1 張的選擇，對手回合只結算 +1 HP、不建立抽牌決策。抽出的牌不由來源 Alchemist Cookie 充當支付，FLIP 來源與棄牌均進入公開棄牌區。
-- 規則／adapter 回歸：`src/game/bs9-031.test.ts` 1 檔／5 項通過，涵蓋基本版與兩張異圖轉接、LV.3 目標唯一性、棄牌／錯誤目標阻擋、自己回合抽 0／1 的 Then 續接，以及對手回合只保留 HP 增益的負向路徑。
-- own-turn 實際觸發：正向 fixture 以正式 P-018「Mustard Cookie」登場 On Play 的效果傷害移除己方 HP，讓真實 BS9-031 從己方 HP 翻開；這條路徑明確由自己的回合啟動 FLIP。原先以對手攻擊翻牌的畫面只能驗證負向時間窗，已改成此 effect-damage route。
-- Browser：`npm run test:bs9-031:browser` 在 1907×863 與 1164×777 共 **12／12** 通過（基本版、`@1`、`@2`）。正向先完成 Mustard Cookie On Play、選唯一的 LV.3 Mustard Cookie、棄 1 張手牌，再分別選抽 1（1907×863）與抽 0（1164×777）；負向切到對手回合，仍增加 1 HP 但沒有 `resolve-draw-up-to`。每筆路徑均通過該筆 exact image gate、無頁面錯誤，報告與截圖寫入忽略的 `output/playwright/bs9-031-browser.json`。
+- 規則／adapter 回歸：`src/game/bs9-031.test.ts` 1 檔／6 項通過，涵蓋基本版與兩張異圖轉接、BS9-030 攻擊後 detached FLIP 入口、LV.3 目標唯一性、棄牌／錯誤目標阻擋、自己回合抽 0／1 的 Then 續接，以及對手回合只保留 HP 增益的負向路徑。
+- own-turn 實際觸發：正向 fixture 改由正式 BS9-030「Shadow Milk Cookie」完成 EXTRA／On Play／攻擊與攻擊後代價，從手牌棄置真實 BS9-031 後發動 FLIP；P-018 effect-damage 路徑保留給 opponent-turn 負向時間窗。
+- Browser：`npm.cmd run test:bs9-031:browser` 嘗試 1907×863 與 1164×777 共 12 lanes（基本版、`@1`、`@2`）；各路徑已到達對應 FLIP UI，但在官方圖片 `naturalWidth > 0` gate 受環境網路限制，未宣稱 12／12 通過。Chrome host 的正向互動已完成，報告與截圖寫入忽略的 `output/playwright/bs9-031-browser.json`。
 - 候選資料仍維持 inventory 隔離，未載入正式 registry、Standard／Open 卡池，也未 promote；以上是 localhost `test-state` 的局部規則／UI 證據，不等同正式牌組、多人或線上逐卡驗收。
 
 ## 第六批 BS9-041（候選局部通過）
@@ -216,9 +263,9 @@ Browser 報告：[report.json](../test-results/bs9-017/report.json)；[桌機固
 本輪核對官方 BS9-032「Yoga Cookie」實卡與英文卡文：黃色、LV.1、HP 1、FLIP；普通攻擊支付 2 點黃色能量、造成 1 點傷害。FLIP 原文為「Draw up to 1 card from your deck. Then, if activated during your turn, set up to 1 of your Cookies active.」。
 
 - 獨立預期：FLIP 沒有能量或棄牌代價，先由持有者選擇抽 0／1 張；Then 只在 FLIP 持有者自己的回合成立。成立時只能選己方至多 1 張橫置 Cookie 設為 active，也可選 0；已 active 的己方 Cookie 與對手 Cookie 都不是合法目標。對手回合翻開時仍可抽 0／1，但不得建立 set-active 決策。
-- 轉接與規則回歸：`official-effect-adapter.ts` 新增 BS9-032 exact `draw-up-to`＋`activated-during-your-turn` `set-cookie-active`；`src/game/bs9-032.test.ts` 5 項覆蓋轉接、抽 0／1、唯一己方橫置目標、選 0、對手回合略過 Then、來源種類與原效果傷害序列續接。連同 BS9-041 及本機／線上 pending hook 共 4 檔／38 項通過。
+- 轉接與規則回歸：`official-effect-adapter.ts` 新增 BS9-032 exact `draw-up-to`＋`activated-during-your-turn` `set-cookie-active`；`src/game/bs9-032.test.ts` 5 項覆蓋轉接、BS9-030 攻擊後 detached FLIP、抽 0／1、唯一己方橫置目標、選 0、對手回合略過 Then 與來源種類。連同 BS9-031 的共同 fixture 回歸共 2 檔／11 項通過。
 - 續接修正：FLIP 的 `draw-up-to` 現在保留 `sourceKind: 'flip'`，讓本機與線上 UI 在外層 `effectDamageSequence` 尚未結束時仍顯示 Yoga 的 Then 面板；本機／線上自動傷害控制器會等待該 pending 決策。`commands.ts` 也改為只在效果「新建立」傷害序列時進入該序列，避免把既有外層序列誤認成 Yoga 新效果而重複開啟 pending queue。
-- Browser：`npm.cmd run test:bs9-032:browser` 在 1907×863、1164×777 共 4／4 通過。桌機正向抽 1 並把橫置 Pomegranate Cookie 設為 active；平板正向抽 0 並選 0，Pomegranate 保持橫置；兩個 opponent-turn 負向均完成抽牌選擇但沒有 Then 面板。四條路徑均通過 BS9-032 exact image request／render／load gate；正向公開 trace 依序包含 `resolve-flip`、`resolve-draw-up-to`、`resolve-ability-effect`，無頁面錯誤或殘留對話框。這仍不取代本輪已完成的實卡目視與正式牌組／線上驗收。
+- Browser：`npm.cmd run test:bs9-032:browser` 嘗試 1907×863、1164×777 共 4 lanes；正向已走過 BS9-030 攻擊後支付、Yoga FLIP、Shadow Milk 目標與抽牌／選 0 UI，負向仍完成 HP FLIP 抽牌但沒有 Then 面板。終端路徑在官方圖片 `naturalWidth > 0` gate 受環境網路限制，未宣稱 4／4 通過；Chrome host 的正向互動已完成。
 - strict contract audit：只稽核 BS9-032 的 `cards:audit:contracts --strict` 為 verified 1／needs-review 0／blocked 0；全候選 analyzer 為 33 supported、44 no-effect、41 待轉接，strict 86 verified／99 needs-review。候選仍未進正式 registry、Standard／Open 卡池或 promote；正式牌組與真實雙瀏覽器線上 pending 流程仍待。
 
 ## 第八批 BS9-033（候選局部通過）
@@ -390,8 +437,8 @@ BS9-001～118 的 185 筆正式記錄均已有卡圖／契約與 Browser 正／�
 - BS9-010～023：`src/game/bs9-010-023.test.ts` 8 項通過；`npm run test:bs9-010-023:browser` **80／80**（1907×863／1164×777）通過，exit 0。代表性 Chrome localhost BS9-011 正／負路徑亦完成；每筆候選均通過 exact image gate，此批仍是 candidate／test-state 局部證據。
 - BS9-024～029：`src/game/bs9-024-029.test.ts`、ledger／BattleResponseModals 回歸通過；BS9-025／`@1` 專用 Browser 正／負雙尺寸 **8／8** 通過，實際完成目標改選、棄 1 張手牌、FLIP 結算及無手牌 disabled／略過。批次腳本的 56 lanes 歷史結果保留，但本次終端重跑受官方影像網路限制，未宣稱 56／56 全綠。
 - BS9-030：`src/game/bs9-024-029.test.ts` 8 項通過；`npm run test:bs9-030:browser` **8／8**（1907×863／1164×777）通過，exit 0。正向完成真實 EXTRA 代價、On Play、3 黃色能量攻擊、攻擊後 detached BS9-026 FLIP 與抽牌 0；負向以 2 張合格 FLIP Cookie 阻擋 EXTRA 入口。此批仍是 candidate／test-state 局部證據。
-- BS9-031：`src/game/bs9-031.test.ts` 1 檔／5 項通過；`npm run test:bs9-031:browser` **12／12**（1907×863／1164×777）通過，exit 0。正向由 P-018 On Play effect-damage 觸發真實 HP FLIP，完成 LV.3 目標、棄 1、抽 0／1；負向切到對手回合後只保留 +1 HP，沒有 Then 抽牌 trace。此批仍是 candidate／test-state 局部證據。
-- BS9-032：`src/game/bs9-032.test.ts` 與 BS9-041／本機及線上 pending hook 共 4 檔／38 項通過；`npm.cmd run test:bs9-032:browser` 4／4（1907×863／1164×777）通過，exit 0。正向覆蓋抽 1＋設 active 與抽 0＋選 0；負向在 opponent turn 仍抽牌但略過 Then。strict 單卡為 verified 1／needs-review 0／blocked 0。此批仍是 candidate／test-state 局部證據。
+- BS9-031：`src/game/bs9-031.test.ts` 6 項通過；正向由 BS9-030 Shadow Milk Cookie 的 EXTRA／On Play／三黃攻擊／攻擊後代價發動真實 Alchemist detached FLIP，完成唯一 LV.3 目標、6→7 HP、棄 1 與抽 0／1；負向仍以 P-018 HP FLIP 驗證 opponent-turn 不建立 Then。`test:bs9-031:browser` 嘗試 12 lanes，均在官方圖片 `naturalWidth > 0` gate 受環境限制，未宣稱通過；Chrome host 正向 UI 已走完。此為 `test-state` 局部證據。
+- BS9-032：`src/game/bs9-032.test.ts` 5 項通過；正向由 BS9-030 攻擊後代價發動真實 Yoga detached FLIP，完成抽 0／1、只列己方 Shadow Milk 且可選 0 設 active；負向仍以 P-018 HP FLIP 驗證 opponent-turn 略過 Then。`test:bs9-032:browser` 嘗試 4 lanes，均在官方圖片 `naturalWidth > 0` gate 受環境限制，未宣稱通過；Chrome host 正向 UI 已走完。此為 `test-state` 局部證據。
 - BS9-033：`src/game/bs9-033.test.ts` 1 檔／5 項通過，與本地 pending hook 合計 2 檔／46 項通過；`npm.cmd run test:bs9-033:browser` **8／8**（1907×863／1164×777）通過，exit 0。正向覆蓋 1 黃色＋唯一 FLIP 代價、支付後 7→6 門檻、抽 0／2與 Once Per Turn；負向在相同手牌張數與能量下以非 FLIP 卡封鎖。strict 基本版／`@1` 為 verified 2／needs-review 0／blocked 0。此批仍是 candidate／test-state 局部證據。
 - BS9-034～038：五個專卡測試檔共 16 項，連同 ledger／EffectPanel 為 7 檔／86 項通過；`npm.cmd run test:bs9-034-038:browser` **36／36**（1907×863／1164×777）通過，exit 0。涵蓋 HP 完整重排、HP 增加封鎖、Activate／攻擊 Then 代價、回合結束可支付分支、黃色 FLIP 回收與同名固定全體增 HP；七筆 strict verified 7／needs-review 0／blocked 0。此批仍是 candidate／test-state 局部證據。
 - BS9-039～040、042～045：`npm.cmd run test -- --maxWorkers=1 src/game/bs9-040.test.ts src/game/bs9-042-045.test.ts src/components/effects/EffectPanel.test.tsx src/hooks/useOnlinePendingEffect.test.tsx` 為 3 檔／74 項通過；兩個雙尺寸 Browser driver 分別為 8／8、16／16，exit 0。042～045 的候選 strict 各為 verified 1／needs-review 0／blocked 0；此批仍是 candidate／test-state 局部證據。

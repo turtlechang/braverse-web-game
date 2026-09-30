@@ -714,6 +714,95 @@ describe('EXTRA Deck direct-play rule path', () => {
     )
   })
 
+  it('allows a same-turn same-name Awaken target when no source area is printed', () => {
+    const state = createBattleState()
+    const awakened: ExtraDeckCard = {
+      ...awakenedGoldenCheese(),
+      instanceId: 'same-name-any-source',
+      awakenRequirement: { targetName: 'Golden Cheese Cookie' },
+    }
+    const base = {
+      ...state.players['player-two'].battleArea[0],
+      card: {
+        ...state.players['player-two'].battleArea[0].card,
+        name: 'Golden Cheese Cookie',
+      },
+      enteredFrom: 'hand' as const,
+      enteredTurn: state.turnNumber,
+    }
+    const prepared = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          extraDeck: [awakened],
+          battleArea: [base],
+        },
+      },
+    }
+
+    expect(canPlayExtraDeckCookie(prepared, 'player-two', awakened.instanceId)).toBe(true)
+  })
+
+  it('enforces an Awaken target remaining-HP threshold when the card prints one', () => {
+    const state = createBattleState()
+    const awakened: ExtraDeckCard = {
+      ...awakenedGoldenCheese(),
+      instanceId: 'same-name-hp-threshold',
+      awakenRequirement: {
+        targetName: 'Golden Cheese Cookie',
+        maxRemainingHp: 3,
+      },
+    }
+    const targetCard = {
+      ...state.players['player-two'].battleArea[0].card,
+      name: 'Golden Cheese Cookie',
+    }
+    const target = {
+      ...state.players['player-two'].battleArea[0],
+      card: targetCard,
+      enteredFrom: 'hand' as const,
+      enteredTurn: state.turnNumber,
+      hpCards: [item('threshold-hp-1'), item('threshold-hp-2'), item('threshold-hp-3')],
+    }
+    const prepared = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          extraDeck: [awakened],
+          battleArea: [target],
+        },
+      },
+    }
+
+    expect(canPlayExtraDeckCookie(prepared, 'player-two', awakened.instanceId)).toBe(true)
+    const overThreshold = {
+      ...prepared,
+      players: {
+        ...prepared.players,
+        'player-two': {
+          ...prepared.players['player-two'],
+          battleArea: [
+            {
+              ...target,
+              hpCards: [
+                ...target.hpCards,
+                item('threshold-hp-4'),
+              ],
+            },
+          ],
+        },
+      },
+    }
+    expect(canPlayExtraDeckCookie(overThreshold, 'player-two', awakened.instanceId)).toBe(false)
+    expect(() => playExtraDeckCookie(overThreshold, 'player-two', awakened.instanceId)).toThrow(
+      '覆蓋目標',
+    )
+  })
+
   it('puts the Awakened card in break and the underlay, HP, and equip in trash when it faints', () => {
     const state = createBattleState()
     const awakened = awakenedGoldenCheese()

@@ -19,6 +19,7 @@ import {
 } from '../effects'
 import { expandChooseOne } from '../effects/choose-one'
 import { selectEnergyPayment } from '../energy'
+import { getCookieEffectiveLevel } from '../helpers'
 import {
   getDiscardHandCostCandidates,
   getTrashBattleCookieCostCandidates,
@@ -118,8 +119,8 @@ const chooseAttackEffectTargets = (
     const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
     const candidateIds = state.players[opponentId].battleArea
       .filter((cookie) => {
-        if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
-        if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+        if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
+        if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
         if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
         return true
       })
@@ -236,7 +237,7 @@ export const evaluateTrapWorth = (
   let score = 0
 
   // 1. protectedTargetValue：保護目標價值
-  const targetLevel = defender.card.level
+  const targetLevel = getCookieEffectiveLevel(defender)
   const targetHp = defender.hpCards.length
   score += targetLevel * 15
   score += targetHp * 10
@@ -318,7 +319,7 @@ const BLOCK_SKIP_THRESHOLD = 0
  * 兩者評的都是「這隻餅乾值多少」，沒有理由用不同尺度。
  */
 const cookieValue = (cookie: CookieInBattle): number => {
-  let value = cookie.card.level * 15 + cookie.hpCards.length * 10
+  let value = getCookieEffectiveLevel(cookie) * 15 + cookie.hpCards.length * 10
   if (getCardEffectValue(cookie.card) >= 5) value += 20
   return value
 }

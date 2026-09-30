@@ -50,7 +50,21 @@ export const describeEffect = (effect: CardEffect) => {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
   }
   if (effect.kind === 'modify-attack-cost') {
-    return '選擇符合條件的餅乾，令其本回合攻擊費用改為任意能量。'
+    const duration = effect.duration === 'this-turn'
+      ? '本回合'
+      : effect.duration === 'opponent-next-turn'
+        ? '直到對手的下一個回合結束，'
+        : '持續'
+    const target = effect.target.sourceOnly ? '這張餅乾' : '符合條件的餅乾'
+    const cost = Object.entries(effect.energyCost)
+      .filter(([, amount]) => typeof amount === 'number' && amount > 0)
+      .map(([color, amount]) => color === 'neutral'
+        ? `${amount} 任意能量`
+        : `${amount} ${energyColorLabel[color] ?? color}能量`)
+      .join('、')
+    return (effect.operation ?? 'set') === 'reduce'
+      ? `${target}${duration}攻擊費用減少 ${cost}。`
+      : `${target}${duration}攻擊費用改為 ${cost}。`
   }
   if (effect.kind === 'multiply-attack-damage') {
     return `符合條件時攻擊傷害乘以 ${effect.multiplier}。`
@@ -157,6 +171,12 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'prevent-opponent-hp-gain') {
     return '本回合對手不能透過卡牌效果增加餅乾的 HP。'
+  }
+  if (effect.kind === 'prevent-opponent-on-play') {
+    return '本回合對手不能發動 On Play。'
+  }
+  if (effect.kind === 'replace-opponent-on-play') {
+    return effect.effectText
   }
   if (effect.kind === 'hp-to-trash') {
     if (effect.amount === 0) return '不移除任何 HP 卡。'
@@ -479,6 +499,8 @@ export const describeEffectResult = (
   if (effect.kind === 'disable-traps') return '本次戰鬥中對手不能發動陷阱。'
   if (effect.kind === 'prevent-opponent-damage') return '已套用對手傷害防止。'
   if (effect.kind === 'prevent-opponent-hp-gain') return '本回合已禁止對手透過卡牌效果增加 HP。'
+  if (effect.kind === 'prevent-opponent-on-play') return '本回合已禁止對手發動 On Play。'
+  if (effect.kind === 'replace-opponent-on-play') return '本回合已替代對手 Cookie 的 On Play。'
   if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
   if (effect.kind === 'equipped-to-hp') return '已裝備卡已正面朝上放到裝備餅乾的 HP 最上方。'

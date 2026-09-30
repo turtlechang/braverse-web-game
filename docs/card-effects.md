@@ -19,8 +19,9 @@
 - `support-to-trash`：將指定數量的支援區卡牌移至棄牌區
 - `trash-to-support`：預設選棄牌區餅乾；卡文明定「卡牌」時以 `cookieOnly: false` 允許其他類型，再共用顏色與數量限制。BS8-069 可選 0～1 張綠色卡，包含物品；UI 與引擎都允許選 0，略過登場效果須清除權威 OnPlay。
 - `optional-cost-attack`：攻擊傷害後可略過的追加效果；來源餅乾可先提供 `sourceEnergy`，其餘費用才由支援區支付
+- `modify-attack-cost`：依持續條件即時調整指定攻擊者的能量費用；BS11-017 的 `source-hp-at-most` 只作用於來源自身，不寫入一次性回合修正
 - `target`：目標陣營、最少／最多數量與篩選條件
-- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword，以及「本回合己方／對手餅乾曾昏厥」等條件
+- `condition`：目前支援 Break Area 最低等級、來源 HP、牌庫／棄牌區／支援區 keyword，以及「本回合己方／對手餅乾曾昏厥」等條件；BS11-009 的「己方 LV.2 以上且剩餘 HP 為 1」以同一張 Cookie 的複合條件表示，避免把不同餅乾的 LV 與 HP 錯誤拼接
 - `duration`：本回合、對手下回合或永久
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw` 與 `deck-to-support`）。
@@ -54,6 +55,7 @@
 | 依序全體傷害 | `damage-all`（`sequential: true`） | 發動方依點擊順序選齊所有合法目標；每一個目標的傷害、FLIP、昏厥與中斷流程處理完畢後才繼續下一個。現用於 BS4-005，並非攻擊，不開啟陷阱步驟。 |
 | 休息區等級差傷害 | `damage-by-break-level-difference` | 依雙方休息區等級總和差造成動態傷害；可搭配 `break-level-higher-than-opponent` 條件 |
 | 攻擊修正 | `modify-attack` | 增加或減少攻擊傷害，回合結束移除 |
+| 攻擊費用修正 | `modify-attack-cost` | 依來源卡的持續條件即時增加／減少指定攻擊者的能量費用；例如 BS11-017 只有來源剩餘 HP≤3 時降低自身 1R |
 | 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |
 | 承受傷害修正 | `modify-damage-received` | 增加或減少承受的攻擊傷害；可在指定門檻達成時固定為特定傷害，回合結束移除 |
 | 純抽牌 | `draw` | 從牌庫抽固定 N 張，牌庫耗盡觸發 pending Refresh |
@@ -70,6 +72,7 @@
 | 效果傷害免疫 | `prevent-effect-damage` | 被影響餅乾在持續期間內不受任何效果傷害（技能、攻擊附加效果等），基本攻擊傷害仍正常結算。`damage`、`damage-all`、`split-damage` 執行器會檢查 `effectDamagePreventedUntilTurn`，受保護餅乾直接跳過（BS3-082） |
 | 對手傷害防止 | `prevent-opponent-damage` | BS9-018 的 `Your Turn` 持續效果；只在來源玩家屬對手、目標屬自己的 Cookie、Hero 仍在戰鬥區且目前為 Hero 擁有者回合時，將攻擊／效果傷害降為 0。逐段效果傷害在實際結算點重新檢查；自己的傷害、Hero 離場或對手回合不適用。 |
 | 對手效果增加 HP 防止 | `prevent-opponent-hp-gain` | BS9-035 的 Activate 效果；支付棄 1 張手牌後，到本回合結束前阻止對手透過卡牌效果把實際卡加入 Cookie HP。涵蓋 `gain-hp`、手牌／支援／其他 HP 的搬入及裝備／FLIP 補 HP，不影響一般登場時配置的印刷 HP，也不阻止來源玩家自己的效果。 |
+| 對手 On Play 防止 | `prevent-opponent-on-play` | 本回合禁止對手啟動 Cookie 的 On Play 效果；登場仍可完成，但 pending On Play 只能略過。|
 | 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |
 | 檢視 HP | `view-hp` | 查看目標餅乾的 HP 卡內容（可選） |
 | 重排 HP | `reorder-hp` | 依 selector 選擇至多 1 個己方或對手餅乾，再以完整且不重複的順序重新排列其全部 HP 卡；不可遺漏、複製或混入其他卡（BS6-034、BS9-034） |
@@ -83,6 +86,7 @@
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
+| 同一張 Cookie 的等級與剩餘 HP | `battle-area-has-cookie-with-level-and-remaining-hp` | 要求同一張戰鬥區餅乾同時達到最低 LV（可選 `maxLevel`）與指定剩餘 HP；BS11-009 使用，規則層與 AI 公開視圖共用；BS11-013 的陷阱條件使用 LV.3 精確上限。 |
 | 本回合餅乾曾昏厥 | `cookies-fainted-this-turn-at-least` | 以 `GameState.cookiesFaintedThisTurn` 檢查指定陣營本回合昏厥張數；例如 BS8-010 沒有己方昏厥紀錄時，Activate 不可發動 |
 | 對手戰鬥區無 Blocker | `opponent-battle-area-has-no-blocker` | BS3-018 第二分支的條件；可選取該分支，但條件不成立時不造成傷害 |
 | 支援區 keyword 條件 | `support-keyword-at-least` | 檢查來源玩家支援區是否至少有指定數量的 keyword 卡，例如 `[Soul Jam]` |
@@ -104,13 +108,13 @@
 | 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`energyCost` 需先由活躍支援卡支付；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
 | 對手棄牌區→對手休息區 | `opponent-trash-to-break` | 從對手棄牌區選餅乾放進**對手**休息區；會推進對手 break 等級，因此走與其他休息區移動相同的勝負判定（BS3-028） |
 | 對手休息區→棄牌區→休息區 | `opponent-break-to-trash-then-battle-to-break` | 先強制將對手休息區 1 張餅乾放進棄牌區，記錄該卡 LV；再可選擇對手戰鬥區中剛好高 1 LV 的餅乾放進對手休息區。第二段允許略過，且仍受「對手效果不能移動戰鬥區餅乾」保護（BS6-039） |
-| 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序），`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114） |
+| 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序）；`top-or-bottom` 會先顯示檢視卡，再由玩家決定放回牌庫頂或牌庫底。`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114、BS10-088） |
 
 | 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068、BS9-036）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走代價／目標流程。每個模式先由規則層判定是否可支付，不可支付者在本機與線上 UI 均停用且指令層拒絕；若只剩一個可支付模式，玩家仍須明確確認。`resolve-choose-one`／`begin-*` 的 `chooseOneModes` 與 AI 共用同一份展開邏輯。 |
 | 休息區→戰鬥區（來源自己） | `break-source-to-battle` | 讓技能來源自己從休息區登場，HP 卡數固定為 `hpCount`（不是卡面 HP），照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定；戰鬥區已滿（2 隻）時執行器直接丟錯，`canActivateCookieSkill` 會提前擋下（BS3-025） |
 | FLIP→休息區 | `flip-to-break` | FLIP 卡翻開並滿足條件時放入持有者休息區，而非棄牌區（BS4-031） |
 
-代價方面，`AbilityCost.trashToDeckBottom` 表示「從棄牌區選 N 張卡放到牌庫底」（BS3-112），選取順序即為放入牌庫底的順序。目前只有餅乾技能路徑（`activate-skill`／`begin-activate-skill`）實作，item／stage 的 `payAbilityCost` 會直接丟錯，避免被靜默忽略。`AbilityCost.handToBreakArea` 表示「將手牌餅乾放入自己休息區」，與棄到棄牌區的 `discardHand` 不同，會推進自己的 break 等級並立刻走 `resolveBreakLevelVictory`；目前只有陷阱路徑（`playTrap`）實作（BS3-046）。
+代價方面，`AbilityCost.trashToDeckBottom` 表示「從棄牌區選 N 張卡放到牌庫底」（BS3-112），選取順序即為放入牌庫底的順序。目前只有餅乾技能路徑（`activate-skill`／`begin-activate-skill`）實作，item／stage 的 `payAbilityCost` 會直接丟錯，避免被靜默忽略。`AbilityCost.trashBattleCookie.faint` 表示「使選定的戰鬥區 Cookie 昏厥」而非直接送入棄牌區；Cookie 技能與 item／stage 共用完整 GameState 的昏厥、休息區、HP 棄牌、昏厥觸發、補位與勝負流程（BS8-022、BS11-018）。`AbilityCost.handToBreakArea` 表示「將手牌餅乾放入自己休息區」，與棄到棄牌區的 `discardHand` 不同，會推進自己的 break 等級並立刻走 `resolveBreakLevelVictory`；目前只有陷阱路徑（`playTrap`）實作（BS3-046）。
 
 `CardSkill.oncePerGame` 搭配 `GameState.skillUsesThisGame` 表示整局只能發動一次。官方 Q&A 明確釋疑：這個限制是**每位玩家**限定一次，即使同一玩家休息區同時有多張同名卡（例如兩張 BS3-025），也只共用這一次額度——因此 key 是 `playerId:card.id`（同名卡共用、跨玩家互不影響），不是 `card.instanceId`（每張實體卡各自不同，會讓同玩家的第二張複本被誤判成尚未使用）。`getOncePerGameKey`（`skills.ts`）是唯一組 key 的入口。BS3-025 的另一條 Q&A 釋疑——戰鬥區與手牌都沒有餅乾時必須從手牌執行「再登場」，不能用休息區的這個技能頂替——由既有的 `pendingReplacement` 一律擋下 `activate` 觸發自然滿足，不需要額外邏輯。`CardSkill.fromBreakArea` 表示技能來源允許在休息區而非戰鬥區發動。這兩個標記靠明確的文字比對設定，不是靠 `{mob}`／`{ap}` 標記推斷——BS3-025 的原文只有 `{mt}`，一般解析會誤判成 `passive`，需要在 `exactCookieSkillTriggers` 明確覆寫成 `activate`。`findSkillSource`（`skills.ts`）是唯一的來源查找入口：先查戰鬥區，找不到才查休息區（且只在該卡技能有 `fromBreakArea` 時才算數），`canActivateCookieSkill`／`activateCookieSkill`／`commands.ts` 的 `activate-skill`／`begin-activate-skill`、`App.tsx`／`OnlineBattleView.tsx` 的點擊處理都必須走這個函式，任何一處各自查 `battleArea` 都會讓休息區技能失效。AI 主動發動技能的三個決策迴圈（`turn-handler.ts`、`evaluated-turn-handler.ts` 兩處）改用 `getActivatableSkillSources` 取得候選來源，把符合 `fromBreakArea` 的休息區餅乾一併收進來，否則 AI 永遠不會用到這類技能。
 

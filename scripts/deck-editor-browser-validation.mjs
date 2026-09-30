@@ -69,7 +69,7 @@ try {
 
   const results = []
   const viewports = process.env.BRAVERSE_DESKTOP_TABLET_ONLY === '1'
-    ? [{ width: 1366, height: 768 }, { width: 1164, height: 777 }]
+    ? [{ width: 1920, height: 1080 }, { width: 1366, height: 768 }, { width: 1164, height: 777 }]
     : [
     { width: 1366, height: 768 },
     { width: 622, height: 1040 },
@@ -95,10 +95,14 @@ try {
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
     await page.evaluate(() => localStorage.setItem('braverse-custom-decks', '[]'))
     await page.reload({ waitUntil: 'networkidle' })
-    await page.locator('[data-testid="open-deck-editor"]').click()
+    await page.getByRole('button', { name: '建立第一副牌組', exact: true }).click()
+    await page.getByRole('button', { name: '新增牌組', exact: true }).click()
 
     const editor = page.locator('[data-testid="deck-editor-page"]')
     await editor.waitFor({ state: 'visible' })
+    const saveBounds = await editor.getByTestId('deck-editor-page-save').boundingBox()
+    assert.ok(saveBounds && saveBounds.x >= 0 && saveBounds.x + saveBounds.width <= viewport.width,
+      'The entire save control must remain inside the viewport, even when the page clips overflow')
     assert.equal(await editor.locator('[data-testid="deck-editor-search"]').count(), 1)
     const filterToggle = editor.locator('[data-testid="deck-editor-filter-toggle"]')
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
@@ -115,7 +119,21 @@ try {
     const standardType = editor.locator('[aria-label="卡牌類型"]')
     await standardType.selectOption('extra')
     const formalExtraCards = editor.locator('.deck-editor-page-pool-card-button')
-    assert.equal(await formalExtraCards.count(), 26)
+    // BS8 (15) + BS9 (11) + BS10 (12) + promoted BS11 (4) formal EXTRA cards.
+    assert.equal(await formalExtraCards.count(), 42)
+    await editor.getByTestId('deck-editor-search').fill('BS11-091')
+    const bs11Extra = editor.locator(
+      '.deck-editor-page-pool-card-button[title^="BS11-091 "]',
+    )
+    assert.equal(await bs11Extra.count(), 2, 'Both promoted BS11-091 variants should be available')
+    await bs11Extra.first().click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /1\s*\/\s*6/)
+    assert.equal((await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(), '0')
+    assert.equal(await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(), 0,
+      'A promoted BS11 EXTRA card must never enter the main deck')
+    await editor.locator('.deck-editor-page-current-footer button').click()
+    assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /0\s*\/\s*6/)
+    await editor.getByTestId('deck-editor-search').fill('')
     await formalExtraCards.first().click()
     assert.match((await editor.locator('[data-testid="deck-editor-extra-count"]').textContent()) ?? '', /1\s*\/\s*6/)
     assert.equal((await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(), '0')
@@ -145,6 +163,29 @@ try {
       (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
       '0',
     )
+    await seriesSelect.selectOption('')
+    await seriesSelect.selectOption('BS11')
+    await editor.getByTestId('deck-editor-search').fill('BS11-001')
+    const bs11Cookie = editor.locator(
+      '.deck-editor-page-pool-card-button[title^="BS11-001 "]',
+    )
+    assert.equal(await bs11Cookie.count(), 1, 'Promoted BS11 Cookie should be available in the formal pool')
+    await bs11Cookie.click()
+    assert.equal(
+      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+      '1',
+    )
+    assert.equal(
+      await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(),
+      1,
+      'A promoted BS11 Cookie should enter the main deck section',
+    )
+    await editor.locator('.deck-editor-page-current-footer button').click()
+    assert.equal(
+      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+      '0',
+    )
+    await editor.getByTestId('deck-editor-search').fill('')
     await seriesSelect.selectOption('')
     await filterToggle.click()
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')

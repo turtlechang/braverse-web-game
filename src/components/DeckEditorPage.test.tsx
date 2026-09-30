@@ -66,7 +66,7 @@ describe('DeckEditorPage', () => {
       expect(confirm).not.toHaveBeenCalled()
       await click('[data-testid="deck-editor-filter-toggle"]')
       await change('[aria-label="卡牌類型"]','extra')
-      expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(26)
+      expect(container.querySelectorAll('.deck-editor-page-pool-card-button')).toHaveLength(42)
       await click('.deck-editor-page-pool-card:has([aria-label^="查看 BS8-005@1 "]) .deck-editor-page-pool-card-button')
       await click('[data-testid="deck-editor-page-back"]')
       expect(confirm).toHaveBeenCalledTimes(1)
@@ -424,6 +424,43 @@ describe('DeckEditorPage', () => {
     expect(firstCard).not.toBeNull()
     await act(() => firstCard!.click())
     expect(container.querySelector('.deck-editor-page-deck-card')?.textContent).toContain('BS7-')
+
+    await act(() => root.unmount())
+  })
+
+  it('shows BS9 and BS10 cards through their series filters in Standard', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+
+    const seriesSelect = Array.from(
+      container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+    ).find((select) =>
+      Array.from(select.options).some((option) => option.value === 'BS9'),
+    )
+    expect(seriesSelect).toBeTruthy()
+    expect(Array.from(seriesSelect!.options).some((option) => option.value === 'BS10')).toBe(true)
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    for (const series of ['BS9', 'BS10']) {
+      await act(() => {
+        nativeSetter.call(seriesSelect, series)
+        seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+
+      const cardNumbers = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+      ).map((button) => button.title)
+      expect(cardNumbers.length).toBeGreaterThan(0)
+      expect(cardNumbers.every((cardNumber) => cardNumber.startsWith(`${series}-`))).toBe(true)
+    }
 
     await act(() => root.unmount())
   })

@@ -6,6 +6,7 @@ import type {
   GameCard,
   GameState,
   PlayerId,
+  StageAbility,
   SkillTrigger,
 } from '../game'
 import {
@@ -27,6 +28,7 @@ import {
   getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
   getCookieSkillCost,
+  getActiveOnPlayReplacement,
   getHandCountAfterFixedSkillCost,
   getCookieSkillEffects,
   getDiscardAllHandCostCandidates,
@@ -50,6 +52,7 @@ import {
   isSkillEffectConditionDeferredUntilCost,
   isCardAbilityEffectConditionDeferredUntilCost,
   isEnergyColorCompatibleWithCost,
+  getCookieEffectiveLevel,
   isEffectConditionMet,
   isChooseOneModePlayable,
   isEffectUntargeted,
@@ -708,7 +711,30 @@ export function usePendingEffect(params: {
   const skillHpToTrashTargetIds = new Set(
     skillHpToTrashCandidates.map((card) => card.instanceId),
   )
-  const hpToTrashCost = pendingEffect?.skill.cost.hpToTrash ? 1 : 0
+  const hpToTrashRequirement = pendingEffect?.skill.cost.hpToTrash
+  const hpToTrashSharedTotal = hpToTrashRequirement?.totalAcrossCookies
+    ? hpToTrashRequirement.amount ?? 1
+    : undefined
+  const hpToTrashCost = hpToTrashRequirement
+    ? hpToTrashSharedTotal ?? 1
+    : 0
+  const hpToTrashSelectionLimit = hpToTrashSharedTotal ?? (hpToTrashRequirement ? 1 : 0)
+  const selectedHpToTrashCookies = pendingEffect
+    ? game.players[pendingEffect.context.sourcePlayerId].battleArea.filter((cookie) =>
+        pendingEffect.selectedHpToTrashTargetIds.includes(cookie.card.instanceId),
+      )
+    : []
+  const selectedHpToTrashAmount = selectedHpToTrashCookies.reduce(
+    (total, cookie) => total + cookie.hpCards.length,
+    0,
+  )
+  const hpToTrashSelectionSatisfied = !hpToTrashRequirement || pendingEffect?.skillActivated
+    ? true
+    : hpToTrashRequirement.totalAcrossCookies
+      ? pendingEffect.selectedHpToTrashTargetIds.length > 0 &&
+        pendingEffect.selectedHpToTrashTargetIds.length <= hpToTrashSelectionLimit &&
+        selectedHpToTrashAmount >= hpToTrashCost
+      : pendingEffect.selectedHpToTrashTargetIds.length === 1
 
   const selectedSkillTrashBattleCookieIds = new Set(
     pendingEffect?.selectedTrashBattleCookieIds ?? [],
@@ -1108,8 +1134,13 @@ export function usePendingEffect(params: {
       sourcePlayerId: playerId,
       sourceInstanceId: card.instanceId,
     }
-    const skillEffects = getCookieSkillEffects(card.skill, trigger)
-    const skillCost = getCookieSkillCost(card.skill, trigger)
+    const onPlayReplacement = trigger === 'on-play'
+      ? getActiveOnPlayReplacement(nextGame, playerId)
+      : undefined
+    const skillEffects = onPlayReplacement?.effects ??
+      getCookieSkillEffects(card.skill, trigger)
+    const skillCost = onPlayReplacement?.cost ??
+      getCookieSkillCost(card.skill, trigger)
     const handCountAfterFixedCost = getHandCountAfterFixedSkillCost(
       nextGame.players[playerId],
       skillCost,
@@ -1243,7 +1274,14 @@ export function usePendingEffect(params: {
       sourceCard: card,
       context,
       skill:
-        trigger === 'on-play' && card.skill.onPlayEffects
+        onPlayReplacement
+          ? {
+              ...card.skill,
+              cost: onPlayReplacement.cost,
+              restSource: false,
+              effects: onPlayReplacement.effects,
+            }
+        : trigger === 'on-play' && card.skill.onPlayEffects
           ? {
               ...card.skill,
               cost: getCookieSkillCost(card.skill, trigger),
@@ -1302,7 +1340,7 @@ export function usePendingEffect(params: {
 
   const beginCardAbility = (
     card: GameCard,
-    ability: CardAbility,
+    ability: CardAbility | StageAbility,
     sourceKind: 'item' | 'stage',
     triggerLabel: string,
   ) => {
@@ -1317,7 +1355,12 @@ export function usePendingEffect(params: {
     const effects = ability.effects.filter(
       (effect) =>
         isEffectConditionMet(game, context, effect) ||
-        isCardAbilityEffectConditionDeferredUntilCost(ability, effect),
+        isCardAbilityEffectConditionDeferredUntilCost(ability, effect) ||
+        (sourceKind === 'stage' &&
+          'allowInactiveConditionalEffects' in ability &&
+          ability.allowInactiveConditionalEffects === true &&
+          'condition' in effect &&
+          effect.condition !== undefined),
     )
     if (effects.length === 0) {
       setMessage(`${card.name}目前未滿足使用條件。`)
@@ -1330,7 +1373,10 @@ export function usePendingEffect(params: {
         trigger: 'activate',
         oncePerTurn: false,
         yourTurn: true,
-        restSource: sourceKind === 'stage',
+        restSource:
+          sourceKind === 'stage' && 'restSource' in ability
+            ? ability.restSource
+            : false,
         cost: effectiveCost,
         text: ability.text,
         effects,
@@ -1884,7 +1930,7 @@ export function usePendingEffect(params: {
     if (!cookie) return
     if (
       trashCost.level !== undefined &&
-      cookie.card.level !== trashCost.level
+      getCookieEffectiveLevel(cookie) !== trashCost.level
     ) return
     if (
       trashCost.energyColor !== undefined &&
@@ -1934,9 +1980,13 @@ export function usePendingEffect(params: {
       return
     }
     const selected = pendingEffect.selectedHpToTrashTargetIds
+    const isSelected = selected.includes(instanceId)
+    if (!isSelected && selected.length >= hpToTrashSelectionLimit) return
     setPendingEffect({
       ...pendingEffect,
-      selectedHpToTrashTargetIds: selected.includes(instanceId) ? [] : [instanceId],
+      selectedHpToTrashTargetIds: isSelected
+        ? selected.filter((id) => id !== instanceId)
+        : [...selected, instanceId],
     })
   }
 
@@ -2295,6 +2345,16 @@ export function usePendingEffect(params: {
         setMessage(
           `${pendingEffect.sourceCard.name}已支付代價；請先完成目前的待處理操作，再繼續處理效果。`,
         )
+        return
+      }
+
+      if (!pendingEffect.skillActivated && pendingEffect.sourceKind === 'stage' &&
+        !activatedGame.pendingAbilityEffect) {
+        const result = `${pendingEffect.sourceCard.name}已支付代價；效果條件未滿足，效果未執行。`
+        setGame(activatedGame)
+        setPendingEffect(null)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
         return
       }
 
@@ -2705,6 +2765,8 @@ export function usePendingEffect(params: {
     skillHpToTrashCandidates,
     skillHpToTrashTargetIds,
     hpToTrashCost,
+    hpToTrashSharedTotal,
+    hpToTrashSelectionSatisfied,
     effectTargetIds,
     breakEffectTargetIds,
     supportEffectTargetIds,

@@ -26,11 +26,11 @@ describe('BS9 effect coverage analysis', () => {
     )
 
     expect(report.primaryConversion).toMatchObject({
-      supported: 74,
+      supported: 99,
       'unsupported-effect-text': 0,
     })
     expect(report.abilityConversion).toMatchObject({
-      converted: 74,
+      converted: 99,
       pending: 0,
     })
     expect(report.pendingAbilityCards).toEqual([])

@@ -54,8 +54,9 @@
 ### 公開測試前仍需完成
 
 1. **Current HEAD 真人 Playtest**：至少 5 人（2 位熟悉 Braverse、2 位熟悉其他 TCG、1 位非核心玩家），記錄首次完成一局比例、第一次合法操作時間、誤觸、付款錯誤、回應窗口漏看與 Battle Log 使用情況。自動 Browser 測試不能取代此項。
-2. **發布基線決策**：確認是否以目前穩定化結果準備 `0.10.0`；在決定前不直接修改版號或建立 tag。
-3. **本批 Preview 驗收**：使用已設定的 bypass secret，從 `main` 手動驗證最新 Preview URL；Production 通過的是既有部署，不能代替尚未部署的本機修改。
+2. **本批 Preview 驗收**：使用已設定的 bypass secret，從 `main` 手動驗證最新 Preview URL；Production 通過的是既有部署，不能代替尚未部署的本機修改。
+
+2026-09-14 已決定以目前穩定化結果準備 `0.10.0`；版本 metadata、release notes 與 git tag 由本次提交完成。真人 Playtest 與本批 Preview 驗收仍維持未完成狀態。
 
 ### 下一批工程硬化
 

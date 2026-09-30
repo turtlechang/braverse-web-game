@@ -14,6 +14,8 @@ import {
   getActingPlayerId,
   getForcedAttackTargetId,
   getCookieSkillUnavailableReason,
+  getCookieEffectiveLevel,
+  isCookieAttackRestricted,
   selectEnergyPayment,
   type GameState,
   type PlayerId,
@@ -27,6 +29,7 @@ export type BattleResourceKind = 'deck' | 'stage' | 'break' | 'extra'
 export type PaymentLabel = '技能' | '物品' | '場景'
 
 export interface BattleRowProps {
+  openingHandPending?: boolean
   game: GameState
   playerId: PlayerId
   position: 'top' | 'bottom'
@@ -80,6 +83,7 @@ export interface BattleRowProps {
 }
 
 export function BattleRow({
+  openingHandPending = false,
   game,
   playerId,
   position,
@@ -131,7 +135,11 @@ export function BattleRow({
   onHoverCard,
   onFocusCard,
 }: BattleRowProps) {
-  const player = game.players[playerId]
+  const authoritativePlayer = game.players[playerId]
+  // Presentation only: opening cards remain off the table until order is confirmed.
+  const player = openingHandPending
+    ? { ...authoritativePlayer, hand: [], deck: [...authoritativePlayer.deck, ...authoritativePlayer.hand] }
+    : authoritativePlayer
   // Pending battle stages can hand control to the defender or attacker without
   // changing activePlayerId; reflect the actual decision owner in the row UI.
   const isActivePlayer = getActingPlayerId(game) === playerId
@@ -347,6 +355,7 @@ export function BattleRow({
   return (
     <section
       className={`battle-row ${position}-field`}
+      data-animation-player={playerId}
       aria-label={`${player.name}場地`}
     >
       <div className="side-zones">
@@ -491,6 +500,7 @@ export function BattleRow({
                       '--opponent-y': `${fan.opponentY}px`,
                       '--fan-z-index': fan.fanZIndex,
                     } as React.CSSProperties}
+                    data-hand-slot={index}
                   >
                     <CardFace
                       card={card}
@@ -548,7 +558,8 @@ export function BattleRow({
                 game.phase === 'main' &&
                 canAttack(game) &&
                 !cookie.rested &&
-                !cookie.card.nonAttackable
+                !cookie.card.nonAttackable &&
+                !isCookieAttackRestricted(game, playerId, cookie)
               const attackEnergyCost = getAttackEnergyCostForState(
                 game,
                 cookie.card.instanceId,
@@ -699,6 +710,15 @@ export function BattleRow({
                     </div>
                   )}
                   <div className="card-badges">
+                    {cookie.levelOverride !== undefined &&
+                      getCookieEffectiveLevel(cookie) !== cookie.card.level && (
+                        <span
+                          className="badge-level"
+                          title={`目前 LV ${getCookieEffectiveLevel(cookie)}；卡面 LV ${cookie.card.level}`}
+                        >
+                          LV {getCookieEffectiveLevel(cookie)}
+                        </span>
+                      )}
                     <span
                       className="badge-hp"
                       title={cookie.card.extraDeckOrigin === 'awakened'
@@ -991,13 +1011,16 @@ export function BattleRow({
                   : canSupport
                     ? '支援'
                     : null
+            const hasAction = Boolean(actionLabel) || canSpecialPlay
             const isSelected = selectedHandCardId === card.instanceId
             const count = player.hand.length
             const { fanX, fanY, fanRotation } = computePlayerHandFan(count, index)
 
             return (
               <div
-                className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${actionLabel ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
+                data-card-instance-id={card.instanceId}
+                className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${hasAction ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
+                data-hand-slot={index}
                 key={card.instanceId}
                 style={{
                   '--fan-index': index,
@@ -1015,26 +1038,28 @@ export function BattleRow({
                   className="hand-card"
                   ariaPressed={isSelected}
                   onClick={
-                    actionLabel && onSelectHandCard
+                    hasAction && onSelectHandCard
                       ? () => onSelectHandCard(card.instanceId)
                       : () => onInspectCard(card)
                   }
                 />
-                {isSelected && actionLabel && (
+                {isSelected && hasAction && (
                   <div className="hand-card-actions">
-                    <button
-                      className="hand-card-action"
-                      type="button"
-                      onClick={() => {
-                        onSelectHandCard?.(null)
-                        if (canDeploy) onDeployCookie?.(card.instanceId)
-                        else if (canUseItem) onPlayItem?.(card.instanceId)
-                        else if (canPlaceStage) onPlayStage?.(card.instanceId)
-                        else onPlaceSupport?.(card.instanceId)
-                      }}
-                    >
-                      {actionLabel}
-                    </button>
+                    {actionLabel && (
+                      <button
+                        className="hand-card-action"
+                        type="button"
+                        onClick={() => {
+                          onSelectHandCard?.(null)
+                          if (canDeploy) onDeployCookie?.(card.instanceId)
+                          else if (canUseItem) onPlayItem?.(card.instanceId)
+                          else if (canPlaceStage) onPlayStage?.(card.instanceId)
+                          else onPlaceSupport?.(card.instanceId)
+                        }}
+                      >
+                        {actionLabel}
+                      </button>
+                    )}
                     {canSpecialPlay && (
                       <button
                         className="hand-card-action"

@@ -30,33 +30,18 @@ const battleEntry = (state: GameState, instanceId: string) => {
 }
 
 const openOwnTurnFlip = (initial: GameState): GameState => {
-  const trigger = initial.players['player-one'].hand.find((card) => card.id === 'P-018')
-  if (!trigger) throw new Error('BS9-032 fixture has no Mustard Cookie trigger')
-  let state = applyGameCommand(initial, {
-    kind: 'deploy-cookie',
+  const detachedFlip = initial.players['player-one'].hand.find((card) => card.id === 'BS9-032')
+  if (!detachedFlip) throw new Error('BS9-032 fixture has no detached FLIP card')
+  const state = applyGameCommand(initial, {
+    kind: 'resolve-optional-cost-attack',
     playerId: 'player-one',
-    instanceId: trigger.instanceId,
-  })
-  const discard = state.players['player-one'].hand[0]
-  if (!discard) throw new Error('BS9-032 fixture has no On Play discard candidate')
-  state = applyGameCommand(state, {
-    kind: 'begin-activate-skill',
-    playerId: 'player-one',
-    sourceInstanceId: trigger.instanceId,
-    trigger: 'on-play',
+    action: 'pay',
+    discardCardIds: [detachedFlip.instanceId],
     paymentIds: [],
-    discardHandIds: [discard.instanceId],
-    targetIds: [],
   })
-  state = applyGameCommand(state, {
-    kind: 'resolve-ability-effect',
-    playerId: 'player-one',
-    targetIds: [],
-  })
-  return applyGameCommand(state, {
-    kind: 'resolve-next-damage',
-    playerId: 'player-one',
-  })
+  expect(state.pendingBattle?.detachedFlip).toBe(true)
+  expect(state.pendingBattle?.revealedHpCard?.id).toBe('BS9-032')
+  return state
 }
 
 const finishPendingDamage = (initial: GameState): GameState => {
@@ -133,12 +118,12 @@ describe('BS9-032 Yoga Cookie FLIP candidate', () => {
         getEffectTargetCandidates(state, context, effect.target).map(
           (entry) => entry.card.instanceId,
         ),
-      ).toEqual(['bs9-bs9-032-effect-target'])
-      expect(battleEntry(state, 'bs9-bs9-032-effect-target').rested).toBe(true)
+      ).toEqual(['bs9-030-demo-extra'])
+      expect(battleEntry(state, 'bs9-030-demo-extra').rested).toBe(true)
       expect(() => applyGameCommand(state, {
         kind: 'resolve-ability-effect',
         playerId: 'player-one',
-        targetIds: ['bs9-bs9-032-trigger'],
+        targetIds: ['player-two-ST1-014-1'],
       })).toThrow()
     }
   })
@@ -151,12 +136,12 @@ describe('BS9-032 Yoga Cookie FLIP candidate', () => {
     const selectedThenResolved = applyGameCommand(selected, {
       kind: 'resolve-ability-effect',
       playerId: 'player-one',
-      targetIds: ['bs9-bs9-032-effect-target'],
+      targetIds: ['bs9-030-demo-extra'],
     })
     expect(selectedThenResolved.pendingAbilityEffect).toBeUndefined()
-    expect(selectedThenResolved.pendingBattle?.effectDamageSequence).toBeDefined()
     const selectedResolved = finishPendingDamage(selectedThenResolved)
-    expect(battleEntry(selectedResolved, 'bs9-bs9-032-effect-target').rested).toBe(false)
+    expect(selectedResolved.pendingBattle).toBeNull()
+    expect(battleEntry(selectedResolved, 'bs9-030-demo-extra').rested).toBe(false)
 
     const skipped = openSetActiveThen(
       openOwnTurnFlip(createCardCheckDemoState('BS9-032')),
@@ -168,9 +153,9 @@ describe('BS9-032 Yoga Cookie FLIP candidate', () => {
       targetIds: [],
     })
     expect(skippedThenResolved.pendingAbilityEffect).toBeUndefined()
-    expect(skippedThenResolved.pendingBattle?.effectDamageSequence).toBeDefined()
     const skippedResolved = finishPendingDamage(skippedThenResolved)
-    expect(battleEntry(skippedResolved, 'bs9-bs9-032-effect-target').rested).toBe(true)
+    expect(skippedResolved.pendingBattle).toBeNull()
+    expect(battleEntry(skippedResolved, 'bs9-030-demo-extra').rested).toBe(true)
   })
 
   it('keeps the draw but skips Then outside the FLIP owner turn', () => {

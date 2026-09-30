@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
+  createBs11115SpecialPlayDemoState,
+  createBs11092ActivateDemoState,
   createBs8011DoubleSkillDemoState,
   createCardCheckDemoState,
   createCardNegativeDemoState,
@@ -9,7 +11,7 @@ import {
 } from '../../game/demo'
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import type { CardSkill, ExtraDeckCard, GameState, PendingBattle } from '../../game'
-import { applyGameCommand } from '../../game'
+import { applyGameCommand, createDemoSetupGame } from '../../game'
 import { maskGameStateForViewer } from '../../game/masked-state'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
@@ -477,6 +479,25 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('hand-card-wrap is-selected')
     expect(markup).toContain('hand-card-actions')
     expect(markup).toContain('>使用<')
+    expect(markup).toContain('>詳情<')
+  })
+
+  it('keeps Special Play reachable when the battle area is full', () => {
+    const game = createBs11115SpecialPlayDemoState('BS11-115', false)
+    const sourceId = game.players['player-one'].hand[0].instanceId
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          selectedHandCardId: sourceId,
+          onSelectHandCard: () => undefined,
+          onSpecialPlayCookie: () => undefined,
+        })}
+      />,
+    )
+
+    expect(markup).toContain('hand-card-wrap is-selected is-actionable')
+    expect(markup).toContain('>特殊登場<')
     expect(markup).toContain('>詳情<')
   })
 
@@ -1382,6 +1403,21 @@ describe('BS9-010 permanent face-up HP display', () => {
   })
 })
 
+describe('temporary Cookie level display', () => {
+  it('shows the effective LV only while Licorice is level-shifted in battle', () => {
+    const before = renderToStaticMarkup(<BattleRow {...createProps({
+      game: createBs11092ActivateDemoState(false), playerId: 'player-one', position: 'bottom',
+    })} />)
+    const after = renderToStaticMarkup(<BattleRow {...createProps({
+      game: createBs11092ActivateDemoState(true), playerId: 'player-one', position: 'bottom',
+    })} />)
+    expect(before).not.toContain('class="badge-level"')
+    expect(after).toContain('class="badge-level"')
+    expect(after).toContain('目前 LV 1；卡面 LV 2')
+    expect(after).toContain('LV 1')
+  })
+})
+
 describe('HP flip chain reveal indicator', () => {
   const revealedCard = {
     id: 'revealed-hp',
@@ -1497,4 +1533,20 @@ describe('HP flip chain reveal indicator', () => {
     )
     expect(markup).not.toContain('hp-reveal-indicator')
   })
+})
+
+it('keeps both opening hands off the table until order confirmation without changing state', () => {
+  const game = createDemoSetupGame('player-one')
+  const before = JSON.stringify(game)
+  for (const playerId of ['player-one', 'player-two'] as const) {
+    const player = game.players[playerId]
+    const props = createProps({game,playerId,position:playerId === 'player-one' ? 'bottom' : 'top',openingHandPending:true})
+    const pending = renderToStaticMarkup(<BattleRow {...props} />)
+    expect(pending).not.toContain('data-hand-slot=')
+    expect(pending).toContain(`手牌 0`)
+    expect(pending).toContain(`牌庫剩餘 ${player.deck.length + player.hand.length} 張`)
+    const confirmed = renderToStaticMarkup(<BattleRow {...props} openingHandPending={false} />)
+    expect(confirmed.match(/data-hand-slot=/g)).toHaveLength(player.hand.length)
+  }
+  expect(JSON.stringify(game)).toBe(before)
 })

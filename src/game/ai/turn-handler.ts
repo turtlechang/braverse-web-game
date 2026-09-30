@@ -4,6 +4,7 @@ import {
 } from '../card-abilities'
 import { canPlayExtraDeckCookie } from '../actions'
 import { applyGameCommand } from '../commands'
+import { isCookieAttackRestricted } from '../battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { materializeExtraDeckCookie } from '../extra-deck'
 import { getRefreshCandidates } from '../refresh'
@@ -622,7 +623,11 @@ export const handleAiTurnState = (
       if (target) {
         // 選擇最適合攻擊此目標的餅乾（優先選能一擊擊殺的）
         const eligibleAttackers = player.battleArea.filter((attacker) => {
-          if (attacker.rested || attacker.card.nonAttackable) return false
+          if (
+            attacker.rested ||
+            attacker.card.nonAttackable ||
+            isCookieAttackRestricted(state, playerId, attacker)
+          ) return false
           if (
             state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
             state.turnNumber

@@ -111,3 +111,14 @@
     top: calc(100% + 3px);
   }
 }
+
+.match-toolbar-menu { min-width: 230px; gap: 5px; padding: 9px; border: 1px solid #5cbfdd60; border-radius: 14px; background: #0b203bf5; box-shadow: 0 16px 40px #0008; }
+.match-toolbar-label { padding: 6px 10px 9px; color: #8fabbe; font-size: 10px; letter-spacing: .12em; }
+.match-toolbar-menu button { min-height: 56px; gap: 12px; padding: 10px; border-radius: 9px; }
+.match-toolbar-menu button span { display: grid; gap: 5px; }
+.match-toolbar-menu strong { color: #e3edf7; font-size: 12px; font-weight: 600; }
+.match-toolbar-menu small { color: #94aec4; font-size: 10px; font-weight: 400; }
+.match-toolbar-menu svg { width: 18px; height: 18px; color: #8bd5e4; }
+.match-toolbar-menu .match-toolbar-reset { border-top: 1px solid #ffffff12; }
+.match-toolbar-reset svg { color: #dfb786; }
+.match-toolbar-menu button:focus-visible { outline: 2px solid #efcf87; outline-offset: -2px; }

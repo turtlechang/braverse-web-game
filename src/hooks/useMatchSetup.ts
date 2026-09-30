@@ -51,6 +51,7 @@ export function useMatchSetup({
   chooseDeck = chooseRandomDeck,
   onReplayRoot,
 }: UseMatchSetupParams) {
+  const [rpsResult, setRpsResult] = useState<{ player: string; opponent: string; winner: 'player' | 'opponent' | 'draw'; round: number } | null>(null)
   const [setupStep, setSetupStep] = useState<MatchSetupStep>(
     enabled ? 'deck-selection' : null,
   )
@@ -115,6 +116,7 @@ export function useMatchSetup({
       const aiDeck = aiDeckChoice ?? chooseDeck()
       setDeckConfig({ player: playerDeck, ai: aiDeck })
       setSelectedCustomDeck(customDeck ?? null)
+      setRpsResult(null)
       setSetupStep('rps')
       setSetupMessage(
         formatDeckSelectionMessage(
@@ -162,6 +164,8 @@ export function useMatchSetup({
     (choice: 'rock' | 'paper' | 'scissors') => {
       const choices = ['rock', 'paper', 'scissors'] as const
       const aiChoice = choices[Math.floor(Math.random() * choices.length)]
+      const wins = (choice === 'rock' && aiChoice === 'scissors') || (choice === 'paper' && aiChoice === 'rock') || (choice === 'scissors' && aiChoice === 'paper')
+      setRpsResult(previous => ({ player: choice, opponent: aiChoice, winner: choice === aiChoice ? 'draw' : wins ? 'player' : 'opponent', round: (previous?.round ?? 0) + 1 }))
       if (choice === aiChoice) {
         setSetupMessage('本次猜拳平手，請再選一次。')
         return
@@ -253,12 +257,14 @@ export function useMatchSetup({
   )
 
   const resetSetup = useCallback(() => {
+    setRpsResult(null)
     setSetupStep('deck-selection')
     setSetupMessage('請選擇本次對戰使用的牌組。')
     setSelectedCustomDeck(null)
   }, [])
 
   return {
+    rpsResult,
     setupStep,
     setSetupStep,
     setupMessage,

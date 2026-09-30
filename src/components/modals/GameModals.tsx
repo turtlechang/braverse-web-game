@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   AlertTriangle,
   ChevronLeft,
@@ -30,6 +30,7 @@ import {
   CardEffectText,
   EnergyCostIcons,
 } from '../cards/CardVisuals'
+import { getCookieEffectiveLevel } from '../../game'
 import { deckChoiceLabel } from '../gameUiLabels'
 import {
   GuidedPhaseSteps,
@@ -157,6 +158,7 @@ export type OpeningSetupStep =
   | 'starting-cookie'
 
 export interface OpeningSetupModalProps {
+  rpsResult?: { player: string; opponent: string; winner: 'player' | 'opponent' | 'draw'; round: number } | null
   step: OpeningSetupStep
   message: string
   hand: GameCard[]
@@ -169,6 +171,7 @@ export interface OpeningSetupModalProps {
 }
 
 export function OpeningSetupModal({
+  rpsResult,
   step,
   message,
   hand,
@@ -179,6 +182,10 @@ export function OpeningSetupModal({
   onMulligan,
   onSelectStartingCookie,
 }: OpeningSetupModalProps) {
+  const headingId = useId()
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { heading.current?.focus({preventScroll:true}) }, [step])
+  const stepIndex = ['rps', 'choose-order', 'mulligan', 'starting-cookie'].indexOf(step)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
   const [savedCustomDeck, setSavedCustomDeck] = useState<CustomDeck | null>(
     null,
@@ -228,10 +235,20 @@ export function OpeningSetupModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="opening-setup-modal" role="alertdialog">
-        <span>對戰開始前設定</span>
-        <h2>{title}</h2>
-        <p>{message}</p>
+      <section className={`opening-setup-modal opening-step-${step}`} role="dialog" aria-modal="true" aria-labelledby={headingId}>
+        <header className="setup-heading">
+          <span className="setup-eyebrow">開局準備 {stepIndex >= 0 && <b>0{stepIndex + 1} / 04</b>}</span>
+          <h2 id={headingId} ref={heading} tabIndex={-1}>{title}</h2>
+        </header>
+        {stepIndex >= 0 && <ol className="setup-progress" aria-label="開局步驟">
+          {['猜拳', '先後攻', '調度', '起始餅乾'].map((label,index) => <li key={label} className={index < stepIndex ? 'is-complete' : ''} aria-current={index === stepIndex ? 'step' : undefined}><span>{index < stepIndex ? '✓' : index + 1}</span>{label}</li>)}
+        </ol>}
+        {rpsResult && (step === 'rps' || step === 'choose-order') && <div className="match-rps-reveal" key={rpsResult.round} role="status">
+          <span className={rpsResult.winner === 'player' ? 'is-winner' : ''}>你：{{ rock: '✊ 石頭', paper: '✋ 布', scissors: '✌ 剪刀' }[rpsResult.player]}</span>
+          <strong>{rpsResult.winner === 'draw' ? '平手' : rpsResult.winner === 'player' ? '你獲勝' : 'AI 獲勝'}</strong>
+          <span className={rpsResult.winner === 'opponent' ? 'is-winner' : ''}>AI：{{ rock: '✊ 石頭', paper: '✋ 布', scissors: '✌ 剪刀' }[rpsResult.opponent]}</span>
+        </div>}
+        <p className="setup-instruction">{step === 'rps' ? (rpsResult?.winner === 'draw' ? '平手，再選一次。勝方可決定先後攻。' : '選擇你的手勢，勝方可決定先攻或後攻。') : message}</p>
         {step === 'deck-selection' && (
           <>
             <div className="setup-deck-grid">
@@ -278,36 +295,36 @@ export function OpeningSetupModal({
         )}
         {step === 'rps' && (
           <>
-            <div className="setup-matchup">
-              <span>我方：{deckChoiceLabel[deckConfig.player]}</span>
-              <span>AI：{deckChoiceLabel[deckConfig.ai]}</span>
+            <div className="setup-choice-grid setup-gestures">
+              {([['rock','✊','石頭'],['paper','✋','布'],['scissors','✌','剪刀']] as const).map(([choice,icon,label]) => <button type="button" key={choice} aria-label={label} onClick={() => onRps(choice)}><span className="setup-gesture-icon" aria-hidden="true">{icon}</span><strong>{label}</strong></button>)}
             </div>
-            <div className="setup-choice-grid">
-              <button type="button" onClick={() => onRps('rock')}>石頭</button>
-              <button type="button" onClick={() => onRps('paper')}>布</button>
-              <button type="button" onClick={() => onRps('scissors')}>剪刀</button>
-            </div>
+            <details className="setup-deck-summary"><summary>對戰牌組 · {deckChoiceLabel[deckConfig.player]} vs {deckChoiceLabel[deckConfig.ai]}</summary><p>{message}</p></details>
           </>
         )}
         {step === 'choose-order' && (
-          <div className="setup-choice-grid">
-            <button type="button" onClick={() => onChooseFirstPlayer(true)}>
-              選擇先攻
+          <div className="setup-choice-grid setup-order-options">
+            <button type="button" aria-label="選擇先攻" onClick={() => onChooseFirstPlayer(true)}>
+              <span className="setup-order-number" aria-hidden="true">01</span><strong>選擇先攻</strong><small>由你開始第一回合</small>
             </button>
-            <button type="button" onClick={() => onChooseFirstPlayer(false)}>
-              選擇後攻
+            <button type="button" aria-label="選擇後攻" onClick={() => onChooseFirstPlayer(false)}>
+              <span className="setup-order-number" aria-hidden="true">02</span><strong>選擇後攻</strong><small>由對手開始第一回合</small>
             </button>
           </div>
         )}
         {(step === 'mulligan' || step === 'starting-cookie') && (
+          <>
+          <div className="setup-hand-heading"><strong>你的起始手牌</strong><span>{hand.length} 張{step === 'mulligan' ? ' · 不需逐張選取' : ' · 選擇一張餅乾'}</span></div>
           <div className="modal-card-options setup-hand">
-            {hand.map((card) => {
+            {hand.map((card, index) => {
               const canSelect =
                 step === 'starting-cookie' && card.type === 'cookie'
+              if (step === 'mulligan') return <div className="setup-hand-card" key={card.instanceId}><CardFace card={card} /><span>{card.name}</span></div>
               return (
                 <button
                   type="button"
                   key={card.instanceId}
+                  className="setup-hand-card"
+                  style={{ animationDelay: `${index * 60}ms` }}
                   disabled={step === 'starting-cookie' && !canSelect}
                   onClick={
                     canSelect
@@ -321,8 +338,11 @@ export function OpeningSetupModal({
               )
             })}
           </div>
+          </>
         )}
         {step === 'mulligan' && (
+          <div className="setup-mulligan-footer">
+          <p>保留目前手牌，或全部換成新的手牌。</p>
           <div className="modal-actions">
             <button type="button" onClick={() => onMulligan(false)}>
               保留手牌
@@ -330,6 +350,7 @@ export function OpeningSetupModal({
             <button type="button" onClick={() => onMulligan(true)}>
               全部調度
             </button>
+          </div>
           </div>
         )}
       </section>
@@ -2620,21 +2641,27 @@ export function PauseModal({
   onCopyIssueBundle,
 }: PauseModalProps) {
   const modalRef = useModalFocus(onResume, '.match-toolbar-trigger')
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const diagnosticsId = useId()
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="pause-modal" role="dialog" ref={modalRef} aria-modal="true" aria-label="遊戲已暫停" tabIndex={-1}>
-        <Pause aria-hidden="true" />
-        <span>對戰資訊</span>
-        <h2>遊戲已暫停</h2>
-        <p>目前為第 {turnNumber} 回合，{phaseLabel}。</p>
+        <header className="pause-heading"><div className="pause-symbol"><Pause aria-hidden="true" /></div><div><span>對戰資訊</span><h2>遊戲已暫停</h2></div><span className="pause-status">已暫停</span></header>
+        <div className="pause-turn"><span>目前進度</span><strong>第 {turnNumber} 回合</strong><b>{phaseLabel}</b></div>
         <div className="pause-match-details">
           <span>玩家 {deckChoiceLabel[deckConfig.player]}</span>
           <b>VS</b>
           <span>AI {deckChoiceLabel[deckConfig.ai]}</span>
         </div>
+        <button className="pause-resume" type="button" onClick={onResume} data-modal-initial-focus>
+          繼續對戰<ChevronRight aria-hidden="true" />
+        </button>
+        <p className="pause-shortcut">也可按 Esc 返回對戰</p>
+        <div className="pause-diagnostics"><button className="pause-diagnostics-toggle" type="button" aria-expanded={showDiagnostics} aria-controls={diagnosticsId} onClick={() => setShowDiagnostics(value => !value)}>問題回報與執行資訊 <ChevronRight aria-hidden="true" /></button>
+        <div id={diagnosticsId} hidden={!showDiagnostics}>
         <small>AI 已執行 {aiActionCount} 個動作</small>
         {onCopyIssueBundle && (
           <button
@@ -2653,9 +2680,7 @@ export function PauseModal({
                 : '複製問題包'}
           </button>
         )}
-        <button type="button" onClick={onResume} data-modal-initial-focus>
-          繼續對戰
-        </button>
+        </div></div>
       </section>
     </div>
   )
@@ -2782,13 +2807,17 @@ export interface ResultModalProps {
   reason: GameEndReason
   onRestart: () => void
   onReviewLog?: (reasonText: string) => void
+  restartLabel?: string
+  deckSummary?: string
+  turnNumber?: number
 }
 
 export interface SpecialPlayModalProps {
   sourceCard: GameCard
   candidates: CookieInBattle[]
-  selectedCandidateId: string | null
-  onSelectCandidate: (instanceId: string) => void
+  requiredCandidateCount?: number
+  selectedCandidateIds: string[]
+  onToggleCandidate: (instanceId: string) => void
   onCancel: () => void
   onConfirm: () => void
 }
@@ -2796,8 +2825,9 @@ export interface SpecialPlayModalProps {
 export function SpecialPlayModal({
   sourceCard,
   candidates,
-  selectedCandidateId,
-  onSelectCandidate,
+  requiredCandidateCount = sourceCard.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1,
+  selectedCandidateIds,
+  onToggleCandidate,
   onCancel,
   onConfirm,
 }: SpecialPlayModalProps) {
@@ -2806,7 +2836,7 @@ export function SpecialPlayModal({
       <section className="battle-response-modal special-play-modal" role="dialog" aria-modal="true">
         <span className="modal-eyebrow">Special Play 特殊登場</span>
         <h2>{sourceCard.name}</h2>
-        <p>選擇 1 張符合條件的戰鬥區餅乾放置到棄牌區，完成特殊登場。</p>
+        <p>選擇 {requiredCandidateCount} 張符合條件的戰鬥區餅乾放置到棄牌區，完成特殊登場。</p>
         <div className="special-play-source">
           <CardFace card={sourceCard} className="special-play-source-card" />
           <div>
@@ -2817,19 +2847,19 @@ export function SpecialPlayModal({
         <div className="special-play-candidates" role="list" aria-label="特殊登場代價餅乾">
           {candidates.map((candidate) => {
             const id = candidate.card.instanceId
-            const selected = selectedCandidateId === id
+            const selected = selectedCandidateIds.includes(id)
             return (
               <button
                 key={id}
                 type="button"
                 className={`special-play-candidate${selected ? ' is-selected' : ''}`}
                 aria-pressed={selected}
-                onClick={() => onSelectCandidate(id)}
+                onClick={() => onToggleCandidate(id)}
               >
                 <CardFace card={candidate.card} className="special-play-candidate-card" />
                 <span>
                   <strong>{candidate.card.name}</strong>
-                  <small>LV.{candidate.card.level}／HP {candidate.card.hp}</small>
+                  <small>LV.{getCookieEffectiveLevel(candidate)}／HP {candidate.card.hp}</small>
                 </span>
               </button>
             )
@@ -2837,7 +2867,11 @@ export function SpecialPlayModal({
         </div>
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>取消</button>
-          <button type="button" disabled={!selectedCandidateId} onClick={onConfirm}>
+          <button
+            type="button"
+            disabled={selectedCandidateIds.length !== requiredCandidateCount}
+            onClick={onConfirm}
+          >
             確認特殊登場
           </button>
         </div>
@@ -3005,7 +3039,11 @@ export function ResultModal({
   reason,
   onRestart,
   onReviewLog,
+  restartLabel = '再來一局',
+  deckSummary,
+  turnNumber,
 }: ResultModalProps) {
+  const titleId = useId()
   const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
     reason === 'special-victory'
@@ -3018,10 +3056,12 @@ export function ResultModal({
 
   return (
     <div className="modal-backdrop result-backdrop" role="presentation">
-      <section className="result-modal" role="alertdialog">
+      <section className="result-modal" role="alertdialog" aria-modal="true" aria-labelledby={titleId}>
         <span>對局結束</span>
-        <h2>{winnerName}勝利</h2>
+        <h2 id={titleId}>{winnerName}勝利</h2>
         <p>{reasonText}</p>
+        {turnNumber !== undefined && <p>結束於第 {turnNumber} 回合</p>}
+        {deckSummary && <p className="result-deck-summary">使用牌組：{deckSummary}</p>}
         <div className="result-modal-actions">
           {onReviewLog && (
             <button
@@ -3038,7 +3078,7 @@ export function ResultModal({
             className="result-restart-button"
             onClick={onRestart}
           >
-            再來一局
+            {restartLabel}
           </button>
         </div>
       </section>

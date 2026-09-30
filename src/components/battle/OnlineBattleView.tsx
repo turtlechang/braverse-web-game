@@ -34,6 +34,7 @@ import { getOptionalCostAttackPrompt } from '../modals/optionalCostAttackPrompt'
 import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
+import { HandInspectionModal } from './HandInspectionModal'
 import {
   CardDetailModal,
   CardPileModal,
@@ -122,7 +123,7 @@ export function OnlineBattleView({
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
-  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [specialPlayCandidateIds, setSpecialPlayCandidateIds] = useState<string[]>([])
   const [battleLogReviewReason, setBattleLogReviewReason] = useState<string | null>(null)
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
@@ -137,6 +138,7 @@ export function OnlineBattleView({
     game,
     viewerPlayerId,
     sendCommand,
+    synchronizing: connectionMode === "syncing",
     seed,
   })
   const handleExportReplay = (): boolean => {
@@ -177,6 +179,7 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+  const handInspectionResult = game.handInspectionResults?.[viewerPlayerId]
   const stagePlacementCard = stagePlacement
     ? viewerPlayer.hand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
     : null
@@ -237,12 +240,27 @@ export function OnlineBattleView({
           viewerPlayer.battleArea,
         )
       : []
+  const specialPlayCandidateCount =
+    specialPlaySourceCard?.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1
+  const toggleSpecialPlayCandidate = (instanceId: string) => {
+    setSpecialPlayCandidateIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      return current.length < specialPlayCandidateCount
+        ? [...current, instanceId]
+        : current
+    })
+  }
   const handleSpecialPlayConfirm = () => {
     if (
       !specialPlaySourceCard ||
-      !specialPlayCandidateId ||
-      !specialPlayCandidates.some(
-        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      specialPlayCandidateIds.length !== specialPlayCandidateCount ||
+      specialPlayCandidateIds.some(
+        (candidateId) =>
+          !specialPlayCandidates.some(
+            (candidate) => candidate.card.instanceId === candidateId,
+          ),
       ) ||
       !canSpecialPlayCookie(game, viewerPlayerId, specialPlaySourceCard.instanceId)
     ) {
@@ -254,12 +272,12 @@ export function OnlineBattleView({
         kind: 'deploy-cookie',
         playerId: viewerPlayerId,
         instanceId: specialPlaySourceCard.instanceId,
-        specialPlayCookieInstanceId: specialPlayCandidateId,
+        specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
       '特殊登場已支付，等待處理 On Play。',
     )
     setSpecialPlaySourceId(null)
-    setSpecialPlayCandidateId(null)
+    setSpecialPlayCandidateIds([])
   }
   const { activeSelectedHandCardId, setSelectedHandCardId } =
     useHandSelectionDismissal(viewerPlayer.hand, closeResourcePopover)
@@ -497,7 +515,7 @@ export function OnlineBattleView({
     localPublicIntentDraft,
     sendPublicIntent,
   ])
-  const interactionLocked = deriveInteractionLocked(
+  const interactionLocked = match.animations.isPlaying || deriveInteractionLocked(
     game,
     viewerPlayerId,
     Boolean(pending.pendingEffect),
@@ -506,6 +524,7 @@ export function OnlineBattleView({
   )
 
   const phaseDisabled =
+    match.animations.isPlaying ||
     game.status !== 'playing' ||
     Boolean(game.pendingReplacement) ||
     hasPendingCardResolution(game) ||
@@ -634,7 +653,7 @@ export function OnlineBattleView({
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
-      setSpecialPlayCandidateId(null)
+      setSpecialPlayCandidateIds([])
     },
     onPlayItem: (instanceId) => {
       const card = viewerPlayer.hand.find(
@@ -653,7 +672,7 @@ export function OnlineBattleView({
   }
 
   return (
-    <main className="game-shell" data-attention-state={attentionState}>
+    <main data-motion={match.animations.reducedMotion ? "reduced" : match.animations.speed} className="game-shell" data-attention-state={attentionState}>
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
@@ -672,6 +691,7 @@ export function OnlineBattleView({
       )}
 
       <BattleTable
+        animation={match.animations}
         ariaLabel="Braverse 線上對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
@@ -739,7 +759,7 @@ export function OnlineBattleView({
         }}
       />
 
-      {openingSnapshot && (
+      {openingSnapshot && !match.animations.isPlaying && (
         <OnlineOpeningOverlay
           opening={openingSnapshot}
           game={game}
@@ -752,7 +772,7 @@ export function OnlineBattleView({
       )}
 
       <EffectPanel
-        pendingEffect={pending.pendingEffect}
+        pendingEffect={match.animations.isPlaying ? null : pending.pendingEffect}
         currentEffect={pending.currentEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
@@ -874,9 +894,13 @@ export function OnlineBattleView({
         }
       />
 
-      <BattleResponseModals match={match} />
-      <DamageEffectModals match={match} pending={pending} />
-      <PendingDecisionModals match={match} pending={pending} />
+      {!match.animations.isPlaying && <BattleResponseModals match={match} />}
+      {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
+      {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
+
+      {handInspectionResult && (
+        <HandInspectionModal result={handInspectionResult} />
+      )}
 
       {stagePlacementCard?.stageAbility && stagePlacement && (
         <StagePlacementModal
@@ -896,22 +920,25 @@ export function OnlineBattleView({
         <SpecialPlayModal
           sourceCard={specialPlaySourceCard}
           candidates={specialPlayCandidates}
-          selectedCandidateId={specialPlayCandidateId}
-          onSelectCandidate={setSpecialPlayCandidateId}
+          requiredCandidateCount={specialPlayCandidateCount}
+          selectedCandidateIds={specialPlayCandidateIds}
+          onToggleCandidate={toggleSpecialPlayCandidate}
           onCancel={() => {
             setSpecialPlaySourceId(null)
-            setSpecialPlayCandidateId(null)
+            setSpecialPlayCandidateIds([])
           }}
           onConfirm={handleSpecialPlayConfirm}
         />
       )}
 
-      {game.result && battleLogReviewReason === null && (
+      {game.result && !match.animations.isPlaying && battleLogReviewReason === null && (
         <ResultModal
           winnerName={game.players[game.result.winnerId].name}
           loserId={game.result.loserId}
           viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
+          turnNumber={game.turnNumber}
+          restartLabel="返回大廳"
           onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
           onRestart={onLeave}
         />

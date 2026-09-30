@@ -361,6 +361,29 @@ describe('HandDiscardResponseModal', () => {
       '《{B}》 During this battle, if 1 of your {B} Cookies faints, you can draw up to 3 cards from your deck and discard 1 card from your hand.',
   }
 
+  it('labels a deck-top hand placement as placement rather than discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(() => root.render(
+      <HandDiscardResponseModal
+        sourceCardName="Black Raisin Cookie"
+        hand={[createHandCard(1)]}
+        requiredCount={1}
+        selectedIds={['test-hand-1']}
+        destination="deck-top"
+        onToggleCard={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    ))
+    expect(container.textContent).toContain('要求你放置手牌到牌庫頂')
+    expect(container.textContent).toContain('必須選擇 1 張手牌放置到牌庫頂')
+    expect(container.textContent).toContain('確認放置 (1)')
+    expect(container.textContent).not.toContain('棄置手牌')
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('uses the same battle response modal style for the discard step', async () => {
     const onToggleCard = vi.fn()
     const onConfirm = vi.fn()
@@ -1534,6 +1557,49 @@ describe('InspectDeckModal', () => {
     expect(container.querySelector('[aria-label="選擇牌A"]')).not.toBeNull()
     expect(container.querySelector('[aria-label="選擇牌B"]')).not.toBeNull()
     expect(container.querySelector('[aria-label="選擇牌C"]')).not.toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('shows a non-pickable revealed card and requires its top-or-bottom placement', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const topCard = revealedCards[0]
+
+    await act(() =>
+      root.render(
+        <InspectDeckModal
+          sourceCardName="Butterfly Lantern"
+          revealedCards={[topCard]}
+          pickCount={0}
+          restDestination="top-or-bottom"
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.inspect-deck-card')).not.toBeNull()
+    expect(container.querySelector('.inspect-deck-card')?.textContent).toContain(topCard.name)
+
+    const confirmBtn = findButtonByText(container, '確認並放回')!
+    expect(confirmBtn.disabled).toBe(true)
+
+    const bottomButton = findButtonByText(container, '放回牌庫底')!
+    expect(bottomButton.getAttribute('aria-pressed')).toBe('false')
+    await act(() => {
+      bottomButton.click()
+    })
+
+    expect(confirmBtn.disabled).toBe(false)
+    expect(bottomButton.getAttribute('aria-pressed')).toBe('true')
+    await act(() => {
+      confirmBtn.click()
+    })
+
+    expect(onConfirm).toHaveBeenCalledWith([], [topCard.instanceId], 'bottom')
 
     await act(() => root.unmount())
     container.remove()

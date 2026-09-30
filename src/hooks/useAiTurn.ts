@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameState } from '../game'
-import {
-  createDemoGame,
-  simulateAiMatch,
-  takeAiStep,
-} from '../game'
 import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
 import type { AiStrategyMemory } from '../game'
 import type { BuiltInDeckChoice, DeckChoice } from '../game'
 import type { BattleReplayAiDecision, BattleReplayAiMetadata } from '../game'
 import type { CustomDeck } from '../game/custom-deck'
-import { AI_STRATEGY_VERSION } from '../game'
+import { AI_STRATEGY_VERSION } from '../game/ai/strategy/version'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -110,53 +105,68 @@ export function useAiTurn(params: {
       return
     }
 
+    let effectActive = true
+    const loadAiStep = import('../game/ai').then(
+      ({ takeAiStep }) => takeAiStep,
+      () => null,
+    )
     const thinkingTimer = (window.setTimeout(
       () => setAiThinking(true),
       0,
     ) as unknown) as number
     aiThinkingTimerRef.current = thinkingTimer
     const timer = (window.setTimeout(() => {
-      const decision = takeAiStep(game, 'player-two', {
-        level: aiLevel,
-        memory: aiStrategyMemoryRef.current ?? undefined,
-      })
-      if (decision.reason?.strategyMemory) {
-        aiStrategyMemoryRef.current = decision.reason.strategyMemory
-      }
-      setAiThinking(false)
+      void loadAiStep.then((takeAiStep) => {
+        if (!effectActive) return
+        if (!takeAiStep) {
+          setAiThinking(false)
+          setMessage('AI 停止：無法載入策略。')
+          return
+        }
 
-      if (decision.action === 'error' || decision.state === game) {
-        setMessage(`AI 停止：${decision.description}`)
-        return
-      }
+        const decision = takeAiStep(game, 'player-two', {
+          level: aiLevel,
+          memory: aiStrategyMemoryRef.current ?? undefined,
+        })
+        if (decision.reason?.strategyMemory) {
+          aiStrategyMemoryRef.current = decision.reason.strategyMemory
+        }
+        setAiThinking(false)
 
-      if (decision.revealedCards?.length) {
-        setPendingAiDecision(decision)
-        setMessage(
-          `AI 棄置 ${decision.revealedCards.length} 張卡牌，等待公開確認。`,
-        )
-        return
-      }
+        if (decision.action === 'error' || decision.state === game) {
+          setMessage(`AI 停止：${decision.description}`)
+          return
+        }
 
-      if (decision.revealedCard) {
-        // 實驗性：單張卡牌公開（如 FLIP）不再暫停等待玩家點擊確認，改由 toast 訊息帶出。
+        if (decision.revealedCards?.length) {
+          setPendingAiDecision(decision)
+          setMessage(
+            `AI 棄置 ${decision.revealedCards.length} 張卡牌，等待公開確認。`,
+          )
+          return
+        }
+
+        if (decision.revealedCard) {
+          // 實驗性：單張卡牌公開（如 FLIP）不再暫停等待玩家點擊確認，改由 toast 訊息帶出。
+          setGame(decision.state)
+          recordAiDecision(decision, game)
+          setMessage(`AI 公開 ${decision.revealedCard.name}：${decision.description}`)
+          consecutiveAiActionCountRef.current += 1
+          setAiActionCount((count) => count + 1)
+          return
+        }
+
         setGame(decision.state)
         recordAiDecision(decision, game)
-        setMessage(`AI 公開 ${decision.revealedCard.name}：${decision.description}`)
+        setMessage(`AI：${decision.description}`)
         consecutiveAiActionCountRef.current += 1
         setAiActionCount((count) => count + 1)
-        return
-      }
-
-      setGame(decision.state)
-      recordAiDecision(decision, game)
-      setMessage(`AI：${decision.description}`)
-      consecutiveAiActionCountRef.current += 1
-      setAiActionCount((count) => count + 1)
+      })
     }, 450) as unknown) as number
     aiActionTimerRef.current = timer
 
     return () => {
+      effectActive = false
       setAiThinking(false)
       if (aiThinkingTimerRef.current !== null) {
         window.clearTimeout(aiThinkingTimerRef.current)
@@ -184,14 +194,20 @@ export function useAiTurn(params: {
   ])
 
   const runSimulation = useCallback(() => {
-    const results = aiSimulationSeeds.map((seed) =>
-      simulateAiMatch(
-        createDemoGame(seed, deckConfig, playerCustomDeck ?? undefined),
-      ),
-    )
-    setSimulationResults(results)
-    const completed = results.filter((result) => !result.stuck).length
-    setMessage(`AI 驗證完成：${completed}/20 場正常結束。`)
+    void Promise.all([import('../game/demo'), import('../game/ai')])
+      .then(([demoModule, aiModule]) => {
+        const results = aiSimulationSeeds.map((seed) =>
+          aiModule.simulateAiMatch(
+            demoModule.createDemoGame(seed, deckConfig, playerCustomDeck ?? undefined),
+          ),
+        )
+        setSimulationResults(results)
+        const completed = results.filter((result) => !result.stuck).length
+        setMessage(`AI 驗證完成：${completed}/20 場正常結束。`)
+      })
+      .catch(() => {
+        setMessage('AI 驗證失敗：無法載入策略。')
+      })
   }, [deckConfig, playerCustomDeck, setMessage])
 
   const resetAiCounts = useCallback(() => {

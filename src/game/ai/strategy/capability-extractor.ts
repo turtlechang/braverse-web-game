@@ -229,7 +229,9 @@ const extractEffect = (
           ? 'deck-bottom'
           : effect.restDestination === 'top'
             ? 'deck-top'
-            : 'trash',
+            : effect.restDestination === 'top-or-bottom'
+              ? 'deck'
+              : 'trash',
         tags: ['deck-order'],
       })
       if (effect.pickDestination === 'battle') {
@@ -283,6 +285,7 @@ const extractEffect = (
     case 'disable-traps':
     case 'prevent-opponent-damage':
     case 'prevent-opponent-hp-gain':
+    case 'prevent-opponent-on-play':
     case 'prevent-opponent-battle-movement':
     case 'prevent-effect-damage':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'control', {

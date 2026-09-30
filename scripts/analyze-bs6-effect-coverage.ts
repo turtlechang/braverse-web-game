@@ -67,13 +67,20 @@ const compareCardNumber = (left: string, right: string) =>
   left.localeCompare(right, 'en')
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
-  if (card.type === 'cookie') return card.skill.text
-  if (card.type === 'flip') return card.flipText
-  return card.attackText
+  if (card.type === 'cookie') {
+    // Keep raw inventory text untouched, but let coverage reflect an exact
+    // image-backed Cookie skill override used by the runtime adapter.
+    return card.skill.text ?? convertOfficialCookieSkill(card)?.text ?? null
+  }
+  if (card.type === 'flip') return card.flipText ?? card.skill.text
+  // 官方 Item／Stage／Trap records keep their primary text in skill.text;
+  // attackText is only a legacy fallback for older imports.  Looking only at
+  // attackText silently classified every BS10 non-Cookie card as no-effect.
+  return card.skill.text ?? card.attackText
 }
 
 const hasAttackThen = (card: OfficialCardRecord) =>
-  (card.type === 'cookie' || card.type === 'flip') &&
+  (card.type === 'cookie' || card.type === 'flip' || card.type === 'extra') &&
   /\bThen\b/i.test(card.attackText ?? '')
 
 const getAbilityConversion = (
@@ -89,8 +96,9 @@ const getAbilityConversion = (
   }
 
   if (card.type === 'cookie') {
-    if (!card.skill.text) return 'not-applicable'
-    return convertOfficialCookieSkill(card) ? 'converted' : 'pending'
+    const ability = convertOfficialCookieSkill(card)
+    if (!card.skill.text && !ability) return 'not-applicable'
+    return ability ? 'converted' : 'pending'
   }
 
   if (card.type === 'flip') {
@@ -98,7 +106,7 @@ const getAbilityConversion = (
     return convertOfficialFlipAbility(card) ? 'converted' : 'pending'
   }
 
-  if (!card.attackText) return 'not-applicable'
+  if (!card.skill.text && !card.attackText) return 'not-applicable'
 
   const ability =
     card.type === 'item'

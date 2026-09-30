@@ -2418,6 +2418,1013 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
       },
     ],
+    // BS11-002 Macaron Cookie：支付 1R 與 1 張紅色 Item 後，先抽 1 張，
+    // 再指定恰好 1 張對手 Cookie 造成 1 傷害。通用 parser 目前不會把
+    // 「Draw 1 ... and select ...」的兩段結算保留下來，因此使用 exact map；
+    // 紅色能量與紅色 Item 代價由 parser 搭配下方 exact cost override 保留。
+    'BS11-002': [
+      { kind: 'draw', amount: 1 },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ],
+    // BS11-006 Castanets：有 Macaron Cookie 在己方戰鬥區時，對手所有
+    // Cookies 各受 1 傷害；登場代價見 exactCookieSkillCosts。
+    'BS11-006': [{
+      kind: 'damage-all',
+      amount: 1,
+      side: 'opponent',
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Macaron Cookie',
+      },
+    }],
+    // BS11-007 Flat Tofu Cookie：支付 RR 後對手所有 Cookies 各受 1 傷害。
+    'BS11-007': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    // BS11-008 Raspberry Cookie：支付 R 後，對手至多 1 張 Cookie 受 1 傷害。
+    'BS11-008': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS11-009 Orb of Eternal Flame：LV.2 以上與剩餘 HP 1 必須由同一張
+    // 己方戰鬥區 Cookie 同時滿足，不能拆成兩個可由不同 Cookie 拼成的條件。
+    'BS11-009': [{
+      kind: 'damage',
+      amount: 3,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'battle-area-has-cookie-with-level-and-remaining-hp',
+        side: 'self',
+        minLevel: 2,
+        remainingHp: 1,
+      },
+    }],
+    // BS11-012 Avatar of Ruin Turmeric Statue：本回合己方至少兩張 Cookie
+    // 昏厥後才建立對手至多一張的 2 傷害目標。
+    'BS11-012': [{
+      kind: 'damage',
+      amount: 2,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'self',
+        count: 2,
+      },
+    }],
+    // BS11-016 Fire Spirit Cookie：支付所有紅色 Cookie 合計 2 張 HP，
+    // 再讓對手所有 Cookie 各受 1 傷害；跨 Cookie 的分攤由規則層支付器處理。
+    'BS11-016': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    // BS11-017 Hollyberry：HP 條件下的攻擊費用被動修正另由
+    // exactCookieSkillPassiveEffects 保存；這裡只標示技能已支援，避免
+    // 將持續被動效果誤放進一次性技能效果佇列。
+    'BS11-017': [],
+    // BS11-018 Burning Spice：先支付 1 張紅色 Cookie 昏厥，再於手牌
+    // 至多 5 張時抽至多 2 張；代價由 exactCookieSkillCosts 保留。
+    'BS11-018': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-019 Potato Salad Cookie：FLIP 的附著 +1 HP 由 exactFlipEffects
+    // 承載；空效果陣列仍需標記主效果已安全轉接。
+    'BS11-019': [],
+    // BS11-020 Royal Margarine Cookie：FLIP 抽最多 1 張。
+    'BS11-020': [{ kind: 'draw-up-to', max: 1 }],
+    // BS11-021 Book of Wizdom：只有己方戰鬥區有 Wizard Cookie 時，
+    // 才能從己方棄牌區回手最多 1 張同時是 Cookie 且具有 runtime FLIP 的卡。
+    'BS11-021': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      cookieOnly: true,
+      hasFlip: true,
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Wizard Cookie',
+      },
+    }],
+    // BS11-024 Smoked Cheese Cookie：昏厥時從手牌至多登場 1 張 LV.3
+    // Cookie；Then 的 +1 HP 綁在 hand-to-battle 的 gainHp，確保只套用到
+    // 實際登場的那張 Cookie，而不是重新開放任意己方目標。
+    'BS11-024': [{
+      kind: 'hand-to-battle',
+      amount: 1,
+      minLevel: 3,
+      maxLevel: 3,
+      optional: true,
+      gainHp: 1,
+    }],
+    // BS11-026 Wizard Cookie：先支付 Y1 與手牌中恰好 1 張具有 FLIP 的
+    // Cookie，再選至多 1 張對手 Cookie 造成 1 傷害。
+    'BS11-026': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS11-029 Life's Protection：先讓至多一張對手 Cookie 本回合攻擊傷害
+    // -1，再保留 Then 的可選 1N ability payment。付款後才檢查己方戰鬥區的
+    // Millennial Tree／Ancient 條件，並另選至多一張己方 Cookie +1 HP。
+    'BS11-029': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        payBeforeCondition: true,
+        cost: { energy: { neutral: 1 }, discardHand: 0 },
+        effectText:
+          "Then, <{N}> if there is a [Millennial Tree Cookie] or 【Ancient】 Cookie in your battle area, select up to 1 of your Cookies. That Cookie gains +1 HP.",
+        effects: [{
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Millennial Tree Cookie',
+              },
+              {
+                kind: 'battle-area-has-keyword',
+                side: 'self',
+                keyword: 'ancient',
+              },
+            ],
+          },
+        }],
+      },
+    ],
+    // BS11-030 Life-Sprouting Jar：Break 區達 LV.3 後，才可選擇剩餘 HP
+    // 至多 3 的己方 Cookie 補 1 HP；門檻與目標上限都留在 CardEffect。
+    'BS11-030': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1, maxRemainingHp: 3 },
+      condition: { kind: 'break-level-at-least', level: 3 },
+    }],
+    // BS11-031 Winged Tree：Break 區至少 4 張 Cookie 時，標記對手至多
+    // 一張 Cookie 的 Activate 技能在對手下一回合前需要額外棄牌；不是
+    // Active Phase readiness，也不是 disable-attack。
+    'BS11-031': [{
+      kind: 'require-cookie-activate-discard-hand',
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'break-area-card-count-at-least',
+        side: 'self',
+        count: 4,
+      },
+      count: 2,
+    }],
+    // BS11-032 Burnt Cheese：回合結束時，只有本回合曾從休息區登場
+    // LV.3 以上 Cookie 才把來源送入棄牌區；等級來源由 runtime 另行保留。
+    'BS11-032': [{
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: {
+        kind: 'cookie-played-from-break-this-turn',
+        exactLevel: 3,
+      },
+    }],
+    // BS11-034 Golden Cheese：展示手牌中等級合計 3 的 Cookie 作為代價，
+    // 來源從休息區登場並固定以 5 張 HP 結算，最後把展示卡全部放回休息區。
+    'BS11-034': [
+      {
+        kind: 'reveal-hand',
+        amount: 3,
+        minAmount: 1,
+        maxAmount: 3,
+        levelSum: 3,
+        asCost: true,
+        selectCard: true,
+        cookieOnly: true,
+      },
+      { kind: 'break-source-to-battle', hpCount: 5 },
+      { kind: 'hand-to-break', amount: 3, optional: true, revealedCardOnly: true },
+    ],
+    // BS11-035 Millennial Tree 的兩段登場效果由 On Play 專用 map 承載；
+    // 這裡保留空 Activate effects，讓候選卡被標記為已轉接。
+    'BS11-035': [],
+    // BS11-036 Eternal Sugar Cookie：沒有另一張同名餅乾時，選對手至多
+    // 一張 Cookie，直到對手下回合結束增加 1N 攻擊費用。
+    'BS11-036': [{
+      kind: 'modify-attack-cost',
+      target: { side: 'opponent', min: 0, max: 1 },
+      energyCost: { neutral: 1 },
+      operation: 'increase',
+      duration: 'opponent-next-turn',
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Eternal Sugar Cookie',
+        excludeSource: true,
+        negate: true,
+      },
+    }],
+    // BS11-038 Director Q：只有己方戰鬥區有 Shine Muscat Cookie 時，
+    // 將己方支援區至多一張支援卡恢復活動。
+    'BS11-038': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Shine Muscat Cookie',
+      },
+    }],
+    // BS11-041 Peach Blossom Cookie：回手綠色支援卡是啟動代價；效果為
+    // 讓己方目前所有 Cookie 各增加 1 HP，不能縮成單一目標選擇。
+    'BS11-041': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 2, allMatching: true },
+    }],
+    // BS11-042 Shine Muscat Cookie：On Play 時將己方支援區至多一張設為
+    // active；支援區選擇與 optional up-to 語意沿用共用 set-active 管線。
+    'BS11-042': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+    }],
+    // BS11-044 Silverbell 的能力是持續被動，實際效果由
+    // exactCookieSkillPassiveEffects 承載；空陣列仍標記主能力已精確接管。
+    'BS11-044': [],
+    // BS11-045 Grand Dust Hotel：啟動後只解除休息中的綠色 Cookie，
+    // 場景自身 REST 由 exactStageAbility 的 restSource 保留。
+    'BS11-045': [{
+      kind: 'set-cookie-active',
+      target: {
+        side: 'self',
+        min: 0,
+        max: 2,
+        energyColor: 'green',
+        restedOnly: true,
+      },
+    }],
+    // BS11-046 Awakened Apathy：第二段 Then 只能重用第一段選中的
+    // 對手 Cookie，且支援區差距是「己方至少少 2 張」的條件。
+    'BS11-046': [{
+      kind: 'modify-attack',
+      amount: -2,
+      duration: 'this-turn',
+      target: { side: 'opponent', min: 0, max: 1 },
+      thenEffects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          previousEffectTargetOnly: true,
+        },
+        condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+      }],
+    }],
+    // BS11-048 Wind's Protection：第二段先支付可選的 1N，付款後才
+    // 檢查 Wind Archer／Ancient 條件；休息支援卡由對手選擇。
+    'BS11-048': [{
+      kind: 'modify-attack',
+      amount: -1,
+      duration: 'this-turn',
+      target: { side: 'opponent', min: 0, max: 1 },
+    }, {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        payBeforeCondition: true,
+        cost: { energy: { neutral: 1 }, discardHand: 0 },
+        effectText: "Then, <{N}> if there is a [Wind Archer Cookie] or 【Ancient】 Cookie in your battle area, rest up to 1 card in your opponent's support area.",
+        effects: [{
+          kind: 'rest-support',
+          side: 'opponent',
+          amount: 1,
+          activeOnly: true,
+          optional: true,
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Wind Archer Cookie',
+              },
+              {
+                kind: 'battle-area-has-keyword',
+                side: 'self',
+                keyword: 'ancient',
+              },
+            ],
+          },
+        }],
+    }],
+    // BS11-049 Emerald of the Wind：只允許指定名稱的 Cookie 從己方
+    // 棄牌區登場；On Play 是否存在由實際登場的 Cookie 自身決定。
+    'BS11-049': [{
+      kind: 'trash-to-battle',
+      amount: 1,
+      optional: true,
+      cardName: 'Wind Archer Cookie',
+    }],
+    // BS11-053 Mystic Flour Cookie：只處理對手剩餘 HP 至少 5 的 Cookie；
+    // hp-to-trash-all 的 target 是候選篩選，不會把全體效果降成任選目標。
+    'BS11-053': [{
+      kind: 'hp-to-trash-all',
+      amount: 1,
+      side: 'opponent',
+      target: { side: 'opponent', min: 0, max: 4, minRemainingHp: 5 },
+    }],
+    // BS11-054 Net Cookie：選定的對手 Cookie 在期限內每次攻擊前都要
+    // 由其控制者棄 2 張手牌；目標與期限由 runtime requirement 保存。
+    'BS11-054': [{
+      kind: 'require-cookie-attack-discard-hand',
+      target: { side: 'opponent', min: 0, max: 1 },
+      count: 2,
+    }],
+    // BS11-056 Soda Dollop：指定名稱的 Cream Soda Cookie 必須在己方
+    // 戰鬥區；Activate／Once Per Turn 由官方時機標記轉接。
+    'BS11-056': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: {
+        kind: 'battle-area-has-named-cookie',
+        side: 'self',
+        name: 'Cream Soda Cookie',
+      },
+    }],
+    // BS11-058 Cream Soda Cookie：對手攻擊反應支付棄 2 張手牌後，
+    // 選自己的 Cookie 至多 1 張補 1 HP。
+    'BS11-058': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1 },
+    }],
+    // BS11-061 Candy Apple Cookie：支付 2B 後，將對手至多一張 Cookie
+    // 的最上方 HP 放到對手牌庫底；沒有目標時整段可略過。
+    'BS11-061': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'opponent', min: 0, max: 1 },
+      hpOnly: true,
+    }],
+    // BS11-064 The Breath of the Depths：本回合對手 Cookie 的 On Play
+    // 改為支付 1N 抽最多 1 張；這不是禁止 On Play，而是替代原效果。
+    'BS11-064': [{
+      kind: 'replace-opponent-on-play',
+      duration: 'this-turn',
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+      effectText: 'During this turn, your opponent\'s Cookies\' On Play become "<{N}> Draw up to 1 card from your deck."',
+    }],
+    // BS11-047 Dumpling Censer：本回合對手 Cookie 的 On Play
+    // 改為由該 Cookie 的控制者支付 1N，並從自己的支援區回手 1 張卡。
+    // 這是替代效果，不是禁止 On Play；啟動 Dumpling Censer 自身的
+    // {G}＋支援區回手代價另由 exact item cost 保留。
+    'BS11-047': [{
+      kind: 'replace-opponent-on-play',
+      duration: 'this-turn',
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [{ kind: 'support-to-hand', amount: 1 }],
+      effectText: 'During this turn, your opponent\'s Cookies\' On Play become "<{N}> Return 1 card from your support area to your hand."',
+    }],
+    // BS11-065 Mirror of Destiny：選任一方 LV.2 以下 Cookie 整張放入
+    // 該 Cookie 所有人的牌庫底；不能縮成只移除 HP 卡。
+    'BS11-065': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'either', min: 0, max: 1, maxLevel: 2 },
+    }],
+    // BS11-066 Milk Lake of Truth：先降低至多一張對手 Cookie 的攻擊傷害，
+    // 再揭示對手牌庫頂牌並讓其選擇放回頂或底。
+    'BS11-066': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'inspect-deck',
+        lookCount: 1,
+        pickCount: 0,
+        restDestination: 'top-or-bottom',
+        side: 'opponent',
+      },
+    ],
+    // BS11-068 Black Sapphire Cookie：昏厥觸發只移除目標 Cookie 的最上方
+    // HP 卡；Cookie 本身、其餘 HP 與裝備都留在場上。
+    'BS11-068': [{
+      kind: 'field-to-deck-bottom',
+      target: { side: 'opponent', min: 0, max: 1 },
+      hpOnly: true,
+    }],
+    // BS11-069 Sea Fairy Cookie：對手攻擊回應時，手牌至多 5 張才抽最多
+    // 2 張，接著把 1 張手牌放牌庫頂；條件必須在抽牌／棄牌整段上保留。
+    'BS11-069': [{
+      kind: 'draw-up-to-then-discard',
+      max: 2,
+      discardCount: 1,
+      handDestination: 'deck-top',
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-070 Pure Vanilla Cookie：On Play 的抽牌效果，Ancient 棄牌
+    // 限制由 exactCookieSkillCosts 保留。
+    'BS11-070': [{ kind: 'draw-up-to', max: 2 }],
+    // BS11-072 Dark Choco Cookie：自己的棄牌區達 15 張後，對手至多一張
+    // Cookie 受 1 傷害；門檻屬於來源玩家的 trash。
+    'BS11-072': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }],
+    // BS11-077 Dark Spirit Helmet：卡圖補足候選 API 遺漏的 Skill 文字；
+    // 實際持續效果放在 exactCookieSkillPassiveEffects，Activate effects 保持空陣列。
+    'BS11-077': [],
+    // BS11-079 Espresso Cookie：On Play 棄 2 張手牌後，從自己的棄牌區
+    // 選擇至多 1 張紫色 Cookie 登場；棄牌代價由 exactCookieSkillCosts 保留。
+    'BS11-079': [{
+      kind: 'trash-to-battle',
+      amount: 1,
+      optional: true,
+      energyColor: 'purple',
+    }],
+    // BS11-080 Banner of the Solitary Oath：只有本局完成至少兩次 Refresh
+    // 才抽 1 張並選至多 1 張對手 Cookie 造成 2 傷害；兩段共用同一門檻。
+    'BS11-080': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'refresh-count-during-game-at-least', count: 2 },
+      },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'refresh-count-during-game-at-least', count: 2 },
+      },
+    ],
+    // BS11-081 Dream Traveler's Hourglass：雙方棄牌區的所有卡牌各自洗回
+    // 所屬牌庫；side: both 不能縮成只處理來源玩家。
+    'BS11-081': [{ kind: 'trash-to-deck-all', side: 'both' }],
+    // BS11-085 Salt Cellar Cookie：支付 1P 與來源自我送入棄牌區後，
+    // 將己方至多 1 張紫色 LV.2 以下 Cookie 從戰鬥區送入棄牌區。
+    'BS11-085': [{
+      kind: 'field-to-trash',
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        maxLevel: 2,
+        energyColor: 'purple',
+      },
+    }],
+    // BS11-087 Dark Cacao Cookie：只有從棄牌區登場的 On Play 才補 2 張 HP；
+    // fromTrashArea 來源限制在 convertOfficialCookieSkill 統一套用。
+    'BS11-087': [{
+      kind: 'gain-hp',
+      amount: 2,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS11-088 Moonlight Cookie：紫色 LV.1 Cookie 的移動在尖括號內，
+    // 已由 exactCookieSkillCosts 的 trashBattleCookie 表示；效果本身只
+    // 回收棄牌區的紫色 LV.2 以上 Cookie。
+    'BS11-088': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      minLevel: 2,
+      energyColor: 'purple',
+      cookieOnly: true,
+    }],
+    // BS11-089 Silent Salt Cookie：On Play 的尖括號是自動磨自己牌庫頂
+    // 3 張的技能代價；抽最多 2 張後必須棄 1 張，Refresh 後才補 1 HP。
+    // 牌庫代價由 exactCookieSkillCosts 支付，不能重複放進效果佇列。
+    'BS11-089': [
+      { kind: 'draw-up-to-then-discard', max: 2, discardCount: 1 },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'refreshed-during-game' },
+      },
+    ],
+    // BS11-090 White Lily Cookie：昏厥自己後，無視 Avatar of Destiny 的
+    // EXTRA 登場條件直接建立登場選擇；+3 HP 綁在同一張實際登場卡上。
+    'BS11-090': [{
+      kind: 'play-extra-deck-cookie',
+      cardName: 'Avatar of Destiny',
+      ignorePlayRequirements: true,
+      gainHp: 3,
+    }],
+    // BS11-094 Jam Skelecake Grunt：Blocker 只把攻擊導向來源自身；
+    // 官方候選文字使用「【Blocker】」而非 `{bl}`，因此由 exact map
+    // 明確保留 redirect effect，trigger 另在 exactCookieSkillTriggers 指定。
+    'BS11-094': [{
+      kind: 'redirect-attack',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS11-092 Licorice Cookie：本回合來源 Cookie 在戰鬥區的有效 LV 變為 1；
+    // levelOverride 保留卡面原始 LV，離場或回合結束時不會污染其他區域。
+    'BS11-092': [{
+      kind: 'set-cookie-level',
+      level: 1,
+      duration: 'this-turn',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS11-108 Dark Enchantress's Castle：以 Special Play 登場 Cookie 後，
+    // 抽最多 1 張再棄 1 張；Stage adapter 另保留放置／啟動費用與 REST。
+    'BS11-108': [{
+      kind: 'draw-up-to-then-discard',
+      max: 1,
+      discardCount: 1,
+      condition: { kind: 'cookie-played-via-special-play-this-turn' },
+    }],
+    // BS11-097 Cream Jelly Worm：場上有具 Special Play 的 Cookie 時，
+    // 對手至多一張無技能 LV.1 Cookie 昏厥；黑色能量與棄牌代價另列。
+    'BS11-097': [{
+      kind: 'make-faint',
+      target: {
+        side: 'opponent',
+        min: 0,
+        max: 1,
+        minLevel: 1,
+        maxLevel: 1,
+        noSkillOnly: true,
+      },
+      condition: { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+    }],
+    // BS11-098 Cream Skelecake Archer：同一 Special Play 門檻下造成至多 1 傷害。
+    'BS11-098': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+    }],
+    // BS11-099 Cream Roll Hog Rider：條件成立時將來源從戰鬥區送入棄牌區。
+    'BS11-099': [{
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+    }],
+    // BS11-107 Oven of Burning Fate：黑色 2 能量後，只有己方戰鬥區 Cookie
+    // 的 LV. 總和達 5 才能選對手 Cookie 造成 2 傷害。
+    'BS11-107': [{
+      kind: 'damage',
+      amount: 2,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-cookie-level-sum-at-least', side: 'self', level: 5 },
+    }],
+    // BS11-103 Skelecake Bomber：手牌至多 5 張時，從棄牌區回收具有
+    // Special Play 的 Cookie；hasSpecialPlay 是選牌限制，不是額外代價。
+    'BS11-103': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      cookieOnly: true,
+      hasSpecialPlay: true,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-104 Cake Witch：昏厥時檢視牌頂 3 張，至多選 1 張黑色卡加入手牌。
+    'BS11-104': [{
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restDestination: 'trash',
+      filterColor: 'black',
+      optionalPick: true,
+    }],
+    // BS11-109 Emblem of Darkness：支付 1K 後，檢視牌頂 5 張，至多選 1 張
+    // 具有 Special Play 的 Cookie 加入手牌，其餘進棄牌區。
+    'BS11-109': [{
+      kind: 'inspect-deck',
+      lookCount: 5,
+      pickCount: 1,
+      restDestination: 'trash',
+      filterType: 'cookie',
+      filterHasSpecialPlay: true,
+      optionalPick: true,
+    }],
+    // BS11-110 Draining Magic Circle：陷阱的 Then 需保留第一段選定目標，
+    // 並在條件成立時對同一目標再套用 -1。
+    'BS11-110': [{
+      kind: 'modify-attack',
+      amount: -1,
+      duration: 'this-turn',
+      target: { side: 'opponent', min: 0, max: 1 },
+      thenEffects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+        condition: {
+          kind: 'any-of',
+          conditions: [
+            { kind: 'battle-area-has-cookie-with-min-level', side: 'self', minLevel: 5 },
+            { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+          ],
+        },
+      }],
+    }],
+    // BS11-111 Mold Dough Cookie：Special Play 的黑色 LV.1 犧牲由
+    // specialPlayCost 支付；On Play 的棄牌與 1 傷害則留在這張技能效果。
+    'BS11-111': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS11-112 Pom-pom Dough Cookie：手牌至多 5 張時，回收棄牌區一張
+    // 黑色 Cookie；「up to」保留可選 0 張路徑。
+    'BS11-112': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      energyColor: 'black',
+      cookieOnly: true,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-113 Venom Dough Cookie：手牌至多 5 張時抽最多 2 張。
+    'BS11-113': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-114 Pomegranate Cookie：棄黑色手牌後，在手牌至多 5 張時抽最多 2 張。
+    'BS11-114': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }],
+    // BS11-115 Dark Enchantress Cookie：對手支援區至少 4 張時，對手所有
+    // Cookie 各受 1 傷害；逐張結算以保留 FLIP／昏厥處理。
+    'BS11-115': [{
+      kind: 'damage-all',
+      amount: 1,
+      side: 'opponent',
+      sequential: true,
+      target: { side: 'opponent', min: 0, max: 4 },
+      condition: { kind: 'opponent-support-count-at-least', count: 4 },
+    }],
+    // BS10-009 Cranberry Cookie：支付己方任一 LV.2 以上 Cookie 的最上方
+    // 1 張 HP 後，本回合僅降低這張來源 Cookie 的 1R 攻擊費用；HP 代價
+    // 由 exactCookieSkillCosts 提供，不能把來源限定誤套到支付目標。
+    'BS10-009': [
+      {
+        kind: 'modify-attack-cost',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        energyCost: { red: 1 },
+        operation: 'reduce',
+        duration: 'this-turn',
+      },
+    ],
+    'BS10-013': [
+      { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 } },
+    ],
+    'BS10-015': [
+      { kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-016': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 2, maxRemainingHp: 3 } }],
+    'BS10-017': [
+      { kind: 'draw-up-to', max: 1 },
+      { kind: 'hp-to-trash', amount: 2, target: { side: 'self', min: 0, max: 1 } },
+    ],
+    'BS10-018': [
+      { kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-037': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-041': [{ kind: 'draw-up-to', max: 2, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-042': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'break-level-at-least', level: 5 } }] }],
+    'BS10-038': [{
+      kind: 'modify-attack',
+      amount: -2,
+      duration: 'this-turn',
+      target: { side: 'opponent', min: 0, max: 1 },
+      thenEffects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+        condition: { kind: 'previous-effect-target-hp-above-original' },
+      }],
+    }],
+    'BS10-062': [{ kind: 'support-to-hp', target: { side: 'self', min: 0, max: 1 }, energyColor: 'green', selectTarget: true, optional: true }],
+    'BS10-063': [
+      { kind: 'support-to-trash', amount: 1, side: 'self', condition: { kind: 'opponent-support-count-at-least', count: 7 } },
+      { kind: 'support-to-trash', amount: 1, side: 'opponent', condition: { kind: 'opponent-support-count-at-least', count: 7 } },
+    ],
+    'BS10-064': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 3 }, condition: { kind: 'support-count-at-least', count: 7 } }],
+    'BS10-065': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, energyColor: 'green', rested: false, optional: true },
+    ],
+    'BS10-066': [{ kind: 'draw-up-to-then-discard', max: 3, discardCount: 1, condition: { kind: 'support-count-at-least', count: 7 } }],
+    // BS10-068 A Single Lily：指定 White Lily 可從手牌或棄牌區擇一，
+    // 橫置放入支援區後再抽最多 1；不能把任意綠色卡誤當成合法目標。
+    'BS10-068': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place White Lily Cookie from your hand in your support area as rested.',
+            effects: [{ kind: 'hand-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+          },
+          {
+            label: 'Place White Lily Cookie from your trash in your support area as rested.',
+            effects: [{ kind: 'trash-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+          },
+        ],
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS10-086': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    'BS10-087': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    'BS10-090': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 2 } }] }],
+    'BS10-111': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 2 }, condition: { kind: 'refreshed-during-game' } }],
+    'BS10-112': [{ kind: 'deck-to-trash', amount: 5, side: 'self' }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS10-113': [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'refreshed-during-game' } }] }],
+    'BS10-114': [{ kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] }],
+    'BS10-116': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'field-to-trash', target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' } }] }],
+    // BS10-120 的「磨 5」位於昏厥效果最前段。以效果佇列表達可讓
+    // 牌庫耗盡時沿用既有 Refresh 續接；不能掛在 CardSkill.cost，因為
+    // 直接技能代價支付器不會處理牌庫磨牌的 Refresh。
+    'BS10-120': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'draw', amount: 1 },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS10-123': [],
+    'BS10-030': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-035': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'break-level-higher-than-opponent' } }],
+    'BS10-043': [{ kind: 'modify-attack', amount: 2, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'cookie-gained-hp-this-turn' } }],
+    'BS10-054': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'support-count-at-least', count: 7 } }],
+    'BS10-060': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'support-count-at-least', count: 5 } }],
+    'BS10-105': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'refreshed-during-game' } }],
+    'BS10-121': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'refreshed-during-game' } }],
+    // BS10-088 必須先讓玩家看到牌庫頂牌，再決定放回牌庫頂或牌庫底；
+    // `top-or-bottom` 讓 inspect-deck modal 保留這張牌並在檢視後收取放置決定。
+    'BS10-088': [
+      { kind: 'inspect-deck', lookCount: 1, pickCount: 0, restDestination: 'top-or-bottom' },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS10-091': [{ kind: 'return-to-deck-bottom', target: { side: 'self', min: 1, max: 1, maxLevel: 2 } }, { kind: 'draw-up-to', max: 2 }],
+    'BS10-092': [{ kind: 'draw-up-to', max: 1 }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'blue' } }],
+    // BS10-011 Royal Berry Cookie：本回合對手曾有餅乾昏厥時，啟動後
+    // 對手至多一張餅乾受到1傷害；條件沿用BS10-007的公開回合旗標。
+    'BS10-011': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'opponent',
+        count: 1,
+      },
+    }],
+    // BS10-012 Devil Cookie：來源昏厥後，對手至多一張餅乾受到1傷害。
+    'BS10-012': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS10-025 Carrot Cookie：登場時若己方Break區有至少3張黃色餅乾，
+    // 抽最多2張；以Break card count與yellow keyword保留條件邊界。
+    'BS10-025': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: {
+        kind: 'break-area-card-count-at-least',
+        side: 'self',
+        count: 3,
+        color: 'yellow',
+      },
+    }],
+    // BS10-079 Eggnog Cookie：昏厥後抽最多 3 張，無額外門檻。
+    'BS10-079': [{ kind: 'draw-up-to', max: 3 }],
+    // BS10-084 Plum Cookie：登場時只能把己方戰鬥區 LV.1 餅乾回手，
+    // 不可誤放寬成任意等級或對手目標。
+    'BS10-084': [{
+      kind: 'return-to-hand',
+      target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+    }],
+    // BS10-093 Orange Cookie：昏厥時僅在手牌至多 7 張才抽最多 2 張。
+    'BS10-093': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 7 },
+    }],
+    // BS10-095 Lime Cookie：先抽最多 1 張，再以抽牌後手牌張數判定
+    // 是否可再抽最多 1 張；陣列順序保留 Then 的結算順序。
+    'BS10-095': [
+      { kind: 'draw-up-to', max: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+    ],
+    // BS10-102 Alchemist：支付自己進棄牌後，磨自己牌庫頂 3 張。
+    'BS10-102': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    // BS10-108 Black Garlic：棄 1 張手牌後，從自己的棄牌區回收紫色 LV.1
+    // Cookie；目標限制不能被泛化成任意卡牌。
+    'BS10-108': [{
+      kind: 'trash-to-hand',
+      max: 1,
+      energyColor: 'purple',
+      cookieOnly: true,
+      maxLevel: 1,
+    }],
+    // BS10-118 Pastry：支付自己進棄牌，只有己方棄牌區至少 15 張才抽 1 張。
+    'BS10-118': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }],
+    // BS10-058 Clover：先回手 1 張支援，再可把手牌中的綠色卡放入
+    // 支援區並橫置；保留前後效果順序與可選性。
+    'BS10-058': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, energyColor: 'green', rested: true, optional: true },
+    ],
+    // BS10-059 Yeast Spores：支付綠色能量與 1 張支援後，來源進支援區橫置。
+    'BS10-059': [{ kind: 'place-source-to-support', rested: true }],
+    // BS10-061 Carameleon：己方支援比對手少 1 張時，手牌至多放 1 張進
+    // 支援區並橫置；這是每回合一次的主動效果。
+    'BS10-061': [{
+      kind: 'hand-to-support',
+      amount: 1,
+      rested: true,
+      optional: true,
+      condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+    }],
+    // BS10-069 White Lily：對手支援區至少 6 張時，從牌庫頂放 1 張支援
+    // 並橫置；登場能量由 exactCookieSkillCosts 保留。
+    'BS10-069': [{
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: true,
+      condition: { kind: 'opponent-support-count-at-least', count: 6 },
+    }],
+    // BS10-074 Candy Diver：把來源放牌庫底後，手牌至多 7 張才抽最多 1 張。
+    'BS10-074': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'hand-count-at-most', count: 7 },
+    }],
+    // BS10-044 Angel：支付來源自己的 1 張 HP 後，選其他黃色 Cookie +1 HP。
+    'BS10-044': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        excludeSource: true,
+        energyColor: 'yellow',
+      },
+    }],
+    // BS10-046 Sugarfly：手牌至多 6 張且本回合己方餅乾曾補 HP 時抽 1。
+    'BS10-046': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'hand-count-at-most', count: 6 },
+          { kind: 'cookie-gained-hp-this-turn' },
+        ],
+      },
+    }],
+    // BS10-050 Gim：己方支援區至少 7 張時，選至多 1 張支援轉為 active。
+    'BS10-050': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: { kind: 'support-count-at-least', count: 7 },
+    }],
+    // BS10-071 Mercurial Knight：主技能只處理回收綠色 Cookie 與來源進
+    // 支援區；攻擊 Then 的綠色能量與牌庫支援另由 attack-Then 盤點保留。
+    'BS10-071': [{ kind: 'place-source-to-support', rested: true }],
+    // BS10-072 Elder Faerie：對手支援至少 6 張時橫置 1 張。
+    'BS10-072': [{
+      kind: 'rest-support',
+      side: 'opponent',
+      amount: 1,
+      activeOnly: true,
+      condition: { kind: 'opponent-support-count-at-least', count: 6 },
+    }],
+    // BS10-097 Manju：棄 1 張手牌後，對手手牌至少 6 張才棄 1 張。
+    'BS10-097': [{
+      kind: 'opponent-discard-hand',
+      count: 1,
+      condition: { kind: 'opponent-hand-count-at-least', count: 6 },
+    }],
+    // BS10-117 Seaweed：支付紫色 LV.2 以下其他 Cookie 進棄牌後磨 3 張。
+    'BS10-117': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    // BS10-023 Wildberry：支付紅色能量後，選至多 1 張對手場景送棄；
+    // 攻擊 Then 的棄牌／補 HP 另列待轉接。
+    'BS10-023': [{
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 0, max: 1 },
+      stageOnly: true,
+      allowStage: true,
+    }],
+    // BS10-021 Hollyberry：動態攻擊限制由 CardSkill 的條件欄位保存；
+    // 不把它折成一次性 disable-attack，否則 HP 回復後仍會錯誤封鎖攻擊。
+    'BS10-021': [],
+    // BS10-045 Light of Sloth：先選黃色 LV.3 餅乾補 1 HP；Then 可另付
+    // 1Y 裝備到 Eternal Sugar，裝備後的陷阱免疫由 item 的 equipped effects
+    // 保存，不能把第二段能量誤併入第一段啟動費用。
+    'BS10-045': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          energyColor: 'yellow',
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      },
+      {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { yellow: 1 }, discardHand: 0 },
+        effectText: 'Then, <{Y}> You can Equip this card to your [Eternal Sugar Cookie].',
+        effects: [{
+          kind: 'equip-source',
+          target: { side: 'self', min: 0, max: 1 },
+          requiredCookieId: 'BS10-049',
+        }],
+      },
+    ],
+    // BS10-049 的全場被動攻擊費用與攻擊 Then 分開保存。
+    'BS10-049': [],
+    // BS10-070 的移動封鎖必須隨支援區張數即時重算。
+    'BS10-070': [{
+      kind: 'prevent-opponent-battle-movement',
+      sourceOnly: true,
+      condition: { kind: 'support-count-at-most', count: 4 },
+    }],
+    // BS10-094：On Play 先把另一張己方藍色 LV.1 Cookie 放牌庫底，
+    // 再抽最多 1；場上移動效果順序會保留這個先後。
+    'BS10-094': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, energyColor: 'blue', maxLevel: 1, excludeSource: true },
+        battleSide: 'self',
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS10-107 White Ghost：Refresh 歷史成立才抽牌，然後由對手選 1 張手牌棄置。
+    'BS10-107': [
+      { kind: 'draw-up-to', max: 2, condition: { kind: 'refreshed-during-game' } },
+      { kind: 'opponent-discard-hand', count: 1 },
+    ],
+    // BS10-110 Candlelight：只在來源玩家曾 Refresh 時抽最多 1 張。
+    'BS10-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'refreshed-during-game' } }],
+    // BS10-119 Light of Silence：Refresh 後才造成 1 傷；Then 可另付 1P
+    // 裝備到 Silent Salt，裝備攻擊加成由 item metadata 保存。
+    'BS10-119': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'refreshed-during-game' },
+      },
+      {
+        kind: 'optional-cost-attack',
+        resolution: 'ability',
+        cost: { energy: { purple: 1 }, discardHand: 0 },
+        effectText: 'Then, <{P}> You can Equip this card to [Silent Salt Cookie].',
+        effects: [{
+          kind: 'equip-source',
+          target: { side: 'self', min: 0, max: 1 },
+          requiredCookieId: 'BS10-122',
+        }],
+      },
+    ],
+    // BS10-122 On Play 的尖括號是固定磨牌步驟，接著抽最多 2 張；同樣
+    // 放入效果佇列以保留牌庫耗盡時的 Refresh 續接。
+    'BS10-122': [
+      { kind: 'deck-to-trash', amount: 5, side: 'self' },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    // BS10-109 Licorice：從戰鬥區直接進棄牌區時磨自己牌庫頂 3 張；
+    // 觸發時機由 exactCookieSkillTriggers 分離保存，避免被誤判成 passive。
+    'BS10-109': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
     // BS5-020 Crimson Dragon Mask（item）：<{R}{R}> If there are 2 Cookies
     // whose remaining HP is 1 in your battle area, 對所有對手餅乾 2 傷害。
     'BS5-020': [
@@ -4845,6 +5852,19 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS10-007 Jungleberry Cookie：Activate／Once Per Turn；本回合對手
+    // 餅乾昏厥後抽至多一張。條件與 BS9-009 相同，保留在 CardEffect。
+    'BS10-007': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'cookies-fainted-this-turn-at-least',
+          side: 'opponent',
+          count: 1,
+        },
+      },
+    ],
     // BS9-011 Devil Cookie：本回合己方至少兩張紅色 LV.1 餅乾昏厥後，
     // 登場時可對對手一張餅乾造成 1 傷害。
     'BS9-011': [
@@ -6060,6 +7080,16 @@ export const convertOfficialItemAbility = (
     'BS9-115': { energy: { purple: 1 }, discardHand: 0 },
     'BS9-019': { energy: { red: 2 }, discardHand: 0 },
     'BS9-020': { energy: { red: 1 }, discardHand: 0 },
+    'BS10-045': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS10-119': { energy: { purple: 1 }, discardHand: 0 },
+    'BS11-009': { energy: { red: 3 }, discardHand: 0 },
+    'BS11-012': { energy: { red: 2 }, discardHand: 0 },
+    'BS11-030': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS11-031': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS11-049': { energy: { green: 1 }, discardHand: 0 },
+    'BS11-047': { energy: { green: 1 }, discardHand: 0, supportToHand: 1 },
+    'BS11-064': { energy: { blue: 1 }, discardHand: 1 },
+    'BS11-065': { energy: { blue: 2 }, discardHand: 1 },
   // BS9-027 Vampire Cookie：技能本身沒有額外印刷代價；手牌置入 HP
   // 是效果，不是 cost，避免 generic parser 將它誤當成棄牌代價。
     'BS9-027': { energy: {}, discardHand: 0 },
@@ -6072,6 +7102,11 @@ export const convertOfficialItemAbility = (
         condition: { kind: 'break-level-at-least', level: 8 },
       },
     ],
+    // Soul Jam: Light of Sloth makes the equipped Eternal Sugar immune to
+    // opposing Trap effects for each battle it attacks in.
+    'BS10-045': [{ kind: 'disable-traps', duration: 'current-battle' }],
+    // Light of Silence grants Silent Salt +1 attack damage while equipped.
+    'BS10-119': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
   }
   const parsedCost = parseAbilityCost(abilityText)
   const hasSpecialCost =
@@ -6131,6 +7166,77 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    'BS10-019': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 1, cardName: 'Hollyberry Cookie' } }],
+    'BS10-040': [{ kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, energyColor: 'yellow' } }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, previousEffectTargetOnly: true } }],
+    // BS10-067 Mossy Silver Bridge：回合結束時只計算休息中的支援卡，
+    // 並讓至多一張已休息支援恢復 active。
+    'BS10-067': [{
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: true,
+      condition: { kind: 'support-count-at-least', count: 7, restedOnly: true },
+    }],
+    'BS10-089': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 6 } }],
+    'BS10-115': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }, { kind: 'stage-source-to-trash' }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 }, condition: { kind: 'refreshed-during-game' } }],
+    // BS11-011 Canyon of Destruction：啟動本回合己方 Cookie 曾昏厥後，
+    // 才可選至多一張對手 Cookie 造成 1 傷害；放置與啟動費用分開保留。
+    'BS11-011': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'self',
+        count: 1,
+      },
+    }],
+    // BS11-028 Berry Paradise：啟動後手牌至多 6 張才抽最多 1 張；
+    // 場景自身休息與黃色 Cookie 的 HP 代價由 stage cost／restSource 保留。
+    'BS11-028': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'hand-count-at-most', count: 6 },
+    }],
+    // BS11-045 Grand Dust Hotel：場景啟動後解除至多 2 張休息中的綠色
+    // Cookie；放置費用、啟動費用與場景 REST 分別由 Stage adapter 保留。
+    'BS11-045': [{
+      kind: 'set-cookie-active',
+      target: {
+        side: 'self',
+        min: 0,
+        max: 2,
+        energyColor: 'green',
+        restedOnly: true,
+      },
+    }],
+    // BS11-062 Top of the Spire of Deceit：啟動時先把來源場景送入棄牌區，
+    // 再讓來源玩家查看對手整副手牌；viewAll 不建立選牌步驟。
+    'BS11-062': [{
+      kind: 'reveal-hand',
+      amount: 0,
+      side: 'opponent',
+      viewAll: true,
+    }],
+    // BS11-083 Catacombs of Lost Solidarity：Refresh 過後，將本回合對手
+    // Cookie 的 On Play 替換成支付 1N、由對手棄 1 張手牌；來源場景進棄牌
+    // 是 activation cost，見 exactStageCosts。
+    'BS11-083': [{
+      kind: 'replace-opponent-on-play',
+      duration: 'this-turn',
+      condition: { kind: 'refreshed-during-game' },
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [{ kind: 'opponent-discard-hand', count: 1, destination: 'trash' }],
+      effectText: 'During this turn, your opponent\'s Cookies\' On Play become "<{N}> Your opponent places 1 card from their hand into their trash."',
+    }],
+    // BS11-108 Dark Enchantress's Castle：本回合以 Special Play 登場
+    // Cookie 後，抽最多 1 張再棄 1 張；條件綁在整個 draw／discard Then 上。
+    'BS11-108': [{
+      kind: 'draw-up-to-then-discard',
+      max: 1,
+      discardCount: 1,
+      condition: { kind: 'cookie-played-via-special-play-this-turn' },
+    }],
     'ST3-022': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw-up-to', max: 1 },
@@ -6711,6 +7817,26 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    // BS10-019 requires both the red activation energy and one hand discard;
+    // the stage itself is rested separately through `restSource`.
+    'BS10-019': { energy: { red: 1 }, discardHand: 1 },
+    'BS11-011': { energy: { red: 1 }, discardHand: 0 },
+    'BS11-028': {
+      energy: {},
+      discardHand: 0,
+      hpToTrash: { amount: 1, energyColor: 'yellow' },
+    },
+    // BS11-045：啟動費用是 2G；`<Rest this card.>` 仍由 activation text
+    // 的 restSource 解析，不能把休息場景誤當成額外支付。
+    'BS11-045': { energy: { green: 2 }, discardHand: 0 },
+    // BS11-062：Place this card in your trash. 是場景啟動代價，並非效果鏈
+    // 中的普通移動；支付後才能結算查看對手手牌。
+    'BS11-062': { energy: {}, discardHand: 0, stageSourceToTrash: true },
+    // BS11-083：啟動支付 1P，並將來源場景送入棄牌區；Refresh 門檻只
+    // 約束 replacement effect，不得讓未 Refresh 時無法支付／移動來源。
+    'BS11-083': { energy: { purple: 1 }, discardHand: 0, stageSourceToTrash: true },
+    // BS11-108：啟動只休息來源場景；Special Play 是效果條件，不是付款。
+    'BS11-108': { energy: {}, discardHand: 0 },
     'BS1-026': {
       energy: {},
       discardHand: 0,
@@ -6834,6 +7960,9 @@ export const convertOfficialStageAbility = (
       ...(card.cardNumber === 'BS9-118' || card.baseCardNumber === 'BS9-118'
         ? { ownerIndependent: true, oncePerTurn: true }
         : {}),
+      ...(card.baseCardNumber === 'BS11-083'
+        ? { allowInactiveConditionalEffects: true }
+        : {}),
       ...(activation?.markers.includes('t1') ? { oncePerTurn: true } : {}),
       ...(endPhaseScope ? { endPhase: true, endPhaseScope } : {}),
     }
@@ -6946,6 +8075,455 @@ export const convertOfficialAttackEffects = (
           'Then, <can be used as {N}.> Select up to 1 of your opponent\'s Cookies. Add 1 card from the top of that Cookie\'s HP face-up to the bottom of this Cookie\'s HP.',
       },
     ],
+    // BS10-122 Silent Salt：Refresh 後才把對手每張餅乾最上方 1 張 HP
+    // 送入棄牌區；`hp-to-trash-all` 逐張處理 FLIP／昏厥與續接。
+    'BS10-122': [{
+      kind: 'hp-to-trash-all',
+      amount: 1,
+      side: 'opponent',
+      condition: { kind: 'refreshed-during-game' },
+    }],
+    // BS10-049 Eternal Sugar：攻擊後可棄 1 張手牌，選己方至多 1 張
+    // 剩餘 HP 不超過 5 的 Cookie 補 1 HP。
+    'BS10-049': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+      }],
+      effectText: "Then, <discard 1 card.> Select up to 1 of your Cookies with 5 or less HP. That Cookie gains +1 HP.",
+    }],
+    // BS10-048 Warden of the Heart：攻擊後直到對手回合結束，己方所有
+    // Cookie 所受的效果傷害各減 1。
+    'BS10-048': [{
+      kind: 'modify-damage-received',
+      amount: -1,
+      duration: 'opponent-next-turn',
+      damageType: 'effect',
+      target: { side: 'self', min: 0, max: 4, allMatching: true },
+    }],
+    // BS10-098 Jagae：攻擊後選對手至多 1 張 Cookie 造成 1 傷害。
+    'BS10-098': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // BS10-123 Spectral Warmaster：攻擊後將來源自己送入棄牌區。
+    'BS10-123': [{
+      kind: 'field-to-trash',
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }],
+    // BS11-025 Fettuccine Cookie：攻擊後先抽最多 2 張，再將攻擊來源
+    // 自身放入休息區；順序與 source-only 限定都保留在 attack effects。
+    'BS11-025': [
+      { kind: 'draw-up-to', max: 2 },
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS11-086 Crunchy Chip Cookie：攻擊後可從自己的棄牌區登場至多 1 張
+    // 指定名稱的 Dark Cacao Cookie；登場後的 On Play 另依 BS11-087 自身卡文
+    // 判斷是否從棄牌區補 2 張 HP。
+    'BS11-086': [{
+      kind: 'trash-to-battle',
+      amount: 1,
+      optional: true,
+      cardName: 'Dark Cacao Cookie',
+    }],
+    // BS11-087 Dark Cacao Cookie：另一張 Ancient Cookie 或自己的棄牌區達
+    // 15 張時，將對手手牌隨機 1 張送入棄牌區。
+    'BS11-087': [{
+      kind: 'opponent-random-discard',
+      count: 1,
+      condition: {
+        kind: 'any-of',
+        conditions: [
+          {
+            kind: 'battle-area-has-keyword',
+            side: 'self',
+            keyword: 'ancient',
+            excludeSource: true,
+          },
+          { kind: 'trash-count-at-least', count: 15 },
+        ],
+      },
+    }],
+    // BS11-088 Moonlight Cookie：對手棄牌區至少 15 張時，攻擊 Then
+    // 可選對手至多 1 張 Cookie 造成 1 傷害；@1 共用同一份印刷效果。
+    'BS11-088': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+    }],
+    // BS11-105 Red Velvet Dragon：己方戰鬥區有具 Special Play 的 Cookie
+    // 時，攻擊 Then 可選對手至多 1 張 Cookie 造成 1 傷害。
+    'BS11-105': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+    }],
+    // BS11-089 Silent Salt Cookie：Refresh 過後才讓對手所有 Cookie 各受 1
+    // 傷害；沿用 sequential 逐一處理每張 Cookie 的 HP／FLIP／昏厥。
+    'BS11-089': [{
+      kind: 'damage-all',
+      amount: 1,
+      side: 'opponent',
+      sequential: true,
+      target: { side: 'opponent', min: 0, max: 4 },
+      condition: { kind: 'refreshed-during-game' },
+    }],
+    // BS11-112 Pom-pom Dough Cookie：攻擊 Then 可棄 1 張手牌，
+    // 封鎖對手本回合 LV.2 以上 Cookie 的 On Play。
+    'BS11-112': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'prevent-opponent-on-play',
+        duration: 'this-turn',
+        minLevel: 2,
+      }],
+      effectText: 'Then, <discard 1 card.> During this turn, your opponent cannot activate On Play for Cookies that are LV.2 or higher.',
+    }],
+    // BS11-113 Venom Dough Cookie：攻擊 Then 可棄 1 張手牌使來源 +1 HP。
+    'BS11-113': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      }],
+      effectText: 'Then, <discard 1 card.> This Cookie gains +1 HP.',
+    }],
+    // BS11-114 Pomegranate Cookie：棄 1 張手牌後回收指定 Dark Enchantress Cookie。
+    'BS11-114': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'trash-to-hand',
+        max: 1,
+        cookieOnly: true,
+        cardName: 'Dark Enchantress Cookie',
+      }],
+      effectText: 'Then, <discard 1 card.> Return up to 1 [Dark Enchantress Cookie] from your trash to your hand.',
+    }],
+    // BS11-115 Dark Enchantress Cookie：支付 2 黑色能量後，對手至多一張
+    // Cookie 受到 2 傷害。
+    'BS11-115': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { black: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+      effectText: 'Then, <{K}{K}> select up to 1 of your opponent\'s Cookies. That Cookie receives 2 damage.',
+    }],
+    // BS11-032 Burnt Cheese：先將另一張黃色 Cookie 置入休息區，再抽最多 1 張。
+    'BS11-032': [
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'yellow',
+        },
+        thenEffects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    ],
+    // BS11-033 Pavlova：本回合有己方 Cookie 增加 HP 時才把來源送入
+    // 棄牌區；Then 後的抽牌不帶條件。
+    'BS11-033': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'cookie-gained-hp-this-turn' },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS11-034 Golden Cheese：另付 1N，依休息區中 LV.2 以上 Ancient
+    // Cookie 張數造成傷害；keyword 與等級條件交由 break count 共用。
+    'BS11-034': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'damage-by-break-count',
+        perCount: 1,
+        minBreakLevel: 2,
+        keyword: 'ancient',
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+      effectText: 'Then, <{N}> deals 1 damage for each LV.2 or higher Ancient Cookie in your break area.',
+    }],
+    // BS11-035 Millennial Tree：另付 1Y 與一張手牌中的 FLIP Cookie，
+    // 再對攻擊目標造成 2 傷害；target min 0 保留無目標安全路徑。
+    'BS11-035': [{
+      kind: 'optional-cost-attack',
+      cost: {
+        energy: { yellow: 1 },
+        discardHand: 1,
+        discardHandType: 'cookie',
+        discardHandHasFlip: true,
+      },
+      effects: [{
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1, attackTargetOnly: true },
+      }],
+      effectText: 'Then, <{Y}> <discard 1 Cookie that has FLIP from your hand.> Deals 2 damage.',
+    }],
+    // BS11-036 Eternal Sugar Cookie：攻擊後若來源剩餘 HP 不超過 3，
+    // 來源自己補 1 張 HP；source-hp-at-most 保留「this Cookie」門檻。
+    'BS11-036': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'source-hp-at-most', amount: 3 },
+    }],
+    // BS11-050 Cloud Haetae：支援區落後時可支付 1G 與來源自我送 trash；
+    // 自我移動是 Then 代價，不是另一個可選目標效果，之後才將牌庫頂牌
+    // 以休息狀態放入支援區。
+    'BS11-050': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { green: 1 }, discardHand: 0, selfToTrash: true },
+      effects: [{
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      }],
+      effectText: 'Then, if there are less cards in your support area than your opponent\'s support area, <{G}> <place this Cookie in your trash.> Place up to 1 card from the top of your deck in your support area as rested.',
+    }],
+    // BS11-051 Mercurial Knight：支援區至少 7 張且本次攻擊造成昏厥時，
+    // 由玩家至多選 2 張支援恢復活動。
+    'BS11-051': [{
+      kind: 'set-active',
+      supportCount: 2,
+      selectable: true,
+      optional: true,
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'support-count-at-least', count: 7 },
+          { kind: 'opponent-cookie-fainted-in-current-battle' },
+        ],
+      },
+    }],
+    // BS11-052 Wind Archer：可棄 1 張綠色 Item；傷害目標可選 0，
+    // 結算後才依手牌至多 5 張抽最多 2 張。
+    'BS11-052': [{
+      kind: 'optional-cost-attack',
+      cost: {
+        energy: {},
+        discardHand: 1,
+        discardHandColor: 'green',
+        discardHandType: 'item',
+      },
+      effects: [
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'draw-up-to', max: 2, condition: { kind: 'hand-count-at-most', count: 5 } },
+      ],
+      effectText: "Then, <discard 1 {G} Item card from your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.",
+    }],
+    // BS11-053 Mystic Flour：攻擊後若支援區落後，可略過或支付來源自我
+    // 送 trash 的 Then 代價；支付後再將牌庫頂牌以休息狀態放入支援區。
+    'BS11-053': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, selfToTrash: true },
+      effects: [{
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      }],
+      effectText: 'Then, if there are less cards in your support area than your opponent\'s support area, <place this Cookie in your trash.> Place 1 card from the top of your deck into your support area as rested.',
+    }],
+    // BS10-020 Tiger Lily：對手餅乾因本次攻擊昏厥後，抽 1 再棄 1。
+    'BS10-020': [
+      { kind: 'draw', amount: 1, condition: { kind: 'opponent-cookie-fainted-in-current-battle' } },
+      { kind: 'discard-hand', count: 1, condition: { kind: 'opponent-cookie-fainted-in-current-battle' } },
+    ],
+    // BS10-022 Raspberry：可支付其他己方餅乾 1 張 HP，支付後來源進棄牌區。
+    'BS10-022': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1, excludeSource: true } },
+      effects: [{
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      }],
+      effectText: "Then, <place 1 card from the top of one of your other Cookies' HP into your trash.> Place this Cookie in the trash.",
+    }],
+    // BS10-023 Wildberry：棄 1 張手牌後，只有本次攻擊造成昏厥才補來源 HP。
+    'BS10-023': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      }],
+      effectText: "Then, <discard 1 card.> If your opponent's Cookie faints from this Cookie's attack, this Cookie gains +1 HP.",
+    }],
+    // BS11-014 Nutmeg Tiger Cookie：攻擊後選至多 1 張己方 Cookie，
+    // 將該 Cookie 最上方 1 張 HP 置入棄牌區。
+    'BS11-014': [{
+      kind: 'hp-to-trash',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1 },
+    }],
+    // BS11-015 Wildberry Cookie：只有本次攻擊使對手 Cookie 昏厥時，
+    // 對手本回合不能發動 On Play。
+    'BS11-015': [{
+      kind: 'prevent-opponent-on-play',
+      duration: 'this-turn',
+      condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+    }],
+    // BS11-017 Hollyberry：another Ancient 必須排除攻擊來源自身，
+    // 並在 Then 中對手至多一張 Cookie 造成 2 傷害。
+    'BS11-017': [{
+      kind: 'damage',
+      amount: 2,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'battle-area-has-keyword',
+        side: 'self',
+        keyword: 'ancient',
+        excludeSource: true,
+      },
+    }],
+    // BS11-018 Burning Spice：Then 先讓己方至多一張 Cookie 昏厥，
+    // 再對手至多一張 Cookie 造成 1 傷害；陣列順序即結算順序。
+    'BS11-018': [
+      { kind: 'make-faint', target: { side: 'self', min: 0, max: 1 } },
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    // BS10-024 Hollyberry EXTRA：攻擊後可支付 2R，選對手至多一張餅乾
+    // 造成 2 傷害；這段付款沿用 optional-cost-attack 的支援區支付管道。
+    'BS10-024': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { red: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+      effectText: "Then, <{R}{R}> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+    }],
+    // BS10-034 Overjoyed：本回合己方任一餅乾補 HP 後抽最多 1 張。
+    'BS10-034': [{
+      kind: 'draw-up-to',
+      max: 1,
+      condition: { kind: 'cookie-gained-hp-this-turn' },
+    }],
+    // BS10-036 Adventurer：選己方戰鬥區至多一張 LV.1 餅乾補 1 HP。
+    'BS10-036': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+    }],
+    // BS10-046 Sugarfly：來源剩餘 HP 至多 3 時補 1 HP。
+    'BS10-046': [{
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'source-hp-at-most', amount: 3 },
+    }],
+    // BS10-047 Pavlova：可支付任一己方餅乾 1 張 HP，再選己方餅乾補 1 HP。
+    'BS10-047': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1 } },
+      effects: [{
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+      }],
+      effectText: "Then, <place 1 card from the top of your Cookie's HP into the trash.> Select up to 1 of your Cookies. That Cookie gains +1 HP.",
+    }],
+    // BS10-052 Beet：對手支援區至少 7 張時，雙方各棄 1 張支援卡。
+    'BS10-052': [
+      {
+        kind: 'support-to-trash',
+        amount: 1,
+        side: 'self',
+        condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      },
+      {
+        kind: 'support-to-trash',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      },
+    ],
+    // BS10-071 Mercurial Knight：可支付 2G；己方支援至多 5 張時磨 1 張進休息支援。
+    'BS10-071': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-count-at-most', count: 5 },
+      }],
+      effectText: "Then, <{G}{G}> If your support area contains 5 cards or less, place up to 1 card from the top of your deck in your support area as rested.",
+    }],
+    // BS10-073 White Lily EXTRA：返回一張支援區 Cookie 作為可略過的
+    // Then 代價，再將牌庫頂牌以休息狀態放入支援區。
+    'BS10-073': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+      effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+      effectText: 'Then, <return 1 Cookie from your support area to your hand.> Place up to 1 card from the top of your deck in your support area as rested.',
+    }],
+    // BS10-072 Elder Faerie：對手支援區全部休息時造成 1 傷害。
+    'BS10-072': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'all-support-rested', side: 'opponent' },
+    }],
+    // BS10-075 Peppermint：己方手牌至少 7 張時選對手餅乾造成 1 傷害。
+    'BS10-075': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'hand-count-at-least', count: 7 },
+    }],
+    // BS10-096 Grapefruit：可支付 1B 並將來源放牌庫底；手牌至多 7 張時抽最多 2。
+    'BS10-096': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+      effects: [{
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 7 },
+      }],
+      effectText: "Then, <{B}> <Place this Cookie on the bottom of your deck.> If there are 7 cards or less in your hand, draw up to 2 cards from your deck.",
+    }],
+    // BS10-097 Manju：手牌至多 4 張時抽最多 2 張。
+    'BS10-097': [{
+      kind: 'draw-up-to',
+      max: 2,
+      condition: { kind: 'hand-count-at-most', count: 4 },
+    }],
+    // BS10-106 Pumpkin Pie：攻擊後固定磨自己牌庫頂 5 張。
+    'BS10-106': [{ kind: 'deck-to-trash', amount: 5, side: 'self' }],
+    // BS10-121 Charcoal：可支付磨牌代價後造成 1 傷害。牌庫代價是
+    // `AbilityCost.deckToTrash`，不是把磨牌誤當成支付後的固定效果，
+    // 這樣付款、Refresh 與後續傷害會保留正確順序。
+    'BS10-121': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 0, deckToTrash: { amount: 5 } },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+      effectText: 'Then, <place 5 cards from the top of your deck into the trash.> Deals 1 damage.',
+    }],
     // BS9-024 Golden Cheese Cookie：攻擊後可支付「將自身最上方 1 張 HP
     // 回手」的代價，再對原本被攻擊的 Cookie 造成 1 傷害。HP 回手是可略過
     // 的 Then 代價，不能降成沒有代價的固定傷害。
@@ -8990,6 +10568,116 @@ export const convertOfficialAttackEffects = (
       target: { side: 'opponent', min: 0, max: 1 },
       condition: { kind: 'opponent-support-count-at-least', count: 6 },
     }],
+    // BS10-006 Blueberry Cookie：主攻擊結算後，若對手本回合曾有 Cookie
+    // 昏厥，選至多 1 張對手 Cookie 追加 1 傷害。
+    'BS10-006': [{
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: {
+        kind: 'cookies-fainted-this-turn-at-least',
+        side: 'opponent',
+        count: 1,
+      },
+    }],
+    // BS11-067 Black Raisin Cookie：攻擊後支付 1B，先把來源 Cookie
+    // 放牌庫底，再抽 1 張並把 1 張手牌放牌庫頂；兩個後續動作保留在
+    // 同一個 Then 佇列，確保抽牌先於手牌置頂。
+    'BS11-067': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+      effects: [
+        { kind: 'draw', amount: 1 },
+        { kind: 'discard-hand', count: 1, destination: 'deck-top' },
+      ],
+      effectText:
+        'Then, <{B}> <place this Cookie on the bottom of your deck.> Draw 1 card from your deck and place 1 card from your hand on the top of your deck.',
+    }],
+    // BS11-070 Pure Vanilla Cookie：攻擊後以 1N 二選一，將另一張 LV.2
+    // 以下己方 Cookie 放牌庫頂或底；來源攻擊 Cookie 不能被當成「other」。
+    'BS11-070': [{
+      kind: 'optional-cost-attack',
+      resolution: 'attack',
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place up to 1 other Cookie that is LV.2 or lower on the top of your deck.',
+            effects: [{
+              kind: 'battle-to-deck-top',
+              target: {
+                side: 'self',
+                min: 0,
+                max: 1,
+                maxLevel: 2,
+                excludeSource: true,
+              },
+            }],
+          },
+          {
+            label: 'Place up to 1 other Cookie that is LV.2 or lower on the bottom of your deck.',
+            effects: [{
+              kind: 'field-to-deck-bottom',
+              target: {
+                side: 'self',
+                min: 0,
+                max: 1,
+                maxLevel: 2,
+                excludeSource: true,
+              },
+              battleSide: 'self',
+            }],
+          },
+        ],
+      }],
+      effectText: 'Then, <{N}> place up to 1 other Cookie that is LV.2 or lower from your battle area on the top or bottom of your deck.',
+    }],
+    // BS11-071 Shadow Milk Cookie：支付 1N 與 1 張手牌後，必須從 EXTRA
+    // Deck 選 1 張同名卡放入棄牌區，再選擇發動其 On Play 或 Activate。
+    // 外層 Then 仍可整段略過；一旦付款，EXTRA 選擇本身不可略過。
+    'BS11-071': [{
+      kind: 'optional-cost-attack',
+      resolution: 'attack',
+      cost: { energy: { neutral: 1 }, discardHand: 1 },
+      effects: [{
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Activate the Shadow Milk Cookie Extra Deck Cookie On Play skill.',
+            effects: [{
+              kind: 'activate-extra-deck-skill',
+              cardName: 'Shadow Milk Cookie',
+              skillTrigger: 'on-play',
+              optional: false,
+            }],
+          },
+          {
+            label: 'Activate the Shadow Milk Cookie Extra Deck Cookie Activate skill.',
+            effects: [{
+              kind: 'activate-extra-deck-skill',
+              cardName: 'Shadow Milk Cookie',
+              skillTrigger: 'activate',
+              optional: false,
+            }],
+          },
+        ],
+      }],
+      effectText: "Then, <{N}> <discard 1 card.> Place 1 [Shadow Milk Cookie] from your Extra Deck into your trash. Activate that Cookie's 【On Play】 or 【Activate】.",
+    }],
+    // BS11-078 Caramel Arrow Cookie：棄牌區至少 15 張後才可支付 1P，
+    // 再將所選對手 Cookie 最上方 1 張 HP 放入該玩家的棄牌區。
+    'BS11-078': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      }],
+      effectText: "Then, if there are 15 cards or more in your trash, <{P}> select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP into your opponent's trash.",
+    }],
     // BS9-062 Carameleon Cookie：攻擊後必須將兩張支援卡送入棄牌區。
     'BS9-062': [{ kind: 'support-to-trash', amount: 2 }],
     // BS9-065 Pure Vanilla Cookie：攻擊後支付兩張支援卡，再讓己方至多
@@ -9341,6 +11029,67 @@ export const convertOfficialFlipAbility = (
     },
     'BS6-104': {
       effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-019 Potato Salad Cookie：棄 1 張手牌後，讓原附著餅乾補 1 張 HP。
+    'BS11-019': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS11-039 Rosemary Cookie：FLIP 支付棄 1 張手牌，讓原附著餅乾
+    // 增加 1 張 HP。
+    'BS11-039': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS11-040 Melon Bun Cookie：GREEN FLIP 無額外代價，抽最多 1 張牌。
+    'BS11-040': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-093／096／101：棄 1 張手牌後，原附著 Cookie 增加 1 張 HP。
+    'BS11-093': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS11-096': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS11-101': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    // BS11-100 Agar Agar Cookie：FLIP 無額外代價，抽最多 1 張牌。
+    'BS11-100': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-095 Matcha Cookie：與 BS11-100 共用無額外代價、抽最多 1 張牌。
+    'BS11-095': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-020 Royal Margarine Cookie：無額外代價，抽最多 1 張牌。
+    'BS11-020': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-057 Custard Cookie III：FLIP 無額外代價，抽最多 1 張。
+    'BS11-057': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    // BS11-059 Seltzer Cookie：FLIP 棄 1 張手牌後，由翻開的 FLIP
+    // 讓原附著 Cookie 增加 1 張 HP。
+    'BS11-059': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
     },
     // BS7-002 Red Osmanthus Cookie：只有己方戰鬥區存在紅色【Arena】Cookie
     // 時，且這張 FLIP 所附著的受傷餅乾為 LV.2 以上，才從牌庫補 1 張 HP。
@@ -10002,6 +11751,405 @@ export const convertOfficialTrapAbility = (
         { kind: 'damage-all', amount: 1, side: 'self' },
         { kind: 'damage-all', amount: 1, side: 'opponent' },
       ],
+    },
+    'BS10-013': {
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 } },
+      ],
+    },
+    'BS10-014': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      conditionalCost: {
+        condition: { kind: 'friendly-cookie-fainted-this-battle' },
+        cost: { energy: {}, discardHand: 0 },
+      },
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }],
+    },
+    'BS10-015': {
+      // The discard is the optional Then payment, not part of the initial
+      // trap activation cost. Keep it in the effect chain and pay only 3R.
+      cost: { energy: { red: 3 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'discard-hand', count: 1 },
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+      ],
+    },
+    // BS11-010 Flame's Protection：第一段攻擊傷害下降後，Then 的 N 是
+    // 可選支援區付款；付款後才檢查 Fire Spirit 或 Ancient 條件，第二段
+    // 另選至多一張對手 Cookie，不能共用第一段目標或降成無條件傷害。
+    'BS11-010': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          payBeforeCondition: true,
+          cost: { energy: { neutral: 1 }, discardHand: 0 },
+          effectText: "Then, <{N}> if there is a [Fire Spirit Cookie] or 【Ancient】 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+          effects: [{
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: {
+              kind: 'any-of',
+              conditions: [
+                {
+                  kind: 'battle-area-has-named-cookie',
+                  side: 'self',
+                  name: 'Fire Spirit Cookie',
+                },
+                {
+                  kind: 'battle-area-has-keyword',
+                  side: 'self',
+                  keyword: 'ancient',
+                },
+              ],
+            },
+          }],
+        },
+      ],
+    },
+    // BS11-063 Sea's Protection：第一段選填減傷後，只有己方有 Sea Fairy
+    // Cookie 或 Ancient Cookie 才接續抽最多 1 張；063@1 沿用 baseCardNumber。
+    'BS11-063': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Sea Fairy Cookie',
+              },
+              {
+                kind: 'battle-area-has-keyword',
+                side: 'self',
+                keyword: 'ancient',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS11-082 Moonlight's Protection：先讓至多一張對手 Cookie 本回合
+    // 攻擊傷害 -1；己方有 Moonlight 或 Ancient 時，再由對手選 1 張手牌
+    // 放入棄牌區。082@1 由 baseCardNumber 共用此契約。
+    'BS11-082': {
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'opponent-discard-hand',
+          count: 1,
+          destination: 'trash',
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              {
+                kind: 'battle-area-has-named-cookie',
+                side: 'self',
+                name: 'Moonlight Cookie',
+              },
+              {
+                kind: 'battle-area-has-keyword',
+                side: 'self',
+                keyword: 'ancient',
+              },
+            ],
+          },
+        },
+      ],
+    },
+    // BS11-084 Freedom that Broke the Silence：先降低至多一張對手 Cookie
+    // 的本回合攻擊傷害；Refresh 門檻只約束後續抽牌，不能阻止陷阱本身發動。
+    'BS11-084': {
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: { kind: 'refreshed-during-game' },
+        },
+      ],
+    },
+    // BS11-106 World-reflecting Mirrors：卡面主費用是 1K，但己方戰鬥區有
+    // LV.5 以上或具 Special Play 的 Cookie 時，啟動費用降為 0；效果仍是
+    // 選填的對手 Cookie 本回合 -1 攻擊傷害。
+    'BS11-106': {
+      cost: { energy: { black: 1 }, discardHand: 0 },
+      conditionalCost: {
+        condition: { kind: 'battle-area-has-level-or-special-play-cookie' },
+        cost: { energy: {}, discardHand: 0 },
+      },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+    },
+    // BS11-110 Draining Magic Circle：第一段固定 -1 後，只有己方戰鬥區
+    // 有 LV.5 以上或具 Special Play 的 Cookie，才對同一目標再 -1。
+    'BS11-110': {
+      cost: { energy: { black: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: {
+            kind: 'any-of',
+            conditions: [
+              { kind: 'battle-area-has-cookie-with-min-level', side: 'self', minLevel: 5 },
+              { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+            ],
+          },
+        }],
+      }],
+    },
+    // BS11-066 Milk Lake of Truth：1B 陷阱費用後，先套用選填的 -1
+    // 攻擊傷害，再進入牌庫頂牌的頂／底放回決策。
+    'BS11-066': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'inspect-deck',
+          lookCount: 1,
+          pickCount: 0,
+          restDestination: 'top-or-bottom',
+          side: 'opponent',
+        },
+      ],
+    },
+    // BS11-013 Roaring Destruction：LV.3 且剩餘 HP 恰為 1 是陷阱
+    // 發動條件，必須綁在 TrapAbility.condition，而不是只放在效果上。
+    'BS11-013': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      condition: {
+        kind: 'battle-area-has-cookie-with-level-and-remaining-hp',
+        minLevel: 3,
+        maxLevel: 3,
+        remainingHp: 1,
+      },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -3,
+        duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+    },
+    // BS11-027 Passion Escaping Paradise：先讓對手全體 Cookie 本回合
+    // 攻擊傷害 -1，再選至多 1 張對手 Cookie，將其本回合攻擊費用增加 1N。
+    // `increase` 不可省略，否則 runtime 會把 1N 當成取代原費用。
+    'BS11-027': {
+      cost: { energy: { yellow: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-all-attack',
+          amount: -1,
+          duration: 'this-turn',
+          side: 'opponent',
+        },
+        {
+          kind: 'modify-attack-cost',
+          target: { side: 'opponent', min: 0, max: 1 },
+          energyCost: { neutral: 1 },
+          operation: 'increase',
+          duration: 'this-turn',
+        },
+      ],
+    },
+    // BS11-029 Life's Protection：初始 Y1 陷阱費用與 Then 的可選 N1
+    // ability payment 分離；條件與前段減傷都保留在各自效果，不升格成
+    // 陷阱發動門檻，也不把第二段錯綜成無條件回血。
+    'BS11-029': {
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          payBeforeCondition: true,
+          cost: { energy: { neutral: 1 }, discardHand: 0 },
+          effectText:
+            "Then, <{N}> if there is a [Millennial Tree Cookie] or 【Ancient】 Cookie in your battle area, select up to 1 of your Cookies. That Cookie gains +1 HP.",
+          effects: [{
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1 },
+            condition: {
+              kind: 'any-of',
+              conditions: [
+                {
+                  kind: 'battle-area-has-named-cookie',
+                  side: 'self',
+                  name: 'Millennial Tree Cookie',
+                },
+                {
+                  kind: 'battle-area-has-keyword',
+                  side: 'self',
+                  keyword: 'ancient',
+                },
+              ],
+            },
+          }],
+        },
+      ],
+    },
+    // BS11-046 Awakened Apathy：初始 G2 後先 -2；支援區差距達 2 張時，
+    // 付款／目標都不重開，Then 只對第一段同一目標再 -1。
+    'BS11-046': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+        }],
+      }],
+    },
+    // BS11-048 Wind's Protection：第二段 1N 以 ability optional-cost
+    // 結算，付款後才檢查 Wind Archer／Ancient，且對手只可選活躍支援卡。
+    'BS11-048': {
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      effects: [{
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      }, {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          payBeforeCondition: true,
+          cost: { energy: { neutral: 1 }, discardHand: 0 },
+          effectText: "Then, <{N}> if there is a [Wind Archer Cookie] or 【Ancient】 Cookie in your battle area, rest up to 1 card in your opponent's support area.",
+          effects: [{
+            kind: 'rest-support',
+            side: 'opponent',
+            amount: 1,
+            activeOnly: true,
+            optional: true,
+            condition: {
+              kind: 'any-of',
+              conditions: [
+                { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' },
+                { kind: 'battle-area-has-keyword', side: 'self', keyword: 'ancient' },
+              ],
+            },
+          }],
+      }],
+    },
+    'BS10-062': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      effects: [{ kind: 'support-to-hp', target: { side: 'self', min: 0, max: 1 }, energyColor: 'green', selectTarget: true, optional: true }],
+    },
+    'BS10-063': {
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      condition: { kind: 'opponent-support-count-at-least', count: 7 },
+      effects: [
+        { kind: 'support-to-trash', amount: 1, side: 'self' },
+        { kind: 'support-to-trash', amount: 1, side: 'opponent' },
+      ],
+    },
+    'BS10-042': {
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [{
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'break-level-at-least', level: 5 },
+          }],
+        },
+      ],
+    },
+    'BS10-086': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    },
+    'BS10-038': {
+      effects: [{
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'previous-effect-target-hp-above-original' },
+        }],
+      }],
+    },
+    'BS10-087': {
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'hand-count-at-least', count: 7 } }] }],
+    },
+    'BS10-090': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'draw-up-to', max: 1, condition: { kind: 'hand-count-at-most', count: 2 } }] }],
+    },
+    'BS10-113': {
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true }, condition: { kind: 'refreshed-during-game' } }] }],
+    },
+    'BS10-114': {
+      effects: [{ kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] }],
+    },
+    'BS10-116': {
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 }, thenEffects: [{ kind: 'field-to-trash', target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' } }] }],
     },
     'BS8-023': {
       effects: [
@@ -10937,9 +13085,126 @@ export const convertOfficialTrapAbility = (
   }
 }
 
+const exactCookieSkillSpecialPlayCosts: Partial<Record<string, AbilityCost>> = {
+  // BS11-111～113 的 Special Play 共用「送 1 張黑色 LV.1 Cookie 進 trash」
+  // 代價；On Play／攻擊 Then 的手牌代價另由一般 skill／attack cost 表示。
+  'BS11-111': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: { count: 1, energyColor: 'black', level: 1 },
+  },
+  'BS11-112': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: { count: 1, energyColor: 'black', level: 1 },
+  },
+  'BS11-113': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: { count: 1, energyColor: 'black', level: 1 },
+  },
+  // BS11-115 Dark Enchantress Cookie：2 張黑色 LV.2 且具有 Special Play 的
+  // Cookie；hasSpecialPlay 是候選篩選條件，不是額外的付款。
+  'BS11-115': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: {
+      count: 2,
+      level: 2,
+      energyColor: 'black',
+      hasSpecialPlay: true,
+    },
+  },
+}
+
 const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   // BS8 候選流程中有些尖括號是來源離場或手牌／戰鬥區移動成本；明確保留
   // 可防止通用英文 parser 漏掉 self reference 而讓技能無成本發動。
+  // BS11-002 的代價文字帶有「from your hand」，沿用這張卡的精確代價
+  // 定義，避免通用 discard regex 只接受句點結尾而漏掉紅色 Item 限制。
+  'BS11-002': {
+    energy: { red: 1 },
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'item',
+  },
+  'BS11-041': {
+    energy: {},
+    discardHand: 0,
+    supportToHand: 1,
+    supportToHandColor: 'green',
+  },
+  'BS11-006': {
+    energy: {},
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'item',
+  },
+  'BS11-007': { energy: { red: 2 }, discardHand: 0 },
+  'BS11-008': { energy: { red: 1 }, discardHand: 0 },
+  // BS11-016 Fire Spirit Cookie：紅色 Cookie 的 HP 合計支付 2 張，
+  // 不能縮成單一 Cookie 必須有 2 張 HP。
+  'BS11-016': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 2, energyColor: 'red', totalAcrossCookies: true },
+  },
+  'BS11-017': { energy: {}, discardHand: 0 },
+  'BS11-018': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: { count: 1, faint: true, energyColor: 'red' },
+  },
+  'BS11-026': {
+    energy: { yellow: 1 },
+    discardHand: 1,
+    discardHandType: 'cookie',
+    discardHandHasFlip: true,
+  },
+  'BS11-034': { energy: {}, discardHand: 0 },
+  'BS11-054': { energy: {}, discardHand: 0 },
+  'BS11-056': { energy: {}, discardHand: 0 },
+  'BS11-058': { energy: {}, discardHand: 2 },
+  'BS11-061': { energy: { blue: 2 }, discardHand: 0 },
+  'BS11-069': { energy: {}, discardHand: 0 },
+  'BS11-070': {
+    energy: {},
+    discardHand: 1,
+    discardHandType: 'cookie',
+    discardHandKeyword: 'ancient',
+  },
+  'BS11-072': { energy: { purple: 1 }, discardHand: 0 },
+  // BS11-079 Espresso Cookie：On Play 的尖括號是棄 2 張手牌代價，並非
+  // 額外 Activate 代價；紫色限制屬於後續棄牌區登場效果。
+  'BS11-079': { energy: {}, discardHand: 2 },
+  // BS11-085 Salt Cellar Cookie：來源自我送入棄牌區是 Activate 代價；
+  // 後續紫色 LV.2 以下 Cookie 的移動由 exactStarterEffects 結算。
+  'BS11-085': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  // BS11-088 Moonlight Cookie：第一段 LV.1 紫色 Cookie 是 On Play 代價，
+  // 不是可略過的效果目標；回收段則由 exactStarterEffects 保留。
+  'BS11-088': {
+    energy: {},
+    discardHand: 0,
+    trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+  },
+  // BS11-089 Silent Salt Cookie：On Play 自動將自己牌庫頂 3 張放入 trash；
+  // 牌庫不足時沿用既有 Refresh continuation，不能把這段誤列為抽牌前效果。
+  'BS11-089': {
+    energy: {},
+    discardHand: 0,
+    deckToTrash: { amount: 3 },
+  },
+  // BS11-090 White Lily Cookie：來源自己昏厥是 Activate 技能代價。
+  'BS11-090': { energy: {}, discardHand: 0, selfToFaint: true },
+  // BS11-097 Cream Jelly Worm：支付 1K 與 1 張手牌。
+  'BS11-097': { energy: { black: 1 }, discardHand: 1 },
+  // BS11-098 Cream Skelecake Archer：只支付 1K。
+  'BS11-098': { energy: { black: 1 }, discardHand: 0 },
+  // BS11-099 Cream Roll Hog Rider：條件成立時無額外支付代價。
+  'BS11-099': { energy: {}, discardHand: 0 },
+  // BS11-114 Pomegranate Cookie：On Play 先棄 1 張黑色手牌。
+  'BS11-114': { energy: {}, discardHand: 1, discardHandColor: 'black' },
+  'BS11-053': { energy: { green: 1 }, discardHand: 0 },
   'BS8-052': { energy: {}, discardHand: 0, selfToTrash: true },
   'BS8-103': { energy: { purple: 1 }, discardHand: 0 },
   'BS8-059': {
@@ -10981,6 +13246,53 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   },
   'BS8-119': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
   'BS8-120': { energy: {}, discardHand: 1 },
+  // BS10-009 Cranberry Cookie：從己方任一 LV.2 以上 Cookie 的 HP 頂端
+  // 支付 1 張；不能誤設 sourceOnly，因來源以外的符合條件 Cookie 也合法。
+  'BS10-009': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, minLevel: 2 },
+  },
+  // BS10-102 Alchemist／BS10-118 Pastry 都把來源自己送進棄牌作為技能代價；
+  // 通用 parser 對「Place this Cookie in the trash」不可靠，明確保留紫色費用。
+  'BS10-102': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  'BS10-118': { energy: { purple: 1 }, discardHand: 0, selfToTrash: true },
+  // BS10-108 Black Garlic 的 On Play 只需要棄一張手牌，目標限制由
+  // exactStarterEffects 的 trash-to-hand effect 提供。
+  'BS10-108': { energy: {}, discardHand: 1 },
+  // BS10-058 Clover 的尖括號是回手支援成本；通用 parser 不把 Return
+  // support → hand 句式轉成 AbilityCost。
+  'BS10-058': { energy: {}, discardHand: 0 },
+  'BS10-120': { energy: {}, discardHand: 0 },
+  'BS10-121': { energy: {}, discardHand: 1 },
+  'BS10-122': { energy: {}, discardHand: 0 },
+  'BS10-059': { energy: { green: 1 }, discardHand: 0, supportToTrash: 1 },
+  'BS10-069': { energy: { green: 1 }, discardHand: 0 },
+  'BS10-074': { energy: { blue: 1 }, discardHand: 0, selfToDeckBottom: true },
+  'BS10-044': {
+    energy: { yellow: 1 },
+    discardHand: 0,
+    hpToTrash: { amount: 1, sourceOnly: true },
+  },
+  'BS10-071': {
+    energy: { green: 2 },
+    discardHand: 0,
+    supportToHand: 1,
+    supportToHandType: 'cookie',
+    supportToHandColor: 'green',
+  },
+  'BS10-097': { energy: {}, discardHand: 1 },
+  'BS10-117': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: {
+      count: 1,
+      maxLevel: 2,
+      energyColor: 'purple',
+      excludeSource: true,
+    },
+  },
+  'BS10-023': { energy: { red: 1 }, discardHand: 0 },
   // BS9-014 Candy Apple Cookie：On Play 代價是從自己「其他」Cookie
   // 的 HP 頂端移除 2 張，不能用來源卡自身支付。
   'BS9-014': {
@@ -11370,6 +13682,68 @@ const exactCookieSkillPassiveEffects: Partial<Record<string, CardEffect[]>> = {
       },
     },
   ],
+  // BS10-049 Eternal Sugar：Break LV.5+ 且己方戰鬥區沒有另一張同名卡時，
+  // 對手所有餅乾攻擊費用增加 1N。energy.ts 會把這個被動即時套用到攻擊者，
+  // 不寫入一次性 modifier，避免來源離場／條件變化後殘留。
+  'BS10-049': [{
+    kind: 'modify-attack-cost',
+    target: { side: 'opponent', min: 0, max: 1 },
+    energyCost: { neutral: 1 },
+    operation: 'increase',
+    duration: 'persistent',
+    condition: {
+      kind: 'all-of',
+      conditions: [
+        { kind: 'break-level-at-least', level: 5 },
+        {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Eternal Sugar Cookie',
+          excludeSource: true,
+          negate: true,
+        },
+      ],
+    },
+  }],
+  // BS11-017 Hollyberry：剩餘 HP 至多 3 時，持續降低自身 1R 攻擊費用。
+  // 這是即時被動修正，不能折成一次性 modify-attack-cost 效果。
+  'BS11-017': [{
+    kind: 'modify-attack-cost',
+    target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    energyCost: { red: 1 },
+    operation: 'reduce',
+    duration: 'persistent',
+    condition: { kind: 'source-hp-at-most', amount: 3 },
+  }],
+  // BS11-044 Silverbell Cookie：支援區達 7 張時，來源 Cookie 的普通攻擊
+  // 傷害固定增加 1；這是持續被動，不是一次性技能效果。
+  'BS11-044': [{
+    kind: 'modify-attack',
+    amount: 1,
+    duration: 'persistent',
+    target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'support-count-at-least', count: 7 },
+  }],
+  // BS11-077 Dark Spirit Helmet：官方卡圖有技能文字，但候選 API 的
+  // `skill.text` 為 null；只讓己方指定 Dark Choco Cookie 取得持續 +1 攻擊傷害。
+  'BS11-077': [{
+    kind: 'modify-attack',
+    amount: 1,
+    duration: 'persistent',
+    target: { side: 'self', min: 1, max: 1, cardName: 'Dark Choco Cookie' },
+    condition: { kind: 'trash-count-at-least', count: 15 },
+  }],
+}
+
+const exactCookieSkillTextOverrides: Partial<Record<string, string>> = {
+  // Transcribed from the official card image because the candidate API record
+  // has the skill name but omits its text.
+  'BS11-077': 'If there are 15 cards or more in your trash, your [Dark Choco Cookie] gains +1 attack damage.',
+}
+
+/** 動態攻擊限制不能轉為一次性 state flag，必須隨 HP 即時判定。 */
+const exactCookieSkillAttackRestrictions: Partial<Record<string, EffectCondition>> = {
+  'BS10-021': { kind: 'source-hp-at-most', amount: 3 },
 }
 
 /** 卡面同時有獨立 On Play 與 Activate 子句時，保留登場效果的單次時機。 */
@@ -11399,6 +13773,22 @@ const exactCookieSkillOnPlayEffects: Partial<Record<string, CardEffect[]>> = {
       },
     },
   ],
+  // BS11-035 Millennial Tree：On Play 另付 2Y，先放 1 張手牌進休息區，
+  // 再把至多 1 張黃色 LV.2 以下 Cookie 回手。
+  'BS11-035': [
+    { kind: 'hand-to-break', amount: 1 },
+    {
+      kind: 'break-to-hand',
+      amount: 1,
+      optional: true,
+      energyColor: 'yellow',
+      maxLevel: 2,
+    },
+  ],
+}
+
+const exactCookieSkillOnPlayCosts: Partial<Record<string, AbilityCost>> = {
+  'BS11-035': { energy: { yellow: 2 }, discardHand: 0 },
 }
 
 const exactCookieSkillSourceEnergy: Partial<
@@ -11410,6 +13800,9 @@ const exactCookieSkillSourceEnergy: Partial<
   'BS7-040': { yellow: 1 },
   // BS7-048 Poison Mushroom Cookie：昏厥效果可由自身作為 1 綠色能量支付。
   'BS7-048': { green: 1 },
+  // BS11-068 Black Sapphire Cookie：昏厥效果的 1B 由支援區支付，
+  // 以 sourceEnergy 保留在整組 faint trigger 的單次付款上。
+  'BS11-068': { blue: 1 },
 }
 
 /**
@@ -11434,6 +13827,23 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS7-044': 'on-play',
   'BS7-045': 'on-play',
   'BS7-046': 'on-play',
+  // BS10-109 Licorice：Cookie 從戰鬥區直接進棄牌區時觸發。
+  'BS10-109': 'departure',
+  'BS11-006': 'on-play',
+  'BS11-007': 'activate',
+  'BS11-008': 'activate',
+  'BS11-034': 'activate',
+  'BS11-058': 'opponent-attack',
+  'BS11-069': 'opponent-attack',
+  'BS11-070': 'on-play',
+  'BS11-072': 'activate',
+  'BS11-087': 'on-play',
+  'BS11-094': 'block',
+  'BS11-111': 'on-play',
+  'BS11-112': 'on-play',
+  'BS11-113': 'on-play',
+  'BS11-114': 'on-play',
+  'BS11-115': 'on-play',
 }
 
 /**
@@ -11460,19 +13870,24 @@ const exactCookieSkillFaintOptional: Partial<Record<string, boolean>> = {
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,
 ): CardSkill | undefined => {
-  if ((card.type !== 'cookie' && card.type !== 'flip') || !card.skill.text) {
+  if (card.type !== 'cookie' && card.type !== 'flip') {
     return undefined
   }
 
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
+  const skillText = card.skill.text ?? exactCookieSkillTextOverrides[cardKey]
+  if (!skillText) return undefined
+  const effectiveCard = card.skill.text
+    ? card
+    : { ...card, skill: { ...card.skill, text: skillText } }
   const conversion = convertOfficialCardEffects(
-    card.type === 'flip' ? { ...card, type: 'cookie' } : card,
+    effectiveCard.type === 'flip' ? { ...effectiveCard, type: 'cookie' } : effectiveCard,
   )
-  const cost = P_EXACT_SKILL_COSTS[cardKey] ?? exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
-  const parsed = parseOfficialCardText(card.skill.text)
-  const endPhaseScope = getEndPhaseScope(card.skill.text)
+  const cost = P_EXACT_SKILL_COSTS[cardKey] ?? exactCookieSkillCosts[cardKey] ?? parseAbilityCost(skillText)
+  const parsed = parseOfficialCardText(skillText)
+  const endPhaseScope = getEndPhaseScope(skillText)
 
   if (
     conversion.status !== 'supported' ||
@@ -11485,11 +13900,11 @@ export const convertOfficialCookieSkill = (
     trigger:
       P_EXACT_SKILL_TRIGGERS[cardKey] ??
       exactCookieSkillTriggers[cardKey] ??
-      (/(?:when|if) this Cookie is played from the (?:trash|support|break)(?: area)?/i.test(card.skill.text)
+      (/(?:when|if) this Cookie is played from the (?:trash|support|break)(?: area)?/i.test(skillText)
         ? 'on-play'
         : undefined) ??
       (parsed.markers.includes('bl') &&
-      /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(card.skill.text)
+      /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(skillText)
         ? 'block'
         : parsed.markers.includes('mob')
           ? 'activate'
@@ -11498,10 +13913,13 @@ export const convertOfficialCookieSkill = (
             : 'passive'),
     oncePerTurn: parsed.markers.includes('t1'),
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
-    restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
+    restSource: RESTS_THIS_CARD_PATTERN.test(skillText),
     cost,
-    ...(P_EXACT_SPECIAL_PLAY_COSTS[cardKey]
-      ? { specialPlayCost: P_EXACT_SPECIAL_PLAY_COSTS[cardKey] }
+    ...(P_EXACT_SPECIAL_PLAY_COSTS[cardKey] ?? exactCookieSkillSpecialPlayCosts[cardKey]
+      ? {
+          specialPlayCost:
+            P_EXACT_SPECIAL_PLAY_COSTS[cardKey] ?? exactCookieSkillSpecialPlayCosts[cardKey],
+        }
       : {}),
     ...(P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey]
       ? { sourceEnergy: P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey] }
@@ -11513,35 +13931,46 @@ export const convertOfficialCookieSkill = (
     effects: conversion.effects,
     // Official Korean FAQ: HP >= 2 still permits the BS8-003 discard cost;
     // only its HP-gain effect is skipped. BS8-002 has the opposite ruling.
-    ...(cardKey === 'BS8-003' ? { effectConditionsAtResolution: true } : {}),
+    // BS11-089 likewise always permits the On Play cost; its Refresh-gated
+    // HP gain is checked after the automatic mill cost and any Refresh.
+    ...(cardKey === 'BS8-003' || cardKey === 'BS11-089'
+      ? { effectConditionsAtResolution: true }
+      : {}),
     ...(exactCookieSkillPassiveEffects[cardKey]
       ? { passiveEffects: exactCookieSkillPassiveEffects[cardKey] }
+      : {}),
+    ...(exactCookieSkillAttackRestrictions[cardKey]
+      ? { cannotAttackCondition: exactCookieSkillAttackRestrictions[cardKey] }
       : {}),
     ...(exactCookieSkillOnPlayEffects[cardKey]
       ? { onPlayEffects: exactCookieSkillOnPlayEffects[cardKey] }
       : {}),
     ...(exactCookieSkillOnPlayEffects[cardKey]
-      ? { onPlayCost: { energy: {}, discardHand: 0 } }
+      ? {
+          onPlayCost:
+            exactCookieSkillOnPlayCosts[cardKey] ??
+            { energy: {}, discardHand: 0 },
+        }
       : {}),
-    faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),
+    faint: FAINT_TRIGGER_PATTERN.test(skillText),
     endPhase: endPhaseScope !== undefined,
     ...(endPhaseScope ? { endPhaseScope } : {}),
     afterDamage: /(?:after|when)\s+(?:receiving|taking)\s+damage/i.test(
-      card.skill.text,
+      skillText,
     ),
-    oncePerGame: /once per game/i.test(card.skill.text),
+    oncePerGame: /once per game/i.test(skillText),
     // 只認「來源自己目前在休息區」這個前提句式（BS3-025），不能用寬鬆的
     // 「文字裡有提到 break area」去比對——P-016／BS3-036／BS1-035／BS1-038
     // 的文字都提到 break area，但那是效果的目標／去向（送某張卡進休息區），
     // 不是這個技能本身只能從休息區發動的前提，誤判會讓 findSkillSource 在
     // 這些卡意外流落休息區時把它們當成可發動的技能來源。
-    fromBreakArea: /this Cookie is in your break area/i.test(card.skill.text),
-    onPlayFromBreakArea: /when this Cookie is played from the break area/i.test(card.skill.text),
+    fromBreakArea: /this Cookie is in your break area/i.test(skillText),
+    onPlayFromBreakArea: /when this Cookie is played from the break area/i.test(skillText),
     fromTrashArea:
       P_FROM_TRASH.has(cardKey) ||
-      /when this Cookie is played from the trash/i.test(card.skill.text),
+      /(?:when|if) this Cookie (?:is|was) played from (?:(?:your|the) )?trash/i.test(skillText),
     fromSupportArea:
       P_FROM_SUPPORT.has(cardKey) ||
-      /when this Cookie is played from the support area/i.test(card.skill.text),
+      /when this Cookie is played from the support area/i.test(skillText),
   }
 }

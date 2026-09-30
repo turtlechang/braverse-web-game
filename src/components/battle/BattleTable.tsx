@@ -1,3 +1,5 @@
+import type { MatchAnimations } from '../../hooks/useMatchAnimations'
+import { MatchAnimationLayer } from './MatchAnimationLayer'
 import type { GameCard } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { AttackPreviewArrow, type AttackPreviewArrowProps } from './AttackPreviewArrow'
@@ -17,6 +19,7 @@ import { CardPreviewPanel } from '../panels/InteractionOverlays'
  * 後面、蓋住它們,因此維持由呼叫端各自渲染。
  */
 export interface BattleTableProps {
+  animation?: MatchAnimations
   ariaLabel: string
   topBattleRow: BattleRowProps
   bottomBattleRow: BattleRowProps
@@ -29,6 +32,7 @@ export interface BattleTableProps {
 }
 
 export function BattleTable({
+  animation,
   ariaLabel,
   topBattleRow,
   bottomBattleRow,
@@ -41,20 +45,21 @@ export function BattleTable({
 }: BattleTableProps) {
   return (
     <>
+      {animation && <MatchAnimationLayer animation={animation} entering={topBattleRow.game.status === "setup"} />}
       <CardPreviewPanel
-        card={previewCard}
+        card={attackPaymentPanel ? null : previewCard}
         contextLabel={previewContextLabel}
         onDismiss={onDismissPreview}
       />
 
       <section className="table-area" aria-label={ariaLabel}>
-        <BattleRow {...topBattleRow} />
+        <BattleRow {...topBattleRow} drawAnimIds={animation ? undefined : topBattleRow.drawAnimIds} />
 
         <AttackPreviewArrow {...attackPreviewArrow} />
 
         {centerPreview && <CenterCardPreview {...centerPreview} />}
 
-        <BattleRow {...bottomBattleRow} />
+        <BattleRow {...bottomBattleRow} drawAnimIds={animation ? undefined : bottomBattleRow.drawAnimIds} />
       </section>
 
       {attackPaymentPanel && <AttackPaymentPanel {...attackPaymentPanel} />}

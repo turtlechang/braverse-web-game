@@ -48,6 +48,8 @@ export interface EffectPanelProps {
   selectedHpToTrashTargetIds?: Set<string>
   onToggleHpToTrash?: (instanceId: string) => void
   hpToTrashCost?: number
+  hpToTrashSharedTotal?: number
+  hpToTrashSelectionSatisfied?: boolean
   showCancelSkill?: boolean
   energyPaymentValid?: boolean
   paymentCandidates?: GameCard[]
@@ -114,10 +116,11 @@ function CandidateButtons({
         const selected = selectedIds.has(card.instanceId)
         const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
         return (
+          <div className="effect-candidate-entry" key={card.instanceId}>
           <button
             type="button"
             className={selected ? 'is-selected' : ''}
-            key={card.instanceId}
+            aria-pressed={selected}
             disabled={readOnly}
             data-fixed-target={readOnly || undefined}
             onClick={() => onToggle?.(card.instanceId)}
@@ -126,7 +129,15 @@ function CandidateButtons({
             <span>{card.id === 'hidden' ? `對手手牌 ${index + 1}（未公開）` : card.name}</span>
             {labels?.[card.instanceId] && <small>{labels[card.instanceId]}</small>}
             {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
+            {!readOnly && <small className="effect-candidate-status">{selected ? '✓ 已選取 · 點擊取消' : '點擊選取'}</small>}
           </button>
+          {card.id !== 'hidden' && (card.skill?.text || card.effectText) && (
+            <details className="effect-candidate-details">
+              <summary>查看 {card.name} 卡文</summary>
+              <CardEffectText text={card.skill?.text || card.effectText || ''} />
+            </details>
+          )}
+          </div>
         )
       })}
     </div>
@@ -268,6 +279,8 @@ function EffectPanelContent({
   selectedHpToTrashTargetIds = new Set<string>(),
   onToggleHpToTrash,
   hpToTrashCost = 0,
+  hpToTrashSharedTotal,
+  hpToTrashSelectionSatisfied,
   showCancelSkill = false,
   energyPaymentValid,
   paymentCandidates = [],
@@ -354,6 +367,8 @@ function EffectPanelContent({
         ? { min: pendingEffect?.compoundEffectStep === 'follow-up' ? 0 : 1, max: 1 }
       : currentEffect?.kind === 'opponent-trash-to-break'
         ? { min: 0, max: currentEffect.max }
+      : currentEffect?.kind === 'battle-to-break'
+        ? { min: currentEffect.target.min, max: currentEffect.target.max }
       : currentEffect?.kind === 'break-to-battle' ||
           currentEffect?.kind === 'support-to-battle'
         ? { min: 0, max: currentEffect.amount }
@@ -378,11 +393,14 @@ function EffectPanelContent({
           ? {
               min:
                 currentEffect.kind === 'reveal-hand'
-                  ? currentEffect.amount
+                  ? currentEffect.minAmount ?? currentEffect.amount
                   : currentEffect.optional
                     ? 0
                     : currentEffect.amount,
-              max: currentEffect.amount,
+              max:
+                currentEffect.kind === 'reveal-hand'
+                  ? currentEffect.maxAmount ?? currentEffect.amount
+                  : currentEffect.amount,
             }
           : currentEffect?.kind === 'hand-to-hp'
             ? { min: currentEffect.optional ? 0 : 1, max: 1 }
@@ -480,9 +498,10 @@ function EffectPanelContent({
       : discardHandAtLeast
         ? (pendingEffect?.selectedDiscardHandIds.length ?? 0) >= discardHandCost
         : pendingEffect?.selectedDiscardHandIds.length === discardHandCost)
-  const hpToTrashPaid =
+  const hpToTrashPaid = hpToTrashSelectionSatisfied ?? (
     hpToTrashCost === 0 ||
     (pendingEffect?.selectedHpToTrashTargetIds.length ?? 0) === hpToTrashCost
+  )
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
@@ -512,7 +531,16 @@ function EffectPanelContent({
 
   const isLevelSumEffect =
     currentEffect?.kind === 'hand-to-break-by-level-sum' ||
-    currentEffect?.kind === 'break-to-hand-by-level-sum'
+    currentEffect?.kind === 'break-to-hand-by-level-sum' ||
+    (currentEffect?.kind === 'reveal-hand' && currentEffect.levelSum !== undefined)
+
+  const levelSumTarget =
+    currentEffect?.kind === 'reveal-hand'
+      ? currentEffect.levelSum
+      : currentEffect?.kind === 'hand-to-break-by-level-sum' ||
+          currentEffect?.kind === 'break-to-hand-by-level-sum'
+        ? currentEffect.targetSum
+        : undefined
 
   const selectedLevelSum = isLevelSumEffect
     ? candidateCards
@@ -544,8 +572,8 @@ function EffectPanelContent({
             pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
             pendingEffect.selectedTargetIds.length <= selectionLimits.max &&
             (isAtMostLevelSum
-              ? selectedLevelSum <= currentEffect.targetSum
-              : selectedLevelSum === currentEffect.targetSum),
+              ? selectedLevelSum <= (levelSumTarget ?? 0)
+              : selectedLevelSum === (levelSumTarget ?? 0)),
         )
       : !selectionLimits ||
         Boolean(
@@ -588,6 +616,9 @@ function EffectPanelContent({
     ? []
     : [
         ...(skill?.restSource ? ['將效果來源卡橫置'] : []),
+        ...(skill?.cost.stageSourceToTrash
+          ? ['將效果來源場景卡置入棄牌區']
+          : []),
         ...(skill?.cost.hpToTrash &&
         skill.cost.hpToTrash.untilRemainingHp === undefined
           ? [`棄置 ${skill.cost.hpToTrash.amount ?? 1} 張 HP 卡`]
@@ -916,8 +947,9 @@ function EffectPanelContent({
                 )}
                 {hpToTrashCost > 0 && (
                   <small>
-                    已選 {pendingEffect.selectedHpToTrashTargetIds.length} 張／
-                    {hpToTrashCost} 張 HP 費用
+                    {hpToTrashSharedTotal
+                      ? `已選 ${pendingEffect.selectedHpToTrashTargetIds.length} 張餅乾／合計 ${hpToTrashSharedTotal} 張 HP 費用`
+                      : `已選 ${pendingEffect.selectedHpToTrashTargetIds.length} 張／${hpToTrashCost} 張 HP 費用`}
                   </small>
                 )}
                 {trashBattleCookieCost > 0 && (
@@ -967,7 +999,11 @@ function EffectPanelContent({
                 )}
                 {discardHandCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價棄置的手牌</small>
+                    <p className="effect-selection-instruction" role="status">
+                      {selectedDiscardHandIds.size < discardHandCost
+                        ? `選擇 ${discardHandCost} 張手牌棄置，還需選 ${discardHandCost - selectedDiscardHandIds.size} 張。`
+                        : `已選擇 ${selectedDiscardHandIds.size} 張手牌，確認發動後才會棄置。`}
+                    </p>
                     <CandidateButtons
                       cards={discardHandCandidates}
                       selectedIds={selectedDiscardHandIds}
@@ -978,7 +1014,11 @@ function EffectPanelContent({
                 )}
                 {hpToTrashCandidates.length > 0 && (
                   <>
-                    <small>選擇要支付 HP 費用的餅乾</small>
+                    <small>
+                      {hpToTrashSharedTotal
+                        ? `選擇要支付合計 ${hpToTrashSharedTotal} 張 HP 費用的餅乾`
+                        : '選擇要支付 HP 費用的餅乾'}
+                    </small>
                     <CandidateButtons
                       cards={hpToTrashCandidates}
                       selectedIds={selectedHpToTrashTargetIds}
@@ -1194,10 +1234,11 @@ function EffectPanelContent({
                 {fixedTargets ? (
                   <small>固定套用 {candidateCards.length} 張餅乾，不需選取。</small>
                 ) : currentEffect.kind === 'hand-to-break-by-level-sum' ||
-                currentEffect.kind === 'break-to-hand-by-level-sum' ? (
+                currentEffect.kind === 'break-to-hand-by-level-sum' ||
+                (currentEffect.kind === 'reveal-hand' && currentEffect.levelSum !== undefined) ? (
                   <small>
                     已選等級總和 {selectedLevelSum}／
-                    {isAtMostLevelSum ? '最多 ' : ''}{currentEffect.targetSum}
+                    {isAtMostLevelSum ? '最多 ' : ''}{levelSumTarget}
                   </small>
                 ) : currentEffect.kind === 'hp-to-trash' && hpAmountSelection ? (
                   <small>

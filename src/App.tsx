@@ -69,6 +69,11 @@ const PendingDecisionModals = lazy(async () => {
   return { default: module.PendingDecisionModals }
 })
 
+const HandInspectionModal = lazy(async () => {
+  const module = await import('./components/battle/HandInspectionModal')
+  return { default: module.HandInspectionModal }
+})
+
 const ResultModal = lazy(async () => {
   const module = await import('./components/modals/GameModals')
   return { default: module.ResultModal }
@@ -106,9 +111,11 @@ const testStateConfig = parseTestStateConfig(
   window.location.hostname,
 )
 
-const contractTraceCardId = new URLSearchParams(window.location.search).get(
-  'contract-card',
-)
+const contractTraceCardIds = new URLSearchParams(window.location.search)
+  .get('contract-card')
+  ?.split(',')
+  .map((cardId) => cardId.trim())
+  .filter(Boolean)
 
 function App() {
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
@@ -118,7 +125,7 @@ function App() {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
-  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
+  const [specialPlayCandidateIds, setSpecialPlayCandidateIds] = useState<string[]>([])
   const [stagePlacement, setStagePlacement] = useState<{
     instanceId: string
     paymentIds: string[]
@@ -130,10 +137,10 @@ function App() {
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
   useEffect(() => {
-    if (!contractTraceCardId) return
+    if (!contractTraceCardIds?.length) return
     const trace = buildCardContractActionTrace(
       match.game.commandLog ?? [],
-      contractTraceCardId,
+      contractTraceCardIds.length === 1 ? contractTraceCardIds[0]! : contractTraceCardIds,
     )
     // Browser attestation exposes only the public command summary/steps.  It
     // deliberately omits command payloads, hand contents, deck order and HP
@@ -165,7 +172,7 @@ function App() {
     game: match.game,
     setGame: match.setGame,
     setMessage: match.setMessage,
-    showPause: dialogs.showPause,
+    showPause: dialogs.showPause || match.animations.isPlaying,
     aiControlsCurrentState: match.aiControlsCurrentState,
     pendingEffect: pending.pendingEffect,
     faintActive: pending.faintActive,
@@ -196,7 +203,7 @@ function App() {
     setBattleLogReviewReason(null)
     setSelectedHandCardId(null)
     setSpecialPlaySourceId(null)
-    setSpecialPlayCandidateId(null)
+    setSpecialPlayCandidateIds([])
     setStagePlacement(null)
     dialogs.closeResourcePopover()
     match.resetMatchState(nextConfig)
@@ -216,7 +223,7 @@ function App() {
     return downloaded
   }
 
-  const interactionLocked = deriveInteractionLocked(
+  const interactionLocked = match.animations.isPlaying || deriveInteractionLocked(
     match.game,
     match.viewerPlayerId,
     Boolean(pending.pendingEffect),
@@ -232,6 +239,7 @@ function App() {
   const trapPaymentIdSet = new Set(match.selectedTrapPaymentIds)
 
   const phaseDisabled =
+    match.animations.isPlaying ||
     match.game.status === 'finished' ||
     Boolean(match.game.pendingReplacement) ||
     hasPendingCardResolution(match.game) ||
@@ -239,6 +247,7 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const handInspectionResult = match.game.handInspectionResults?.[match.viewerPlayerId]
   const stagePlacementCard = stagePlacement
     ? playerHand.find((card) => card.instanceId === stagePlacement.instanceId) ?? null
     : null
@@ -299,12 +308,27 @@ function App() {
           match.game.players[match.viewerPlayerId].battleArea,
         )
       : []
+  const specialPlayCandidateCount =
+    specialPlaySourceCard?.skill?.specialPlayCost?.trashBattleCookie?.count ?? 1
+  const toggleSpecialPlayCandidate = (instanceId: string) => {
+    setSpecialPlayCandidateIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      return current.length < specialPlayCandidateCount
+        ? [...current, instanceId]
+        : current
+    })
+  }
   const handleSpecialPlayConfirm = () => {
     if (
       !specialPlaySourceCard ||
-      !specialPlayCandidateId ||
-      !specialPlayCandidates.some(
-        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      specialPlayCandidateIds.length !== specialPlayCandidateCount ||
+      specialPlayCandidateIds.some(
+        (candidateId) =>
+          !specialPlayCandidates.some(
+            (candidate) => candidate.card.instanceId === candidateId,
+          ),
       ) ||
       !canSpecialPlayCookie(
         match.game,
@@ -316,18 +340,17 @@ function App() {
     }
 
     const sourceInstanceId = specialPlaySourceCard.instanceId
-    const sacrificeInstanceId = specialPlayCandidateId
     match.dispatch(
       {
         kind: 'deploy-cookie',
         playerId: match.viewerPlayerId,
         instanceId: sourceInstanceId,
-        specialPlayCookieInstanceId: sacrificeInstanceId,
+        specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
       '特殊登場已支付，等待處理 On Play。',
       (nextGame) => {
         setSpecialPlaySourceId(null)
-        setSpecialPlayCandidateId(null)
+        setSpecialPlayCandidateIds([])
         if (nextGame.pendingRefresh) return
         pending.beginCookieSkill(
           nextGame,
@@ -403,6 +426,7 @@ function App() {
   }
 
   const topBattleRowProps: BattleRowProps = {
+    openingHandPending: match.openingHandPending,
     game: match.game,
     playerId: match.opponentId,
     position: 'top',
@@ -435,6 +459,7 @@ function App() {
   }
 
   const bottomBattleRowProps: BattleRowProps = {
+    openingHandPending: match.openingHandPending,
     game: match.game,
     playerId: match.viewerPlayerId,
     position: 'bottom',
@@ -550,7 +575,7 @@ function App() {
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
-      setSpecialPlayCandidateId(null)
+      setSpecialPlayCandidateIds([])
     },
     onPlayItem: (instanceId) => {
       if (!canPlayItem(match.game, match.activePlayer.id, instanceId)) {
@@ -605,6 +630,7 @@ function App() {
   return (
     <main
       className="game-shell"
+      data-motion={match.animations.reducedMotion ? "reduced" : match.animations.speed}
       data-attention-state={attentionState}
       data-bs4-condition-card={
         testStateConfig?.kind === 'bs4-condition'
@@ -644,6 +670,7 @@ function App() {
       />
 
       <BattleTable
+        animation={match.animations}
         ariaLabel="Braverse 對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
@@ -719,7 +746,7 @@ function App() {
       )}
 
       <EffectPanel
-        pendingEffect={pending.pendingEffect}
+        pendingEffect={match.animations.isPlaying ? null : pending.pendingEffect}
         currentEffect={currentJsxEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
@@ -796,6 +823,8 @@ function App() {
         selectedHpToTrashTargetIds={pending.selectedSkillHpToTrashTargetIds}
         onToggleHpToTrash={pending.toggleSkillHpToTrash}
         hpToTrashCost={pending.hpToTrashCost}
+        hpToTrashSharedTotal={pending.hpToTrashSharedTotal}
+        hpToTrashSelectionSatisfied={pending.hpToTrashSelectionSatisfied}
         showCancelSkill={showCancelSkill}
         energyPaymentValid={pending.skillEnergyPaymentValid}
         paymentCandidates={
@@ -873,9 +902,10 @@ function App() {
         }
       />
 
-      {match.setupStep && (
+      {match.setupStep && (match.openingHandPending || !match.animations.isPlaying) && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <OpeningSetupModal
+            rpsResult={match.rpsResult}
             step={match.setupStep as OpeningSetupStep}
             message={match.setupMessage}
             hand={match.game.players[match.viewerPlayerId].hand}
@@ -894,11 +924,15 @@ function App() {
       )}
 
       <Suspense fallback={null}>
-        <BattleResponseModals match={match} />
+        {!match.animations.isPlaying && <BattleResponseModals match={match} />}
 
-        <DamageEffectModals match={match} pending={pending} />
+        {!match.animations.isPlaying && <DamageEffectModals match={match} pending={pending} />}
 
-        <PendingDecisionModals match={match} pending={pending} />
+        {!match.animations.isPlaying && <PendingDecisionModals match={match} pending={pending} />}
+
+        {handInspectionResult && (
+          <HandInspectionModal result={handInspectionResult} />
+        )}
 
         <InformationModals match={match} ai={ai} dialogs={dialogs} />
 
@@ -920,24 +954,27 @@ function App() {
           <SpecialPlayModal
             sourceCard={specialPlaySourceCard}
             candidates={specialPlayCandidates}
-            selectedCandidateId={specialPlayCandidateId}
-            onSelectCandidate={setSpecialPlayCandidateId}
+            requiredCandidateCount={specialPlayCandidateCount}
+            selectedCandidateIds={specialPlayCandidateIds}
+            onToggleCandidate={toggleSpecialPlayCandidate}
             onCancel={() => {
               setSpecialPlaySourceId(null)
-              setSpecialPlayCandidateId(null)
+              setSpecialPlayCandidateIds([])
             }}
             onConfirm={handleSpecialPlayConfirm}
           />
         )}
       </Suspense>
 
-      {gameResult && battleLogReviewReason === null && (
+      {gameResult && !match.animations.isPlaying && battleLogReviewReason === null && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <ResultModal
             winnerName={resultWinnerName ?? ''}
             loserId={gameResult.loserId}
             viewerPlayerId={match.viewerPlayerId}
             reason={gameResult.reason}
+            turnNumber={match.game.turnNumber}
+            deckSummary={match.deckConfig.player === 'custom' ? match.selectedCustomDeck?.name : deckChoiceLabel[match.deckConfig.player]}
             onReviewLog={(reasonText) => setBattleLogReviewReason(reasonText)}
             onRestart={() => {
               resetGame(

@@ -81,6 +81,7 @@ export interface ExtraDeckAttackModalProps {
   cardName: string
   candidates: ExtraDeckCard[]
   optional: boolean
+  resolution?: 'attack' | 'skill' | 'play'
   onSelect: (instanceId: string) => void
   onSkip?: () => void
 }
@@ -97,9 +98,22 @@ export function ExtraDeckAttackModal({
   cardName,
   candidates,
   optional,
+  resolution = 'attack',
   onSelect,
   onSkip,
 }: ExtraDeckAttackModalProps) {
+  const isSkillResolution = resolution === 'skill'
+  const isPlayResolution = resolution === 'play'
+  const resolutionLabel = isPlayResolution
+    ? '登場'
+    : isSkillResolution
+      ? '技能'
+      : '攻擊'
+  const selectionText = isPlayResolution
+    ? '直接將其放置到戰鬥區。'
+    : isSkillResolution
+      ? '發動其指定技能效果。'
+      : '發動其攻擊效果。'
   return (
     <div className="modal-backdrop" role="presentation">
       <section
@@ -107,12 +121,12 @@ export function ExtraDeckAttackModal({
         role="alertdialog"
         aria-labelledby="extra-deck-attack-modal-title"
       >
-        <span>額外牌組攻擊效果</span>
+        <span>額外牌組{resolutionLabel}效果</span>
         <h2 id="extra-deck-attack-modal-title">
           {sourceCardName}：選擇「{cardName}」
         </h2>
         <p className="faint-effect-text">
-          從你的額外牌組選擇最多 1 張同名卡，發動其攻擊效果。
+          從你的額外牌組選擇最多 1 張同名卡，{selectionText}
           {optional ? '你也可以略過。' : '這是必要選擇。'}
         </p>
         {candidates.length > 0 ? (
@@ -132,9 +146,17 @@ export function ExtraDeckAttackModal({
                 <CardFace card={card} />
                 <strong>{card.name}</strong>
                 <small>實體 ID：{card.instanceId}</small>
-                {card.attackText && (
+                {(isSkillResolution || isPlayResolution
+                  ? card.effectText
+                  : card.attackText) && (
                   <span className="extra-deck-attack-text">
-                    <CardEffectText text={card.attackText} />
+                    <CardEffectText
+                      text={
+                        isSkillResolution || isPlayResolution
+                          ? card.effectText!
+                          : card.attackText!
+                      }
+                    />
                   </span>
                 )}
               </button>
@@ -357,6 +379,12 @@ export function HandDiscardResponseModal({
     ? selectedIds.length >= requiredCount
     : selectedIds.length === requiredCount
   const placementRequired = destination === 'deck-top-or-bottom'
+  const deckDestination = destination === 'deck-top'
+    ? '牌庫頂'
+    : destination === 'deck-bottom'
+      ? '牌庫底'
+      : null
+  const actionVerb = destination && destination !== 'trash' ? '放置' : '棄置'
   const placementComplete = !placementRequired || selectedIds.every(
     (id) => placementByCardId[id] === 'top' || placementByCardId[id] === 'bottom',
   )
@@ -390,7 +418,7 @@ export function HandDiscardResponseModal({
           type="button"
           className="minimize-reveal"
           onClick={() => setMinimized(true)}
-          title="縮小棄置手牌提示"
+          title={`縮小${actionVerb}手牌提示`}
         >
           <Minimize2 aria-hidden="true" />
           縮小
@@ -399,13 +427,13 @@ export function HandDiscardResponseModal({
           <GuidedPhaseSteps
             phases={[
               { id: 'draw', label: '抽牌', complete: true },
-              { id: 'discard', label: '棄牌', complete: false },
+            { id: 'discard', label: actionVerb === '棄置' ? '棄牌' : '放置', complete: false },
             ]}
             activePhase="discard"
           />
         )}
-        <span>棄置手牌</span>
-        <h2>{sourceCardName} 要求你棄置手牌</h2>
+        <span>{actionVerb}手牌</span>
+        <h2>{sourceCardName} 要求你{actionVerb}手牌{deckDestination ? `到${deckDestination}` : ''}</h2>
         <div className="draw-up-to-source-card hand-discard-source-card">
           {sourceCard && <CardFace card={sourceCard} />}
           <div className="draw-up-to-source-info">
@@ -419,10 +447,10 @@ export function HandDiscardResponseModal({
         </div>
         <p className="faint-target-hint">
           {optional
-            ? `可以選擇不棄置；若要讓目標餅乾成為活躍，必須恰好棄置 ${requiredCount} 張手牌。`
+            ? `可以選擇不${actionVerb}；若要讓目標餅乾成為活躍，必須恰好${actionVerb} ${requiredCount} 張手牌。`
             : atLeast
-            ? `至少選擇 ${requiredCount} 張手牌棄置。`
-            : `必須選擇 ${requiredCount} 張手牌棄置。`}
+            ? `至少選擇 ${requiredCount} 張手牌${actionVerb}${deckDestination ? `到${deckDestination}` : ''}。`
+            : `必須選擇 ${requiredCount} 張手牌${actionVerb}${deckDestination ? `到${deckDestination}` : ''}。`}
           {placementRequired && ' 選定後請逐張指定放到牌庫頂或牌庫底。'}
         </p>
         <div className="modal-card-options hand-discard-options">
@@ -463,7 +491,7 @@ export function HandDiscardResponseModal({
         </div>
         <div className="modal-actions hand-discard-actions">
           <button type="button" disabled={!canSubmit} onClick={onConfirm}>
-            確認棄置 ({selectedIds.length})
+            確認{actionVerb} ({selectedIds.length})
           </button>
         </div>
       </section>
@@ -847,6 +875,7 @@ export interface OptionalCostAttackModalProps {
   unmetConditionWarning?: string | null
   /** 支援區沒有足夠的合法能量支付攻擊後效果時的提示。 */
   paymentUnavailableWarning?: string | null
+  deckToTrashAvailable?: boolean
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -885,6 +914,7 @@ export function OptionalCostAttackModal({
   embedded = false,
   unmetConditionWarning = null,
   paymentUnavailableWarning = null,
+  deckToTrashAvailable = true,
 }: OptionalCostAttackModalProps) {
   const isAbilityResolution = resolution === 'ability'
   const sourceEnergyTotal = Object.values(sourceEnergy ?? {}).reduce(
@@ -927,6 +957,7 @@ export function OptionalCostAttackModal({
     hpToTrashCandidates.length >= hpToTrashCost &&
     hpToHandCandidates.length >= hpToHandCost &&
     trashToDeckCandidates.length >= trashToDeckCost &&
+    deckToTrashAvailable &&
     (!needsTarget || targetCandidates.length >= targetMin)
 
   const toggleDiscard = useCallback((instanceId: string) => {
@@ -1560,8 +1591,13 @@ export interface InspectDeckModalProps {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
+  filterHasSpecialPlay?: boolean
   optionalPick?: boolean
-  onConfirm: (pickedCardIds: string[], restOrder: string[]) => void
+  onConfirm: (
+    pickedCardIds: string[],
+    restOrder: string[],
+    selectedRestDestination?: 'top' | 'bottom',
+  ) => void
 }
 
 const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
@@ -1569,6 +1605,7 @@ const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
   top: '牌庫頂',
   trash: '棄牌區',
   'support-rested': '支援區（橫置）',
+  'top-or-bottom': '牌庫頂或牌庫底',
 }
 
 export function InspectDeckModal({
@@ -1581,11 +1618,15 @@ export function InspectDeckModal({
   filterColor,
   filterType,
   filterKeyword,
+  filterHasSpecialPlay,
   optionalPick,
   onConfirm,
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [pickedIds, setPickedIds] = useState<string[]>([])
+  const [selectedRestDestination, setSelectedRestDestination] = useState<
+    'top' | 'bottom' | null
+  >(null)
   // restOrder 只保存「未被選走」的卡，順序就是玩家決定的放回順序。
   const [restOrder, setRestOrder] = useState<string[]>(
     () => revealedCards.map((card) => card.instanceId),
@@ -1595,7 +1636,9 @@ export function InspectDeckModal({
   const isPickable = (card: GameCard) =>
     (filterColor == null || card.energyColor === filterColor) &&
     (filterType == null || card.type === filterType) &&
-    (filterKeyword == null || card.keywords?.includes(filterKeyword))
+    (filterKeyword == null || card.keywords?.includes(filterKeyword)) &&
+    (!filterHasSpecialPlay ||
+      (card.type === 'cookie' && card.skill?.specialPlayCost !== undefined))
   const hasNoPickableCard = !revealedCards.some(isPickable)
   const restLabel = REST_DESTINATION_LABEL[restDestination]
   const showReorder =
@@ -1606,6 +1649,7 @@ export function InspectDeckModal({
   const resetPick = () => {
     setPickedIds([])
     setRestOrder(revealedCards.map((card) => card.instanceId))
+    setSelectedRestDestination(null)
   }
 
   const handlePick = (instanceId: string) => {
@@ -1637,12 +1681,14 @@ export function InspectDeckModal({
     setRestOrder(next)
   }
 
+  const needsRestDestination = restDestination === 'top-or-bottom'
   const canConfirm =
-    !canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0
+    (!canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0) &&
+    (!needsRestDestination || selectedRestDestination !== null)
 
   const handleConfirm = () => {
     if (!canConfirm) return
-    onConfirm(pickedIds, restOrder)
+    onConfirm(pickedIds, restOrder, selectedRestDestination ?? undefined)
   }
 
   if (minimized) {
@@ -1704,19 +1750,47 @@ export function InspectDeckModal({
             沒有符合條件的卡牌，將全部放入{restLabel}。
           </p>
         )}
-        {canPick && (
+        {canPick ? (
           <div className="inspect-deck-grid">
             {revealedCards.map((card) => (
               <button
                 type="button"
                 key={card.instanceId}
                 className={pickedIds.includes(card.instanceId) ? 'is-selected' : ''}
-                disabled={!isPickable(card) || (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)}
+                disabled={
+                  !isPickable(card) ||
+                  (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)
+                }
                 onClick={() => handlePick(card.instanceId)}
                 aria-label={`選擇${card.name}`}
               >
                 <CardFace card={card} />
                 <span>{card.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="inspect-deck-grid" aria-label="已查看的牌庫卡牌">
+            {revealedCards.map((card) => (
+              <div className="inspect-deck-card" key={card.instanceId}>
+                <CardFace card={card} />
+                <span>{card.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {needsRestDestination && (
+          <div className="inspect-deck-placement" aria-label="牌庫放置位置">
+            <strong>選擇檢視的牌要放回哪裡</strong>
+            {(['top', 'bottom'] as const).map((placement) => (
+              <button
+                type="button"
+                key={placement}
+                className={selectedRestDestination === placement ? 'is-selected' : ''}
+                aria-pressed={selectedRestDestination === placement}
+                onClick={() => setSelectedRestDestination(placement)}
+              >
+                {placement === 'top' ? '放回牌庫頂' : '放回牌庫底'}
               </button>
             ))}
           </div>

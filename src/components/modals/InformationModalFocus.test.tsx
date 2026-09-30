@@ -32,6 +32,8 @@ describe('dismissible information dialog keyboard interaction', () => {
     expect(document.activeElement).toBe(buttons[0])
     document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }))
     expect(document.activeElement).toBe(buttons.at(-1))
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+    expect(document.activeElement).toBe(buttons[0])
     await act(() => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
     expect(resume).toHaveBeenCalledTimes(1)
     await act(() => root.unmount())

@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import type { TurnPhase } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
 import './PhaseRail.css'
+import { PlayerGuideButton } from '../help/PlayerGuide'
 
 const nextPhaseLabels: Record<TurnPhase, string> = {
   active: '自動活躍中',
@@ -30,6 +31,7 @@ export function PhaseRail({
     <aside className="phase-rail" aria-label="回合階段">
       <div className={`turn-indicator ${isPlayerTurn ? 'is-player' : 'is-opponent'}`}>
         <span>TURN {turnNumber}</span>
+        <small className="phase-owner">{isPlayerTurn ? '你的回合' : '對手回合'}</small>
         <strong>{phaseLabels[phase]}</strong>
       </div>
       <button
@@ -38,9 +40,10 @@ export function PhaseRail({
         onClick={onAdvance}
         disabled={disabled}
       >
-        <span>{nextPhaseLabels[phase]}</span>
+        <span>{isPlayerTurn ? nextPhaseLabels[phase] : '等待對手行動'}</span>
         <ChevronRight aria-hidden="true" />
       </button>
+      <PlayerGuideButton phase={phase} />
     </aside>
   )
 }

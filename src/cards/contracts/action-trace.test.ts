@@ -48,6 +48,20 @@ describe('card contract action trace', () => {
     })
     expect(failed.passed).toBe(false)
     expect(failed.errors).toContain('missing ordered step: 未出現的步驟')
+
+    const otherCardEntry: CommandLogEntry = {
+      ...entries[0],
+      id: 3,
+      payload: { privateTarget: 'hidden-card' },
+      card: { ...entries[0].card!, id: 'BS6-202' },
+    }
+    const multiCardTrace = buildCardContractActionTrace(
+      [entries[0], otherCardEntry, entries[1]],
+      ['BS6-101', 'BS6-202'],
+    )
+    expect(multiCardTrace.map((entry) => entry.id)).toEqual([1, 3, 2])
+    expect(multiCardTrace.every((entry) => !('payload' in entry))).toBe(true)
+    expect(buildCardContractActionTrace(entries, 'BS6-101')).toEqual(trace)
   })
 
   it('rejects source/payment-only traces and requires effect settlement evidence', () => {

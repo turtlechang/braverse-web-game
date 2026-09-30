@@ -1,3 +1,4 @@
+import { mergePresentationSteps } from './presentation'
 import { GameRuleError } from './errors'
 import {
   advanceBattleAfterTrap,
@@ -51,9 +52,12 @@ import {
 } from './effects/choose-one'
 import { advancePhase, resumeActivePhaseAfterCookieDiscard } from './turn'
 import {
+  activateOnPlayReplacement,
   activateCookieSkill,
   findSkillSource,
   getCookieSkillEffects,
+  getCookieActivateDiscardRequirement,
+  getActiveOnPlayReplacement,
   getSkillUseKey,
   skipCookieOnPlay,
   isPendingEndPhaseSkill,
@@ -65,6 +69,10 @@ import {
   playItem,
   playStage,
 } from './card-abilities'
+import {
+  getExtraDeckSkillEffects,
+  materializeExtraDeckCookie,
+} from './extra-deck'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
@@ -97,6 +105,7 @@ import type {
   GameState,
   InspectDeckRestDestination,
   PendingEffectOrderItem,
+  PendingCookieActivateSkill,
   PlayerId,
   Shuffle,
 } from './types'
@@ -123,6 +132,7 @@ export interface OpponentHandDiscardDecision {
   energyColor?: import('./types').EnergyColor
   cookieOnly?: boolean
   hasFlip?: boolean
+  excludedCardIds?: string[]
   drawEqualDiscarded?: boolean
   destination?: 'trash' | 'deck-top' | 'deck-bottom' | 'deck-top-or-bottom'
 }
@@ -154,6 +164,7 @@ export interface InspectDeckDecision {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   filterKeyword?: CardKeyword
+  filterHasSpecialPlay?: boolean
   optionalPick?: boolean
   extraHp?: number
 }
@@ -229,6 +240,8 @@ export interface ExtraDeckAttackDecision {
   cardName: string
   candidateIds: string[]
   optional: boolean
+  resolution?: 'attack' | 'skill' | 'play'
+  skillTrigger?: 'on-play' | 'activate'
 }
 
 export type PendingDecision =
@@ -296,6 +309,8 @@ export interface ResolveInspectDeckCommand {
   playerId: PlayerId
   pickedCardIds: string[]
   restOrder: string[]
+  /** BS10-088：檢視後選擇將未選卡放回牌庫頂或牌庫底。 */
+  restDestination?: 'top' | 'bottom'
 }
 
 export interface ResolveRevealTopDeckCommand {
@@ -426,6 +441,7 @@ export interface DeployCookieCommand {
   playerId: PlayerId
   instanceId: string
   specialPlayCookieInstanceId?: string
+  specialPlayCookieInstanceIds?: string[]
 }
 
 /** 從持有者自己的 EXTRA Deck 直接登場一張非 Awaken 型餅乾。 */
@@ -854,6 +870,8 @@ export const getPendingDecision = (
       cardName: pending.cardName,
       candidateIds: [...pending.candidateIds],
       optional: pending.optional,
+      resolution: pending.resolution,
+      skillTrigger: pending.skillTrigger,
     }
   }
 
@@ -950,6 +968,7 @@ export const getPendingDecision = (
       ...(pending.energyColor ? { energyColor: pending.energyColor } : {}),
       ...(pending.cookieOnly ? { cookieOnly: true } : {}),
       ...(pending.hasFlip ? { hasFlip: true } : {}),
+      ...(pending.excludedCardIds ? { excludedCardIds: pending.excludedCardIds } : {}),
       ...(pending.drawEqualDiscarded ? { drawEqualDiscarded: true } : {}),
       ...(pending.destination ? { destination: pending.destination } : {}),
     }
@@ -994,6 +1013,7 @@ export const getPendingDecision = (
       filterColor: pending.filterColor,
       filterType: pending.filterType,
       filterKeyword: pending.filterKeyword,
+      filterHasSpecialPlay: pending.filterHasSpecialPlay,
       optionalPick: pending.optionalPick,
       extraHp: pending.extraHp,
     }
@@ -1168,6 +1188,7 @@ export const appendCommandLogEntry = (
   const groupId =
     previousEntry && hasBlockingPending(previous) ? previousEntry.groupId : id
   const entry: CommandLogEntry = {
+    presentation: mergePresentationSteps(previous, next, command.kind, `command-${id}`, resolveLogCard(previous, next, command)),
     id,
     turnNumber: previous.turnNumber,
     phase: previous.phase,
@@ -1184,7 +1205,9 @@ export const appendCommandLogEntry = (
       'player-two': getBreakAreaLevel(next, 'player-two'),
     },
   }
-  return { ...next, commandLog: [...log, entry] }
+  const { presentationSteps, ...settled } = next
+  void presentationSteps
+  return { ...settled, commandLog: [...log, entry] }
 }
 
 export const applyGameCommand = (
@@ -1199,9 +1222,10 @@ export const applyGameCommand = (
           ...options,
           shuffle: createSeededShuffle(options.shuffleSeed),
         }
+  const executionState: GameState = { ...state, presentationSteps: [] }
   const commanded = isPendingDecisionCommand(command)
-    ? applyPendingDecisionCommand(state, command, effectiveOptions)
-    : applyPlayerActionCommand(state, command, effectiveOptions)
+    ? applyPendingDecisionCommand(executionState, command, effectiveOptions)
+    : applyPlayerActionCommand(executionState, command, effectiveOptions)
   const next = clearCompletedEffectOrder(commanded)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
@@ -1271,12 +1295,21 @@ const applyPendingDecisionCommand = (
       const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
       const activePhaseCookieInstanceId =
         state.pendingOpponentHandDiscard?.activePhaseCookieInstanceId
+      const cookieActivateSkill = state.pendingOpponentHandDiscard?.cookieActivateSkill
       let resolved = resolveOpponentHandDiscard(
         state,
         command.playerId,
         command.cardIds,
         command.placementByCardId,
       )
+      if (cookieActivateSkill) {
+        resolved = clearCookieActivateDiscardRequirement(
+          resolved,
+          cookieActivateSkill.playerId,
+          cookieActivateSkill.sourceInstanceId,
+        )
+        return resumeCookieActivateSkill(resolved, cookieActivateSkill, options)
+      }
       const triggerContinuation =
         state.pendingBattle?.stage === 'attack-effect'
           ? ('attack-effect' as const)
@@ -1316,7 +1349,13 @@ const applyPendingDecisionCommand = (
     case 'resolve-opponent-rest-support':
       return resolveOpponentRestSupport(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
-      return resolveInspectDeck(state, command.playerId, command.pickedCardIds, command.restOrder)
+      return resolveInspectDeck(
+        state,
+        command.playerId,
+        command.pickedCardIds,
+        command.restOrder,
+        command.restDestination,
+      )
     case 'resolve-reveal-top-deck': {
       const pending = state.pendingRevealTopDeck
       if (!pending || pending.playerId !== command.playerId) {
@@ -1427,6 +1466,76 @@ const applyPendingDecisionCommand = (
       const selected = player.extraDeck?.find(
         (card) => card.instanceId === selectedId,
       )
+      if (
+        pending.battleContinuation === 'attack-effect' &&
+        (!state.pendingBattle ||
+          state.pendingBattle.stage !== 'attack-effect' ||
+          state.pendingBattle.attackerPlayerId !== pending.sourcePlayerId)
+      ) {
+        throw new GameRuleError('目前的攻擊效果已不在可接續的戰鬥流程中。')
+      }
+
+      if (pending.resolution === 'play') {
+        if (!selected || selected.name !== pending.cardName) {
+          throw new GameRuleError('選擇的 EXTRA 卡已不存在或無法直接登場。')
+        }
+        const played = playExtraDeckCookie(
+          state,
+          pending.sourcePlayerId,
+          selected.instanceId,
+          true,
+          {
+            ignorePlayRequirement: pending.ignorePlayRequirements === true,
+            extraHp: pending.extraHp ?? 0,
+          },
+        )
+        return { ...played, pendingExtraDeckAttack: null }
+      }
+
+      if (pending.resolution === 'skill') {
+        const trigger = pending.skillTrigger
+        const skillEffects =
+          selected && trigger
+            ? getExtraDeckSkillEffects(selected, trigger)
+            : []
+        if (
+          !trigger ||
+          !selected ||
+          selected.name !== pending.cardName ||
+          skillEffects.length === 0
+        ) {
+          throw new GameRuleError('選擇的 EXTRA 卡已不存在或沒有可發動的技能。')
+        }
+        const materialized = materializeExtraDeckCookie(selected)
+        return {
+          ...state,
+          players: {
+            ...state.players,
+            [pending.sourcePlayerId]: {
+              ...player,
+              extraDeck: (player.extraDeck ?? []).filter(
+                (card) => card.instanceId !== selected.instanceId,
+              ),
+              discardPile: [...player.discardPile, materialized],
+            },
+          },
+          pendingExtraDeckAttack: null,
+          pendingAbilityEffect: {
+            playerId: pending.playerId,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceInstanceId: selected.instanceId,
+            sourceCardName: selected.name,
+            sourceKind: 'skill',
+            trigger,
+            effects: skillEffects,
+            effectIndex: 0,
+            ...(pending.battleContinuation
+              ? { battleContinuation: pending.battleContinuation }
+              : {}),
+          },
+        }
+      }
+
       const attackEffects = selected?.attackEffects
       if (
         !selected ||
@@ -1435,14 +1544,6 @@ const applyPendingDecisionCommand = (
         attackEffects.length === 0
       ) {
         throw new GameRuleError('選擇的 EXTRA 卡已不存在或沒有可發動的攻擊效果。')
-      }
-      if (
-        pending.battleContinuation === 'attack-effect' &&
-        (!state.pendingBattle ||
-          state.pendingBattle.stage !== 'attack-effect' ||
-          state.pendingBattle.attackerPlayerId !== pending.sourcePlayerId)
-      ) {
-        throw new GameRuleError('目前的攻擊效果已不在可接續的戰鬥流程中。')
       }
 
       return {
@@ -1950,6 +2051,368 @@ const executeAbilityEffects = (
   return nextState
 }
 
+type CookieActivateCommand = ActivateSkillCommand | BeginActivateSkillCommand
+
+const createCookieActivateDiscardPending = (
+  state: GameState,
+  command: CookieActivateCommand,
+  options: ApplyGameCommandOptions,
+): GameState | null => {
+  const requirement = command.trigger === 'activate'
+    ? getCookieActivateDiscardRequirement(state, command.playerId, command.sourceInstanceId)
+    : undefined
+  if (!requirement) return null
+
+  const discardHandIds = command.discardHandIds ?? []
+  const excludedCardIds = [...new Set(discardHandIds)]
+  if (excludedCardIds.length !== discardHandIds.length) {
+    throw new GameRuleError('不能重複選擇同一張手牌作為技能代價。')
+  }
+  if (excludedCardIds.length > 0) {
+    const handIds = new Set(state.players[command.playerId].hand.map((card) => card.instanceId))
+    if (excludedCardIds.some((id) => !handIds.has(id))) {
+      throw new GameRuleError('技能代價只能選擇自己的手牌。')
+    }
+  }
+
+  const availableCount = state.players[command.playerId].hand.filter(
+    (card) => !excludedCardIds.includes(card.instanceId),
+  ).length
+  if (availableCount < requirement.count) {
+    throw new GameRuleError(
+      `發動這張餅乾的 Activate 前必須棄置 ${requirement.count} 張未被其他技能代價選用的手牌。`,
+    )
+  }
+
+  // Validate the ordinary skill command before opening the extra-discard
+  // modal.  Otherwise an invalid payment could consume the two cards first
+  // and only fail when the saved command resumes.
+  const validationState = clearCookieActivateDiscardRequirement(
+    state,
+    command.playerId,
+    command.sourceInstanceId,
+  )
+  activateCookieSkill(
+    validationState,
+    command.playerId,
+    command.sourceInstanceId,
+    command.trigger,
+    command.paymentIds,
+    command.costSupportToTrashIds ?? [],
+    discardHandIds,
+    command.trashBattleCookieIds ?? [],
+    command.trashToDeckBottomIds ?? [],
+    command.trashToDeckIds ?? [],
+    options.shuffle,
+    command.hpToTrashTargetIds ?? [],
+    command.supportToHandIds ?? [],
+    command.battleToHandIds ?? [],
+    command.trashCookieToBreakAreaIds ?? [],
+    command.handToBreakAreaIds ?? [],
+    command.kind === 'activate-skill'
+      ? command.effectTargets?.[0] ?? []
+      : command.targetIds ?? [],
+  )
+
+  const source = findSkillSource(
+    state.players[command.playerId],
+    command.sourceInstanceId,
+  )
+  const cookieActivateSkill: PendingCookieActivateSkill = {
+    kind: command.kind,
+    playerId: command.playerId,
+    sourceInstanceId: command.sourceInstanceId,
+    trigger: command.trigger,
+    paymentIds: command.paymentIds,
+    costSupportToTrashIds: command.costSupportToTrashIds ?? [],
+    discardHandIds,
+    hpToTrashTargetIds: command.hpToTrashTargetIds ?? [],
+    trashBattleCookieIds: command.trashBattleCookieIds ?? [],
+    battleToHandIds: command.battleToHandIds ?? [],
+    trashToDeckBottomIds: command.trashToDeckBottomIds ?? [],
+    trashToDeckIds: command.trashToDeckIds ?? [],
+    supportToHandIds: command.supportToHandIds ?? [],
+    trashCookieToBreakAreaIds: command.trashCookieToBreakAreaIds ?? [],
+    handToBreakAreaIds: command.handToBreakAreaIds ?? [],
+    ...('targetIds' in command && command.targetIds
+      ? { targetIds: command.targetIds }
+      : {}),
+    ...('effectTargets' in command && command.effectTargets
+      ? { effectTargets: command.effectTargets }
+      : {}),
+    ...(command.chooseOneModes ? { chooseOneModes: command.chooseOneModes } : {}),
+    ...(options.shuffleSeed === undefined ? {} : { shuffleSeed: options.shuffleSeed }),
+  }
+  return {
+    ...state,
+    pendingOpponentHandDiscard: {
+      playerId: command.playerId,
+      count: requirement.count,
+      excludedCardIds,
+      sourcePlayerId: command.playerId,
+      sourceInstanceId: command.sourceInstanceId,
+      sourceCardName: source?.card.name ?? requirement.sourceCardName,
+      effectText: `棄置 ${requirement.count} 張手牌後，才能發動這張餅乾的 Activate 技能。`,
+      cookieActivateSkill,
+    },
+  }
+}
+
+const clearCookieActivateDiscardRequirement = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+): GameState => ({
+  ...state,
+  cookieActivateDiscardRequirements: {
+    ...(state.cookieActivateDiscardRequirements ?? {}),
+    [playerId]: (state.cookieActivateDiscardRequirements?.[playerId] ?? [])
+      .filter((requirement) => requirement.cookieInstanceId !== sourceInstanceId),
+  },
+})
+
+const executeActivateSkillCommand = (
+  state: GameState,
+  command: ActivateSkillCommand,
+  options: ApplyGameCommandOptions,
+): GameState => {
+  const source = findSkillSource(
+    state.players[command.playerId],
+    command.sourceInstanceId,
+  )
+  const skill = source?.card.skill
+  const onPlayReplacement = command.trigger === 'on-play'
+    ? getActiveOnPlayReplacement(state, command.playerId)
+    : undefined
+  if (onPlayReplacement) {
+    const activated = activateOnPlayReplacement(
+      state,
+      command.playerId,
+      command.sourceInstanceId,
+      command.paymentIds,
+    )
+    const context: EffectContext = {
+      sourcePlayerId: command.playerId,
+      sourceInstanceId: command.sourceInstanceId,
+      sourceCardName: source?.card.name,
+    }
+    return executeAbilityEffects(
+      activated,
+      context,
+      onPlayReplacement.effects,
+      command.effectTargets,
+      options.shuffle,
+      command.chooseOneModes,
+      'skill',
+    )
+  }
+  const activated = activateCookieSkill(
+    state,
+    command.playerId,
+    command.sourceInstanceId,
+    command.trigger,
+    command.paymentIds,
+    command.costSupportToTrashIds ?? [],
+    command.discardHandIds ?? [],
+    command.trashBattleCookieIds ?? [],
+    command.trashToDeckBottomIds ?? [],
+    command.trashToDeckIds ?? [],
+    options.shuffle,
+    command.hpToTrashTargetIds ?? [],
+    command.supportToHandIds ?? [],
+    command.battleToHandIds ?? [],
+    command.trashCookieToBreakAreaIds ?? [],
+    command.handToBreakAreaIds ?? [],
+    command.effectTargets?.[0] ?? [],
+  )
+  const context: EffectContext = {
+    sourcePlayerId: command.playerId,
+    sourceInstanceId: command.sourceInstanceId,
+    sourceCardName: source?.card.name,
+  }
+  if (activated.pendingRefresh) {
+    const effects = skill ? getCookieSkillEffects(skill, command.trigger) : []
+    return effects.length === 0
+      ? activated
+      : {
+          ...activated,
+          pendingAbilityEffect: {
+            playerId: command.playerId,
+            sourcePlayerId: command.playerId,
+            sourceInstanceId: command.sourceInstanceId,
+            sourceCardName: source?.card.name,
+            sourceKind: 'skill',
+            trigger: command.trigger,
+            effects,
+            effectIndex: 0,
+          },
+        }
+  }
+  return executeAbilityEffects(
+    activated,
+    context,
+    skill ? getCookieSkillEffects(skill, command.trigger) : [],
+    command.effectTargets,
+    options.shuffle,
+    command.chooseOneModes,
+    'skill',
+  )
+}
+
+const executeBeginActivateSkillCommand = (
+  state: GameState,
+  command: BeginActivateSkillCommand,
+  options: ApplyGameCommandOptions,
+): GameState => {
+  const source = findSkillSource(
+    state.players[command.playerId],
+    command.sourceInstanceId,
+  )
+  const skill = source?.card.skill
+  const onPlayReplacement = command.trigger === 'on-play'
+    ? getActiveOnPlayReplacement(state, command.playerId)
+    : undefined
+  if (onPlayReplacement) {
+    const activated = activateOnPlayReplacement(
+      state,
+      command.playerId,
+      command.sourceInstanceId,
+      command.paymentIds,
+    )
+    const context: EffectContext = {
+      sourcePlayerId: command.playerId,
+      sourceInstanceId: command.sourceInstanceId,
+      sourceCardName: source?.card.name,
+    }
+    const effects = expandChooseOneSequence(
+      filterActiveEffects(activated, context, onPlayReplacement.effects),
+      command.chooseOneModes,
+    )
+    if (activated.status !== 'playing' || effects.length === 0) {
+      return activated
+    }
+    const pendingState: GameState = {
+      ...activated,
+      pendingAbilityEffect: {
+        playerId: command.playerId,
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: command.sourceInstanceId,
+        sourceCardName: source?.card.name,
+        sourceKind: 'skill',
+        trigger: command.trigger,
+        effects,
+        effectIndex: 0,
+      },
+    }
+    return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
+      ? pendingState
+      : resolvePendingAbilityEffect(
+          pendingState,
+          command.playerId,
+          command.targetIds,
+          undefined,
+          options,
+        )
+  }
+  const activated = activateCookieSkill(
+    state,
+    command.playerId,
+    command.sourceInstanceId,
+    command.trigger,
+    command.paymentIds,
+    command.costSupportToTrashIds ?? [],
+    command.discardHandIds ?? [],
+    command.trashBattleCookieIds ?? [],
+    command.trashToDeckBottomIds ?? [],
+    command.trashToDeckIds ?? [],
+    options.shuffle,
+    command.hpToTrashTargetIds ?? [],
+    command.supportToHandIds ?? [],
+    command.battleToHandIds ?? [],
+    command.trashCookieToBreakAreaIds ?? [],
+    command.handToBreakAreaIds ?? [],
+    command.targetIds ?? [],
+  )
+  const context: EffectContext = {
+    sourcePlayerId: command.playerId,
+    sourceInstanceId: command.sourceInstanceId,
+    sourceCardName: source?.card.name,
+  }
+  if (activated.pendingRefresh) {
+    const effects = skill ? getCookieSkillEffects(skill, command.trigger) : []
+    return effects.length === 0
+      ? activated
+      : {
+          ...activated,
+          pendingAbilityEffect: {
+            playerId: command.playerId,
+            sourcePlayerId: command.playerId,
+            sourceInstanceId: command.sourceInstanceId,
+            sourceCardName: source?.card.name,
+            sourceKind: 'skill',
+            trigger: command.trigger,
+            effects,
+            effectIndex: 0,
+          },
+        }
+  }
+  const effects = expandChooseOneSequence(
+    filterActiveEffects(
+      activated,
+      context,
+      skill ? getCookieSkillEffects(skill, command.trigger) : [],
+    ),
+    command.chooseOneModes,
+  )
+  if (activated.status !== 'playing' || effects.length === 0) {
+    return activated
+  }
+  const pendingState: GameState = {
+    ...activated,
+    pendingAbilityEffect: {
+      playerId: command.playerId,
+      sourcePlayerId: command.playerId,
+      sourceInstanceId: command.sourceInstanceId,
+      sourceCardName: source?.card.name,
+      sourceKind: 'skill',
+      trigger: command.trigger,
+      effects,
+      effectIndex: 0,
+    },
+  }
+  return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
+    ? pendingState
+    : resolvePendingAbilityEffect(
+        pendingState,
+        command.playerId,
+        command.targetIds,
+        undefined,
+        options,
+      )
+}
+
+const resumeCookieActivateSkill = (
+  state: GameState,
+  pending: PendingCookieActivateSkill,
+  options: ApplyGameCommandOptions,
+): GameState => {
+  const resumeOptions = pending.shuffleSeed === undefined
+    ? options
+    : { ...options, shuffleSeed: pending.shuffleSeed }
+  if (pending.kind === 'activate-skill') {
+    return executeActivateSkillCommand(
+      state,
+      pending as ActivateSkillCommand,
+      resumeOptions,
+    )
+  }
+  return executeBeginActivateSkillCommand(
+    state,
+    pending as BeginActivateSkillCommand,
+    resumeOptions,
+  )
+}
+
 /**
  * 建立技能 Then 的可選付款決策。這個 wrapper 故意保留在
  * `pendingAbilityEffect` 的目前 index，付款後才會把巢狀 effects 插回同一條
@@ -2265,6 +2728,11 @@ const resolvePendingAbilityEffect = (
     resolvedTargetIds,
     options.shuffle,
   )
+  if (resolved.pendingExtraDeckAttack) {
+    // EXTRA 技能／攻擊的選擇視窗本身負責建立下一個 pending ability；
+    // 這裡不能先跑到 continueBattle，否則會在玩家選卡前結束目前攻擊。
+    return { ...resolved, pendingAbilityEffect: undefined }
+  }
   if (
     resolved.pendingBattle?.effectDamageSequence &&
     resolved.pendingBattle.effectDamageSequence !==
@@ -2454,7 +2922,7 @@ const applyPlayerActionCommand = (
       return deployCookie(
         state,
         command.instanceId,
-        command.specialPlayCookieInstanceId,
+        command.specialPlayCookieInstanceIds ?? command.specialPlayCookieInstanceId,
       )
     case 'play-extra-deck-cookie':
       requireActivePlayer(state, command.playerId)
@@ -2476,108 +2944,12 @@ const applyPlayerActionCommand = (
         command.supportPaymentIds,
       )
     case 'activate-skill': {
-      const source = findSkillSource(
-        state.players[command.playerId],
-        command.sourceInstanceId,
-      )
-      const skill = source?.card.skill
-      const activated = activateCookieSkill(
-        state,
-        command.playerId,
-        command.sourceInstanceId,
-        command.trigger,
-        command.paymentIds,
-        command.costSupportToTrashIds ?? [],
-        command.discardHandIds ?? [],
-        command.trashBattleCookieIds ?? [],
-        command.trashToDeckBottomIds ?? [],
-        command.trashToDeckIds ?? [],
-        options.shuffle,
-        command.hpToTrashTargetIds ?? [],
-        command.supportToHandIds ?? [],
-        command.battleToHandIds ?? [],
-        command.trashCookieToBreakAreaIds ?? [],
-        command.handToBreakAreaIds ?? [],
-        command.effectTargets?.[0] ?? [],
-      )
-      const context: EffectContext = {
-        sourcePlayerId: command.playerId,
-        sourceInstanceId: command.sourceInstanceId,
-        sourceCardName: source?.card.name,
-      }
-      return executeAbilityEffects(
-        activated,
-        context,
-        skill ? getCookieSkillEffects(skill, command.trigger) : [],
-        command.effectTargets,
-        options.shuffle,
-        command.chooseOneModes,
-        'skill',
-      )
+      return createCookieActivateDiscardPending(state, command, options) ??
+        executeActivateSkillCommand(state, command, options)
     }
     case 'begin-activate-skill': {
-      const source = findSkillSource(
-        state.players[command.playerId],
-        command.sourceInstanceId,
-      )
-      const skill = source?.card.skill
-      const activated = activateCookieSkill(
-        state,
-        command.playerId,
-        command.sourceInstanceId,
-        command.trigger,
-        command.paymentIds,
-        command.costSupportToTrashIds ?? [],
-        command.discardHandIds ?? [],
-        command.trashBattleCookieIds ?? [],
-        command.trashToDeckBottomIds ?? [],
-        command.trashToDeckIds ?? [],
-        options.shuffle,
-        command.hpToTrashTargetIds ?? [],
-        command.supportToHandIds ?? [],
-        command.battleToHandIds ?? [],
-        command.trashCookieToBreakAreaIds ?? [],
-        command.handToBreakAreaIds ?? [],
-        command.targetIds ?? [],
-      )
-      const context: EffectContext = {
-        sourcePlayerId: command.playerId,
-        sourceInstanceId: command.sourceInstanceId,
-        sourceCardName: source?.card.name,
-      }
-      const effects = expandChooseOneSequence(
-        filterActiveEffects(
-          activated,
-          context,
-          skill ? getCookieSkillEffects(skill, command.trigger) : [],
-        ),
-        command.chooseOneModes,
-      )
-      if (activated.status !== 'playing' || effects.length === 0) {
-        return activated
-      }
-      const pendingState: GameState = {
-        ...activated,
-        pendingAbilityEffect: {
-          playerId: command.playerId,
-          sourcePlayerId: command.playerId,
-          sourceInstanceId: command.sourceInstanceId,
-          sourceCardName: source?.card.name,
-          sourceKind: 'skill',
-          trigger: command.trigger,
-          effects,
-          effectIndex: 0,
-        },
-      }
-      return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
-        ? pendingState
-        : resolvePendingAbilityEffect(
-            pendingState,
-            command.playerId,
-            command.targetIds,
-            undefined,
-            options,
-          )
+      return createCookieActivateDiscardPending(state, command, options) ??
+        executeBeginActivateSkillCommand(state, command, options)
     }
     case 'skip-on-play':
       return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)

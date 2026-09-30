@@ -160,6 +160,7 @@ describe('BS9-041 Pistachio Cookie FLIP candidate', () => {
 
     const ownTurn = createBs9041OwnTurnDemoState('BS9-041')
     expect(ownTurn.activePlayerId).toBe('player-one')
-    expect(ownTurn.players['player-one'].hand.some((card) => card.id === 'P-018')).toBe(true)
+    expect(ownTurn.players['player-one'].hand.some((card) => card.id === 'BS9-041')).toBe(true)
+    expect(ownTurn.players['player-one'].battleArea[0]?.card.id).toBe('BS9-030')
   })
 })

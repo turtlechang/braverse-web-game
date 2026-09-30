@@ -116,21 +116,22 @@ try {
   await page.reload({ waitUntil: 'networkidle' })
 
   const completeOpeningSetup = async () => {
-    const startButton = page.locator('button', { hasText: '對戰入口' })
+    const startButton = page.getByRole('button', { name: 'AI 對戰', exact: true })
     if ((await startButton.count()) > 0 && (await startButton.isVisible())) {
       await startButton.click()
       await page.waitForTimeout(200)
     }
 
-    let sawModal = false
     for (let attempt = 0; attempt < 50; attempt += 1) {
       const modal = page.locator('.opening-setup-modal').first()
       if ((await modal.count()) === 0 || !(await modal.isVisible())) {
-        if (sawModal) return
+        // Dealing temporarily hides the setup panel; only a populated battlefield
+        // establishes that setup is complete.
+        if (await page.locator('.bottom-field .combat-card-wrap').count() &&
+            await page.locator('.top-field .combat-card-wrap').count()) return
         await page.waitForTimeout(60)
         continue
       }
-      sawModal = true
 
       const heading = await modal.locator('h2').innerText()
       if (heading.includes('選擇牌組')) {

@@ -1152,3 +1152,16 @@
   .deck-editor-page-current-footer { align-items: stretch; flex-direction: column; }
   .deck-editor-page-current-footer span { text-align: left; }
 }
+
+@media (max-width: 360px) {
+  .deck-editor-page-header {
+    padding-inline: 10px;
+  }
+
+  .deck-editor-page-header-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+}

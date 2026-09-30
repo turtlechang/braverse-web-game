@@ -12,6 +12,7 @@ import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
 import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  findRevealHandSelection,
   getSupportEffectCandidates,
   requiresEffectCardSelection,
 } from '../effects'
@@ -215,13 +216,18 @@ export const handleAiPendingDecision = (
       ? getEffectSelectionCandidates(state, context, effect)
           .map((card) => card.instanceId)
       : []
-    const targetIds = universal.enabled
-      ? universal.selectEffectTargetIds(
-          effect,
-          candidates,
-          getEffectSelectionLimits(effect)?.max ?? 0,
-        )
-      : candidates.slice(0, getEffectSelectionLimits(effect)?.max ?? 0)
+    const targetIds =
+      effect.kind === 'reveal-hand' &&
+      effect.selectCard &&
+      effect.levelSum !== undefined
+        ? findRevealHandSelection(state, context, effect) ?? []
+        : universal.enabled
+          ? universal.selectEffectTargetIds(
+              effect,
+              candidates,
+              getEffectSelectionLimits(effect)?.max ?? 0,
+            )
+          : candidates.slice(0, getEffectSelectionLimits(effect)?.max ?? 0)
     return withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-ability-effect',
@@ -238,7 +244,7 @@ export const handleAiPendingDecision = (
       return {
         state,
         action: 'idle',
-        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇 EXTRA 攻擊效果。`,
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇 EXTRA ${pendingDecision.resolution === 'play' ? '登場' : pendingDecision.resolution === 'skill' ? '技能' : '攻擊'}效果。`,
       }
     }
     const selectedId = pendingDecision.candidateIds
@@ -257,8 +263,8 @@ export const handleAiPendingDecision = (
           }),
       action: 'resolve-extra-deck-attack',
       description: selectedId
-        ? `${state.players[playerId].name}選擇 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`
-        : `${state.players[playerId].name}略過 EXTRA 的「${pendingDecision.cardName}」攻擊效果。`,
+        ? `${state.players[playerId].name}選擇 EXTRA 的「${pendingDecision.cardName}」${pendingDecision.resolution === 'play' ? '登場' : pendingDecision.resolution === 'skill' ? '技能' : '攻擊'}效果。`
+        : `${state.players[playerId].name}略過 EXTRA 的「${pendingDecision.cardName}」${pendingDecision.resolution === 'play' ? '登場' : pendingDecision.resolution === 'skill' ? '技能' : '攻擊'}效果。`,
     }, 'extra-deck-attack', pendingDecision.sourceInstanceId)
   }
 
@@ -524,6 +530,7 @@ export const handleAiPendingDecision = (
     }
     const hand = state.players[playerId].hand.filter(
       (card) =>
+        !(pendingDecision.excludedCardIds ?? []).includes(card.instanceId) &&
         (pendingDecision.energyColor === undefined ||
           card.energyColor === pendingDecision.energyColor) &&
         (!pendingDecision.cookieOnly || card.type === 'cookie') &&
@@ -593,7 +600,8 @@ export const handleAiPendingDecision = (
     const hasFilter =
       pendingDecision.filterColor !== undefined ||
       pendingDecision.filterType !== undefined ||
-      pendingDecision.filterKeyword !== undefined
+      pendingDecision.filterKeyword !== undefined ||
+      pendingDecision.filterHasSpecialPlay !== undefined
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
     const candidateCards = hasFilter
       ? revealed.filter(
@@ -603,7 +611,9 @@ export const handleAiPendingDecision = (
             (pendingDecision.filterType === undefined ||
               card.type === pendingDecision.filterType) &&
             (pendingDecision.filterKeyword === undefined ||
-              card.keywords?.includes(pendingDecision.filterKeyword)),
+              card.keywords?.includes(pendingDecision.filterKeyword)) &&
+            (!pendingDecision.filterHasSpecialPlay ||
+              (card.type === 'cookie' && card.skill?.specialPlayCost !== undefined)),
         )
       : revealed
     const candidateIds = candidateCards.map((card) => card.instanceId)
@@ -625,9 +635,15 @@ export const handleAiPendingDecision = (
         playerId,
         pickedCardIds: pickedIds,
         restOrder: restIds,
+        ...(pendingDecision.restDestination === 'top-or-bottom'
+          ? { restDestination: 'top' as const }
+          : {}),
       }),
       action: 'resolve-inspect-deck',
-      description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+      description:
+        pendingDecision.restDestination === 'top-or-bottom'
+          ? `${state.players[playerId].name}將檢視牌放回牌庫頂。`
+          : `${state.players[playerId].name}從檢視牌中選取卡片。`,
     }, 'multi-stage', pendingDecision.sourceInstanceId)
   }
 

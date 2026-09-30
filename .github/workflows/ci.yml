@@ -23,7 +23,7 @@ jobs:
       - run: npm run validate:candidate
       - run: npm run check:card-pool
       - run: npm run typecheck
-      - run: npm test
+      - run: npm test -- --maxWorkers=1
       - run: npm run lint
       - run: npm run build
       - run: npm run check:bundle

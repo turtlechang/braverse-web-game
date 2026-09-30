@@ -51,7 +51,7 @@ const OpeningHand = ({
     data-testid="online-opening-hand"
     aria-label="起始手牌"
   >
-    {cards.map((card) => {
+    {cards.map((card, index) => {
       const canSelect = Boolean(selectable && card.type === 'cookie' && onSelect)
       const content = (
         <>
@@ -63,6 +63,7 @@ const OpeningHand = ({
         <button
           key={card.instanceId}
           className="online-opening-card is-selectable"
+          style={{animationDelay:`${index * 60}ms`}}
           data-testid="online-starting-cookie"
           type="button"
           aria-label={`選擇 ${card.name} 作為起始餅乾`}
@@ -74,6 +75,7 @@ const OpeningHand = ({
         <div
           key={card.instanceId}
           className="online-opening-card"
+          style={{animationDelay:`${index * 60}ms`}}
           data-testid="online-opening-card"
         >
           {content}

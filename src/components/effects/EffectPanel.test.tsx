@@ -248,6 +248,48 @@ const createPendingEffect = (
   ...overrides,
 })
 
+it('describes a Stage-to-trash activation cost without claiming the source is rested', async () => {
+  const effect: CardEffect = { kind: 'draw', amount: 1 }
+  const pending = createPendingEffect({
+    sourceCard: {
+      id: 'BS11-062',
+      instanceId: 'bs11-062-stage-source',
+      name: 'Top of the Spire of Deceit',
+      type: 'stage',
+    },
+    skill: {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: true,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0, stageSourceToTrash: true },
+      text: 'Place this card in your trash.',
+      effects: [effect],
+    },
+    effects: [effect],
+    sourceKind: 'stage',
+  })
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+    expect(container.querySelector('.effect-auto-cost')?.textContent).toContain(
+      '將效果來源場景卡置入棄牌區',
+    )
+    expect(container.textContent).not.toContain('將效果來源卡橫置')
+  } finally {
+    await act(() => root.unmount())
+  }
+})
+
 describe('Break area selection costs', () => {
   it.each(['trash', 'hand'] as const)('%s cost requires exactly the selected count and is not paid twice', async (zone) => {
     const game = createCardCheckDemoState('BS8-031')

@@ -46,6 +46,26 @@ describe('validateCardEffectSemantics', () => {
     expect(validateCardEffectSemantics(entry, card)).toEqual([])
   })
 
+  it('accepts executable OnPlay effects stored separately from the main skill effects', () => {
+    const { entry, card } = getConvertedCard('BS11-035')
+
+    expect(card.skill).toMatchObject({
+      trigger: 'on-play',
+      effects: [],
+      onPlayEffects: [
+        { kind: 'hand-to-break', amount: 1 },
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          optional: true,
+          energyColor: 'yellow',
+          maxLevel: 2,
+        },
+      ],
+    })
+    expect(validateCardEffectSemantics(entry, card)).toEqual([])
+  })
+
   it('rejects a high-risk contract when ST5-022 optional draw becomes mandatory', () => {
     const { entry, card } = getConvertedCard('ST5-022')
     const brokenCard: GameCard = {

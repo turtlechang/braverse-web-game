@@ -58,6 +58,9 @@ export const resolveOpponentHandDiscard = (
   }
 
   for (const instanceId of uniqueIds) {
+    if (pending.excludedCardIds?.includes(instanceId)) {
+      throw new GameRuleError('選擇的手牌已被其他技能代價保留，不能重複支付。')
+    }
     const candidate = player.hand.find((card) => card.instanceId === instanceId)
     if (!candidate) {
       throw new GameRuleError('選擇的卡片不在你的手牌中。')
@@ -221,11 +224,25 @@ export const resolveInspectDeck = (
   playerId: PlayerId,
   pickedCardIds: string[],
   restOrder: string[],
+  selectedRestDestination?: 'top' | 'bottom',
 ): GameState => {
   const pending = state.pendingInspectDeck
   if (!pending || pending.playerId !== playerId) {
     throw new GameRuleError('目前沒有待處理的牌庫檢視效果。')
   }
+
+  if (pending.restDestination === 'top-or-bottom') {
+    if (selectedRestDestination !== 'top' && selectedRestDestination !== 'bottom') {
+      throw new GameRuleError('檢視的牌必須選擇放回牌庫頂或牌庫底。')
+    }
+  } else if (selectedRestDestination !== undefined) {
+    throw new GameRuleError('目前的牌庫檢視效果不接受額外的放置位置。')
+  }
+
+  const resolvedRestDestination =
+    pending.restDestination === 'top-or-bottom'
+      ? selectedRestDestination!
+      : pending.restDestination ?? 'bottom'
 
   const revealedIds = pending.revealedCards.map((card) => card.instanceId)
 
@@ -246,7 +263,9 @@ export const resolveInspectDeck = (
     (c) =>
       (!pending.filterColor || c.energyColor === pending.filterColor) &&
       (!pending.filterType || c.type === pending.filterType) &&
-      (!pending.filterKeyword || c.keywords?.includes(pending.filterKeyword)),
+      (!pending.filterKeyword || c.keywords?.includes(pending.filterKeyword)) &&
+      (!pending.filterHasSpecialPlay ||
+        (c.type === 'cookie' && c.skill?.specialPlayCost !== undefined)),
   ).length
   if (
     pending.pickCount > 0 &&
@@ -272,6 +291,12 @@ export const resolveInspectDeck = (
     if (pending.filterKeyword && !card.keywords?.includes(pending.filterKeyword)) {
       throw new GameRuleError('選取的卡牌關鍵字不符合此效果。')
     }
+    if (
+      pending.filterHasSpecialPlay &&
+      (card.type !== 'cookie' || card.skill?.specialPlayCost === undefined)
+    ) {
+      throw new GameRuleError('選取的卡牌必須具有 Special Play。')
+    }
     pickedCards.push(card)
   }
 
@@ -290,6 +315,38 @@ export const resolveInspectDeck = (
   const restCards = restOrder.map(
     (id) => pending.revealedCards.find((card) => card.instanceId === id)!,
   )
+
+  const deckPlayerId = pending.deckPlayerId ?? pending.playerId
+
+  // BS11-066 views the opponent's deck but returns the revealed card to that
+  // deck.  Its pickCount is zero, so keep this narrow branch separate from the
+  // existing self-deck pick-to-hand/support/battle flow.
+  if (deckPlayerId !== playerId) {
+    if (pickedCards.length > 0 || !['top', 'bottom'].includes(resolvedRestDestination)) {
+      throw new GameRuleError('目前的對手牌庫檢視效果不支援移出檢視卡。')
+    }
+    const deckOwner = state.players[deckPlayerId]
+    const updatedDeckOwner = {
+      ...deckOwner,
+      deck:
+        resolvedRestDestination === 'top'
+          ? [...restCards, ...deckOwner.deck]
+          : [...deckOwner.deck, ...restCards],
+    }
+    const nextState: GameState = {
+      ...state,
+      pendingInspectDeck: null,
+      players: { ...state.players, [deckPlayerId]: updatedDeckOwner },
+    }
+    return updatedDeckOwner.deck.length > 0 || nextState.pendingRefresh
+      ? nextState
+      : getRefreshCandidates(nextState, deckPlayerId).length === 0
+        ? finishWithDefeat(nextState, deckPlayerId, 'refresh-unavailable')
+        : {
+            ...nextState,
+            pendingRefresh: { playerId: deckPlayerId, remainingDraws: 0 },
+          }
+  }
 
   let player: PlayerState = state.players[playerId]
   const playedCookies: GameCard[] = []
@@ -338,11 +395,11 @@ export const resolveInspectDeck = (
   }
 
   player =
-    pending.restDestination === 'trash'
+    resolvedRestDestination === 'trash'
       ? { ...player, discardPile: [...player.discardPile, ...restCards] }
-      : pending.restDestination === 'top'
+      : resolvedRestDestination === 'top'
         ? { ...player, deck: [...restCards, ...player.deck] }
-        : pending.restDestination === 'support-rested'
+        : resolvedRestDestination === 'support-rested'
           ? {
               ...player,
               supportArea: [

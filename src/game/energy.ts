@@ -4,9 +4,13 @@ import type {
   EnergyCost,
   GameState,
   PlayerId,
+  AttackCostModifier,
   StageAttackCostModifier,
   SupportCard,
+  EffectCondition,
 } from './types'
+import { getCookieEffectiveHp } from './helpers'
+import { getBreakAreaLevel } from './victory'
 
 const ENERGY_COLORS: EnergyColor[] = [
   'red',
@@ -84,6 +88,143 @@ const applyStageAttackCostModifier = (
   return next
 }
 
+const applyAttackCostModifier = (
+  cost: EnergyCost,
+  modifier: AttackCostModifier,
+): EnergyCost => {
+  if ((modifier.operation ?? 'set') === 'set') return { ...modifier.energyCost }
+
+  const next = { ...cost }
+  for (const [rawColor, amount] of Object.entries(modifier.energyCost)) {
+    if (typeof amount !== 'number' || amount <= 0) continue
+    const color = rawColor as keyof EnergyCost
+    const current = next[color] ?? 0
+    if (modifier.operation === 'increase') {
+      next[color] = current + amount
+      continue
+    }
+    const remaining = current - amount
+    if (remaining > 0) next[color] = remaining
+    else delete next[color]
+  }
+  return next
+}
+
+const getOpponentPlayerId = (playerId: PlayerId): PlayerId =>
+  playerId === 'player-one' ? 'player-two' : 'player-one'
+
+/**
+ * Evaluate the small condition subset used by passive attack-cost auras.
+ * Keeping this in energy.ts avoids a targeting↔energy runtime cycle while the
+ * normal effect evaluator continues to own interactive target conditions.
+ */
+const passiveAttackCostConditionMet = (
+  state: GameState,
+  sourcePlayerId: PlayerId,
+  sourceInstanceId: string,
+  condition: EffectCondition | undefined,
+): boolean => {
+  if (!condition) return true
+  if (condition.kind === 'all-of') {
+    return condition.conditions.every((sub) =>
+      passiveAttackCostConditionMet(state, sourcePlayerId, sourceInstanceId, sub),
+    )
+  }
+  if (condition.kind === 'any-of') {
+    return condition.conditions.some((sub) =>
+      passiveAttackCostConditionMet(state, sourcePlayerId, sourceInstanceId, sub),
+    )
+  }
+  if (condition.kind === 'break-level-at-least') {
+    return getBreakAreaLevel(state, sourcePlayerId) >= condition.level
+  }
+  if (condition.kind === 'support-count-at-most') {
+    return state.players[sourcePlayerId].supportArea.length <= condition.count
+  }
+  if (condition.kind === 'source-hp-at-most') {
+    const source = state.players[sourcePlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    return source !== undefined && getCookieEffectiveHp(source) <= condition.amount
+  }
+  if (condition.kind === 'battle-area-has-named-cookie') {
+    const playerId = condition.side === 'self'
+      ? sourcePlayerId
+      : getOpponentPlayerId(sourcePlayerId)
+    const found = state.players[playerId].battleArea.some((cookie) =>
+      cookie.card.name === condition.name &&
+      (!condition.excludeSource || cookie.card.instanceId !== sourceInstanceId),
+    )
+    return condition.negate ? !found : found
+  }
+  return false
+}
+
+const passiveAttackCostApplies = (
+  state: GameState,
+  sourcePlayerId: PlayerId,
+  sourceCookie: CookieCard,
+  attackerPlayerId: PlayerId,
+  attacker: CookieCard,
+  effect: Extract<import('./types').CardEffect, { kind: 'modify-attack-cost' }>,
+): boolean => {
+  const targetPlayerId = effect.target.side === 'self'
+    ? sourcePlayerId
+    : getOpponentPlayerId(sourcePlayerId)
+  if (targetPlayerId !== attackerPlayerId) return false
+  const selector = effect.target
+  if (selector.sourceOnly && attacker.instanceId !== sourceCookie.instanceId) return false
+  if (selector.excludeSource && attacker.instanceId === sourceCookie.instanceId) return false
+  if (selector.cardName !== undefined && attacker.name !== selector.cardName) return false
+  if (selector.energyColor !== undefined && attacker.energyColor !== selector.energyColor) return false
+  if (selector.minLevel !== undefined && attacker.level < selector.minLevel) return false
+  if (selector.maxLevel !== undefined && attacker.level > selector.maxLevel) return false
+  return passiveAttackCostConditionMet(
+    state,
+    sourcePlayerId,
+    sourceCookie.instanceId,
+    effect.condition,
+  )
+}
+
+const applyPassiveAttackCostModifiers = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+  attacker: CookieCard,
+  initialCost: EnergyCost,
+): EnergyCost => {
+  let cost = { ...initialCost }
+  for (const sourcePlayerId of Object.keys(state.players) as PlayerId[]) {
+    for (const sourceCookie of state.players[sourcePlayerId].battleArea) {
+      const skill = sourceCookie.card.skill
+      if (!skill || skill.trigger !== 'passive') continue
+      if (skill.yourTurn && state.activePlayerId !== sourcePlayerId) continue
+      const effects = [...skill.effects, ...(skill.passiveEffects ?? [])]
+      for (const effect of effects) {
+        if (
+          effect.kind !== 'modify-attack-cost' ||
+          !passiveAttackCostApplies(
+            state,
+            sourcePlayerId,
+            sourceCookie.card,
+            attackerPlayerId,
+            attacker,
+            effect,
+          )
+        ) continue
+        cost = applyAttackCostModifier(cost, {
+          sourceInstanceId: sourceCookie.card.instanceId,
+          targetInstanceId: attacker.instanceId,
+          energyCost: effect.energyCost,
+          operation: effect.operation,
+          expiresAfterTurn: null,
+        })
+      }
+    }
+  }
+  return cost
+}
+
 const stageAttackCostModifierApplies = (
   state: GameState,
   stageOwnerId: PlayerId,
@@ -148,11 +289,16 @@ export const getAttackEnergyCostForPlayer = (
   state: GameState,
   attackerPlayerId: PlayerId,
   attacker: CookieCard,
-): EnergyCost => applyStaticStageAttackCostModifiers(
+): EnergyCost => applyPassiveAttackCostModifiers(
   state,
   attackerPlayerId,
   attacker,
-  getAttackEnergyCost(attacker),
+  applyStaticStageAttackCostModifiers(
+    state,
+    attackerPlayerId,
+    attacker,
+    getAttackEnergyCost(attacker),
+  ),
 )
 
 /**
@@ -177,19 +323,24 @@ export const getAttackEnergyCostForState = (
   }
   const { playerId: attackerPlayerId, attacker } = ownerAndAttacker
 
-  const modifier = [...(state.attackCostModifiers ?? [])]
-    .reverse()
-    .find(
-      (candidate) =>
-        candidate.targetInstanceId === attackerInstanceId &&
-        (candidate.expiresAfterTurn === null ||
-          candidate.expiresAfterTurn >= state.turnNumber),
-    )
-  return applyStaticStageAttackCostModifiers(
+  let cost = getAttackEnergyCost(attacker.card)
+  for (const modifier of state.attackCostModifiers ?? []) {
+    if (
+      modifier.targetInstanceId !== attackerInstanceId ||
+      (modifier.expiresAfterTurn !== null && modifier.expiresAfterTurn < state.turnNumber)
+    ) continue
+    cost = applyAttackCostModifier(cost, modifier)
+  }
+  return applyPassiveAttackCostModifiers(
     state,
     attackerPlayerId,
     attacker.card,
-    modifier ? { ...modifier.energyCost } : getAttackEnergyCost(attacker.card),
+    applyStaticStageAttackCostModifiers(
+      state,
+      attackerPlayerId,
+      attacker.card,
+      cost,
+    ),
   )
 }
 

@@ -69,6 +69,61 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.errors).toContain('payment evidence missing')
   })
 
+  it('treats an attack-faint condition and quoted On Play keyword as attack evidence', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-015',
+      baseCardNumber: 'BS11-015',
+      attackText:
+        "<{R}{R}{R}{R}> Principled Uppercut {da} 4 Then, if your opponent's Cookie fainted from this Cookie's attack, during this turn, your opponent cannot activate 【On Play】.",
+    })
+    const runtime = makeCard({
+      attack: 4,
+      attackCost: 4,
+      attackEnergyCost: { red: 4 },
+      attackEffects: [{
+        kind: 'prevent-opponent-on-play',
+        duration: 'this-turn',
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      }],
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.contract.timing.markers).toEqual([])
+    expect(audit.errors).toEqual([])
+  })
+
+  it('does not treat nested Extra skill choices as the attacking Cookie timing', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-071',
+      baseCardNumber: 'BS11-071',
+      attackText:
+        "<{B}{B}{B}> Void Kaleidoscope {da} 3 Then, <{N}> <discard 1 card.> Place 1 [Shadow Milk Cookie] from your Extra Deck into your trash. Activate that Cookie's 【On Play】 or 【Activate】.",
+    })
+    const runtime = makeCard({
+      attack: 3,
+      attackEnergyCost: { blue: 3 },
+      attackEffects: [{
+        kind: 'optional-cost-attack',
+        cost: { energy: { neutral: 1 }, discardHand: 1 },
+        effectText: "Then, <{N}> <discard 1 card.> Place 1 [Shadow Milk Cookie] from your Extra Deck into your trash. Activate that Cookie's 【On Play】 or 【Activate】.",
+        effects: [{
+          kind: 'choose-one',
+          modes: [
+            { label: 'On Play', effects: [{ kind: 'activate-extra-deck-skill', cardName: 'Shadow Milk Cookie', skillTrigger: 'on-play', optional: false }] },
+            { label: 'Activate', effects: [{ kind: 'activate-extra-deck-skill', cardName: 'Shadow Milk Cookie', skillTrigger: 'activate', optional: false }] },
+          ],
+        }],
+      }],
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.timing.markers).toEqual([])
+    expect(audit.errors).not.toContain('timing marker has no runtime ability')
+    expect(audit.errors).not.toContain('timing evidence missing')
+  })
+
   it('rejects a FLIP card whose official flip text has no runtime FlipAbility', () => {
     const source = makeRecord({
       cardNumber: 'BS7-002',
@@ -125,6 +180,32 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.errors).toContain('target evidence unresolved')
   })
 
+  it('matches a curly apostrophe in an opponent target selector', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-080',
+      baseCardNumber: 'BS11-080',
+      type: 'item',
+      officialType: 'ITEM',
+      skill: {
+        name: 'Banner of the Solitary Oath',
+        text: 'Select up to 1 of your opponent’s Cookies. That Cookie receives 2 damage.',
+      },
+    })
+    const runtime = makeCard({
+      type: 'item',
+      effects: [{
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      }],
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
   it('accepts an explicit target on next-Active-Phase prevention', () => {
     const source = makeRecord({
       skill: {
@@ -140,6 +221,103 @@ describe('card behavior contract shadow ledger', () => {
     })
 
     expect(analyzeOfficialCardBehavior(source, runtime).checks.targetCovered).toBe(true)
+  })
+
+  it('binds bracketed Beast battle-area selectors to the keyword runtime target', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-116',
+      baseCardNumber: 'BS10-116',
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: {
+        name: 'Beast trap',
+        text: 'Select up to 1 【Beast】 Cookie in your opponent\'s battle area. Place that Cookie in the trash.',
+      },
+    })
+    const runtime = makeCard({
+      type: 'trap',
+      effects: [{
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' },
+      }],
+      trap: {
+        text: source.skill.text ?? '',
+        cost: {},
+        effects: [{
+          kind: 'field-to-trash',
+          target: { side: 'opponent', min: 0, max: 1, keyword: 'beast' },
+        }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.errors).not.toContain('target evidence unresolved')
+  })
+
+  it('audits equipped trap immunity against the item equipped-attack runtime effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-045',
+      baseCardNumber: 'BS10-045',
+      type: 'item',
+      officialType: 'ITEM',
+      skill: {
+        name: 'Trap immunity',
+        text: "That Cookie is unaffected by your opponent's trap effects.",
+      },
+    })
+    const runtime = makeCard({
+      type: 'item',
+      effects: [],
+      item: {
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [],
+        equippedAttackEffects: [{ kind: 'disable-traps', duration: 'current-battle' }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('accepts a non-cookie trap Then when the root effect nests its continuation', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-042',
+      baseCardNumber: 'BS10-042',
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: {
+        name: 'Nested trap',
+        text: 'During this turn, that Cookie deals -1 attack damage. Then, draw up to 1 card from your deck.',
+      },
+    })
+    const nestedEffects = [{
+      kind: 'modify-attack' as const,
+      amount: -1,
+      duration: 'this-turn' as const,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+      thenEffects: [{ kind: 'draw-up-to' as const, max: 1 }],
+    }]
+    const runtime = makeCard({
+      type: 'trap',
+      effects: nestedEffects,
+      trap: {
+        text: source.skill.text ?? '',
+        cost: {},
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'draw-up-to', max: 1 },
+        ],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.errors).not.toContain('resolution order evidence missing')
   })
 
   it('binds an LV-qualified trash-to-break cost before a fixed bounded-sum return', () => {
@@ -452,6 +630,75 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.contract.status).toBe('verified')
   })
 
+  it('binds a source-only field movement to a self-to-trash attack cost', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-033',
+      baseCardNumber: 'BS11-033',
+      attackText:
+        "<{Y}> Arrow of Love {da} 1 Then, during this turn, if any of your Cookies gained HP, <place this Cookie in your trash.> Draw up to 1 card from your deck.",
+    })
+    const runtime = makeCard({
+      attack: 1,
+      attackEnergyCost: { yellow: 1 },
+      attackEffects: [
+        {
+          kind: 'field-to-trash',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'cookie-gained-hp-this-turn' },
+        },
+        { kind: 'draw-up-to', max: 1 },
+      ],
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.errors).not.toContain('cost evidence missing')
+  })
+
+  it('classifies a reveal-hand cost with a total Cookie level sum', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-034',
+      baseCardNumber: 'BS11-034',
+      skill: {
+        name: "Immortal's Return",
+        text: 'If this Cookie is in your break area, <reveal Cookies from your hand with a total LV. sum of 3.> Play this Cookie. Then, place the revealed Cookies in your break area.',
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [
+          {
+            kind: 'reveal-hand',
+            amount: 3,
+            minAmount: 1,
+            maxAmount: 3,
+            levelSum: 3,
+            asCost: true,
+            selectCard: true,
+            cookieOnly: true,
+          },
+          { kind: 'break-source-to-battle', hpCount: 5 },
+          { kind: 'hand-to-break', amount: 3, optional: true, revealedCardOnly: true },
+        ],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.contract.costs).toContainEqual(expect.objectContaining({ kind: 'reveal-hand' }))
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+    expect(audit.errors).not.toContain('cost evidence missing')
+  })
+
   it('splits a combined source-and-support trash cost for BS9-059', () => {
     const source = makeRecord({
       cardNumber: 'BS9-059',
@@ -541,6 +788,45 @@ describe('card behavior contract shadow ledger', () => {
     }))
     expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
     expect(audit.contract.status).toBe('verified')
+  })
+
+  it('binds a self-faint AbilityCost to the printed self-to-break cost', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-090',
+      baseCardNumber: 'BS11-090',
+      skill: {
+        name: 'Sacrifice for Freedom',
+        text: '【Activate】 <Make this Cookie faint.> Play [Avatar of Destiny] from your Extra Deck, ignoring its play requirements. Then, that Cookie gains +3 HP.',
+      },
+    })
+    const runtime = makeCard({
+      effects: [{
+        kind: 'play-extra-deck-cookie',
+        cardName: 'Avatar of Destiny',
+        ignorePlayRequirements: true,
+        gainHp: 3,
+      }],
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0, selfToFaint: true },
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'play-extra-deck-cookie',
+          cardName: 'Avatar of Destiny',
+          ignorePlayRequirements: true,
+          gainHp: 3,
+        }],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.errors).not.toContain('cost evidence missing')
   })
 
   it('binds a break-area target to the level of the preceding trash-to-break card', () => {
@@ -688,6 +974,99 @@ describe('card behavior contract shadow ledger', () => {
       },
     }))
     expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('classifies named hand-or-trash Support placement as an effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-068',
+      baseCardNumber: 'BS10-068',
+      type: 'item',
+      officialType: 'ITEM',
+      skill: {
+        name: 'White Lily placement',
+        text: '<{G}{G}> <Place 1 [White Lily Cookie] from your hand or your trash in your support area as rested.> Draw up to 1 card from your deck.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard({
+      type: 'item',
+      item: {
+        cost: { energy: { green: 2 }, discardHand: 0 },
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'choose-one',
+          modes: [
+            {
+              label: 'from hand',
+              effects: [{ kind: 'hand-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+            },
+            {
+              label: 'from trash',
+              effects: [{ kind: 'trash-to-support', amount: 1, cardName: 'White Lily Cookie', rested: true }],
+            },
+          ],
+        }, { kind: 'draw-up-to', max: 1 }],
+      },
+    }))
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.contract.clauses.find((clause) => clause.text.includes('White Lily'))?.role).toBe('effect')
+    expect(audit.errors).not.toContain('cost evidence missing')
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('classifies an EXTRA Awaken clause without an If prefix as an effect', () => {
+    const source = makeRecord({
+      cardNumber: 'BS10-024',
+      baseCardNumber: 'BS10-024',
+      type: 'extra',
+      officialType: 'EXTRA',
+      skill: {
+        name: 'Hollyberry Awaken',
+        text: 'EXTRA <Discard 1 card.> You can Awaken your [Hollyberry Cookie] with 3 or less HP remaining.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, {
+      id: 'BS10-024',
+      instanceId: 'bs10-024-contract',
+      name: 'Hollyberry Cookie',
+      type: 'cookie',
+      officialType: 'cookie',
+      level: 3,
+      hp: 1,
+      attack: 2,
+      attackCost: 2,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 1 },
+        text: source.skill.text ?? '',
+        effects: [],
+      },
+    })
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.errors).not.toContain('source contains unclassified clause')
+  })
+
+  it('classifies EXTRA movement protection as an executable effect clause', () => {
+    const source = makeRecord({
+      cardNumber: 'BS11-116',
+      baseCardNumber: 'BS11-116',
+      type: 'extra',
+      officialType: 'EXTRA',
+      level: 5,
+      hp: null,
+      skill: {
+        name: 'Forbidden Magic',
+        text: "【EXTRA】 If your break area is LV.7 or higher and [Dark Enchantress's Castle] is in your stage area, you can 【Awaken】 your LV.3 [Dark Enchantress Cookie] that has Special Play.\nThis Cookie cannot be moved from the battle area by your opponent's effects.",
+      },
+      attackText: '<{K}{K}{K}{K}> Fornacem Accende! {da} 7',
+    })
+
+    const audit = analyzeOfficialCardBehavior(source)
+
+    expect(audit.contract.clauses.find((clause) => clause.text.includes('cannot be moved'))?.role).toBe('effect')
     expect(audit.errors).not.toContain('source contains unclassified clause')
   })
 

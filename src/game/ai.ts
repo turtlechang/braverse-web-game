@@ -2,10 +2,15 @@ import { playItem } from './card-abilities'
 import { getForcedAttackTargetId } from './battle'
 import { applyGameCommand } from './commands'
 import { getActingPlayerId } from './controller'
-import { createSeededRandom, createSeededShuffle } from './helpers'
+import {
+  createSeededRandom,
+  createSeededShuffle,
+  getCookieEffectiveLevel,
+} from './helpers'
 import {
   getBreakToTrashCandidates,
   findBreakToHandBySumSelection,
+  findRevealHandSelection,
   getCookieOwnerId,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
@@ -27,6 +32,8 @@ import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
   canActivateCookieSkill,
+  getActiveOnPlayReplacement,
+  getCookieActivateDiscardRequirement,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getBattleCookieToHandCostCandidates,
@@ -139,6 +146,13 @@ const chooseEffectTargets = (
   if (effect.kind === 'break-to-hand-by-level-sum') {
     return findBreakToHandBySumSelection(state, context, effect) ?? []
   }
+  if (
+    effect.kind === 'reveal-hand' &&
+    effect.selectCard &&
+    effect.levelSum !== undefined
+  ) {
+    return findRevealHandSelection(state, context, effect) ?? []
+  }
 
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     return getEffectSelectionCandidates(state, context, effect)
@@ -248,8 +262,8 @@ const chooseEffectTargets = (
       return []
     }
     const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
-      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
+      if (effect.target.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.target.maxLevel) return false
+      if (effect.target.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.target.minLevel) return false
       if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
       return true
     })
@@ -300,8 +314,8 @@ const chooseEffectTargets = (
     const opponentId =
       context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
     const candidates = state.players[opponentId].battleArea.filter((cookie) => {
-      if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
-      if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+      if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
+      if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
       if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
       return true
     })
@@ -433,7 +447,7 @@ const chooseEffectTargets = (
     )
   } else if (effect.kind === 'disable-flip') {
     ordered.sort(
-      (left, right) => right.card.level - left.card.level,
+      (left, right) => getCookieEffectiveLevel(right) - getCookieEffectiveLevel(left),
     )
   } else if (effect.kind === 'disable-attack') {
     ordered.sort(
@@ -914,10 +928,25 @@ const resolveAiSkill = (
   trigger: 'activate' | 'on-play',
   shuffleSeed?: number,
 ): AiDecision | null => {
-  const skill = source.card.skill
+  const baseSkill = source.card.skill
+  const replacement = trigger === 'on-play'
+    ? getActiveOnPlayReplacement(state, playerId)
+    : undefined
+  const skill = replacement
+    ? baseSkill
+      ? {
+          ...baseSkill,
+          cost: replacement.cost,
+          restSource: false,
+          effects: replacement.effects,
+        }
+      : undefined
+    : baseSkill
   if (
+    !baseSkill ||
+    (baseSkill.trigger !== trigger &&
+      !(trigger === 'on-play' && Boolean(baseSkill.onPlayEffects?.length))) ||
     !skill ||
-    skill.trigger !== trigger ||
     !canActivateCookieSkill(
       state,
       playerId,
@@ -1039,6 +1068,29 @@ const resolveAiSkill = (
   if (
     (skill.cost.discardAllHand && discardHandCandidates.length === 0) ||
     (discardHandCost > 0 && discardHandIds.length < discardHandCost)
+  ) {
+    return null
+  }
+
+  const activationRequirement = trigger === 'activate'
+    ? getCookieActivateDiscardRequirement(state, playerId, source.card.instanceId)
+    : undefined
+  const activationRestrictionDiscardIds = activationRequirement
+    ? (universal?.enabled
+        ? universal.orderCostIds(
+            player.hand
+              .filter((card) => !discardHandIds.includes(card.instanceId))
+              .map((card) => card.instanceId),
+            activationRequirement.count,
+          ).slice(0, activationRequirement.count)
+        : player.hand
+            .filter((card) => !discardHandIds.includes(card.instanceId))
+            .slice(0, activationRequirement.count)
+            .map((card) => card.instanceId))
+    : []
+  if (
+    activationRequirement &&
+    activationRestrictionDiscardIds.length < activationRequirement.count
   ) {
     return null
   }
@@ -1229,6 +1281,7 @@ const resolveAiSkill = (
     handToBreakAreaIds,
     effects[0]?.kind === 'damage' && effects[0].selectionAsCost
       ? universalChooseEffectTargets(state, context, effects[0]) : [],
+    activationRestrictionDiscardIds,
   )
   const sim = simulateAbilityEffects(
     activated,

@@ -9,6 +9,7 @@ import {
   createBlueOptionalCostAttackDemoState,
   createCardCheckDemoState,
   createBs5StageConditionDemoState,
+  createBs11083StageDemoState,
   createItemUsageDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
@@ -277,6 +278,52 @@ describe('usePendingEffect BS8-042 support selection', () => {
     expect(currentGame.pendingOnPlay).toBeNull()
     expect(currentGame.pendingAbilityEffect).toBeFalsy()
     await act(() => root.unmount())
+  })
+})
+
+describe('usePendingEffect Stage activation metadata', () => {
+  it.each([false, true])('preserves the Stage rest-source instruction when it is %s', async (restSource) => {
+    const initial = createCardCheckDemoState('BS11-062')
+    const card = initial.players['player-one'].hand.find(
+      (candidate) => candidate.id === 'BS11-062',
+    )
+    if (card?.type !== 'stage' || !card.stageAbility) {
+      throw new Error('BS11-062 card-check fixture requires its Stage ability')
+    }
+    const ability = { ...card.stageAbility, restSource }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: initial,
+        setGame: () => {},
+        dispatch: createDispatch(initial, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      await act(() => captured!.beginCardAbility(card, ability, 'stage', '啟動場景'))
+      expect(captured!.pendingEffect?.skill.restSource).toBe(restSource)
+    } finally {
+      await act(() => root.unmount())
+    }
   })
 })
 
@@ -1340,6 +1387,64 @@ describe('usePendingEffect required target gating', () => {
       'self-extra-1',
     ])
 
+    await act(() => root.unmount())
+  })
+
+  it('opens BS11-083 Stage payment when Refresh condition is not yet met', async () => {
+    const base = createBs11083StageDemoState(false)
+    const stageCard = base.players['player-one'].hand[0]
+    if (!stageCard || stageCard.type !== 'stage' || !stageCard.stageAbility) {
+      throw new Error('BS11-083 Stage fixture is incomplete')
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [],
+          stage: { card: stageCard, rested: false },
+        },
+      },
+    }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    const messages: string[] = []
+    let finalGame = state
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: state,
+        setGame: (next) => { finalGame = typeof next === 'function' ? next(finalGame) : next },
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: (message) => { messages.push(message) },
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCardAbility(stageCard, stageCard.stageAbility!, 'stage', '啟動場景'))
+    expect(captured!.pendingEffect?.sourceKind).toBe('stage')
+    expect(captured!.pendingEffect?.effects).toHaveLength(1)
+    expect(messages.at(-1)).toContain('等待支付能量')
+    await act(() => captured!.toggleSkillPayment(state.players['player-one'].supportArea[0]!.card.instanceId))
+    await act(() => captured!.confirmEffect())
+    expect(finalGame.players['player-one'].stage, messages.at(-1)).toBeNull()
+    expect(finalGame.players['player-one'].discardPile).toContainEqual(stageCard)
+    expect(captured!.pendingEffect).toBeNull()
     await act(() => root.unmount())
   })
 

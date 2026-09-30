@@ -39,7 +39,7 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
   [/\bboth\s+players\s+can\s+use\s+(?:the\s+)?effect\s+below\b/i, 'condition'],
   [/\b(?:draw\w*|reveal\w*|inspect\w*|look at|view\w*|rearrange\w*)\b/i, 'effect'],
-  [/\b(?:add\w*|deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\bcannot\s+add\s+HP\b|\{da\}/i, 'effect'],
+  [/\b(?:add\w*|become\w*|deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*|awaken\w*)\b|\bcannot\s+add\s+HP\b|\bcannot\s+be\s+moved\b|\bunaffected\s+by\s+your\s+opponent['’]s\s+trap\s+effects\b|\{da\}/i, 'effect'],
   [
     /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
     'effect',
@@ -704,6 +704,19 @@ const bracketClauses = (
     if (/^select\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+in\s+your\s+trash\.?$/i.test(inner)) {
       continue
     }
+    // BS10-068 places a specifically named Cookie from either hand or trash
+    // into the Support Area.  This is a move effect (the runtime adapter
+    // exposes the two source zones as a choose-one), never an unknown cost.
+    // Keep it as a classified effect clause so the source text is covered
+    // without pretending that the source itself is an energy/discard cost.
+    if (
+      /^place\s+(?:up\s+to\s+)?\d+\s+\[[^\]]+\]\s+from\s+your\s+hand\s+or\s+your\s+trash\s+in\s+your\s+support\s+area\s+as\s+rested\.?$/i.test(
+        inner,
+      )
+    ) {
+      addClause(clauses, source, match[0], 'effect', start, end, 'pattern')
+      continue
+    }
     const discard = inner.match(
       /discard\s+(?:(\d+)|an?)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:non-)?(?:cards?|cookies?|traps?|items?)/i,
     )
@@ -713,9 +726,9 @@ const bracketClauses = (
     )
     const hpTrash =
       inner.match(
-        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?(?:\s+in\s+your\s+battle\s+area)?\s+(?:into|in)\s+(?:the|your)\s+trash/i,
+        /place\s+(?:a\s+total\s+of\s+)?(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?(?:\s+in\s+your\s+battle\s+area)?\s+(?:into|in)\s+(?:the|your)\s+trash/i,
       ) ??
-      inner.match(/place\s+(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
+      inner.match(/place\s+(?:a\s+total\s+of\s+)?(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
     const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
     // BS9-059 combines the source Cookie and support-card payment in a
@@ -742,8 +755,11 @@ const bracketClauses = (
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
-    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
-    const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
+    const revealHand =
+      /(?:reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)|reveal\s+(?:cards?|cookies?)\s+from\s+your\s+hand\s+with\s+a\s+total\s+LV\.\s+sum\s+of\s+\d+)/i.test(inner)
+    const deckTrash = inner.match(
+      /place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+(?:the|your)\s+trash/i,
+    )
     if (
       discard ||
       discardAll ||
@@ -837,7 +853,8 @@ const bracketClauses = (
         supportHand ??
         trashDeck ??
         trashDeckBottom ??
-        hpToHand
+        hpToHand ??
+        deckTrash
       costs.push({
         kind,
         amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
@@ -917,7 +934,7 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const re = /select\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(your opponent's|your|either player's)\s+([\s\S]*?)\b(?:cookies?|cards?)(?=\s|[.,;]|$)/gi
+  const re = /select\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(your opponent['’]s|your|either player['’]s)\s+([\s\S]*?)\b(?:cookies?|cards?)(?=\s|[.,;]|$)/gi
   for (const match of text.matchAll(re)) {
     const min = match[1] ? 0 : Number(match[2])
     const max = Number(match[2])
@@ -1118,6 +1135,33 @@ const targetClauses = (
       },
       clauseIds: [clauseId],
       zone: 'trash',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const keywordBattleAreaSelection =
+    /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:【|\[)(arena|beast)(?:】|\])\s+(?:cookies?|cards?)\s+(?:in|from)\s+(your opponent's|opponent's|your|either player's|the)\s+battle\s+area\b/gi
+  for (const match of text.matchAll(keywordBattleAreaSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const sideText = (match[4] ?? '').toLowerCase()
+    const side = sideText.includes('opponent')
+      ? 'opponent'
+      : sideText.includes('either') || sideText === 'the'
+        ? 'either'
+        : 'self'
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side,
+        min: match[1] ? 0 : amount,
+        max: amount,
+        keyword: match[3].toLowerCase() as 'arena' | 'beast',
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
     })
     structuredRanges.push({ start, end })
   }
@@ -1451,7 +1495,9 @@ const addActionClauses = (
     /(?:<|《)[^>》]+(?:>|》)/g,
     (markup) => ' '.repeat(markup.length),
   )
-  const separator = /(?<=[.!?])\s+|;\s+|\bThen,?\s*/gi
+  // `LV.` is an abbreviation inside a sentence (for example BS11-092's
+  // "the LV. of this Cookie ..."), not an end-of-sentence boundary.
+  const separator = /(?<!LV\.)(?<=[.!?])\s+|;\s+|\bThen,?\s*/gi
   let cursor = 0
   const sentences: Array<{ text: string; start: number; end: number }> = []
   for (const match of stripped.matchAll(separator)) {
@@ -1575,6 +1621,18 @@ const collectRuntime = (value: unknown, result: {
     if (record.kind === 'discard-hand' && record.destination === 'deck-bottom') {
       result.effectKinds.add('hand-to-deck-bottom')
     }
+    // A source-only field movement is the runtime shape used when a Cookie
+    // pays the printed cost「Place this Cookie in your trash」(BS11-033).
+    // Expose the semantic cost kind so the contract can bind it without
+    // treating every field-to-trash effect as a self-cost.
+    if (
+      record.kind === 'field-to-trash' &&
+      record.target &&
+      typeof record.target === 'object' &&
+      (record.target as Record<string, unknown>).sourceOnly === true
+    ) {
+      result.effectKinds.add('self-to-trash')
+    }
     if (record.kind === 'support-to-hp') {
       result.targetSelectors.push({
         side: 'self',
@@ -1677,6 +1735,9 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
           // effect sequence 一一對照；裝備後攻擊效果仍由上方的全卡遞迴
           // collectRuntime 收集，不得混成這次物品啟動的 Then 序列。
           effects: card.item.effects,
+          ...(card.item.equippedAttackEffects
+            ? { equippedAttackEffects: card.item.equippedAttackEffects }
+            : {}),
         }
       : card.stageAbility
         ? {
@@ -1721,6 +1782,12 @@ type TurnFaintConditionRequirement = {
   label: 'friendly-cookie-fainted-this-turn' | 'opponent-cookie-fainted-this-turn'
 }
 
+type AttackFaintConditionRequirement = {
+  side: 'opponent'
+  count: 1
+  label: 'opponent-cookie-fainted-in-current-battle'
+}
+
 /**
  * 條件句不能只被 clause ledger 分類後就算完成：若 adapter 忘了把條件
  * 寫進 runtime，舊版 shadow audit 仍可能因傷害／目標都存在而回報 verified。
@@ -1737,7 +1804,7 @@ const requiredTurnFaintConditions = (
     TurnFaintConditionRequirement
   >()
   const conditionPattern =
-    /(?:during\s+this\s+turn,\s*)?if\s+(?:(\d+)\s+or\s+more\s+of\s+)?(your\s+opponent['’]s|your)\s+Cookies?\s+(?:has\s+)?fainted(?:\s+(?:during\s+)?this\s+turn)?/gi
+    /(?:during\s+this\s+turn,\s*)?if\s+(?:(\d+)\s+or\s+more\s+of\s+)?(your\s+opponent['’]s|your)\s+Cookies?\s+(?:has\s+)?fainted(?!\s+from\s+this\s+Cookie['’]s\s+attack)(?:\s+(?:during\s+)?this\s+turn)?/gi
 
   for (const text of Object.values(sourceSegments(record))) {
     if (!text) continue
@@ -1754,6 +1821,30 @@ const requiredTurnFaintConditions = (
   return [...requirements.values()]
 }
 
+const requiredAttackFaintConditions = (
+  record: OfficialCardRecord,
+): AttackFaintConditionRequirement[] => {
+  if (record.type !== 'cookie') return []
+
+  const requirements: AttackFaintConditionRequirement[] = []
+  const conditionPattern =
+    /(?:if|when)\s+your\s+opponent['’]s\s+Cookie\s+(?:has\s+)?faint(?:s|ed)?\s+from\s+this\s+Cookie['’]s\s+attack/gi
+
+  for (const text of Object.values(sourceSegments(record))) {
+    if (!text) continue
+    if (conditionPattern.test(text)) {
+      requirements.push({
+        side: 'opponent',
+        count: 1,
+        label: 'opponent-cookie-fainted-in-current-battle',
+      })
+      conditionPattern.lastIndex = 0
+    }
+  }
+
+  return requirements
+}
+
 const hasRuntimeTurnFaintCondition = (
   evidence: RuntimeCardEvidence,
   requirement: TurnFaintConditionRequirement,
@@ -1766,6 +1857,19 @@ const hasRuntimeTurnFaintCondition = (
       candidate.kind === 'cookies-fainted-this-turn-at-least' &&
       candidate.side === requirement.side &&
       candidate.count === requirement.count
+    )
+  })
+
+const hasRuntimeAttackFaintCondition = (
+  evidence: RuntimeCardEvidence,
+  requirement: AttackFaintConditionRequirement,
+): boolean =>
+  flattenRuntimeEffects(evidence).some((effect) => {
+    const condition = (effect as CardEffect & { condition?: unknown }).condition
+    return (
+      condition !== null &&
+      typeof condition === 'object' &&
+      (condition as Record<string, unknown>).kind === requirement.label
     )
   })
 
@@ -1830,8 +1934,18 @@ const hasConsistentMirroredEffectOrder = (
     !evidence.ability?.effects ||
     evidence.effects.length === 0
   ) return true
-  const rootKinds = evidence.effects.map((effect) => effect.kind)
-  const abilityKinds = evidence.ability.effects.map((effect) => effect.kind)
+  const flattenKinds = (effects: readonly CardEffect[]): string[] => {
+    const kinds: string[] = []
+    const visit = (effect: CardEffect): void => {
+      kinds.push(effect.kind)
+      if ('thenEffects' in effect && effect.thenEffects) effect.thenEffects.forEach(visit)
+      if (effect.kind === 'choose-one') effect.modes.forEach((mode) => mode.effects.forEach(visit))
+    }
+    effects.forEach(visit)
+    return kinds
+  }
+  const rootKinds = flattenKinds(evidence.effects)
+  const abilityKinds = flattenKinds(evidence.ability.effects)
   return (
     rootKinds.length === abilityKinds.length &&
     rootKinds.every((kind, index) => kind === abilityKinds[index])
@@ -1916,12 +2030,21 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   if (/\breturn\b[\s\S]*\bto (?:your|the) deck\b/.test(text)) {
     kinds.push('trash-to-deck', 'trash-to-deck-all', 'hand-to-deck-and-draw')
   }
+  if (/\b(?:lv\.?|level)\b[\s\S]*\bbecomes?\b/.test(text)) {
+    kinds.push('set-cookie-level')
+  }
   if (/damage|deal|receives/.test(text)) kinds.push('damage', 'damage-all')
   if (/draw/.test(text)) kinds.push('draw', 'draw-up-to')
   if (/discard/.test(text)) kinds.push('discard-hand', 'opponent-discard-hand')
   if (/cannot add hp[\s\S]*card effects/.test(text)) kinds.push('prevent-opponent-hp-gain')
   if (/(?:view|rearrange)[\s\S]*hp/.test(text)) kinds.push('reorder-hp')
   if (/return[\s\S]*from your trash to your hand/.test(text)) kinds.push('trash-to-hand')
+  if (/\b(?:receives?|takes?)\s+[+-]\d+\s+damage\s+from\s+effects\b/.test(text)) {
+    kinds.push('modify-damage-received')
+  }
+  if (/unaffected by your opponent['’]s trap effects/.test(text)) {
+    kinds.push('disable-traps')
+  }
   if (/gain(?:s)?\s+\+?\d+\s+hp/.test(text)) kinds.push('gain-hp')
   if (/top[\s\S]*hp[\s\S]*(?:into|to) (?:your )?trash/.test(text)) kinds.push('hp-to-trash')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
@@ -1950,7 +2073,24 @@ const buildContract = (
     const parsed = parseOfficialCardText(normalizedSourceText)
     if (!parsed) continue
     parsed.markers
-      .filter((marker) => TIMING_MARKERS.has(marker))
+      .filter((marker) => {
+        if (!TIMING_MARKERS.has(marker)) return false
+        const markerMatches = [...parsed.raw.matchAll(/\{([a-z]+)\}/gi)]
+          .filter((match) => match[1]?.toLowerCase() === marker.toLowerCase())
+        return markerMatches.some((match) => {
+          const index = match.index ?? 0
+          const prefix = parsed.raw.slice(Math.max(0, index - 64), index)
+          // `Activate that Cookie's On Play or Activate` is a nested
+          // Extra-Deck choice, not a timing marker of the attacking Cookie.
+          if (/\bthat\s+Cookie['’]s(?:\s+\{(?:ap|mob)\})?\s*(?:or\s+)?$/i.test(prefix)) {
+            return false
+          }
+          // `cannot activate On Play` describes a restriction, not this
+          // card's own On Play timing.
+          if (marker === 'ap' && /cannot\s+activate\s*$/i.test(prefix)) return false
+          return true
+        })
+      })
       .forEach((marker) => {
         timingMarkers.add(marker)
         addClause(clauses, source, `{${marker}}`, 'timing', 0, text.length, 'exact')
@@ -1971,6 +2111,17 @@ const buildContract = (
     energyCosts: [],
     abilityCostKeys: new Set<string>(),
   })
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      {
+        effectKinds: runtime.effectKinds,
+        targetSelectors: [],
+        energyCosts: [],
+        abilityCostKeys: new Set<string>(),
+      },
+    )
+  }
   const sourceOrder = new Map(
     (Object.keys(segments) as CardTextSource[]).map((source, index) => [source, index]),
   )
@@ -2018,6 +2169,11 @@ const buildContract = (
       blockers.push(`condition evidence missing: ${requirement.label}`)
     }
   }
+  for (const requirement of requiredAttackFaintConditions(record)) {
+    if (!hasRuntimeAttackFaintCondition(evidence, requirement)) {
+      blockers.push(`condition evidence missing: ${requirement.label}`)
+    }
+  }
   // A FLIP card is still rendered as a Cookie at runtime, so merely seeing
   // its normal attack fields is not evidence that its HP-attached text was
   // converted.  Require a FlipAbility whenever official FLIP text exists;
@@ -2038,6 +2194,12 @@ const buildContract = (
   }
   if (/rearrange them in any order/i.test(fullSourceText) && !hasRuntimeEffect('reorder-hp')) {
     blockers.push('HP rearrangement has no runtime effect')
+  }
+  if (/unaffected by your opponent['’]s trap effects/i.test(fullSourceText)) {
+    const equippedEffects = evidence.ability?.equippedAttackEffects ?? []
+    if (!equippedEffects.some((effect) => effect.kind === 'disable-traps')) {
+      blockers.push('equipped trap immunity has no runtime effect')
+    }
   }
   if (/discard 1 Cookie that has FLIP from your hand or place 1 card from the top of this Cookie's HP/i.test(fullSourceText)) {
     const chooseOne = flattenedRuntimeEffects.find((effect) => effect.kind === 'choose-one')
@@ -2087,6 +2249,12 @@ const buildContract = (
     abilityCostKeys: new Set<string>(),
   }
   collectRuntime(evidence.card, { effectKinds: new Set<string>(), ...runtimeArrays })
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      { effectKinds: new Set<string>(), ...runtimeArrays },
+    )
+  }
   if (
     payments.length > 0 &&
     runtimeArrays.energyCosts.length === 0 &&
@@ -2161,9 +2329,13 @@ export const analyzeOfficialCardBehavior = (
       : extraConversion?.status === 'converted'
         ? materializeExtraDeckCookie(extraConversion.extraDeckCard)
         : null
-    : runtimeCard ?? null
+      : runtimeCard ?? null
+  const extraDeckPlayCost = extraConversion?.status === 'converted'
+    ? extraConversion.extraDeckCard.extraDeckPlayCost
+    : undefined
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
+    ...(extraDeckPlayCost ? { extraDeckPlayCost } : {}),
     unsupportedReason:
       conversion?.status === 'unsupported'
         ? conversion.reason
@@ -2186,6 +2358,12 @@ export const analyzeOfficialCardBehavior = (
     abilityCostKeys: new Set<string>(),
   }
   collectRuntime(card, sets)
+  if (evidence.extraDeckPlayCost) {
+    collectCostEvidence(
+      evidence.extraDeckPlayCost as unknown as Record<string, unknown>,
+      sets,
+    )
+  }
   runtime.effectKinds = [...sets.effectKinds].sort()
   runtime.abilityCostKeys = [...sets.abilityCostKeys].sort()
   runtime.timing = contract.timing.runtime
@@ -2218,6 +2396,9 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'support-to-hand') {
       return keys.has('supportToHand') || kinds.has('support-to-hand')
     }
+    if (cost.kind === 'deck-to-trash') {
+      return keys.has('deckToTrash') || kinds.has('deck-to-trash')
+    }
     if (cost.kind === 'trash-to-break') {
       return (
         // P-082 models「place 1 Cookie … from your trash into your break
@@ -2245,7 +2426,13 @@ export const analyzeOfficialCardBehavior = (
         kinds.has('stage-source-to-trash')
       )
     }
-    if (cost.kind === 'self-to-break') return keys.has('selfToBreakArea') || kinds.has('self-to-break')
+    if (cost.kind === 'self-to-break') {
+      return (
+        keys.has('selfToBreakArea') ||
+        keys.has('selfToFaint') ||
+        kinds.has('self-to-break')
+      )
+    }
     if (cost.kind === 'rest-source') {
       return evidence.skill?.restSource === true || evidence.ability?.restSource === true
     }

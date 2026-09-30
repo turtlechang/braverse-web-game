@@ -9,6 +9,7 @@ import {
   getHpToTrashCostCandidates,
   getSupportEffectCandidates,
   getTrashToDeckCostCandidates,
+  getRefreshCandidates,
   isEffectConditionMet,
   isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
@@ -73,6 +74,8 @@ export interface OptionalCostAttackPromptData {
   unmetConditionWarning: string | null
   /** 支援區沒有足夠的合法能量支付剩餘代價時的明確提示。 */
   paymentUnavailableWarning: string | null
+  /** 牌庫頂磨牌代價目前是否有可用的牌庫／Refresh 路徑。 */
+  deckToTrashAvailable?: boolean
 }
 
 const getUnmetConditionWarning = (
@@ -110,9 +113,11 @@ const describeCost = (
   supportToTrashCost: number,
   hpToTrashCost: number,
   hpToHandCost: number,
+  selfToTrashCost: boolean,
   selfToBreakAreaCost: boolean,
   selfToDeckBottomCost: boolean,
   trashToDeckCost: number,
+  deckToTrashCost: number,
 ): string => {
   const parts: string[] = []
 
@@ -144,10 +149,14 @@ const describeCost = (
   }
   if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
   if (hpToHandCost > 0) parts.push(`將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌`)
+  if (selfToTrashCost) parts.push('將此餅乾送入棄牌區')
   if (selfToBreakAreaCost) parts.push('將此餅乾放入休息區')
   if (selfToDeckBottomCost) parts.push('將此餅乾放到牌庫底')
   if (trashToDeckCost > 0) {
     parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
+  }
+  if (deckToTrashCost > 0) {
+    parts.push(`將牌庫頂 ${deckToTrashCost} 張卡放入棄牌區`)
   }
 
   return parts.length > 0 ? parts.join('、') : '無'
@@ -343,12 +352,19 @@ export function getOptionalCostAttackPrompt(
       ),
     )
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
+  const deckToTrashCost = pending.cost.deckToTrash?.amount ?? 0
+  const deckToTrashAvailable =
+    deckToTrashCost <= 0 ||
+    game.players[viewerPlayerId].deck.length >= deckToTrashCost ||
+    getRefreshCandidates(game, viewerPlayerId).length > 0
   const paymentUnavailableWarning =
-    energyCostTotal > 0 &&
-    selectEnergyPayment(
-      energyCost,
-      game.players[viewerPlayerId].supportArea,
-    ) === null
+    !deckToTrashAvailable
+      ? `目前牌庫不足以支付磨牌代價，且沒有可用的 Refresh，無法執行${pending.resolution === 'ability' ? '技能 Then 效果' : '攻擊後效果'}，${pending.mandatory ? '此效果必須支付。' : '請選擇「略過」。'}`
+      : energyCostTotal > 0 &&
+        selectEnergyPayment(
+          energyCost,
+          game.players[viewerPlayerId].supportArea,
+        ) === null
       ? `目前沒有足夠的可支付${Object.entries(energyCost)
           .filter(([, amount]) => (amount ?? 0) > 0)
           .map(([color]) => `${energyColorLabel[color] ?? color}`)
@@ -393,9 +409,11 @@ export function getOptionalCostAttackPrompt(
       supportToTrashCost,
       hpToTrashCost,
       hpToHandCost,
+      pending.cost.selfToTrash === true,
       pending.cost.selfToBreakArea === true,
       pending.cost.selfToDeckBottom === true,
       trashToDeckCost,
+      deckToTrashCost,
     ),
     playerHand: game.players[viewerPlayerId].hand,
     supportCandidates,
@@ -413,5 +431,6 @@ export function getOptionalCostAttackPrompt(
       pending.effects,
     ),
     paymentUnavailableWarning,
+    deckToTrashAvailable,
   }
 }

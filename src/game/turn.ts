@@ -186,6 +186,8 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     arenaCookieDealtEffectDamageThisTurn: {},
     cookiesPlayedFromTrashThisTurn: {},
     cookiesPlayedFromBreakThisTurn: {},
+    cookieLevelsPlayedFromBreakThisTurn: {},
+    cookiesPlayedViaSpecialPlayThisTurn: {},
     cookiesPlacedFromBattleToDeckThisTurn: {},
     extraDeckPlayUsedThisTurn: false,
   }
@@ -509,8 +511,23 @@ export const advancePhase = (state: GameState): GameState => {
       if (endPhaseState.status !== 'playing' || hasBlockingPending(endPhaseState)) {
         return endPhaseState
       }
+      const clearedCookieLevelOverrides = Object.fromEntries(
+        Object.entries(endPhaseState.players).map(([playerId, player]) => [
+          playerId,
+          {
+            ...player,
+            battleArea: player.battleArea.map((cookie) => {
+              if (cookie.levelOverride === undefined) return cookie
+              const clearedCookie = { ...cookie }
+              delete clearedCookie.levelOverride
+              return clearedCookie
+            }),
+          },
+        ]),
+      ) as GameState['players']
       return {
         ...endPhaseState,
+        players: clearedCookieLevelOverrides,
         // Snapshot the turn that just ended before Active Phase clears the
         // current counters.  The next active player can then evaluate
         // "during your opponent's previous turn" conditions against the
@@ -547,6 +564,41 @@ export const advancePhase = (state: GameState): GameState => {
             ([, turn]) => turn > state.turnNumber,
           ),
         ),
+        onPlayDisabledUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.onPlayDisabledUntilTurn ?? {}).filter(
+            ([, turn]) => turn > state.turnNumber,
+          ),
+        ),
+        onPlayDisabledMinLevelUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.onPlayDisabledMinLevelUntilTurn ?? {}).filter(
+            ([, restriction]) => restriction.turn > state.turnNumber,
+          ),
+        ),
+        onPlayReplacementUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.onPlayReplacementUntilTurn ?? {}).filter(
+            ([, replacement]) => replacement.turn > state.turnNumber,
+          ),
+        ),
+        cookieActivateDiscardRequirements: Object.fromEntries(
+          Object.entries(endPhaseState.cookieActivateDiscardRequirements ?? {})
+            .map(([playerId, requirements]) => [
+              playerId,
+              requirements.filter(
+                (requirement) => requirement.expiresAfterTurn > state.turnNumber,
+              ),
+            ])
+            .filter(([, requirements]) => requirements.length > 0),
+        ),
+        cookieAttackDiscardRequirements: Object.fromEntries(
+          Object.entries(endPhaseState.cookieAttackDiscardRequirements ?? {})
+            .map(([playerId, requirements]) => [
+              playerId,
+              requirements.filter(
+                (requirement) => requirement.expiresAfterTurn > state.turnNumber,
+              ),
+            ])
+            .filter(([, requirements]) => requirements.length > 0),
+        ),
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,
         phase: 'active',
@@ -556,6 +608,8 @@ export const advancePhase = (state: GameState): GameState => {
         preventHpGainThisTurn: {},
         cookiesPlayedFromTrashThisTurn: {},
         cookiesPlayedFromBreakThisTurn: {},
+        cookieLevelsPlayedFromBreakThisTurn: {},
+        cookiesPlayedViaSpecialPlayThisTurn: {},
         cookiesPlacedFromBattleToDeckThisTurn: {},
         skillUsesThisTurn: [],
       }

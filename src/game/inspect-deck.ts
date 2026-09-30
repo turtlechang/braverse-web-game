@@ -11,7 +11,8 @@ export const continueInspectDeckAfterRefresh = (state: GameState): GameState => 
   if (!pending || state.pendingRefresh) return state
   if (state.status !== 'playing') return state
 
-  const player = state.players[pending.playerId]
+  const deckPlayerId = pending.deckPlayerId ?? pending.playerId
+  const player = state.players[deckPlayerId]
   const alreadyRevealed = pending.revealedCards
   const needed = pending.lookCount - alreadyRevealed.length
 
@@ -24,25 +25,25 @@ export const continueInspectDeckAfterRefresh = (state: GameState): GameState => 
     const updatedPlayer = { ...player, deck: player.deck.slice(newCards.length) }
     const nextState = {
       ...state,
-      players: { ...state.players, [pending.playerId]: updatedPlayer },
+      players: { ...state.players, [deckPlayerId]: updatedPlayer },
       pendingInspectDeck: {
         ...pending,
         revealedCards: [...alreadyRevealed, ...newCards],
       },
     }
-    if (!hasLv1CookieInDiscard(nextState, pending.playerId)) {
-      return finishWithDefeat(nextState, pending.playerId, 'refresh-unavailable')
+    if (!hasLv1CookieInDiscard(nextState, deckPlayerId)) {
+      return finishWithDefeat(nextState, deckPlayerId, 'refresh-unavailable')
     }
     return {
       ...nextState,
-      pendingRefresh: { playerId: pending.playerId, remainingDraws: 0 },
+      pendingRefresh: { playerId: deckPlayerId, remainingDraws: 0 },
     }
   }
 
   const updatedPlayer = { ...player, deck: player.deck.slice(needed) }
   return {
     ...state,
-    players: { ...state.players, [pending.playerId]: updatedPlayer },
+    players: { ...state.players, [deckPlayerId]: updatedPlayer },
     pendingInspectDeck: {
       ...pending,
       revealedCards: [...alreadyRevealed, ...newCards],

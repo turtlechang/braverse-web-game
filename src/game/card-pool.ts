@@ -41,7 +41,7 @@ export const compareCardNumbers = (left: string, right: string): number => {
   }
 
   // Keep unknown/legacy identifiers deterministic without making them block
-  // the normal BS1 → BS8 ordering of official card numbers.
+  // the normal BS1 → BS10 ordering of official card numbers.
   return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
 }
 

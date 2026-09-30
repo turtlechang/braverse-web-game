@@ -73,6 +73,16 @@ const waitForPort = async (port, processInfo, label) => {
 const hasExited = (child) =>
   child.exitCode !== null || child.signalCode !== null
 
+const clickIfCurrent = async (locator, options = {}) => {
+  try {
+    await locator.click({ timeout: 1200, ...options })
+    return true
+  } catch (error) {
+    if (error?.name === 'TimeoutError') return false
+    throw error
+  }
+}
+
 const waitForExit = (child, timeoutMs) => {
   if (hasExited(child)) return Promise.resolve(true)
   return new Promise((resolvePromise) => {
@@ -119,12 +129,31 @@ const waitForPortClosed = async (port, label) => {
   throw new Error(`${label} still accepts connections on port ${port}`)
 }
 
-const deckEntries = [
-  ['ST1-002', 4], ['ST1-003', 4], ['ST1-005', 4], ['ST1-006', 4],
-  ['ST1-007', 4], ['ST1-008', 4], ['ST1-009', 4], ['ST1-010', 4],
-  ['ST1-011', 4], ['ST1-012', 4], ['ST1-001', 4], ['ST1-004', 4],
-  ['ST1-013', 4], ['ST1-015', 4], ['ST1-016', 2], ['ST1-020', 2],
-].map(([cardNumber, count]) => ({ cardNumber, count }))
+const onlineDeckSeries = (process.env.BRAVERSE_ONLINE_DECK_SERIES ?? 'ST1').toUpperCase()
+const deckEntries = (
+  onlineDeckSeries === 'BS11'
+    ? [
+        ['BS11-001', 4], ['BS11-002', 4], ['BS11-003', 4], ['BS11-004', 4],
+        ['BS11-005', 4], ['BS11-006', 4], ['BS11-007', 4], ['BS11-008', 4],
+        ['BS11-014', 4], ['BS11-015', 4], ['BS11-016', 4], ['BS11-017', 4],
+        ['BS11-018', 4], ['BS11-019', 4], ['BS11-020', 4],
+      ]
+    : onlineDeckSeries === 'ST1'
+      ? [
+          ['ST1-002', 4], ['ST1-003', 4], ['ST1-005', 4], ['ST1-006', 4],
+          ['ST1-007', 4], ['ST1-008', 4], ['ST1-009', 4], ['ST1-010', 4],
+          ['ST1-011', 4], ['ST1-012', 4], ['ST1-001', 4], ['ST1-004', 4],
+          ['ST1-013', 4], ['ST1-015', 4], ['ST1-016', 2], ['ST1-020', 2],
+        ]
+      : null
+)?.map(([cardNumber, count]) => ({ cardNumber, count }))
+if (!deckEntries) throw new Error(`Unsupported online deck series: ${onlineDeckSeries}`)
+if (deckEntries.reduce((total, entry) => total + entry.count, 0) !== 60) {
+  throw new Error(`${onlineDeckSeries} online deck must contain exactly 60 cards`)
+}
+if (onlineDeckSeries === 'BS11' && deckEntries.some((entry) => !entry.cardNumber.startsWith('BS11-'))) {
+  throw new Error('BS11 online deck contains cards from another series')
+}
 
 const installDeck = async (context, id, name) => {
   await context.addInitScript(({ deckId, deckName, entries }) => {
@@ -233,8 +262,10 @@ try {
   })
   hostContext = await browser.newContext({ viewport: { width: 1366, height: 768 } })
   guestContext = await browser.newContext({ viewport: { width: 1366, height: 768 } })
-  await installDeck(hostContext, 'host-browser-deck', 'Host Browser Deck')
-  await installDeck(guestContext, 'guest-browser-deck', 'Guest Browser Deck')
+  const hostDeckId = 'host-browser-deck'
+  const guestDeckId = 'guest-browser-deck'
+  await installDeck(hostContext, hostDeckId, `Host ${onlineDeckSeries} Browser Deck`)
+  await installDeck(guestContext, guestDeckId, `Guest ${onlineDeckSeries} Browser Deck`)
   await Promise.all([
     trackApplicationSockets(hostContext),
     trackApplicationSockets(guestContext),
@@ -245,6 +276,8 @@ try {
   guestPage = guest.page
 
   await Promise.all([openOnlinePanel(hostPage), openOnlinePanel(guestPage)])
+  assert.equal(await hostPage.locator('#deck-select').inputValue(), hostDeckId)
+  assert.equal(await guestPage.locator('#deck-select').inputValue(), guestDeckId)
   await hostPage.locator('#online-player-name').fill('Host Player')
   await guestPage.locator('#online-player-name').fill('Guest Player')
   await hostPage.locator('.online-match-btn-primary').click()
@@ -335,11 +368,13 @@ try {
     hostOpeningHand.getByTestId('online-starting-cookie').first(),
   )
   assert.ok(await hostOpeningHand.getByTestId('online-starting-cookie').count() > 0)
+  await guestOpeningHand.getByTestId('online-starting-cookie').first().waitFor({ state: 'visible' })
   assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await hostOpeningHand.getByTestId('online-starting-cookie').first().click()
   await hostPage
     .getByText('起始餅乾已覆蓋，等待對手完成選擇…', { exact: true })
     .waitFor()
+  await guestOpeningHand.getByTestId('online-starting-cookie').first().waitFor({ state: 'visible' })
   assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await guestOpeningHand.getByTestId('online-starting-cookie').first().click()
 
@@ -572,11 +607,114 @@ try {
     /不是目前的回合玩家/,
   )
 
+  let animationFullMatch = null
+  if (process.argv.includes('--animation-full-match')) {
+    await hostPage.setViewportSize({width:1920,height:1080})
+    await guestPage.setViewportSize({width:1164,height:777})
+    await hostPage.getByLabel('動畫速度').selectOption('fast')
+    await guestPage.getByLabel('動畫速度').selectOption('reduced')
+    let commands = 0
+    let attacks = 0
+    const exerciseBattle = process.argv.includes('--animation-battle')
+    const deadline = Date.now() + 240000
+    while (Date.now() < deadline && commands < 500) {
+      if (await hostPage.locator('.result-modal').count() && await guestPage.locator('.result-modal').count()) break
+      for (const page of [hostPage, guestPage]) {
+        if (exerciseBattle) {
+          if (await page.getByRole('button',{name:'略過目前演出',exact:true}).count()) continue
+          const skip = page.getByRole('button').filter({hasText:/^(不發動|略過(?!目前演出)|不使用|跳過)/,hasNotText:'支援階段'}).filter({visible:true}).first()
+          const choices = page.locator('.modal-card-options > button:not(:disabled)').filter({visible:true})
+          const confirm = page.getByRole('button').filter({hasText:/^(確認|完成|繼續|結算)/}).filter({visible:true}).first()
+          if (await skip.evaluateAll(nodes => nodes.some(node => node instanceof HTMLButtonElement && !node.disabled))) {
+            if (await clickIfCurrent(skip)) commands++
+            continue
+          }
+          if (await choices.count()) {
+            if (await clickIfCurrent(choices.first())) commands++
+            continue
+          }
+          if (await confirm.evaluateAll(nodes => nodes.some(node => node instanceof HTMLButtonElement && !node.disabled))) {
+            if (await clickIfCurrent(confirm)) commands++
+            continue
+          }
+          if (await page.locator('.modal-backdrop:visible').count()) continue
+          const previewDismiss = page.getByTestId('card-preview-dismiss-layer')
+          if (await previewDismiss.isVisible()) {
+            await clickIfCurrent(previewDismiss, { position: { x: 2, y: 2 } })
+            continue
+          }
+          const payment = page.locator('.attack-payment-panel')
+          if (await payment.count()) {
+            // Hovering a hand card during payment must not cover the supports.
+            const paymentHand = page.locator('.bottom-hand .hand-card').first()
+            if (await paymentHand.count()) await paymentHand.hover({ force: true })
+            assert.equal(await page.locator('.card-preview-panel').count(), 0)
+            assert.equal(await page.locator('.card-preview-dismiss-layer').count(), 0)
+            if (await page.locator('.attack-payment-panel.is-valid').count()) {
+              const target = page.getByRole('button',{name:/^選擇攻擊目標：/}).first()
+              if (await target.count()) {
+                if (await clickIfCurrent(target)) { attacks++; commands++ }
+                continue
+              }
+            }
+            const energy = page.locator('.bottom-field .support-card.is-targetable:not(.is-selected)').first()
+            if (await energy.count()) {
+              if (await clickIfCurrent(energy)) commands++
+              continue
+            }
+          }
+          const attacker = page.locator('.bottom-field .combat-card-wrap .card-face.is-attackable').first()
+          if (await attacker.count()) {
+            if (await clickIfCurrent(attacker)) commands++
+            continue
+          }
+          const phase = await page.locator('.phase-rail').innerText()
+          const ownPhaseButton = page.locator('.next-phase-button')
+          if (phase.includes('支援階段') && await ownPhaseButton.isEnabled()) {
+            const hand = page.locator('.bottom-hand .hand-card').last()
+            if (await hand.count()) {
+              if (!(await clickIfCurrent(hand))) continue
+              const support = page.locator('.bottom-hand .hand-card-action').filter({hasText:'支援'})
+              if (await support.count()) {
+                if (await clickIfCurrent(support)) commands++
+                continue
+              }
+              if (await previewDismiss.isVisible()) {
+                await clickIfCurrent(previewDismiss, { position: { x: 2, y: 2 } })
+              }
+            }
+          }
+        }
+        const button = page.locator('.next-phase-button')
+        if (await button.count() && await button.isEnabled()) {
+          if (await clickIfCurrent(button)) commands++
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve,100))
+    }
+    await hostPage.locator('.result-modal').waitFor({state:'visible',timeout:5000})
+    await guestPage.locator('.result-modal').waitFor({state:'visible',timeout:5000})
+    const hostResult = await hostPage.locator('.result-modal h2').innerText()
+    const guestResult = await guestPage.locator('.result-modal h2').innerText()
+    assert.equal(hostResult,guestResult,'Both clients must agree on the winner')
+    await hostPage.screenshot({path:resolve(root,'test-results/animation-online-1920x1080.png')})
+    await guestPage.screenshot({path:resolve(root,'test-results/animation-online-1164x777.png')})
+    if (exerciseBattle) assert.ok(attacks > 0,'The full battle route must include a paid UI attack')
+    animationFullMatch = {completed:true,commands,attacks,hostResult,guestResult,hostSpeed:'fast',guestSpeed:'reduced',route:exerciseBattle ? 'Visible support payment, attacks, decisions and replacements to the result' : 'Normal turns and draws until Refresh determines the result'}
+    console.log('Animation full match:', JSON.stringify(animationFullMatch))
+  }
+
   await guestContext.close()
   guestContext = null
-  const disconnectNotice = hostPage.locator('.online-match-notice')
-  await disconnectNotice.waitFor({ state: 'visible' })
-  assert.match((await disconnectNotice.textContent()) ?? '', /對手已離線/)
+  if (animationFullMatch) {
+    // A completed room retains its result; disconnect banners apply to live matches.
+    await hostPage.locator('.result-modal').waitFor({state:'visible'})
+    assert.equal(await hostPage.locator('.result-modal h2').innerText(),animationFullMatch.hostResult)
+  } else {
+    const disconnectNotice = hostPage.locator('.online-match-notice')
+    await disconnectNotice.waitFor({ state: 'visible' })
+    assert.match((await disconnectNotice.textContent()) ?? '', /對手已離線/)
+  }
   assert.equal(host.errors.length, 0, `host errors: ${host.errors.join('; ')}`)
   assert.equal(guest.errors.length, 0, `guest errors: ${guest.errors.join('; ')}`)
 
@@ -621,7 +759,9 @@ try {
 
   console.log(JSON.stringify({
     roomCode,
+    onlineDeckSeries,
     setupCompleted: true,
+    animationFullMatch,
     synchronizedPhase: 'main',
     synchronizedTurn: hostTurn,
     openingResponsive: true,
@@ -636,7 +776,8 @@ try {
     onlineResourcePopoversVisible: true,
     cardDetailClosable: true,
     commandRejectionVisible: true,
-    disconnectHandled: true,
+    disconnectHandled: !animationFullMatch,
+    finishedResultPreservedOnDisconnect: Boolean(animationFullMatch),
     connectionFailureHandled: true,
   }, null, 2))
 } catch (error) {

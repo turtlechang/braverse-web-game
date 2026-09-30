@@ -1,0 +1,48 @@
+.match-animation-layer { position: absolute; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
+.match-animation-object { position: absolute; left: 0; top: 0; width: clamp(56px, 6vw, 94px); transform: translate(var(--to-x),var(--to-y)) translate(-50%,-50%); filter: drop-shadow(0 5px 9px #0008); }
+.match-animation-object .card-face { width: 100%; aspect-ratio: 5 / 7; border-radius: 8px; overflow: hidden; }
+.match-animation-object .card-face img { width: 100%; height: 100%; object-fit: cover; }
+.match-animation-object span { display: block; width: max-content; max-width: 180px; padding: 6px 10px; border-radius: 16px; color: #fff7d9; background: #222b39eb; border: 1px solid #f3d77e; font-size: 16px; font-weight: 800; }
+.match-animation-object.kind-attack span, .match-animation-object.kind-impact span { font-size: 38px; color: #ffdd70; background: none; border: 0; text-shadow: 0 0 12px #ffb52a; }
+.match-animation-object.kind-rest span { color: #98e5ff; font-size: 26px; background: none; border: 0; }
+.match-animation-object.kind-faint { filter: grayscale(.7) drop-shadow(0 4px 8px #0008); }
+.match-animation-banner { position: absolute; top: 44%; left: 15%; right: 15%; padding: 18px; text-align: center; font-size: clamp(20px,3vw,38px); font-weight: 900; color: #fff2bf; background: linear-gradient(90deg,transparent,#192230ed 20%,#192230ed 80%,transparent); text-shadow: 0 2px 6px #000; animation: match-banner var(--motion-duration,450ms) ease both; }
+.match-animation-banner.kind-finish { inset: 0; display: grid; place-content: center; background: radial-gradient(ellipse,#344449c9,#050c18b5); color: #ffdc75; }
+.match-animation-banner.kind-phase { top: 47%; padding: 8px; font-size: 20px; }
+.match-animation-spotlight { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); display: grid; justify-items: center; gap: 8px; padding: 16px 22px; border-radius: 18px; background: #142133f0; box-shadow: 0 0 45px #efc35d80; color: #ffdf79; animation: match-spotlight var(--motion-duration,600ms) ease both; }
+.match-animation-spotlight .card-face { width: clamp(95px,13vw,165px); aspect-ratio: 5 / 7; overflow: hidden; border-radius: 9px; }
+.match-animation-spotlight img { width: 100%; height: 100%; object-fit: cover; }
+.match-animation-spotlight strong { font-size: 24px; }
+.match-animation-controls { position: absolute; z-index: 140; left: 50px; top: 10px; max-width: calc(100% - 100px); display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; font-size: 11px; }
+.match-animation-controls label, .match-animation-controls button { background: #1c293bed; color: #f4e9d2; border: 1px solid #8b805c; border-radius: 7px; padding: 4px 7px; }
+.match-animation-controls select { background: transparent; color: inherit; border: 0; font: inherit; }
+.match-animation-controls option { background: #1c293b; }
+.match-animation-announcement { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.is-reduced .match-animation-object { display: none; }
+.is-reduced .match-animation-banner, .is-reduced .match-animation-spotlight { animation: none; }
+@keyframes match-banner { 0% { opacity: 0; transform: translateY(8px); } 25%,75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes match-spotlight { 0% { opacity: 0; transform: translate(-50%,-50%) rotateY(70deg) scale(.9); } 25%,75% { opacity: 1; transform: translate(-50%,-50%); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(.95); } }
+@media (prefers-reduced-motion: reduce) { .match-animation-banner,.match-animation-spotlight { animation: none; } }
+.match-rps-reveal { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; padding: 12px; background: #172337; color: #fff0d1; border-radius: 12px; animation: match-rps .5s ease both; }
+.match-rps-reveal .is-winner { color: #ffe588; text-shadow: 0 0 12px #edbb4c; }
+.online-opening-rps-result { animation: match-rps .5s ease both; }
+.online-opening-card, .opening-setup-modal .setup-card { animation: match-deal .28s ease both; }
+.game-shell[data-motion="fast"] { --setup-motion: 140ms; }
+.game-shell[data-motion="reduced"] .match-rps-reveal, .game-shell[data-motion="reduced"] .online-opening-rps-result, .game-shell[data-motion="reduced"] .online-opening-card, .game-shell[data-motion="reduced"] .setup-card { animation: none; }
+@keyframes match-rps { from { opacity: 0; transform: rotateX(55deg) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes match-deal { from { opacity: 0; transform: translateY(24px) rotate(4deg); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .match-rps-reveal,.online-opening-rps-result,.online-opening-card,.opening-setup-modal .setup-card { animation: none; } }
+.match-animation-links { position: absolute; inset: 0; overflow: visible; }
+.match-animation-links path { fill: none; stroke: #ffdc79; stroke-width: 3; stroke-dasharray: 8 8; opacity: .65; filter: drop-shadow(0 0 5px #f6c755); }
+.match-animation-links .kind-rest { stroke: #92e0ff; stroke-width: 2; }
+.online-opening-card { animation-duration: var(--setup-motion,280ms); }
+.game-shell[data-motion="reduced"] .online-opening-card { animation-delay: 0ms !important; }
+.match-animation-spotlights { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); display: flex; gap: 20px; }
+.match-animation-spotlights .match-animation-spotlight { position: relative; left: auto; top: auto; transform: none; animation-name: match-reveal-card; }
+.opening-setup-modal .setup-hand > button { animation: match-deal var(--setup-motion,280ms) ease both; }
+@keyframes match-reveal-card { 0% { opacity: 0; transform: rotateY(70deg) scale(.9); } 25%,75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(.95); } }
+.game-shell[data-motion="reduced"] .setup-hand > button { animation: none; }
+@media (prefers-reduced-motion: reduce) { .opening-setup-modal .setup-hand > button { animation: none; } }
+.match-animation-banner.kind-finish::after { content: '✦ · ✧ · ✦'; position: absolute; left: 25%; right: 25%; top: 35%; font-size: 42px; letter-spacing: 24px; animation: match-victory-sparks var(--motion-duration,1000ms) ease-out both; }
+@keyframes match-victory-sparks { from { opacity: 0; transform: translateY(40px) scale(.6); } 30% { opacity: 1; } to { opacity: 0; transform: translateY(-45px) scale(1.2); } }
+.game-shell[data-motion="reduced"] *, .game-shell[data-motion="reduced"] *::before, .game-shell[data-motion="reduced"] *::after { animation-duration: 0s !important; transition-duration: 0s !important; }

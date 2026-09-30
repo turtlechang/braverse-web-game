@@ -491,6 +491,12 @@
   border-right: 3px solid #ffcc33;
 }
 
+.badge-level {
+  background: rgba(15, 41, 80, 0.94);
+  color: #fff;
+  border-left: 3px solid #66b8ff;
+}
+
 /* 顯示這張餅乾目前裝備了幾張道具（如靈魂果醬），懸停可看到裝備卡名。
  * 跟 .card-badges 的 HP／攻擊力徽章共用視覺語彙，但因為只在有裝備時才
  * 出現、不是固定兩欄版面，獨立定位而不是塞進 .card-badges 的 flex 容器。 */
@@ -2481,6 +2487,14 @@
   bottom: 40px;
   transform: scale(1.32);
   transform-origin: bottom right;
+}
+
+.combat-card-wrap .badge-level {
+  position: absolute;
+  left: 3px;
+  bottom: 40px;
+  transform: scale(1.16);
+  transform-origin: bottom left;
 }
 
 .combat-card-wrap.is-attack-target::before {
