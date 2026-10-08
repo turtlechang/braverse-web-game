@@ -7,7 +7,7 @@ import { createCardCheckDemoState, createCardNegativeDemoState, parseTestStateCo
 it.each(['BS12-092', 'BS12-092@1'] as const)('%s generic preview keeps EXTRA in its deck until the mandatory battle cost is paid', number => {
   expect(parseTestStateConfig(`?test-state=card:${number}`, 'localhost')).toEqual({ kind: 'bs12-092', cardNumber: number, scenario: 'extra' })
   expect(parseTestStateConfig(`?test-state=card:${number}`, 'example.com')).toBeNull()
-  expect(getCardPoolEntry(number)).toBeUndefined()
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
   const state = createCardCheckDemoState(number)
   const player = state.players['player-one']
   expect(player.extraDeck).toHaveLength(1)
@@ -26,7 +26,7 @@ it.each(['BS12-092', 'BS12-092@1'] as const)('%s generic preview keeps EXTRA in 
   expect(after.players['player-one'].battleArea.map(entry => [entry.card.id, entry.hpCards.length])).toEqual([['BS12-092', 5]])
   expect(after.players['player-one'].discardPile.map(card => card.instanceId)).toEqual(['bs12-092-cost', 'bs12-092-cost-hp-0', 'bs12-092-cost-hp-1', 'bs12-092-cost-hp-2'])
   expect(after.players['player-one'].breakArea).toEqual(player.breakArea)
-  expect(getCardPoolEntry(number)).toBeUndefined()
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
 })
 
 it.each(['BS12-092', 'BS12-092@1'] as const)('%s generic negative preview blocks entry with only two Arena Blockers in Break', number => {
@@ -39,5 +39,5 @@ it.each(['BS12-092', 'BS12-092@1'] as const)('%s generic negative preview blocks
   expect(player.battleArea.some(entry => entry.card.id === 'BS12-092')).toBe(false)
   expect(canPlayExtraDeckCookie(state, 'player-one', player.extraDeck![0]!.instanceId)).toBe(false)
   expect(() => applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: player.extraDeck![0]!.instanceId })).toThrow()
-  expect(getCardPoolEntry(number)).toBeUndefined()
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
 })

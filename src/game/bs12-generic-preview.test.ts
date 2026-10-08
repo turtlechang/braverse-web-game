@@ -4,8 +4,8 @@ import { getTrashToHandCandidates } from './effects'
 import { createCardCheckDemoState, createCardNegativeDemoState, parseTestStateConfig } from './demo'
 import { assertBs12PhysicalFixture } from './bs12-physical-fixtures.test-helpers'
 
-it.each(['BS12-032', 'BS12-032@1', 'BS12-080', 'BS12-101', 'BS12-102'])('generic localhost card preview loads isolated BS12 candidate %s', number => {
-  expect(getCardPoolEntry(number)).toBeUndefined()
+it.each(['BS12-032', 'BS12-032@1', 'BS12-080', 'BS12-101', 'BS12-102'])('generic localhost card preview loads promoted BS12 card %s', number => {
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
   if (number === 'BS12-080') {
     expect(parseTestStateConfig(`?test-state=card:${number}`, 'localhost')).toEqual({ kind: 'bs12-080', scenario: 'positive' })
   } else if(number==='BS12-101'||number==='BS12-102'){
@@ -43,7 +43,7 @@ it.each(['BS12-032', 'BS12-032@1', 'BS12-080', 'BS12-101', 'BS12-102'])('generic
   if (state.pendingBattle?.revealedHpCard) cards.push(state.pendingBattle.revealedHpCard)
   expect(cards.some(card => card.id === number.split('@')[0] && card.imageUrl?.startsWith('https://cookierunbraverse.com/data/en_storage/'))).toBe(true)
   expect(() => createCardNegativeDemoState(number)).not.toThrow()
-  expect(getCardPoolEntry(number)).toBeUndefined()
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
 })
 it('generic candidate preview rejects unknown numbers and keeps supported EXTRA in the EXTRA Deck before entry', () => {
   expect(() => createCardCheckDemoState('BS12-999')).toThrow(/找不到卡片編號/)

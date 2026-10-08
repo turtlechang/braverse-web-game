@@ -11,7 +11,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-007-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const references = readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).flatMap(file => JSON.parse(readFileSync(resolve(root, 'data/cards', file), 'utf8')).cards ?? [])
 const cards = [...candidate.filter(card => existsSync(resolve(root, `test-results/bs12-official-art/${card.cardNumber}.webp`))), ...['BS6-008', 'ST2-007', 'ST4-001'].map(number => references.find(card => card.cardNumber === number))]
 const cases = ['positive', 'rested-source', 'rested-host', 'cancel-payment', 'cancel-target', 'deselect', 'zero', 'attack', 'no-energy', 'wrong-energy', 'rested-energy', 'used', 'opponent-turn', 'no-host', 'wrong-host', 'opponent-host']

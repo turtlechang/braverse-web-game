@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-027-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const references = readdirSync(resolve(root, 'data/cards')).filter(f => f.endsWith('.json')).flatMap(f => JSON.parse(readFileSync(resolve(root, 'data/cards', f), 'utf8')).cards ?? [])
 const cards = [...candidate.filter(card => existsSync(resolve(root, `test-results/bs12-official-art/${card.cardNumber}.webp`))), ...references.filter(card => ["ST2-001","ST2-002","ST4-001","BS7-061","BS8-009","BS8-021"].includes(card.cardNumber))]
 const cases = ['four', 'three', 'five', 'arena-only', 'yellow-only', 'non-arena', 'high-level', 'opponent-break', 'trash-arena', 'support-arena', 'battle-arena', 'free-no-energy', 'free-wrong-energy', 'free-rested-energy', 'no-energy', 'wrong-energy', 'rested-energy', 'disabled', 'used', 'main', 'after-battle', 'zero-free', 'zero-paid', 'other-free', 'other-paid', 'skip-free', 'skip-paid', 'cancel-energy', 'cancel-target', 'back-energy', 'payment-deselect', 'target-deselect', 'source-preview']

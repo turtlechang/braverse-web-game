@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-028-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const formal = readdirSync(resolve(root, 'data/cards')).filter(f => f.endsWith('.json')).flatMap(f => JSON.parse(readFileSync(resolve(root, 'data/cards', f), 'utf8')).cards ?? [])
 const cards = [...candidate.filter(card => existsSync(resolve(root, `test-results/bs12-official-art/${card.cardNumber}.webp`))), ...formal.filter(card => ["ST2-002","ST4-001"].includes(card.cardNumber))]
 const cases = ['positive', 'no-cost', 'non-arena', 'arena-item', 'red-only', 'wrong-energy', 'rested-energy', 'no-energy', 'opponent-turn', 'outside-main', 'break-nine', 'short-deck', 'draw-zero', 'draw-one', 'draw-two', 'cost-red', 'cost-deselect', 'cost-max', 'cancel-energy', 'cancel-cost', 'back-energy', 'payment-deselect', 'draw-select-change', 'skip-draw', 'source-detail']

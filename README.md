@@ -1,5 +1,7 @@
 # 薑餅人對戰卡牌 Braverse
 
+2026-10-08 BS12 promote：依使用者明確授權，154 筆印刷（112 張基礎卡、42 筆變體）已由 `data/candidates/official-festival-arena-bs12.en.json` 移入 `data/cards/official-festival-arena-bs12.en.json`，重建正式 registry；只將來源狀態改為 `promotion-ready`，卡片內容逐筆比對未變。246 個測試、fixture 與 Browser 工具同步改讀正式資料。正式 validator 補辨識 Special Play 代價技能，BS12-112／@1 新增正向與缺失代價反例，未改遊戲規則；BS12 正式註冊期待、AI 卡池數量及 EXTRA 精確數量同步，新增 BS12 系列選單與篩選前綴。受影響 6 檔／297 項整合回歸通過。候選 strict／正式 strict 均 154 verified、0 needs-review、0 blocked；候選 strict validate、promote、validate:cards、check:card-pool、build、全域 lint、針對性 3 檔／63 項皆 exit 0。BS12-043 通用正反入口雙尺寸 smoke 4／4、AI Browser 與牌組編輯器 Browser PASS；正式牌組 EXTRA 列表由 42 增為 56，精確確認新增 14 筆 BS12，原有張數／儲存／匯入判定保留，牌組 UI 19 項（含 BS12 篩選／主牌組加入）回歸通過；這些不替代整系列正式對局或逐卡 online 驗收。完整 Vitest 最終第三次回歸 799 檔／17,048 項（1,011.97 秒）全部通過，exit 0，1,396 個來源雜湊一致；前兩次因舊 EXTRA 數量／候選隔離／AI 卡池數量期待失敗而中止，日誌保留。AI capability audit 無轉接失敗；BS12-014／015／082 的策略效果仍採保守處理，不宣稱 AI 能完整評估這三張。Browser 初次 sandbox 本機網路失敗保留，允許本機連線的重跑通過；Vitest 暫存目錄設於 `test-results/bs12-promote-temp` 避免 sandbox rename EPERM。證據：`test-results/bs12-promoted-contracts-2026-10-08.json`、`bs12-promoted-043-browser-final2/results.json`、`bs12-promote-ai-browser-final2.log`、`bs12-promote-full-vitest-final3-2026-10-08.log`。本輪 Git 發佈整理於 `codex/bs12-promote`；既有 AGENTS 修改與其他產物不納入提交。
+
 以 React、TypeScript 與 Vite 建置的 CookieRun: Braverse 網頁遊戲原型。
 
 > **非官方聲明**：本專案為 CookieRun: Braverse 的**非官方粉絲研究 / 學習型實作**，與 Devsisters Corporation 沒有任何合作、授權或背書關係。CookieRun: Braverse 及其卡牌、插畫、標誌之著作權與商標權均屬 Devsisters 及其授權方所有。本專案不商用、不收費；素材使用政策見 [docs/ip-and-asset-policy.md](docs/ip-and-asset-policy.md)。
@@ -378,6 +380,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 好友房開局由伺服器協調私密猜拳、勝者選擇先後攻、依順位調度、強制調度補償與起始餅乾覆蓋；開局操作直接疊加在對戰桌上，雙方完成後才同步揭示起始餅乾並進入正式回合。
 
 ## 目前進度
+
+- 2026-10-08：BS12 154 筆印刷已 promote，正式 registry 與 BS12 系列篩選已同步。799 檔／17,048 項完整 Vitest、build、lint、strict 154／154、資料驗證及 Browser smoke 通過；驗證來源雜湊未變。正式完整對局與逐卡 online 仍未驗收，AI 對 BS12-014／015／082 採保守處理。
 
 - **BS12-091候選局部驗收**：兩印刷雙尺寸188／188、專項123項及24檔／667項回歸、strict2／2、build／lint通過；先付牌庫頂三張，再取己方棄牌區其他名稱Blocker Cookie，Chrome正反、16案可見紀錄與共用48案另列。一般6,994、cursor092／092@1、剩21基礎／32印刷。完整700檔／11,138項屬091前版本，本批全套留093批末；正式／逐卡online未完成，裁定留112及全部印刷後。
 - **BS12-090候選局部驗收（歷史快照）**：兩印刷雙尺寸180／180、91項專項與16檔／505項回歸、strict2／2、build／lint通過；Blocker與免費昏厥LV1移牌分開，四張門檻含來源、三張反例、選零／反選／超選、FLIP與LV10已驗。088～090最新完整Vitest700檔／11,138項（809.98秒）、AI／ST1核心同步及1,344凍結雜湊通過，共用088／089共32案另列。一般6,806、cursor091／091@1、剩22基礎卡號／34印刷，091～093六印刷卡面已備；裁定留112全部印刷後，154 inventory／0 promoted，正式／逐卡online未完成。

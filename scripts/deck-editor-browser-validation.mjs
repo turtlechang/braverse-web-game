@@ -119,8 +119,10 @@ try {
     const standardType = editor.locator('[aria-label="卡牌類型"]')
     await standardType.selectOption('extra')
     const formalExtraCards = editor.locator('.deck-editor-page-pool-card-button')
-    // BS8 (15) + BS9 (11) + BS10 (12) + promoted BS11 (4) formal EXTRA cards.
-    assert.equal(await formalExtraCards.count(), 42)
+    // BS8 (15) + BS9 (11) + BS10 (12) + BS11 (4) + promoted BS12 (14).
+    assert.equal(await formalExtraCards.count(), 56)
+    assert.equal(await editor.locator('.deck-editor-page-pool-card-button[title^="BS12-"]').count(), 14,
+      'All promoted BS12 EXTRA prints must appear in the formal pool')
     await editor.getByTestId('deck-editor-search').fill('BS11-091')
     const bs11Extra = editor.locator(
       '.deck-editor-page-pool-card-button[title^="BS11-091 "]',
@@ -164,27 +166,29 @@ try {
       '0',
     )
     await seriesSelect.selectOption('')
-    await seriesSelect.selectOption('BS11')
-    await editor.getByTestId('deck-editor-search').fill('BS11-001')
-    const bs11Cookie = editor.locator(
-      '.deck-editor-page-pool-card-button[title^="BS11-001 "]',
-    )
-    assert.equal(await bs11Cookie.count(), 1, 'Promoted BS11 Cookie should be available in the formal pool')
-    await bs11Cookie.click()
-    assert.equal(
-      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
-      '1',
-    )
-    assert.equal(
-      await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(),
-      1,
-      'A promoted BS11 Cookie should enter the main deck section',
-    )
-    await editor.locator('.deck-editor-page-current-footer button').click()
-    assert.equal(
-      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
-      '0',
-    )
+    for (const series of ['BS11', 'BS12']) {
+      await seriesSelect.selectOption(series)
+      await editor.getByTestId('deck-editor-search').fill(`${series}-001`)
+      const promotedCookie = editor.locator(
+        `.deck-editor-page-pool-card-button[title^="${series}-001 "]`,
+      )
+      assert.equal(await promotedCookie.count(), 1, `Promoted ${series} Cookie should be available in the formal pool`)
+      await promotedCookie.click()
+      assert.equal(
+        (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+        '1',
+      )
+      assert.equal(
+        await editor.locator('[data-testid^="deck-editor-deck-section-"] .deck-editor-page-deck-card').count(),
+        1,
+        `A promoted ${series} Cookie should enter the main deck section`,
+      )
+      await editor.locator('.deck-editor-page-current-footer button').click()
+      assert.equal(
+        (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+        '0',
+      )
+    }
     await editor.getByTestId('deck-editor-search').fill('')
     await seriesSelect.selectOption('')
     await filterToggle.click()

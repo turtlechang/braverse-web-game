@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { expect } from 'vitest'
-import candidateDocument from '../../data/candidates/official-festival-arena-bs12.en.json'
+import candidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
 import { convertOfficialCardToExtraDeckCard, convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type { GameState } from './types'

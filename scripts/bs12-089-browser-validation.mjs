@@ -10,7 +10,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-089-browser')
 mkdirSync(out, { recursive: true })
-const records = ['data/candidates/official-festival-arena-bs12.en.json', ...readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).map(file => `data/cards/${file}`)]
+const records = ['data/cards/official-festival-arena-bs12.en.json', ...readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).map(file => `data/cards/${file}`)]
   .flatMap(path => JSON.parse(readFileSync(resolve(root, path), 'utf8')).cards ?? [])
 const requiredCards = records.map(card=>({card,path:['bs12-official-art','bs11-official-art'].map(dir=>resolve(root,'test-results/'+dir+'/'+card.cardNumber+'.webp')).find(existsSync)})).filter(entry=>entry.path)
 for(const entry of requiredCards)assert.ok(entry.card.imageUrl&&existsSync(entry.path))

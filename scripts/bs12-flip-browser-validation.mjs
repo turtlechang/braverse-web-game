@@ -6,7 +6,7 @@ import { chromium } from 'playwright'
 const root = resolve('.')
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-flip-browser')
 mkdirSync(out, { recursive: true })
-const candidateRecords = JSON.parse(readFileSync('data/candidates/official-festival-arena-bs12.en.json', 'utf8')).cards
+const candidateRecords = JSON.parse(readFileSync('data/cards/official-festival-arena-bs12.en.json', 'utf8')).cards
 const formalRecords = readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json'))
   .flatMap(file => JSON.parse(readFileSync(resolve(root, 'data/cards', file), 'utf8')).cards ?? [])
 const records = [...candidateRecords, ...formalRecords]

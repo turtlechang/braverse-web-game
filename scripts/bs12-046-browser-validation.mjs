@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-046-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const formal = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...formal].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const cases = ['draw-two', 'draw-one', 'draw-zero', 'skip-draw', 'change-draw', 'rested-entry', 'removed', 'old-turn', 'hand-entry', 'no-event', 'parent-zero', 'cancel-parent', 'deselect-parent', 'cancel-item', 'cancel-paid-draft', 'deselect-payment', 'wrong-draft-payment', 'no-energy', 'wrong-energy', 'rested-energy', 'opponent-turn', 'outside-main', 'short-deck', 'short-refresh-two', 'last-deck', 'refresh-lv10', 'isolated-opponent-entry']

@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-056-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const formal = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...formal].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const fixtureCases = ['extra-named', 'extra-named-rested', 'extra-seven', 'extra-seven-rested', 'extra-six', 'extra-seven-mixed', 'extra-non-arena', 'extra-wrong-name', 'extra-support-name', 'extra-opponent-name', 'extra-equipment', 'extra-full', 'extra-used', 'extra-outside-main', 'extra-opponent-turn', 'extra-refresh', 'positive', 'first-player', 'no-hand', 'all-blue', 'few-energy', 'rested-energy', 'source-rested', 'outside-main', 'opponent-turn', 'target-faints']

@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, 'test-results/bs12-033-cost-browser')
 mkdirSync(out, { recursive: true })
-const cards = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const cards = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 cards.push(...JSON.parse(readFileSync(resolve(root, 'data/cards/official-starter-deck-blue.en.json'), 'utf8')).cards)
 const cases = ['draw-both', 'item-zero', 'item-three', 'source-zero', 'cancel-cost', 'deselect-cost']
 const state = page => page.evaluate(() => {

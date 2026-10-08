@@ -130,11 +130,13 @@ export const validateCardEffectSemantics = (
         card.skill?.cannotAttackCondition,
     )
     const hasOnPlayPayload = Boolean(card.skill?.onPlayEffects?.length)
+    const hasSpecialPlayPayload = Boolean(card.skill?.specialPlayCost)
     if (
       !hasFlavorOnlySkill &&
       (!card.skill || (
         card.skill.effects.length === 0 &&
         !hasOnPlayPayload &&
+        !hasSpecialPlayPayload &&
         !hasStaticSkillPayload
       ))
     ) {

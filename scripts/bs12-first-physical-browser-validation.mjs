@@ -10,7 +10,7 @@ const pw = await import(pathToFileURL(require.resolve('playwright', { paths: pro
 const chromium = pw.chromium ?? pw.default.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-first-physical-browser')
 mkdirSync(out, { recursive: true })
-const records = ['data/candidates/official-festival-arena-bs12.en.json', ...readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).map(file => `data/cards/${file}`)]
+const records = ['data/cards/official-festival-arena-bs12.en.json', ...readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).map(file => `data/cards/${file}`)]
   .flatMap(file => JSON.parse(readFileSync(resolve(root, file), 'utf8')).cards ?? [])
 const numbers = ['BS12-001', 'BS12-002', 'BS12-003', 'BS12-004', 'BS12-005', 'BS12-006', 'BS12-007', 'BS12-008', 'BS12-009', 'BS12-010', 'BS12-011', 'BS12-012', 'BS12-013', 'BS12-019', 'BS12-024', 'BS12-028', 'BS12-029', 'BS12-030', 'BS12-031', 'BS12-037', 'BS12-046', 'BS12-048', 'BS12-068', 'BS6-017', 'ST4-001']
 const art = numbers.map(number => ({ record: records.find(record => record.cardNumber === number), path: resolve(root, `test-results/bs12-official-art/${number}.webp`) }))

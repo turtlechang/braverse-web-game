@@ -11,7 +11,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-007-equipped-browser')
 mkdirSync(out, { recursive: true })
-const candidates = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const candidates = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const references = readdirSync(resolve(root, 'data/cards')).filter(file => file.endsWith('.json')).flatMap(file => JSON.parse(readFileSync(resolve(root, 'data/cards', file), 'utf8')).cards ?? [])
 const cards = ['BS12-004', 'BS12-007', 'BS12-018', 'BS6-008', 'ST2-007'].map(number => [...candidates, ...references].find(card => card.cardNumber === number))
 const state = page => page.evaluate(() => {

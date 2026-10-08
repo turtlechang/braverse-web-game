@@ -10,8 +10,8 @@ import {getEffectSelectionCandidates} from './effects'
 import {printed,entry,extraScene as extraHelperScene,attest as helperAttest} from './bs12-final-physical-test-helpers'
 import type {OfficialCardRecord} from '../cards/types'
 import type {GameState,GameCard,ExtraDeckCard} from './types'
-import candidate from '../../data/candidates/official-festival-arena-bs12.en.json'
-const records:OfficialCardRecord[]=['data/candidates/official-festival-arena-bs12.en.json',...readdirSync('data/cards').filter(p=>p.endsWith('.json')).map(p=>'data/cards/'+p)].flatMap(p=>JSON.parse(readFileSync(p,'utf8')).cards)
+import candidate from '../../data/cards/official-festival-arena-bs12.en.json'
+const records:OfficialCardRecord[]=['data/cards/official-festival-arena-bs12.en.json',...readdirSync('data/cards').filter(p=>p.endsWith('.json')).map(p=>'data/cards/'+p)].flatMap(p=>JSON.parse(readFileSync(p,'utf8')).cards)
 const attest=(s:GameState)=>{
  const globalIds:string[]=[]
  for(const p of Object.values(s.players)){

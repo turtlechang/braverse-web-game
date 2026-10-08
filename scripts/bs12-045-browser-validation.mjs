@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-045-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const formal = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...formal].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const cases = ['five', 'four', 'six', 'zero', 'all-rested', 'non-arena', 'opponent-only', 'battle-only', 'support-five', 'support-four', 'parent-zero', 'cancel-parent', 'deselect-parent', 'draw-zero', 'skip-draw', 'change-draw', 'skip-on-play', 'short-deck', 'last-deck', 'refresh-lv10', 'attack', 'attack-red', 'attack-wrong', 'attack-few', 'attack-rested', 'attack-rested-source', 'cancel-attack']

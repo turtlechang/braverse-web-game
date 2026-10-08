@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import document from '../../data/candidates/official-festival-arena-bs12.en.json'
+import document from '../../data/cards/official-festival-arena-bs12.en.json'
 import { convertOfficialCardToGameCard, normalizeOfficialCardRecord } from './official-card-adapter'
 import { convertOfficialFlipAbility } from './official-effect-adapter'
 import type { OfficialCardRecord } from './types'

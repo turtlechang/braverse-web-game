@@ -14,7 +14,7 @@ const executablePath = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
 const baseUrl = process.env.BRAVERSE_BASE_URL ?? 'http://127.0.0.1:5173'
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-005-browser')
 mkdirSync(out, { recursive: true })
-const records = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const records = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const referenceRecords = [
   JSON.parse(readFileSync(resolve(root, 'data/cards/official-promotion-p001-p032.en.json'), 'utf8')).cards.find(card => card.cardNumber === 'P-018'),
   JSON.parse(readFileSync(resolve(root, 'data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'), 'utf8')).cards.find(card => card.cardNumber === 'BS9-032'),

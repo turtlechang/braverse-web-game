@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-040-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const formal = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...formal].filter(card=>existsSync(resolve(root,`test-results/bs12-official-art/${card.cardNumber}.webp`)))
 const cases = ['positive', 'item-hand', 'stage-hand', 'yellow-hand', 'returned-arena', 'rested-cost', 'non-arena-cost', 'non-arena-hand', 'source-rested', 'all-support-rested', 'skill-zero', 'cancel-cost', 'cancel-target', 'deselect-cost', 'back-cost', 'target-upper-bound', 'item-support-only', 'no-support', 'opponent-turn', 'outside-main', 'used', 'attack', 'attack-wrong', 'attack-few', 'attack-rested-energy', 'attack-rested-source', 'cancel-attack', 'deploy']

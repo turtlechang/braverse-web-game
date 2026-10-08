@@ -5,7 +5,7 @@ import {resolve} from 'node:path'
 import {fileURLToPath,pathToFileURL} from 'node:url'
 const root=resolve(fileURLToPath(new URL('..',import.meta.url))),require=createRequire(import.meta.url),module=await import(pathToFileURL(require.resolve('playwright',{paths:process.env.PLAYWRIGHT_NODE_MODULES?[process.env.PLAYWRIGHT_NODE_MODULES]:[root]})).href),chromium=module.chromium??module.default?.chromium
 const number=process.env.BS12_PRINT_NUMBER;assert.match(number??'',/^BS12-(106|107(?:@1)?|108(?:@1)?)$/);const base=number.split('@')[0],out=resolve(root,process.env.BS12_BROWSER_OUTPUT);assert.ok(process.env.BS12_BROWSER_OUTPUT&&!existsSync(out));mkdirSync(out,{recursive:true})
-const records=['data/candidates/official-festival-arena-bs12.en.json',...readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).map(f=>'data/cards/'+f)].flatMap(p=>JSON.parse(readFileSync(resolve(root,p),'utf8')).cards)
+const records=['data/cards/official-festival-arena-bs12.en.json',...readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).map(f=>'data/cards/'+f)].flatMap(p=>JSON.parse(readFileSync(resolve(root,p),'utf8')).cards)
 const art=records.map(record=>({record,path:['bs12-official-art','bs11-official-art'].map(dir=>resolve(root,'test-results/'+dir+'/'+record.cardNumber+'.webp')).find(existsSync)})).filter(r=>r.path),source=records.find(r=>r.cardNumber===number);assert.ok(source&&art.some(r=>r.record===source))
 const scenes={
  'BS12-106':['positive','no-hand','cookie-cost','stage-cost','trap-cost','new-cost-target','no-special','arena-item','non-arena-special','empty-trash','no-energy','wrong-energy','rested-energy','other-target'],

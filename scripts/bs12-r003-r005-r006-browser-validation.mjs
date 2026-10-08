@@ -5,7 +5,7 @@ import { chromium } from 'playwright'
 const number=process.env.BS12_BROWSER_CARD, out=resolve(process.env.BS12_BROWSER_OUTPUT??'')
 assert.ok(['BS12-036','BS12-036@1','BS12-082','BS12-109','BS12-109@1','BS12-109@2'].includes(number))
 assert.ok(process.env.BS12_BROWSER_OUTPUT); assert.equal(existsSync(out),false,'Preserve earlier results'); mkdirSync(out,{recursive:true})
-const records=[...JSON.parse(readFileSync('data/candidates/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
+const records=[...JSON.parse(readFileSync('data/cards/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
 const art=records.filter(c=>existsSync(`test-results/bs12-official-art/${c.cardNumber}.webp`))
 const traceCards=records.filter(c=>c.cardNumber.startsWith('BS12-')||['BS6-008','ST4-001','BS11-111'].includes(c.cardNumber)).map(c=>c.cardNumber)
 const nonArenaName=records.find(c=>c.cardNumber==='BS11-111').name

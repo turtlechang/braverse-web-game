@@ -20,7 +20,7 @@ const executablePath = [
 const baseUrl = process.env.BRAVERSE_BASE_URL ?? 'http://127.0.0.1:5173'
 const outputDir = resolve(root, 'test-results/bs12-attack-browser')
 mkdirSync(outputDir, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8'))
+const candidate = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8'))
 const byNumber = new Map(candidate.cards.map((record) => [record.cardNumber, record]))
 const printed = {
   'BS12-001': { cost: 3, damage: 4 },

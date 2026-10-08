@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-074-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const references = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...references].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const fixtures = ['extra', 'extra-no-event', 'extra-non-arena', 'extra-top', 'extra-hand', 'extra-support', 'extra-opponent', 'extra-old-turn', 'extra-full', 'extra-used', 'extra-opponent-turn', 'extra-outside-main', 'onplay', 'onplay-first', 'onplay-short', 'onplay-refresh-defeat', 'onplay-no-refresh-cookie', 'positive', 'green-arena', 'red-arena', 'yellow-arena', 'bottom-dj', 'level-one', 'level-three', 'non-arena', 'arena-item', 'top-only', 'empty-deck', 'short-deck', 'refresh-defeat', 'no-refresh-cookie', 'one-energy', 'two-energy', 'wrong-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'target-last-hp', 'other-last-hp', 'target-faints', 'flip', 'ordinary-flip']

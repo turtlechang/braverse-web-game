@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest'
-import candidate from '../../data/candidates/official-festival-arena-bs12.en.json'
+import candidate from '../../data/cards/official-festival-arena-bs12.en.json'
 import {createBs12AngelLightstickDemoState,createBs12SpotlightFanDemoState,createCardCheckDemoState,createCardNegativeDemoState,parseTestStateConfig,type Bs12RuledEquipScenario} from './demo'
 import {applyGameCommand} from './commands'
 import {canActivateCookieSkill} from './skills'

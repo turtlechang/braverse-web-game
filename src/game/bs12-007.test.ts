@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import candidate from '../../data/candidates/official-festival-arena-bs12.en.json'
+import candidate from '../../data/cards/official-festival-arena-bs12.en.json'
 import { convertOfficialCardToExtraDeckCard, convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { beginAttack, resolveNextDamage, resolveFlip, skipTrap } from './battle'

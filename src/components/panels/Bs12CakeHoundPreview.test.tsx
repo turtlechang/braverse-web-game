@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { expect, it } from 'vitest'
-import candidate from '../../../data/candidates/official-festival-arena-bs12.en.json'
+import candidate from '../../../data/cards/official-festival-arena-bs12.en.json'
 import type { OfficialCardRecord } from '../../cards/types'
 import { convertOfficialCardToGameCard } from '../../cards/official-card-adapter'
 import { CardPreviewPanel } from './InteractionOverlays'

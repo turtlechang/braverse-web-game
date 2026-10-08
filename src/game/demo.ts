@@ -41,7 +41,7 @@ import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-r
 import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
 import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
-import bs12CandidateDocument from '../../data/candidates/official-festival-arena-bs12.en.json'
+import bs12CandidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,

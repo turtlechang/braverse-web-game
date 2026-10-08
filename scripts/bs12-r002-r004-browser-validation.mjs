@@ -8,7 +8,7 @@ assert.ok(process.env.BS12_BROWSER_OUTPUT)
 const out=resolve(process.env.BS12_BROWSER_OUTPUT)
 assert.equal(existsSync(out),false,'Preserve every earlier Browser result')
 mkdirSync(out,{recursive:true})
-const records=[...JSON.parse(readFileSync('data/candidates/official-festival-arena-bs12.en.json')).cards,
+const records=[...JSON.parse(readFileSync('data/cards/official-festival-arena-bs12.en.json')).cards,
  ...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
 const art=records.filter(c=>existsSync(`test-results/bs12-official-art/${c.cardNumber}.webp`))
 const is035=number.startsWith('BS12-035')

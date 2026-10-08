@@ -2,7 +2,7 @@ import {readdirSync,readFileSync} from 'node:fs'
 import {convertOfficialCardToGameCard} from '../cards/official-card-adapter'
 import type {OfficialCardRecord} from '../cards/types'
 import type {GameState,GameCard} from './types'
-const records:OfficialCardRecord[]=['data/candidates/official-festival-arena-bs12.en.json',...readdirSync('data/cards').filter(p=>p.endsWith('.json')).map(p=>'data/cards/'+p)].flatMap(p=>JSON.parse(readFileSync(p,'utf8')).cards)
+const records:OfficialCardRecord[]=['data/cards/official-festival-arena-bs12.en.json',...readdirSync('data/cards').filter(p=>p.endsWith('.json')).map(p=>'data/cards/'+p)].flatMap(p=>JSON.parse(readFileSync(p,'utf8')).cards)
 export const printed=(number:string,id:string):GameCard=>{
  const record=records.find(r=>r.cardNumber===number);if(!record)throw Error('Missing physical '+number)
  const result=convertOfficialCardToGameCard(record,id);if(result.status!=='converted')throw Error('Unconverted physical '+number)

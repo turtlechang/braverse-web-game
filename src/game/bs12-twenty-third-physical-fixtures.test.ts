@@ -57,11 +57,11 @@ for(const [number,factory,positive,negative]of[
  ['BS12-105',demos.createBs12PerfectStageDemoState,'positive','split'],
 ]as const)for(const isNegative of[false,true]){
  const route=isNegative?'card-negative:':'card:',scenario=isNegative?negative:positive
- it(route+number+' routes to actual physical effect scene and preserves candidate isolation',()=>{
+ it(route+number+' routes to actual physical effect scene and uses the formal pool',()=>{
   expect(demos.parseTestStateConfig('?test-state='+route+number,'localhost')).toEqual({kind:number.toLowerCase(),scenario})
   expect(demos.parseTestStateConfig('?test-state='+route+number,'example.com')).toBeNull()
   const s=isNegative?demos.createCardNegativeDemoState(number):demos.createCardCheckDemoState(number)
   expect(s).toEqual((factory as (value:typeof scenario)=>typeof s)(scenario));assertBs12PhysicalFixture(s)
-  expect(getCardPoolEntry(number)).toBeUndefined()
+  expect(getCardPoolEntry(number)).toMatchObject({ cardNumber: number })
  })
 }

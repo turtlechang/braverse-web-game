@@ -1,7 +1,7 @@
-# BS12 Festival Arena 卡牌盤點（候選資料）
+# BS12 Festival Arena 卡牌盤點（正式卡池）
 
 來源：[官方英文卡表](https://cookierunbraverse.com/data/json/cardList_en.json)。抓取時間：2026-09-30T06:26:54.923Z。
-由 `npm run cards:analyze:bs12-candidate` 產生；候選狀態：`inventory`；原始文字與卡圖 URL 保留於 `data/candidates/official-festival-arena-bs12.en.json`。下表逐筆列出技能、攻擊與 FLIP 文字（含印刷變體）；實作轉接狀態見 [BS12 轉接覆蓋盤點](bs12-effect-coverage.md)。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
+由 `npm run cards:analyze:bs12-candidate` 產生；官方資料已位於正式卡池；原始文字與卡圖 URL 保留於 `data/cards/official-festival-arena-bs12.en.json`。下表逐筆列出技能、攻擊與 FLIP 文字（含印刷變體）；實作轉接狀態見 [BS12 轉接覆蓋盤點](bs12-effect-coverage.md)。此靜態盤點不取代逐卡卡圖、Browser、正式牌組或 online 驗收。
 
 ## 來源與數量
 
@@ -9,7 +9,7 @@
 | --- | ---: |
 | 官方資料總數 | 2274 |
 | BS12 匹配記錄 | 154 |
-| 匯入候選記錄 | 154 |
+| 正式卡池記錄 | 154 |
 | 不同基礎卡號 | 112 |
 | 基礎記錄 | 112 |
 | 變體記錄 | 42 |
@@ -51,7 +51,7 @@
 | --- | ---: |
 | verified | 154 |
 
-## 全部候選記錄
+## 全部正式來源記錄
 
 | 卡號 | 基礎卡號 | 卡名 | 類型 | 顏色 | 技能 | 攻擊 | FLIP | 官方卡圖 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -212,6 +212,6 @@
 
 ## 資料與驗收界線
 
-- `inventory` 只代表官方資料已隔離保存與結構驗證，不代表 runtime、卡圖語意或正式卡池已完成。
+- 正式卡池位置只證明資料已 promote，不代表每張卡的正式牌組或 online 流程都已驗收。
 - `needs-review`／`blocked` 的卡號與缺口必須在 adapter、規則與逐卡 Browser A/B 前保留，不能用猜測文字或數值補齊。
 - 所有變體仍需逐筆核對卡圖；基本卡與變體不能僅因卡號相同就共用語意案例。

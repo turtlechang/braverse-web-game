@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import candidate from '../../data/candidates/official-festival-arena-bs12.en.json'
+import candidate from '../../data/cards/official-festival-arena-bs12.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { createBs12DjDemoState, createBs12GuitarStringDemoState, parseTestStateConfig } from './demo'

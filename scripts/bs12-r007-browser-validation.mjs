@@ -4,7 +4,7 @@ import {resolve} from 'node:path'
 import {chromium} from 'playwright'
 const number=process.env.BS12_BROWSER_CARD,out=resolve(process.env.BS12_BROWSER_OUTPUT??'')
 assert.ok(['BS12-062','BS12-077'].includes(number));assert.ok(process.env.BS12_BROWSER_OUTPUT);assert.equal(existsSync(out),false);mkdirSync(out,{recursive:true})
-const records=[...JSON.parse(readFileSync('data/candidates/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
+const records=[...JSON.parse(readFileSync('data/cards/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
 const art=records.filter(c=>existsSync(`test-results/bs12-official-art/${c.cardNumber}.webp`)),sourceRecord=records.find(c=>c.cardNumber===number)
 const short=number.slice(-3),prefix=number.toLowerCase(),blue=short==='062',sourceId=prefix+'-source',hostId=prefix+'-host'
 const cases=['positive','rested-source','rested-host','wrong-host','no-energy','wrong-energy','rested-energy','opponent-turn','outside-main','hand-five','hand-six','draw-zero','draw-one','draw-two','cancel-payment','cancel-target','deselect','generic-positive','generic-negative']

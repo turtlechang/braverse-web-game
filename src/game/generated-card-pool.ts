@@ -11,16 +11,17 @@ import official_arena_of_glory_bs7_en_json_5 from '../../data/cards/official-are
 import official_brave_beginning_bs1_en_json_6 from '../../data/cards/official-brave-beginning-bs1.en.json'
 import official_brave_beginning_bs2_en_json_7 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import official_dark_enchantress_war_bs11_en_json_8 from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
-import official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_9 from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
-import official_p_0xx_remaining_en_json_10 from '../../data/cards/official-p-0xx-remaining.en.json'
-import official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_11 from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
-import official_promotion_p001_p032_remaining_en_json_12 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
-import official_promotion_p001_p032_en_json_13 from '../../data/cards/official-promotion-p001-p032.en.json'
-import official_sample_en_json_14 from '../../data/cards/official-sample.en.json'
-import official_starter_deck_blue_en_json_15 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_16 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_17 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_18 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_festival_arena_bs12_en_json_9 from '../../data/cards/official-festival-arena-bs12.en.json'
+import official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_10 from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import official_p_0xx_remaining_en_json_11 from '../../data/cards/official-p-0xx-remaining.en.json'
+import official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_12 from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
+import official_promotion_p001_p032_remaining_en_json_13 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import official_promotion_p001_p032_en_json_14 from '../../data/cards/official-promotion-p001-p032.en.json'
+import official_sample_en_json_15 from '../../data/cards/official-sample.en.json'
+import official_starter_deck_blue_en_json_16 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_17 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_18 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_19 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -32,14 +33,15 @@ export const officialCardDatasets = [
   official_brave_beginning_bs1_en_json_6,
   official_brave_beginning_bs2_en_json_7,
   official_dark_enchantress_war_bs11_en_json_8,
-  official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_9,
-  official_p_0xx_remaining_en_json_10,
-  official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_11,
-  official_promotion_p001_p032_remaining_en_json_12,
-  official_promotion_p001_p032_en_json_13,
-  official_sample_en_json_14,
-  official_starter_deck_blue_en_json_15,
-  official_starter_deck_green_en_json_16,
-  official_starter_deck_purple_en_json_17,
-  official_starter_deck_yellow_en_json_18,
+  official_festival_arena_bs12_en_json_9,
+  official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_10,
+  official_p_0xx_remaining_en_json_11,
+  official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_12,
+  official_promotion_p001_p032_remaining_en_json_13,
+  official_promotion_p001_p032_en_json_14,
+  official_sample_en_json_15,
+  official_starter_deck_blue_en_json_16,
+  official_starter_deck_green_en_json_17,
+  official_starter_deck_purple_en_json_18,
+  official_starter_deck_yellow_en_json_19,
 ] as const

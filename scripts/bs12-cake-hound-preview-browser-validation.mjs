@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-cake-hound-preview-browser')
 mkdirSync(out, { recursive: true })
-const cards = JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards
+const cards = JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards
 const art = cards.filter(card => ['BS12-095', 'BS12-096', 'BS12-097', 'BS12-098', 'BS12-001', 'BS12-003', 'BS12-011', 'BS12-061', 'BS12-062'].includes(card.cardNumber))
 const browser = await chromium.launch({ headless: true, executablePath: ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'].find(existsSync) })
 const rows = []

@@ -5,7 +5,7 @@ import {chromium} from 'playwright'
 
 const out=resolve(process.env.BS12_BROWSER_OUTPUT??'')
 assert.ok(process.env.BS12_BROWSER_OUTPUT);assert.equal(existsSync(out),false);mkdirSync(out,{recursive:true})
-const records=[...JSON.parse(readFileSync('data/candidates/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
+const records=[...JSON.parse(readFileSync('data/cards/official-festival-arena-bs12.en.json')).cards,...readdirSync('data/cards').filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync('data/cards/'+f)).cards??[])]
 const art=records.filter(c=>existsSync(`test-results/bs12-official-art/${c.cardNumber}.webp`))
 const traceCards=[...new Set(records.filter(c=>c.cardNumber.startsWith('BS12-')||['BS8-119','BS11-087','BS8-104','BS6-080','BS6-008','BS1-037','BS7-102','ST4-001'].includes(c.cardNumber)).map(c=>c.cardNumber))]
 const cases=['r008-return','r008-zero','r009-bottom','r009-bottom-alt','r009-bottom-zero','r009-bottom-cancel','r009-all','r009-all-cancel','r009-cost','r009-cost-skip','r009-cost-cancel']

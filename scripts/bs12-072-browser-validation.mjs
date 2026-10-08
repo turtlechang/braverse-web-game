@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-072-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const references = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...references].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const fixtures = ['positive', 'green-arena', 'red-arena', 'yellow-arena', 'level-one', 'level-three', 'non-arena', 'rested-target', 'equipped-target', 'same-name', 'no-target', 'hand-only', 'support-only', 'stage-only', 'no-energy', 'one-energy', 'wrong-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'once-used', 'short-deck', 'awakened-target']

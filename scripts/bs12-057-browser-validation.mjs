@@ -9,7 +9,7 @@ const module = await import(pathToFileURL(require.resolve('playwright', { paths:
 const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, process.env.BS12_BROWSER_OUTPUT ?? 'test-results/bs12-057-browser')
 mkdirSync(out, { recursive: true })
-const candidate = JSON.parse(readFileSync(resolve(root,'data/candidates/official-festival-arena-bs12.en.json'),'utf8')).cards
+const candidate = JSON.parse(readFileSync(resolve(root,'data/cards/official-festival-arena-bs12.en.json'),'utf8')).cards
 const formal = readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).flatMap(f=>JSON.parse(readFileSync(resolve(root,'data/cards',f),'utf8')).cards??[])
 const cards = [...candidate,...formal].filter(card=>existsSync(resolve(root,'test-results/bs12-official-art/'+card.cardNumber+'.webp')))
 const fixtures = ['positive', 'cost-item', 'cost-stage', 'no-cost', 'cost-non-arena', 'cost-wrong-color', 'cost-split', 'opponent-cost-only', 'rested-target', 'only-high', 'no-target', 'target-only', 'target-equipped', 'movement-blocked', 'full-battle', 'opponent-turn', 'outside-main', 'refresh', 'refresh-lv10', 'isolated-opponent-on-play', 'support-entry', 'rested-support-entry', 'attack', 'attack-all-blue', 'attack-wrong', 'attack-few', 'attack-rested-energy', 'attack-source-rested']

@@ -10,7 +10,7 @@ const chromium = module.chromium ?? module.default?.chromium
 const out = resolve(root, 'test-results/bs12-033-on-play-browser')
 mkdirSync(out, { recursive: true })
 const cards = ['official-arena-of-glory-bs7.en.json', 'official-starter-deck-blue.en.json'].flatMap(file => JSON.parse(readFileSync(resolve(root, 'data/cards', file), 'utf8')).cards)
-cards.push(...JSON.parse(readFileSync(resolve(root, 'data/candidates/official-festival-arena-bs12.en.json'), 'utf8')).cards)
+cards.push(...JSON.parse(readFileSync(resolve(root, 'data/cards/official-festival-arena-bs12.en.json'), 'utf8')).cards)
 const cases = ['positive', 'whole-skip-cost', 'whole-skip-target', 'deselect', 'back', 'damage-zero', 'draw-zero', 'rested', 'equipped', 'non-arena', 'refresh', 'break-nine', 'other-target', 'opponent-turn']
 const fixture = s => ({ rested: 'on-play-rested', equipped: 'on-play-equipped', 'non-arena': 'on-play-non-arena', refresh: 'on-play-short-deck', 'break-nine': 'on-play-break-nine', 'opponent-turn': 'on-play-opponent-turn' }[s] ?? 'on-play')
 const state = page => page.evaluate(() => {

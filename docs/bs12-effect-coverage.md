@@ -1,6 +1,6 @@
-# BS12 轉接覆蓋盤點（候選資料）
+# BS12 轉接覆蓋盤點（正式卡池）
 
-由 `npm run cards:analyze:bs12-candidate` 產生。逐筆卡面技能、攻擊與 FLIP 原文（154 筆記錄含 42 個變體）見 [BS12 卡牌盤點](bs12-card-inventory.md)；下表列出 112 張基礎卡的主效果、額外能力與攻擊 Then 轉接狀態。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；候選維持 `inventory`，不得由本報告推導 promote。
+由 `npm run cards:analyze:bs12-candidate` 產生。逐筆卡面技能、攻擊與 FLIP 原文（154 筆記錄含 42 個變體）見 [BS12 卡牌盤點](bs12-card-inventory.md)；下表列出 112 張基礎卡的主效果、額外能力與攻擊 Then 轉接狀態。這是靜態 runtime 轉接盤點，不取代逐卡卡圖、Browser、正式牌組或 online 驗收；正式卡池中的 BS12 記錄仍須分層回報其瀏覽器、牌組與 online 證據。
 
 ## 摘要
 
@@ -168,6 +168,6 @@
 
 ## 後續門檻
 
-1. 先逐筆查看官方卡圖，確認卡號、變體、費用、代價、目標、時機與 Then，再補 exact adapter。
-2. 每個新增效果補規則／adapter 回歸測試；必要時保留合法與不合法操作路徑。
-3. 完成 strict contract、逐卡 Browser A/B、正式牌組與 online 證據，且經明確授權後，才可考慮 promote.
+1. 官方來源更新時先重新匯入候選區，再完成卡圖、契約、規則與逐卡 Browser 驗證。
+2. 轉接變更同步補規則／adapter 回歸測試及必要的合法／不合法操作路徑。
+3. 正式牌組與 online 驗收仍是獨立證據層。

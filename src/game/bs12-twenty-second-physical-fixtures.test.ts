@@ -183,12 +183,12 @@ for(const row of rows)for(const negative of [false,true]){
   expect(demos.parseTestStateConfig('?test-state='+route+row.number,'localhost')).toEqual({kind:row.number.toLowerCase(),scenario})
   expect(demos.parseTestStateConfig('?test-state='+route+row.number,'example.com')).toBeNull()
  })
- it(route+row.number+' equals real physical factory and remains candidate-isolated',()=>{
+ it(route+row.number+' equals real physical factory and remains registered in the formal pool',()=>{
   const s=negative?demos.createCardNegativeDemoState(row.number):demos.createCardCheckDemoState(row.number)
   assertBs12PhysicalFixture(s)
   // The row's expected scenario is narrowed by its printed-card factory above.
   const expected=(row.factory as (fixtureScenario:typeof scenario)=>typeof s)(scenario)
   expect(s).toEqual(expected)
-  expect(getCardPoolEntry(row.number)).toBeUndefined()
+  expect(getCardPoolEntry(row.number)).toMatchObject({ cardNumber: row.number })
  })
 }

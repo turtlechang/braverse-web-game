@@ -8,7 +8,7 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url))), require=create
 const module=await import(pathToFileURL(require.resolve('playwright',{paths:process.env.PLAYWRIGHT_NODE_MODULES?[process.env.PLAYWRIGHT_NODE_MODULES]:[root]})).href)
 const chromium=module.chromium??module.default?.chromium, out=resolve(root,process.env.BS12_BROWSER_OUTPUT??'test-results/bs12-103-browser')
 mkdirSync(out,{recursive:true})
-const records=['data/candidates/official-festival-arena-bs12.en.json',...readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).map(f=>`data/cards/${f}`)]
+const records=['data/cards/official-festival-arena-bs12.en.json',...readdirSync(resolve(root,'data/cards')).filter(f=>f.endsWith('.json')).map(f=>`data/cards/${f}`)]
   .flatMap(path=>JSON.parse(readFileSync(resolve(root,path),'utf8')).cards??[])
 const art=records.map(record=>({record,path:['bs12-official-art','bs11-official-art'].map(dir=>resolve(root,'test-results/'+dir+'/'+record.cardNumber+'.webp')).find(existsSync)})).filter(entry=>entry.path)
 for(const entry of art)assert.ok(entry.record.imageUrl&&existsSync(entry.path))

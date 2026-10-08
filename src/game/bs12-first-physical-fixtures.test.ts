@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import candidateDocument from '../../data/candidates/official-festival-arena-bs12.en.json'
+import candidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
 import bs6Document from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import blueDocument from '../../data/cards/official-starter-deck-blue.en.json'
 import { convertOfficialCardToExtraDeckCard, convertOfficialCardToGameCard } from '../cards/official-card-adapter'
