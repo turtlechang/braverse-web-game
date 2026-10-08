@@ -44,6 +44,10 @@ export interface BattleUiMatchLike {
     value: string[] | ((current: string[]) => string[]),
   ) => void
   selectedTrapTrashBattleCookieIds: string[]
+  selectedTrapPositionCostIds: string[]
+  setSelectedTrapPositionCostIds: (value: string[] | ((current: string[]) => string[])) => void
+  selectedTrapPositionCost: import('../game').AbilityCost['battleCookiePosition']
+  selectedTrapPositionCostCandidates: CookieInBattle[]
   setSelectedTrapTrashBattleCookieIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
@@ -121,6 +125,8 @@ export interface BattleUiMatchLike {
   setSelectedBlockerId: (value: string | null) => void
   playerBlockerCandidates: CookieInBattle[]
   selectedBlockerPaymentIds: string[]
+  selectedBlockerDiscardIds: string[]
+  setSelectedBlockerDiscardIds: (updater: string[] | ((current: string[]) => string[])) => void
   setSelectedBlockerPaymentIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
@@ -152,6 +158,11 @@ export interface BattleUiMatchLike {
   attackResponseDiscardCandidates: GameCard[]
   attackResponseDiscardAmount: number
   toggleAttackResponseDiscard: (instanceId: string) => void
+  selectedAttackResponseSupportToTrashIds: string[]
+  setSelectedAttackResponseSupportToTrashIds: (value: string[] | ((current: string[]) => string[])) => void
+  attackResponseSupportToTrashCandidates: GameCard[]
+  attackResponseSupportToTrashAmount: number
+  toggleAttackResponseSupportToTrash: (instanceId: string) => void
   // Flip
   selectedFlipDiscardIds: string[]
   setSelectedFlipDiscardIds: (
@@ -188,6 +199,7 @@ export interface BattleUiMatchLike {
   faintPaymentValid: boolean
   toggleFaintPayment: (instanceId: string) => void
   faintCostHandAmount: number
+  faintCostDeckToTrashAmount: number
   faintCostHandCandidates: GameCard[]
   toggleFaintCostHand: (instanceId: string) => void
   faintCostSupportAmount: number

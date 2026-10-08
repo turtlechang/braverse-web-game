@@ -120,6 +120,7 @@ export const materializeExtraDeckCookie = (
       card.extraDeckPlayMode === 'awaken' || card.type === 'awakened'
         ? 'awakened'
         : 'extra',
+    extraDeckCard: card,
   }
 }
 

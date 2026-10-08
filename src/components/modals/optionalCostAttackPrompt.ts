@@ -1,5 +1,7 @@
 import {
   getBreakCount,
+  getBattleCookiePositionCostCandidates,
+  getCookieToBreakCostCandidates,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEnergyCostTotal,
@@ -9,13 +11,17 @@ import {
   getHpToTrashCostCandidates,
   getSupportEffectCandidates,
   getTrashToDeckCostCandidates,
+  getTrashToDeckBottomCostCandidates,
+  getExtraDeckTrashBattleCookieCostCandidates,
   getRefreshCandidates,
   isEffectConditionMet,
   isSupportToHandCostCandidate,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
+  isFixedAttackTargetDamage,
   selectEnergyPayment,
   type CardEffect,
+  type AbilityCost,
   type EnergyCost,
   type ExtraDeckCard,
   type GameCard,
@@ -25,6 +31,8 @@ import {
 import { energyColorLabel } from '../gameUiLabels'
 
 export interface OptionalCostAttackPromptData {
+  cookieBreakCost: number
+  cookieBreakCandidates: { card: GameCard; instanceId: string; zone: 'hand' | 'battle' }[]
   sourceCard?: GameCard | ExtraDeckCard
   /** 來源餅乾可直接提供的能量；這是付款流程中的固定候選，不是支援區卡。 */
   sourceEnergy?: EnergyCost
@@ -34,7 +42,12 @@ export interface OptionalCostAttackPromptData {
   resolution?: 'attack' | 'ability'
   /** 僅供明確規定不能略過的代價；一般 Then 代價維持可選。 */
   mandatory: boolean
+  extraDeckEntry?: boolean
+  conditionalSourcePlay?: boolean
+  positionCost?: AbilityCost['battleCookiePosition']
+  positionCostCandidates: { card: GameCard; instanceId: string }[]
   discardHandCost: number
+  handCostDestination?: AbilityCost['handCostDestination']
   discardHandCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCost: number
   supportToTrashCost: number
@@ -44,12 +57,13 @@ export interface OptionalCostAttackPromptData {
   hpToHandCost: number
   hpToHandCandidates: { card: GameCard; instanceId: string }[]
   trashToDeckCost: number
+  trashToDeckDestination?: 'bottom'
   trashToDeckCandidates: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCandidates: { card: GameCard; instanceId: string }[]
-  targetCandidates: { card: GameCard; instanceId: string }[]
+  targetCandidates: { card: GameCard; instanceId: string; requiresDiscardId?: string }[]
   needsTarget: boolean
   targetMin: number
   targetMax: number
@@ -118,6 +132,10 @@ const describeCost = (
   selfToDeckBottomCost: boolean,
   trashToDeckCost: number,
   deckToTrashCost: number,
+  positionCost?: AbilityCost['battleCookiePosition'],
+  discardHandKeyword?: AbilityCost['discardHandKeyword'],
+  supportToHandKeyword?: AbilityCost['supportToHandKeyword'],
+  discardHandType?: AbilityCost['discardHandType'],
 ): string => {
   const parts: string[] = []
 
@@ -140,9 +158,13 @@ const describeCost = (
   if (energyParts.length > 0) {
     parts.push(`支付支援區 ${energyParts.join('、')}`)
   }
-  if (discardHandCost > 0) parts.push(`棄置 ${discardHandCost} 張手牌`)
+  if (discardHandCost > 0) {
+    const typeName = discardHandType ? { cookie: '餅乾', item: '道具', trap: '陷阱', stage: '場景' }[discardHandType] : ''
+    parts.push(`棄置 ${discardHandCost} 張${discardHandKeyword === 'arena' ? '【Arena】' : discardHandKeyword === 'ancient' ? '【Ancient】' : ''}${typeName}手牌`)
+  }
   if (supportToHandCost > 0) {
-    parts.push(`將 ${supportToHandCost} 張支援區卡返回手牌`)
+    const keyword = supportToHandKeyword === 'arena' ? '【Arena】' : supportToHandKeyword ? `【${supportToHandKeyword}】` : ''
+    parts.push(`將 ${supportToHandCost} 張支援區${keyword}卡返回手牌`)
   }
   if (supportToTrashCost > 0) {
     parts.push(`將 ${supportToTrashCost} 張支援區卡送入棄牌區`)
@@ -158,6 +180,9 @@ const describeCost = (
   if (deckToTrashCost > 0) {
     parts.push(`將牌庫頂 ${deckToTrashCost} 張卡放入棄牌區`)
   }
+  if (positionCost) {
+    parts.push(`將 ${positionCost.count} 張${positionCost.keyword === 'arena' ? ' Arena ' : ''}餅乾設為${positionCost.position === 'rested' ? '橫置' : '活躍'}`)
+  }
 
   return parts.length > 0 ? parts.join('、') : '無'
 }
@@ -165,11 +190,9 @@ const describeCost = (
 /**
  * 攻擊後代價的目標要依「支付代價後」的區域判定。
  *
- * BS6-096 會先把來源餅乾放入棄牌區，再從棄牌區登場 LV.1 紫色餅乾。
- * 當己方戰鬥區已經有兩張餅乾時，若直接用目前 state 找候選，
- * `getTrashCookieCandidates` 會因戰鬥區已滿而回傳空陣列，讓支付按鈕被
- * UI 錯誤地停用。規則引擎在實際結算時本來就先支付來源代價再驗證目標，
- * 這裡只建立同樣的唯讀投影供提示框使用，不會改動正式 GameState。
+ * 休息區的來源餅乾是公開資訊，移入休息區的投影可用於選擇該公開目標。
+ * 棄牌來源代價則可能公開隱藏 HP，必須由規則層實際支付後另開選牌，
+ * 不得在唯讀投影中把 HP 牌面提前顯示。
  */
 const getTargetSelectionState = (
   game: GameState,
@@ -181,11 +204,9 @@ const getTargetSelectionState = (
     selfToBreakArea?: boolean
   },
 ): GameState => {
-  const projectsTrashToBattle =
-    cost.selfToTrash === true && targetedEffect?.kind === 'trash-to-battle'
   const projectsBreakToBattle =
     cost.selfToBreakArea === true && targetedEffect?.kind === 'break-to-battle'
-  if (!projectsTrashToBattle && !projectsBreakToBattle) return game
+  if (!projectsBreakToBattle) return game
 
   const player = game.players[viewerPlayerId]
   const source = player.battleArea.find(
@@ -193,11 +214,6 @@ const getTargetSelectionState = (
   )
   if (!source) return game
 
-  const sourceCards = [
-    source.card,
-    ...source.hpCards,
-    ...(source.equippedCards ?? []),
-  ]
   return {
     ...game,
     players: {
@@ -210,9 +226,6 @@ const getTargetSelectionState = (
         ...(projectsBreakToBattle
           ? { breakArea: [...player.breakArea, source.card] }
           : {}),
-        discardPile: projectsTrashToBattle
-          ? [...player.discardPile, ...sourceCards]
-          : player.discardPile,
       },
     },
   }
@@ -225,19 +238,29 @@ export function getOptionalCostAttackPrompt(
   const pending = game.pendingOptionalCostAttack
   if (!pending || pending.playerId !== viewerPlayerId) return null
   const isAbilityResolution = pending.resolution === 'ability'
+  // EXTRA battle payment uses the existing targetIds selection channel; these
+  // are cost Cookies, and the entry resolver validates them before deployment.
+  const battleTrashCost = pending.extraDeckPlayInstanceId ? pending.cost.trashBattleCookie : undefined
 
-  // A source-only battle-to-break effect is an automatic cost step (the
-  // attacking Cookie itself), not the card the player is asked to choose.
-  // Skip it so chained effects such as BS4-029 expose the following
-  // break-to-battle candidate in the payment flow.
+  // Printed source-only movement uses the attacking Cookie automatically.
+  // Keep these recipients out of the player choice, while exposing any
+  // following selectable effect (such as BS4-029 break-to-battle).
   const targetedEffect = isAbilityResolution
     ? undefined
     : pending.effects.find(
         (effect) =>
           requiresEffectCardSelection(effect) &&
-          !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
+          !isFixedAttackTargetDamage(effect) &&
+          !(effect.kind === 'battle-to-break' && effect.target.sourceOnly) &&
+          !(effect.kind === 'field-to-deck-bottom' && !effect.hpOnly && effect.target.sourceOnly),
       )
-  const needsTarget = Boolean(targetedEffect)
+  // A local payment step must never reveal hidden HP. Commit the source cost
+  // first, then let pendingAbilityEffect select from the actual public Trash.
+  const selectAfterSourcePayment = (
+    pending.cost.selfToTrash === true && (targetedEffect?.kind === 'trash-to-hand' || targetedEffect?.kind === 'trash-to-battle')
+  ) || (Boolean(pending.cost.cookieToBreakArea) && targetedEffect?.kind === 'break-to-battle' &&
+    targetedEffect.excludeBreakPaymentCardNumber === true)
+  const needsTarget = Boolean(battleTrashCost || (targetedEffect && !selectAfterSourcePayment))
   const targetSelectionState = getTargetSelectionState(
     game,
     viewerPlayerId,
@@ -245,8 +268,9 @@ export function getOptionalCostAttackPrompt(
     targetedEffect,
     pending.cost,
   )
-  const targetCandidates = (
-    targetedEffect
+  const targetCandidates: OptionalCostAttackPromptData['targetCandidates'] = (
+    battleTrashCost ? getExtraDeckTrashBattleCookieCostCandidates(pending.cost, game.players[viewerPlayerId].battleArea, pending.sourceInstanceId).map(cookie => cookie.card)
+    : targetedEffect && !selectAfterSourcePayment
       ? getEffectSelectionCandidates(
           targetSelectionState,
           {
@@ -260,17 +284,19 @@ export function getOptionalCostAttackPrompt(
   const selectionLimits = targetedEffect
     ? getEffectSelectionLimits(targetedEffect)
     : null
-  const targetMin = selectionLimits?.min ?? 0
-  const targetMax = selectionLimits?.max ?? 1
+  const targetMin = battleTrashCost?.count ?? selectionLimits?.min ?? 0
+  const targetMax = battleTrashCost?.count ?? selectionLimits?.max ?? 1
   const targetSelector =
     targetedEffect && 'target' in targetedEffect ? targetedEffect.target : undefined
   // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，
   // 避免把「對手的支援區卡」顯示成「對手餅乾」。
   const targetLabel =
-    targetedEffect?.kind === 'hand-to-support'
+    battleTrashCost ? '己方戰鬥區代價餅乾' : targetedEffect?.kind === 'hand-to-support'
       ? `自己的手牌中的${
           energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
         }卡牌`
+      : targetedEffect?.kind === 'set-active'
+      ? '己方支援區的卡'
       : targetedEffect?.kind === 'rest-support'
       ? targetedEffect.side === 'self'
         ? '己方支援區的卡'
@@ -279,7 +305,9 @@ export function getOptionalCostAttackPrompt(
         ? '對手餅乾'
         : targetedEffect?.kind === 'break-to-battle'
           ? '己方休息區餅乾'
-          : targetedEffect?.kind === 'trash-to-battle'
+          : targetedEffect?.kind === 'trash-to-hand'
+          ? targetedEffect.cookieOnly ? '己方棄牌區餅乾' : '己方棄牌區卡牌'
+        : targetedEffect?.kind === 'trash-to-battle'
             ? '己方棄牌區餅乾'
             : targetedEffect?.kind === 'trash-to-deck'
               ? '棄牌區卡牌'
@@ -288,21 +316,47 @@ export function getOptionalCostAttackPrompt(
           : '對手餅乾'
 
   const targetInstruction =
-    targetedEffect?.kind === 'hand-to-support'
+    battleTrashCost ? `EXTRA 登場代價：選擇 ${targetMax} 張己方${energyColorLabel[battleTrashCost.energyColor ?? ''] ?? ''}${battleTrashCost.maxLevel === undefined ? '' : ` LV.${battleTrashCost.maxLevel} 以下`}戰鬥區餅乾，與 HP／裝備放入棄牌區`
+    : targetedEffect?.kind === 'hand-to-support'
       ? `從自己的手牌選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張${
           energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
         }卡牌作為目標`
-      : undefined
+      : targetedEffect?.kind === 'set-active'
+        ? `從自己的支援區選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張卡牌，設為活躍`
+        : undefined
 
   const costEnergy = pending.cost.energy ?? ({} as EnergyCost)
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
   const energyCostTotal = getEnergyCostTotal(energyCost)
   const discardHandCost = pending.cost.discardHand ?? 0
+  const positionCost = pending.cost.battleCookiePosition
+  const cookieBreakCost = pending.cost.cookieToBreakArea?.count ?? 0
+  const cookieBreakCandidates = getCookieToBreakCostCandidates(pending.cost, game.players[viewerPlayerId], pending.sourceInstanceId)
+  const positionCostCandidates = getBattleCookiePositionCostCandidates(
+    pending.cost, game.players[viewerPlayerId].battleArea, pending.sourceInstanceId,
+  ).map(cookie => ({ card: cookie.card, instanceId: cookie.card.instanceId }))
   const discardHandCandidates = getDiscardHandCostCandidates(
     pending.cost,
     game.players[viewerPlayerId].hand,
     pending.sourceInstanceId,
   ).map((card) => ({ card, instanceId: card.instanceId }))
+  // A selected exact-one hand payment can itself become a legal recovery.
+  // Derive this option through the authoritative candidate helper using a
+  // readonly payment projection; the printed card is never modified.
+  if (targetedEffect?.kind === 'trash-to-hand' && discardHandCost === 1 && pending.cost.handCostDestination === undefined) {
+    const player = game.players[viewerPlayerId]
+    for (const entry of discardHandCandidates) {
+      const projected: GameState = { ...game, players: { ...game.players, [viewerPlayerId]: {
+        ...player,
+        hand: player.hand.filter(card => card.instanceId !== entry.instanceId),
+        discardPile: [...player.discardPile, entry.card],
+      } } }
+      const recovered = getEffectSelectionCandidates(projected, {
+        sourcePlayerId: viewerPlayerId, sourceInstanceId: pending.sourceInstanceId,
+      }, targetedEffect).find(card => card.instanceId === entry.instanceId)
+      if (recovered) targetCandidates.push({ card: recovered, instanceId: recovered.instanceId, requiresDiscardId: entry.instanceId })
+    }
+  }
   const supportToHandCost = pending.cost.supportToHand ?? 0
   const supportToTrashCost = pending.cost.supportToTrash ?? 0
   const supportToTrashCandidates = supportToTrashCost === 0
@@ -334,9 +388,9 @@ export function getOptionalCostAttackPrompt(
         pending.sourceInstanceId,
       ).map((cookie) => ({ card: cookie.card, instanceId: cookie.card.instanceId }))
     : []
-  const trashToDeckCost = pending.cost.trashToDeck?.count ?? 0
+  const trashToDeckCost = pending.cost.trashToDeckBottom?.count ?? pending.cost.trashToDeck?.count ?? 0
   const trashToDeckCandidates = trashToDeckCost
-    ? getTrashToDeckCostCandidates(
+    ? (pending.cost.trashToDeckBottom ? getTrashToDeckBottomCostCandidates : getTrashToDeckCostCandidates)(
         pending.cost,
         game.players[viewerPlayerId].discardPile,
       ).map((card) => ({ card, instanceId: card.instanceId }))
@@ -358,7 +412,14 @@ export function getOptionalCostAttackPrompt(
     game.players[viewerPlayerId].deck.length >= deckToTrashCost ||
     getRefreshCandidates(game, viewerPlayerId).length > 0
   const paymentUnavailableWarning =
-    !deckToTrashAvailable
+    cookieBreakCandidates.length < cookieBreakCost
+      ? '目前沒有足夠的合法餅乾可放入休息區作為代價，請選擇「略過」。'
+      :
+    positionCost && positionCostCandidates.length < positionCost.count
+      ? '目前沒有足夠的餅乾可以支付狀態代價，請選擇「略過」。'
+      : trashToDeckCandidates.length < trashToDeckCost
+      ? `目前棄牌區沒有足夠的合法卡牌可支付代價，${pending.mandatory ? '此效果必須支付。' : '請選擇「略過」。'}`
+      : !deckToTrashAvailable
       ? `目前牌庫不足以支付磨牌代價，且沒有可用的 Refresh，無法執行${pending.resolution === 'ability' ? '技能 Then 效果' : '攻擊後效果'}，${pending.mandatory ? '此效果必須支付。' : '請選擇「略過」。'}`
       : energyCostTotal > 0 &&
         selectEnergyPayment(
@@ -374,6 +435,10 @@ export function getOptionalCostAttackPrompt(
     (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
   )?.card ?? game.players[viewerPlayerId].extraDeck?.find(
     (card) => card.instanceId === pending.sourceInstanceId,
+  ) ?? game.players[viewerPlayerId].discardPile.find(
+    (card) => card.instanceId === pending.sourceInstanceId,
+  ) ?? game.players[viewerPlayerId].breakArea.find(
+    (card) => card.instanceId === pending.sourceInstanceId,
   )
   const supportToHandCandidates =
     supportToHandCost === 0
@@ -382,15 +447,31 @@ export function getOptionalCostAttackPrompt(
           .filter((support) => isSupportToHandCostCandidate(pending.cost, support))
           .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
+  const basicCostText = describeCost(
+    energyCost, pending.sourceEnergy, discardHandCost, supportToHandCost,
+    supportToTrashCost, hpToTrashCost, hpToHandCost,
+    pending.cost.selfToTrash === true, pending.cost.selfToBreakArea === true,
+    pending.cost.selfToDeckBottom === true, trashToDeckCost, deckToTrashCost,
+    positionCost, pending.cost.discardHandKeyword, pending.cost.supportToHandKeyword,
+    pending.cost.discardHandType,
+  )
+
   return {
+    cookieBreakCost,
+    cookieBreakCandidates,
     sourceCard,
     sourceEnergy: pending.sourceEnergy,
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
     resolution: pending.resolution,
     mandatory: pending.mandatory === true,
+    extraDeckEntry: Boolean(pending.extraDeckPlayInstanceId),
+    conditionalSourcePlay: pending.effects.some(effect => effect.kind === 'play-revealed-bottom-cookie'),
+    positionCost,
+    positionCostCandidates,
       discardHandCost,
       discardHandCandidates,
+      handCostDestination: pending.cost.handCostDestination,
       supportToHandCost,
       supportToTrashCost,
       supportToTrashCandidates,
@@ -399,22 +480,16 @@ export function getOptionalCostAttackPrompt(
     hpToHandCost,
     hpToHandCandidates,
     trashToDeckCost,
+    trashToDeckDestination: pending.cost.trashToDeckBottom ? 'bottom' : undefined,
     trashToDeckCandidates,
     energyCostTotal,
-    costText: describeCost(
-      energyCost,
-      pending.sourceEnergy,
-      discardHandCost,
-      supportToHandCost,
-      supportToTrashCost,
-      hpToTrashCost,
-      hpToHandCost,
-      pending.cost.selfToTrash === true,
-      pending.cost.selfToBreakArea === true,
-      pending.cost.selfToDeckBottom === true,
-      trashToDeckCost,
-      deckToTrashCost,
-    ),
+    costText: (pending.cost.trashToDeckBottom
+      ? `將 ${trashToDeckCost} 張己方棄牌區${pending.cost.trashToDeckBottom.blockerOnly ? ' Blocker 餅乾' : '卡牌'}依選取順序放到牌庫底`
+      : battleTrashCost ? targetInstruction : pending.effects.some(effect => effect.kind === 'reveal-bottom-deck' && effect.requireCard)
+      ? [basicCostText === '無' ? '' : basicCostText, '展示 1 張牌庫底卡'].filter(Boolean).join('、')
+      : pending.cost.handCostDestination === 'deck-bottom'
+      ? `公開 ${discardHandCost} 張${pending.cost.discardHandLevel === undefined ? '' : ` LV.${pending.cost.discardHandLevel}`}${pending.cost.discardHandKeyword === 'arena' ? ' Arena' : ''} 餅乾手牌，將同一張牌放入牌庫底`
+      : cookieBreakCost ? `從${pending.cost.cookieToBreakArea?.zones.map(zone => zone === 'hand' ? '手牌' : '己方戰鬥區').join('或')}將 ${cookieBreakCost} 張${pending.cost.cookieToBreakArea?.excludeSource ? '來源以外的 ' : ''}Arena 餅乾放入休息區${selectAfterSourcePayment ? '，支付後再選擇效果目標' : ''}` : '') || basicCostText,
     playerHand: game.players[viewerPlayerId].hand,
     supportCandidates,
     supportToHandCandidates,

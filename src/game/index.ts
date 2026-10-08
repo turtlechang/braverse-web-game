@@ -23,6 +23,7 @@ export {
   isOpponentDamagePrevented,
   getBreakCount,
   getBreakToBattleCandidates,
+  getPlaceHandHpCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   findBreakToHandBySumSelection,
@@ -36,6 +37,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  isFixedAttackTargetDamage,
   getEffectTargetSelectionLimits,
   getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
@@ -283,12 +285,14 @@ export {
   getFaintEffectCardCandidates,
   getFaintEffectCandidateLabel,
   getAfterDamageEffectCandidates,
+  getAfterDamageEffectSourceCard,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintSourceCostUnavailableReason,
   getFaintEffectMinMax,
   getAttackResponseSkillCandidates,
   getBlockerCandidates,
+  getBattleAttackEffectPrevention,
   explainUnavailableTraps,
   getTrapCandidates,
   getTrapCostOptions,
@@ -305,6 +309,7 @@ export {
   resolveNextAfterDamageEffect,
   resolveNextDamage,
   resolveOptionalCostAttack,
+  hasApplicableOptionalAttackEffect,
   skipTrap,
 } from './battle'
 export type {
@@ -331,8 +336,10 @@ export {
   canPlayStage,
   getEffectiveCardAbilityCost,
   getItemAbility,
+  getItemActivateDiscardRequirement,
   getStageAbility,
   isCardAbilityEffectConditionDeferredUntilCost,
+  isItemEffectConditionSatisfiedAfterAdditionalCost,
   playItem,
   playStage,
 } from './card-abilities'
@@ -371,6 +378,7 @@ export {
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
+  getExtraDeckTrashBattleCookieCostCandidates,
   payBattleCookieToHandCost,
   payHpToHandCost,
   getTrashCookieToBreakAreaCostCandidates,
@@ -669,3 +677,5 @@ export type {
   SwissTournamentReport,
   TournamentColor,
 } from './tournament'
+export { getBattleCookiePositionCostCandidates, payBattleCookiePositionCost } from './battle-position-cost'
+export { getCookieToBreakCostCandidates, payCookieToBreakCost } from './cookie-break-cost'

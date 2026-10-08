@@ -7,12 +7,13 @@ import {
 } from './setup'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import { simulateAiMatchDetailed } from './ai-detailed-sim'
+import { avoidRepeatedPairings } from './tournament-pairing'
 import type { CustomDeck } from './custom-deck'
 import type { AiDetailedResult, AiExperienceProfileByPlayer } from './ai/types'
 import type { AiTournamentExperienceProfile } from './ai/strategy/tournament-experience'
 import type { GameState, PlayerId } from './types'
 
-export type TournamentColor = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+export type TournamentColor = 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'black'
 
 /** 對局安全上限；benchmark 的超限對局必須標記為失敗。 */
 export const MAX_TOURNAMENT_ACTIONS = 500
@@ -154,6 +155,27 @@ export interface SwissTournamentOptions {
   experienceProfile?: AiTournamentExperienceProfile | null
   /** 若指定玩家欄位，會覆蓋 shared experienceProfile；null 代表明確停用。 */
   experienceProfileByPlayer?: AiExperienceProfileByPlayer
+  /** Optional isolated execution of a round; outcomes remain in pairing order. */
+  simulateRound?: (inputs: SwissSimulationInput[]) => Promise<SwissSimulationOutcome[]>
+  deterministicSearch?: boolean
+  avoidRematches?: boolean
+}
+
+export interface SwissSimulationInput {
+  deterministicSearch?: boolean
+  seed: number
+  left: SwissRosterDeck
+  right: SwissRosterDeck
+  firstPlayerId: PlayerId
+  maxActions: number
+  aiLevel: 1 | 2 | 3 | 4 | 5
+  experienceProfile?: AiTournamentExperienceProfile | null
+  experienceProfileByPlayer?: AiExperienceProfileByPlayer
+}
+
+export interface SwissSimulationOutcome {
+  result: AiDetailedResult | null
+  error: string | null
 }
 
 export type CrossPlayStrategy = 'baseline' | 'trained'
@@ -176,6 +198,7 @@ const COLORS: TournamentColor[] = [
   'green',
   'blue',
   'purple',
+  'black',
 ]
 
 const ensureOpeningCookie = (
@@ -319,7 +342,7 @@ const toStanding = (
 const buildColorSummaries = (
   sortedStandings: InternalStanding[],
 ): SwissColorSummary[] =>
-  COLORS.map((color) => {
+  COLORS.filter((color) => color !== 'black' || sortedStandings.some((standing) => standing.deck.color === color)).map((color) => {
     const colorStandings = sortedStandings.filter(
       (standing) => standing.deck.color === color,
     )
@@ -410,7 +433,22 @@ export const runSwissTournament = async (
   const progressEvery = Math.max(1, options.progressEvery ?? 16)
 
   for (let round = 1; round <= rounds; round += 1) {
-    const pairings = buildPairings(standings, round)
+    const greedyPairings = buildPairings(standings, round)
+    const pairings = options.avoidRematches ? avoidRepeatedPairings(greedyPairings) : greedyPairings
+    const roundResults = options.simulateRound
+      ? await options.simulateRound(pairings.map(([left, right], tableIndex) => ({
+          seed: seed + round * 1_000_000 + tableIndex,
+          left: left.deck, right: right.deck,
+          firstPlayerId: (round + tableIndex) % 2 === 0 ? 'player-one' : 'player-two',
+          maxActions, aiLevel,
+          deterministicSearch: options.deterministicSearch,
+          experienceProfile: options.experienceProfile,
+          experienceProfileByPlayer: options.experienceProfileByPlayer,
+        })))
+      : undefined
+    if (roundResults && roundResults.length !== pairings.length) {
+      throw new Error('Round simulation returned an incomplete outcome list.')
+    }
     for (const [tableIndex, [left, right]] of pairings.entries()) {
       const firstPlayerId: PlayerId =
         (round + tableIndex) % 2 === 0 ? 'player-one' : 'player-two'
@@ -418,7 +456,10 @@ export const runSwissTournament = async (
       let result: AiDetailedResult | null = null
       let error: string | null = null
       try {
-        result = simulateAiMatchDetailed(
+        if (roundResults) {
+          result = roundResults[tableIndex].result
+          error = roundResults[tableIndex].error
+        } else result = simulateAiMatchDetailed(
           createCustomDeckMatch(matchSeed, left.deck, right.deck, firstPlayerId),
           maxActions,
           {
@@ -427,6 +468,7 @@ export const runSwissTournament = async (
               'player-two': aiLevel,
             },
             seed: matchSeed,
+            ...(options.deterministicSearch ? { searchNow: () => 0 } : {}),
             experienceProfile: options.experienceProfile,
             experienceProfileByPlayer: options.experienceProfileByPlayer,
           },

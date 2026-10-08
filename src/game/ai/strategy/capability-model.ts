@@ -48,6 +48,7 @@ export type CapabilityTiming =
   | 'opponent-attack'
   | 'faint'
   | 'departure'
+  | 'break-by-arena-effect'
   | 'after-damage'
   | 'end-phase'
   | 'flip'

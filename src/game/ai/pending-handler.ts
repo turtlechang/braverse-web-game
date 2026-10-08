@@ -2,6 +2,7 @@ import {
   getAfterDamageEffectCandidates,
   getFaintEffectCardCandidates,
   getFaintEffectCandidates,
+  getFaintSourceCostUnavailableReason,
 } from '../battle'
 import {
   applyGameCommand,
@@ -11,6 +12,7 @@ import {
 import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
 import {
   getEffectSelectionCandidates,
+  getPlaceHandHpCandidates,
   getEffectSelectionLimits,
   findRevealHandSelection,
   getSupportEffectCandidates,
@@ -21,10 +23,13 @@ import {
   canActivateCookieSkill,
   getDiscardHandCostCandidates,
   getHpToHandCostCandidates,
-  getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
+  getTrashToDeckBottomCostCandidates,
+  getExtraDeckTrashBattleCookieCostCandidates,
 } from '../skills'
+import { chooseAiHpToTrashIds } from './hp-cost-selection'
+import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
 import { chooseAiEffectMode } from './choose-one-mode'
 import { createPlayerView } from '../player-view'
 import {
@@ -164,6 +169,7 @@ export const handleAiPendingDecision = (
           discardHandIds: costs.discardHandIds,
           hpToTrashTargetIds: costs.hpToTrashTargetIds,
           trashBattleCookieIds: costs.trashBattleCookieIds,
+          ...(costs.trashToDeckBottomIds ? { trashToDeckBottomIds: costs.trashToDeckBottomIds } : {}),
         } : {
           kind: 'skip-end-phase-skill', playerId,
           sourceInstanceId: pendingAbility.sourceInstanceId,
@@ -316,6 +322,17 @@ export const handleAiPendingDecision = (
         action: 'idle',
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇昏厥效果目標。`,
       }
+    }
+    const deckCost = state.pendingFaintEffects?.[0]?.cost?.deckToTrash?.amount ?? 0
+    if (deckCost > 0) {
+      const unavailable = getFaintSourceCostUnavailableReason(state)
+      return withPendingReason({
+        state: applyGameCommand(state, { kind: 'resolve-faint-effect', playerId, targetIds: [],
+          ...(unavailable ? {} : { payDeckToTrash: true }),
+        }),
+        action: 'resolve-faint',
+        description: unavailable ?? `${state.players[playerId].name}支付牌庫頂 ${deckCost} 張昏厥代價，再選擇後續目標。`,
+      }, 'effect-target', pendingDecision.sourceInstanceId)
     }
     const cardCandidates = getFaintEffectCardCandidates(state)
     const candidates = getFaintEffectCandidates(state)
@@ -497,7 +514,7 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇放回 HP 的手牌。`,
       }
     }
-    const handCards = state.players[playerId].hand
+    const handCards = getPlaceHandHpCandidates(state, playerId)
     const handCard = universal.enabled
       ? handCards.find((card) =>
           universal.orderCostIds(handCards.map((candidate) => candidate.instanceId), 1)
@@ -724,25 +741,29 @@ export const handleAiPendingDecision = (
     const supportToHandIds = universal.enabled
       ? universal.orderCostIds(supportToHandCandidateIds, supportToHandAmount)
       : supportToHandCandidateIds.slice(0, supportToHandAmount)
+    const positionCostCount = pendingDecision.cost.battleCookiePosition?.count ?? 0
+    const cookieBreakCount = pendingDecision.cost.cookieToBreakArea?.count ?? 0
+    const cookieToBreakAreaIds = getCookieToBreakCostCandidates(pendingDecision.cost, state.players[playerId], pendingDecision.sourceInstanceId)
+      .slice(0, cookieBreakCount).map(candidate => candidate.instanceId)
+    const positionCandidates = getBattleCookiePositionCostCandidates(
+      pendingDecision.cost, state.players[playerId].battleArea, pendingDecision.sourceInstanceId,
+    ).map(cookie => cookie.card.instanceId)
+    const positionCostTargetIds = universal.enabled
+      ? universal.orderCostIds(positionCandidates, positionCostCount)
+      : positionCandidates.slice(0, positionCostCount)
     const canPay =
+      cookieToBreakAreaIds.length === cookieBreakCount &&
+      positionCostTargetIds.length === positionCostCount &&
       discardHandCandidateIds.length >= discardHandAmount &&
       Boolean(paymentIds) &&
       supportToTrashIds.length >= supportToTrashAmount &&
       supportToHandIds.length >= supportToHandAmount
-    const hpToTrashCandidateIds = pendingDecision.cost.hpToTrash
-      ? getHpToTrashCostCandidates(
-          pendingDecision.cost,
-          state.players[playerId].battleArea,
-          pendingDecision.sourceInstanceId,
-        )
-          .map((cookie) => cookie.card.instanceId)
-      : []
-    const hpToTrashIds = universal.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    const canPayHpToTrash = pendingDecision.cost.hpToTrash
-      ? hpToTrashIds.length === 1
-      : true
+    const selectedHpToTrashIds = chooseAiHpToTrashIds(
+      pendingDecision.cost, state.players[playerId].battleArea,
+      pendingDecision.sourceInstanceId, universal,
+    )
+    const hpToTrashIds = selectedHpToTrashIds ?? []
+    const canPayHpToTrash = selectedHpToTrashIds !== null
     const hpToHandCandidateIds = pendingDecision.cost.hpToHand
       ? getHpToHandCostCandidates(
           pendingDecision.cost,
@@ -756,33 +777,40 @@ export const handleAiPendingDecision = (
     const canPayHpToHand = pendingDecision.cost.hpToHand
       ? hpToHandIds.length === 1
       : true
-    const trashToDeckCandidateIds = pendingDecision.cost.trashToDeck
-      ? getTrashToDeckCostCandidates(
+    const trashCost = pendingDecision.cost.trashToDeckBottom ?? pendingDecision.cost.trashToDeck
+    const trashToDeckCandidateIds = trashCost
+      ? (pendingDecision.cost.trashToDeckBottom ? getTrashToDeckBottomCostCandidates : getTrashToDeckCostCandidates)(
           pendingDecision.cost,
           state.players[playerId].discardPile,
         )
           .map((card) => card.instanceId)
       : []
-    const trashToDeckIds = pendingDecision.cost.trashToDeck
+    const trashToDeckIds = trashCost
       ? universal.enabled
         ? universal.orderCostIds(
             trashToDeckCandidateIds,
-            pendingDecision.cost.trashToDeck.count,
+            trashCost.count,
           )
-        : trashToDeckCandidateIds.slice(0, pendingDecision.cost.trashToDeck.count)
+        : trashToDeckCandidateIds.slice(0, trashCost.count)
       : []
-    const canPayTrashToDeck = pendingDecision.cost.trashToDeck
-      ? trashToDeckIds.length === pendingDecision.cost.trashToDeck.count
+    const canPayTrashToDeck = trashCost
+      ? trashToDeckIds.length === trashCost.count
       : true
     const context: EffectContext = {
       sourcePlayerId: playerId,
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
     const isAbilityResolution = pendingDecision.resolution === 'ability'
-    const sharedSelection = isAbilityResolution
+    const extraBattleCost = state.pendingOptionalCostAttack?.extraDeckPlayInstanceId ? pendingDecision.cost.trashBattleCookie : undefined
+    const extraBattleCostIds = extraBattleCost
+      ? getExtraDeckTrashBattleCookieCostCandidates(pendingDecision.cost, state.players[playerId].battleArea, pendingDecision.sourceInstanceId).slice(0, extraBattleCost.count).map(cookie => cookie.card.instanceId)
+      : []
+    const sharedSelection = extraBattleCost ? { targetIds: extraBattleCostIds, valid: extraBattleCostIds.length === extraBattleCost.count } : isAbilityResolution
       ? { targetIds: [], valid: true }
       : chooseSharedEffectTargets(
-          state,
+          cookieBreakCount && cookieToBreakAreaIds.length === cookieBreakCount
+            ? { ...state, players: { ...state.players, [playerId]: payCookieToBreakCost(pendingDecision.cost, state.players[playerId], cookieToBreakAreaIds, pendingDecision.sourceInstanceId).player } }
+            : state,
           context,
           pendingDecision.effects,
           universal,
@@ -828,6 +856,8 @@ export const handleAiPendingDecision = (
           supportToHandIds,
           supportToTrashIds,
           hpToTrashIds,
+          positionCostTargetIds,
+          cookieToBreakAreaIds,
           trashToDeckIds,
           hpToHandIds,
         }),
@@ -902,7 +932,7 @@ export const handleAiPendingDecision = (
       return {
         state,
         action: 'idle',
-        description: `等待 ${state.players[pendingDecision.playerId].name} 決定是否發動場景效果。`,
+        description: `等待 ${state.players[pendingDecision.playerId].name} 決定是否發動觸發效果。`,
       }
     }
     const player = state.players[playerId]
@@ -916,10 +946,11 @@ export const handleAiPendingDecision = (
       }),
       action: 'resolve-stage-trigger',
       description: canDraw
-        ? `${state.players[playerId].name}發動${pendingDecision.sourceCardName}效果抽 1 張牌。`
+        ? `${state.players[playerId].name}發動${pendingDecision.sourceCardName}觸發效果。`
         : `${state.players[playerId].name}略過${pendingDecision.sourceCardName}效果。`,
     }, 'multi-stage', pendingDecision.sourceInstanceId)
   }
 
   return null
 }
+import { getCookieToBreakCostCandidates, payCookieToBreakCost } from '../cookie-break-cost'

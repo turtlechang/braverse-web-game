@@ -347,7 +347,7 @@ function App() {
         instanceId: sourceInstanceId,
         specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
-      '特殊登場已支付，等待處理 On Play。',
+      '特殊登場已支付，接續登場結算。',
       (nextGame) => {
         setSpecialPlaySourceId(null)
         setSpecialPlayCandidateIds([])
@@ -558,7 +558,7 @@ function App() {
           playerId: match.activePlayer.id,
           instanceId,
         },
-        'EXTRA 餅乾已登場並配置 HP。',
+        '已宣告 EXTRA 登場，請依畫面完成後續操作。',
         (nextGame) => {
           if (nextGame.pendingRefresh) return
           pending.beginCookieSkill(
@@ -852,6 +852,10 @@ function App() {
         selectedBattleToHandIds={pending.selectedSkillBattleToHandIds}
         onToggleBattleToHand={pending.toggleSkillBattleToHand}
         battleCookieToHandCost={pending.battleToHandCost}
+        positionCostCandidates={pending.positionCostCandidates}
+        selectedPositionCostTargetIds={pending.selectedPositionCostTargetIds}
+        onTogglePositionCost={pending.togglePositionCost}
+        positionCost={pending.positionCost}
         optionalCostAttack={
           optionalCostAttackPrompt
             ? {
@@ -863,7 +867,9 @@ function App() {
                       playerId: match.viewerPlayerId,
                       action: 'skip',
                     },
-                    optionalCostAttackPrompt.resolution === 'ability'
+                    optionalCostAttackPrompt.conditionalSourcePlay
+                      ? '未支付技能登場代價，來源與底牌維持原位。'
+                      : optionalCostAttackPrompt.resolution === 'ability'
                       ? '已略過Then 可選效果。'
                       : '已略過攻擊後續效果。',
                   )
@@ -877,6 +883,8 @@ function App() {
                   trashToDeckIds,
                   hpToHandIds,
                   supportToTrashIds = [],
+                  positionCostTargetIds = [],
+                  cookieToBreakAreaIds = [],
                 ) => {
                   match.dispatch(
                     {
@@ -891,9 +899,15 @@ function App() {
                       trashToDeckIds,
                       hpToHandIds,
                       supportToTrashIds,
+                      positionCostTargetIds,
+                      cookieToBreakAreaIds,
                     },
-                    optionalCostAttackPrompt.resolution === 'ability'
-                      ? '已支付技能 Then 費用。'
+                    optionalCostAttackPrompt.extraDeckEntry
+                      ? '已支付 EXTRA 登場代價，餅乾已登場並配置 HP。'
+                      : optionalCostAttackPrompt.conditionalSourcePlay
+                        ? '已支付技能登場代價，接續同一張底牌登場。'
+                      : optionalCostAttackPrompt.resolution === 'ability'
+                        ? '已支付技能 Then 費用。'
                       : '已支付攻擊後續效果費用。',
                   )
                 },

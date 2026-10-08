@@ -27,6 +27,7 @@ const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
   BS9: 'BS9-',
   BS10: 'BS10-',
   BS11: 'BS11-',
+  BS12: 'BS12-',
 }
 
 export const getCardAttackPower = (attackText: string | null): number | null =>

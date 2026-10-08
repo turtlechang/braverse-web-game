@@ -39,6 +39,24 @@ describe('validateCardEffectSemantics', () => {
     )
   })
 
+  it.each(['BS12-112', 'BS12-112@1'])('accepts %s Special Play cost and rejects a missing ability', (cardNumber) => {
+    const { entry, card } = getConvertedCard(cardNumber)
+
+    expect(card.skill?.effects).toEqual([])
+    expect(card.skill?.specialPlayCost).toMatchObject({
+      trashBattleCookie: { count: 1, energyColor: 'black', level: 1, hasSpecialPlay: true },
+    })
+    expect(validateCardEffectSemantics(entry, card)).toEqual([])
+
+    const brokenCard: GameCard = {
+      ...card,
+      skill: card.skill ? { ...card.skill, specialPlayCost: undefined } : undefined,
+    }
+    expect(validateCardEffectSemantics(entry, brokenCard)).toContain(
+      `${entry.cardNumber} ${entry.name}: 技能文字必須轉出含至少 1 個效果的 skill`,
+    )
+  })
+
   it('accepts P-041\'s official birthday greeting as a non-rules OnPlay skill', () => {
     const { entry, card } = getConvertedCard('P-041')
 

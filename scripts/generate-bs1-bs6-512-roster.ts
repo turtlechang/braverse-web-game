@@ -11,9 +11,10 @@ import {
   validateCustomDeck,
   type BuiltInDeckChoice,
   type CustomDeck,
-  type TournamentColor,
+  type TournamentColor as CurrentTournamentColor,
 } from '../src/game'
 import type { CardPoolEntry } from '../src/game/card-pool'
+type TournamentColor = Exclude<CurrentTournamentColor, 'black'>
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const ROSTER_SIZE = 512

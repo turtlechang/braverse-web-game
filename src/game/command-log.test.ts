@@ -1702,7 +1702,9 @@ describe('describeCommandSteps', () => {
       '抽牌原因：「P-059 Chamomile Cookie」技能觸發抽牌：支援區有 2 張啟動卡（需要至少 2 張）',
     )
     expect(steps?.[0].cards).toEqual([source])
-    expect(steps?.[1].cards).toEqual([drawn])
+    expect(steps?.[1]).toEqual({ text: '抽牌結果：抽了 1 張牌' })
+    expect(JSON.stringify(steps)).not.toContain(drawn.instanceId)
+    expect(JSON.stringify(steps)).not.toContain(drawn.name)
     expect(resolveLogCard(previous, next, command)).toEqual(source)
   })
 

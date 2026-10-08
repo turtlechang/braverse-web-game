@@ -764,7 +764,8 @@ export function BattleRow({
                       type="button"
                       className="badge-equip"
                       title={`已裝備：${cookie.equippedCards.map((equipped) => equipped.name).join('、')}`}
-                      onClick={(e) => { e.stopPropagation(); onInspectCard(cookie.card) }}
+                      aria-label={`查看裝備：${cookie.equippedCards.map((equipped) => equipped.name).join('、')}`}
+                      onClick={(e) => { e.stopPropagation(); onInspectCard(cookie.equippedCards![0]) }}
                     >
                       <Gem size={12} aria-hidden="true" /> {cookie.equippedCards.length}
                     </button>
@@ -807,8 +808,7 @@ export function BattleRow({
                     <div className="combat-action-stack">
                       {showEnergyShortfallHint && (
                         <span className="energy-shortfall-hint">
-                          能量不足：需要 {getEnergyCostTotal(attackEnergyCost)}，
-                          目前可用 {availableEnergyCount}
+                          攻擊費用無法支付：需要 {getEnergyCostTotal(attackEnergyCost)} 張符合能量需求的活躍支援卡（目前活躍 {availableEnergyCount} 張）。
                         </span>
                       )}
                       {showBattleSkillAction && (

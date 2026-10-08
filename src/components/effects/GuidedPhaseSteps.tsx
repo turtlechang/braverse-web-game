@@ -4,6 +4,8 @@ import './GuidedPhaseSteps.css'
 export type GuidedPhaseId =
   | 'energy'
   | 'cost'
+  | 'position-cost'
+  | 'cookie-break-cost'
   | 'support-cost'
   | 'support-trash-cost'
   | 'hp-cost'

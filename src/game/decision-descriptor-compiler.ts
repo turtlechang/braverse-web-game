@@ -1,8 +1,11 @@
 import { getPendingDecision } from './commands'
+import { getCookieToBreakCostCandidates } from './cookie-break-cost'
 import type { PendingDecision } from './commands'
 import {
   getEffectSelectionCandidates,
+  getPlaceHandHpCandidates,
   getEffectSelectionLimits,
+  isFixedAttackTargetDamage,
   getSupportEffectCandidates,
   requiresEffectCardSelection,
 } from './effects/targeting'
@@ -11,8 +14,10 @@ import {
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
+  getHandToBreakAreaCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
+  getExtraDeckTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getTrashToDeckCostCandidates,
@@ -389,12 +394,7 @@ const compileCostSteps = (
   if (cost.handToBreakArea) {
     if (!viewerOwnsPrivateZones) blockers.push('private hand candidates are withheld from a non-owner view')
     const candidates = viewerOwnsPrivateZones
-      ? player.hand.filter(
-          (card) =>
-            card.type === 'cookie' &&
-            (cost.handToBreakArea?.energyColor === undefined ||
-              card.energyColor === cost.handToBreakArea.energyColor),
-        )
+      ? getHandToBreakAreaCostCandidates(cost, player.hand, context.sourceInstanceId)
       : []
     const count = cost.handToBreakArea.count
     steps.push(costStep(
@@ -544,10 +544,27 @@ export const compilePendingDecisionDescriptor = (
   )
   const descriptor = describePendingDecision(decision, candidateIds)
   if (!descriptor) return null
+  const faintDeckCost = decision.kind === 'faint-effect' ? state.pendingFaintEffects?.[0]?.cost?.deckToTrash : undefined
+  if (faintDeckCost && faintDeckCost.amount > 0) {
+    descriptor.steps = [{ id: 'faint-deck-cost', kind: 'cost', required: true,
+      min: 0, max: 0, candidateIds: [], candidateSource: 'none', cost: { deckToTrash: faintDeckCost },
+      commandKinds: ['resolve-faint-effect'], label: `先支付牌庫頂 ${faintDeckCost.amount} 張到棄牌區，再選擇效果目標`,
+    }]
+    descriptor.actionKinds = ['resolve-faint-effect']
+    return { ...descriptor, status: 'ready', blockers: [] }
+  }
 
   const blockers: string[] = []
 
   if (decision.kind === 'optional-cost-attack') {
+    if (decision.cost.cookieToBreakArea) {
+      const cost = decision.cost.cookieToBreakArea
+      const candidates = getCookieToBreakCostCandidates(decision.cost, state.players[decision.playerId], decision.sourceInstanceId)
+        .filter(candidate => candidate.zone === 'battle' || viewerPlayerId === decision.playerId)
+      descriptor.steps.push({ id: 'cookie-break-cost', kind: 'cost', required: true, min: cost.count, max: cost.count,
+        candidateIds: candidates.map(candidate => candidate.instanceId), candidateSource: 'provided',
+        commandKinds: ['resolve-optional-cost-attack'], label: `選擇${cost.zones.map(zone => zone === 'hand' ? '手牌' : '己方戰鬥區').join('或')}${cost.excludeSource ? '來源以外的' : ''}餅乾放入休息區作為代價` })
+    }
     const paymentStep = descriptor.steps[0]
     paymentStep.candidateIds = supportIds(state, decision.playerId)
     paymentStep.candidateSource = 'public-support'
@@ -561,7 +578,19 @@ export const compilePendingDecisionDescriptor = (
     paymentStep.min = paymentCount
     paymentStep.max = paymentCount
 
-    const nested = decision.effects.find((effect) => requiresEffectCardSelection(effect))
+    const nested = decision.effects.find((effect) => requiresEffectCardSelection(effect) && !isFixedAttackTargetDamage(effect))
+    if (decision.cost.trashToDeckBottom) {
+      const cost = decision.cost.trashToDeckBottom
+      descriptor.steps.push({ id: 'trash-bottom-cost', kind: 'cost', required: true, min: cost.count, max: cost.count,
+        candidateIds: getTrashToDeckBottomCostCandidates(decision.cost, state.players[decision.playerId].discardPile).map(card => card.instanceId),
+        candidateSource: 'public-trash', commandKinds: ['resolve-optional-cost-attack'], label: '選擇棄牌區卡依選取順序放到牌庫底作為代價' })
+    }
+    if (state.pendingOptionalCostAttack?.extraDeckPlayInstanceId && decision.cost.trashBattleCookie) {
+      const cost = decision.cost.trashBattleCookie
+      descriptor.steps.push({ id: 'battle-trash-cost', kind: 'cost', required: true, min: cost.count, max: cost.count,
+        candidateIds: getExtraDeckTrashBattleCookieCostCandidates(decision.cost, state.players[decision.playerId].battleArea, decision.sourceInstanceId).map(cookie => cookie.card.instanceId),
+        candidateSource: 'public-battle', commandKinds: ['resolve-optional-cost-attack'], label: 'EXTRA 登場代價：戰鬥區餅乾與 HP／裝備放入棄牌區' })
+    }
     if (nested) {
       const nestedCandidates = getEffectCandidates({
         state,
@@ -612,6 +641,9 @@ export const compilePendingDecisionDescriptor = (
     const baseTargetStep = descriptor.steps.find((step) => step.kind === 'target')
     if (targetStep && baseTargetStep) {
       Object.assign(baseTargetStep, targetStep, { id: baseTargetStep.id })
+      if (decision.kind === 'after-damage-effect' && state.pendingAfterDamageEffects?.[0]?.triggerReason === 'break-by-arena-effect') {
+        baseTargetStep.label = '選擇休息區移入效果的己方餅乾'
+      }
     }
     const costSteps = compiled.steps.filter((step) => step.kind === 'cost' || step.kind === 'payment')
     descriptor.steps = [
@@ -648,8 +680,11 @@ export const compilePendingDecisionDescriptor = (
   }
   if (decision.kind === 'place-hand-hp') {
     const step = descriptor.steps[0]
+    step.required = Boolean(decision.required)
+    step.min = decision.required ? 1 : 0
+    step.max = 1
     if (viewerPlayerId === decision.playerId) {
-      step.candidateIds = cardIds(state.players[decision.playerId].hand)
+      step.candidateIds = cardIds(getPlaceHandHpCandidates(state, decision.playerId))
       step.candidateSource = 'private-hand'
     } else {
       blockers.push('private hand candidates are withheld from a non-owner view')

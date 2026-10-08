@@ -1,11 +1,113 @@
 import { describe, expect, it } from 'vitest'
 import { describeEffect, describeEffectResult, getSkillLabels } from './effectUiUtils'
+
+it('R008 real Adventurer zero choice does not claim a Cookie returned to hand', () => {
+  const effect = { kind: 'return-to-hand' as const, target: { side: 'opponent' as const, min: 0, max: 1 } }
+  expect(describeEffectResult(effect, [])).toBe('未選擇餅乾，沒有卡牌返回手牌。')
+  expect(describeEffectResult(effect, ['Dark Cacao Cookie'])).toBe('Dark Cacao Cookie 已返回手牌。')
+})
+
+it('087 explains current-turn reduction, post-payment Arena threshold, same target and zero selection', () => {
+  const effect = { kind: 'modify-attack' as const, amount: -2, duration: 'this-turn' as const, target: { side: 'opponent' as const, min: 0, max: 1 },
+    thenEffects: [{ kind: 'modify-attack' as const, amount: -1, duration: 'this-turn' as const, target: { side: 'opponent' as const, min: 0, max: 1, previousEffectTargetOnly: true },
+      condition: { kind: 'trash-keyword-count-at-least' as const, count: 10, keyword: 'arena' as const } }] }
+  expect(describeEffect(effect)).toContain('本回合攻擊傷害 -2')
+  expect(describeEffect(effect)).toContain('10 張以上【Arena】牌')
+  expect(describeEffect(effect)).toContain('同一張餅乾再 -1（不能改選目標）')
+  expect(describeEffect(effect)).toContain('不限卡片類型與顏色')
+  expect(describeEffect(effect)).toContain('本陷阱先進棄牌區再判斷')
+  expect(describeEffect(effect)).toContain('可選 0 張，兩段均不修改')
+})
+
+it('086 names the printed Blocker filter and own next turn expiry', () => {
+  const effect = { kind: 'modify-attack' as const, amount: 2, duration: 'own-next-turn' as const, target: { side: 'self' as const, min: 0, max: 1, blockerOnly: true } }
+  expect(describeEffect(effect)).toContain('己方戰鬥區具有 Blocker 技能')
+  expect(describeEffect(effect)).toContain('直到自己的下個回合結束')
+  expect(describeEffect(effect)).toContain('可選 0 張')
+  expect(describeEffectResult(effect, ['Pudding Cookie'])).toBe('Pudding Cookie 攻擊傷害 +2，直到自己的下個回合結束。')
+  expect(describeEffectResult(effect, [])).not.toContain('+2')
+})
+
+it('describes opponent support return and its actual zero selection', () => {
+  const effect = { kind: 'support-to-hand' as const, side: 'opponent' as const, amount: 2, optional: true }
+  expect(describeEffect(effect)).toBe('將對手最多2 張支援區卡返回對手手牌。')
+  expect(describeEffectResult(effect, ['Sorbet Shark Cookie'])).toBe('對手的Sorbet Shark Cookie已返回對手手牌。')
+  expect(describeEffectResult(effect, [])).toBe('未選擇對手支援卡，未移動卡牌。')
+  expect(describeEffect({ ...effect, side: undefined })).toBe('將最多2 張支援區卡返回手牌。')
+})
+
+it('uses the rule-calculated damage for each recipient instead of the printed amount', () => {
+  const effect = { kind: 'damage' as const, amount: 2, target: { side: 'opponent' as const, min: 0, max: 2 } }
+  expect(describeEffectResult(effect, ['CAKE POPs'], undefined, [1])).toBe('CAKE POPs 受到 1 傷害。')
+  expect(describeEffectResult(effect, ['CAKE POPs', 'Popping Candy Cookie'], undefined, [1, 2])).toBe('CAKE POPs 受到 1 傷害。 Popping Candy Cookie 受到 2 傷害。')
+  expect(describeEffectResult(effect, ['CAKE POPs'], undefined, [0])).toBe('CAKE POPs 受到 0 傷害。')
+  expect(describeEffectResult(effect, [], undefined, [])).toBe('未選擇傷害目標，效果未造成傷害。')
+})
 import type {
   BreakToTrashEffect,
   FieldToTrashEffect,
   TrashToBattleEffect,
 } from '../../game'
 import type { DamageEffect, DeckToTrashEffect, SupportToBattleEffect } from '../../game/types'
+
+it('shows the Arena intersection and zero choice for optional support entry', () => {
+  expect(describeEffect({ kind: 'support-to-battle', amount: 1, optional: true, keyword: 'arena' })).toBe('從支援區選最多 1 張【Arena】餅乾登場。可選 0 張。')
+  expect(describeEffect({ kind: 'support-to-battle', amount: 1 })).toBe('從支援區選最多 1 張餅乾登場。')
+})
+
+it('describes grouped Arena damage by Cookie count instead of Break LV', () => {
+  expect(describeEffect({ kind: 'damage-by-break-count', perCount: 1, groupSize: 4, keyword: 'arena', target: { side: 'opponent', min: 0, max: 1 } })).toMatch(/目前休息區每 4 張【Arena】餅乾造成 1 點傷害/)
+})
+
+it('shows rested top-deck support placement without changing the active wording', () => {
+  expect(describeEffect({ kind: 'deck-to-support', amount: 1, rested: true })).toBe('從牌庫頂放 1 張到支援區（疲勞）。')
+  expect(describeEffect({ kind: 'deck-to-support', amount: 1, rested: false })).toBe('從牌庫頂放 1 張到支援區。')
+})
+
+it('describes source HP per three Arena break Cookies without promising a fixed one HP', () => {
+  expect(describeEffect({ kind: 'gain-hp', amount: 1, perBreakCard: { keyword: 'arena', divisor: 3 },
+    target: { side: 'self', min: 1, max: 1, sourceOnly: true } })).toBe('我方休息區每有 3 張【Arena】餅乾，這張技能來源餅乾獲得 1 HP。')
+})
+
+it.each([0, 1, 2, 3])('reports the observed grouped HP result %i', gained => {
+  const effect = { kind: 'gain-hp' as const, amount: 1, perBreakCard: { keyword: 'arena' as const, divisor: 3 },
+    target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true } }
+  expect(describeEffectResult(effect, ['Chocolate Bonbon Cookie'], gained)).toBe(gained === 0
+    ? 'Chocolate Bonbon Cookie 未增加 HP。' : `Chocolate Bonbon Cookie 獲得 ${gained} HP。`)
+  expect(describeEffectResult(effect, ['Chocolate Bonbon Cookie'])).toBe('Chocolate Bonbon Cookie 已依休息區餅乾數量結算 HP。')
+})
+
+it('readying zero Cookies reports a no-op rather than inventing an activated target', () => {
+  const effect = { kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena' } } as const
+  expect(describeEffect(effect)).toBe('選擇 最多 1 張我方戰鬥區的【Arena】餅乾設為活躍。可選 0 張，未選目標不改變任何餅乾狀態。')
+  expect(describeEffectResult(effect, [])).toBe('未選擇餅乾，未將任何餅乾設為活躍。')
+  expect(describeEffectResult(effect, ['Pancake Cookie'])).toBe('Pancake Cookie 已設為活躍。')
+})
+
+it('red Arena readying shows both filters and the optional two-target limit', () => {
+  expect(describeEffect({ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 2, energyColor: 'red', keyword: 'arena' } }))
+    .toBe('選擇 最多 2 張我方戰鬥區的紅色【Arena】餅乾設為活躍。可選 0 張，未選目標不改變任何餅乾狀態。')
+})
+
+it('distinguishes another Arena ready target from optional source REST', () => {
+  expect(describeEffect({ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true } }))
+    .toBe('選擇 最多 1 張我方戰鬥區的另一張【Arena】餅乾設為活躍。可選 0 張，未選目標不改變任何餅乾狀態。')
+  const rest = { kind: 'rest-cookie' as const, target: { side: 'self' as const, min: 0, max: 1, sourceOnly: true } }
+  expect(describeEffect(rest)).toBe('可將這張技能來源餅乾橫置。可選 0 張略過，不會橫置先前選定的其他餅乾。')
+  expect(describeEffectResult(rest, [])).toBe('未選擇餅乾，未將任何餅乾橫置。')
+  expect(describeEffectResult(rest, ['Strawberry Mochi Cookie'])).toBe('Strawberry Mochi Cookie 已橫置。')
+})
+
+it('attack bonus and ready Then explain the same target, this turn and both zero-target no-ops', () => {
+  const effect = { kind: 'modify-attack', amount: 1, duration: 'this-turn',
+    target: { side: 'self', min: 0, max: 1, energyColor: 'red', keyword: 'arena' },
+    thenEffects: [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, energyColor: 'red', keyword: 'arena', previousEffectTargetOnly: true } }],
+  } as const
+  const mutable = { ...effect, thenEffects: [...effect.thenEffects] }
+  expect(describeEffect(mutable)).toBe('選擇 最多 1 張我方戰鬥區的紅色【Arena】餅乾，本回合攻擊傷害 +1。然後將同一張餅乾設為活躍，不能改選目標。可選 0 張，兩段都不改變餅乾。')
+  expect(describeEffectResult(mutable, [])).toBe('未選擇餅乾，未套用攻擊力修改，也未將任何餅乾設為活躍。')
+  expect(describeEffectResult(mutable, ['Cheerleader Cookie'])).toBe('Cheerleader Cookie 本回合攻擊傷害 +1，然後已將同一張餅乾設為活躍。')
+})
 
 describe('BS9-017 fixed modifier instructions', () => {
   it('distinguishes the Ancient condition from the source receiving attack damage', () => {
@@ -58,7 +160,7 @@ describe('hand-to-support selection instructions', () => {
   })
   it('preserves a keyword filter and does not invent a color restriction', () => {
     expect(describeEffect({ kind: 'hand-to-support', amount: 2, optional: true, keyword: 'arena' }))
-      .toBe('點選 0～2 張具有 [arena] 的手牌，以活躍狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
+      .toBe('點選 0～2 張【Arena】手牌，以活躍狀態放入支援區。不選卡牌也可確認；再次點選可取消選取。')
   })
 })
 
@@ -364,4 +466,26 @@ describe('revealed hand card movement descriptions', () => {
     expect(describeEffect(effect)).toBe('將先前展示的同一張手牌放入休息區（不能改選）。')
     expect(describeEffectResult(effect, [])).toBe('先前展示的同一張手牌已放入休息區。')
   })
+})
+
+it('distinguishes top HP movement from moving the Cookie to the deck bottom', () => {
+  const effect = { kind: 'field-to-deck-bottom' as const, hpOnly: true, target: { side: 'opponent' as const, min: 0, max: 1 } }
+  expect(describeEffect(effect)).toBe('選擇 最多 1 張對手餅乾，將其最上方 1 張 HP 卡放到該餅乾持有者的牌庫底。')
+  expect(describeEffect({ ...effect, hpOnly: false })).toBe('選擇 最多 1 張對手餅乾 放到持有者牌庫底。')
+  expect(describeEffectResult(effect, ['Langue de Chat Cookie'])).toBe('Langue de Chat Cookie 的最上方 1 張 HP 卡已放到持有者牌庫底。')
+  expect(describeEffectResult(effect, [])).toBe('未選擇餅乾，未移動 HP 卡。')
+})
+
+it('makes an attack-target-only damage instruction explicit without changing ordinary target selection', () => {
+  const damage = { kind: 'damage' as const, amount: 1, target: { side: 'opponent' as const, min: 1, max: 1, attackTargetOnly: true } }
+  expect(describeEffect(damage)).toBe('對原受攻擊的同一張餅乾造成 1 傷害（不能改選）。')
+  expect(describeEffect({ ...damage, target: { ...damage.target, attackTargetOnly: false } })).toBe('選擇 1 張對手餅乾，造成 1 傷害。')
+})
+
+it('shows the named Cookie restriction on optional gain-HP selection', () => {
+  const effect = { kind: 'gain-hp' as const, amount: 1, target: { side: 'self' as const, min: 0, max: 1, cardName: 'Caramel Choux Cookie' } }
+  expect(describeEffect(effect)).toBe('選擇最多 1 張我方「Caramel Choux Cookie」餅乾，獲得 1 HP（可選 0 張）。')
+  expect(describeEffect({ ...effect, target: { ...effect.target, side: 'opponent' } })).toBe('選擇最多 1 張對手「Caramel Choux Cookie」餅乾，獲得 1 HP（可選 0 張）。')
+  expect(describeEffectResult(effect, [])).toBe('未選擇餅乾，未增加 HP。')
+  expect(describeEffectResult(effect, ['Caramel Choux Cookie'])).toBe('Caramel Choux Cookie 獲得 1 HP。')
 })

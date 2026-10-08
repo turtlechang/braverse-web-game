@@ -104,6 +104,7 @@ type ExtraDeckPlaySpec = {
   activateOncePerTurn?: boolean
   /** Passive effects that remain active while an EXTRA Cookie is in battle. */
   passiveEffects?: CardEffect[]
+  friendlyFaintEffects?: CardEffect[]
   /** Passive attack restriction printed on an EXTRA card. */
   cannotAttackCondition?: Extract<CardSkill['cannotAttackCondition'], { kind: string }>
   awakenRequirement?: ExtraDeckCard['awakenRequirement']
@@ -119,6 +120,42 @@ type ExtraDeckPlaySpec = {
  * Awaken 疊放。因此只對已有官方文字與規則裁決的卡號建立精確映射。
  */
 const BS8_EXTRA_PLAY_SPECS: Readonly<Record<string, ExtraDeckPlaySpec>> = {
+  'BS12-111': { mode: 'enter-battle', requirement: { kind: 'all-of', conditions: [
+    { kind: 'opponent-support-count-at-least', count: 4 },
+    { kind: 'battle-area-has-special-play-cookie', side: 'self' },
+  ] }, passiveEffects: [{ kind: 'modify-attack', amount: 1, duration: 'persistent',
+    target: { side: 'self', min: 0, max: 1, allMatching: true, excludeSource: true, energyColor: 'black', keyword: 'arena' } }] },
+  'BS12-092': {
+    mode: 'enter-battle',
+    requirement: { kind: 'break-blocker-cookie-count-at-least', count: 3, keyword: 'arena' },
+    playCost: { energy: {}, trashBattleCookie: { count: 1, energyColor: 'purple', maxLevel: 2 } },
+    friendlyFaintEffects: [{ kind: 'opponent-discard-hand', count: 1,
+      condition: { kind: 'opponent-hand-count-at-least', count: 3 } }],
+  },
+  'BS12-074': {
+    mode: 'enter-battle',
+    requirement: { kind: 'arena-cookie-placed-from-battle-to-deck-bottom-this-turn', side: 'self' },
+    onPlayEffects: [{ kind: 'draw-up-to', max: 2, condition: { kind: 'player-started-second' } }],
+  },
+  'BS12-056': {
+    mode: 'enter-battle',
+    requirement: { kind: 'any-of', conditions: [
+      { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Candy Apple Cookie', keyword: 'arena' },
+      { kind: 'support-color-count-at-least', color: 'green', count: 7 },
+    ] },
+  },
+  'BS12-036': {
+    mode: 'enter-battle',
+    requirement: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena', color: 'yellow' },
+    onPlayEffects: [{ kind: 'gain-hp', amount: 2, target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'player-started-second' } }],
+  },
+  'BS12-018': {
+    mode: 'enter-battle',
+    requirement: { kind: 'break-level-at-least', level: 4 },
+    playCost: { energy: {}, discardHand: 1, discardHandKeyword: 'arena' },
+    activateOncePerTurn: true,
+    activateEffects: [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena', energyColor: 'red', excludeSource: true } }],
+  },
   // BS10-024／073 are Awakened EXTRA cards.  The official feed stores their
   // printed HP+1 as a non-numeric value, so the runtime keeps the bonus in
   // `awakenHpBonus` while materializing the card with a concrete HP value.
@@ -401,7 +438,7 @@ const createExtraSkill = (
         : {}),
     }
   }
-  if (spec.passiveEffects?.length || spec.cannotAttackCondition) {
+  if (spec.passiveEffects?.length || spec.cannotAttackCondition || spec.friendlyFaintEffects?.length) {
     return {
       trigger: 'passive',
       oncePerTurn: false,
@@ -411,6 +448,7 @@ const createExtraSkill = (
       text,
       effects: [],
       ...(spec.passiveEffects?.length ? { passiveEffects: spec.passiveEffects } : {}),
+      ...(spec.friendlyFaintEffects?.length ? { friendlyFaintEffects: spec.friendlyFaintEffects } : {}),
       ...(spec.cannotAttackCondition
         ? { cannotAttackCondition: spec.cannotAttackCondition }
         : {}),
@@ -456,6 +494,16 @@ export const normalizeOfficialCardRecord = (
 ): OfficialCardRecord => {
   const knownNormalized = normalizeKnownOfficialCardRecord(sourceCard)
   sourceCard = knownNormalized
+
+  // BS12 English records append a translated full-card transcript after an
+  // explicit Card Name delimiter. Keep the source intact; runtime attack/UI
+  // consumes only the preceding English attack (including its Then clauses).
+  if (sourceCard.baseCardNumber.startsWith('BS12-') && sourceCard.locale === 'en') {
+    const attackText = sourceCard.attackText?.split(/(?:^|\r?\n)\s*Card Name\s*:/i)[0].trim()
+    if (attackText !== undefined && attackText !== sourceCard.attackText) {
+      return { ...sourceCard, attackText: attackText || null }
+    }
+  }
 
   // BS6-021 的官方 STAGE 記錄把普通攻擊的傷害標記併在場景文字最前方；
   // 場景沒有普通攻擊，這個 `{da} 1` 會被 UI 誤顯示成額外的 Damage 1。

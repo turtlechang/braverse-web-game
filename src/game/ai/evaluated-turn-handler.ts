@@ -873,10 +873,11 @@ export const handleAiTwoPlyTurnState = (
     : createKnowledgeStateFromPlayerView(beforeView)
   strategy.knowledgeState = knowledgeState
   const rootContext = createLv3ContextForView(beforeView, knowledgeState)
-  const searchOptions = decisionLevel === 5
-    ? DEFAULT_LV5_SEARCH_OPTIONS
-    : DEFAULT_LV4_SEARCH_OPTIONS
-  const deadlineMs = Date.now() + searchOptions.timeBudgetMs
+  const searchOptions = {
+    ...(decisionLevel === 5 ? DEFAULT_LV5_SEARCH_OPTIONS : DEFAULT_LV4_SEARCH_OPTIONS),
+    ...(strategy.searchNow ? { now: strategy.searchNow } : {}),
+  }
+  const deadlineMs = (searchOptions.now ?? Date.now)() + searchOptions.timeBudgetMs
   const searchHooks: Lv4SearchHooks = {
     getLegalCommands: (nextState: GameState, nextPlayerId: PlayerId) =>
       getLegalTurnCommands(nextState, nextPlayerId).filter((command) =>

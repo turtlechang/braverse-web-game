@@ -24,6 +24,7 @@ export interface PendingEffect {
   selectedTrashCookieToBreakAreaIds?: string[]
   selectedHandToBreakAreaIds?: string[]
   selectedBattleToHandIds?: string[]
+  selectedPositionCostTargetIds?: string[]
   /** 未指定時視為空陣列；只有帶棄牌區代價的技能會用到。 */
   selectedTrashToDeckBottomIds?: string[]
   /** 未指定時視為空陣列；BS3-098 使用洗回牌庫的棄牌區代價。 */

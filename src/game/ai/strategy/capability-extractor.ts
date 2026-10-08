@@ -35,7 +35,7 @@ const setupTags = new Set<StrategyTag>([
 
 const sourceTiming = (skill: CardSkill | StageAbility): CapabilityTiming => {
   if (skill.endPhase) return 'end-phase'
-  if ('faint' in skill && skill.faint) return 'faint'
+  if ('faint' in skill && skill.faint && !skill.faintEffects) return 'faint'
   if ('afterDamage' in skill && skill.afterDamage) return 'after-damage'
   return 'trigger' in skill ? skill.trigger : 'activate'
 }
@@ -580,6 +580,11 @@ export const extractCardCapabilities = (
       timing,
       cost: card.skill.cost,
     }, card.skill.effects)
+    if (card.skill.faintEffects) {
+      extractEffects(capabilities, card, cardIndex, {
+        source: 'skill', timing: 'faint', cost: card.skill.faintCost ?? card.skill.cost,
+      }, card.skill.faintEffects)
+    }
   }
   if (card.flip) {
     addMarker(capabilities, card, cardIndex, 'flip', 'flip', 'flip', card.flip.cost)

@@ -45,6 +45,20 @@ const makeCard = (overrides: Partial<GameCard> = {}): GameCard => ({
 })
 
 describe('card behavior contract shadow ledger', () => {
+  it.each([{ phrase: 'up to 1', owner: 'your', side: 'self', min: 0 },
+    { phrase: '1', owner: 'your', side: 'self', min: 1 },
+    { phrase: 'up to 1', owner: "your opponent's", side: 'opponent', min: 0 }] as const)(
+    'binds bracketed battle name $phrase in $owner area without losing optionality or side', ({ phrase, owner, side, min }) => {
+      const source = makeRecord({ skill: { name: 'Employee', text: `Select ${phrase} [Caramel Choux Cookie] in ${owner} battle area. That Cookie gains +1 HP.` } })
+      const runtime = makeCard({ effects: [{ kind: 'gain-hp', amount: 1, target: { side, min, max: 1, cardName: 'Caramel Choux Cookie' } }] })
+      const audit = analyzeOfficialCardBehavior(source, runtime)
+      expect(audit.contract.targets).toHaveLength(1)
+      expect(audit.contract.targets[0]).toMatchObject({ zone: 'battle', selector: { side, min, max: 1, cardName: 'Caramel Choux Cookie' } })
+      expect(audit.contract.targets[0].unresolved).toBeUndefined()
+      expect(audit.checks.targetCovered).toBe(true)
+      const wrong = analyzeOfficialCardBehavior(source, makeCard({ effects: [{ kind: 'gain-hp', amount: 1, target: { side, min, max: 1, cardName: 'Mayor Cuckoobeans' } }] }))
+      expect(wrong.checks.targetCovered).toBe(false)
+    })
   it('detects a missing energy payment on a faint-triggered play', () => {
     const source = makeRecord({
       skill: {

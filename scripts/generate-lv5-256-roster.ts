@@ -11,7 +11,7 @@ import {
   validateCustomDeck,
   type BuiltInDeckChoice,
   type CustomDeckEntry,
-  type TournamentColor,
+  type TournamentColor as CurrentTournamentColor,
 } from '../src/game'
 import {
   getAllCardPoolEntries,
@@ -20,6 +20,7 @@ import {
 } from '../src/game/card-pool'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+type TournamentColor = Exclude<CurrentTournamentColor, 'black'>
 const COLORS: TournamentColor[] = ['red', 'yellow', 'green', 'blue', 'purple']
 const DEFAULT_SIZE = 256
 const DEFAULT_SEED = 20260823

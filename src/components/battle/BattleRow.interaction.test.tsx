@@ -12,6 +12,28 @@ afterEach(() => {
 })
 
 describe('BattleRow battle cookie interactions', () => {
+  it('inspects the actual equipped card rather than its host', async () => {
+    const game = createBattleState()
+    const equipment = { ...cookie('producer-mic'), name: 'Producer Mic' }
+    game.players['player-one'].battleArea[0].equippedCards = [equipment]
+    const onInspectCard = vi.fn()
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+    const props: BattleRowProps = {
+      game, playerId: 'player-one', position: 'bottom', selectedAttackerId: null,
+      effectTargetIds: new Set(), breakEffectTargetIds: new Set(), selectedEffectTargetIds: new Set(),
+      selectedSkillPaymentIds: new Set(), selectedAttackPaymentIds: new Set(), attackPaymentValid: true,
+      interactionLocked: false, onInspectCard, onInspectDiscard: vi.fn(),
+    }
+    await act(() => root.render(<BattleRow {...props} />))
+    const button = container.querySelector<HTMLButtonElement>('[aria-label="查看裝備：Producer Mic"]')
+    expect(button).not.toBeNull()
+    await act(() => button!.click())
+    expect(onInspectCard).toHaveBeenCalledWith(equipment)
+    await act(() => root.unmount())
+  })
   it('lets the player inspect the previous Cookie shown under an Awakened card', async () => {
     const game = createBattleState()
     const baseCookie = game.players['player-one'].battleArea[0].card

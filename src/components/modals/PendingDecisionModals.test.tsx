@@ -11,9 +11,60 @@ import {
   OptionalCostAttackModal,
   InspectDeckModal,
   ReorderHpModal,
+  RevealTopDeckModal,
 } from './PendingDecisionModals'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
+it.each([true, false])('bottom reveal displays same-card destination without claiming the card was moved early: matched=%s', async matched => {
+  const card = createHandCard(1)
+  const onConfirm = vi.fn()
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<RevealTopDeckModal sourceCardName="Cream Puff Cookie" revealedCard={card}
+      deckPosition="bottom" addMatchedToHand matched={matched} onConfirm={onConfirm} />))
+    expect(container.textContent).toContain('Cream Puff Cookie — 展示牌庫底')
+    expect(container.textContent).not.toContain('翻開牌庫頂')
+    expect(container.textContent).toContain(matched ? '確認後加入手牌並執行後段效果。' : '保持在牌庫底，後段效果不執行。')
+    const button = container.querySelector<HTMLButtonElement>('.reveal-confirm')!
+    await act(() => button.click())
+    expect(onConfirm).toHaveBeenCalledOnce()
+  } finally {
+    await act(() => root.unmount())
+    container.remove()
+  }
+})
+it.each([true, false])('Comeback Stage public bottom text does not invent subsequent effects: matched=%s', async matched => {
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<RevealTopDeckModal sourceCardName="Comeback Stage" revealedCard={createHandCard(1)}
+      deckPosition="bottom" addMatchedToHand matched={matched} hasFollowupEffects={false} onConfirm={vi.fn()} />))
+    expect(container.textContent).toContain(matched ? '確認後加入手牌。' : '保持在牌庫底。')
+    expect(container.textContent).not.toContain('後段效果')
+    expect(container.textContent).not.toContain('已加入手牌')
+  } finally { await act(() => root.unmount()) }
+})
+it('the opponent sees the public bottom reveal but cannot confirm it', async () => {
+  const onConfirm = vi.fn()
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<RevealTopDeckModal sourceCardName="Cream Puff Cookie" revealedCard={createHandCard(1)}
+      deckPosition="bottom" addMatchedToHand matched canConfirm={false} onConfirm={onConfirm} />))
+    const button = container.querySelector<HTMLButtonElement>('.reveal-confirm')!
+    expect(button.disabled).toBe(true)
+    expect(button.textContent).toContain('等待對手確認')
+    await act(() => button.click())
+    expect(onConfirm).not.toHaveBeenCalled()
+  } finally {
+    await act(() => root.unmount())
+    container.remove()
+  }
+})
 
 const createHandCard = (index: number): GameCard => ({
   id: `TEST-${index}`,
@@ -337,7 +388,7 @@ describe('DrawUpToResponseModal', () => {
 
     expect(container.querySelector('.draw-up-to-modal')).toBeNull()
     expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
-      '最多抽 2 張牌',
+      '最多抽 3 張牌',
     )
 
     await act(() => {
@@ -345,6 +396,9 @@ describe('DrawUpToResponseModal', () => {
     })
 
     expect(container.querySelector('.draw-up-to-modal')).not.toBeNull()
+    const options = container.querySelectorAll<HTMLButtonElement>('.draw-up-to-option')
+    expect(options).toHaveLength(4)
+    expect(options[3].textContent).toContain('牌庫不足時繼續 Refresh')
 
     await act(() => root.unmount())
     container.remove()
@@ -352,6 +406,23 @@ describe('DrawUpToResponseModal', () => {
 })
 
 describe('HandDiscardResponseModal', () => {
+  it('offers Item cancellation while keeping the mandatory extra discard confirmation disabled', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const onCancelItem = vi.fn()
+    const onConfirm = vi.fn()
+    try {
+      await act(() => root.render(<HandDiscardResponseModal sourceCardName="DJ Cookie" hand={[createHandCard(1)]}
+        requiredCount={1} selectedIds={[]} onToggleCard={vi.fn()} onConfirm={onConfirm} onCancelItem={onCancelItem}
+        effectText="另外棄置 1 張手牌後，才能使用這張道具。確認後才支付道具的完整費用。" />))
+      expect(findButtonByText(container, '確認棄置 (0)')?.disabled).toBe(true)
+      expect(container.textContent).toContain('確認後才支付道具的完整費用')
+      await act(() => findButtonByText(container, '取消使用道具')!.click())
+      expect(onCancelItem).toHaveBeenCalledOnce()
+      expect(onConfirm).not.toHaveBeenCalled()
+    } finally { await act(() => root.unmount()); container.remove() }
+  })
   const tridentCard: GameCard = {
     id: 'BS2-049',
     instanceId: 'test-bs2-049',
@@ -594,6 +665,29 @@ describe('HandDiscardResponseModal', () => {
 })
 
 describe('OptionalCostAttackModal', () => {
+  it('public hand-to-bottom payment labels the real destination and opening the selection does not pay', async () => {
+    const card = createCookieCard(1)
+    const onPay = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(() => root.render(<OptionalCostAttackModal sourceCardName="Misdelivered Fan Letter"
+        effectText="Then reveal a LV2 Arena Cookie and place it on the bottom."
+        resolution="ability" discardHandCost={1} handCostDestination="deck-bottom"
+        discardHandCandidates={[{ card, instanceId: card.instanceId }]} playerHand={[card]}
+        energyCostTotal={0} supportCandidates={[]} targetCandidates={[]} needsTarget={false}
+        targetMin={0} targetMax={0} targetLabel="對手餅乾" onSkip={() => undefined} onPay={onPay} />))
+      expect(container.textContent).toContain('公開 1 張手牌並放入牌庫底')
+      expect(container.textContent).not.toContain('棄置')
+      await act(() => findButtonByText(container, '支付')!.click())
+      expect(container.textContent).toContain('選擇 1 張合法餅乾手牌，公開並放入牌庫底')
+      expect(onPay).not.toHaveBeenCalled()
+    } finally {
+      await act(() => root.unmount())
+      container.remove()
+    }
+  })
   it.each([false, true])('shows skip unless the attack-after cost is explicitly mandatory (%s)', async (mandatory) => {
     const container = document.createElement('div')
     document.body.appendChild(container)

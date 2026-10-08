@@ -29,7 +29,7 @@ const candidate = JSON.parse(await (await import('node:fs/promises')).readFile(
 const cards = Object.fromEntries(candidate.cards
   .filter((card) => /^BS11-05[0-3](?:@1)?$/.test(card.cardNumber))
   .map((card) => [card.cardNumber, { name: card.name, imageUrl: card.imageUrl }]))
-const contractCards = Object.keys(cards).join(',')
+const contractCards = [...Object.keys(cards), 'BS11-095'].join(',')
 const requestedCards = process.env.BS11_BROWSER_CARDS?.split(',').map((value) => value.trim()).filter(Boolean)
 const selectedCards = requestedCards?.length
   ? Object.keys(cards).filter((cardId) => requestedCards.includes(cardId))
@@ -171,9 +171,16 @@ const sourceCard = (page, cardName) => page.locator('.bottom-field .combat-card-
 }).first()
 const optionalModal = (page) => page.locator('.optional-cost-attack-inline:visible').first()
 const activeEffectPanel = (page) => page.locator('.effect-panel[role="alertdialog"]:visible').last()
-const readButtonName = async (button) => button.locator('.card-face img').getAttribute('alt').catch(async () =>
-  button.locator('.card-fallback strong').textContent().then((value) => value?.trim() ?? null),
-)
+const readButtonName = async (button) => {
+  // Payment targets can be the card-face itself, rather than its wrapper.
+  const name = await button.evaluate((element) =>
+    element.querySelector('img')?.getAttribute('alt')
+      ?? element.querySelector('.card-fallback strong')?.textContent?.trim()
+      ?? element.getAttribute('title'),
+  )
+  assert.ok(name, 'Target card must expose its rendered name')
+  return name
+}
 const clickEffectPrimary = async (panel, description) => {
   const button = panel.locator('.effect-panel-primary-action').last()
   await button.waitFor({ state: 'visible' })
@@ -311,6 +318,18 @@ const runAttackCase = async (page, evidence) => {
       await finishOptionalCost(page, evidence, 'skip')
     } else {
       await finishOptionalCost(page, evidence, 'pay')
+      if (evidence.routeKind === 'flip-positive') {
+        // This normal local fixture has an AI defender. Verify its actual FLIP,
+        // then click the attacker's resumed second ability step through the UI.
+        await waitForCommand(page, 'resolve-flip')
+        await waitForCommand(page, 'resolve-draw-up-to')
+        const resumed = activeEffectPanel(page)
+        await resumed.waitFor({ state: 'visible' })
+        assert.match(await resumed.innerText(), /Wind Archer Cookie|最多抽 2 張/)
+        await clickEffectPrimary(resumed, 'attacker continuation after defender FLIP')
+        evidence.flipDraw = 1
+        evidence.flipController = 'AI defender'
+      }
       await finishDrawIfPresent(page, evidence, 2)
     }
   } else if (evidence.negative) {
@@ -329,6 +348,14 @@ const runAttackCase = async (page, evidence) => {
   const after = await readBothFields(page)
   evidence.after = after
   evidence.trace = await trace(page)
+  if (evidence.routeKind === 'flip-positive') {
+    assert.equal(after.top.hand.length, evidence.before.top.hand.length + 1, 'defender FLIP draws exactly one')
+    assert.equal(after.top.deckCount, evidence.before.top.deckCount - 1, 'defender FLIP consumes one deck card')
+    const kinds = evidence.trace.map((entry) => entry.commandKind)
+    const flipIndex = kinds.indexOf('resolve-flip')
+    const drawIndices = kinds.map((kind, index) => kind === 'resolve-draw-up-to' ? index : -1).filter((index) => index >= 0)
+    assert.ok(flipIndex >= 0 && drawIndices.length === 2 && flipIndex < drawIndices[0] && drawIndices[0] < drawIndices[1], 'FLIP draw completes before attacker Then draw')
+  }
   assert.ok(evidence.trace.some((entry) => entry.commandKind === 'declare-attack'), 'attack must use the normal declare-attack command')
   assert.ok(evidence.trace.some((entry) => entry.commandKind === 'resolve-attack-effect'), 'normal attack Then must resolve through the attack-effect command')
   const targetAfter = after.top.battle.find((entry) => entry.id === evidence.targetId)
@@ -419,7 +446,9 @@ const run053ActivateCase = async (page, evidence) => {
     : '053 Activate paid G and removed exactly one HP from the five-HP target only'
 }
 
-const routeKindsForCard = (cardNumber) => cardNumber.startsWith('BS11-053')
+const routeKindsForCard = (cardNumber) => process.env.BS11_BROWSER_FLIP_INTERLEAVE === 'true'
+  ? cardNumber.startsWith('BS11-052') ? ['flip-positive', 'flip-negative'] : []
+  : cardNumber.startsWith('BS11-053')
   ? ['positive', 'negative', 'activate-positive', 'activate-negative']
   : ['positive', 'negative']
 
@@ -459,6 +488,8 @@ const runCase = async (browser, viewport, cardNumber, routeKind) => {
     evidence.body = await page.locator('body').innerText().catch(() => '')
     evidence.trace = await trace(page).catch(() => [])
     evidence.state = await readBothFields(page).catch(() => null)
+    await page.screenshot({ path: resolve(artifactDir, `${cardNumber.replace('@', '-')}-${routeKind}-${viewport.width}-failure.png`), fullPage: true }).catch(() => {})
+    writeFileSync(resolve(artifactDir, 'latest-failure.json'), JSON.stringify(evidence, null, 2))
   } finally {
     await page.close()
   }

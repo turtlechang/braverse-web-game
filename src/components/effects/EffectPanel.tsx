@@ -71,6 +71,10 @@ export interface EffectPanelProps {
   selectedBattleToHandIds?: Set<string>
   onToggleBattleToHand?: (instanceId: string) => void
   battleCookieToHandCost?: number
+  positionCostCandidates?: GameCard[]
+  selectedPositionCostTargetIds?: Set<string>
+  onTogglePositionCost?: (instanceId: string) => void
+  positionCost?: CardSkill['cost']['battleCookiePosition']
   trashToDeckBottomCandidates?: GameCard[]
   selectedTrashToDeckBottomIds?: Set<string>
   onToggleTrashToDeckBottom?: (instanceId: string) => void
@@ -302,6 +306,10 @@ function EffectPanelContent({
   selectedBattleToHandIds = new Set<string>(),
   onToggleBattleToHand,
   battleCookieToHandCost = 0,
+  positionCostCandidates = [],
+  selectedPositionCostTargetIds = new Set<string>(),
+  onTogglePositionCost,
+  positionCost,
   trashToDeckBottomCandidates = [],
   selectedTrashToDeckBottomIds = new Set<string>(),
   onToggleTrashToDeckBottom,
@@ -320,8 +328,9 @@ function EffectPanelContent({
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const fixedTargets = hasFixedModifierTargets(currentEffect)
+  const isAttackFollowUp = pendingEffect?.sourceKind === 'attack' || pendingEffect?.triggerLabel === '攻擊後續效果'
   const attackTextSections =
-    pendingEffect?.sourceKind === 'attack'
+    pendingEffect && isAttackFollowUp
       ? splitAttackText(pendingEffect.skill.text)
       : null
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
@@ -332,6 +341,8 @@ function EffectPanelContent({
   const supportCostColorLabel = skill?.cost.supportToHandColor
     ? `${energyColorLabel[skill.cost.supportToHandColor]} `
     : ''
+  const supportCostKeywordLabel = skill?.cost.supportToHandKeyword === 'arena' ? '【Arena】' :
+    skill?.cost.supportToHandKeyword ? `【${skill.cost.supportToHandKeyword}】` : ''
   const isRestSupportAndDamageEffect =
     currentEffect?.kind === 'rest-support-and-damage'
   const selectedRestSupportIds = new Set(
@@ -525,6 +536,7 @@ function EffectPanelContent({
       (pendingEffect?.selectedTrashCookieToBreakAreaIds ?? []).length === trashCookieToBreakAreaCost) &&
     (handToBreakAreaCost === 0 ||
       (pendingEffect?.selectedHandToBreakAreaIds ?? []).length === handToBreakAreaCost) &&
+    (selectedPositionCostTargetIds.size === (positionCost?.count ?? 0)) &&
     battleCookieToHandPaid &&
     trashToDeckBottomPaid &&
     trashToDeckPaid
@@ -641,6 +653,7 @@ function EffectPanelContent({
       handToBreakAreaCost > 0 ||
       battleCookieToHandCandidates.length > 0 ||
       battleCookieToHandCost > 0 ||
+      Boolean(positionCost) ||
       trashToDeckBottomCandidates.length > 0 ||
       trashToDeckBottomCost > 0 ||
       trashToDeckCandidates.length > 0 ||
@@ -773,7 +786,7 @@ function EffectPanelContent({
         <div className="effect-panel-body">
           <div className="effect-panel-heading">
             <span>
-              {optionalCostAttack.resolution === 'ability'
+              {optionalCostAttack.conditionalSourcePlay ? '技能登場代價（可選）' : optionalCostAttack.extraDeckEntry ? 'EXTRA 登場代價（必須支付）' : optionalCostAttack.resolution === 'ability'
                 ? 'Then 可選效果'
                 : '攻擊後續效果'}
             </span>
@@ -816,8 +829,10 @@ function EffectPanelContent({
               <span>{pendingEffect.sourceCard.id}</span>
               <strong>{pendingEffect.sourceCard.name}</strong>
               <div className="skill-labels">
-                {(pendingEffect.sourceKind === 'attack'
+                {(isAttackFollowUp
                   ? ['攻擊後續效果']
+                  : pendingEffect.sourceCard.type === 'trap'
+                    ? ['陷阱效果']
                   : getSkillLabels(pendingEffect.skill, {
                       endPhase: pendingEffect.endPhase,
                     })).map((label) => (
@@ -837,7 +852,7 @@ function EffectPanelContent({
                 </>
               ) : (
                 <p className="effect-source-description">
-                  <CardEffectText text={pendingEffect.skill.text} />
+                  <CardEffectText text={pendingEffect.skill.text || pendingEffect.sourceCard.effectText || ''} />
                 </p>
               )}
             </div>
@@ -847,6 +862,12 @@ function EffectPanelContent({
             pendingEffect.skill.effectConditionsAtResolution && (
             <p className="effect-instruction" role="status">
               目前效果條件不成立。仍可支付代價並消耗本次發動，但不會執行效果。
+            </p>
+          )}
+
+          {pendingEffect.skill.cost.selfToTrash && !pendingEffect.skillActivated && (
+            <p className="effect-instruction" role="status">
+              技能代價：將來源餅乾及其 HP 卡、裝備與 Awaken 底卡置入棄牌區。確認發動後支付，來源餅乾不能選為效果目標。
             </p>
           )}
 
@@ -876,6 +897,16 @@ function EffectPanelContent({
           )}
 
           <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+
+          {currentEffect.kind === 'trash-to-deck-all' && currentEffect.condition?.kind === 'trash-blocker-cookie-count-at-least' && (
+            <div className="effect-instruction effect-resolution-summary" role="status">
+              <Sparkles aria-hidden="true" />
+              <span>
+                {describeEffect(currentEffect)}
+                {!effectConditionMet && '目前未達門檻，使用後可能不執行效果。'}
+              </span>
+            </div>
+          )}
 
           {hasEffectSequence && (
             <div className="effect-sequence-status" role="status">
@@ -958,6 +989,15 @@ function EffectPanelContent({
                     {trashBattleCookieCost} 張戰鬥區餅乾代價
                   </small>
                 )}
+                {positionCost && (
+                  <>
+                    <p className="effect-selection-instruction" role="status">
+                      技能代價：選擇 {positionCost.count} 張餅乾設為{positionCost.position === 'active' ? '活躍' : '橫置'}，已選 {selectedPositionCostTargetIds.size}／{positionCost.count} 張。
+                    </p>
+                    <CandidateButtons cards={positionCostCandidates} selectedIds={selectedPositionCostTargetIds}
+                      onToggle={onTogglePositionCost} className="effect-candidates-position-cost" />
+                  </>
+                )}
                 {battleCookieToHandCost > 0 && (
                   <small>
                     已選擇 {(pendingEffect.selectedBattleToHandIds ?? []).length} 張，
@@ -987,7 +1027,7 @@ function EffectPanelContent({
                 {costSupportCandidates.length > 0 && (
                   <>
                     <small>
-                      選擇要作為代價移動的支援區{supportCostColorLabel}{supportCostTypeLabel}
+                      選擇要作為代價移動的支援區{supportCostColorLabel}{supportCostKeywordLabel}{supportCostTypeLabel}
                     </small>
                     <CandidateButtons
                       cards={costSupportCandidates}
@@ -1031,6 +1071,8 @@ function EffectPanelContent({
                   <>
                     <small>{pendingEffect.skill?.cost.trashBattleCookie?.faint
                       ? '選擇要作為代價昏厥的己方餅乾（餅乾進入休息區，HP 卡進入棄牌區）'
+                      : pendingEffect.skill?.cost.trashBattleCookie?.toBreakArea
+                        ? '選擇要作為代價放入休息區的戰鬥區餅乾'
                       : '選擇要作為代價送入棄牌區的戰鬥區餅乾'}</small>
                     <CandidateButtons
                       cards={trashBattleCookieCandidates}
@@ -1056,7 +1098,7 @@ function EffectPanelContent({
                 {handToBreakAreaCost > 0 && (
                   <>
                     <small>
-                      手牌 → 休息區（技能代價）：已選 {(pendingEffect.selectedHandToBreakAreaIds ?? []).length}／{handToBreakAreaCost} 張卡牌
+                      手牌 → 休息區（{pendingEffect.sourceKind === 'item' ? '道具' : '技能'}代價）：已選 {(pendingEffect.selectedHandToBreakAreaIds ?? []).length}／{handToBreakAreaCost} 張卡牌
                     </small>
                     <CandidateButtons
                       cards={handToBreakAreaCandidates}
@@ -1074,10 +1116,11 @@ function EffectPanelContent({
                 )}
                 {trashToDeckBottomCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價放到牌庫底的棄牌區卡牌</small>
+                    <small>{pendingEffect.skill.cost.trashToDeckBottom?.blockerOnly ? '選擇要作為代價放到牌庫底的具有 Blocker 的餅乾' : '選擇要作為代價放到牌庫底的棄牌區卡牌'}</small>
                     <CandidateButtons
                       cards={trashToDeckBottomCandidates}
                       selectedIds={selectedTrashToDeckBottomIds}
+                      selectedOrderIds={pendingEffect.selectedTrashToDeckBottomIds}
                       onToggle={onToggleTrashToDeckBottom}
                       className="effect-candidates-trash-deck-bottom"
                     />
@@ -1231,6 +1274,10 @@ function EffectPanelContent({
                   </small>
                 )}
                 {effectSelectionError && <small role="status">{effectSelectionError}</small>}
+                {((currentEffect.kind === 'field-to-deck-bottom' && !currentEffect.hpOnly) || currentEffect.kind === 'return-to-deck-bottom' || currentEffect.kind === 'battle-to-deck-top' || currentEffect.kind === 'trash-to-deck') &&
+                  candidateCards.some(card => card.type === 'cookie' && card.extraDeckOrigin) && (
+                    <small role="status">EXTRA 餅乾返回 EXTRA Deck；離開戰鬥區時，原 HP、裝備與 Awaken 底卡移入棄牌區。</small>
+                  )}
                 {fixedTargets ? (
                   <small>固定套用 {candidateCards.length} 張餅乾，不需選取。</small>
                 ) : currentEffect.kind === 'hand-to-break-by-level-sum' ||
@@ -1339,8 +1386,8 @@ export function EffectPanel(props: EffectPanelProps) {
     props.pendingEffect?.sourceCard.name ??
     props.optionalCostAttack?.sourceCardName
   const minimizedPromptLabel =
-    props.pendingEffect?.triggerLabel ??
-    (props.optionalCostAttack?.resolution === 'ability'
+    (props.optionalCostAttack?.conditionalSourcePlay ? '技能登場代價' : undefined) ?? props.pendingEffect?.triggerLabel ??
+    (props.optionalCostAttack?.extraDeckEntry ? 'EXTRA 登場代價' : props.optionalCostAttack?.resolution === 'ability'
       ? 'Then 可選效果'
       : '攻擊後續效果')
 
@@ -1352,59 +1399,58 @@ export function EffectPanel(props: EffectPanelProps) {
     return null
   }
 
-  if (
-    minimized &&
-    (props.pendingEffect || props.optionalCostAttack) &&
-    minimizedSourceName
-  ) {
-    return (
-      <button
-        type="button"
-        className="effect-panel-dock"
-        onClick={() => setMinimized(false)}
-      >
-        <span>
-          <strong>{minimizedSourceName}</strong>
-          <small>{minimizedPromptLabel}</small>
-        </span>
-        <Maximize2 aria-hidden="true" />
-      </button>
-    )
-  }
+  const showDock = Boolean(minimized && hasPendingPrompt && minimizedSourceName)
 
   return (
-    <div
-      className="modal-backdrop"
-      role="presentation"
-      style={hasPendingPrompt ? undefined : { pointerEvents: 'none' }}
-    >
-      <section
-        className={`battle-response-modal effect-panel${hasPendingPrompt ? '' : ' is-complete'}`}
-        role={hasPendingPrompt ? 'alertdialog' : 'status'}
-        aria-live="polite"
+    <>
+      {showDock && (
+        <button
+          type="button"
+          className="effect-panel-dock"
+          onClick={() => setMinimized(false)}
+        >
+          <span>
+            <strong>{minimizedSourceName}</strong>
+            <small>{minimizedPromptLabel}</small>
+          </span>
+          <Maximize2 aria-hidden="true" />
+        </button>
+      )}
+      {/* Keep the draft mounted so restoring the panel retains its current step. */}
+      <div
+        className="modal-backdrop"
+        role="presentation"
+        style={showDock ? { display: 'none' } : hasPendingPrompt ? undefined : { pointerEvents: 'none' }}
+        aria-hidden={showDock || undefined}
       >
-        {(props.pendingEffect || props.optionalCostAttack) && (
-          <button
-            type="button"
-            className="minimize-reveal"
-            onClick={() => setMinimized(true)}
-            title={
-              props.pendingEffect ? '縮小技能效果' : '縮小攻擊後續效果'
-            }
-          >
-            <Minimize2 aria-hidden="true" />
-            縮小
-          </button>
-        )}
-        <EffectPanelContent {...props} />
-        {props.effectHistory.length > 0 && (
-          <ol>
-            {props.effectHistory.map((entry, index) => (
-              <li key={`${entry}-${index}`}>{entry}</li>
-            ))}
-          </ol>
-        )}
-      </section>
-    </div>
+        <section
+          className={`battle-response-modal effect-panel${hasPendingPrompt ? '' : ' is-complete'}`}
+          role={hasPendingPrompt ? 'alertdialog' : 'status'}
+          aria-live="polite"
+        >
+          {(props.pendingEffect || props.optionalCostAttack) && (
+            <button
+              type="button"
+              className="minimize-reveal"
+              onClick={() => setMinimized(true)}
+              title={
+                props.pendingEffect ? '縮小技能效果' : '縮小攻擊後續效果'
+              }
+            >
+              <Minimize2 aria-hidden="true" />
+              縮小
+            </button>
+          )}
+          <EffectPanelContent {...props} />
+          {props.effectHistory.length > 0 && (
+            <ol>
+              {props.effectHistory.map((entry, index) => (
+                <li key={`${entry}-${index}`}>{entry}</li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
+    </>
   )
 }

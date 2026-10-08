@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
 import type {
+  AbilityCost,
   CardEffect,
   EnergyCost,
   EffectTargetSelector,
   GameCard,
+  ExtraDeckCard,
 } from '../../game'
 import {
   convertOfficialCardToExtraDeckCard,
@@ -278,6 +280,11 @@ const additionalRuntimeSelectorsForEffect = (
   })
 
   switch (record.kind) {
+    case 'set-active':
+      return record.selectable === true && typeof record.supportCount === 'number'
+        ? [{ side: 'self', min: record.optional === false ? record.supportCount : 0, max: record.supportCount,
+            ...(record.energyColor ? { energyColor: record.energyColor as EffectTargetSelector['energyColor'] } : {}) }]
+        : []
     case 'deck-to-support':
       return amount === undefined ? [] : [upTo(amount), fixed(amount)]
     case 'trash-to-support':
@@ -318,10 +325,9 @@ const additionalRuntimeSelectorsForEffect = (
         { side: 'opponent', min: 0, max: 1 },
       ]
     case 'hand-to-hp':
-      // Without selectTarget the actual choice is a hand card; the target
-      // field points at the destination Cookie and is therefore a second,
-      // source-only domain.
-      return [{ side: 'self', min: 0, max: 1 }]
+      // The hand choice is independent of the destination Cookie selector.
+      // A required second-stage placement cannot be covered by an optional hand choice.
+      return [{ side: 'self', min: record.handPlacementRequired === true ? 1 : 0, max: 1 }]
     case 'hp-to-support':
       // The target field identifies the destination Cookie.  The attached HP
       // card is a separate support-area selection exposed by the UI.
@@ -571,6 +577,9 @@ const runtimeSelectorsForCost = (
       ...(typeof value.supportToHandColor === 'string'
         ? { energyColor: value.supportToHandColor as EffectTargetSelector['energyColor'] }
         : {}),
+      ...(typeof value.supportToHandKeyword === 'string'
+        ? { keyword: value.supportToHandKeyword as EffectTargetSelector['keyword'] }
+        : {}),
     })
   }
   const hpToTrash = value.hpToTrash
@@ -684,6 +693,11 @@ const bracketClauses = (
       payments.push({ kind: 'source-energy', energy, clauseIds: [clauseId] })
       continue
     }
+    if (/^reveal\s+1\s+card\s+from\s+the\s+bottom\s+of\s+your\s+deck\.?$/i.test(inner)) {
+      addClause(clauses, source, match[0], 'cost', start, end, 'pattern')
+      costs.push({ kind: 'reveal-deck-bottom', amount: 1, clauseIds: [clauseId] })
+      continue
+    }
     // A bracketed `Select ... from ... support area` is a target selector,
     // not a payment/cost.  Leave its contract target classification to
     // `targetClauses`; otherwise the generic bracket fallback would add an
@@ -741,8 +755,9 @@ const bracketClauses = (
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
     const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
     const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
+    const positionCookie = inner.match(/set\s+(\d+)\s+(?:【Arena】\s+)?cookies?\s+in\s+your\s+battle\s+area\s+as\s+(active|rested)/i)
     const restCookie = /rest\s+\d+\s+cookie\s+in\s+your\s+battle\s+area/i.test(inner)
-    const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
+    const restSource = /(?:rest\s+this\s+(?:card|cookie)|card\s+rests?)/i.test(inner)
     const fieldToDeckBottom = /\b(?:place|select)\b[\s\S]*\b(?:battle\s+area|stage\s+area)\b[\s\S]*\b(?:on|at|to)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
     // 官方 BS8-078／082 省略了 "your"，但來源仍只能是自己這張 Cookie；
     // 兩種措辭都必須綁到 AbilityCost.selfToDeckBottom 的成本證據。
@@ -753,7 +768,7 @@ const bracketClauses = (
     const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
     const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+(?:your|this)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
-    const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
+    const trashDeckBottom = inner.match(/(?:select|return|place)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
     const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
     const revealHand =
       /(?:reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)|reveal\s+(?:cards?|cookies?)\s+from\s+your\s+hand\s+with\s+a\s+total\s+LV\.\s+sum\s+of\s+\d+)/i.test(inner)
@@ -773,6 +788,7 @@ const bracketClauses = (
       battleFaint ||
       battleBreak ||
       handBreak ||
+      positionCookie ||
       restCookie ||
       restSource ||
       fieldToDeckBottom ||
@@ -812,6 +828,8 @@ const bracketClauses = (
                     ? 'battle-to-break'
                     : handBreak
                       ? 'hand-to-break'
+                      : positionCookie
+                        ? positionCookie[2].toLowerCase() === 'active' ? 'ready-cookie' : 'rest-cookie'
                       : restCookie
                         ? 'rest-cookie'
                         : restSource
@@ -857,7 +875,7 @@ const bracketClauses = (
         deckTrash
       costs.push({
         kind,
-        amount: amountMatch?.[1] ? Number(amountMatch[1]) : 1,
+        amount: positionCookie?.[1] ? Number(positionCookie[1]) : amountMatch?.[1] ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
       if (selfAndSupportTrash) {
@@ -890,6 +908,16 @@ const targetClauses = (
 ): ContractTarget[] => {
   const targets: ContractTarget[] = []
   const structuredRanges: Array<{ start: number; end: number }> = []
+  // "select up to 1 Cookie in your battle area" names the owner after Cookie.
+  // Keep this plain battle selector separate from qualified hand/Break choices.
+  const plainBattleSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+Cookies?\s+(?:from|in)\s+(your opponent['’]s|your|either player['’]s)\s+battle\s+area\b/gi
+  for (const match of text.matchAll(plainBattleSelection)) {
+    const start = match.index ?? 0, end = start + match[0].length
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({ selector: { side: /opponent/i.test(match[3]) ? 'opponent' : /either/i.test(match[3]) ? 'either' : 'self', min: match[1] ? 0 : Number(match[2]), max: Number(match[2]) }, clauseIds: [clauseId], zone: 'battle' })
+    structuredRanges.push({ start, end })
+  }
   // BS9-025's trailing clause omits a number: the player may select another
   // one of their Cookies as the recipient of the attached +1 HP.  Treat this
   // as an optional battle Cookie selector and keep `excludeSource` explicit;
@@ -1021,6 +1049,15 @@ const targetClauses = (
       clauseIds: [clauseId],
       zone: 'battle',
     })
+    structuredRanges.push({ start, end })
+  }
+  const specialPlayBattleSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+Cookie\s+that\s+has\s+Special\s+Play\s+in\s+your\s+battle\s+area\b/gi
+  for (const match of text.matchAll(specialPlayBattleSelection)) {
+    const start = match.index ?? 0, end = start + match[0].length
+    if (structuredRanges.some(range => start < range.end && end > range.start)) continue
+    const amount = Number(match[2]), clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({ selector: { side: 'self', min: match[1] ? 0 : amount, max: amount, hasSpecialPlay: true }, clauseIds: [clauseId], zone: 'battle' })
     structuredRanges.push({ start, end })
   }
   // BS8-050 的「LV.3 Cookie that was played from your break area during this
@@ -1165,7 +1202,7 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's|the)\s+battle\s+area\b/gi
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:\{[RYGBPK]\}\s+)?(?:(?:【Arena】|\[Arena\]|Arena)\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?(?:\s+(?:that\s+does\s+not\s+have|without)\s+(?:【Skill】|\[Skill\]|Skill))?)\s+(?:in|from)\s+(your opponent's|your|either player's|the)\s+battle\s+area\b/gi
   for (const match of text.matchAll(battleAreaSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -1399,9 +1436,31 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
+  const namedBattleSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+\[([^\]]+)\]\s+in\s+(your|your opponent's)\s+battle\s+area\b/gi
+  for (const match of text.matchAll(namedBattleSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({ selector: { side: match[4].toLowerCase() === 'your' ? 'self' : 'opponent',
+      min: match[1] ? 0 : amount, max: amount, cardName: match[3].trim() }, clauseIds: [clauseId], zone: 'battle' })
+    structuredRanges.push({ start, end })
+  }
   // Any remaining Select / play-from-zone phrase is still a player choice.
   // Do not silently treat it as an untargeted effect when no safe selector
   // grammar exists; the contract must stop at needs-review instead.
+  const battleBlockerSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+Cookies?\s+that\s+(?:has|have)\s+(?:【Blocker】|\{bl\}|Blocker)\s+in\s+your\s+battle\s+area\b/gi
+  for (const match of text.matchAll(battleBlockerSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some(range => start < range.end && end > range.start)) continue
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({ selector: { side: 'self', min: match[1] ? 0 : Number(match[2]), max: Number(match[2]), blockerOnly: true }, clauseIds: [clauseId], zone: 'battle' })
+    structuredRanges.push({ start, end })
+  }
   const unresolvedSelection = /\bselect\b[^.]+(?:\.|$)/gi
   for (const match of text.matchAll(unresolvedSelection)) {
     const start = match.index ?? 0
@@ -1531,6 +1590,10 @@ const addActionClauses = (
       // `{sk}` is the official display marker for a named skill.  A lone
       // marker plus title (for example BS4-004) has no executable clause.
       if (source === 'skill' && /^\s*\{sk\}/i.test(normalized)) continue
+      if (source === 'skill' && /^(?:【Blocker】|\{bl\})$/i.test(normalized)) {
+        addClause(clauses, source, normalized, 'effect', sentence.start, sentence.end, 'exact')
+        continue
+      }
       // A parenthetical ordering reminder is an explicit resolution rule, not
       // an unsupported effect.  Preserve it as an order clause so the
       // contract still records the source evidence without inventing a
@@ -1602,6 +1665,16 @@ const collectRuntime = (value: unknown, result: {
     return
   }
   const record = value as Record<string, unknown>
+  if (record.handCostDestination === 'deck-bottom' && typeof record.discardHand === 'number' && record.discardHand > 0) {
+    result.effectKinds.add('reveal-hand')
+    result.effectKinds.add('hand-to-deck-bottom')
+  }
+  if (record.handCostDestination === 'deck-bottom' && record.cost && typeof record.cost === 'object' &&
+    typeof (record.cost as Record<string, unknown>).discardHand === 'number' &&
+    ((record.cost as Record<string, unknown>).discardHand as number) > 0) {
+    result.effectKinds.add('reveal-hand')
+    result.effectKinds.add('hand-to-deck-bottom')
+  }
   if (typeof record.kind === 'string') {
     result.effectKinds.add(record.kind)
     if (record.target && typeof record.target === 'object') {
@@ -1682,7 +1755,7 @@ const collectRuntime = (value: unknown, result: {
       key === 'attackEnergyCost' ||
       key === 'sourceEnergy'
     ) continue
-    if (key === 'cost' && child && typeof child === 'object') {
+    if ((key === 'cost' || key === 'faintCost') && child && typeof child === 'object') {
       collectCostEvidence(child as Record<string, unknown>, result)
     }
     if (key === 'alternativeCosts' && Array.isArray(child)) {
@@ -1708,11 +1781,18 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
           oncePerGame: card.skill.oncePerGame,
           yourTurn: card.skill.yourTurn,
           restSource: card.skill.restSource,
+          equippedAttackDisablesFlip: card.skill.equippedAttackDisablesFlip,
+          equippedAttackBlockerPrevention: card.skill.equippedAttackBlockerPrevention,
+          equippedAttackTrigger: card.skill.equippedAttackTrigger,
+          battleOpponentAttackEffectPrevention: card.skill.battleOpponentAttackEffectPrevention,
           cost: card.skill.cost,
+          faintCost: card.skill.faintCost,
           sourceEnergy: card.skill.sourceEnergy,
           effects: [
             ...card.skill.effects,
             ...(card.skill.onPlayEffects ?? []),
+            ...(card.skill.faintEffects ?? []),
+            ...(card.skill.friendlyFaintEffects ?? []),
             ...(card.skill.passiveEffects ?? []),
           ],
         }
@@ -1770,6 +1850,7 @@ const flattenRuntimeEffects = (evidence: RuntimeCardEvidence): CardEffect[] => {
   }
   visit(evidence.effects)
   visit(evidence.skill?.effects)
+  visit(evidence.skill?.equippedAttackTrigger?.effects)
   visit(evidence.attackEffects)
   visit(evidence.flip?.effects)
   visit(evidence.ability?.effects)
@@ -1904,7 +1985,8 @@ const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
 }
 
 const hasRuntimeConditionalStep = (evidence: RuntimeCardEvidence): boolean =>
-  flattenRuntimeEffects(evidence).some((effect) => 'condition' in effect)
+  flattenRuntimeEffects(evidence).some((effect) => 'condition' in effect ||
+    (effect.kind === 'reveal-top-deck' || effect.kind === 'reveal-bottom-deck') && Boolean(effect.match))
 
 const runtimeEffectsForSource = (
   evidence: RuntimeCardEvidence,
@@ -2184,6 +2266,1067 @@ const buildContract = (
   }
   const fullSourceText = Object.values(segments).join(' ')
   const flattenedRuntimeEffects = flattenRuntimeEffects(evidence)
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-040') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const effect = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.attack !== 3 || card.attackEnergyCost?.green !== 2 || card.attackEnergyCost?.neutral !== 1 || card.attackEffects?.length ||
+      skill?.trigger !== 'activate' || !skill.oncePerTurn || skill.yourTurn || skill.restSource ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || skill.cost.discardHand !== 0 ||
+      skill.cost.supportToHand !== 1 || skill.cost.supportToHandType !== 'cookie' || skill.cost.supportToHandColor !== undefined ||
+      effect?.kind !== 'hand-to-support' || effect.amount !== 1 || effect.keyword !== 'arena' || !effect.optional || effect.rested !== true ||
+      effect.energyColor !== undefined || effect.cardName !== undefined) {
+      blockers.push('BS12-040 lacks Cookie-only support return cost or optional rested placement of any hand Arena card')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-041') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Basil Pesto Cookie' || card.level !== 1 || card.hp !== 2 ||
+      card.energyColor !== 'green' || card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'neutral' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena')) {
+      blockers.push('BS12-041 lacks the printed green Arena LV1/HP2 N ordinary one damage or invents a skill/Then')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-039') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Melon Soda Cookie' || card.level !== 3 || card.hp !== 4 ||
+      card.energyColor !== 'green' || card.attack !== 4 || card.attackCost !== 3 || card.attackEnergyCost?.neutral !== 3 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'neutral' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena')) {
+      blockers.push('BS12-039 lacks the printed green Arena LV3/HP4 NNN ordinary four damage or invents a skill/Then')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-038') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const effect = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.attack !== 2 || card.attackEnergyCost?.green !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      skill?.trigger !== 'on-play' || !skill.fromSupportArea || skill.yourTurn || skill.oncePerTurn || skill.restSource ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || skill.cost.discardHand !== 0 ||
+      effect?.kind !== 'deck-to-support' || effect.amount !== 1 || effect.rested !== true || effect.condition?.kind !== 'support-count-less-than-opponent' || effect.condition.difference !== 1) {
+      blockers.push('BS12-038 lacks support-origin free On Play, strictly fewer own support cards, or rested top-deck placement')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-037') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const damage = skill?.effects[0]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const extraDamage = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    if (card?.type !== 'cookie' || card.attack !== 3 || card.attackEnergyCost?.yellow !== 3 ||
+      skill?.trigger !== 'activate' || !skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.cost.energy?.yellow !== 1 || skill.cost.discardHand !== 0 ||
+      damage?.kind !== 'damage-by-break-count' || damage.perCount !== 1 || damage.groupSize !== 4 || damage.keyword !== 'arena' || damage.breakEnergyColor !== undefined || damage.minBreakLevel !== undefined || damage.exactBreakLevel !== undefined ||
+      damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 ||
+      then?.kind !== 'optional-cost-attack' || then.cost.energy?.neutral !== 1 || extraDamage?.kind !== 'damage' || extraDamage.amount !== 1 || extraDamage.target.side !== 'opponent' || extraDamage.target.min !== 0 || extraDamage.target.max !== 1 || extraDamage.target.attackTargetOnly) {
+      blockers.push('BS12-037 lacks Y1 once-per-turn every-four own Arena damage or independently paid N1 optional opponent Then target')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-036') {
+    const card = evidence.card
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const play = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const cost = then?.kind === 'optional-cost-attack' ? then.cost.cookieToBreakArea : undefined
+    if (card?.type !== 'cookie' || card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' ||
+      then.effects.length !== 1 || then.payBeforeCondition !== true || then.resolution !== undefined || then.mandatory === true ||
+      Object.keys(then.cost).some(key => !['energy', 'cookieToBreakArea'].includes(key)) || Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      cost?.count !== 1 || cost.keyword !== 'arena' || cost.excludeSource !== true || cost.zones.length !== 1 || cost.zones[0] !== 'battle' ||
+      Object.keys(cost).some(key => !['count', 'keyword', 'excludeSource', 'zones'].includes(key)) ||
+      play?.kind !== 'break-to-battle' || play.amount !== 1 || play.optional !== true || play.exactLevel !== 1 || play.keyword !== 'arena' ||
+      play.excludeBreakPaymentCardNumber !== true || Object.keys(play).some(key => !['kind', 'amount', 'optional', 'exactLevel', 'keyword', 'excludeBreakPaymentCardNumber'].includes(key))) {
+      blockers.push('BS12-036 lacks R003 other own battle Arena cost and optional own Break LV1 Arena revival of a different paid card number')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-035') {
+    const card = evidence.card
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.attack !== 1 || card.attackEnergyCost?.yellow !== 1 || card.attackEffects?.length !== 1 ||
+      then?.kind !== 'damage' || then.amount !== 1 || then.target.side !== 'opponent' || then.target.min !== 0 || then.target.max !== 1 ||
+      Object.keys(then.target).some(key => !['side', 'min', 'max'].includes(key)) ||
+      then.condition?.kind !== 'break-area-card-count-at-least' || then.condition.side !== 'self' || then.condition.count !== 4 || then.condition.keyword !== 'arena' ||
+      Object.keys(then.condition).some(key => !['kind', 'side', 'count', 'keyword'].includes(key))) {
+      blockers.push('BS12-035 lacks R002 four own Arena Break Cookies and optional independently selected opponent one-damage Then')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-034') {
+    const gameCard = evidence.card
+    const skill = gameCard?.type === 'cookie' ? gameCard.skill : undefined
+    const boost = skill?.effects[0]
+    const outer = gameCard?.type === 'cookie' ? gameCard.attackEffects?.[0] : undefined
+    const cost = outer?.kind === 'optional-cost-attack' ? outer.cost.cookieToBreakArea : undefined
+    const hp = outer?.kind === 'optional-cost-attack' ? outer.effects[0] : undefined
+    if (gameCard?.type !== 'cookie' || gameCard.attack !== 2 || gameCard.attackEnergyCost?.yellow !== 2 ||
+      skill?.trigger !== 'passive' || skill.yourTurn || skill.oncePerTurn || skill.restSource ||
+      boost?.kind !== 'modify-attack' || boost.amount !== 1 || boost.duration !== 'persistent' || !boost.target.sourceOnly ||
+      boost.condition?.kind !== 'break-area-card-count-at-least' || boost.condition.count !== 4 || boost.condition.keyword !== 'arena' || boost.condition.side !== 'self' || boost.condition.color !== undefined ||
+      cost?.count !== 1 || cost.keyword !== 'arena' || cost.zones.length !== 2 || !cost.zones.includes('hand') || !cost.zones.includes('battle') ||
+      hp?.kind !== 'gain-hp' || hp.amount !== 2 || hp.target?.side !== 'self' || hp.target.min !== 0 || hp.target.max !== 1 || hp.target.minLevel !== 1 || hp.target.maxLevel !== 1) {
+      blockers.push('BS12-034 lacks four own Arena passive +1 or a single hand-or-battle Arena Break cost before optional own LV1 +2 HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-033') {
+    const skill = evidence.card?.skill
+    const draw = skill?.effects[0]
+    if (evidence.card?.type !== 'cookie' || skill?.trigger !== 'break-by-arena-effect' || skill.yourTurn !== true ||
+      skill.oncePerTurn || skill.restSource || skill.faint || skill.afterDamage || skill.fromBreakArea ||
+      Object.entries(skill.cost.energy ?? {}).some(([, value]) => value !== undefined && value !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 1 ||
+      draw.condition !== undefined || draw.untilHandSize !== undefined) {
+      blockers.push('BS12-033 lacks free own-turn source Break entry by Arena effect trigger and optional draw up to one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-032') {
+    const skill = evidence.card?.skill
+    const hp = skill?.effects[0]
+    if (evidence.card?.type !== 'cookie' || skill?.trigger !== 'break-by-arena-effect' || skill.yourTurn !== true ||
+      skill.oncePerTurn || skill.restSource || skill.faint || skill.afterDamage || skill.fromBreakArea ||
+      Object.values(skill.cost.energy ?? {}).some(value => value !== undefined && value !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || hp?.kind !== 'gain-hp' || hp.amount !== 1 || hp.condition !== undefined ||
+      hp.target?.side !== 'self' || hp.target.min !== 0 || hp.target.max !== 1 || hp.target.keyword !== undefined ||
+      hp.target.energyColor !== undefined || hp.target.sourceOnly || hp.target.excludeSource || hp.perBreakCard !== undefined) {
+      blockers.push('BS12-032 lacks free own-turn source Break entry by Arena effect trigger and optional any own Cookie one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-031') {
+    const item = evidence.card?.item
+    const cost = item?.cost
+    const battle = cost?.trashBattleCookie
+    const draw = item?.effects[0]
+    const damage = item?.effects[1]
+    if (evidence.card?.type !== 'item' || cost?.energy?.yellow !== 2 ||
+      Object.entries(cost.energy ?? {}).some(([key, value]) => key !== 'yellow' && value !== undefined && value !== 0) ||
+      Object.entries(cost).some(([key, value]) => !['energy', 'trashBattleCookie'].includes(key) && value !== undefined && value !== 0) ||
+      battle?.count !== 1 || battle.toBreakArea !== true || battle.energyColor !== 'yellow' || battle.keyword !== 'arena' ||
+      battle.faint === true || battle.sourceOnly === true || battle.excludeSource === true || battle.level !== undefined ||
+      battle.minLevel !== undefined || battle.maxLevel !== undefined || battle.hasSpecialPlay === true ||
+      item?.effects.length !== 2 || draw?.kind !== 'draw-up-to' || draw.max !== 1 || draw.condition !== undefined ||
+      damage?.kind !== 'damage' || damage.amount !== 1 || damage.condition !== undefined ||
+      damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 ||
+      damage.target.energyColor !== undefined || damage.target.keyword !== undefined || damage.target.attackTargetOnly === true) {
+      blockers.push('BS12-031 lacks YY and one own yellow Arena battle Cookie directly to break before independent optional draw one and optional opponent one damage')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-030') {
+    const stage = evidence.card?.stageAbility
+    const effect = stage?.effects[0]
+    if (evidence.card?.type !== 'stage' || stage?.placementCost.yellow !== 1 ||
+      Object.entries(stage.placementCost).some(([key, value]) => key !== 'yellow' && value !== undefined && value !== 0) ||
+      stage.cost.energy?.yellow !== 1 || Object.entries(stage.cost.energy ?? {}).some(([key, value]) => key !== 'yellow' && value !== undefined && value !== 0) ||
+      Object.entries(stage.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      stage.restSource !== true || stage.allowInactiveConditionalEffects !== true || stage.oncePerTurn === true ||
+      stage.ownerIndependent === true || stage.endPhase === true || stage.triggered === true ||
+      stage.effects.length !== 1 || effect?.kind !== 'gain-hp' || effect.amount !== 1 ||
+      effect.target?.side !== 'self' || effect.target.min !== 0 || effect.target.max !== 1 ||
+      effect.target.keyword !== undefined || effect.target.energyColor !== undefined || effect.target.sourceOnly === true ||
+      effect.target.excludeSource === true || effect.condition?.kind !== 'arena-cookie-placed-in-break-this-turn') {
+      blockers.push('BS12-030 lacks Y placement and Y plus source rest activation before conditional optional own Cookie one HP for this-turn Arena break entry')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-029') {
+    const trap = evidence.card?.trap
+    const cost = trap?.cost
+    const reduction = trap?.effects[0]
+    const draw = trap?.effects[1]
+    const condition = draw?.kind === 'draw-up-to' ? draw.condition : undefined
+    if (evidence.card?.type !== 'trap' || cost?.energy?.yellow !== 2 ||
+      Object.entries(cost.energy ?? {}).some(([key, value]) => key !== 'yellow' && value !== undefined && value !== 0) ||
+      Object.entries(cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      trap?.condition !== undefined || trap?.conditionalCost !== undefined || trap?.alternativeCosts !== undefined ||
+      trap?.effects.length !== 2 || reduction?.kind !== 'modify-attack' || reduction.amount !== -2 || reduction.duration !== 'this-turn' ||
+      reduction.condition !== undefined || reduction.target.side !== 'opponent' || reduction.target.min !== 0 || reduction.target.max !== 1 ||
+      reduction.target.attackTargetOnly === true || reduction.target.energyColor !== undefined || reduction.target.keyword !== undefined ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 1 || condition?.kind !== 'break-area-card-count-at-least' ||
+      condition.side !== 'self' || condition.count !== 4 || condition.color !== 'yellow' || condition.keyword !== 'arena' ||
+      condition.minLevel !== undefined || condition.maxLevel !== undefined) {
+      blockers.push('BS12-029 lacks YY optional opponent this-turn -2 then optional draw one for four own yellow Arena break Cookies')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-028') {
+    const item = evidence.card?.item
+    const cost = item?.cost
+    const effect = item?.effects[0]
+    if (evidence.card?.type !== 'item' || cost?.energy?.yellow !== 1 ||
+      Object.entries(cost.energy ?? {}).some(([key, value]) => key !== 'yellow' && value !== undefined && value !== 0) ||
+      Object.entries(cost).some(([key, value]) => !['energy', 'handToBreakArea'].includes(key) && value !== undefined && value !== 0) ||
+      cost.handToBreakArea?.count !== 1 || cost.handToBreakArea.keyword !== 'arena' ||
+      cost.handToBreakArea.energyColor !== undefined || cost.handToBreakArea.minLevel !== undefined || cost.handToBreakArea.maxLevel !== undefined ||
+      item?.effects.length !== 1 || effect?.kind !== 'draw-up-to' || effect.max !== 3 || effect.condition !== undefined) {
+      blockers.push('BS12-028 lacks Y1 and one any-color hand Arena Cookie to break before optional draw up to three')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-027') {
+    const trap = evidence.card?.trap
+    const condition = trap?.conditionalCost?.condition
+    const effect = trap?.effects[0]
+    const costMatches = (cost: AbilityCost | undefined, yellow: number) => cost !== undefined &&
+      (cost.energy?.yellow ?? 0) === yellow && Object.entries(cost.energy ?? {}).every(([key, value]) => key === 'yellow' || value === undefined || value === 0) &&
+      Object.entries(cost).every(([key, value]) => key === 'energy' || value === undefined || value === 0)
+    if (!costMatches(trap?.cost, 1) || !costMatches(trap?.conditionalCost?.cost, 0) || trap?.condition !== undefined ||
+      trap?.alternativeCosts !== undefined || condition?.kind !== 'break-area-card-count-at-least' ||
+      condition.count !== 4 || condition.color !== 'yellow' || condition.keyword !== 'arena' ||
+      trap?.effects.length !== 1 || effect?.kind !== 'modify-attack' || effect.amount !== -1 || effect.duration !== 'this-turn' ||
+      effect.target.side !== 'opponent' || effect.target.min !== 0 || effect.target.max !== 1 || effect.target.attackTargetOnly === true ||
+      effect.target.energyColor !== undefined || effect.target.keyword !== undefined) {
+      blockers.push('BS12-027 lacks Y1 reduced to zero by four own yellow Arena break Cookies or optional opponent this-turn -1')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-025') {
+    const skill = evidence.card?.skill
+    const gain = skill?.effects[0]
+    if (skill?.trigger !== 'on-play' || skill.yourTurn !== false || skill.restSource !== false ||
+      Object.values(skill.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined || gain.perBreakCard !== undefined ||
+      gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 1 || gain.target.cardName !== 'Caramel Choux Cookie' ||
+      gain.target.energyColor !== undefined || gain.target.keyword !== undefined || gain.target.sourceOnly === true || gain.target.excludeSource === true) {
+      blockers.push('BS12-025 lacks free On Play or zero-to-one own Caramel Choux Cookie gaining one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-026') {
+    const optional = evidence.card?.type === 'cookie' ? evidence.card.attackEffects?.[0] : undefined
+    const damage = optional?.kind === 'optional-cost-attack' ? optional.effects[0] : undefined
+    const condition = damage?.kind === 'damage' ? damage.condition : undefined
+    const count = condition?.kind === 'any-of' ? condition.conditions[0] : undefined
+    const event = condition?.kind === 'any-of' ? condition.conditions[1] : undefined
+    if (evidence.card?.type !== 'cookie' || evidence.card.attackEffects?.length !== 1 || optional?.kind !== 'optional-cost-attack' ||
+      optional.resolution === 'ability' || optional.mandatory === true || optional.payBeforeCondition !== true || optional.cost.discardHand !== 1 ||
+      Object.values(optional.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(optional.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      optional.effects.length !== 1 || damage?.kind !== 'damage' || damage.amount !== 1 ||
+      damage.target.side !== 'opponent' || damage.target.min !== 1 || damage.target.max !== 1 || damage.target.attackTargetOnly !== true ||
+      damage.target.energyColor !== undefined || damage.target.keyword !== undefined ||
+      condition?.kind !== 'any-of' || condition.conditions.length !== 2 || count?.kind !== 'break-area-card-count-at-least' ||
+      count.side !== 'self' || count.count !== 4 || count.keyword !== 'arena' || count.color !== undefined || count.minLevel !== undefined || count.maxLevel !== undefined ||
+      event?.kind !== 'arena-cookie-placed-in-break-this-turn') {
+      blockers.push('BS12-026 lacks one-hand cost before the Arena count OR turn-event condition and original-defender damage')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-023') {
+    const skill = evidence.card?.skill
+    const gain = skill?.effects[0]
+    if (skill?.trigger !== 'on-play' || skill.yourTurn !== false || skill.restSource !== false ||
+      Object.values(skill.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined ||
+      gain.perBreakCard?.keyword !== 'arena' || gain.perBreakCard.divisor !== 3 || gain.perBreakCard.minLevel !== undefined || gain.perBreakCard.exactLevel !== undefined || gain.perBreakCard.energyColor !== undefined ||
+      gain.target?.side !== 'self' || gain.target.sourceOnly !== true || gain.target.min !== 1 || gain.target.max !== 1) {
+      blockers.push('BS12-023 lacks free On Play or one source HP per three own break Arena Cookies')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-058') {
+    const card = evidence.card
+    const flip = card?.flip
+    const draw = flip?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Peppermint Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 1 || card.hp !== 1 || card.attack !== 1 || card.attackEnergyCost?.blue !== 1 || card.skill || card.attackEffects?.length ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      !flip || flip.handCostDestination !== 'deck-bottom' || flip.cost.discardHand !== 1 || flip.cost.discardHandKeyword !== 'arena' ||
+      Object.values(flip.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.keys(flip.cost).some(key => !['energy', 'discardHand', 'discardHandKeyword'].includes(key)) ||
+      flip.attachedHpBonus || flip.attachedHpAlternateTarget || flip.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 2 || draw.condition) {
+      blockers.push('BS12-058 lacks printed B one or FLIP reveal one any Arena hand card to own deck bottom before draw zero to two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-057') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const move = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Marbleberry Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 4 || card.attack !== 2 || card.attackEnergyCost?.blue !== 2 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['blue', 'neutral'].includes(key) && (value ?? 0) !== 0) || card.attackEffects?.length ||
+      !skill || skill.trigger !== 'on-play' || skill.yourTurn || skill.oncePerTurn || skill.restSource || skill.oncePerGame ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.onPlayFromBreakArea || skill.activationOriginThisTurn ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'blue' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || Object.keys(skill.cost).some(key => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key)) ||
+      skill.effects.length !== 1 || move?.kind !== 'field-to-deck-bottom' || move.hpOnly || move.allowStage || move.battleSide || move.condition ||
+      move.target.side !== 'opponent' || move.target.min !== 0 || move.target.max !== 1 || move.target.maxLevel !== 2 ||
+      Object.keys(move.target).some(key => !['side', 'min', 'max', 'maxLevel'].includes(key))) {
+      blockers.push('BS12-057 lacks printed BBN ordinary two or On Play one same blue AND Arena hand cost before optional one opponent LV2-or-lower Cookie to deck bottom')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-056') {
+    const card = evidence.card
+    const requirement = evidence.extraDeckPlayRequirement
+    const named = requirement?.kind === 'any-of' ? requirement.conditions[0] : undefined
+    const supports = requirement?.kind === 'any-of' ? requirement.conditions[1] : undefined
+    const optional = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const ready = optional?.kind === 'optional-cost-attack' ? optional.effects[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Apple Faerie Cookie' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 3 || card.attack !== 2 || card.attackEnergyCost?.neutral !== 2 || card.skill ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'neutral' && (value ?? 0) !== 0) ||
+      evidence.extraDeckPlayMode !== 'enter-battle' || evidence.extraDeckPlayCost || requirement?.kind !== 'any-of' || requirement.conditions.length !== 2 ||
+      named?.kind !== 'battle-area-has-named-cookie' || named.side !== 'self' || named.name !== 'Candy Apple Cookie' || named.keyword !== 'arena' || named.negate || named.excludeSource ||
+      supports?.kind !== 'support-color-count-at-least' || supports.color !== 'green' || supports.count !== 7 ||
+      card.attackEffects?.length !== 1 || optional?.kind !== 'optional-cost-attack' || optional.resolution === 'ability' || optional.mandatory || optional.payBeforeCondition || optional.sourceEnergy ||
+      optional.cost.discardHand !== 1 || Object.values(optional.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.keys(optional.cost).some(key => !['energy', 'discardHand'].includes(key)) || optional.effects.length !== 1 ||
+      ready?.kind !== 'set-active' || ready.supportCount !== 1 || ready.selectable !== true || ready.optional !== true || ready.restedOnly !== false ||
+      ready.energyColor !== undefined || ready.condition?.kind !== 'player-started-second') {
+      blockers.push('BS12-056 lacks ordinary EXTRA entry with same own Candy Apple AND Arena OR seven green supports, printed NN two, or second-player one-any-hand optional zero-to-one any support ready')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-055') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const choice = skill?.effects[0]
+    const modes = choice?.kind === 'choose-one' ? choice.modes : []
+    const moves = modes.map(mode => mode.effects[0])
+    if (card?.type !== 'cookie' || card.name !== 'Herb Cookie' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 2 || card.attack !== 1 || card.attackEnergyCost?.green !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) || card.attackEffects?.length ||
+      !skill || skill.trigger !== 'activate' || skill.oncePerTurn || skill.yourTurn || skill.restSource ||
+      skill.activationOriginThisTurn !== 'support' || skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame ||
+      skill.cost.discardHand !== 1 || skill.cost.selfToTrash !== true || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.keys(skill.cost).some(key => !['energy', 'discardHand', 'selfToTrash'].includes(key)) || skill.effects.length !== 1 ||
+      choice?.kind !== 'choose-one' || choice.condition || modes.length !== 2 || modes.some(mode => mode.effects.length !== 1) ||
+      moves.some((move, index) => move?.kind !== 'deck-to-support' || move.amount !== (index === 0 ? 1 : 0) || move.rested !== true ||
+        Object.keys(move).some(key => !['kind', 'amount', 'rested'].includes(key)))) {
+      blockers.push('BS12-055 lacks this source battle entry from support this turn, discard one any hand plus source trash cost, paid zero or one deck support as rested, or printed G ordinary one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-054') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const move = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Mint Choco Cookie' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 4 || card.attack !== 3 || card.attackEnergyCost?.green !== 2 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['green', 'neutral'].includes(key) && (value ?? 0) !== 0) || card.attackEffects?.length ||
+      !skill || skill.trigger !== 'activate' || skill.oncePerTurn !== true || skill.yourTurn || skill.restSource ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame ||
+      skill.cost.supportToTrash !== 1 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'supportToTrash', 'discardHand'].includes(key) && (value ?? 0) !== 0) || (skill.cost.discardHand ?? 0) !== 0 ||
+      skill.effects.length !== 1 || move?.kind !== 'trash-to-support' || move.amount !== 1 || move.cookieOnly !== true || move.rested !== true || move.optional !== true ||
+      Object.keys(move).some(key => !['kind', 'amount', 'cookieOnly', 'rested', 'optional'].includes(key))) {
+      blockers.push('BS12-054 lacks once-per-turn Activate one any support trash cost and optional one any own trash Cookie to support as rested, or printed GGN ordinary three')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-053') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const reduce = skill?.effects[0]
+    const damage = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Kumiho Cookie' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      card.level !== 3 || card.hp !== 6 || card.attack !== 3 || card.attackEnergyCost?.green !== 3 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['green', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      !skill || skill.trigger !== 'opponent-attack' || skill.oncePerTurn !== true || skill.yourTurn || skill.restSource ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame ||
+      skill.cost.supportToTrash !== 1 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'supportToTrash', 'discardHand'].includes(key) && (value ?? 0) !== 0) || (skill.cost.discardHand ?? 0) !== 0 ||
+      skill.effects.length !== 1 || reduce?.kind !== 'modify-attack' || reduce.amount !== -2 || reduce.duration !== 'this-turn' ||
+      reduce.target.side !== 'opponent' || reduce.target.min !== 0 || reduce.target.max !== 1 || reduce.condition !== undefined ||
+      Object.keys(reduce.target).some(key => !['side', 'min', 'max'].includes(key)) || card.attackEffects?.length !== 1 ||
+      damage?.kind !== 'damage-all' || damage.amount !== 1 || damage.side !== 'opponent' || damage.sequential !== true ||
+      damage.target?.side !== 'opponent' || damage.target.min !== 1 || damage.target.max !== 2 ||
+      Object.keys(damage.target).some(key => !['side', 'min', 'max'].includes(key)) ||
+      damage.condition?.kind !== 'all-support-rested' || damage.condition.side !== 'self') {
+      blockers.push('BS12-053 lacks once-per-turn opponent attack response with one any support trash cost and optional opponent ordinary minus two, or all own supports rested sequential opponent one damage after GGGN ordinary three')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-052') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const damage = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Cocoa Cookie' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      card.level !== 1 || card.hp !== 2 || card.attack !== 2 || card.attackEnergyCost?.green !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['green', 'neutral'].includes(key) && (value ?? 0) !== 0) || card.attackEffects?.length ||
+      !skill || skill.trigger !== 'on-play' || skill.fromSupportArea !== true || skill.yourTurn || skill.oncePerTurn || skill.restSource ||
+      skill.fromBreakArea || skill.fromTrashArea || skill.onPlayFromBreakArea || skill.oncePerGame ||
+      skill.cost.discardHand !== 1 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && (value ?? 0) !== 0) || skill.effects.length !== 1 ||
+      damage?.kind !== 'damage' || damage.amount !== 1 || damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 ||
+      Object.keys(damage.target).some(key => !['side', 'min', 'max'].includes(key)) || damage.condition !== undefined) {
+      blockers.push('BS12-052 lacks support-origin On Play, discard one any hand card before optional one opponent one damage, or printed GN ordinary two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-051') {
+    const card = evidence.card
+    const move = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Cream Ferret Cookie' || card.level !== 1 || card.hp !== 2 || card.attack !== 1 ||
+      card.energyColor !== 'green' || !card.keywords?.includes('arena') || card.attackEnergyCost?.green !== 1 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) || card.skill !== undefined || card.attackEffects?.length !== 1 ||
+      move?.kind !== 'support-to-battle' || move.amount !== 1 || move.optional !== true || move.keyword !== 'arena' || move.energyColor !== undefined ||
+      move.minLevel !== undefined || move.maxLevel !== undefined || move.exactLevel !== undefined || move.condition !== undefined || move.thenEffects !== undefined) {
+      blockers.push('BS12-051 lacks printed G ordinary one then optional one own support Arena Cookie play without color or level restriction')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-050') {
+    const card = evidence.card
+    const item = card?.item
+    const move = item?.effects[0]
+    if (card?.type !== 'item' || card.name !== 'Wonderful Melody' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      !item || item.cost.energy?.green !== 3 || Object.entries(item.cost.energy).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      Object.entries(item.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) || item.effects.length !== 1 ||
+      move?.kind !== 'trash-to-support' || move.amount !== 1 || move.cookieOnly !== true || move.keyword !== 'arena' || move.rested !== true || move.optional !== true ||
+      move.energyColor !== undefined || move.cardName !== undefined || move.minLevel !== undefined || move.maxLevel !== undefined || move.condition !== undefined) {
+      blockers.push('BS12-050 lacks fixed GGG then optional one own trash Arena Cookie to support REST without color or level restriction')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-049') {
+    const card = evidence.card
+    const trap = card?.trap
+    const reduction = trap?.effects[0]
+    const then = trap?.effects[1]
+    const draw = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    if (card?.type !== 'trap' || card.name !== 'Immersed Audience' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      !trap || trap.cost.energy?.green !== 1 || trap.condition !== undefined || trap.conditionalCost !== undefined ||
+      Object.entries(trap.cost.energy).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      Object.entries(trap.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      trap.effects.length !== 2 || reduction?.kind !== 'modify-attack' || reduction.amount !== -1 || reduction.duration !== 'this-turn' ||
+      reduction.target.side !== 'opponent' || reduction.target.min !== 0 || reduction.target.max !== 1 || reduction.condition !== undefined ||
+      then?.kind !== 'optional-cost-attack' || then.resolution !== 'ability' || then.mandatory === true ||
+      Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || then.cost.supportToHand !== 1 || then.cost.supportToHandKeyword !== 'arena' ||
+      Object.entries(then.cost).some(([key, value]) => !['energy', 'supportToHand', 'supportToHandKeyword'].includes(key) && (value ?? 0) !== 0) ||
+      then.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 1 || draw.condition !== undefined) {
+      blockers.push('BS12-049 lacks G optional opponent minus one followed by optional one any-type Arena support return cost then optional one draw')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-048') {
+    const card = evidence.card
+    const ability = card?.stageAbility
+    const play = ability?.effects[0]
+    const then = play?.kind === 'support-to-battle' ? play.thenEffects?.[0] : undefined
+    const rest = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const fixedGreen = (cost: EnergyCost | undefined) => cost?.green === 1 &&
+      Object.entries(cost).every(([key, value]) => key === 'green' || (value ?? 0) === 0)
+    if (card?.type !== 'stage' || card.name !== 'Orchestra Hall' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      !ability || !fixedGreen(ability.placementCost) || ability.restSource !== true || ability.oncePerTurn === true ||
+      ability.triggered === true || ability.endPhase === true ||
+      Object.values(ability.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(ability.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      ability.effects.length !== 1 || play?.kind !== 'support-to-battle' || play.amount !== 1 || play.optional !== true || play.keyword !== 'arena' ||
+      play.energyColor !== undefined || play.condition !== undefined || play.thenEffects?.length !== 1 ||
+      then?.kind !== 'optional-cost-attack' || then.resolution !== 'ability' || then.mandatory === true || !fixedGreen(then.cost.energy) ||
+      Object.entries(then.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) || then.effects.length !== 1 ||
+      rest?.kind !== 'rest-support' || rest.side !== 'opponent' || rest.amount !== 1 || rest.optional !== true ||
+      rest.energyColor !== undefined || rest.activeOnly === true || rest.condition !== undefined) {
+      blockers.push('BS12-048 lacks G placement, source REST optional Arena support Cookie entry and optional G paid opponent support rest only after actual entry')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-047') {
+    const card = evidence.card
+    const trap = card?.type === 'trap' ? card.trap : undefined
+    const reduce = trap?.effects[0]
+    const draw = trap?.effects[1]
+    if (card?.type !== 'trap' || card.name !== 'Beautiful Harmony' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      !trap || trap.cost.energy?.green !== 2 || trap.condition !== undefined || trap.conditionalCost !== undefined ||
+      Object.entries(trap.cost.energy ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      Object.entries(trap.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      trap.effects.length !== 2 || reduce?.kind !== 'modify-attack' || reduce.amount !== -2 || reduce.duration !== 'this-turn' ||
+      reduce.target?.side !== 'opponent' || reduce.target.min !== 0 || reduce.target.max !== 1 || reduce.condition !== undefined ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 1 || draw.condition?.kind !== 'support-count-at-least' || draw.condition.count !== 7 ||
+      draw.condition.energyColor !== undefined || draw.condition.keyword !== undefined || draw.condition.restedOnly !== undefined) {
+      blockers.push('BS12-047 lacks fixed GG payment, optional opponent minus two ordinary damage and independent draw at seven own supports of any type')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-046') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const draw = item?.effects[0]
+    if (card?.type !== 'item' || card.name !== 'E-Z Camera' || card.energyColor !== 'green' || !card.keywords?.includes('arena') ||
+      !item || item.allowInactiveConditionalEffects !== true || item.cost.energy?.green !== 1 ||
+      Object.entries(item.cost.energy ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      Object.entries(item.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      item.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 2 ||
+      draw.condition?.kind !== 'cookie-played-from-support-this-turn') {
+      blockers.push('BS12-046 lacks G1 payment and optional zero to two draw after an actual own support Cookie entry this turn')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-045') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const draw = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Clover Cookie' || card.level !== 1 || card.hp !== 2 || card.energyColor !== 'green' ||
+      card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.green !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'green' && key !== 'neutral' && (value ?? 0) !== 0) ||
+      card.attackEffects?.length || !card.keywords?.includes('arena') || !skill || skill.trigger !== 'on-play' ||
+      skill.oncePerTurn === true || skill.yourTurn === true || skill.restSource === true ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      skill.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 1 ||
+      draw.condition?.kind !== 'support-count-at-least' || draw.condition.count !== 5 ||
+      draw.condition.energyColor !== undefined || draw.condition.keyword !== undefined || draw.condition.restedOnly !== undefined) {
+      blockers.push('BS12-045 lacks free On Play draw zero to one at five own supports of any color, type and rest state, or printed GN2')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-044') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const play = skill?.effects[0]
+    const ready = play?.kind === 'support-to-battle' ? play.thenEffects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Herb Teapot' || card.level !== 1 || card.hp !== 2 || card.energyColor !== 'green' ||
+      card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.green !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      card.attackEffects?.length || !card.keywords?.includes('arena') || !skill || skill.trigger !== 'activate' ||
+      skill.oncePerTurn !== true || skill.yourTurn === true || skill.restSource === true ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      skill.effects.length !== 1 || play?.kind !== 'support-to-battle' || play.amount !== 1 || play.optional !== true || play.keyword !== 'arena' ||
+      play.energyColor !== undefined || play.condition !== undefined || play.thenEffects?.length !== 1 ||
+      ready?.kind !== 'set-active' || ready.supportCount !== 1 || ready.selectable !== true || ready.optional !== true ||
+      ready.restedOnly !== false || ready.energyColor !== undefined || ready.condition?.kind !== 'previous-effect-target-card-name' ||
+      ready.condition.cardName !== 'Herb Cookie') {
+      blockers.push('BS12-044 lacks free once-per-turn optional support Arena entry then optional support ready only for just-played Herb Cookie and GG2')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-043') {
+    const card = evidence.card
+    const flip = card?.type === 'cookie' ? card.flip : undefined
+    const effect = flip?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Coffee Candy Cookie' || card.level !== 3 || card.hp !== 3 || card.energyColor !== 'green' ||
+      card.attack !== 3 || card.attackCost !== 3 || card.attackEnergyCost?.green !== 3 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena') || !flip ||
+      Object.values(flip.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(flip.cost).some(([key, value]) => key !== 'energy' && (value ?? 0) !== 0) ||
+      flip.effects.length !== 1 || effect?.kind !== 'rest-support' || effect.side !== 'opponent' || effect.amount !== 1 ||
+      effect.optional !== true || effect.activeOnly === true || effect.energyColor !== undefined ||
+      effect.condition?.kind !== 'support-count-at-least' || effect.condition.count !== 5 ||
+      effect.condition.energyColor !== 'green' || effect.condition.keyword !== 'arena') {
+      blockers.push('BS12-043 lacks five own green Arena support cards before optional opponent support REST and printed GGG3')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-064') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const reveal = skill?.effects[0]
+    const draw = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Cream Puff Cookie' || card.energyColor !== 'blue' || card.level !== 3 || card.hp !== 5 ||
+      card.attack !== 3 || card.attackCost !== 3 || card.attackEnergyCost?.blue !== 2 || card.attackEnergyCost.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => !['blue', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || !card.keywords?.includes('arena') || skill?.trigger !== 'on-play' ||
+      skill.oncePerTurn || skill.yourTurn || skill.restSource ||
+      Object.entries(skill.cost).some(([key, value]) => key === 'energy'
+        ? Object.values(value ?? {}).some(amount => amount !== undefined && amount !== 0) : value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      reveal.effects?.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 2 || draw.untilHandSize !== undefined || draw.condition !== undefined) {
+      blockers.push('BS12-064 lacks required bottom reveal, same LV2 Arena Cookie to hand then optional two draws and printed BBN3/HP5')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-072') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const move = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Cream Soda Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 3 || card.attack !== 2 || card.attackEnergyCost?.blue !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      !skill || skill.trigger !== 'activate' || skill.oncePerTurn !== true || skill.restSource || skill.yourTurn || skill.sourceEnergy ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame ||
+      skill.cost.energy?.blue !== 1 || Object.entries(skill.cost.energy ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || move?.kind !== 'field-to-deck-bottom' || move.hpOnly || move.allowStage || move.battleSide || move.condition || move.deferAwakenedUnderlay ||
+      move.target.side !== 'self' || move.target.min !== 0 || move.target.max !== 1 || move.target.maxLevel !== 2 || move.target.keyword !== 'arena' || move.target.excludeSource !== true ||
+      Object.keys(move.target).some(key => !['side', 'min', 'max', 'maxLevel', 'keyword', 'excludeSource'].includes(key))) {
+      blockers.push('BS12-072 lacks B1 Activate once-per-entry, exact optional other own LV2-or-lower Arena Cookie to deck bottom or BB ordinary two')
+    }
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const reveal = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const damage = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' ||
+      then.cost.discardHand !== 1 || Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.keys(then.cost).some(key => !['energy', 'discardHand'].includes(key)) || then.effects.length !== 1 || then.resolution !== undefined || then.mandatory === true || ('condition' in then && then.condition !== undefined) ||
+      reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' || reveal.condition !== undefined ||
+      reveal.playMatchedAfterSourceTrash === true || reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) || reveal.effects?.length !== 1 ||
+      damage?.kind !== 'damage' || damage.amount !== 1 || damage.condition !== undefined || damage.target.side !== 'opponent' || damage.target.min !== 1 || damage.target.max !== 1 || damage.target.attackTargetOnly !== true ||
+      Object.keys(damage.target).some(key => !['side', 'min', 'max', 'attackTargetOnly'].includes(key))) {
+      blockers.push('BS12-072 lacks R004 discard one, required matching LV2 Arena bottom to hand, then one damage on original defender')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-073') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const reveal = skill?.effects[0]
+    const discard = skill?.effects[1]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const move = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'DJ Miya' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 2 || card.attack !== 2 || card.attackEnergyCost?.blue !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      !skill || skill.trigger !== 'on-play' || skill.oncePerTurn || skill.restSource || skill.yourTurn || skill.sourceEnergy ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame || skill.effectConditionsAtResolution !== true ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 2 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' || reveal.match.excludeCardName !== 'DJ Miya' ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword', 'excludeCardName'].includes(key)) ||
+      reveal.condition || reveal.cookieDestination || reveal.otherwiseDestination || reveal.playMatchedAfterSourceTrash || (reveal.effects?.length ?? 0) !== 0 ||
+      discard?.kind !== 'opponent-discard-hand' || discard.count !== 1 || discard.condition?.kind !== 'opponent-hand-count-at-least' || discard.condition.count !== 6 ||
+      card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' || then.mandatory || then.sourceEnergy ||
+      then.cost.discardHand !== 1 || Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(then.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      then.effects.length !== 1 || move?.kind !== 'field-to-deck-bottom' || move.hpOnly || move.allowStage || move.battleSide || move.condition || move.deferAwakenedUnderlay ||
+      move.target.side !== 'self' || move.target.min !== 1 || move.target.max !== 1 || move.target.sourceOnly !== true ||
+      Object.keys(move.target).some(key => !['side', 'min', 'max', 'sourceOnly'].includes(key))) {
+      blockers.push('BS12-073 lacks required exact non-DJ LV2 Arena bottom return, independent opponent six-hand discard or paid source-only bottom movement')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-075') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const discard = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Gnome Band' || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 3 || card.attack !== 2 || card.attackEnergyCost?.purple !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) || card.attackEffects?.length ||
+      !skill || skill.trigger !== 'activate' || skill.oncePerTurn || skill.restSource !== true || skill.yourTurn || skill.sourceEnergy ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.oncePerGame || skill.effectConditionsAtResolution !== true ||
+      skill.cost.discardHand !== 1 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || discard?.kind !== 'opponent-discard-hand' || discard.count !== 1 ||
+      discard.destination && discard.destination !== 'trash' || discard.condition?.kind !== 'opponent-hand-count-at-least' || discard.condition.count !== 5) {
+      blockers.push('BS12-075 lacks paid one-hand discard and source REST Activate, opponent five-hand chosen discard or PP ordinary two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-074') {
+    const card = evidence.card
+    const requirement = evidence.extraDeckPlayRequirement
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const draw = skill?.effects[0]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const reveal = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const move = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Popping Candy Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 3 || card.hp !== 5 || card.attack !== 3 || card.attackEnergyCost?.blue !== 3 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      evidence.extraDeckPlayMode !== 'enter-battle' || evidence.extraDeckPlayCost || requirement?.kind !== 'arena-cookie-placed-from-battle-to-deck-bottom-this-turn' || requirement.side !== 'self' ||
+      !skill || skill.trigger !== 'on-play' || skill.oncePerTurn || skill.restSource || skill.yourTurn || skill.oncePerGame || skill.sourceEnergy ||
+      skill.fromSupportArea || skill.fromBreakArea || skill.fromTrashArea || skill.effects.length !== 1 ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 2 || draw.condition?.kind !== 'player-started-second' || draw.untilHandSize !== undefined ||
+      card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' || then.mandatory || then.sourceEnergy ||
+      Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || Object.entries(then.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      then.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' || Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.condition || reveal.cookieDestination || reveal.otherwiseDestination || reveal.playMatchedAfterSourceTrash || reveal.effects?.length !== 1 ||
+      move?.kind !== 'field-to-deck-bottom' || move.hpOnly !== true || move.allowStage || move.battleSide || move.condition || move.deferAwakenedUnderlay ||
+      move.target.side !== 'opponent' || move.target.min !== 0 || move.target.max !== 1 || Object.keys(move.target).some(key => !['side', 'min', 'max'].includes(key))) {
+      blockers.push('BS12-074 lacks precise own Arena battle-to-bottom EXTRA history, second-player up-to-two draws or BBB3 and matched-bottom return before optional opponent top HP to its owner bottom')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-068') {
+    const card = evidence.card
+    const ability = card?.item
+    const draw = ability?.effects[0]
+    const bounce = ability?.effects[1]
+    if (card?.type !== 'item' || card.name !== 'Bone-afide Multivitamin Jelly' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      !ability || ability.cost.blue !== 1 || Object.entries(ability.cost).some(([key, value]) => key !== 'blue' && value !== undefined && value !== 0) ||
+      ability.sourceEnergy !== undefined || ability.activationCostOverride !== undefined || ability.equippedAttackEffects?.length || ability.allowInactiveConditionalEffects === true ||
+      ability.effects.length !== 2 || draw?.kind !== 'draw-up-to' || draw.max !== 1 || draw.condition !== undefined || draw.untilHandSize !== undefined ||
+      bounce?.kind !== 'support-to-hand' || bounce.side !== 'opponent' || bounce.amount !== 2 || bounce.optional !== true ||
+      bounce.condition?.kind !== 'support-count-less-than-opponent' || bounce.condition.difference !== 2 ||
+      bounce.anyNumber === true || bounce.keepCount !== undefined || bounce.cardType !== undefined || bounce.energyColor !== undefined || bounce.maxLevel !== undefined || bounce.thenEffects?.length) {
+      blockers.push('BS12-068 lacks B optional one draw then exact support difference two and opponent zero to two supports returned to opponent hand')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-069') {
+    const card = evidence.card
+    const ability = card?.item
+    const reveal = ability?.effects[0]
+    const damage = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'item' || card.name !== 'Pop Pop Photocard' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      !ability || ability.cost.blue !== 2 || Object.entries(ability.cost).some(([key, value]) => key !== 'blue' && value !== undefined && value !== 0) ||
+      ability.sourceEnergy !== undefined || ability.activationCostOverride !== undefined || ability.equippedAttackEffects?.length || ability.allowInactiveConditionalEffects === true ||
+      ability.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' || Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.condition !== undefined || reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      reveal.effects?.length !== 1 || damage?.kind !== 'damage' || damage.amount !== 1 || damage.condition !== undefined ||
+      damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 || Object.keys(damage.target).some(key => !['side', 'min', 'max'].includes(key))) {
+      blockers.push('BS12-069 lacks BB required bottom reveal, exact same LV2 Arena Cookie to hand then opponent zero to one damage')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-071') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const reveal = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Ice Pop Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 1 || card.hp !== 3 || card.attack !== 1 || (card.attackEffects?.length ?? 0) !== 0 ||
+      card.attackEnergyCost?.blue !== 1 || card.attackEnergyCost.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => !['blue', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      !skill || skill.trigger !== 'activate' || skill.oncePerTurn !== true || skill.restSource === true || skill.yourTurn === true ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || skill.sourceEnergy !== undefined ||
+      skill.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.playMatchedAfterSourceTrash !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.requireCard === true || reveal.addMatchedToHand === true || reveal.condition !== undefined ||
+      reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined || (reveal.effects?.length ?? 0) !== 0) {
+      blockers.push('BS12-071 lacks free once-per-entry Activate, exact LV2 Arena bottom reveal before optional source trash cost and same bottom play')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-070') {
+    const card = evidence.card
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const reveal = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const damage = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Stardust Cookie' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      card.level !== 2 || card.hp !== 2 || card.attack !== 2 || card.skill !== undefined ||
+      card.attackEnergyCost?.blue !== 2 || Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && value !== undefined && value !== 0) ||
+      card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' || then.resolution === 'ability' || then.mandatory === true ||
+      then.sourceEnergy !== undefined || then.payBeforeCondition === true || then.effectText !== normalizeOfficialCardRecord(record).attackText ||
+      Object.values(then.cost.energy ?? {}).some(amount => amount !== 0) || Object.entries(then.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      then.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' || Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.condition !== undefined || reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      reveal.effects?.length !== 1 || damage?.kind !== 'damage-all' || damage.amount !== 1 || damage.side !== 'opponent' || damage.sequential !== true ||
+      damage.condition !== undefined || damage.minRemainingHp !== undefined || damage.excludeSource === true || damage.excludeCardName !== undefined ||
+      damage.target?.side !== 'opponent' || damage.target.min !== 1 || damage.target.max !== 2 || Object.keys(damage.target).some(key => !['side', 'min', 'max'].includes(key))) {
+      blockers.push('BS12-070 lacks BB ordinary two and optional required bottom reveal, exact same LV2 Arena Cookie to hand then all opponents ordered one damage')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-067') {
+    const card = evidence.card
+    const ability = card?.stageAbility
+    const reveal = ability?.effects[0]
+    const blueOnly = (cost: EnergyCost | undefined) => cost?.blue === 1 &&
+      Object.entries(cost).every(([key, value]) => key === 'blue' || (value ?? 0) === 0)
+    if (card?.type !== 'stage' || card.name !== 'Comeback Stage' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      !ability || !blueOnly(ability.placementCost) || !blueOnly(ability.cost.energy) || ability.restSource !== true ||
+      Object.entries(ability.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      (ability.cost.discardHand ?? 0) !== 0 || ability.oncePerTurn === true || ability.triggered === true ||
+      ability.endPhase === true || ability.ownerIndependent === true || ability.allowInactiveConditionalEffects === true || ability.specialVictory !== undefined ||
+      ability.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true || reveal.addMatchedToHand !== true ||
+      reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.condition !== undefined || reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      (reveal.effects?.length ?? 0) !== 0) {
+      blockers.push('BS12-067 lacks separate B placement and B source REST activation with required exact LV2 Arena Cookie bottom return only')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-066') {
+    const card = evidence.card
+    const trap = card?.type === 'trap' ? card.trap : undefined
+    const reveal = trap?.effects[0]
+    const modifier = reveal?.kind === 'reveal-bottom-deck' ? reveal.effects?.[0] : undefined
+    if (card?.type !== 'trap' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      !trap || trap.cost.energy?.blue !== 1 || trap.cost.discardHand !== 0 ||
+      Object.entries(trap.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      Object.entries(trap.cost.energy ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      trap.condition !== undefined || trap.conditionalCost !== undefined || trap.alternativeCosts?.length ||
+      trap.effects.length !== 1 || reveal?.kind !== 'reveal-bottom-deck' || reveal.requireCard !== true ||
+      reveal.addMatchedToHand !== true || reveal.match?.type !== 'cookie' || reveal.match.level !== 2 || reveal.match.keyword !== 'arena' ||
+      Object.keys(reveal.match).some(key => !['type', 'level', 'keyword'].includes(key)) ||
+      reveal.condition !== undefined || reveal.cookieDestination !== undefined || reveal.otherwiseDestination !== undefined ||
+      reveal.effects?.length !== 1 || modifier?.kind !== 'modify-attack' || modifier.amount !== -2 || modifier.duration !== 'this-turn' ||
+      modifier.condition !== undefined || modifier.target.side !== 'opponent' || modifier.target.min !== 0 || modifier.target.max !== 1 ||
+      Object.keys(modifier.target).some(key => !['side', 'min', 'max'].includes(key))) {
+      blockers.push('BS12-066 lacks B required bottom reveal, exact same LV2 Arena Cookie to hand and conditional opponent reduction')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-065') {
+    const card = evidence.card
+    const trap = card?.type === 'trap' ? card.trap : undefined
+    const front = trap?.effects[0]
+    const then = trap?.effects[1]
+    const draw = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    if (card?.type !== 'trap' || card.energyColor !== 'blue' || !card.keywords?.includes('arena') ||
+      !trap || trap.cost.energy?.blue !== 1 || trap.cost.discardHand !== 0 ||
+      Object.entries(trap.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      Object.entries(trap.cost.energy ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      trap.condition !== undefined || trap.conditionalCost !== undefined || trap.alternativeCosts?.length ||
+      trap.effects.length !== 2 || front?.kind !== 'modify-attack' || front.amount !== -1 || front.duration !== 'this-turn' ||
+      front.condition !== undefined || front.target.side !== 'opponent' || front.target.min !== 0 || front.target.max !== 1 ||
+      Object.keys(front.target).some(key => !['side', 'min', 'max'].includes(key)) ||
+      then?.kind !== 'optional-cost-attack' || then.resolution !== 'ability' || then.mandatory || then.sourceEnergy ||
+      then.cost.discardHand !== 1 || then.cost.discardHandType !== 'cookie' || then.cost.discardHandLevel !== 2 ||
+      then.cost.discardHandKeyword !== 'arena' || then.cost.handCostDestination !== 'deck-bottom' ||
+      Object.entries(then.cost.energy ?? {}).some(([, value]) => (value ?? 0) !== 0) ||
+      Object.keys(then.cost).some(key => !['energy', 'discardHand', 'discardHandType', 'discardHandLevel', 'discardHandKeyword', 'handCostDestination'].includes(key)) ||
+      then.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 1 || draw.condition !== undefined || draw.untilHandSize !== undefined) {
+      blockers.push('BS12-065 lacks B reduction then optional public exact LV2 Arena Cookie hand cost to bottom before draw up to one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-077') {
+    const card = evidence.card
+    const skill = evidence.skill
+    const equip = skill?.effects?.[0]
+    if (card?.type !== 'cookie' || card.name !== 'Spotlight Fan' || card.energyColor !== 'purple' || card.level !== 1 || card.hp !== 3 ||
+      !card.keywords?.includes('arena') || card.attack !== 1 || card.attackEnergyCost?.purple !== 1 || card.attackEnergyCost.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) || card.flip || card.attackEffects?.length ||
+      skill?.trigger !== 'activate' || skill.oncePerTurn !== true || skill.yourTurn || skill.restSource ||
+      skill.cost?.energy?.purple !== 1 || Object.entries(skill.cost?.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      Object.entries(skill.cost ?? {}).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects?.length !== 1 || equip?.kind !== 'equip-source' || equip.sourceZone !== 'battle' ||
+      equip.target?.side !== 'self' || equip.target.min !== 1 || equip.target.max !== 1 || equip.target.cardName !== 'Rockstar Cookie' ||
+      Object.keys(equip.target).some(key => !['side', 'min', 'max', 'cardName'].includes(key)) ||
+      skill.equippedAttackBlockerPrevention?.hostCardName !== 'Rockstar Cookie' || skill.equippedAttackDisablesFlip || skill.equippedAttackTrigger || equip.battleSourceDisposition?.hp !== 'trash' || equip.battleSourceDisposition.replacement !== 'none' ||
+      Object.keys(equip.battleSourceDisposition).some(key => !['hp', 'replacement'].includes(key))) {
+      blockers.push('BS12-077 lacks P Once Per Turn Rockstar Equip, named-host battle Blocker prevention or PN ordinary one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-078') {
+    const card = evidence.card
+    const flip = card?.flip
+    const discard = flip?.effects?.[0]
+    if (card?.type !== 'cookie' || card.name !== 'Onion Cookie' || card.energyColor !== 'purple' || card.level !== 3 || card.hp !== 3 ||
+      !card.keywords?.includes('arena') || card.attack !== 3 || card.attackEnergyCost?.purple !== 3 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) || card.attackEffects?.length || evidence.skill ||
+      !flip || flip.cost.discardHand !== 1 || flip.cost.discardHandColor !== 'purple' || flip.cost.discardHandKeyword !== 'arena' ||
+      Object.keys(flip.cost).some(key => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key)) ||
+      Object.values(flip.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || flip.handCostDestination || flip.attachedHpBonus || flip.attachedHpAlternateTarget ||
+      flip.effects?.length !== 1 || discard?.kind !== 'opponent-discard-hand' || discard.count !== 2 ||
+      discard.condition?.kind !== 'opponent-hand-count-at-least' || discard.condition.count !== 5 ||
+      discard.destination && discard.destination !== 'trash') {
+      blockers.push('BS12-078 lacks purple Arena any-card hand FLIP cost, five-hand condition, opponent-chosen two trash or PPP ordinary three')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-062') {
+    const card = evidence.card
+    const skill = evidence.skill
+    const equip = skill?.effects?.[0]
+    const trigger = skill?.equippedAttackTrigger
+    const draw = trigger?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Angel Lightstick' || card.level !== 1 || card.hp !== 3 ||
+      card.energyColor !== 'blue' || card.attack !== 1 || card.attackCost !== 2 ||
+      card.attackEnergyCost?.blue !== 1 || card.attackEnergyCost.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost).some(([key, value]) => !['blue', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || !card.keywords?.includes('arena') ||
+      skill?.trigger !== 'activate' || skill.oncePerTurn !== true || skill.yourTurn || skill.restSource ||
+      skill.cost?.energy?.blue !== 1 || Object.entries(skill.cost?.energy ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      Object.entries(skill.cost ?? {}).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects?.length !== 1 || equip?.kind !== 'equip-source' || equip.sourceZone !== 'battle' ||
+      equip.target?.side !== 'self' || equip.target.min !== 1 || equip.target.max !== 1 || equip.target.cardName !== 'Popping Candy Cookie' ||
+      Object.keys(equip.target).some(key => !['side', 'min', 'max', 'cardName'].includes(key)) ||
+      equip.battleSourceDisposition?.hp !== 'trash' || equip.battleSourceDisposition.replacement !== 'none' ||
+      Object.keys(equip.battleSourceDisposition).some(key => !['hp', 'replacement'].includes(key)) ||
+      trigger?.hostCardName !== 'Popping Candy Cookie' || trigger.effects.length !== 1 ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 2 || draw.untilHandSize !== undefined ||
+      draw.condition?.kind !== 'hand-count-at-most' || draw.condition.count !== 5 ||
+      Object.keys(draw.condition).some(key => !['kind', 'count'].includes(key))) {
+      blockers.push('BS12-062 lacks B Once Per Turn named-host Equip or the hand-at-most-five attack-declaration draw up to two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-063') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const effect = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'CAKE POPs' || card.level !== 2 || card.hp !== 2 ||
+      card.energyColor !== 'blue' || card.attack !== 3 || card.attackCost !== 2 || card.attackEnergyCost?.blue !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || !card.keywords?.includes('arena') ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.yourTurn || skill.restSource ||
+      Object.entries(skill.cost).some(([key, value]) => key === 'energy'
+        ? Object.values(value ?? {}).some(amount => amount !== undefined && amount !== 0)
+        : value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || effect?.kind !== 'modify-damage-received' || effect.amount !== 0 ||
+      effect.duration !== 'persistent' || effect.damageType !== 'all' || effect.minimumDamage !== 2 || effect.setDamageTo !== 1 ||
+      effect.target?.side !== 'self' || effect.target.min !== 1 || effect.target.max !== 1 || effect.target.sourceOnly !== true ||
+      Object.keys(effect.target).some(key => !['side', 'min', 'max', 'sourceOnly'].includes(key)) ||
+      effect.condition?.kind !== 'battle-area-has-named-cookie' || effect.condition.side !== 'self' ||
+      effect.condition.name !== 'Popping Candy Cookie' ||
+      Object.keys(effect.condition).some(key => !['kind', 'side', 'name'].includes(key))) {
+      blockers.push('BS12-063 lacks source-only all-damage reduction from two or more to one while own Popping Candy Cookie is in battle')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-060') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Sorbet Shark Cookie' || card.level !== 2 || card.hp !== 2 || card.energyColor !== 'blue' ||
+      card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.blue !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'blue' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena')) blockers.push('BS12-060 lacks the printed blue Arena LV2/HP2 BB ordinary two damage')
+    const flip = evidence.card?.type === 'cookie' ? evidence.card.flip : undefined
+    const gain = flip?.effects[0]
+    if (flip?.cost.discardHand !== 1 || Object.values(flip.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(flip.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      flip.handCostDestination !== undefined || flip.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined ||
+      gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 1 || gain.target.keyword !== 'arena' ||
+      gain.target.energyColor !== undefined || gain.target.sourceOnly === true || gain.target.excludeSource === true) {
+      blockers.push('BS12-060 lacks one hand discard or zero-to-one own Arena Cookie gaining one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-042') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Chamomile Cookie' || card.level !== 1 || card.hp !== 1 || card.energyColor !== 'green' ||
+      card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.green !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'green' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena')) blockers.push('BS12-042 lacks the printed green Arena LV1/HP1 G ordinary one damage')
+    const flip = evidence.card?.type === 'cookie' ? evidence.card.flip : undefined
+    const gain = flip?.effects[0]
+    if (flip?.cost.discardHand !== 1 || Object.values(flip.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(flip.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      flip.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined ||
+      gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 1 || gain.target.keyword !== 'arena' ||
+      gain.target.energyColor !== undefined || gain.target.sourceOnly === true || gain.target.excludeSource === true) {
+      blockers.push('BS12-042 lacks one hand discard or zero-to-one own Arena Cookie gaining one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-080') {
+    const card = evidence.card
+    const flip = card?.type === 'cookie' ? card.flip : undefined
+    const gain = flip?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Kohlrabi Cookie' || card.level !== 1 || card.hp !== 1 || card.energyColor !== 'purple' ||
+      card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.purple !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      card.skill || card.attackEffects?.length || !card.keywords?.includes('arena') ||
+      flip?.cost.discardHand !== 1 || Object.values(flip.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(flip.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      flip.handCostDestination !== undefined || (flip.attachedHpBonus ?? 0) !== 0 ||
+      flip.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined ||
+      gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 1 || gain.target.keyword !== 'arena' ||
+      Object.entries(gain.target).some(([key, value]) => !['side', 'min', 'max', 'keyword'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-080 lacks P ordinary one, one unrestricted hand trash cost or zero-to-one own Arena Cookie gaining one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-022') {
+    const flip = evidence.card?.type === 'cookie' ? evidence.card.flip : undefined
+    const gain = flip?.effects[0]
+    if (flip?.cost.discardHand !== 1 || Object.values(flip.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(flip.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      flip.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.condition !== undefined ||
+      gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 1 || gain.target.keyword !== 'arena' ||
+      gain.target.energyColor !== undefined || gain.target.sourceOnly === true || gain.target.excludeSource === true) {
+      blockers.push('BS12-022 lacks one hand discard or zero-to-one own Arena Cookie gaining one HP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-021') {
+    const skill = evidence.card?.skill
+    const gain = skill?.effects[0]
+    if (skill?.trigger !== 'on-play' || skill.yourTurn !== true || skill.restSource !== false ||
+      Object.values(skill.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.target?.side !== 'self' ||
+      gain.target.sourceOnly !== true || gain.target.min !== 1 || gain.target.max !== 1 ||
+      gain.condition?.kind !== 'arena-cookie-placed-in-break-this-turn') {
+      blockers.push('BS12-021 lacks free own-turn On Play, source-only one HP, or this-turn Arena break-entry history')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-020') {
+    const flip = evidence.card?.type === 'cookie' ? evidence.card.flip : undefined
+    const gain = flip?.effects[0]
+    const condition = gain?.kind === 'gain-hp' ? gain.condition : undefined
+    if (flip?.cost.discardHand !== 1 || Object.values(flip.cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      flip.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 || gain.target?.side !== 'self' || gain.target.min !== 0 || gain.target.max !== 2 ||
+      gain.target.keyword !== undefined || gain.target.energyColor !== undefined || gain.target.sourceOnly === true ||
+      condition?.kind !== 'break-area-card-count-at-least' || condition.side !== 'self' || condition.count !== 4 || condition.keyword !== 'arena' || condition.color !== undefined) {
+      blockers.push('BS12-020 lacks one-hand FLIP cost, own four-Arena break count, or unrestricted zero-to-two own Cookie HP targets')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-018') {
+    const skill = evidence.card?.skill
+    const ready = skill?.effects[0]
+    const damage = evidence.card?.type === 'cookie' ? evidence.card.attackEffects?.[0] : undefined
+    const cost = evidence.extraDeckPlayCost
+    const requirement = evidence.extraDeckPlayRequirement
+    if (evidence.extraDeckPlayMode !== 'enter-battle' || requirement?.kind !== 'break-level-at-least' || requirement.level !== 4 ||
+      cost?.discardHand !== 1 || cost.discardHandKeyword !== 'arena' ||
+      Object.values(cost.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandKeyword'].includes(key) && value !== undefined && value !== 0) ||
+      skill?.trigger !== 'activate' || skill.oncePerTurn !== true || skill.restSource !== false ||
+      Object.values(skill.cost?.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost ?? {}).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || ready?.kind !== 'set-cookie-active' || ready.target.side !== 'self' || ready.target.min !== 0 || ready.target.max !== 1 ||
+      ready.target.keyword !== 'arena' || ready.target.energyColor !== 'red' || ready.target.excludeSource !== true || ready.target.sourceOnly === true ||
+      evidence.card?.type !== 'cookie' || evidence.card.attackEffects?.length !== 1 || damage?.kind !== 'damage' || damage.amount !== 1 ||
+      damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 || damage.target.attackTargetOnly === true ||
+      damage.target.energyColor !== undefined || damage.target.keyword !== undefined || damage.condition?.kind !== 'player-started-second') {
+      blockers.push('BS12-018 lacks LV4/Arena EXTRA cost, separate free other-red-Arena Activate, or selectable second-player damage Then')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-017') {
+    const skill = evidence.card?.skill
+    const ready = skill?.effects[0]
+    const damage = evidence.card?.type === 'cookie' ? evidence.card.attackEffects?.[0] : undefined
+    const condition = damage?.kind === 'damage' ? damage.condition : undefined
+    if (skill?.trigger !== 'activate' || skill.oncePerTurn !== true || skill.restSource !== false || skill.cost?.discardHand !== 1 ||
+      Object.values(skill.cost?.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost ?? {}).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined && value !== 0) ||
+      skill.effects.length !== 1 || ready?.kind !== 'set-cookie-active' ||
+      ready.target.side !== 'self' || ready.target.min !== 0 || ready.target.max !== 1 ||
+      ready.target.keyword !== 'arena' || ready.target.excludeSource !== true || ready.target.energyColor !== undefined || ready.target.sourceOnly === true ||
+      evidence.card?.type !== 'cookie' || evidence.card.attackEffects?.length !== 1 ||
+      damage?.kind !== 'damage' || damage.amount !== 1 || damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 ||
+      damage.target.attackTargetOnly === true || damage.target.energyColor !== undefined || damage.target.keyword !== undefined ||
+      condition?.kind !== 'battle-area-has-named-cookie' || condition.side !== 'self' || condition.name !== 'Apple Faerie Cookie' || condition.negate === true) {
+      blockers.push('BS12-017 lacks one-hand discard cost, other-Arena ready, or optional opponent damage with friendly Apple Faerie')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-016') {
+    const skill = evidence.card?.skill
+    const ready = skill?.effects[0]
+    const rest = skill?.effects[1]
+    const damage = evidence.card?.type === 'cookie' ? evidence.card.attackEffects?.[0] : undefined
+    if (skill?.trigger !== 'activate' || skill.oncePerTurn !== true || skill.restSource !== false ||
+      Object.values(skill.cost?.energy ?? {}).some(amount => amount !== undefined && amount !== 0) ||
+      Object.entries(skill.cost ?? {}).some(([key, value]) => key !== 'energy' && value !== undefined && value !== 0) ||
+      skill.effects.length !== 2 || ready?.kind !== 'set-cookie-active' ||
+      ready.target.side !== 'self' || ready.target.min !== 0 || ready.target.max !== 1 ||
+      ready.target.keyword !== 'arena' || ready.target.excludeSource !== true || ready.target.energyColor !== undefined ||
+      rest?.kind !== 'rest-cookie' || rest.target.side !== 'self' || rest.target.min !== 0 || rest.target.max !== 1 || rest.target.sourceOnly !== true ||
+      damage?.kind !== 'damage' || damage.amount !== 2 || damage.target.side !== 'opponent' ||
+      damage.target.min !== 1 || damage.target.max !== 1 || damage.target.attackTargetOnly !== true ||
+      damage.condition?.kind !== 'source-set-active-by-effect-this-turn') {
+      blockers.push('BS12-016 lacks ordered free other-Arena ready, optional source REST, or original-defender effect-ready damage Then')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-015') {
+    const damage = evidence.card?.type === 'cookie' ? evidence.card.attackEffects?.[0] : undefined
+    const condition = damage?.kind === 'damage' ? damage.condition : undefined
+    if (damage?.kind !== 'damage' || damage.amount !== 1 ||
+      damage.target.side !== 'opponent' || damage.target.attackTargetOnly !== true || damage.target.min !== 1 || damage.target.max !== 1 ||
+      condition?.kind !== 'battle-area-has-keyword' || condition.side !== 'self' ||
+      condition.keyword !== 'arena' || condition.excludeSource !== true) {
+      blockers.push('BS12-015 original-defender damage Then lacks the other friendly Arena condition or user-ruled target')
+    }
+  }
+  if (/During the Active Phase, if there is no other.*Arena.*Cookie in your battle area, this Cookie is not set as active/i.test(fullSourceText)) {
+    const prevention = evidence.card?.skill?.effects.find(effect => effect.kind === 'prevent-source-active-phase')
+    const condition = prevention?.condition
+    if (evidence.card?.skill?.trigger !== 'passive' || condition?.kind !== 'battle-area-cookie-count' ||
+      condition.side !== 'self' || condition.count !== 0 || condition.keyword !== 'arena' ||
+      condition.excludeSource !== true || condition.energyColor !== undefined) {
+      blockers.push('Active Phase source readiness restriction lacks the other friendly Arena condition')
+    }
+  }
+  if (record.type === 'item' && /Select up to 1 \{R\}.*Arena.*Cookie in your battle area\.\s*During this turn, that Cookie gains \+1 attack damage\.\s*Then, set that Cookie as active/i.test(fullSourceText)) {
+    const modifier = evidence.card?.item?.effects[0]
+    if (modifier?.kind !== 'modify-attack' || modifier.amount !== 1 || modifier.duration !== 'this-turn' ||
+      modifier.target.side !== 'self' || modifier.target.min !== 0 || modifier.target.max !== 1 ||
+      modifier.target.energyColor !== 'red' || modifier.target.keyword !== 'arena' ||
+      !modifier.thenEffects?.some(effect => effect.kind === 'set-cookie-active' && effect.target.previousEffectTargetOnly &&
+        effect.target.side === 'self' && effect.target.min === 0 && effect.target.max === 1 &&
+        effect.target.energyColor === 'red' && effect.target.keyword === 'arena')) {
+      blockers.push('red Arena attack bonus and same-target ready Then have no complete runtime evidence')
+    }
+  }
+  if (record.type === 'item' && /Select up to 2.*\{R\}.*Arena.*Cookies in your battle area\.\s*Set those Cookies as active/i.test(fullSourceText) &&
+    !evidence.card?.item?.effects.some(effect => effect.kind === 'set-cookie-active' &&
+      effect.target.side === 'self' && effect.target.min === 0 && effect.target.max === 2 &&
+      effect.target.energyColor === 'red' && effect.target.keyword === 'arena')) {
+    blockers.push('optional red Arena Cookie readying has no complete runtime evidence')
+  }
+  if (record.type === 'stage' && /When your turn ends, select up to 1.*Arena.*Cookie in your battle area\.\s*Set that Cookie as active/i.test(fullSourceText)) {
+    const stage = evidence.card?.stageAbility
+    if (stage?.endPhase !== true || stage.endPhaseScope !== 'your-turn' ||
+      !stage.effects.some(effect => effect.kind === 'set-cookie-active' &&
+        effect.target.side === 'self' && effect.target.min === 0 && effect.target.max === 1 && effect.target.keyword === 'arena')) {
+      blockers.push('own end-turn Arena Cookie readying has no complete runtime evidence')
+    }
+  }
+  if (/Set 2.*Arena.*Cookies in your battle area as rested/i.test(fullSourceText)) {
+    const hasOptionalThenCost = /Then,\s*<set 2.*Arena.*Cookies in your battle area as rested/i.test(fullSourceText)
+    const optional = evidence.ability?.effects?.find(effect => effect.kind === 'optional-cost-attack' && effect.resolution === 'ability')
+    const cost = hasOptionalThenCost && optional?.kind === 'optional-cost-attack'
+      ? optional.cost.battleCookiePosition : hasOptionalThenCost ? undefined : evidence.ability?.cost?.battleCookiePosition
+    if (cost?.count !== 2 || cost.position !== 'rested' || cost.keyword !== 'arena') {
+      blockers.push('Arena Cookie resting cost has no complete runtime evidence')
+    }
+    if (hasOptionalThenCost && /that Cookie deals an additional -1 attack damage/i.test(fullSourceText) &&
+      !(optional?.kind === 'optional-cost-attack' && optional.effects.some(effect => effect.kind === 'modify-attack' &&
+        effect.amount === -1 && effect.duration === 'this-turn' && effect.target.side === 'opponent' && effect.target.previousEffectTargetOnly))) {
+      blockers.push('additional attack reduction has no linked optional Then evidence')
+    }
+  }
+  // Require the intersection, not independent red and Arena counts.
+  if (/there are 4 \{R\}.*Arena.*cards or more in your support area/i.test(fullSourceText) &&
+    !runtimeEffectsForSource(evidence, 'skill').some(effect => 'condition' in effect &&
+      effect.condition?.kind === 'support-count-at-least' && effect.condition.count === 4 &&
+      effect.condition.energyColor === 'red' && effect.condition.keyword === 'arena')) {
+    blockers.push('red Arena support threshold has no complete runtime evidence')
+  }
   const hasRuntimeEffect = (kind: string): boolean =>
     flattenedRuntimeEffects.some((effect) => effect.kind === kind)
   if (
@@ -2200,6 +3343,14 @@ const buildContract = (
     if (!equippedEffects.some((effect) => effect.kind === 'disable-traps')) {
       blockers.push('equipped trap immunity has no runtime effect')
     }
+  }
+  if (/when that cookie attacks, your opponent cannot activate FLIP during this battle/i.test(fullSourceText) &&
+    evidence.skill?.equippedAttackDisablesFlip !== true) {
+    blockers.push('equipped battle FLIP prevention has no runtime evidence')
+  }
+  if (flattenedRuntimeEffects.some(effect => effect.kind === 'equip-source' && effect.sourceZone === 'battle' &&
+    (effect.battleSourceDisposition?.hp !== 'trash' || effect.battleSourceDisposition.replacement !== 'none'))) {
+    blockers.push('Cookie Equip HP and replacement ruling is unconfirmed')
   }
   if (/discard 1 Cookie that has FLIP from your hand or place 1 card from the top of this Cookie's HP/i.test(fullSourceText)) {
     const chooseOne = flattenedRuntimeEffects.find((effect) => effect.kind === 'choose-one')
@@ -2242,7 +3393,547 @@ const buildContract = (
       blockers.push('named twin all-Cookie HP gain lacks exact runtime evidence')
     }
   }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-081') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Pudding Cookie' || card.level !== 1 || card.hp !== 2 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.purple !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-081 lacks P ordinary one or unrestricted-type purple Arena hand-cost Blocker without REST, Once or Your Turn')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-088') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    const draw = skill?.faintEffects?.[0]
+    if (card?.type !== 'cookie' || card.name !== 'Black Sapphire Cookie' || card.level !== 1 || card.hp !== 3 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 1 || card.attackCost !== 2 || card.attackEnergyCost?.purple !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn || !skill.faint || skill.faintOptional ||
+      skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.oncePerGame ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined) ||
+      skill.faintCost?.discardHand !== 1 || skill.faintCost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.faintCost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.faintCost).some(([key, value]) => !['energy', 'discardHand', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.faintEffects?.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 2 ||
+      Object.entries(draw).some(([key, value]) => !['kind', 'max'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-088 lacks PN ordinary one, purple Arena hand Blocker and independent any-color Arena hand-cost faint draw up to two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-089') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Werewolf Cookie' || card.level !== 2 || card.hp !== 5 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 2 || card.attackCost !== 3 || card.attackEnergyCost?.purple !== 2 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn || skill.faint ||
+      skill.faintEffects?.length || skill.faintCost || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.oncePerGame ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined) ||
+      skill.battleOpponentAttackEffectPrevention?.level !== 3 ||
+      Object.entries(skill.battleOpponentAttackEffectPrevention).some(([key, value]) => key !== 'level' && value !== undefined)) {
+      blockers.push('BS12-089 lacks PPN ordinary two, purple Arena hand Blocker or battle-only opponent exact LV3 attack-effect prevention')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-092') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const requirement = evidence.extraDeckPlayRequirement
+    const cost = evidence.extraDeckPlayCost
+    const battleCost = cost?.trashBattleCookie
+    const faint = skill?.friendlyFaintEffects?.[0]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    if (card?.type !== 'cookie' || card.name !== 'Black Lemonade Cookie' || card.level !== 3 || card.hp !== 5 || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      card.attack !== 4 || card.attackCost !== 4 || card.attackEnergyCost?.purple !== 4 || Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      card.flip || card.awakenHpBonus !== undefined || card.extraDeckOrigin !== 'extra' || evidence.extraDeckPlayMode !== 'enter-battle' ||
+      requirement?.kind !== 'break-blocker-cookie-count-at-least' || requirement.count !== 3 || requirement.keyword !== 'arena' || hasOtherKeys(requirement, ['kind', 'count', 'keyword']) ||
+      !cost || Object.values(cost.energy ?? {}).some(value => (value ?? 0) !== 0) || hasOtherKeys(cost, ['energy', 'trashBattleCookie']) ||
+      battleCost?.count !== 1 || battleCost.energyColor !== 'purple' || battleCost.maxLevel !== 2 || hasOtherKeys(battleCost, ['count', 'energyColor', 'maxLevel']) ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.faint || skill.faintEffects?.length || skill.faintCost ||
+      skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.fromBreakArea || skill.fromSupportArea || skill.fromTrashArea ||
+      skill.effects.length !== 0 || (skill.cost.discardHand ?? 0) !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) || hasOtherKeys(skill.cost, ['energy', 'discardHand']) ||
+      skill.friendlyFaintEffects?.length !== 1 || faint?.kind !== 'opponent-discard-hand' || faint.count !== 1 || hasOtherKeys(faint, ['kind', 'count', 'condition']) ||
+      faint.condition?.kind !== 'opponent-hand-count-at-least' || faint.condition.count !== 3 || hasOtherKeys(faint.condition, ['kind', 'count']) ||
+      card.attackEffects?.length !== 1 || then?.kind !== 'opponent-discard-hand' || then.count !== 1 || hasOtherKeys(then, ['kind', 'count', 'condition']) ||
+      then.condition?.kind !== 'player-started-second' || hasOtherKeys(then.condition, ['kind'])) {
+      blockers.push('BS12-092 lacks three own Break Arena Blocker Cookies, purple LV2-or-lower battle-to-trash EXTRA cost, living friendly-faint three-hand opponent discard or independent second-player PPPP four Then')
+    }
+  }
+  if (['BS12-109','BS12-110','BS12-111','BS12-112'].includes(record.baseCardNumber || record.cardNumber.split('@')[0])) {
+    const number=record.baseCardNumber || record.cardNumber.split('@')[0],card=evidence.card
+    const canonical=(value:unknown):string=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value!==null&&typeof value==='object'?'{'+Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>JSON.stringify(k)+':'+canonical(v)).join(',')+'}':JSON.stringify(value)??'undefined'
+    const same=(value:unknown,expected:unknown)=>canonical(value)===canonical(expected)
+    const base=card?.type==='cookie'&&card.id===number&&card.cardColor==='black'&&card.energyColor==='black'&&same(card.keywords,['arena'])&&!card.flip
+    if(number==='BS12-109'){
+      if(!base||card?.type!=='cookie'||card.name!=='Licorice Cookie'||card.level!==1||card.hp!==2||card.attack!==2||card.attackCost!==2||!same(card.attackEnergyCost,{black:2})||card.skill!==undefined||card.extraDeckOrigin!==undefined||!same(card.attackEffects,[{kind:'hand-to-hp',condition:{kind:'opponent-support-count-at-least',count:3},target:{side:'self',min:0,max:1},selectTarget:true,optional:true,handHasSpecialPlay:true,handPlacementRequired:true,faceUp:true,hpPlacement:'top'}]))blockers.push('BS12-109 lacks R006 opponent three support cards then optional own Cookie with required printed Special Play hand Cookie as face-up TOP HP')
+    }else if(number==='BS12-110'){
+      const skill=card?.type==='cookie'?card.skill:undefined
+      if(!base||card?.type!=='cookie'||card.name!=='Agar Agar Cookie'||card.level!==1||card.hp!==3||card.attack!==1||card.attackCost!==2||!same(card.attackEnergyCost,{black:1,neutral:1})||(card.attackEffects?.length??0)!==0||card.extraDeckOrigin!==undefined||skill?.trigger!=='activate'||skill.oncePerTurn||skill.restSource||skill.yourTurn||!same(skill.cost,{energy:{},discardHand:0,selfToTrash:true})||!same(skill.effects,[{kind:'draw-up-to',max:1,condition:{kind:'support-count-at-least',count:3,energyColor:'black'}}])||skill.passiveEffects?.length||skill.onPlayEffects?.length)blockers.push('BS12-110 lacks black Arena LV1 HP3 KN1 free nonOnce Activate three black support CARDS, self+HP Trash then draw0-1')
+    }else if(number==='BS12-111'){
+      const skill=card?.type==='cookie'?card.skill:undefined
+      if(!base||card?.type!=='cookie'||card.name!=='Poison Mushroom Cookie'||card.level!==3||card.hp!==5||card.attack!==2||card.attackCost!==2||!same(card.attackEnergyCost,{black:2})||card.extraDeckOrigin!=='extra'||evidence.extraDeckPlayMode!=='enter-battle'||evidence.extraDeckPlayCost!==undefined||!same(evidence.extraDeckPlayRequirement,{kind:'all-of',conditions:[{kind:'opponent-support-count-at-least',count:4},{kind:'battle-area-has-special-play-cookie',side:'self'}]})||skill?.trigger!=='passive'||skill.oncePerTurn||skill.restSource||skill.yourTurn||!same(skill.cost,{energy:{},discardHand:0})||!same(skill.effects,[])||!same(skill.passiveEffects,[{kind:'modify-attack',amount:1,duration:'persistent',target:{side:'self',min:0,max:1,allMatching:true,excludeSource:true,energyColor:'black',keyword:'arena'}}])||!same(card.attackEffects,[{kind:'gain-hp',amount:1,target:{side:'self',min:1,max:1,sourceOnly:true},condition:{kind:'player-started-second'}}]))blockers.push('BS12-111 lacks exact EXTRA opponent four support CARDS plus any own SpecialPlay Cookie, other own blackArena aura and KK2 second-player sourceHP1')
+    }else{
+      const skill=card?.type==='cookie'?card.skill:undefined,then=card?.type==='cookie'?card.attackEffects?.[0]:undefined
+      if(!base||card?.type!=='cookie'||card.name!=='Red Velvet Cookie'||card.level!==2||card.hp!==4||card.attack!==3||card.attackCost!==3||!same(card.attackEnergyCost,{black:3})||card.extraDeckOrigin!==undefined||!same(skill?.specialPlayCost,{energy:{},discardHand:0,trashBattleCookie:{count:1,energyColor:'black',level:1,hasSpecialPlay:true}})||card.attackEffects?.length!==1||then?.kind!=='optional-cost-attack'||then.resolution!==undefined||!same(then.cost,{energy:{},discardHand:0,selfToTrash:true})||!same(then.effects,[{kind:'trash-to-hand',max:2,cookieOnly:true,keyword:'arena',minLevel:1,maxLevel:1}]))blockers.push('BS12-112 lacks blackArena LV2 HP4 SpecialPlay blackLV1Special cost and KKK3 optional source+HPTrash then0-2 ownTrash LV1Arena Cookie recovery')
+    }
+  }
+  if (['BS12-106','BS12-107','BS12-108'].includes(record.baseCardNumber || record.cardNumber.split('@')[0])) {
+    const number=record.baseCardNumber || record.cardNumber.split('@')[0],card=evidence.card
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([k,v])=>!allowed.includes(k)&&v!==undefined)
+    const energy=(value:EnergyCost|undefined,black:number,neutral=0)=>value?.black===black&&(value.neutral??0)===neutral&&!Object.entries(value).some(([k,v])=>!['black','neutral'].includes(k)&&(v??0)!==0)
+    const free=(value:EnergyCost|undefined)=>value!==undefined&&Object.values(value).every(v=>(v??0)===0)
+    const base=card?.id===number&&card.cardColor==='black'&&card.energyColor==='black'&&card.keywords?.length===1&&card.keywords[0]==='arena'
+    if(number==='BS12-106') {
+      const a=card?.type==='trap'?card.trap:undefined,first=a?.effects[0],target=first?.kind==='modify-attack'?first.target:undefined,then=a?.effects[1],cost=then?.kind==='optional-cost-attack'?then.cost:undefined,recovery=then?.kind==='optional-cost-attack'?then.effects[0]:undefined
+      if(!base||card?.type!=='trap'||card.name!=='Bad and Dark'||!energy(a?.cost.energy,2)||a?.cost.discardHand!==0||other(a?.cost??{},['energy','discardHand'])||other(a??{},['text','cost','effects'])||a?.effects.length!==2||JSON.stringify(card.effects)!==JSON.stringify(a.effects)||
+        first?.kind!=='modify-attack'||first.amount!==-2||first.duration!=='this-turn'||other(first??{},['kind','amount','duration','target'])||target?.side!=='opponent'||target.min!==0||target.max!==1||other(target??{},['side','min','max'])||
+        then?.kind!=='optional-cost-attack'||then.resolution!=='ability'||then.effects.length!==1||other(then??{},['kind','resolution','cost','effectText','effects'])||!free(cost?.energy)||cost?.discardHand!==1||other(cost??{},['energy','discardHand'])||
+        recovery?.kind!=='trash-to-hand'||recovery.max!==1||recovery.cookieOnly!==true||recovery.keyword!=='arena'||recovery.hasSpecialPlay!==true||other(recovery??{},['kind','max','cookieOnly','keyword','hasSpecialPlay']))blockers.push('BS12-106 lacks independent KK Trap primary minus2 and optional Then anyHand discard1 before SpecialPlay Arena Cookie recovery')
+    } else if(number==='BS12-107') {
+      const then=card?.type==='cookie'?card.attackEffects?.[0]:undefined,cost=then?.kind==='optional-cost-attack'?then.cost:undefined,recovery=then?.kind==='optional-cost-attack'?then.effects[0]:undefined
+      if(!base||card?.type!=='cookie'||card.name!=='Pomegranate Cookie'||card.level!==1||card.hp!==2||card.attack!==2||card.attackCost!==2||!energy(card.attackEnergyCost,1,1)||card.skill!==undefined||card.flip!==undefined||card.extraDeckOrigin!==undefined||card.attackEffects?.length!==1||
+        then?.kind!=='optional-cost-attack'||then.resolution!==undefined||then.effects.length!==1||other(then??{},['kind','cost','effectText','effects'])||!free(cost?.energy)||cost?.discardHand!==1||other(cost??{},['energy','discardHand'])||
+        recovery?.kind!=='trash-to-hand'||recovery.max!==1||recovery.cookieOnly!==true||recovery.keyword!=='arena'||other(recovery??{},['kind','max','cookieOnly','keyword']))blockers.push('BS12-107 lacks black Arena LV1 HP2 KN2 and optional Then anyHand discard1 before Arena Cookie recovery')
+    } else {
+      const s=card?.type==='cookie'?card.skill:undefined,draw=s?.effects[0],condition=draw?.kind==='draw-up-to'?draw.condition:undefined,hand=condition?.kind==='all-of'?condition.conditions[0]:undefined,witness=condition?.kind==='all-of'?condition.conditions[1]:undefined
+      if(!base||card?.type!=='cookie'||card.name!=='Schwarzwälder'||card.level!==1||card.hp!==2||card.attack!==1||card.attackCost!==1||!energy(card.attackEnergyCost,1)||(card.attackEffects?.length??0)!==0||card.flip!==undefined||card.extraDeckOrigin!==undefined||
+        s?.trigger!=='activate'||s.oncePerTurn!==true||s.restSource!==false||s.yourTurn!==false||[s.faint,s.endPhase,s.afterDamage,s.oncePerGame,s.fromBreakArea,s.onPlayFromBreakArea,s.fromTrashArea,s.fromSupportArea].some(v=>v!==false)||other(s??{},['trigger','oncePerTurn','restSource','yourTurn','cost','text','effects','faint','endPhase','afterDamage','oncePerGame','fromBreakArea','onPlayFromBreakArea','fromTrashArea','fromSupportArea'])||!free(s.cost.energy)||s.cost.discardHand!==0||other(s.cost,['energy','discardHand'])||s.effects.length!==1||
+        draw?.kind!=='draw-up-to'||draw.max!==1||other(draw??{},['kind','max','condition'])||condition?.kind!=='all-of'||condition.conditions.length!==2||other(condition??{},['kind','conditions'])||
+        hand?.kind!=='hand-count-at-most'||hand.count!==5||other(hand??{},['kind','count'])||witness?.kind!=='battle-area-has-color'||witness.side!=='self'||witness.color!=='black'||witness.keyword!=='arena'||witness.excludeSource!==true||other(witness??{},['kind','side','color','keyword','excludeSource']))blockers.push('BS12-108 lacks black Arena LV1 HP2 K1 free ActivateOnce draw1 with Hand<=5 and another same black Arena Cookie')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-105') {
+    const card = evidence.card, trap = card?.type === 'trap' ? card.trap : undefined, effect = trap?.effects[0]
+    const condition = effect?.kind === 'modify-attack' && effect.condition?.kind === 'battle-area-has-color' ? effect.condition : undefined
+    const target = effect?.kind === 'modify-attack' ? effect.target : undefined
+    const extra = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    if (card?.type !== 'trap' || card.name !== 'Perfect Stage' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || trap?.cost.energy?.black !== 1 ||
+      Object.entries(trap?.cost.energy ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      trap?.cost.discardHand !== 0 || extra(trap?.cost ?? {}, ['energy', 'discardHand']) || extra(trap ?? {}, ['text', 'cost', 'effects']) || trap?.effects.length !== 1 ||
+      effect?.kind !== 'modify-attack' || effect.amount !== -2 || effect.duration !== 'this-turn' || extra(effect ?? {}, ['kind', 'amount', 'duration', 'condition', 'target']) ||
+      condition?.side !== 'self' || condition.color !== 'black' || condition.keyword !== 'arena' || extra(condition ?? {}, ['kind', 'side', 'color', 'keyword']) ||
+      target?.side !== 'opponent' || target.min !== 0 || target.max !== 1 || extra(target ?? {}, ['side', 'min', 'max'])) {
+      blockers.push('BS12-105 lacks black Arena K1 Trap, same own battle Cookie black and Arena condition or optional opponent current-turn minus two')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-104') {
+    const card = evidence.card, ability = card?.type === 'item' ? card.item : undefined
+    const draw = ability?.effects[0], buff = ability?.effects[1], target = buff?.kind === 'modify-attack' ? buff.target : undefined
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    const blackOne = (energy: EnergyCost | undefined) => energy?.black === 1 &&
+      !Object.entries(energy).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0)
+    if (card?.type !== 'item' || card.name !== 'Recipe For Acting Success' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || !blackOne(ability?.cost.energy) || ability?.cost.discardHand !== 0 ||
+      hasOtherKeys(ability?.cost ?? {}, ['energy', 'discardHand']) || hasOtherKeys(ability ?? {}, ['cost', 'text', 'effects']) || ability?.effects.length !== 2 ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 1 || hasOtherKeys(draw ?? {}, ['kind', 'max']) ||
+      buff?.kind !== 'modify-attack' || buff.amount !== 1 || buff.duration !== 'this-turn' || hasOtherKeys(buff ?? {}, ['kind', 'amount', 'duration', 'target']) ||
+      target?.side !== 'self' || target.min !== 0 || target.max !== 1 || target.hasSpecialPlay !== true ||
+      hasOtherKeys(target ?? {}, ['side', 'min', 'max', 'hasSpecialPlay'])) {
+      blockers.push('BS12-104 lacks black Arena K1 Item, independent optional draw one then own Special Play Cookie attack plus one this turn')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-103') {
+    const card = evidence.card, ability = card?.type === 'item' ? card.item : undefined, effect = ability?.effects[0]
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    const blackOne = (energy: EnergyCost | undefined) => energy?.black === 1 &&
+      !Object.entries(energy).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0)
+    if (card?.type !== 'item' || card.name !== "Veteran Director's Sunglasses" || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || !blackOne(ability?.cost.energy) || ability?.cost.discardHand !== 0 ||
+      hasOtherKeys(ability?.cost ?? {}, ['energy', 'discardHand']) || hasOtherKeys(ability ?? {}, ['cost', 'text', 'effects']) || ability?.effects.length !== 1 ||
+      effect?.kind !== 'inspect-deck' || effect.lookCount !== 4 || effect.pickCount !== 1 || effect.optionalPick !== true || effect.revealPicked !== true ||
+      effect.filterColor !== 'black' || effect.filterKeyword !== 'arena' || effect.restDestination !== 'trash' ||
+      (effect.side !== undefined && effect.side !== 'self') || (effect.pickDestination !== undefined && effect.pickDestination !== 'hand') ||
+      hasOtherKeys(effect ?? {}, ['kind', 'lookCount', 'pickCount', 'optionalPick', 'revealPicked', 'filterColor', 'filterKeyword', 'restDestination', 'side', 'pickDestination'])) {
+      blockers.push('BS12-103 lacks black Arena K1 Item, four own top cards, optional revealed black Arena card to hand or all unchosen cards to trash')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-102') {
+    const card = evidence.card, ability = card?.type === 'stage' ? card.stageAbility : undefined
+    const recovery = ability?.effects[0]
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    const blackOne = (energy: EnergyCost | undefined) => energy?.black === 1 &&
+      !Object.entries(energy).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0)
+    if (card?.type !== 'stage' || card.name !== "Manager Scarlet's Coffee Truck" || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') ||
+      !blackOne(ability?.placementCost) || !blackOne(ability?.cost.energy) || ability?.cost.discardHand !== 0 ||
+      hasOtherKeys(ability?.cost ?? {}, ['energy', 'discardHand']) || ability?.restSource !== true ||
+      hasOtherKeys(ability ?? {}, ['placementCost', 'cost', 'text', 'effects', 'restSource']) || ability?.effects.length !== 1 ||
+      recovery?.kind !== 'trash-to-hand' || recovery.max !== 1 || recovery.cookieOnly !== true || recovery.keyword !== 'arena' || recovery.hasSpecialPlay !== true ||
+      hasOtherKeys(recovery ?? {}, ['kind', 'max', 'cookieOnly', 'keyword', 'hasSpecialPlay'])) {
+      blockers.push('BS12-102 lacks black Arena Stage, K placement, K plus source REST activation or up to one own trash Arena Cookie with Special Play recovery')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-101') {
+    const card = evidence.card, then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const draw = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const cost = then?.kind === 'optional-cost-attack' ? then.cost : undefined
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    if (card?.type !== 'cookie' || card.name !== 'Chess Choco Cookie' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 2 || card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.black !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.skill || card.flip || card.extraDeckOrigin || card.awakenHpBonus !== undefined ||
+      card.attackEffects?.length !== 1 || then?.kind !== 'optional-cost-attack' || (then.resolution !== undefined && then.resolution !== 'attack') ||
+      hasOtherKeys(then ?? {}, ['kind', 'cost', 'effects', 'effectText', 'resolution']) ||
+      cost?.discardHand !== 1 || cost.discardHandType !== 'cookie' || cost.discardHandKeyword !== 'arena' ||
+      Object.values(cost.energy ?? {}).some(value => (value ?? 0) !== 0) || hasOtherKeys(cost ?? {}, ['energy', 'discardHand', 'discardHandType', 'discardHandKeyword']) ||
+      then.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 1 || hasOtherKeys(draw ?? {}, ['kind', 'max'])) {
+      blockers.push('BS12-101 lacks black Arena LV1 HP2, K1 ordinary one and optional one Arena Cookie hand discard before drawing up to one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-100') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const special = skill?.specialPlayCost, battle = special?.trashBattleCookie
+    const flip = card?.type === 'cookie' ? card.flip : undefined, recovery = flip?.effects[0]
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    const free = (cost: AbilityCost | undefined) => cost?.discardHand === 0 && !Object.values(cost.energy ?? {}).some(value => (value ?? 0) !== 0)
+    if (card?.type !== 'cookie' || card.name !== 'Strategist Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 1 || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.black !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.extraDeckOrigin || card.awakenHpBonus !== undefined || card.attackEffects?.length ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.effects.length ||
+      skill.faint || skill.faintCost || skill.faintEffects?.length || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.friendlyFaintEffects?.length ||
+      skill.afterDamage || skill.endPhase || skill.sourceEnergy || skill.fromBreakArea || skill.fromSupportArea || skill.fromTrashArea ||
+      !free(skill.cost) || hasOtherKeys(skill.cost, ['energy', 'discardHand']) ||
+      !free(special) || hasOtherKeys(special ?? {}, ['energy', 'discardHand', 'trashBattleCookie']) ||
+      battle?.count !== 1 || battle.energyColor !== 'black' || battle.level !== 1 || hasOtherKeys(battle ?? {}, ['count', 'energyColor', 'level']) ||
+      !free(flip?.cost) || hasOtherKeys(flip?.cost ?? {}, ['energy', 'discardHand']) ||
+      hasOtherKeys(flip ?? {}, ['text', 'cost', 'effects']) || flip?.effects.length !== 1 ||
+      recovery?.kind !== 'trash-to-hand' || recovery.max !== 1 || recovery.cookieOnly !== true || recovery.keyword !== 'arena' || recovery.hasSpecialPlay !== true ||
+      hasOtherKeys(recovery ?? {}, ['kind', 'max', 'cookieOnly', 'keyword', 'hasSpecialPlay'])) {
+      blockers.push('BS12-100 lacks black Arena LV1 HP1, black LV1 Special Play, KK ordinary two or free own trash Arena Cookie with Special Play recovery up to one')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-099') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const recovery = skill?.effects[0]
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    if (card?.type !== 'cookie' || card.name !== 'Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 2 || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.black !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.flip || card.extraDeckOrigin || card.awakenHpBonus !== undefined || card.attackEffects?.length ||
+      skill?.trigger !== 'passive' || skill.faint !== true || skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.faintOptional ||
+      skill.faintCost || skill.faintEffects?.length || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.friendlyFaintEffects?.length ||
+      skill.afterDamage || skill.endPhase || skill.sourceEnergy || skill.specialPlayCost || skill.fromBreakArea || skill.fromSupportArea || skill.fromTrashArea ||
+      skill.cost.discardHand !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      skill.cost.deckToTrash?.amount !== 3 || hasOtherKeys(skill.cost, ['energy', 'discardHand', 'deckToTrash']) ||
+      hasOtherKeys(skill.cost.deckToTrash ?? {}, ['amount']) || skill.effects.length !== 1 ||
+      recovery?.kind !== 'trash-to-hand' || recovery.max !== 1 || recovery.cookieOnly !== true || recovery.energyColor !== 'black' || recovery.keyword !== 'arena' ||
+      hasOtherKeys(recovery ?? {}, ['kind', 'max', 'cookieOnly', 'energyColor', 'keyword'])) {
+      blockers.push('BS12-099 lacks black Arena LV1 HP2, KK ordinary two or faint-only top-three cost before zero-to-one own trash black Arena Cookie recovery')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-098') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const special = skill?.specialPlayCost, battle = special?.trashBattleCookie
+    const flip = card?.type === 'cookie' ? card.flip : undefined, gain = flip?.effects[0]
+    const field = gain?.kind === 'gain-hp' && gain.condition?.kind === 'battle-area-has-color' ? gain.condition : undefined
+    const target = gain?.kind === 'gain-hp' ? gain.target : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Caramel Pudding Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 1 || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.black !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.extraDeckOrigin || card.attackEffects?.length ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.restSource || skill.yourTurn || skill.effects.length ||
+      skill.faint || skill.faintEffects?.length || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.afterDamage || skill.endPhase || skill.sourceEnergy ||
+      skill.cost.discardHand !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      special?.discardHand !== 0 || Object.values(special?.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(special ?? {}).some(([key, value]) => !['energy', 'discardHand', 'trashBattleCookie'].includes(key) && value !== undefined) ||
+      battle?.count !== 1 || battle.energyColor !== 'black' || battle.level !== 1 ||
+      Object.entries(battle ?? {}).some(([key, value]) => !['count', 'energyColor', 'level'].includes(key) && value !== undefined) ||
+      flip?.cost.discardHand !== 0 || Object.values(flip?.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(flip?.cost ?? {}).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      Object.entries(flip ?? {}).some(([key, value]) => !['text', 'cost', 'effects'].includes(key) && value !== undefined) ||
+      flip?.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 ||
+      Object.entries(gain ?? {}).some(([key, value]) => !['kind', 'amount', 'target', 'condition'].includes(key) && value !== undefined) ||
+      target?.side !== 'self' || target.min !== 1 || target.max !== 1 || target.sourceOnly !== true || target.minLevel !== 2 ||
+      Object.entries(target ?? {}).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly', 'minLevel'].includes(key) && value !== undefined) ||
+      field?.side !== 'self' || field.color !== 'black' || field.keyword !== 'arena' ||
+      Object.entries(field ?? {}).some(([key, value]) => !['kind', 'side', 'color', 'keyword'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-098 lacks black Arena LV1 HP1, black LV1 Special Play, KK ordinary two or free fixed original LV2-or-higher HP bearer gain requiring one own black Arena battle Cookie')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-096') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const special = skill?.specialPlayCost, battle = special?.trashBattleCookie
+    const flip = card?.type === 'cookie' ? card.flip : undefined, draw = flip?.effects[0]
+    const condition = draw?.kind === 'draw-up-to' && draw.condition?.kind === 'all-of' ? draw.condition : undefined
+    const hand = condition?.conditions.find(c => c.kind === 'hand-count-at-most')
+    const field = condition?.conditions.find(c => c.kind === 'battle-area-has-color')
+    if (card?.type !== 'cookie' || card.name !== 'Crimson Danger Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 1 || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.black !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.extraDeckOrigin || card.attackEffects?.length ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.restSource || skill.yourTurn || skill.effects.length ||
+      skill.faint || skill.faintEffects?.length || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.afterDamage || skill.endPhase || skill.sourceEnergy ||
+      skill.cost.discardHand !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      special?.discardHand !== 0 || Object.values(special?.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(special ?? {}).some(([key, value]) => !['energy', 'discardHand', 'trashBattleCookie'].includes(key) && value !== undefined) ||
+      battle?.count !== 1 || battle.energyColor !== 'black' || battle.level !== 1 ||
+      Object.entries(battle ?? {}).some(([key, value]) => !['count', 'energyColor', 'level'].includes(key) && value !== undefined) ||
+      flip?.cost.discardHand !== 0 || Object.values(flip?.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(flip?.cost ?? {}).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      Object.entries(flip ?? {}).some(([key, value]) => !['text', 'cost', 'effects'].includes(key) && value !== undefined) ||
+      flip?.effects.length !== 1 || draw?.kind !== 'draw-up-to' || draw.max !== 2 || draw.untilHandSize !== undefined ||
+      Object.entries(draw ?? {}).some(([key, value]) => !['kind', 'max', 'condition'].includes(key) && value !== undefined) ||
+      !condition || condition.conditions.length !== 2 || Object.keys(condition).some(key => !['kind', 'conditions'].includes(key)) ||
+      hand?.count !== 5 || Object.keys(hand ?? {}).some(key => !['kind', 'count'].includes(key)) ||
+      field?.side !== 'self' || field.color !== 'black' || field.keyword !== 'arena' ||
+      Object.entries(field ?? {}).some(([key, value]) => !['kind', 'side', 'color', 'keyword'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-096 lacks black Arena LV1 HP1, black LV1 Special Play, KK ordinary two or free draw up to two requiring both own hand at most five and one own black Arena battle Cookie')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-095') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const special = skill?.specialPlayCost
+    const battle = special?.trashBattleCookie
+    const flip = card?.type === 'cookie' ? card.flip : undefined
+    const hp = flip?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'Blueberry Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 1 || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.black !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'black' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.extraDeckOrigin || card.attackEffects?.length ||
+      skill?.trigger !== 'passive' || skill.oncePerTurn || skill.restSource || skill.yourTurn || skill.effects.length ||
+      skill.faint || skill.faintEffects?.length || skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.afterDamage || skill.endPhase || skill.sourceEnergy ||
+      skill.cost.discardHand !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      special?.discardHand !== 0 || Object.values(special?.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(special ?? {}).some(([key, value]) => !['energy', 'discardHand', 'trashBattleCookie'].includes(key) && value !== undefined) ||
+      battle?.count !== 1 || battle.energyColor !== 'black' || battle.level !== 1 ||
+      Object.entries(battle ?? {}).some(([key, value]) => !['count', 'energyColor', 'level'].includes(key) && value !== undefined) ||
+      flip?.cost.discardHand !== 1 || Object.values(flip?.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(flip?.cost ?? {}).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      (flip && 'condition' in flip && flip.condition !== undefined) || flip?.handCostDestination || flip?.effects.length !== 1 || hp?.kind !== 'gain-hp' || hp.amount !== 1 || hp.condition || !hp.target ||
+      hp.target.side !== 'self' || hp.target.min !== 0 || hp.target.max !== 1 || hp.target.keyword !== 'arena' ||
+      Object.entries(hp.target).some(([key, value]) => !['side', 'min', 'max', 'keyword'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-095 lacks black Arena LV1 HP1, independent black LV1 Special Play, KK ordinary two or paid zero-to-one own Arena HP FLIP')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-097') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Subtle Jasmine Cake Hound' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 1 || card.hp !== 2 || card.attack !== 1 || card.attackCost !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'neutral' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.skill || card.flip || card.extraDeckOrigin ||
+      card.effects?.length || card.attackEffects?.length) {
+      blockers.push('BS12-097 lacks black Arena LV1 HP2, neutral-one ordinary one or invents an unprinted ability')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-094') {
+    const card = evidence.card
+    if (card?.type !== 'cookie' || card.name !== 'Butter Roll Cookie' || card.cardColor !== 'black' || card.energyColor !== 'black' ||
+      card.level !== 3 || card.hp !== 4 || card.attack !== 4 || card.attackCost !== 3 || card.attackEnergyCost?.neutral !== 3 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'neutral' && (value ?? 0) !== 0) ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.skill || card.flip || card.extraDeckOrigin ||
+      card.effects?.length || card.attackEffects?.length) {
+      blockers.push('BS12-094 lacks black Arena LV3 HP4, neutral-three ordinary four or invents an unprinted ability')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-093') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const bottom = then?.kind === 'optional-cost-attack' ? then.cost.trashToDeckBottom : undefined
+    const damage = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Rockstar Cookie' || card.level !== 2 || card.hp !== 4 || card.energyColor !== 'purple' ||
+      card.keywords?.length !== 1 || !card.keywords.includes('arena') || card.attack !== 3 || card.attackCost !== 3 || card.attackEnergyCost?.purple !== 2 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length !== 1 || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn || skill.faint || skill.faintEffects?.length || skill.faintCost ||
+      skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.oncePerGame || skill.battleOpponentAttackEffectPrevention ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined) ||
+      then?.kind !== 'optional-cost-attack' || then.mandatory || then.resolution || then.sourceEnergy || then.payBeforeCondition || then.effects.length !== 1 ||
+      Object.values(then.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(then.cost).some(([key, value]) => !['energy', 'trashToDeckBottom'].includes(key) && value !== undefined) ||
+      bottom?.count !== 2 || bottom.cookieOnly !== true || bottom.blockerOnly !== true ||
+      Object.entries(bottom).some(([key, value]) => !['count', 'cookieOnly', 'blockerOnly'].includes(key) && value !== undefined) ||
+      damage?.kind !== 'damage' || damage.amount !== 1 || damage.condition !== undefined ||
+      Object.entries(damage).some(([key, value]) => !['kind', 'amount', 'target'].includes(key) && value !== undefined) ||
+      damage.target.side !== 'opponent' || damage.target.min !== 0 || damage.target.max !== 1 ||
+      Object.entries(damage.target).some(([key, value]) => !['side', 'min', 'max'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-093 lacks PPN ordinary three, purple Arena hand Blocker or optional ordered two own trash Blocker Cookie bottom cost before up-to-one opposing one damage')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-091') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    const recover = skill?.faintEffects?.[0]
+    if (card?.type !== 'cookie' || card.name !== 'Caramel Arrow Cookie' || card.level !== 1 || card.hp !== 2 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.purple !== 1 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn || !skill.faint || skill.faintOptional ||
+      skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.oncePerGame || skill.battleOpponentAttackEffectPrevention ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined) ||
+      !skill.faintCost || Object.values(skill.faintCost.energy ?? {}).some(value => (value ?? 0) !== 0) || skill.faintCost.deckToTrash?.amount !== 3 ||
+      Object.entries(skill.faintCost).some(([key, value]) => !['energy', 'deckToTrash'].includes(key) && value !== undefined) ||
+      skill.faintEffects?.length !== 1 || recover?.kind !== 'trash-to-hand' || recover.max !== 1 || recover.cookieOnly !== true || recover.blockerOnly !== true ||
+      recover.excludeCardName !== 'Caramel Arrow Cookie' ||
+      Object.entries(recover).some(([key, value]) => !['kind', 'max', 'cookieOnly', 'blockerOnly', 'excludeCardName'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-091 lacks PN ordinary two, purple Arena hand Blocker or independent top-three faint cost before own trash other-name Blocker Cookie recovery')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-090') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const redirect = skill?.effects[0]
+    const move = skill?.faintEffects?.[0]
+    const condition = move && 'condition' in move ? move.condition : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Milky Way Cookie' || card.level !== 2 || card.hp !== 4 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 3 || card.attackCost !== 3 || card.attackEnergyCost?.purple !== 2 || card.attackEnergyCost?.neutral !== 1 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => !['purple', 'neutral'].includes(key) && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'block' || skill.restSource || skill.oncePerTurn || skill.yourTurn || !skill.faint || skill.faintOptional ||
+      skill.onPlayEffects?.length || skill.passiveEffects?.length || skill.sourceEnergy || skill.afterDamage || skill.endPhase || skill.oncePerGame || skill.battleOpponentAttackEffectPrevention ||
+      skill.cost.discardHand !== 1 || skill.cost.discardHandColor !== 'purple' || skill.cost.discardHandKeyword !== 'arena' ||
+      Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand', 'discardHandColor', 'discardHandKeyword'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || redirect?.kind !== 'redirect-attack' || redirect.condition !== undefined ||
+      redirect.target?.side !== 'self' || redirect.target.min !== 1 || redirect.target.max !== 1 || redirect.target.sourceOnly !== true ||
+      Object.entries(redirect.target).some(([key, value]) => !['side', 'min', 'max', 'sourceOnly'].includes(key) && value !== undefined) ||
+      !skill.faintCost || Object.values(skill.faintCost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.faintCost).some(([key, value]) => key !== 'energy' && value !== undefined) ||
+      skill.faintEffects?.length !== 1 || move?.kind !== 'break-to-trash' || move.max !== 1 || move.exactLevel !== 1 ||
+      Object.entries(move).some(([key, value]) => !['kind', 'max', 'exactLevel', 'condition'].includes(key) && value !== undefined) ||
+      condition?.kind !== 'break-blocker-cookie-count-at-least' || condition.count !== 4 ||
+      Object.entries(condition).some(([key, value]) => !['kind', 'count'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-090 lacks PPN ordinary three, purple Arena hand Blocker or free faint four-Blocker own Break LV1-to-trash selection')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-082') {
+    const card = evidence.card
+    const skill = card?.type === 'cookie' ? card.skill : undefined
+    const tax = skill?.effects[0]
+    if (card?.type !== 'cookie' || card.name !== 'DJ Cookie' || card.level !== 1 || card.hp !== 2 || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || card.attack !== 2 || card.attackCost !== 2 || card.attackEnergyCost?.purple !== 2 ||
+      Object.entries(card.attackEnergyCost ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      card.flip || card.attackEffects?.length || skill?.trigger !== 'passive' || skill.restSource || skill.oncePerTurn || skill.yourTurn ||
+      (skill.cost.discardHand ?? 0) !== 0 || Object.values(skill.cost.energy ?? {}).some(value => (value ?? 0) !== 0) ||
+      Object.entries(skill.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      skill.effects.length !== 1 || tax?.kind !== 'require-item-activate-discard-hand' || tax.count !== 1 ||
+      Object.entries(tax).some(([key, value]) => !['kind', 'count'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-082 lacks continuous battle-source opponent Item discard one and PP ordinary two without REST, Once or Your Turn')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-083') {
+    const card = evidence.card
+    const ability = card?.item
+    const play = ability?.effects[0]
+    if (card?.type !== 'item' || card.name !== 'Rock Spirit Guitar String' || card.energyColor !== 'purple' ||
+      !card.keywords?.includes('arena') || ability?.cost.energy?.purple !== 1 ||
+      Object.entries(ability.cost.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      (ability.cost.discardHand ?? 0) !== 0 ||
+      Object.entries(ability.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      ability.effects.length !== 1 || play?.kind !== 'trash-to-battle' || play.amount !== 1 || !play.optional || !play.blockerOnly ||
+      Object.entries(play).some(([key, value]) => !['kind', 'amount', 'optional', 'blockerOnly'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-083 lacks P1 Item playing zero-to-one own trash Blocker Cookie without added restrictions')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-084') {
+    const card = evidence.card
+    const ability = card?.stageAbility
+    const discard = ability?.effects[0]
+    const bottom = ability?.cost.trashToDeckBottom
+    if (card?.type !== 'stage' || card.name !== 'Summer Soda Festival' || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      ability?.placementCost.purple !== 1 || Object.entries(ability.placementCost).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      ability.cost.energy?.purple !== 1 || Object.entries(ability.cost.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      (ability.cost.discardHand ?? 0) !== 0 || Object.entries(ability.cost).some(([key, value]) => !['energy', 'discardHand', 'trashToDeckBottom'].includes(key) && value !== undefined) ||
+      bottom?.count !== 2 || !bottom.cookieOnly || !bottom.blockerOnly || Object.entries(bottom).some(([key, value]) => !['count', 'cookieOnly', 'blockerOnly'].includes(key) && value !== undefined) ||
+      !ability.restSource || ability.oncePerTurn || ability.endPhase || ability.triggered || !ability.allowInactiveConditionalEffects ||
+      ability.effects.length !== 1 || discard?.kind !== 'opponent-discard-hand' || discard.count !== 1 ||
+      discard.condition?.kind !== 'opponent-hand-count-at-least' || discard.condition.count !== 6 ||
+      Object.entries(discard).some(([key, value]) => !['kind', 'count', 'condition'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-084 lacks independent P placement and P REST two trash Blockers in chosen bottom order before six-hand opponent discard')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-085') {
+    const card = evidence.card
+    const ability = card?.item
+    const shuffle = ability?.effects[0]
+    const condition = shuffle?.kind === 'trash-to-deck-all' ? shuffle.condition : undefined
+    if (card?.type !== 'item' || card.name !== 'Rainbow Headphones' || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      ability?.cost.energy?.purple !== 1 || Object.entries(ability.cost.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      (ability.cost.discardHand ?? 0) !== 0 || Object.entries(ability.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      ability.allowInactiveConditionalEffects !== true || ability.effects.length !== 1 ||
+      shuffle?.kind !== 'trash-to-deck-all' || shuffle.side !== 'self' ||
+      Object.entries(shuffle).some(([key, value]) => !['kind', 'side', 'condition'].includes(key) && value !== undefined) ||
+      condition?.kind !== 'trash-blocker-cookie-count-at-least' || condition.count !== 5 ||
+      Object.entries(condition).some(([key, value]) => !['kind', 'count'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-085 lacks P1 then five own trash Blocker Cookies before shuffling every own trash card')
+    }
+  }
   if (clauses.some((clause) => clause.role === 'unsupported')) blockers.push('source contains unclassified clause')
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-086') {
+    const card = evidence.card
+    const trap = card?.trap
+    const effect = trap?.effects[0]
+    const selector = effect?.kind === 'modify-attack' ? effect.target : undefined
+    if (card?.type !== 'trap' || card.name !== 'True Rock Spirit' || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      trap?.cost.energy?.purple !== 1 || Object.entries(trap.cost.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      (trap.cost.discardHand ?? 0) !== 0 || Object.entries(trap.cost).some(([key, value]) => !['energy', 'discardHand'].includes(key) && value !== undefined) ||
+      trap.condition !== undefined || trap.effects.length !== 1 ||
+      Object.entries(trap).some(([key, value]) => !['cost', 'effects', 'text', 'condition'].includes(key) && value !== undefined) ||
+      effect?.kind !== 'modify-attack' || effect.amount !== 2 || effect.duration !== 'own-next-turn' ||
+      Object.entries(effect).some(([key, value]) => !['kind', 'amount', 'duration', 'target'].includes(key) && value !== undefined) ||
+      selector?.side !== 'self' || selector.min !== 0 || selector.max !== 1 || selector.blockerOnly !== true ||
+      Object.entries(selector).some(([key, value]) => !['side', 'min', 'max', 'blockerOnly'].includes(key) && value !== undefined)) {
+      blockers.push('BS12-086 lacks P1 and optional own printed Blocker +2 attack through own next turn end')
+    }
+  }
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-087') {
+    const card = evidence.card
+    const trap = card?.trap
+    const first = trap?.effects[0]
+    const then = first?.kind === 'modify-attack' ? first.thenEffects?.[0] : undefined
+    const condition = then?.kind === 'modify-attack' ? then.condition : undefined
+    const hasOtherKeys = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => !allowed.includes(key) && item !== undefined)
+    if (card?.type !== 'trap' || card.name !== 'Coming To An Understanding' || card.energyColor !== 'purple' || !card.keywords?.includes('arena') ||
+      trap?.cost.energy?.purple !== 2 || Object.entries(trap.cost.energy ?? {}).some(([key, value]) => key !== 'purple' && (value ?? 0) !== 0) ||
+      (trap.cost.discardHand ?? 0) !== 0 || hasOtherKeys(trap.cost, ['energy', 'discardHand']) ||
+      trap.condition !== undefined || trap.effects.length !== 1 || hasOtherKeys(trap, ['cost', 'effects', 'text', 'condition']) ||
+      first?.kind !== 'modify-attack' || first.amount !== -2 || first.duration !== 'this-turn' ||
+      hasOtherKeys(first, ['kind', 'amount', 'duration', 'target', 'thenEffects']) ||
+      first.target.side !== 'opponent' || first.target.min !== 0 || first.target.max !== 1 || hasOtherKeys(first.target, ['side', 'min', 'max']) ||
+      first.thenEffects?.length !== 1 || then?.kind !== 'modify-attack' || then.amount !== -1 || then.duration !== 'this-turn' ||
+      hasOtherKeys(then, ['kind', 'amount', 'duration', 'target', 'condition']) ||
+      then.target.side !== 'opponent' || then.target.min !== 0 || then.target.max !== 1 || then.target.previousEffectTargetOnly !== true ||
+      hasOtherKeys(then.target, ['side', 'min', 'max', 'previousEffectTargetOnly']) ||
+      condition?.kind !== 'trash-keyword-count-at-least' || condition.keyword !== 'arena' || condition.count !== 10 ||
+      hasOtherKeys(condition, ['kind', 'keyword', 'count'])) {
+      blockers.push('BS12-087 lacks PP optional opponent this-turn -2 then same target -1 for ten own trash Arena cards')
+    }
+  }
   const runtimeArrays = {
     targetSelectors: [] as Partial<EffectTargetSelector>[],
     energyCosts: [] as EnergyCost[],
@@ -2309,9 +4000,11 @@ const buildContract = (
   }
 }
 
+const isRuntimeExtraCard = (card: GameCard | ExtraDeckCard): card is ExtraDeckCard => card.type === 'extra' || card.type === 'awakened'
+
 export const analyzeOfficialCardBehavior = (
   record: OfficialCardRecord,
-  runtimeCard?: GameCard | null,
+  runtimeCard?: GameCard | ExtraDeckCard | null,
 ): CardBehaviorAudit => {
   // 契約必須稽核「runtime 實際消費的來源」：轉換邊界的正規化（例如
   // BS4-080@2 欄位併寫、BS6 傷害 errata）發生在 adapter 內，若契約仍以
@@ -2320,7 +4013,8 @@ export const analyzeOfficialCardBehavior = (
   const conversion = runtimeCard === undefined && normalized.type !== 'extra'
     ? convertOfficialCardToGameCard(normalized)
     : null
-  const extraConversion = runtimeCard === undefined && normalized.type === 'extra'
+  const runtimeExtra = runtimeCard && isRuntimeExtraCard(runtimeCard) ? runtimeCard : undefined
+  const extraConversion = runtimeExtra ? { status: 'converted' as const, extraDeckCard: runtimeExtra } : runtimeCard === undefined && normalized.type === 'extra'
     ? convertOfficialCardToExtraDeckCard(normalized)
     : null
   const card = runtimeCard === undefined
@@ -2329,13 +4023,19 @@ export const analyzeOfficialCardBehavior = (
       : extraConversion?.status === 'converted'
         ? materializeExtraDeckCookie(extraConversion.extraDeckCard)
         : null
-      : runtimeCard ?? null
+      : runtimeCard === null ? null : isRuntimeExtraCard(runtimeCard)
+        ? materializeExtraDeckCookie(runtimeCard)
+        : runtimeCard
   const extraDeckPlayCost = extraConversion?.status === 'converted'
     ? extraConversion.extraDeckCard.extraDeckPlayCost
     : undefined
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
     ...(extraDeckPlayCost ? { extraDeckPlayCost } : {}),
+    ...(extraConversion?.status === 'converted' ? {
+      extraDeckPlayMode: extraConversion.extraDeckCard.extraDeckPlayMode,
+      extraDeckPlayRequirement: extraConversion.extraDeckCard.playRequirement,
+    } : {}),
     unsupportedReason:
       conversion?.status === 'unsupported'
         ? conversion.reason
@@ -2375,8 +4075,14 @@ export const analyzeOfficialCardBehavior = (
   const costCovered = contract.costs.every((cost) => {
     if (cost.kind === 'unknown') return false
     if (cost.kind === 'energy') return runtime.energyCosts.length > 0
+    if (cost.kind === 'reveal-deck-bottom') return flattenRuntimeEffects(evidence).some(effect => effect.kind === 'reveal-bottom-deck' && effect.requireCard === true)
     const keys = new Set(runtime.abilityCostKeys)
     const kinds = new Set(runtime.effectKinds)
+    if (cost.kind === 'ready-cookie' || (cost.kind === 'rest-cookie' && keys.has('battleCookiePosition'))) {
+      const selections = [evidence.skill?.cost?.battleCookiePosition, evidence.ability?.cost?.battleCookiePosition,
+        ...flattenRuntimeEffects(evidence).flatMap(effect => effect.kind === 'optional-cost-attack' ? [effect.cost.battleCookiePosition] : [])]
+      return selections.some(selection => selection?.position === (cost.kind === 'ready-cookie' ? 'active' : 'rested') && selection.count === cost.amount)
+    }
     if (cost.kind === 'discard-hand') {
       return keys.has('discardHand') || keys.has('discardAllHand') || kinds.has('discard-hand')
     }
@@ -2385,10 +4091,10 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'hp-to-hand') return keys.has('hpToHand') || kinds.has('hp-to-hand')
     if (cost.kind === 'battle-to-trash') return keys.has('trashBattleCookie') || kinds.has('battle-to-trash')
     if (cost.kind === 'battle-to-break' || cost.kind === 'faint') {
-      return keys.has('trashBattleCookie') || kinds.has('battle-to-break')
+      return keys.has('trashBattleCookie') || (cost.kind === 'battle-to-break' && keys.has('cookieToBreakArea')) || kinds.has('battle-to-break')
     }
     if (cost.kind === 'hand-to-break') {
-      return keys.has('handToBreakArea') || kinds.has('hand-to-break')
+      return keys.has('handToBreakArea') || keys.has('cookieToBreakArea') || kinds.has('hand-to-break')
     }
     if (cost.kind === 'battle-to-hand') {
       return keys.has('battleCookieToHand') || kinds.has('battle-to-hand') || kinds.has('return-to-hand')
@@ -2414,6 +4120,7 @@ export const analyzeOfficialCardBehavior = (
     }
     if (cost.kind === 'self-to-trash') {
       return (
+        flattenRuntimeEffects(evidence).some(effect => effect.kind === 'reveal-bottom-deck' && effect.playMatchedAfterSourceTrash === true) ||
         keys.has('selfToTrash') ||
         keys.has('stageSourceToTrash') ||
         // The adapter represents a self-trash payment as the generic

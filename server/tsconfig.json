@@ -13,5 +13,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src", "../src/game", "../src/net"]
+  "include": ["src", "../src/game", "../src/net"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "../src/**/*.test.ts", "../src/**/*.test.tsx"]
 }

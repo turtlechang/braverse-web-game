@@ -1,3 +1,4 @@
+import { getBattleCookiePositionCostCandidates } from '../game/battle-position-cost'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { describeOpeningDeal } from '../game/presentation'
 import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
@@ -6,6 +7,7 @@ import {
   createDemoSetupGame,
   getCurrentReplacementTask,
   getAfterDamageEffectCandidates,
+  getAfterDamageEffectSourceCard,
   getAfterDamageEffectMinMax,
   getFaintEffectCardCandidates,
   getFaintEffectCandidateLabel,
@@ -126,6 +128,113 @@ import {
   createBs11083StageDemoState,
   createBs11083ReplacementDemoState,
   createBs11VanillaAttackDemoState,
+  createBs12AttackDemoState,
+  createBs12FlipDemoState,
+  createBs12ActivateDemoState,
+  createBs12PositionCostDemoState,
+  createBs12EquipDemoState,
+  createBs12ReadyDemoState,
+  createBs12TrapDemoState,
+  createBs12YappingDemoState,
+  createBs12EntranceDemoState,
+  createBs12WorkshopDemoState,
+  createBs12SpotlightDemoState,
+  createBs12ChouxDemoState,
+  createBs12EspressoDemoState,
+  createBs12MadeleineDemoState,
+  createBs12KouignDemoState,
+  createBs12ClottedDemoState,
+  createBs12FinancierDemoState,
+  createBs12GreenbellDemoState,
+  createBs12CarpetDemoState,
+  createBs12OptionalTrapDemoState,
+  createBs12StageDemoState,
+  createBs12GuitarDemoState,
+  createBs12RecordDemoState,
+  createBs12ActivePhaseDemoState,
+  createBs12ParfaitDemoState,
+  createBs12MochiDemoState,
+  createBs12CandyAppleDemoState,
+  createBs12GlitterDemoState,
+  createBs12MuscleDemoState,
+  createBs12MelonDemoState,
+  createBs12BasilDemoState,
+  createBs12BaguetteDemoState,
+  createBs12StrawberryDemoState,
+  createBs12MangoDemoState,
+  createBs12MintWaferDemoState,
+  createBs12ChamomileDemoState,
+  createBs12KohlrabiDemoState,
+  createBs12CoffeeCandyDemoState,
+  createBs12HerbTeapotDemoState,
+  createBs12CloverDemoState,
+  createBs12CameraDemoState,
+  createBs12HarmonyDemoState,
+  createBs12OrchestraDemoState,
+  createBs12AudienceDemoState,
+  createBs12MelodyDemoState,
+  createBs12FerretDemoState,
+  createBs12CocoaDemoState,
+  createBs12MarbleberryDemoState,
+  createBs12PeppermintDemoState,
+  createBs12SourBeltDemoState,
+  createBs12SorbetSharkDemoState,
+  createBs12SonicWaterDemoState,
+  createBs12CakePopsDemoState,
+  createBs12AngelLightstickDemoState,
+  createBs12CreamPuffDemoState,
+  createBs12FanLetterDemoState,
+  createBs12EndingPoseDemoState,
+  createBs12ComebackStageDemoState,
+  createBs12MultivitaminDemoState,
+  createBs12PhotocardDemoState,
+  createBs12StardustDemoState,
+  createBs12IcePopDemoState,
+  createBs12CreamSodaDemoState,
+  createBs12DjMiyaDemoState,
+  createBs12PoppingCandyDemoState,
+  createBs12GnomeBandDemoState,
+  createBs12BlackberryDemoState,
+  createBs12SpotlightFanDemoState,
+  createBs12OnionDemoState,
+  createBs12CurrantCreamDemoState,
+  createBs12PuddingDemoState,
+  createBs12DjDemoState,
+  createBs12GuitarStringDemoState,
+  createBs12SummerSodaDemoState,
+  createBs12RainbowHeadphonesDemoState,
+  createBs12TrueRockSpiritDemoState,
+  createBs12UnderstandingDemoState,
+  createBs12BlackSapphireDemoState,
+  createBs12WerewolfDemoState,
+  createBs12MilkyWayDemoState,
+  createBs12CaramelArrowDemoState,
+  createBs12BlackLemonadeDemoState,
+  createBs12RockstarDemoState,
+  createBs12ButterRollDemoState,
+  createBs12JasmineDemoState,
+  createBs12BlueberryDemoState,
+  createBs12CrimsonDemoState,
+  createBs12CaramelPuddingDemoState,
+  createBs12CakeHoundDemoState,
+  createBs12StrategistDemoState,
+  createBs12ChessChocoDemoState,
+  createBs12CoffeeTruckDemoState,
+  createBs12SunglassesDemoState,
+  createBs12RecipeDemoState,
+  createBs12PerfectStageDemoState,
+  createBs12TailPhysicalDemoState,
+  createBs12FinalPhysicalDemoState,
+  createBs12RulingsDemoState,
+  createBs12KumihoDemoState,
+  createBs12MintChocoDemoState,
+  createBs12HerbDemoState,
+  createBs12AppleFaerieDemoState,
+  createBs12BonbonDemoState,
+  createBs12GingerBraveDemoState,
+  createBs12MayorDemoState,
+  createBs12BananaRotiDemoState,
+  createBs12EquippedAttackDemoState,
   createBs11RedSkillDemoState,
   createBs11006OnPlayDemoState,
   createBs11RedConditionalItemDemoState,
@@ -372,6 +481,122 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs11-083-replacement') {
       return createBs11083ReplacementDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'bs12-attack') {
+      return createBs12AttackDemoState(testStateConfig.cardNumber, testStateConfig.payable, testStateConfig.blockedColor, testStateConfig.blockedRest)
+    }
+    if (testStateConfig?.kind === 'bs12-006') {
+      return createBs12PositionCostDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs12-008') return createBs12ReadyDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-009') return createBs12TrapDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-010') return createBs12OptionalTrapDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-027') return createBs12YappingDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-029') return createBs12EntranceDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-030') return createBs12WorkshopDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-031') return createBs12SpotlightDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-032') return createBs12ChouxDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-033') return createBs12EspressoDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-034') return createBs12MadeleineDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-035') return createBs12KouignDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-036') return createBs12ClottedDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-037') return createBs12FinancierDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-038') return createBs12GreenbellDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-028') return createBs12CarpetDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-011') return createBs12StageDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-012') return createBs12GuitarDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-013') return createBs12RecordDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-015') return createBs12ParfaitDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-016') return createBs12MochiDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-017') return createBs12CandyAppleDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-018') return createBs12GlitterDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-019') return createBs12MuscleDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-039') return createBs12MelonDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-041') return createBs12BasilDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-040') return createBs12BaguetteDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-020') return createBs12StrawberryDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-021') return createBs12MangoDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-022') return createBs12MintWaferDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-042') return createBs12ChamomileDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-080') return createBs12KohlrabiDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-043') return createBs12CoffeeCandyDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-044') return createBs12HerbTeapotDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-045') return createBs12CloverDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-046') return createBs12CameraDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-047') return createBs12HarmonyDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-048') return createBs12OrchestraDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-049') return createBs12AudienceDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-050') return createBs12MelodyDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-051') return createBs12FerretDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-052') return createBs12CocoaDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-053') return createBs12KumihoDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-054') return createBs12MintChocoDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-055') return createBs12HerbDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-056') return createBs12AppleFaerieDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-063') return createBs12CakePopsDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-062') return createBs12AngelLightstickDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-064') return createBs12CreamPuffDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-065') return createBs12FanLetterDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-066') return createBs12EndingPoseDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-067') return createBs12ComebackStageDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-068') return createBs12MultivitaminDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-069') return createBs12PhotocardDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-070') return createBs12StardustDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-071') return createBs12IcePopDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-072') return createBs12CreamSodaDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-073') return createBs12DjMiyaDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-074') return createBs12PoppingCandyDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-075') return createBs12GnomeBandDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-076') return createBs12BlackberryDemoState(testStateConfig.scenario)
+      if (testStateConfig?.kind === 'bs12-077') return createBs12SpotlightFanDemoState(testStateConfig.scenario)
+      if (testStateConfig?.kind === 'bs12-078') return createBs12OnionDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-079') return createBs12CurrantCreamDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-081') return createBs12PuddingDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-082') return createBs12DjDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-083') return createBs12GuitarStringDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-084') return createBs12SummerSodaDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-085') return createBs12RainbowHeadphonesDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-086') return createBs12TrueRockSpiritDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-087') return createBs12UnderstandingDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-088') return createBs12BlackSapphireDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-090') return createBs12MilkyWayDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-091') return createBs12CaramelArrowDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-092') return createBs12BlackLemonadeDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-093') return createBs12RockstarDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-094') return createBs12ButterRollDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-097') return createBs12JasmineDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-095') return createBs12BlueberryDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-096') return createBs12CrimsonDemoState(testStateConfig.scenario, true)
+    if (testStateConfig?.kind === 'bs12-098') return createBs12CaramelPuddingDemoState(testStateConfig.scenario, true)
+    if (testStateConfig?.kind === 'bs12-099') return createBs12CakeHoundDemoState(testStateConfig.scenario, true)
+    if (testStateConfig?.kind === 'bs12-100') return createBs12StrategistDemoState(testStateConfig.scenario, true)
+    if (testStateConfig?.kind === 'bs12-101') return createBs12ChessChocoDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-102') return createBs12CoffeeTruckDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-103') return createBs12SunglassesDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-104') return createBs12RecipeDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-105') return createBs12PerfectStageDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-final') return createBs12FinalPhysicalDemoState(testStateConfig.cardNumber,testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-rulings') return createBs12RulingsDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-tail') return createBs12TailPhysicalDemoState(testStateConfig.cardNumber,testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-089') return createBs12WerewolfDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-061') return createBs12SonicWaterDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-060') return createBs12SorbetSharkDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-059') return createBs12SourBeltDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-057') return createBs12MarbleberryDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-058') return createBs12PeppermintDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-023') return createBs12BonbonDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-024') return createBs12GingerBraveDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-025') return createBs12MayorDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-026') return createBs12BananaRotiDemoState(testStateConfig.scenario)
+    if (testStateConfig?.kind === 'bs12-014') return createBs12ActivePhaseDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
+    if (testStateConfig?.kind === 'bs12-007') return ['equipped', 'unequipped'].includes(testStateConfig.scenario)
+      ? createBs12EquippedAttackDemoState(testStateConfig.scenario === 'equipped')
+      : createBs12EquipDemoState(testStateConfig.scenario as Parameters<typeof createBs12EquipDemoState>[0])
+    if (testStateConfig?.kind === 'bs12-005') {
+      return createBs12ActivateDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'bs12-flip') {
+      return createBs12FlipDemoState(testStateConfig.scenario, testStateConfig.cardNumber)
     }
     if (testStateConfig?.kind === 'bs11-vanilla-attack') {
       return createBs11VanillaAttackDemoState(testStateConfig.cardNumber, testStateConfig.payable)
@@ -1112,7 +1337,12 @@ export function useMatchController(params: {
     handleStartingCookie,
     resetSetup,
   } = setup
-  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapId, setSelectedTrapIdState] = useState<string | null>(null)
+  const [selectedTrapPositionCostIds, setSelectedTrapPositionCostIds] = useState<string[]>([])
+  const setSelectedTrapId = useCallback((trapId: string | null) => {
+    if (trapId !== selectedTrapId) setSelectedTrapPositionCostIds([])
+    setSelectedTrapIdState(trapId)
+  }, [selectedTrapId])
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
   const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
   const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
@@ -1138,7 +1368,9 @@ export function useMatchController(params: {
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedBlockerPaymentIds, setSelectedBlockerPaymentIds] = useState<string[]>([])
+  const [selectedBlockerDiscardIds, setSelectedBlockerDiscardIds] = useState<string[]>([])
   const [selectedAttackResponseId, setSelectedAttackResponseId] = useState<string | null>(null)
+  const [selectedAttackResponseSupportToTrashIds, setSelectedAttackResponseSupportToTrashIds] = useState<string[]>([])
   const [selectedAttackResponseTrashToDeckIds, setSelectedAttackResponseTrashToDeckIds] =
     useState<string[]>([])
   const [selectedAttackResponseDiscardIds, setSelectedAttackResponseDiscardIds] =
@@ -1178,11 +1410,25 @@ export function useMatchController(params: {
   // response in both A/B routes.  In a normal match the defender owns that
   // response; the localhost fixture switches the local control surface to
   // player-two so the revealed HP card can be activated and inspected.
+  // BS12-042/043 live follow-ups likewise hand player-two the real attack;
+  // when the HP reveal becomes player-one's FLIP, acting-player ownership
+  // switches the local control surface back to the defender.
   const testCardBase =
     (testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative')
       ? testStateConfig.cardNumber.split('@')[0]
       : undefined
+  const liveBs12FlipTestState =
+    testStateConfig !== null &&
+    (testStateConfig.kind === 'bs12-042' || testStateConfig.kind === 'bs12-043') &&
+    String(testStateConfig.scenario) === 'follow-up-live'
+  const liveBs12FlipAttackerControlsState =
+    liveBs12FlipTestState && getActingPlayerId(game) === 'player-two'
   const viewerPlayerId: PlayerId =
+    liveBs12FlipAttackerControlsState ||
+    (testStateConfig?.kind === 'bs12-092' && game.pendingOpponentHandDiscard?.playerId === 'player-two') ||
+    ((testStateConfig?.kind === 'bs12-093' || testStateConfig?.kind === 'bs12-094' || testStateConfig?.kind === 'bs12-097' || testStateConfig?.kind === 'bs12-101') && (game.pendingRefresh?.playerId === 'player-two' ||
+      (game.pendingBattle?.stage === 'flip' && (game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId) === 'player-two') ||
+      (game.pendingAbilityEffect?.sourceKind === 'flip' && game.pendingAbilityEffect.playerId === 'player-two'))) ||
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
     (testStateConfig?.kind === 'bs11-thirteenth-batch' &&
       testStateConfig.cardNumber === 'BS11-047' &&
@@ -1388,6 +1634,7 @@ export function useMatchController(params: {
       : {})
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
   const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
+  const faintCostDeckToTrashAmount = pendingFaint?.cost?.deckToTrash?.amount ?? 0
   const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
   const faintCostSupportToHandAmount = pendingFaint?.cost?.supportToHand ?? 0
   const faintOptional = pendingFaint?.optional === true
@@ -1500,23 +1747,7 @@ export function useMatchController(params: {
     game.pendingAfterDamageEffects && game.pendingAfterDamageEffects.length > 0
       ? game.pendingAfterDamageEffects[0]
       : null
-  const afterDamageSourceCard = pendingAfterDamage
-    ? (() => {
-        for (const player of Object.values(game.players) as PlayerState[]) {
-          const found =
-            player.breakArea.find(
-              (cookie: CookieCard) =>
-                cookie.instanceId === pendingAfterDamage.sourceInstanceId,
-            ) ??
-            player.battleArea.find(
-              (cookie: CookieInBattle) =>
-                cookie.card.instanceId === pendingAfterDamage.sourceInstanceId,
-            )?.card
-          if (found) return found
-        }
-        return null
-      })()
-    : null
+  const afterDamageSourceCard = getAfterDamageEffectSourceCard(game)
   const afterDamageCandidates =
     pendingAfterDamage &&
     pendingAfterDamage.sourcePlayerId === viewerPlayerId
@@ -1609,6 +1840,8 @@ export function useMatchController(params: {
     })
   }
   const selectedTrapDiscardCost = selectedTrapCost?.discardHand ?? 0
+  const selectedTrapPositionCost = selectedTrapCost?.battleCookiePosition
+  const selectedTrapPositionCostCandidates = getBattleCookiePositionCostCandidates(selectedTrapCost ?? {}, game.players[viewerPlayerId].battleArea, selectedTrapId ?? undefined)
   const selectedTrapTrashBattleCookieCost =
     selectedTrapCost?.trashBattleCookie?.count ?? 0
   const selectedTrapTrashBattleCookieCandidates = selectedTrapCost
@@ -1649,6 +1882,7 @@ export function useMatchController(params: {
   )
   const selectTrapCostOption = (index: number) => {
     if (index < 0 || index >= trapCostOptions.length) return
+    setSelectedTrapPositionCostIds([])
     setSelectedTrapCostOptionIndex(index)
     setSelectedTrapPaymentIds([])
     setSelectedTrapTrashCookieToBreakAreaIds([])
@@ -2012,6 +2246,16 @@ export function useMatchController(params: {
     (cookie) => cookie.card.instanceId === selectedAttackResponseId,
   )
   const attackResponseCost = selectedAttackResponse?.card.skill?.cost ?? {}
+  const attackResponseSupportToTrashAmount = attackResponseCost.supportToTrash ?? 0
+  const attackResponseSupportToTrashCandidates = selectedAttackResponse
+    ? getSupportEffectCandidates(game, { sourcePlayerId: viewerPlayerId, sourceInstanceId: selectedAttackResponse.card.instanceId }, { side: 'self', keyword: attackResponseCost.supportToTrashKeyword }).map(entry => entry.card)
+    : []
+  const toggleAttackResponseSupportToTrash = (instanceId: string) => {
+    if (!attackResponseSupportToTrashCandidates.some(card => card.instanceId === instanceId)) return
+    setSelectedAttackResponseSupportToTrashIds(current => current.includes(instanceId)
+      ? current.filter(id => id !== instanceId)
+      : current.length < attackResponseSupportToTrashAmount ? [...current, instanceId] : current)
+  }
   const attackResponseTrashToDeckAmount =
     attackResponseCost.trashToDeck?.count ?? 0
   const attackResponseTrashToDeckCandidates =
@@ -2065,6 +2309,95 @@ export function useMatchController(params: {
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
+    (testStateConfig?.kind === 'bs12-005' && !['positive', 'enable'].includes(testStateConfig.scenario)) ||
+    testStateConfig?.kind === 'bs12-006' ||
+    (testStateConfig?.kind === 'bs12-007' && testStateConfig.scenario === 'opponent-turn') ||
+    (testStateConfig?.kind === 'bs12-008' && testStateConfig.scenario === 'opponent-turn') ||
+    testStateConfig?.kind === 'bs12-009' ||
+    testStateConfig?.kind === 'bs12-027' ||
+    testStateConfig?.kind === 'bs12-029' ||
+    testStateConfig?.kind === 'bs12-047' ||
+    testStateConfig?.kind === 'bs12-049' ||
+    testStateConfig?.kind === 'bs12-050' ||
+    (testStateConfig?.kind === 'bs12-051' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-052' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-053' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-054' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-055' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-056' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-057' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-058' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-059' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-060' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-063' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-062' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-064' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-065' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-066' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-067' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-068' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-069' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-070' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-071' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-072' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-073' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-074' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-075' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-076' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-077' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-078' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-079' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-061' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-030' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-031' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-032' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-033' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-034' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-035' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-036' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-037' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-038' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-039' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-041' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-042' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-080' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-081' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-082' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-083' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-084' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-085' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-086' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-087' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-flip' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip')) ||
+    (testStateConfig?.kind === 'bs12-105' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || !!game.pendingRefresh || !!game.pendingReplacement)) ||
+    (testStateConfig?.kind === 'bs12-final' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || !!game.pendingRefresh || !!game.pendingReplacement)) ||
+    (testStateConfig?.kind === 'bs12-tail' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || !!game.pendingRefresh || !!game.pendingReplacement)) ||
+    (testStateConfig?.kind === 'bs12-088' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-090' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-091' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-092' && (!hasBlockingPending(game) || !!game.pendingOpponentHandDiscard)) ||
+    (testStateConfig?.kind === 'bs12-093' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-094' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-095' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-096' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-098' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-099' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-100' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-101' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh || !!game.pendingReplacement || !!game.pendingFaintEffects?.length)) ||
+    (testStateConfig?.kind === 'bs12-097' && (!hasBlockingPending(game) || game.pendingBattle?.stage === 'flip' || game.pendingAbilityEffect?.sourceKind === 'flip' || !!game.pendingRefresh)) ||
+    (testStateConfig?.kind === 'bs12-089' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-043' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-044' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-048' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-045' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-046' && !hasBlockingPending(game)) ||
+    (testStateConfig?.kind === 'bs12-040' && !hasBlockingPending(game)) ||
+    testStateConfig?.kind === 'bs12-028' ||
+    testStateConfig?.kind === 'bs12-010' ||
+    testStateConfig?.kind === 'bs12-011' ||
+    testStateConfig?.kind === 'bs12-012' ||
+    (testStateConfig?.kind === 'bs12-013' && !hasBlockingPending(game)) ||
+    ((testStateConfig?.kind === 'bs12-014' || testStateConfig?.kind === 'bs12-015' || testStateConfig?.kind === 'bs12-016' || testStateConfig?.kind === 'bs12-017' || testStateConfig?.kind === 'bs12-018' || testStateConfig?.kind === 'bs12-019' || testStateConfig?.kind === 'bs12-020' || testStateConfig?.kind === 'bs12-021' || testStateConfig?.kind === 'bs12-022' || testStateConfig?.kind === 'bs12-023' || testStateConfig?.kind === 'bs12-024' || testStateConfig?.kind === 'bs12-025' || testStateConfig?.kind === 'bs12-026') && !hasBlockingPending(game)) ||
     testStateConfig?.kind === 'bs10-008-flip' ||
     (testStateConfig?.kind === 'bs11-flip' || testStateConfig?.kind === 'bs11-071-hp-no-flip') ||
     testStateConfig?.kind === 'bs11-twelfth-batch' ||
@@ -2093,8 +2426,10 @@ export function useMatchController(params: {
       ? getReplacementCandidates(game, pendingPlayer.id)
       : []
 
+  const holdExtraEntryPhase = testStateConfig?.kind === 'bs12-092' && testStateConfig.scenario === 'outside-main'
   useEffect(() => {
     if (
+      holdExtraEntryPhase ||
       setupStep ||
       game.status !== 'playing' ||
       game.activePlayerId !== viewerPlayerId ||
@@ -2125,7 +2460,7 @@ export function useMatchController(params: {
     }, 350)
 
     return () => window.clearTimeout(timer)
-  }, [game, setupStep, viewerPlayerId])
+  }, [game, setupStep, viewerPlayerId, holdExtraEntryPhase])
 
   // auto-skip trap
   useEffect(() => {
@@ -2164,6 +2499,34 @@ export function useMatchController(params: {
             return current
           }
           const preserveHumanDamageDecisions =
+            testStateConfig.kind === 'bs12-flip' ||
+            testStateConfig.kind === 'bs12-105' ||
+            testStateConfig.kind === 'bs12-final' ||
+            testStateConfig.kind === 'bs12-tail' ||
+            testStateConfig.kind === 'bs12-088' ||
+            testStateConfig.kind === 'bs12-089' ||
+            ((testStateConfig.kind === 'bs12-042' || testStateConfig.kind === 'bs12-043') &&
+              testStateConfig.scenario === 'follow-up-live') ||
+            testStateConfig.kind === 'bs12-090' ||
+            testStateConfig.kind === 'bs12-091' ||
+            testStateConfig.kind === 'bs12-092' ||
+            testStateConfig.kind === 'bs12-093' ||
+            testStateConfig.kind === 'bs12-094' ||
+            testStateConfig.kind === 'bs12-095' ||
+            testStateConfig.kind === 'bs12-096' ||
+            testStateConfig.kind === 'bs12-098' ||
+            testStateConfig.kind === 'bs12-099' ||
+            testStateConfig.kind === 'bs12-100' ||
+            testStateConfig.kind === 'bs12-101' ||
+            testStateConfig.kind === 'bs12-097' ||
+            testStateConfig.kind === 'bs12-032' ||
+            testStateConfig.kind === 'bs12-033' ||
+            testStateConfig.kind === 'bs12-034' ||
+            testStateConfig.kind === 'bs12-035' ||
+            testStateConfig.kind === 'bs12-036' ||
+            testStateConfig.kind === 'bs12-037' ||
+            testStateConfig.kind === 'bs12-038' ||
+            (testStateConfig.kind === 'bs12-007' && testStateConfig.scenario !== 'blocked') || testStateConfig.kind === 'bs12-009' || testStateConfig.kind === 'bs12-010' || testStateConfig.kind === 'bs12-027' || testStateConfig.kind === 'bs12-029' || testStateConfig.kind === 'bs12-047' || testStateConfig.kind === 'bs12-049' || testStateConfig.kind === 'bs12-050' || testStateConfig.kind === 'bs12-051' ||
             testStateConfig.kind === 'bs10-008-flip' ||
             testStateConfig.kind === 'bs11-flip' ||
             testStateConfig.kind === 'bs11-071-hp-no-flip' ||
@@ -2206,6 +2569,7 @@ export function useMatchController(params: {
       battle.trapsDisabled ||
       // A nested decision owns the turn. It must reach its own UI before the
       // response window can be closed automatically.
+      game.pendingAbilityEffect ||
       getPendingDecision(game) ||
       getTrapCandidates(game, trapControllerId).length > 0 ||
       getBlockerCandidates(game, trapControllerId).length > 0 ||
@@ -2243,7 +2607,8 @@ export function useMatchController(params: {
     // scheduled after this committed effect but cannot be cancelled by its
     // cleanup; the current-state guard keeps nested decisions untouched.
     queueMicrotask(() => {
-      setSelectedTrapId(null)
+      setSelectedTrapPositionCostIds([])
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
@@ -2261,6 +2626,7 @@ export function useMatchController(params: {
           (currentBattle.defenderPlayerId !== viewerPlayerId &&
             !allowCandidateOpponentTrapSkip) ||
           currentBattle.trapsDisabled ||
+          current.pendingAbilityEffect ||
           getPendingDecision(current) ||
           getTrapCandidates(current, currentTrapControllerId).length > 0 ||
           getBlockerCandidates(current, currentTrapControllerId).length > 0 ||
@@ -2289,7 +2655,8 @@ export function useMatchController(params: {
       setSelectedFaintTargetIds([])
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
-      setSelectedTrapId(null)
+      setSelectedTrapPositionCostIds([])
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
@@ -2305,6 +2672,7 @@ export function useMatchController(params: {
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
+      setSelectedAttackResponseSupportToTrashIds([])
     },
     [animations, battleActions, resetSetup],
   )
@@ -2321,7 +2689,8 @@ export function useMatchController(params: {
       setSelectedFaintTargetIds([])
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
-      setSelectedTrapId(null)
+      setSelectedTrapPositionCostIds([])
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
@@ -2337,6 +2706,7 @@ export function useMatchController(params: {
       setSelectedAttackResponseId(null)
       setSelectedAttackResponseTrashToDeckIds([])
       setSelectedAttackResponseDiscardIds([])
+      setSelectedAttackResponseSupportToTrashIds([])
     },
     [animations, battleActions, setSetupStep],
   )
@@ -2390,6 +2760,7 @@ export function useMatchController(params: {
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
     selectedTrapTrashBattleCookieIds,
+    selectedTrapPositionCostIds, setSelectedTrapPositionCostIds, selectedTrapPositionCost, selectedTrapPositionCostCandidates,
     setSelectedTrapTrashBattleCookieIds,
     trapSelectNoTarget,
     setTrapSelectNoTarget,
@@ -2451,6 +2822,8 @@ export function useMatchController(params: {
     setSelectedBlockerId,
     selectedBlockerPaymentIds,
     setSelectedBlockerPaymentIds,
+    selectedBlockerDiscardIds,
+    setSelectedBlockerDiscardIds,
     blockerEnergyCost,
     blockerEnergyCostTotal,
     blockerPaymentCandidates,
@@ -2473,6 +2846,11 @@ export function useMatchController(params: {
     attackResponseDiscardCandidates,
     attackResponseDiscardAmount,
     toggleAttackResponseDiscard,
+    selectedAttackResponseSupportToTrashIds,
+    setSelectedAttackResponseSupportToTrashIds,
+    attackResponseSupportToTrashCandidates,
+    attackResponseSupportToTrashAmount,
+    toggleAttackResponseSupportToTrash,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,
@@ -2493,6 +2871,7 @@ export function useMatchController(params: {
     faintPaymentValid,
     toggleFaintPayment,
     faintCostHandAmount,
+    faintCostDeckToTrashAmount,
     faintCostHandCandidates,
     toggleFaintCostHand,
     faintCostSupportAmount,

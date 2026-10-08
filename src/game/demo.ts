@@ -1,9 +1,14 @@
+import bs1FormalDocument from '../../data/cards/official-brave-beginning-bs1.en.json'
+import bs3FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import { createSeededShuffle, defaultShuffle } from './helpers'
+import { createBs12RulingLifecycleFactories } from './bs12-rulings-demo'
 import { getFaintTriggeredCost, hasCookieOnPlayEffects } from './skills'
 import { playExtraDeckCookie } from './actions'
 import { beginAttack } from './battle'
 import { materializeExtraDeckCookie } from './extra-deck'
 import { applyGameCommand } from './commands'
+import { continuePendingReplacements, getCurrentReplacementTask } from './replacement'
+import { advancePhase } from './turn'
 import { beginEffectDamageSequence, executeCardEffect } from './effects'
 import {
   createGame,
@@ -23,12 +28,20 @@ import {
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
+import pPromotionFormalDocument from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import pCompleteFormalDocument from '../../data/cards/official-promotion-p001-p032.en.json'
 import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import bs4FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
+import redFormalDocument from '../../data/cards/official-sample.en.json'
+import yellowFormalDocument from '../../data/cards/official-starter-deck-yellow.en.json'
+import blueFormalDocument from '../../data/cards/official-starter-deck-blue.en.json'
+import greenFormalDocument from '../../data/cards/official-starter-deck-green.en.json'
 import bs7CandidateDocument from '../../data/cards/official-arena-of-glory-bs7.en.json'
 import bs8FormalDocument from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
 import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-deceit-bs9.en.json'
 import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
 import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
+import bs12CandidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -515,6 +528,8 @@ export type Bs11FourteenthBatchCardNumber =
 export type Bs11FourteenthBatchScenario =
   | 'positive'
   | 'negative'
+  | 'flip-positive'
+  | 'flip-negative'
   | 'activate-positive'
   | 'activate-negative'
 
@@ -582,6 +597,8 @@ const isBs11FourteenthBatchScenario = (
 ): value is Bs11FourteenthBatchScenario =>
   value === 'positive' ||
   value === 'negative' ||
+  value === 'flip-positive' ||
+  value === 'flip-negative' ||
   value === 'activate-positive' ||
   value === 'activate-negative'
 
@@ -665,6 +682,112 @@ export const parseTestStateConfig = (
   | { kind: 'bs11-082-trap'; cardNumber: 'BS11-082' | 'BS11-082@1'; conditionMet: boolean }
   | { kind: 'bs11-083-stage'; conditionMet: boolean }
   | { kind: 'bs11-083-replacement'; conditionMet: boolean }
+  | { kind: 'bs12-attack'; cardNumber: Bs12FirstCardNumber; payable: boolean; blockedColor?: true; blockedRest?: true }
+  | { kind: 'bs12-flip'; cardNumber: 'BS12-002' | 'BS12-004'; scenario: Bs12FlipScenario }
+  | { kind: 'bs12-005'; scenario: Bs12ActivateScenario }
+  | { kind: 'bs12-006'; scenario: Bs12PositionCostScenario }
+  | { kind: 'bs12-007'; scenario: Bs12EquipScenario | 'equipped' | 'unequipped' }
+  | { kind: 'bs12-008'; cardNumber: 'BS12-008' | 'BS12-008@1'; scenario: Bs12ReadyScenario }
+  | { kind: 'bs12-009'; scenario: Bs12TrapScenario }
+  | { kind: 'bs12-010'; scenario: Bs12TrapScenario }
+  | { kind: 'bs12-027'; scenario: Bs12YappingScenario }
+  | { kind: 'bs12-029'; scenario: Bs12EntranceScenario }
+  | { kind: 'bs12-030'; scenario: Bs12WorkshopScenario }
+  | { kind: 'bs12-031'; scenario: Bs12SpotlightScenario }
+  | { kind: 'bs12-032'; scenario: Bs12ChouxScenario; cardNumber: 'BS12-032' | 'BS12-032@1' }
+  | { kind: 'bs12-033'; scenario: Bs12ChouxScenario; cardNumber: 'BS12-033' | 'BS12-033@1' }
+  | { kind: 'bs12-034'; scenario: Bs12MadeleineScenario; cardNumber: 'BS12-034' | 'BS12-034@1' }
+  | { kind: 'bs12-035'; scenario: Bs12KouignScenario; cardNumber: 'BS12-035' | 'BS12-035@1' }
+  | { kind: 'bs12-036'; scenario: Bs12ClottedScenario; cardNumber: 'BS12-036' | 'BS12-036@1' }
+  | { kind: 'bs12-037'; scenario: Bs12FinancierScenario; cardNumber: 'BS12-037' | 'BS12-037@1' }
+  | { kind: 'bs12-038'; scenario: Bs12GreenbellScenario; cardNumber: 'BS12-038' | 'BS12-038@1' }
+  | { kind: 'bs12-028'; scenario: Bs12CarpetScenario }
+  | { kind: 'bs12-011'; scenario: Bs12StageScenario }
+  | { kind: 'bs12-012'; scenario: Bs12GuitarScenario }
+  | { kind: 'bs12-013'; scenario: Bs12GuitarScenario }
+  | { kind: 'bs12-015'; cardNumber: 'BS12-015' | 'BS12-015@1'; scenario: Bs12ParfaitScenario }
+  | { kind: 'bs12-016'; cardNumber: 'BS12-016' | 'BS12-016@1'; scenario: Bs12MochiScenario }
+  | { kind: 'bs12-017'; cardNumber: 'BS12-017' | 'BS12-017@1'; scenario: Bs12CandyAppleScenario }
+  | { kind: 'bs12-018'; cardNumber: 'BS12-018' | 'BS12-018@1'; scenario: Bs12GlitterScenario }
+  | { kind: 'bs12-019'; scenario: Bs12MuscleScenario }
+  | { kind: 'bs12-039'; scenario: Bs12MuscleScenario | 'deploy' }
+  | { kind: 'bs12-041'; scenario: Bs12MuscleScenario | 'deploy' }
+  | { kind: 'bs12-040'; scenario: Bs12BaguetteScenario }
+  | { kind: 'bs12-020'; scenario: Bs12StrawberryScenario }
+  | { kind: 'bs12-021'; cardNumber: 'BS12-021' | 'BS12-021@1'; scenario: Bs12MangoScenario }
+  | { kind: 'bs12-022'; scenario: Bs12MintWaferScenario }
+  | { kind: 'bs12-042'; scenario: Bs12ChamomileScenario }
+  | { kind: 'bs12-043'; scenario: Bs12CoffeeCandyScenario }
+  | { kind: 'bs12-044'; scenario: Bs12HerbTeapotScenario }
+  | { kind: 'bs12-045'; scenario: Bs12CloverScenario }
+  | { kind: 'bs12-046'; scenario: Bs12CameraScenario }
+  | { kind: 'bs12-047'; scenario: Bs12HarmonyScenario }
+  | { kind: 'bs12-048'; scenario: Bs12OrchestraScenario }
+  | { kind: 'bs12-049'; scenario: Bs12AudienceScenario }
+  | { kind: 'bs12-050'; scenario: Bs12MelodyScenario }
+  | { kind: 'bs12-051'; scenario: Bs12FerretScenario; cardNumber: 'BS12-051' | 'BS12-051@1' }
+  | { kind: 'bs12-052'; scenario: Bs12CocoaScenario; cardNumber: 'BS12-052' | 'BS12-052@1' }
+  | { kind: 'bs12-053'; scenario: Bs12KumihoScenario; cardNumber: 'BS12-053' | 'BS12-053@1' }
+  | { kind: 'bs12-054'; scenario: Bs12MintChocoScenario; cardNumber: 'BS12-054' | 'BS12-054@1' }
+  | { kind: 'bs12-055'; scenario: Bs12HerbScenario; cardNumber: 'BS12-055' | 'BS12-055@1' }
+  | { kind: 'bs12-056'; scenario: Bs12AppleFaerieScenario; cardNumber: 'BS12-056' | 'BS12-056@1' }
+  | { kind: 'bs12-057'; scenario: Bs12MarbleberryScenario }
+  | { kind: 'bs12-058'; scenario: Bs12PeppermintScenario; cardNumber: 'BS12-058' | 'BS12-058@1' }
+  | { kind: 'bs12-059'; scenario: Bs12MuscleScenario | 'deploy' | 'outside-main' }
+  | { kind: 'bs12-060'; scenario: Bs12SorbetSharkScenario }
+  | { kind: 'bs12-063'; scenario: Bs12CakePopsScenario }
+  | { kind: 'bs12-062'; scenario: Bs12AngelLightstickScenario }
+  | { kind: 'bs12-064'; scenario: Bs12CreamPuffScenario }
+  | { kind: 'bs12-065'; scenario: Bs12FanLetterScenario }
+  | { kind: 'bs12-066'; scenario: Bs12EndingPoseScenario }
+  | { kind: 'bs12-067'; scenario: Bs12ComebackStageScenario }
+  | { kind: 'bs12-068'; scenario: Bs12MultivitaminScenario }
+  | { kind: 'bs12-069'; scenario: Bs12PhotocardScenario }
+  | { kind: 'bs12-070'; scenario: Bs12StardustScenario; cardNumber: 'BS12-070' | 'BS12-070@1' }
+  | { kind: 'bs12-071'; scenario: Bs12IcePopScenario; cardNumber: 'BS12-071' | 'BS12-071@1' }
+  | { kind: 'bs12-072'; scenario: Bs12CreamSodaScenario; cardNumber: 'BS12-072' | 'BS12-072@1' }
+  | { kind: 'bs12-073'; scenario: Bs12DjMiyaScenario; cardNumber: 'BS12-073' | 'BS12-073@1' }
+  | { kind: 'bs12-074'; scenario: Bs12PoppingCandyScenario; cardNumber: 'BS12-074' | 'BS12-074@1' }
+  | { kind: 'bs12-075'; scenario: Bs12GnomeBandScenario; cardNumber: 'BS12-075' | 'BS12-075@1' }
+  | { kind: 'bs12-076'; scenario: Bs12MuscleScenario | 'deploy' | 'outside-main' | 'purple-energy' }
+  | { kind: 'bs12-077'; scenario: Bs12SpotlightFanScenario }
+  | { kind: 'bs12-078'; scenario: Bs12OnionScenario }
+  | { kind: 'bs12-079'; scenario: Bs12CurrantCreamScenario }
+  | { kind: 'bs12-080'; scenario: Bs12KohlrabiScenario }
+  | { kind: 'bs12-081'; scenario: Bs12PuddingScenario }
+  | { kind: 'bs12-082'; scenario: Bs12DjScenario }
+  | { kind: 'bs12-083'; scenario: Bs12GuitarStringScenario }
+  | { kind: 'bs12-084'; scenario: Bs12SummerSodaScenario }
+  | { kind: 'bs12-085'; scenario: Bs12RainbowHeadphonesScenario }
+  | { kind: 'bs12-086'; scenario: Bs12TrueRockSpiritScenario }
+  | { kind: 'bs12-087'; scenario: Bs12UnderstandingScenario }
+  | { kind: 'bs12-088'; cardNumber: 'BS12-088' | 'BS12-088@1'; scenario: Bs12BlackSapphireScenario }
+  | { kind: 'bs12-089'; cardNumber: 'BS12-089' | 'BS12-089@1'; scenario: Bs12WerewolfScenario }
+  | { kind: 'bs12-090'; cardNumber: 'BS12-090' | 'BS12-090@1'; scenario: Bs12MilkyWayScenario }
+  | { kind: 'bs12-091'; cardNumber: 'BS12-091' | 'BS12-091@1'; scenario: Bs12CaramelArrowScenario }
+  | { kind: 'bs12-092'; cardNumber: 'BS12-092' | 'BS12-092@1'; scenario: Bs12BlackLemonadeScenario }
+  | { kind: 'bs12-093'; cardNumber: 'BS12-093' | 'BS12-093@1'; scenario: Bs12RockstarScenario }
+  | { kind: 'bs12-094'; scenario: Bs12ButterRollScenario }
+  | { kind: 'bs12-097'; scenario: Bs12JasmineScenario }
+  | { kind: 'bs12-095'; scenario: Bs12BlueberryScenario }
+  | { kind: 'bs12-096'; scenario: Bs12CrimsonScenario }
+  | { kind: 'bs12-098'; scenario: Bs12CaramelPuddingScenario }
+  | { kind: 'bs12-099'; scenario: Bs12CakeHoundScenario }
+  | { kind: 'bs12-100'; scenario: Bs12StrategistScenario }
+  | { kind: 'bs12-101'; scenario: Bs12ChessChocoScenario }
+  | { kind: 'bs12-102'; scenario: Bs12CoffeeTruckScenario }
+  | { kind: 'bs12-103'; scenario: Bs12SunglassesScenario }
+  | { kind: 'bs12-104'; scenario: Bs12RecipeScenario }
+  | { kind: 'bs12-final'; cardNumber: Bs12FinalPrintedNumber; scenario: Bs12FinalPhysicalScenario }
+  | { kind: 'bs12-rulings'; scenario: Bs12RulingLifecycleScenario }
+  | { kind: 'bs12-tail'; cardNumber: Bs12TailPrintedNumber; scenario: Bs12TailPhysicalScenario }
+  | { kind: 'bs12-105'; scenario: Bs12PerfectStageScenario }
+  | { kind: 'bs12-061'; scenario: Bs12GingerBraveScenario | 'outside-main' }
+  | { kind: 'bs12-023'; scenario: Bs12BonbonScenario }
+  | { kind: 'bs12-024'; scenario: Bs12GingerBraveScenario }
+  | { kind: 'bs12-025'; scenario: Bs12MayorScenario }
+  | { kind: 'bs12-026'; scenario: Bs12BananaRotiScenario }
+  | { kind: 'bs12-014'; cardNumber: 'BS12-014' | 'BS12-014@1'; scenario: Bs12ActivePhaseScenario }
   | { kind: 'bs11-vanilla-attack'; cardNumber: Bs11VanillaAttackCardNumber; payable: boolean }
   | { kind: 'bs11-red-skill'; cardNumber: Bs11RedSkillCardNumber; payable: boolean }
   | { kind: 'bs11-006-on-play'; scenario: 'positive' | 'no-macaron' | 'no-item' }
@@ -1054,6 +1177,268 @@ export const parseTestStateConfig = (
   if (testState === 'bs11-083-replacement:positive' || testState === 'bs11-083-replacement:negative') {
     return { kind: 'bs11-083-replacement', conditionMet: testState.endsWith('positive') }
   }
+  const bs12PositionMatch = testState?.match(/^bs12-006:(positive|self|no-cost|wrong-keyword|no-energy|wrong-energy|rested-energy|used|opponent-turn)$/)
+  const bs12TrapMatch = testState?.match(/^bs12-009:(positive|one-rested|two-rested|non-arena|mic-equipped|no-energy|wrong-energy|rested-energy|disabled|used)$/)
+  if (bs12TrapMatch) return { kind: 'bs12-009', scenario: bs12TrapMatch[1] as Bs12TrapScenario }
+  const bs12OptionalTrapMatch = testState?.match(/^bs12-010:(positive|one-rested|two-rested|non-arena|mic-equipped|no-energy|wrong-energy|rested-energy|disabled|used)$/)
+  if (bs12OptionalTrapMatch) return { kind: 'bs12-010', scenario: bs12OptionalTrapMatch[1] as Bs12TrapScenario }
+  const bs12YappingMatch = testState?.match(/^bs12-027:(four|three|five|arena-only|yellow-only|non-arena|high-level|opponent-break|trash-arena|support-arena|battle-arena|free-no-energy|free-wrong-energy|free-rested-energy|no-energy|wrong-energy|rested-energy|disabled|used|main|after-battle)$/)
+  if (bs12YappingMatch) return { kind: 'bs12-027', scenario: bs12YappingMatch[1] as Bs12YappingScenario }
+  const bs12CarpetMatch = testState?.match(/^bs12-028:(positive|no-cost|non-arena|arena-item|red-only|wrong-energy|rested-energy|no-energy|opponent-turn|outside-main|break-nine|short-deck)$/)
+  if (bs12CarpetMatch) return { kind: 'bs12-028', scenario: bs12CarpetMatch[1] as Bs12CarpetScenario }
+  const bs12EntranceMatch = testState?.match(/^bs12-029:(four|three|five|arena-only|yellow-only|non-arena|high-level|opponent-break|trash-arena|support-arena|battle-arena|no-energy|wrong-energy|rested-energy|disabled|used|main|after-battle|one-energy|mixed-energy|one-rested|short-deck|event-only)$/)
+  if (bs12EntranceMatch) return { kind: 'bs12-029', scenario: bs12EntranceMatch[1] as Bs12EntranceScenario }
+  const bs12WorkshopMatch = testState?.match(/^bs12-030:(positive|faint|green-arena|hand-break|removed-break|old-break|previous-turn|non-arena|opponent-break|trash-arena|no-event|no-energy|wrong-energy|rested-energy|one-energy|rested-source|opponent-turn|wrong-phase|non-arena-target|red-target|rested-target|equipment|support-only|no-target|replace|placed|refresh)$/)
+  if (bs12WorkshopMatch) return { kind: 'bs12-030', scenario: bs12WorkshopMatch[1] as Bs12WorkshopScenario }
+  const bs12SpotlightMatch = testState?.match(/^bs12-031:(positive|two-costs|no-cost|red-arena|yellow-non-arena|equipment-only|support-only|rested-cost|no-energy|one-energy|wrong-energy|mixed-energy|rested-energy|opponent-turn|outside-main|break-nine|single-cookie|equipped-cost|opponent-faints|no-target|short-deck)$/)
+  if (bs12SpotlightMatch) return { kind: 'bs12-031', scenario: bs12SpotlightMatch[1] as Bs12SpotlightScenario }
+  const bs12ChouxMatch = testState?.match(/^bs12-032(@1)?:(hp-cost|hp-cost-survives|positive|non-arena|opponent-turn|rested-source|equipped-source|on-play|on-play-opponent-turn|on-play-non-arena|on-play-rested|on-play-equipped|on-play-short-deck|on-play-break-nine|arena-faint|arena-faint-nested|arena-faint-no-condition|mechanism-faint|mechanism-faint-opponent-turn|mechanism-faint-non-arena|cost|cost-rested|cost-equipped|cost-wrong-energy|cost-one-energy|cost-rested-energy|cost-other-cookie|cost-hand|cost-short-deck|cost-break-nine|cost-prevented|attack|mixed-energy|wrong-energy|one-energy|rested-energy|refresh|old-break|ui-choice|ui-choice-rested|ui-choice-refresh|ui-choice-prevented|ui-choice-public-source)$/)
+  if (bs12ChouxMatch) return { kind: 'bs12-032', scenario: bs12ChouxMatch[2] as Bs12ChouxScenario, cardNumber: bs12ChouxMatch[1] ? 'BS12-032@1' : 'BS12-032' }
+  const bs12EspressoMatch = testState?.match(/^bs12-033(@1)?:(hp-cost|hp-cost-survives|on-play|on-play-opponent-turn|on-play-non-arena|on-play-rested|on-play-equipped|on-play-short-deck|on-play-break-nine|cost|cost-hand|cost-short-deck|positive|non-arena|opponent-turn|rested-source|attack|mixed-energy|wrong-energy|one-energy|rested-energy|arena-faint|arena-faint-nested|arena-faint-no-condition|mechanism-faint|mechanism-faint-opponent-turn|mechanism-faint-non-arena)$/)
+  if (bs12EspressoMatch) return { kind: 'bs12-033', scenario: bs12EspressoMatch[2] as Bs12ChouxScenario, cardNumber: bs12EspressoMatch[1] ? 'BS12-033@1' : 'BS12-033' }
+  const bs12MadeleineMatch = testState?.match(/^bs12-034(@1)?:(positive|four-arena|three-arena|non-arena-break|opponent-break|high-level|wrong-energy|one-energy|rested-energy|rested-source|rested-ally|lv2-ally|non-arena-ally|equipped-ally|break-nine|short-deck|espresso-ally)$/)
+  if (bs12MadeleineMatch) return { kind: 'bs12-034', scenario: bs12MadeleineMatch[2] as Bs12MadeleineScenario, cardNumber: bs12MadeleineMatch[1] ? 'BS12-034@1' : 'BS12-034' }
+  const bs12KouignMatch = testState?.match(/^bs12-035(@1)?:(then-four|then-three|then-non-arena|then-opponent|then-level|then-faints|positive|peach-cost|no-cost|wrong-energy|no-energy|rested-energy|opponent-turn|break-nine|attack|attack-rested)$/)
+  if (bs12KouignMatch) return { kind: 'bs12-035', scenario: bs12KouignMatch[2] as Bs12KouignScenario, cardNumber: bs12KouignMatch[1] ? 'BS12-035@1' : 'BS12-035' }
+  const bs12ClottedMatch = testState?.match(/^bs12-036(@1)?:(then-positive|then-rested|then-same-number|then-same-alt|then-red|then-green|then-blue|then-purple|then-black|then-non-arena-cost|then-no-cost|then-no-target|positive|first-player|three-arena|wrong-color|non-arena|high-level|opponent-break|full-battle|opponent-turn|outside-main|attack|wrong-energy|few-energy|rested-energy|rested-source)$/)
+  if (bs12ClottedMatch) return { kind: 'bs12-036', scenario: bs12ClottedMatch[2] as Bs12ClottedScenario, cardNumber: bs12ClottedMatch[1] ? 'BS12-036@1' : 'BS12-036' }
+  const bs12FinancierMatch = testState?.match(/^bs12-037(@1)?:(four|zero|three|five|seven|eight|mixed-colors|non-arena|high-level|opponent-break|trash-arena|support-arena|wrong-energy|no-energy|rested-energy|opponent-turn|outside-main|used|source-rested|attack|attack-three-energy|attack-wrong|attack-rested|target-faints|deploy)$/)
+  if (bs12FinancierMatch) return { kind: 'bs12-037', scenario: bs12FinancierMatch[2] as Bs12FinancierScenario, cardNumber: bs12FinancierMatch[1] ? 'BS12-037@1' : 'BS12-037' }
+  const bs12GreenbellMatch = testState?.match(/^bs12-038(@1)?:(positive|equal-before|equal-after|more-after|foe-zero|zero-after|source-rested|opponent-rested|hand|full-battle|short-deck|last-deck|attack|attack-wrong|attack-few|attack-rested-energy|attack-rested-source|isolated-opponent-turn)$/)
+  if (bs12GreenbellMatch) return { kind: 'bs12-038', scenario: bs12GreenbellMatch[2] as Bs12GreenbellScenario, cardNumber: bs12GreenbellMatch[1] ? 'BS12-038@1' : 'BS12-038' }
+  const bs12BaguetteMatch = testState?.match(/^bs12-040:(positive|item-hand|stage-hand|yellow-hand|returned-arena|rested-cost|non-arena-cost|non-arena-hand|item-support-only|no-support|source-rested|all-support-rested|opponent-turn|outside-main|used|attack|attack-wrong|attack-few|attack-rested-energy|attack-rested-source|deploy)$/)
+  if (bs12BaguetteMatch) return { kind: 'bs12-040', scenario: bs12BaguetteMatch[1] as Bs12BaguetteScenario }
+  const bs12StageMatch = testState?.match(/^bs12-011:(positive|active-target|non-arena|no-target|mic-equipped|no-energy|wrong-energy|rested-energy|opponent-turn|removed|replaced|rested-stage)$/)
+  if (bs12StageMatch) return { kind: 'bs12-011', scenario: bs12StageMatch[1] as Bs12StageScenario }
+  const bs12GuitarMatch = testState?.match(/^bs12-012:(positive|active-target|wrong-color|wrong-keyword|no-target|no-energy|wrong-energy|rested-energy|opponent-turn)$/)
+  if (bs12GuitarMatch) return { kind: 'bs12-012', scenario: bs12GuitarMatch[1] as Bs12GuitarScenario }
+  const bs12RecordMatch = testState?.match(/^bs12-013:(positive|active-target|wrong-color|wrong-keyword|no-target|no-energy|wrong-energy|rested-energy|opponent-turn)$/)
+  if (bs12RecordMatch) return { kind: 'bs12-013', scenario: bs12RecordMatch[1] as Bs12GuitarScenario }
+  const bs12ParfaitMatch = testState?.match(/^bs12-015:(BS12-015(?:@1)?):(positive|solo|non-arena|green-arena|other-rested|already-active|equipment|support-only|opponent-only|two-copies|effect-ready|no-energy|wrong-energy|rested-energy|opponent-turn|attack-solo|attack-non-arena|attack-equipment|attack-support-only|attack-opponent-only|attack-green-arena|target-faints|few-red)$/)
+  if (bs12ParfaitMatch) return { kind: 'bs12-015', cardNumber: bs12ParfaitMatch[1] as 'BS12-015' | 'BS12-015@1', scenario: bs12ParfaitMatch[2] as Bs12ParfaitScenario }
+  const bs12MochiMatch = testState?.match(/^bs12-016:(BS12-016(?:@1)?):(positive|green-arena|active-target|source-rested|solo|non-arena|equipment|support-only|opponent-only|no-energy|opponent-turn|effect-ready|attack-normal|attack-other|target-faints|wrong-energy|few-red|rested-energy|already-active-ready)$/)
+  if (bs12MochiMatch) return { kind: 'bs12-016', cardNumber: bs12MochiMatch[1] as 'BS12-016' | 'BS12-016@1', scenario: bs12MochiMatch[2] as Bs12MochiScenario }
+  const bs12CandyAppleMatch = testState?.match(/^bs12-017:(BS12-017(?:@1)?):(positive|green-arena|active-target|source-rested|solo|non-arena|equipment|support-only|opponent-only|no-energy|opponent-turn|no-hand|one-hand|no-faerie|faerie-support|faerie-opponent|faerie-variant|target-faints|wrong-energy|few-energy|rested-energy|attack|faerie-only)$/)
+  const bs12GlitterMatch = testState?.match(/^bs12-018:(BS12-018(?:@1)?):(positive|extra|break-low|no-hand|non-arena-hand|full-battle|green-hand|item-hand|first-player|target-faints|green-arena|non-arena|equipment|active-target|source-rested|solo|support-only|opponent-only|no-energy|opponent-turn|wrong-energy|few-energy|rested-energy)$/)
+  if (bs12GlitterMatch) return { kind: 'bs12-018', cardNumber: bs12GlitterMatch[1] as 'BS12-018' | 'BS12-018@1', scenario: bs12GlitterMatch[2] as Bs12GlitterScenario }
+  const bs12SourBeltMatch = testState?.match(/^bs12-059:(positive|blue-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy|outside-main)$/)
+  if (bs12SourBeltMatch) return { kind: 'bs12-059', scenario: bs12SourBeltMatch[1] as Bs12MuscleScenario | 'deploy' | 'outside-main' }
+  const bs12MuscleMatch = testState?.match(/^bs12-019:(positive|blue-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints)$/)
+  if (bs12MuscleMatch) return { kind: 'bs12-019', scenario: bs12MuscleMatch[1] as Bs12MuscleScenario }
+  const bs12BasilMatch = testState?.match(/^bs12-041:(positive|blue-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy)$/)
+  if (bs12BasilMatch) return { kind: 'bs12-041', scenario: bs12BasilMatch[1] as Bs12MuscleScenario | 'deploy' }
+  const bs12MelonMatch = testState?.match(/^bs12-039:(positive|blue-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy)$/)
+  if (bs12MelonMatch) return { kind: 'bs12-039', scenario: bs12MelonMatch[1] as Bs12MuscleScenario | 'deploy' }
+  const bs12StrawberryMatch = testState?.match(/^bs12-020:(positive|three-arena|five-arena|non-arena-break|opponent-break|trash-arena|high-level|mixed-arena|no-hand|item-hand|last-hp|follow-up|attack|wrong-energy|few-energy|rested-energy)$/)
+  if (bs12StrawberryMatch) return { kind: 'bs12-020', scenario: bs12StrawberryMatch[1] as Bs12StrawberryScenario }
+  const bs12MangoMatch = testState?.match(/^bs12-021:(BS12-021(?:@1)?):(positive|faint|green-arena|hand-break|removed-break|old-break|previous-turn|non-arena|opponent-break|trash-arena|no-event|opponent-turn|no-energy|rested-support|attack|wrong-energy|few-energy|full-battle|refresh)$/)
+  if (bs12MangoMatch) return { kind: 'bs12-021', cardNumber: bs12MangoMatch[1] as 'BS12-021' | 'BS12-021@1', scenario: bs12MangoMatch[2] as Bs12MangoScenario }
+  const bs12HerbTeapotMatch = testState?.match(/^bs12-044:(positive|not-herb|wrong-name|rested-herb|source-rested|active-target|all-active|blue-target|no-arena|item-only|no-support|full-battle|existing-herb|opponent-turn|outside-main|used|last-deck|short-deck|refresh-lv10|attack|attack-wrong|attack-few|attack-rested|deploy)$/)
+  const bs12CloverMatch = testState?.match(/^bs12-045:(five|four|six|zero|all-rested|non-arena|opponent-only|battle-only|support-five|support-four|opponent-turn|short-deck|last-deck|refresh-lv10|attack|attack-blue|attack-wrong|attack-few|attack-rested|attack-rested-source)$/)
+  if (bs12CloverMatch) return { kind: 'bs12-045', scenario: bs12CloverMatch[1] as Bs12CloverScenario }
+  const bs12CameraMatch = testState?.match(/^bs12-046:(positive|no-event|removed|old-turn|hand-entry|opponent-entry|no-energy|wrong-energy|rested-energy|rested-entry|short-deck|last-deck|refresh-lv10|opponent-turn|outside-main)$/)
+  if (bs12CameraMatch) return { kind: 'bs12-046', scenario: bs12CameraMatch[1] as Bs12CameraScenario }
+  const bs12HarmonyMatch = testState?.match(/^bs12-047:(seven|six|eight|non-arena|rested-other|opponent-only|battle-only|no-energy|one-energy|wrong-energy|mixed-energy|rested-energy|one-rested|disabled|used|main|after-battle|short-deck|refresh-lv10)$/)
+  if (bs12HarmonyMatch) return { kind: 'bs12-047', scenario: bs12HarmonyMatch[1] as Bs12HarmonyScenario }
+  const bs12OrchestraMatch = testState?.match(/^bs12-048:(positive|placed|replace|rested-entry|blue-entry|no-arena|item-only|no-support|full-battle|no-energy|wrong-energy|rested-energy|entry-only-energy|rested-source|opponent-turn|outside-main|no-opponent-support|rested-target|last-deck|short-deck|refresh-lv10)$/)
+  if (bs12OrchestraMatch) return { kind: 'bs12-048', scenario: bs12OrchestraMatch[1] as Bs12OrchestraScenario }
+  const bs12AudienceMatch = testState?.match(/^bs12-049:(positive|rested-cost|non-arena-only|opponent-only|battle-only|no-energy|wrong-energy|rested-energy|disabled|used|main|after-battle|last-deck|refresh-lv10)$/)
+  if (bs12AudienceMatch) return { kind: 'bs12-049', scenario: bs12AudienceMatch[1] as Bs12AudienceScenario }
+  const bs12MelodyMatch = testState?.match(/^bs12-050:(positive|empty-trash|non-arena-only|opponent-only|battle-only|no-energy|wrong-energy|few-energy|rested-energy|opponent-turn|outside-main|last-deck)$/)
+  if (bs12MelodyMatch) return { kind: 'bs12-050', scenario: bs12MelodyMatch[1] as Bs12MelodyScenario }
+  const bs12FerretMatch = testState?.match(/^bs12-051:(BS12-051(?:@1)?):(positive|rested-entry|high-level|no-arena|item-only|full-battle|no-energy|wrong-energy|rested-energy|source-rested|source-support|opponent-turn|outside-main|target-last-hp|last-deck|short-deck|refresh-lv10)$/)
+  if (bs12FerretMatch) return { kind: 'bs12-051', cardNumber: bs12FerretMatch[1] as 'BS12-051' | 'BS12-051@1', scenario: bs12FerretMatch[2] as Bs12FerretScenario }
+  const bs12CocoaMatch = testState?.match(/^bs12-052:(BS12-052(?:@1)?):(positive|rested-entry|no-hand|item-hand|stage-hand|non-arena-hand|hand|stage-entry|full-battle|last-hp|short-deck|last-deck|refresh-lv10|isolated-opponent-turn|attack|attack-blue|attack-wrong|attack-few|attack-rested-energy|attack-rested-source)$/)
+  if (bs12CocoaMatch) return { kind: 'bs12-052', cardNumber: bs12CocoaMatch[1] as 'BS12-052' | 'BS12-052@1', scenario: bs12CocoaMatch[2] as Bs12CocoaScenario }
+  const bs12KumihoMatch = testState?.match(/^bs12-053:(BS12-053(?:@1)?):(response|response-rested-source|response-other|response-no-support|response-rested-support|response-used|response-last-hp|attack|attack-active-fifth|attack-rested-fifth|attack-few|attack-wrong|attack-rested-energy|attack-rested-source|attack-source-support|attack-opponent-turn|attack-outside-main|attack-target-faint|attack-other-faint|attack-flip)$/)
+  if (bs12KumihoMatch) return { kind: 'bs12-053', cardNumber: bs12KumihoMatch[1] as 'BS12-053' | 'BS12-053@1', scenario: bs12KumihoMatch[2] as Bs12KumihoScenario }
+  const bs12MintChocoMatch = testState?.match(/^bs12-054:(BS12-054(?:@1)?):(positive|empty-trash|item-trash|item-only-support|no-support|rested-cost|all-rested|source-rested|opponent-turn|outside-main|used|source-support|attack|attack-few|attack-wrong|attack-rested-energy|attack-rested-source|deploy)$/)
+  if (bs12MintChocoMatch) return { kind: 'bs12-054', cardNumber: bs12MintChocoMatch[1] as 'BS12-054' | 'BS12-054@1', scenario: bs12MintChocoMatch[2] as Bs12MintChocoScenario }
+  const bs12HerbMatch = testState?.match(/^bs12-055:(BS12-055(?:@1)?):(positive|rested-entry|source-rested|hand-origin|other-cookie|old-turn|no-hand|source-support|opponent-turn|outside-main|deck-item|deck-stage|deck-blue|refresh|refresh-lv10|source-only|source-only-no-cookie|empty-deck|attack|attack-wrong|attack-rested-energy|attack-rested-source|deploy)$/)
+  if (bs12HerbMatch) return { kind: 'bs12-055', cardNumber: bs12HerbMatch[1] as 'BS12-055' | 'BS12-055@1', scenario: bs12HerbMatch[2] as Bs12HerbScenario }
+  const bs12AppleFaerieMatch = testState?.match(/^bs12-056:(BS12-056(?:@1)?):(extra-named|extra-named-rested|extra-seven|extra-seven-rested|extra-six|extra-seven-mixed|extra-non-arena|extra-wrong-name|extra-support-name|extra-opponent-name|extra-equipment|extra-full|extra-used|extra-outside-main|extra-opponent-turn|extra-refresh|positive|active-target|first-player|no-hand|all-blue|few-energy|rested-energy|source-rested|outside-main|opponent-turn|target-faints)$/)
+  if (bs12AppleFaerieMatch) return { kind: 'bs12-056', cardNumber: bs12AppleFaerieMatch[1] as 'BS12-056' | 'BS12-056@1', scenario: bs12AppleFaerieMatch[2] as Bs12AppleFaerieScenario }
+  const bs12MarbleberryMatch = testState?.match(/^bs12-057:(positive|cost-item|cost-stage|no-cost|cost-non-arena|cost-wrong-color|cost-split|opponent-cost-only|rested-target|only-high|no-target|target-only|target-equipped|movement-blocked|full-battle|opponent-turn|outside-main|refresh|refresh-lv10|isolated-opponent-on-play|support-entry|rested-support-entry|attack|attack-all-blue|attack-wrong|attack-few|attack-rested-energy|attack-source-rested)$/)
+  if (bs12MarbleberryMatch) return { kind: 'bs12-057', scenario: bs12MarbleberryMatch[1] as Bs12MarbleberryScenario }
+  const bs12PeppermintMatch = testState?.match(/^bs12-058:(BS12-058(?:@1)?):(positive|red-hand|green-hand|item-hand|stage-hand|no-hand|non-arena-hand|opponent-cost-only|last-hp|last-hp-refresh|follow-up|short-deck|last-deck|refresh-lv10|isolated-own-turn|attack|attack-wrong|attack-few|attack-rested-energy|attack-source-rested|deploy)$/)
+  if (bs12PeppermintMatch) return { kind: 'bs12-058', cardNumber: bs12PeppermintMatch[1] as 'BS12-058' | 'BS12-058@1', scenario: bs12PeppermintMatch[2] as Bs12PeppermintScenario }
+  if (bs12HerbTeapotMatch) return { kind: 'bs12-044', scenario: bs12HerbTeapotMatch[1] as Bs12HerbTeapotScenario }
+  const bs12CoffeeCandyMatch = testState?.match(/^bs12-043:(positive|four|six|rested-own|item-count|stage-count|non-arena|wrong-color|intersection|opponent-only|battle-only|all-target-rested|last-hp|follow-up|follow-up-live|attack|attack-wrong|attack-few|attack-rested|attack-source-rested|opponent-turn|deploy)$/)
+  if (bs12CoffeeCandyMatch) return { kind: 'bs12-043', scenario: bs12CoffeeCandyMatch[1] as Bs12CoffeeCandyScenario }
+  const bs12ChamomileMatch = testState?.match(/^bs12-042:(deploy|red-arena|refresh|positive|green-arena|non-arena|no-arena|no-hand|item-hand|last-hp|follow-up|follow-up-live|rested-target|equipment|attack|wrong-energy|few-energy|rested-energy|opponent-turn|source-rested)$/)
+  if (bs12ChamomileMatch) return { kind: 'bs12-042', scenario: bs12ChamomileMatch[1] as Bs12ChamomileScenario }
+  const bs12SorbetSharkMatch = testState?.match(/^bs12-060:(positive|green-arena|red-arena|non-arena|no-arena|no-hand|item-hand|last-hp|follow-up|rested-target|equipment|attack|wrong-energy|few-energy|rested-energy|opponent-turn|source-rested|deploy|refresh|blue-arena|stage-hand|non-arena-hand)$/)
+  if (bs12SorbetSharkMatch) return { kind: 'bs12-060', scenario: bs12SorbetSharkMatch[1] as Bs12SorbetSharkScenario }
+  const bs12MintWaferMatch = testState?.match(/^bs12-022:(positive|green-arena|non-arena|no-arena|no-hand|item-hand|last-hp|follow-up|rested-target|equipment|attack|wrong-energy|few-energy|rested-energy|opponent-turn|source-rested)$/)
+  if (bs12MintWaferMatch) return { kind: 'bs12-022', scenario: bs12MintWaferMatch[1] as Bs12MintWaferScenario }
+  const bs12BonbonMatch = testState?.match(/^bs12-023:(zero|two|three|five|six|eight|nine|non-arena|high-level|green-arena|opponent-break|trash-arena|history-only|opponent-turn|no-energy|rested-support|attack|wrong-energy|few-yellow|few-energy|rested-energy|refresh)$/)
+  if (bs12BonbonMatch) return { kind: 'bs12-023', scenario: bs12BonbonMatch[1] as Bs12BonbonScenario }
+  const bs12CakePopsMatch = testState?.match(/^bs12-063:(positive|no-host|host-rested|host-support|host-hand|host-trash|host-break|host-equipped|opponent-host|source-rested|one-damage|two-damage|three-damage|other-target|attack|wrong-energy|few-energy|rested-energy|deploy|effect-positive|effect-no-host|effect-other-target|effect-zero|effect-cancel-payment|effect-cancel-target)$/)
+  if (bs12CakePopsMatch) return { kind: 'bs12-063', scenario: bs12CakePopsMatch[1] as Bs12CakePopsScenario }
+  const angelLightstickMatch = testState?.match(/^bs12-062:(equip-positive|equip-rested-source|equip-rested-host|equip-wrong-host|equip-no-energy|equip-wrong-energy|equip-rested-energy|equip-opponent-turn|equip-outside-main|equip-hand-five|equip-hand-six|equip-draw-zero|equip-draw-one|equip-draw-two|equip-cancel-payment|equip-cancel-target|equip-deselect|equipped|hand-five|hand-six|hand-zero|no-equipment|wrong-host|short-deck|refresh|equip-blocked|deploy|attack|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|cancel-payment|cancel-target|draw-zero|draw-one|skip-trigger)$/)
+  if (angelLightstickMatch) return { kind: 'bs12-062', scenario: angelLightstickMatch[1] as Bs12AngelLightstickScenario }
+  const creamPuffMatch = testState?.match(/^bs12-064:(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|empty-deck|deploy|attack|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|draw-zero|draw-one|skip-skill|cancel-confirm|cancel-payment|cancel-target)$/)
+  if (creamPuffMatch) return { kind: 'bs12-064', scenario: creamPuffMatch[1] as Bs12CreamPuffScenario }
+  const fanLetterMatch = testState?.match(/^bs12-065:(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|no-hand|short-deck|empty-deck|no-energy|wrong-energy|rested-energy|disabled|used|main|draw-zero|skip-then|zero-target|other-target|cancel-payment|cancel-target|cancel-then)$/)
+  if (fanLetterMatch) return { kind: 'bs12-065', scenario: fanLetterMatch[1] as Bs12FanLetterScenario }
+  const endingPoseMatch = testState?.match(/^bs12-066:(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|refresh-defeat|empty-deck|no-energy|wrong-energy|rested-energy|disabled|used|main|zero-target|other-target|cancel-payment|back-energy)$/)
+  if (endingPoseMatch) return { kind: 'bs12-066', scenario: endingPoseMatch[1] as Bs12EndingPoseScenario }
+  const comebackStageMatch = testState?.match(/^bs12-067:(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|refresh-defeat|empty-deck|replace|placed|no-energy|wrong-energy|rested-energy|one-energy|activation-no-energy|activation-wrong-energy|activation-rested-energy|rested-source|opponent-turn|outside-main)$/)
+  if (comebackStageMatch) return { kind: 'bs12-067', scenario: comebackStageMatch[1] as Bs12ComebackStageScenario }
+  const multivitaminMatch = testState?.match(/^bs12-068:(positive|difference-one|equal-support|more-own|large-gap|all-opponent-rested|non-cookie-support|no-energy|wrong-energy|rested-energy|opponent-turn|outside-main|short-deck|refresh-defeat|empty-deck|no-refresh-cookie)$/)
+  if (multivitaminMatch) return { kind: 'bs12-068', scenario: multivitaminMatch[1] as Bs12MultivitaminScenario }
+  const photocardMatch = testState?.match(/^bs12-069:(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|refresh-defeat|no-refresh-cookie|empty-deck|no-energy|one-energy|wrong-energy|mixed-energy|rested-energy|opponent-turn|outside-main|target-faints|target-rested|flip)$/)
+  if (photocardMatch) return { kind: 'bs12-069', scenario: photocardMatch[1] as Bs12PhotocardScenario }
+  const stardustMatch = testState?.match(/^bs12-070:(BS12-070(?:@1)?):(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|refresh-defeat|no-refresh-cookie|empty-deck|no-energy|one-energy|wrong-energy|mixed-energy|rested-energy|opponent-turn|outside-main|target-faints|target-rested|source-rested|single-opponent|other-faints|flip|ordinary-flip|protected|all-protected|short-all-protected)$/)
+  if (stardustMatch) return { kind: 'bs12-070', cardNumber: stardustMatch[1] as 'BS12-070' | 'BS12-070@1', scenario: stardustMatch[2] as Bs12StardustScenario }
+  const icePopMatch = testState?.match(/^bs12-071:(BS12-071(?:@1)?):(positive|green-arena|red-arena|yellow-arena|non-arena|level-one|level-three|arena-item|top-only|short-deck|refresh-defeat|no-refresh-cookie|empty-deck|no-energy|one-energy|wrong-energy|mixed-energy|rested-energy|source-rested|opponent-turn|outside-main|two-cookies|equipped|once-used|hand-decoy)$/)
+  if (icePopMatch) return { kind: 'bs12-071', cardNumber: icePopMatch[1] as 'BS12-071' | 'BS12-071@1', scenario: icePopMatch[2] as Bs12IcePopScenario }
+  const creamSodaThenMatch = testState?.match(/^bs12-072(@1)?:(then-positive|then-level-one|then-level-three|then-non-arena|then-item|then-red|then-yellow|then-green|then-purple|then-black|then-no-hand|then-wrong-energy|then-one-energy|then-faints|then-cost-cookie|then-cost-stage|then-cost-trap)$/)
+  if (creamSodaThenMatch) return { kind: 'bs12-072', cardNumber: creamSodaThenMatch[1] ? 'BS12-072@1' : 'BS12-072', scenario: creamSodaThenMatch[2] as Bs12CreamSodaScenario }
+  const creamSodaMatch = testState?.match(/^bs12-072:(BS12-072(?:@1)?):(positive|green-arena|red-arena|yellow-arena|level-one|level-three|non-arena|rested-target|equipped-target|same-name|no-target|hand-only|support-only|stage-only|no-energy|one-energy|wrong-energy|rested-energy|source-rested|opponent-turn|outside-main|once-used|short-deck|awakened-target)$/)
+  if (creamSodaMatch) return { kind: 'bs12-072', cardNumber: creamSodaMatch[1] as 'BS12-072' | 'BS12-072@1', scenario: creamSodaMatch[2] as Bs12CreamSodaScenario }
+  const djMiyaMatch = testState?.match(/^bs12-073:(BS12-073(?:@1)?):(positive|deploy|green-arena|red-arena|yellow-arena|level-one|level-three|non-arena|arena-item|top-only|same-name|same-name-alt|five|seven|empty-deck|short-deck|receiver|receiver-mismatch|attack|attack-item-cost|attack-equipped|attack-ally|attack-no-hand|attack-one-energy|attack-wrong-energy|attack-rested-energy|attack-source-rested|attack-opponent-turn|attack-outside-main|attack-target-faints|attack-flip|attack-awakened|refresh-defeat|no-refresh-cookie|onplay-opponent-turn|onplay-source-rested)$/)
+  if (djMiyaMatch) return { kind: 'bs12-073', cardNumber: djMiyaMatch[1] as 'BS12-073' | 'BS12-073@1', scenario: djMiyaMatch[2] as Bs12DjMiyaScenario }
+  const gnomeBandMatch = testState?.match(/^bs12-075:(BS12-075(?:@1)?):(positive|deploy|four|six|repeat|source-rested|no-hand|opponent-turn|outside-main|item-cost|non-arena-cost|same-name-cost|receiver|attack|attack-one-energy|attack-wrong-energy|attack-rested-energy|attack-source-rested|attack-opponent-turn|attack-outside-main|attack-flip|attack-target-faints)$/)
+  if (gnomeBandMatch) return { kind: 'bs12-075', cardNumber: gnomeBandMatch[1] as 'BS12-075' | 'BS12-075@1', scenario: gnomeBandMatch[2] as Bs12GnomeBandScenario }
+  const blackberryMatch = testState?.match(/^bs12-076:(positive|blue-energy|purple-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy|outside-main)$/)
+  if (blackberryMatch) return { kind: 'bs12-076', scenario: blackberryMatch[1] as Bs12MuscleScenario | 'deploy' | 'outside-main' | 'purple-energy' }
+  const spotlightFanMatch = testState?.match(/^bs12-077:(equip-positive|equip-rested-source|equip-rested-host|equip-wrong-host|equip-no-energy|equip-wrong-energy|equip-rested-energy|equip-opponent-turn|equip-outside-main|equip-hand-five|equip-hand-six|equip-draw-zero|equip-draw-one|equip-draw-two|equip-cancel-payment|equip-cancel-target|equip-deselect|equipped|no-equipment|wrong-host|other-attacker|defender|defender-no-equipment|defender-rested-blocker|defender-trap|flip|equip-blocked|deploy|attack|mixed-energy|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|outside-main)$/)
+  if (spotlightFanMatch) return { kind: 'bs12-077', scenario: spotlightFanMatch[1] as Bs12SpotlightFanScenario }
+  const onionMatch = testState?.match(/^bs12-078:(positive|four|six|no-hand|wrong-color|non-arena|split-cost|item-cost|stage-cost|trap-cost|last-hp|decline|receiver|deploy|attack|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|outside-main)$/)
+  if (onionMatch) return { kind: 'bs12-078', scenario: onionMatch[1] as Bs12OnionScenario }
+  const currantCreamMatch = testState?.match(/^bs12-079:(positive|blue-energy|purple-energy|green-energy|yellow-energy|spare-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy|outside-main)$/)
+  if (currantCreamMatch) return { kind: 'bs12-079', scenario: currantCreamMatch[1] as Bs12CurrantCreamScenario }
+  const kohlrabiMatch = testState?.match(/^bs12-080:(deploy|red-arena|refresh|positive|green-arena|purple-arena|non-arena|no-arena|no-hand|item-hand|stage-hand|trap-hand|last-hp|follow-up|rested-target|equipment|attack|wrong-energy|few-energy|rested-energy|opponent-turn|source-rested|outside-main)$/)
+  if (kohlrabiMatch) return { kind: 'bs12-080', scenario: kohlrabiMatch[1] as Bs12KohlrabiScenario }
+  const puddingMatch = testState?.match(/^bs12-081:(response|no-hand|wrong-color|non-arena|split-cost|item-cost|stage-cost|trap-cost|rested-source|original-target|twice|second-response|attack|deploy|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|outside-main)$/)
+  if (puddingMatch) return { kind: 'bs12-081', scenario: puddingMatch[1] as Bs12PuddingScenario }
+  const djMatch = testState?.match(/^bs12-082:(multi-positive|multi-cookie|multi-item|multi-stage|multi-trap|multi-rested|multi-original|multi-twice|positive|rested-source|cookie-cost|item-cost|stage-cost|trap-cost|no-hand|wrong-energy|rested-energy|no-energy|source-hand|source-support|source-discard|source-break|own-source|twice|original-cost|missing-original-cost|multiple-source|attack|deploy|source-rested|opponent-turn|outside-main|hand-threshold|hand-above-threshold)$/)
+  if (djMatch) return { kind: 'bs12-082', scenario: djMatch[1] as Bs12DjScenario }
+  const guitarStringMatch = testState?.match(/^bs12-083:(positive|red-blocker|two-blockers|no-blocker|full-field|wrong-energy|rested-energy|no-energy|opponent-turn|outside-main|dj-new-target|dj-existing-target|dj-no-hand|short-deck|refresh-defeat|no-refresh-cookie)$/)
+  if (guitarStringMatch) return { kind: 'bs12-083', scenario: guitarStringMatch[1] as Bs12GuitarStringScenario }
+  const summerSodaMatch = testState?.match(/^bs12-084:(positive|five|seven|three-blockers|one-blocker|no-blocker|wrong-energy|rested-energy|no-energy|rested-source|opponent-turn|outside-main|place|replace|one-energy|placement-wrong-energy|placement-rested-energy|placement-no-energy|receiver)$/)
+  if (summerSodaMatch) return { kind: 'bs12-084', scenario: summerSodaMatch[1] as Bs12SummerSodaScenario }
+  const rainbowHeadphonesMatch = testState?.match(/^bs12-085:(positive|four|six|zero|wrong-zones|wrong-energy|rested-energy|no-energy|opponent-turn|outside-main|short-deck|spare-energy|dj-four|dj-five|dj-no-hand)$/)
+  if (rainbowHeadphonesMatch) return { kind: 'bs12-085', scenario: rainbowHeadphonesMatch[1] as Bs12RainbowHeadphonesScenario }
+  const trueRockSpiritMatch = testState?.match(/^bs12-086:(positive|rested-target|non-blocker|no-target|wrong-zones|wrong-energy|rested-energy|no-energy|spare-energy|disabled|used|main|after-battle|next-turn)$/)
+  if (trueRockSpiritMatch) return { kind: 'bs12-086', scenario: trueRockSpiritMatch[1] as Bs12TrueRockSpiritScenario }
+  const understandingMatch = testState?.match(/^bs12-087:(nine|eight|ten|mixed|non-arena|opponent-trash|other-zones|wrong-energy|rested-energy|no-energy|one-energy|one-rested|spare-energy|disabled|used|main|after-battle|dj|expired)$/)
+  if (understandingMatch) return { kind: 'bs12-087', scenario: understandingMatch[1] as Bs12UnderstandingScenario }
+  const blackSapphireMatch = testState?.match(/^bs12-088:(BS12-088(?:@1)?):([^:]+)$/)
+  const blackLemonadeMatch = testState?.match(/^bs12-092:(BS12-092(?:@1)?):([^:]+)$/)
+  const rockstarMatch = testState?.match(/^bs12-093:(BS12-093(?:@1)?):([^:]+)$/)
+  const butterRollMatch = testState?.match(/^bs12-094:([^:]+)$/)
+  const blueberryMatch = testState?.match(/^bs12-095:([^:]+)$/)
+  const crimsonMatch = testState?.match(/^bs12-096:([^:]+)$/)
+  const caramelPuddingMatch = testState?.match(/^bs12-098:([^:]+)$/)
+  const cakeHoundMatch = testState?.match(/^bs12-099:([^:]+)$/)
+  const strategistMatch = testState?.match(/^bs12-100:([^:]+)$/)
+  const chessChocoMatch = testState?.match(/^bs12-101:([^:]+)$/)
+  const coffeeTruckMatch = testState?.match(/^bs12-102:([^:]+)$/)
+  const recipeMatch = testState?.match(/^bs12-104:([^:]+)$/)
+  if (recipeMatch && (BS12_RECIPE_SCENARIOS as readonly string[]).includes(recipeMatch[1])) return {
+    kind: 'bs12-104', scenario: recipeMatch[1] as Bs12RecipeScenario,
+  }
+  const rulingMatch=testState?.match(/^bs12-rulings:([^:]+)$/)
+  if(rulingMatch && (BS12_RULING_LIFECYCLE_SCENARIOS as readonly string[]).includes(rulingMatch[1]))return {kind:'bs12-rulings',scenario:rulingMatch[1] as Bs12RulingLifecycleScenario}
+  const finalMatch=testState?.match(/^bs12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?):([^:]+)$/)
+  if(finalMatch){const number=('BS12-'+finalMatch[1]) as Bs12FinalPrintedNumber,base=number.split('@')[0] as keyof typeof BS12_FINAL_PHYSICAL_SCENARIOS;if((BS12_FINAL_PHYSICAL_SCENARIOS[base] as readonly string[]).includes(finalMatch[2]))return {kind:'bs12-final',cardNumber:number,scenario:finalMatch[2] as Bs12FinalPhysicalScenario}}
+  const tailMatch=testState?.match(/^bs12-(106|107(?:@1)?|108(?:@1)?):([^:]+)$/)
+  if(tailMatch){
+    const number=('BS12-'+tailMatch[1]) as Bs12TailPrintedNumber,base=number.split('@')[0] as keyof typeof BS12_TAIL_PHYSICAL_SCENARIOS
+    if((BS12_TAIL_PHYSICAL_SCENARIOS[base] as readonly string[]).includes(tailMatch[2]))return {kind:'bs12-tail',cardNumber:number,scenario:tailMatch[2] as Bs12TailPhysicalScenario}
+  }
+  const perfectStageMatch = testState?.match(/^bs12-105:([^:]+)$/)
+  if (perfectStageMatch && (BS12_PERFECT_STAGE_SCENARIOS as readonly string[]).includes(perfectStageMatch[1])) return {
+    kind: 'bs12-105', scenario: perfectStageMatch[1] as Bs12PerfectStageScenario,
+  }
+  const sunglassesMatch = testState?.match(/^bs12-103:([^:]+)$/)
+  if (sunglassesMatch && (BS12_SUNGLASSES_SCENARIOS as readonly string[]).includes(sunglassesMatch[1])) return {
+    kind: 'bs12-103', scenario: sunglassesMatch[1] as Bs12SunglassesScenario,
+  }
+  if (coffeeTruckMatch && (BS12_COFFEE_TRUCK_SCENARIOS as readonly string[]).includes(coffeeTruckMatch[1])) return {
+    kind: 'bs12-102', scenario: coffeeTruckMatch[1] as Bs12CoffeeTruckScenario,
+  }
+  if (chessChocoMatch && (BS12_CHESS_CHOCO_SCENARIOS as readonly string[]).includes(chessChocoMatch[1])) return {
+    kind: 'bs12-101', scenario: chessChocoMatch[1] as Bs12ChessChocoScenario,
+  }
+  if (strategistMatch && (BS12_STRATEGIST_SCENARIOS as readonly string[]).includes(strategistMatch[1])) return {
+    kind: 'bs12-100', scenario: strategistMatch[1] as Bs12StrategistScenario,
+  }
+  if (cakeHoundMatch && (BS12_CAKE_HOUND_SCENARIOS as readonly string[]).includes(cakeHoundMatch[1])) return {
+    kind: 'bs12-099', scenario: cakeHoundMatch[1] as Bs12CakeHoundScenario,
+  }
+  if (caramelPuddingMatch && (BS12_CARAMEL_PUDDING_SCENARIOS as readonly string[]).includes(caramelPuddingMatch[1])) return {
+    kind: 'bs12-098', scenario: caramelPuddingMatch[1] as Bs12CaramelPuddingScenario,
+  }
+  const jasmineMatch = testState?.match(/^bs12-097:([^:]+)$/)
+  if (jasmineMatch && (BS12_JASMINE_SCENARIOS as readonly string[]).includes(jasmineMatch[1])) return {
+    kind: 'bs12-097', scenario: jasmineMatch[1] as Bs12JasmineScenario,
+  }
+  if (crimsonMatch && (BS12_CRIMSON_SCENARIOS as readonly string[]).includes(crimsonMatch[1])) return {
+    kind: 'bs12-096', scenario: crimsonMatch[1] as Bs12CrimsonScenario,
+  }
+  if (blueberryMatch && (BS12_BLUEBERRY_SCENARIOS as readonly string[]).includes(blueberryMatch[1])) return {
+    kind: 'bs12-095', scenario: blueberryMatch[1] as Bs12BlueberryScenario,
+  }
+  if (butterRollMatch && (BS12_BUTTER_ROLL_SCENARIOS as readonly string[]).includes(butterRollMatch[1])) return {
+    kind: 'bs12-094', scenario: butterRollMatch[1] as Bs12ButterRollScenario,
+  }
+  if (rockstarMatch && (BS12_ROCKSTAR_SCENARIOS as readonly string[]).includes(rockstarMatch[2])) return {
+    kind: 'bs12-093', cardNumber: rockstarMatch[1] as 'BS12-093' | 'BS12-093@1', scenario: rockstarMatch[2] as Bs12RockstarScenario,
+  }
+  if (blackLemonadeMatch && (BS12_BLACK_LEMONADE_SCENARIOS as readonly string[]).includes(blackLemonadeMatch[2])) return {
+    kind: 'bs12-092', cardNumber: blackLemonadeMatch[1] as 'BS12-092' | 'BS12-092@1', scenario: blackLemonadeMatch[2] as Bs12BlackLemonadeScenario,
+  }
+  const caramelArrowMatch = testState?.match(/^bs12-091:(BS12-091(?:@1)?):([^:]+)$/)
+  if (caramelArrowMatch && (BS12_CARAMEL_ARROW_SCENARIOS as readonly string[]).includes(caramelArrowMatch[2])) return {
+    kind: 'bs12-091', cardNumber: caramelArrowMatch[1] as 'BS12-091' | 'BS12-091@1', scenario: caramelArrowMatch[2] as Bs12CaramelArrowScenario,
+  }
+  const milkyWayMatch = testState?.match(/^bs12-090:(BS12-090(?:@1)?):([^:]+)$/)
+  if (milkyWayMatch && (BS12_MILKY_WAY_SCENARIOS as readonly string[]).includes(milkyWayMatch[2])) return {
+    kind: 'bs12-090', cardNumber: milkyWayMatch[1] as 'BS12-090' | 'BS12-090@1', scenario: milkyWayMatch[2] as Bs12MilkyWayScenario,
+  }
+  if (blackSapphireMatch && (BS12_BLACK_SAPPHIRE_SCENARIOS as readonly string[]).includes(blackSapphireMatch[2])) return {
+    kind: 'bs12-088', cardNumber: blackSapphireMatch[1] as 'BS12-088' | 'BS12-088@1', scenario: blackSapphireMatch[2] as Bs12BlackSapphireScenario,
+  }
+  const poppingCandyMatch = testState?.match(/^bs12-074:(BS12-074(?:@1)?):([^:]+)$/)
+  const werewolfMatch = testState?.match(/^bs12-089:(BS12-089(?:@1)?):([^:]+)$/)
+  if (werewolfMatch && (BS12_WEREWOLF_SCENARIOS as readonly string[]).includes(werewolfMatch[2])) return {
+    kind: 'bs12-089', cardNumber: werewolfMatch[1] as 'BS12-089' | 'BS12-089@1', scenario: werewolfMatch[2] as Bs12WerewolfScenario,
+  }
+  if (poppingCandyMatch && (BS12_POPPING_CANDY_SCENARIOS as readonly string[]).includes(poppingCandyMatch[2])) return {
+    kind: 'bs12-074', cardNumber: poppingCandyMatch[1] as 'BS12-074' | 'BS12-074@1', scenario: poppingCandyMatch[2] as Bs12PoppingCandyScenario,
+  }
+  const bs12SonicWaterMatch = testState?.match(/^bs12-061:(positive|blue-energy|green-energy|yellow-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy|outside-main)$/)
+  if (bs12SonicWaterMatch) return { kind: 'bs12-061', scenario: bs12SonicWaterMatch[1] as Bs12GingerBraveScenario | 'outside-main' }
+  const bs12GingerBraveMatch = testState?.match(/^bs12-024:(positive|blue-energy|green-energy|yellow-energy|few-energy|rested-energy|source-rested|opponent-turn|target-faints|deploy)$/)
+  if (bs12GingerBraveMatch) return { kind: 'bs12-024', scenario: bs12GingerBraveMatch[1] as Bs12GingerBraveScenario }
+  const bs12MayorMatch = testState?.match(/^bs12-025:(positive|red-choux|rested-choux|no-choux|wrong-name|opponent-choux|support-choux|no-energy|rested-support|opponent-turn|attack|wrong-energy|few-energy|rested-energy|source-rested|target-faints)$/)
+  if (bs12MayorMatch) return { kind: 'bs12-025', scenario: bs12MayorMatch[1] as Bs12MayorScenario }
+  const bs12BananaRotiMatch = testState?.match(/^bs12-026:(four-arena|five-arena|mixed-arena|three-arena|high-level|non-arena-break|opponent-break|trash-arena|turn-event|green-event|hand-event|faint-event|removed-event|previous-turn|non-arena-event|opponent-event|both|no-condition|no-hand|item-hand|blue-hand|target-faints|wrong-energy|few-energy|rested-energy|source-rested|opponent-turn|deploy)$/)
+  if (bs12BananaRotiMatch) return { kind: 'bs12-026', scenario: bs12BananaRotiMatch[1] as Bs12BananaRotiScenario }
+  if (bs12CandyAppleMatch) return { kind: 'bs12-017', cardNumber: bs12CandyAppleMatch[1] as 'BS12-017' | 'BS12-017@1', scenario: bs12CandyAppleMatch[2] as Bs12CandyAppleScenario }
+  const bs12ActiveMatch = testState?.match(/^bs12-014:(BS12-014(?:@1)?):(positive|solo|non-arena|green-arena|other-rested|already-active|equipment|support-only|opponent-only|two-copies|effect-ready|no-energy|wrong-energy|rested-energy|opponent-turn)$/)
+  if (bs12ActiveMatch) return { kind: 'bs12-014', cardNumber: bs12ActiveMatch[1] as 'BS12-014' | 'BS12-014@1', scenario: bs12ActiveMatch[2] as Bs12ActivePhaseScenario }
+  const bs12ReadyMatch = testState?.match(/^bs12-008:(BS12-008(?:@1)?):(positive|five|three|wrong-color|wrong-keyword|rested-support|rested-source|active-target|cheerleader|no-target|opponent-turn)$/)
+  if (bs12ReadyMatch) return { kind: 'bs12-008', cardNumber: bs12ReadyMatch[1] as 'BS12-008' | 'BS12-008@1', scenario: bs12ReadyMatch[2] as Bs12ReadyScenario }
+  if (bs12PositionMatch) return { kind: 'bs12-006', scenario: bs12PositionMatch[1] as Bs12PositionCostScenario }
+  const bs12ActivateMatch = testState?.match(/^bs12-005:(positive|normal-active|previous-turn|other-cookie|used|opponent-turn|rested-after-effect|reentered|enable)$/)
+  if (bs12ActivateMatch) return { kind: 'bs12-005', scenario: bs12ActivateMatch[1] as Bs12ActivateScenario }
+  const bs12FlipMatch = testState?.match(/^bs12-flip:(BS12-00[24]):(positive|no-hand|no-arena|wrong-color|two-targets)$/)
+  if (bs12FlipMatch) {
+    return { kind: 'bs12-flip', cardNumber: bs12FlipMatch[1] as 'BS12-002' | 'BS12-004', scenario: bs12FlipMatch[2] as Bs12FlipScenario }
+  }
+  const bs12EquipMatch = testState?.match(/^bs12-007:(blocked|positive|rested-source|rested-host|no-energy|wrong-energy|rested-energy|used|opponent-turn|no-host|wrong-host|opponent-host|equipped|unequipped)$/)
+  if (bs12EquipMatch) return { kind: 'bs12-007', scenario: bs12EquipMatch[1] as Bs12EquipScenario | 'equipped' | 'unequipped' }
+  const bs12AttackMatch = testState?.match(/^bs12-attack:(BS12-00[1-8](?:@1)?):(positive|negative|wrong-color|rested)$/)
+  if (bs12AttackMatch) {
+    return { kind: 'bs12-attack', cardNumber: bs12AttackMatch[1] as Bs12FirstCardNumber, payable: bs12AttackMatch[2] !== 'negative',
+      ...(bs12AttackMatch[2] === 'wrong-color' ? { blockedColor: true as const } : {}),
+      ...(bs12AttackMatch[2] === 'rested' ? { blockedRest: true as const } : {}),
+    }
+  }
   const bs11VanillaAttackMatch = testState?.match(
     /^bs11-vanilla-attack:(BS11-(?:001|004|022|023|037|102)):(positive|negative)$/,
   )
@@ -1276,14 +1661,16 @@ export const parseTestStateConfig = (
     refreshed: bs11089AttackMatch[2] === 'positive',
   }
   const bs11FourteenthBatchMatch = testState?.match(
-    /^bs11-fourteenth-batch:(BS11-(?:050|051|052|053)(?:@1)?):(positive|negative|activate-positive|activate-negative)$/,
+    /^bs11-fourteenth-batch:(BS11-(?:050|051|052|053)(?:@1)?):(positive|negative|flip-positive|flip-negative|activate-positive|activate-negative)$/,
   )
   if (bs11FourteenthBatchMatch) {
     const [, cardNumber, scenario] = bs11FourteenthBatchMatch
     if (
       isBs11FourteenthBatchCardNumber(cardNumber) &&
       isBs11FourteenthBatchScenario(scenario) &&
-      (scenario === 'positive' || scenario === 'negative' || cardNumber.startsWith('BS11-053'))
+      (scenario === 'positive' || scenario === 'negative' ||
+        (scenario.startsWith('activate-') && cardNumber.startsWith('BS11-053')) ||
+        (scenario.startsWith('flip-') && cardNumber.startsWith('BS11-052')))
     ) {
       return { kind: 'bs11-fourteenth-batch', cardNumber, scenario }
     }
@@ -1559,6 +1946,118 @@ export const parseTestStateConfig = (
   }
   if (testState?.startsWith('card:')) {
     const cardNumber = testState.slice('card:'.length).trim()
+    if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber))return {kind:'bs12-final',cardNumber:cardNumber as Bs12FinalPrintedNumber,scenario:'positive'}
+    if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber))return {kind:'bs12-tail',cardNumber:cardNumber as Bs12TailPrintedNumber,scenario:'positive'}
+    if(cardNumber==='BS12-104')return {kind:'bs12-104',scenario:'positive'}
+    if(cardNumber==='BS12-105')return {kind:'bs12-105',scenario:'positive'}
+    if(cardNumber==='BS12-099')return {kind:'bs12-099',scenario:'faint'}
+    if(cardNumber==='BS12-100')return {kind:'bs12-100',scenario:'special'}
+    if(cardNumber==='BS12-101')return {kind:'bs12-101',scenario:'positive'}
+    if(cardNumber==='BS12-102')return {kind:'bs12-102',scenario:'positive'}
+    if(cardNumber==='BS12-103')return {kind:'bs12-103',scenario:'positive'}
+    if(cardNumber==='BS12-094')return {kind:'bs12-094',scenario:'attack'}
+    if(cardNumber==='BS12-095')return {kind:'bs12-095',scenario:'special'}
+    if(cardNumber==='BS12-096')return {kind:'bs12-096',scenario:'special'}
+    if(cardNumber==='BS12-097')return {kind:'bs12-097',scenario:'attack'}
+    if(cardNumber==='BS12-098')return {kind:'bs12-098',scenario:'special'}
+    if (cardNumber === 'BS12-001' || cardNumber === 'BS12-003') {
+      return { kind: 'bs12-attack', cardNumber, payable: true }
+    }
+    if (cardNumber === 'BS12-002' || cardNumber === 'BS12-004') {
+      return { kind: 'bs12-flip', cardNumber, scenario: 'positive' }
+    }
+    if (cardNumber === 'BS12-005') return { kind: 'bs12-005', scenario: 'enable' }
+    if (cardNumber === 'BS12-006') return { kind: 'bs12-006', scenario: 'positive' }
+    if (cardNumber === 'BS12-007') return { kind: 'bs12-007', scenario: 'positive' }
+    if (cardNumber === 'BS12-008' || cardNumber === 'BS12-008@1') return { kind: 'bs12-008', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-009') return { kind: 'bs12-009', scenario: 'positive' }
+    if (cardNumber === 'BS12-010') return { kind: 'bs12-010', scenario: 'positive' }
+    if (cardNumber === 'BS12-011') return { kind: 'bs12-011', scenario: 'positive' }
+    if (cardNumber === 'BS12-012') return { kind: 'bs12-012', scenario: 'positive' }
+    if (cardNumber === 'BS12-013') return { kind: 'bs12-013', scenario: 'positive' }
+    if (cardNumber === 'BS12-014' || cardNumber === 'BS12-014@1') return { kind: 'bs12-014', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-015' || cardNumber === 'BS12-015@1') return { kind: 'bs12-015', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-016' || cardNumber === 'BS12-016@1') return { kind: 'bs12-016', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-017' || cardNumber === 'BS12-017@1') return { kind: 'bs12-017', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-018' || cardNumber === 'BS12-018@1') return { kind: 'bs12-018', cardNumber, scenario: 'extra' }
+    if (cardNumber === 'BS12-019') return { kind: 'bs12-019', scenario: 'positive' }
+    if (cardNumber === 'BS12-020') return { kind: 'bs12-020', scenario: 'positive' }
+    if (cardNumber === 'BS12-021' || cardNumber === 'BS12-021@1') return { kind: 'bs12-021', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-022') return { kind: 'bs12-022', scenario: 'positive' }
+    if (cardNumber === 'BS12-023') return { kind: 'bs12-023', scenario: 'three' }
+    if (cardNumber === 'BS12-024') return { kind: 'bs12-024', scenario: 'positive' }
+    if (cardNumber === 'BS12-025') return { kind: 'bs12-025', scenario: 'positive' }
+    if (cardNumber === 'BS12-026') return { kind: 'bs12-026', scenario: 'four-arena' }
+    if (cardNumber === 'BS12-027') return { kind: 'bs12-027', scenario: 'four' }
+    if (cardNumber === 'BS12-028') return { kind: 'bs12-028', scenario: 'positive' }
+    if (cardNumber === 'BS12-031') return { kind: 'bs12-031', scenario: 'positive' }
+    if (cardNumber === 'BS12-030') return { kind: 'bs12-030', scenario: 'positive' }
+    if (cardNumber === 'BS12-029') return { kind: 'bs12-029', scenario: 'four' }
+    if (cardNumber === 'BS12-032' || cardNumber === 'BS12-032@1') return { kind: 'bs12-032', cardNumber, scenario: 'arena-faint' }
+    if (cardNumber === 'BS12-033' || cardNumber === 'BS12-033@1') return { kind: 'bs12-033', cardNumber, scenario: 'arena-faint' }
+    if (cardNumber === 'BS12-034' || cardNumber === 'BS12-034@1') return { kind: 'bs12-034', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-035' || cardNumber === 'BS12-035@1') return { kind: 'bs12-035', cardNumber, scenario: 'peach-cost' }
+    if (cardNumber === 'BS12-036' || cardNumber === 'BS12-036@1') return { kind: 'bs12-036', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-037' || cardNumber === 'BS12-037@1') return { kind: 'bs12-037', cardNumber, scenario: 'four' }
+    if (cardNumber === 'BS12-038' || cardNumber === 'BS12-038@1') return { kind: 'bs12-038', cardNumber, scenario: 'positive' }
+    if (cardNumber === 'BS12-039') return { kind: 'bs12-039', scenario: 'positive' }
+    if (cardNumber === 'BS12-040') return { kind: 'bs12-040', scenario: 'positive' }
+    if (cardNumber === 'BS12-041') return { kind: 'bs12-041', scenario: 'positive' }
+    if (cardNumber === 'BS12-042') return { kind: 'bs12-042', scenario: 'positive' }
+    if (cardNumber === 'BS12-043') return { kind: 'bs12-043', scenario: 'positive' }
+    if (cardNumber === 'BS12-044') return { kind: 'bs12-044', scenario: 'positive' }
+    if (cardNumber === 'BS12-045') return { kind: 'bs12-045', scenario: 'five' }
+    if (cardNumber === 'BS12-046') return { kind: 'bs12-046', scenario: 'positive' }
+    if (cardNumber === 'BS12-047') return { kind: 'bs12-047', scenario: 'seven' }
+    if (cardNumber === 'BS12-048') return { kind: 'bs12-048', scenario: 'positive' }
+    if (cardNumber === 'BS12-049') return { kind: 'bs12-049', scenario: 'positive' }
+    if (cardNumber === 'BS12-050') return { kind: 'bs12-050', scenario: 'positive' }
+    if (cardNumber === 'BS12-051' || cardNumber === 'BS12-051@1') return { kind: 'bs12-051', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-052' || cardNumber === 'BS12-052@1') return { kind: 'bs12-052', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-053' || cardNumber === 'BS12-053@1') return { kind: 'bs12-053', scenario: 'response', cardNumber }
+    if (cardNumber === 'BS12-054' || cardNumber === 'BS12-054@1') return { kind: 'bs12-054', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-055' || cardNumber === 'BS12-055@1') return { kind: 'bs12-055', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-056' || cardNumber === 'BS12-056@1') return { kind: 'bs12-056', scenario: 'extra-named', cardNumber }
+    if (cardNumber === 'BS12-057') return { kind: 'bs12-057', scenario: 'positive' }
+    if (cardNumber === 'BS12-058' || cardNumber === 'BS12-058@1') return { kind: 'bs12-058', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-059') return { kind: 'bs12-059', scenario: 'positive' }
+    if (cardNumber === 'BS12-060') return { kind: 'bs12-060', scenario: 'positive' }
+    if (cardNumber === 'BS12-061') return { kind: 'bs12-061', scenario: 'positive' }
+    if (cardNumber === 'BS12-062') return { kind: 'bs12-062', scenario: 'equip-positive' }
+    if (cardNumber === 'BS12-063') return { kind: 'bs12-063', scenario: 'positive' }
+    if (cardNumber === 'BS12-064') return { kind: 'bs12-064', scenario: 'positive' }
+    if (cardNumber === 'BS12-065') return { kind: 'bs12-065', scenario: 'positive' }
+    if (cardNumber === 'BS12-066') return { kind: 'bs12-066', scenario: 'positive' }
+    if (cardNumber === 'BS12-067') return { kind: 'bs12-067', scenario: 'placed' }
+    if (cardNumber === 'BS12-068') return { kind: 'bs12-068', scenario: 'positive' }
+    if (cardNumber === 'BS12-069') return { kind: 'bs12-069', scenario: 'positive' }
+    if (cardNumber === 'BS12-070' || cardNumber === 'BS12-070@1') return { kind: 'bs12-070', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-071' || cardNumber === 'BS12-071@1') return { kind: 'bs12-071', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-072' || cardNumber === 'BS12-072@1') return { kind: 'bs12-072', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-073' || cardNumber === 'BS12-073@1') return { kind: 'bs12-073', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-074' || cardNumber === 'BS12-074@1') return { kind: 'bs12-074', scenario: 'extra', cardNumber }
+    if (cardNumber === 'BS12-075' || cardNumber === 'BS12-075@1') return { kind: 'bs12-075', scenario: 'positive', cardNumber }
+    if (cardNumber === 'BS12-076') return { kind: 'bs12-076', scenario: 'positive' }
+    if (cardNumber === 'BS12-077') return { kind: 'bs12-077', scenario: 'equip-positive' }
+    if (cardNumber === 'BS12-078') return { kind: 'bs12-078', scenario: 'positive' }
+    if (cardNumber === 'BS12-079') return { kind: 'bs12-079', scenario: 'positive' }
+    if (cardNumber === 'BS12-080') return { kind: 'bs12-080', scenario: 'positive' }
+    if (cardNumber === 'BS12-081') return { kind: 'bs12-081', scenario: 'response' }
+    if (cardNumber === 'BS12-082') return { kind: 'bs12-082', scenario: 'positive' }
+    if (cardNumber === 'BS12-083') return { kind: 'bs12-083', scenario: 'positive' }
+    if (cardNumber === 'BS12-084') return { kind: 'bs12-084', scenario: 'positive' }
+    if (cardNumber === 'BS12-085') return { kind: 'bs12-085', scenario: 'positive' }
+    if (cardNumber === 'BS12-086') return { kind: 'bs12-086', scenario: 'positive' }
+    if (cardNumber === 'BS12-087') return { kind: 'bs12-087', scenario: 'nine' }
+    if (cardNumber === 'BS12-088' || cardNumber === 'BS12-088@1') return { kind: 'bs12-088', cardNumber, scenario: 'response' }
+    if (cardNumber === 'BS12-089' || cardNumber === 'BS12-089@1') return { kind: 'bs12-089', cardNumber, scenario: 'response' }
+    if (cardNumber === 'BS12-090' || cardNumber === 'BS12-090@1') return { kind: 'bs12-090', cardNumber, scenario: 'faint-four' }
+    if (cardNumber === 'BS12-091' || cardNumber === 'BS12-091@1') return { kind: 'bs12-091', cardNumber, scenario: 'faint' }
+    if (cardNumber === 'BS12-093' || cardNumber === 'BS12-093@1') return { kind: 'bs12-093', cardNumber, scenario: 'attack' }
+
+    if (cardNumber === 'BS12-092' || cardNumber === 'BS12-092@1') {
+      return { kind: 'bs12-092', cardNumber, scenario: 'extra' }
+    }
     if (cardNumber.length > 0) {
       if (cardNumber === 'BS9-018') {
         const targetCardNumber = params.get('bs9-target')
@@ -1613,6 +2112,118 @@ export const parseTestStateConfig = (
   }
   if (testState?.startsWith('card-negative:')) {
     const cardNumber = testState.slice('card-negative:'.length).trim()
+    if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber))return {kind:'bs12-final',cardNumber:cardNumber as Bs12FinalPrintedNumber,scenario:cardNumber.startsWith('BS12-109')?'attack-wrong-energy':cardNumber.startsWith('BS12-110')?'two-black':cardNumber.startsWith('BS12-111')?'three-support':'special-no-skill'}
+    if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber))return {kind:'bs12-tail',cardNumber:cardNumber as Bs12TailPrintedNumber,scenario:cardNumber.startsWith('BS12-108')?'hand-six':cardNumber==='BS12-106'?'no-energy':'wrong-energy'}
+    if(cardNumber==='BS12-104')return {kind:'bs12-104',scenario:'no-energy'}
+    if(cardNumber==='BS12-105')return {kind:'bs12-105',scenario:'split'}
+    if(cardNumber==='BS12-099')return {kind:'bs12-099',scenario:'unpayable'}
+    if(cardNumber==='BS12-100')return {kind:'bs12-100',scenario:'special-wrong-level'}
+    if(cardNumber==='BS12-101')return {kind:'bs12-101',scenario:'non-arena'}
+    if(cardNumber==='BS12-102')return {kind:'bs12-102',scenario:'split'}
+    if(cardNumber==='BS12-103')return {kind:'bs12-103',scenario:'split'}
+    if(cardNumber==='BS12-094')return {kind:'bs12-094',scenario:'few-energy'}
+    if(cardNumber==='BS12-095')return {kind:'bs12-095',scenario:'special-wrong-level'}
+    if(cardNumber==='BS12-096')return {kind:'bs12-096',scenario:'special-wrong-level'}
+    if(cardNumber==='BS12-097')return {kind:'bs12-097',scenario:'no-energy'}
+    if(cardNumber==='BS12-098')return {kind:'bs12-098',scenario:'special-wrong-level'}
+    if (cardNumber === 'BS12-001' || cardNumber === 'BS12-003') {
+      return { kind: 'bs12-attack', cardNumber, payable: false }
+    }
+    if (cardNumber === 'BS12-002' || cardNumber === 'BS12-004') {
+      return { kind: 'bs12-flip', cardNumber, scenario: cardNumber === 'BS12-002' ? 'no-hand' : 'no-arena' }
+    }
+    if (cardNumber === 'BS12-005') return { kind: 'bs12-005', scenario: 'normal-active' }
+    if (cardNumber === 'BS12-006') return { kind: 'bs12-006', scenario: 'no-cost' }
+    if (cardNumber === 'BS12-007') return { kind: 'bs12-007', scenario: 'wrong-host' }
+    if (cardNumber === 'BS12-008' || cardNumber === 'BS12-008@1') return { kind: 'bs12-008', cardNumber, scenario: 'wrong-keyword' }
+    if (cardNumber === 'BS12-009') return { kind: 'bs12-009', scenario: 'two-rested' }
+    if (cardNumber === 'BS12-010') return { kind: 'bs12-010', scenario: 'no-energy' }
+    if (cardNumber === 'BS12-011') return { kind: 'bs12-011', scenario: 'no-energy' }
+    if (cardNumber === 'BS12-012') return { kind: 'bs12-012', scenario: 'no-energy' }
+    if (cardNumber === 'BS12-013') return { kind: 'bs12-013', scenario: 'no-energy' }
+    if (cardNumber === 'BS12-014' || cardNumber === 'BS12-014@1') return { kind: 'bs12-014', cardNumber, scenario: 'solo' }
+    if (cardNumber === 'BS12-015' || cardNumber === 'BS12-015@1') return { kind: 'bs12-015', cardNumber, scenario: 'attack-solo' }
+    if (cardNumber === 'BS12-016' || cardNumber === 'BS12-016@1') return { kind: 'bs12-016', cardNumber, scenario: 'opponent-turn' }
+    if (cardNumber === 'BS12-017' || cardNumber === 'BS12-017@1') return { kind: 'bs12-017', cardNumber, scenario: 'no-hand' }
+    if (cardNumber === 'BS12-018' || cardNumber === 'BS12-018@1') return { kind: 'bs12-018', cardNumber, scenario: 'break-low' }
+    if (cardNumber === 'BS12-019') return { kind: 'bs12-019', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-020') return { kind: 'bs12-020', scenario: 'three-arena' }
+    if (cardNumber === 'BS12-021' || cardNumber === 'BS12-021@1') return { kind: 'bs12-021', cardNumber, scenario: 'no-event' }
+    if (cardNumber === 'BS12-022') return { kind: 'bs12-022', scenario: 'no-hand' }
+    if (cardNumber === 'BS12-023') return { kind: 'bs12-023', scenario: 'zero' }
+    if (cardNumber === 'BS12-024') return { kind: 'bs12-024', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-025') return { kind: 'bs12-025', scenario: 'no-choux' }
+    if (cardNumber === 'BS12-026') return { kind: 'bs12-026', scenario: 'no-hand' }
+    if (cardNumber === 'BS12-027') return { kind: 'bs12-027', scenario: 'no-energy' }
+    if (cardNumber === 'BS12-028') return { kind: 'bs12-028', scenario: 'no-cost' }
+    if (cardNumber === 'BS12-029') return { kind: 'bs12-029', scenario: 'one-energy' }
+    if (cardNumber === 'BS12-032' || cardNumber === 'BS12-032@1') return { kind: 'bs12-032', cardNumber, scenario: 'arena-faint-no-condition' }
+    if (cardNumber === 'BS12-033' || cardNumber === 'BS12-033@1') return { kind: 'bs12-033', cardNumber, scenario: 'arena-faint-no-condition' }
+    if (cardNumber === 'BS12-034' || cardNumber === 'BS12-034@1') return { kind: 'bs12-034', cardNumber, scenario: 'one-energy' }
+    if (cardNumber === 'BS12-035' || cardNumber === 'BS12-035@1') return { kind: 'bs12-035', cardNumber, scenario: 'no-cost' }
+    if (cardNumber === 'BS12-036' || cardNumber === 'BS12-036@1') return { kind: 'bs12-036', cardNumber, scenario: 'three-arena' }
+    if (cardNumber === 'BS12-037' || cardNumber === 'BS12-037@1') return { kind: 'bs12-037', cardNumber, scenario: 'wrong-energy' }
+    if (cardNumber === 'BS12-038' || cardNumber === 'BS12-038@1') return { kind: 'bs12-038', cardNumber, scenario: 'equal-after' }
+    if (cardNumber === 'BS12-039') return { kind: 'bs12-039', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-040') return { kind: 'bs12-040', scenario: 'item-support-only' }
+    if (cardNumber === 'BS12-041') return { kind: 'bs12-041', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-042') return { kind: 'bs12-042', scenario: 'no-arena' }
+    if (cardNumber === 'BS12-043') return { kind: 'bs12-043', scenario: 'four' }
+    if (cardNumber === 'BS12-044') return { kind: 'bs12-044', scenario: 'item-only' }
+    if (cardNumber === 'BS12-045') return { kind: 'bs12-045', scenario: 'four' }
+    if (cardNumber === 'BS12-046') return { kind: 'bs12-046', scenario: 'hand-entry' }
+    if (cardNumber === 'BS12-047') return { kind: 'bs12-047', scenario: 'six' }
+    if (cardNumber === 'BS12-048') return { kind: 'bs12-048', scenario: 'item-only' }
+    if (cardNumber === 'BS12-049') return { kind: 'bs12-049', scenario: 'non-arena-only' }
+    if (cardNumber === 'BS12-050') return { kind: 'bs12-050', scenario: 'non-arena-only' }
+    if (cardNumber === 'BS12-051' || cardNumber === 'BS12-051@1') return { kind: 'bs12-051', scenario: 'no-arena', cardNumber }
+    if (cardNumber === 'BS12-052' || cardNumber === 'BS12-052@1') return { kind: 'bs12-052', scenario: 'hand', cardNumber }
+    if (cardNumber === 'BS12-053' || cardNumber === 'BS12-053@1') return { kind: 'bs12-053', scenario: 'response-no-support', cardNumber }
+    if (cardNumber === 'BS12-054' || cardNumber === 'BS12-054@1') return { kind: 'bs12-054', scenario: 'no-support', cardNumber }
+    if (cardNumber === 'BS12-055' || cardNumber === 'BS12-055@1') return { kind: 'bs12-055', scenario: 'hand-origin', cardNumber }
+    if (cardNumber === 'BS12-056' || cardNumber === 'BS12-056@1') return { kind: 'bs12-056', scenario: 'extra-six', cardNumber }
+    if (cardNumber === 'BS12-057') return { kind: 'bs12-057', scenario: 'cost-split' }
+    if (cardNumber === 'BS12-058' || cardNumber === 'BS12-058@1') return { kind: 'bs12-058', scenario: 'non-arena-hand', cardNumber }
+    if (cardNumber === 'BS12-059') return { kind: 'bs12-059', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-060') return { kind: 'bs12-060', scenario: 'no-hand' }
+    if (cardNumber === 'BS12-061') return { kind: 'bs12-061', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-062') return { kind: 'bs12-062', scenario: 'equip-wrong-host' }
+    if (cardNumber === 'BS12-063') return { kind: 'bs12-063', scenario: 'no-host' }
+    if (cardNumber === 'BS12-064') return { kind: 'bs12-064', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-065') return { kind: 'bs12-065', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-066') return { kind: 'bs12-066', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-067') return { kind: 'bs12-067', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-068') return { kind: 'bs12-068', scenario: 'difference-one' }
+    if (cardNumber === 'BS12-069') return { kind: 'bs12-069', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-070' || cardNumber === 'BS12-070@1') return { kind: 'bs12-070', scenario: 'non-arena', cardNumber }
+    if (cardNumber === 'BS12-071' || cardNumber === 'BS12-071@1') return { kind: 'bs12-071', scenario: 'non-arena', cardNumber }
+    if (cardNumber === 'BS12-072' || cardNumber === 'BS12-072@1') return { kind: 'bs12-072', scenario: 'non-arena', cardNumber }
+    if (cardNumber === 'BS12-073' || cardNumber === 'BS12-073@1') return { kind: 'bs12-073', scenario: 'non-arena', cardNumber }
+    if (cardNumber === 'BS12-074' || cardNumber === 'BS12-074@1') return { kind: 'bs12-074', scenario: 'extra-no-event', cardNumber }
+    if (cardNumber === 'BS12-075' || cardNumber === 'BS12-075@1') return { kind: 'bs12-075', scenario: 'four', cardNumber }
+    if (cardNumber === 'BS12-076') return { kind: 'bs12-076', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-077') return { kind: 'bs12-077', scenario: 'equip-wrong-host' }
+    if (cardNumber === 'BS12-078') return { kind: 'bs12-078', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-079') return { kind: 'bs12-079', scenario: 'few-energy' }
+    if (cardNumber === 'BS12-080') return { kind: 'bs12-080', scenario: 'no-arena' }
+    if (cardNumber === 'BS12-081') return { kind: 'bs12-081', scenario: 'non-arena' }
+    if (cardNumber === 'BS12-082') return { kind: 'bs12-082', scenario: 'no-hand' }
+    if (cardNumber === 'BS12-083') return { kind: 'bs12-083', scenario: 'no-blocker' }
+    if (cardNumber === 'BS12-084') return { kind: 'bs12-084', scenario: 'no-blocker' }
+    if (cardNumber === 'BS12-085') return { kind: 'bs12-085', scenario: 'four' }
+    if (cardNumber === 'BS12-086') return { kind: 'bs12-086', scenario: 'no-target' }
+    if (cardNumber === 'BS12-087') return { kind: 'bs12-087', scenario: 'eight' }
+    if (cardNumber === 'BS12-088' || cardNumber === 'BS12-088@1') return { kind: 'bs12-088', cardNumber, scenario: 'non-arena' }
+    if (cardNumber === 'BS12-089' || cardNumber === 'BS12-089@1') return { kind: 'bs12-089', cardNumber, scenario: 'non-arena' }
+    if (cardNumber === 'BS12-090' || cardNumber === 'BS12-090@1') return { kind: 'bs12-090', cardNumber, scenario: 'faint-three' }
+    if (cardNumber === 'BS12-091' || cardNumber === 'BS12-091@1') return { kind: 'bs12-091', cardNumber, scenario: 'no-blocker-target' }
+    if (cardNumber === 'BS12-093' || cardNumber === 'BS12-093@1') return { kind: 'bs12-093', cardNumber, scenario: 'one-blocker' }
+
+    if (cardNumber === 'BS12-030') return { kind: 'bs12-030', scenario: 'no-event' }
+    if (cardNumber === 'BS12-031') return { kind: 'bs12-031', scenario: 'no-cost' }
+    if (cardNumber === 'BS12-092' || cardNumber === 'BS12-092@1') {
+      return { kind: 'bs12-092', cardNumber, scenario: 'break-two' }
+    }
     if (cardNumber.length > 0) {
       if (cardNumber === 'BS9-018') {
         const targetCardNumber = params.get('bs9-target')
@@ -5406,6 +6017,17 @@ const getBs11CandidateStage = (
   return conversion.gameCard
 }
 
+/** BS12 generic previews share the isolated candidate adapter, never the formal pool. */
+const getBs12CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  const records = bs12CandidateDocument.cards as OfficialCardRecord[]
+  const source = records.find(record => record.cardNumber === trimmed) ?? records.find(record => record.baseCardNumber === trimmed)
+  if (!source || source.flags.extra) return null
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') throw new Error(`BS12 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  return { ...conversion.gameCard, instanceId: `player-one-${source.cardNumber}-1` }
+}
+
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
   // BS6-091 is represented only by variants in the formal API. Resolve it
@@ -5436,6 +6058,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     if (bs10Candidate) return bs10Candidate
     const bs11Candidate = getBs11CandidateTestCard(trimmed)
     if (bs11Candidate) return bs11Candidate
+    const bs12Candidate = getBs12CandidateTestCard(trimmed)
+    if (bs12Candidate) return bs12Candidate
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -7573,6 +8197,81 @@ export const createCardCheckDemoState = (
   cardNumber: string,
   options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean; bs11FifteenthFixtureBypass?: boolean; bs11SixteenthFixtureBypass?: boolean } = {},
 ): GameState => {
+  if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):'positive')
+  if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')&&options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):options.normalAttack==='blocked'?'wrong-energy':'positive')
+  if(cardNumber.trim()==='BS12-104')return createBs12RecipeDemoState('positive')
+  if(cardNumber.trim()==='BS12-105')return createBs12PerfectStageDemoState('positive')
+  if(cardNumber.trim()==='BS12-099')return createBs12CakeHoundDemoState(options.normalAttack?(options.normalAttack==='blocked'?'wrong-energy':'attack'):'faint',true)
+  if(cardNumber.trim()==='BS12-100')return createBs12StrategistDemoState(options.normalAttack?(options.normalAttack==='blocked'?'attack-few-energy':'attack'):'special')
+  if(cardNumber.trim()==='BS12-101')return createBs12ChessChocoDemoState(options.normalAttack==='blocked'?'wrong-energy':'positive')
+  if(cardNumber.trim()==='BS12-102')return createBs12CoffeeTruckDemoState('positive')
+  if(cardNumber.trim()==='BS12-103')return createBs12SunglassesDemoState('positive')
+  if(cardNumber.trim()==='BS12-094')return createBs12ButterRollDemoState(options.normalAttack==='blocked'?'few-energy':'attack')
+  if(cardNumber.trim()==='BS12-095')return createBs12BlueberryDemoState(options.normalAttack?(options.normalAttack==='blocked'?'attack-few-energy':'attack'):'special')
+  if(cardNumber.trim()==='BS12-096')return createBs12CrimsonDemoState(options.normalAttack?(options.normalAttack==='blocked'?'attack-few-energy':'attack'):'special')
+  if(cardNumber.trim()==='BS12-097')return createBs12JasmineDemoState(options.normalAttack==='blocked'?'no-energy':'attack')
+  if(cardNumber.trim()==='BS12-098')return createBs12CaramelPuddingDemoState(options.normalAttack?(options.normalAttack==='blocked'?'attack-few-energy':'attack'):'special')
+  if (cardNumber.trim() === 'BS12-032' || cardNumber.trim() === 'BS12-032@1') return createBs12ChouxDemoState('arena-faint', cardNumber.trim() as 'BS12-032' | 'BS12-032@1')
+  if (cardNumber.trim() === 'BS12-033' || cardNumber.trim() === 'BS12-033@1') return createBs12EspressoDemoState('arena-faint', cardNumber.trim() as 'BS12-033' | 'BS12-033@1')
+  if (cardNumber.trim() === 'BS12-034' || cardNumber.trim() === 'BS12-034@1') return createBs12MadeleineDemoState('positive', cardNumber.trim() as 'BS12-034' | 'BS12-034@1')
+  if (cardNumber.trim() === 'BS12-035' || cardNumber.trim() === 'BS12-035@1') return createBs12KouignDemoState('peach-cost', cardNumber.trim() as 'BS12-035' | 'BS12-035@1')
+  if (cardNumber.trim() === 'BS12-036' || cardNumber.trim() === 'BS12-036@1') return createBs12ClottedDemoState('positive', cardNumber.trim() as 'BS12-036' | 'BS12-036@1')
+  if (cardNumber.trim() === 'BS12-037' || cardNumber.trim() === 'BS12-037@1') return createBs12FinancierDemoState('four', cardNumber.trim() as 'BS12-037' | 'BS12-037@1')
+  if (cardNumber.trim() === 'BS12-038' || cardNumber.trim() === 'BS12-038@1') return createBs12GreenbellDemoState('positive', cardNumber.trim() as 'BS12-038' | 'BS12-038@1')
+  if (cardNumber.trim() === 'BS12-039') return createBs12MelonDemoState('positive')
+  if (cardNumber.trim() === 'BS12-040') return createBs12BaguetteDemoState('positive')
+  if (cardNumber.trim() === 'BS12-041') return createBs12BasilDemoState('positive')
+  if (cardNumber.trim() === 'BS12-042') return createBs12ChamomileDemoState('positive')
+  if (cardNumber.trim() === 'BS12-043') return createBs12CoffeeCandyDemoState('positive')
+  if (cardNumber.trim() === 'BS12-044') return createBs12HerbTeapotDemoState('positive')
+  if (cardNumber.trim() === 'BS12-045') return createBs12CloverDemoState('five')
+  if (cardNumber.trim() === 'BS12-046') return createBs12CameraDemoState('positive')
+  if (cardNumber.trim() === 'BS12-047') return createBs12HarmonyDemoState('seven')
+  if (cardNumber.trim() === 'BS12-048') return createBs12OrchestraDemoState('positive')
+  if (cardNumber.trim() === 'BS12-049') return createBs12AudienceDemoState('positive')
+  if (cardNumber.trim() === 'BS12-050') return createBs12MelodyDemoState('positive')
+  if (cardNumber.trim() === 'BS12-051' || cardNumber.trim() === 'BS12-051@1') return createBs12FerretDemoState('positive', cardNumber.trim() as 'BS12-051' | 'BS12-051@1')
+  if (cardNumber.trim() === 'BS12-052' || cardNumber.trim() === 'BS12-052@1') return createBs12CocoaDemoState('positive', cardNumber.trim() as 'BS12-052' | 'BS12-052@1')
+  if (cardNumber.trim() === 'BS12-053' || cardNumber.trim() === 'BS12-053@1') return createBs12KumihoDemoState('response', cardNumber.trim() as 'BS12-053' | 'BS12-053@1')
+  if (cardNumber.trim() === 'BS12-054' || cardNumber.trim() === 'BS12-054@1') return createBs12MintChocoDemoState('positive', cardNumber.trim() as 'BS12-054' | 'BS12-054@1')
+  if (cardNumber.trim() === 'BS12-055' || cardNumber.trim() === 'BS12-055@1') return createBs12HerbDemoState('positive', cardNumber.trim() as 'BS12-055' | 'BS12-055@1')
+  if (cardNumber.trim() === 'BS12-056' || cardNumber.trim() === 'BS12-056@1') return createBs12AppleFaerieDemoState('extra-named', cardNumber.trim() as 'BS12-056' | 'BS12-056@1')
+  if (cardNumber.trim() === 'BS12-057') return createBs12MarbleberryDemoState('positive')
+  if (cardNumber.trim() === 'BS12-058' || cardNumber.trim() === 'BS12-058@1') return createBs12PeppermintDemoState('positive', cardNumber.trim() as 'BS12-058' | 'BS12-058@1')
+  if (cardNumber.trim() === 'BS12-059') return createBs12SourBeltDemoState('positive')
+  if (cardNumber.trim() === 'BS12-060') return createBs12SorbetSharkDemoState('positive')
+  if (cardNumber.trim() === 'BS12-061') return createBs12SonicWaterDemoState('positive')
+  if (cardNumber.trim() === 'BS12-062') return createBs12AngelLightstickDemoState('equip-positive')
+  if (cardNumber.trim() === 'BS12-063') return createBs12CakePopsDemoState('positive')
+  if (cardNumber.trim() === 'BS12-064') return createBs12CreamPuffDemoState('positive')
+  if (cardNumber.trim() === 'BS12-065') return createBs12FanLetterDemoState('positive')
+  if (cardNumber.trim() === 'BS12-066') return createBs12EndingPoseDemoState('positive')
+  if (cardNumber.trim() === 'BS12-067') return createBs12ComebackStageDemoState('placed')
+  if (cardNumber.trim() === 'BS12-068') return createBs12MultivitaminDemoState('positive')
+  if (cardNumber.trim() === 'BS12-069') return createBs12PhotocardDemoState('positive')
+  if (cardNumber.trim() === 'BS12-070' || cardNumber.trim() === 'BS12-070@1') return createBs12StardustDemoState('positive',cardNumber.trim() as 'BS12-070' | 'BS12-070@1')
+  if (cardNumber.trim() === 'BS12-071' || cardNumber.trim() === 'BS12-071@1') return createBs12IcePopDemoState('positive',cardNumber.trim() as 'BS12-071' | 'BS12-071@1')
+  if (cardNumber.trim() === 'BS12-072' || cardNumber.trim() === 'BS12-072@1') return createBs12CreamSodaDemoState('positive',cardNumber.trim() as 'BS12-072' | 'BS12-072@1')
+  if (cardNumber.trim() === 'BS12-073' || cardNumber.trim() === 'BS12-073@1') return createBs12DjMiyaDemoState('positive',cardNumber.trim() as 'BS12-073' | 'BS12-073@1')
+  if (cardNumber.trim() === 'BS12-074' || cardNumber.trim() === 'BS12-074@1') return createBs12PoppingCandyDemoState('extra',cardNumber.trim() as 'BS12-074' | 'BS12-074@1')
+  if (cardNumber.trim() === 'BS12-075' || cardNumber.trim() === 'BS12-075@1') return createBs12GnomeBandDemoState('positive',cardNumber.trim() as 'BS12-075' | 'BS12-075@1')
+  if (cardNumber.trim() === 'BS12-076') return createBs12BlackberryDemoState('positive')
+  if (cardNumber.trim() === 'BS12-077') return createBs12SpotlightFanDemoState('equip-positive')
+  if (cardNumber.trim() === 'BS12-078') return createBs12OnionDemoState('positive')
+  if (cardNumber.trim() === 'BS12-079') return createBs12CurrantCreamDemoState('positive')
+  if (cardNumber.trim() === 'BS12-080') return createBs12KohlrabiDemoState('positive')
+  if (cardNumber.trim() === 'BS12-081') return createBs12PuddingDemoState('response')
+  if (cardNumber.trim() === 'BS12-082') return createBs12DjDemoState('positive')
+  if (cardNumber.trim() === 'BS12-083') return createBs12GuitarStringDemoState('positive')
+  if (cardNumber.trim() === 'BS12-084') return createBs12SummerSodaDemoState('positive')
+  if (cardNumber.trim() === 'BS12-085') return createBs12RainbowHeadphonesDemoState('positive')
+  if (cardNumber.trim() === 'BS12-086') return createBs12TrueRockSpiritDemoState('positive')
+  if (cardNumber.trim() === 'BS12-087') return createBs12UnderstandingDemoState('nine')
+  if (cardNumber.trim() === 'BS12-088' || cardNumber.trim() === 'BS12-088@1') return createBs12BlackSapphireDemoState(cardNumber.trim() as 'BS12-088' | 'BS12-088@1','response')
+  if (cardNumber.trim() === 'BS12-089' || cardNumber.trim() === 'BS12-089@1') return createBs12WerewolfDemoState(cardNumber.trim() as 'BS12-089' | 'BS12-089@1','response')
+  if (cardNumber.trim() === 'BS12-090' || cardNumber.trim() === 'BS12-090@1') return createBs12MilkyWayDemoState(cardNumber.trim() as 'BS12-090' | 'BS12-090@1','faint-four')
+  if (cardNumber.trim() === 'BS12-091' || cardNumber.trim() === 'BS12-091@1') return createBs12CaramelArrowDemoState(cardNumber.trim() as 'BS12-091' | 'BS12-091@1','faint')
+  if (cardNumber.trim() === 'BS12-093' || cardNumber.trim() === 'BS12-093@1') return createBs12RockstarDemoState(cardNumber.trim() as 'BS12-093' | 'BS12-093@1','attack')
   const fifteenthBaseNumber = cardNumber.trim().split('@')[0]
   if (!options.bs11FifteenthFixtureBypass) {
     if (fifteenthBaseNumber === 'BS11-054') {
@@ -7617,6 +8316,46 @@ export const createCardCheckDemoState = (
     }
   }
   const requestedBaseCardNumber = cardNumber.trim().split('@')[0]
+  if (cardNumber.trim() === 'BS12-001' || cardNumber.trim() === 'BS12-003') {
+    return createBs12AttackDemoState(cardNumber.trim() as 'BS12-001' | 'BS12-003', options.normalAttack !== 'blocked')
+  }
+  if (cardNumber.trim() === 'BS12-002' || cardNumber.trim() === 'BS12-004') {
+    const number = cardNumber.trim() as 'BS12-002' | 'BS12-004'
+    return options.normalAttack ? createBs12AttackDemoState(number, options.normalAttack !== 'blocked') : createBs12FlipDemoState('positive', number)
+  }
+  if (['BS12-005', 'BS12-006', 'BS12-007', 'BS12-008', 'BS12-008@1'].includes(cardNumber.trim())) {
+    if (options.normalAttack) return createBs12AttackDemoState(cardNumber.trim() as Bs12FirstCardNumber, options.normalAttack !== 'blocked')
+    if (cardNumber.trim() === 'BS12-005') return createBs12ActivateDemoState('positive')
+    if (cardNumber.trim() === 'BS12-006') return createBs12PositionCostDemoState('positive')
+    if (cardNumber.trim() === 'BS12-007') return createBs12EquipDemoState('positive')
+    return createBs12ReadyDemoState('positive', cardNumber.trim() as 'BS12-008' | 'BS12-008@1')
+  }
+  if (cardNumber.trim() === 'BS12-092' || cardNumber.trim() === 'BS12-092@1') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs12BlackLemonadeDemoState(cardNumber.trim() as 'BS12-092' | 'BS12-092@1', 'extra')
+  }
+  if (cardNumber.trim() === 'BS12-009' || cardNumber.trim() === 'BS12-010') return createBs12TrapDemoState('positive', cardNumber.trim() as 'BS12-009' | 'BS12-010')
+  if (cardNumber.trim() === 'BS12-011') return createBs12StageDemoState('positive')
+  if (cardNumber.trim() === 'BS12-012') return createBs12GuitarDemoState('positive')
+  if (cardNumber.trim() === 'BS12-013') return createBs12RecordDemoState('positive')
+  if (cardNumber.trim() === 'BS12-014' || cardNumber.trim() === 'BS12-014@1') return createBs12ActivePhaseDemoState('positive', cardNumber.trim() as 'BS12-014' | 'BS12-014@1')
+  if (cardNumber.trim() === 'BS12-015' || cardNumber.trim() === 'BS12-015@1') return createBs12ParfaitDemoState('positive', cardNumber.trim() as 'BS12-015' | 'BS12-015@1')
+  if (cardNumber.trim() === 'BS12-016' || cardNumber.trim() === 'BS12-016@1') return createBs12MochiDemoState('positive', cardNumber.trim() as 'BS12-016' | 'BS12-016@1')
+  if (cardNumber.trim() === 'BS12-017' || cardNumber.trim() === 'BS12-017@1') return createBs12CandyAppleDemoState('positive', cardNumber.trim() as 'BS12-017' | 'BS12-017@1')
+  if (cardNumber.trim() === 'BS12-018' || cardNumber.trim() === 'BS12-018@1') return createBs12GlitterDemoState('extra', cardNumber.trim() as 'BS12-018' | 'BS12-018@1')
+  if (cardNumber.trim() === 'BS12-019') return createBs12MuscleDemoState('positive')
+  if (cardNumber.trim() === 'BS12-020') return createBs12StrawberryDemoState('positive')
+  if (cardNumber.trim() === 'BS12-021' || cardNumber.trim() === 'BS12-021@1') return createBs12MangoDemoState('positive', cardNumber.trim() as 'BS12-021' | 'BS12-021@1')
+  if (cardNumber.trim() === 'BS12-022') return createBs12MintWaferDemoState('positive')
+  if (cardNumber.trim() === 'BS12-023') return createBs12BonbonDemoState('three')
+  if (cardNumber.trim() === 'BS12-024') return createBs12GingerBraveDemoState('positive')
+  if (cardNumber.trim() === 'BS12-025') return createBs12MayorDemoState('positive')
+  if (cardNumber.trim() === 'BS12-026') return createBs12BananaRotiDemoState('four-arena')
+  if (cardNumber.trim() === 'BS12-027') return createBs12YappingDemoState('four')
+  if (cardNumber.trim() === 'BS12-028') return createBs12CarpetDemoState('positive')
+  if (cardNumber.trim() === 'BS12-031') return createBs12SpotlightDemoState('positive')
+  if (cardNumber.trim() === 'BS12-030') return createBs12WorkshopDemoState('positive')
+  if (cardNumber.trim() === 'BS12-029') return createBs12EntranceDemoState('four')
   if (
     isBs10PreviewCardNumber(cardNumber.trim()) &&
     !options.bs10PreviewBypass &&
@@ -9210,7 +9949,7 @@ export const createCardCheckDemoState = (
     const state = baseState()
     const faintCard: CookieCard = { ...(card as CookieCard) }
     const faintCost = getFaintTriggeredCost(card.skill)
-    const pendingFaintEffects: PendingFaintEffect[] = card.skill.effects.map(
+    const pendingFaintEffects: PendingFaintEffect[] = (card.skill.faintEffects ?? card.skill.effects).map(
       (effect, index) => ({
         sourcePlayerId: 'player-one',
         sourceInstanceId: faintCard.instanceId,
@@ -10618,7 +11357,123 @@ export const createCardNegativeDemoState = (
     bs11SixteenthFixtureBypass?: boolean
   } = {},
 ): GameState => {
+  if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,cardNumber.trim().startsWith('BS12-109')?'attack-wrong-energy':cardNumber.trim().startsWith('BS12-110')?'two-black':cardNumber.trim().startsWith('BS12-111')?'three-support':'special-no-skill')
+  if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')?'hand-six':cardNumber.trim()==='BS12-106'?'no-energy':'wrong-energy')
+  if(cardNumber.trim()==='BS12-104')return createBs12RecipeDemoState('no-energy')
+  if(cardNumber.trim()==='BS12-105')return createBs12PerfectStageDemoState('split')
+  if(cardNumber.trim()==='BS12-099')return createBs12CakeHoundDemoState(options.normalAttack?'wrong-energy':'unpayable',true)
+  if(cardNumber.trim()==='BS12-100')return createBs12StrategistDemoState(options.normalAttack?'attack-few-energy':'special-wrong-level')
+  if(cardNumber.trim()==='BS12-101')return createBs12ChessChocoDemoState(options.normalAttack?'wrong-energy':'non-arena')
+  if(cardNumber.trim()==='BS12-102')return createBs12CoffeeTruckDemoState('split')
+  if(cardNumber.trim()==='BS12-103')return createBs12SunglassesDemoState('split')
+  if(cardNumber.trim()==='BS12-094')return createBs12ButterRollDemoState('few-energy')
+  if(cardNumber.trim()==='BS12-095')return createBs12BlueberryDemoState(options.normalAttack?'attack-few-energy':'special-wrong-level')
+  if(cardNumber.trim()==='BS12-096')return createBs12CrimsonDemoState(options.normalAttack?'attack-few-energy':'special-wrong-level')
+  if(cardNumber.trim()==='BS12-097')return createBs12JasmineDemoState('no-energy')
+  if(cardNumber.trim()==='BS12-098')return createBs12CaramelPuddingDemoState(options.normalAttack?'attack-few-energy':'special-wrong-level')
+  if (cardNumber.trim() === 'BS12-032' || cardNumber.trim() === 'BS12-032@1') return createBs12ChouxDemoState('arena-faint-no-condition', cardNumber.trim() as 'BS12-032' | 'BS12-032@1')
+  if (cardNumber.trim() === 'BS12-033' || cardNumber.trim() === 'BS12-033@1') return createBs12EspressoDemoState('arena-faint-no-condition', cardNumber.trim() as 'BS12-033' | 'BS12-033@1')
+  if (cardNumber.trim() === 'BS12-034' || cardNumber.trim() === 'BS12-034@1') return createBs12MadeleineDemoState('one-energy', cardNumber.trim() as 'BS12-034' | 'BS12-034@1')
+  if (cardNumber.trim() === 'BS12-035' || cardNumber.trim() === 'BS12-035@1') return createBs12KouignDemoState('no-cost', cardNumber.trim() as 'BS12-035' | 'BS12-035@1')
+  if (cardNumber.trim() === 'BS12-036' || cardNumber.trim() === 'BS12-036@1') return createBs12ClottedDemoState('three-arena', cardNumber.trim() as 'BS12-036' | 'BS12-036@1')
+  if (cardNumber.trim() === 'BS12-037' || cardNumber.trim() === 'BS12-037@1') return createBs12FinancierDemoState('wrong-energy', cardNumber.trim() as 'BS12-037' | 'BS12-037@1')
+  if (cardNumber.trim() === 'BS12-038' || cardNumber.trim() === 'BS12-038@1') return createBs12GreenbellDemoState('equal-after', cardNumber.trim() as 'BS12-038' | 'BS12-038@1')
+  if (cardNumber.trim() === 'BS12-039') return createBs12MelonDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-040') return createBs12BaguetteDemoState('item-support-only')
+  if (cardNumber.trim() === 'BS12-041') return createBs12BasilDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-042') return createBs12ChamomileDemoState('no-arena')
+  if (cardNumber.trim() === 'BS12-043') return createBs12CoffeeCandyDemoState('four')
+  if (cardNumber.trim() === 'BS12-044') return createBs12HerbTeapotDemoState('item-only')
+  if (cardNumber.trim() === 'BS12-045') return createBs12CloverDemoState('four')
+  if (cardNumber.trim() === 'BS12-046') return createBs12CameraDemoState('hand-entry')
+  if (cardNumber.trim() === 'BS12-047') return createBs12HarmonyDemoState('six')
+  if (cardNumber.trim() === 'BS12-048') return createBs12OrchestraDemoState('item-only')
+  if (cardNumber.trim() === 'BS12-049') return createBs12AudienceDemoState('non-arena-only')
+  if (cardNumber.trim() === 'BS12-050') return createBs12MelodyDemoState('non-arena-only')
+  if (cardNumber.trim() === 'BS12-051' || cardNumber.trim() === 'BS12-051@1') return createBs12FerretDemoState('no-arena', cardNumber.trim() as 'BS12-051' | 'BS12-051@1')
+  if (cardNumber.trim() === 'BS12-052' || cardNumber.trim() === 'BS12-052@1') return createBs12CocoaDemoState('hand', cardNumber.trim() as 'BS12-052' | 'BS12-052@1')
+  if (cardNumber.trim() === 'BS12-053' || cardNumber.trim() === 'BS12-053@1') return createBs12KumihoDemoState('response-no-support', cardNumber.trim() as 'BS12-053' | 'BS12-053@1')
+  if (cardNumber.trim() === 'BS12-054' || cardNumber.trim() === 'BS12-054@1') return createBs12MintChocoDemoState('no-support', cardNumber.trim() as 'BS12-054' | 'BS12-054@1')
+  if (cardNumber.trim() === 'BS12-055' || cardNumber.trim() === 'BS12-055@1') return createBs12HerbDemoState('hand-origin', cardNumber.trim() as 'BS12-055' | 'BS12-055@1')
+  if (cardNumber.trim() === 'BS12-056' || cardNumber.trim() === 'BS12-056@1') return createBs12AppleFaerieDemoState('extra-six', cardNumber.trim() as 'BS12-056' | 'BS12-056@1')
+  if (cardNumber.trim() === 'BS12-057') return createBs12MarbleberryDemoState('cost-split')
+  if (cardNumber.trim() === 'BS12-058' || cardNumber.trim() === 'BS12-058@1') return createBs12PeppermintDemoState('non-arena-hand', cardNumber.trim() as 'BS12-058' | 'BS12-058@1')
+  if (cardNumber.trim() === 'BS12-059') return createBs12SourBeltDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-060') return createBs12SorbetSharkDemoState('no-hand')
+  if (cardNumber.trim() === 'BS12-061') return createBs12SonicWaterDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-062') return createBs12AngelLightstickDemoState('equip-wrong-host')
+  if (cardNumber.trim() === 'BS12-063') return createBs12CakePopsDemoState('no-host')
+  if (cardNumber.trim() === 'BS12-064') return createBs12CreamPuffDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-065') return createBs12FanLetterDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-066') return createBs12EndingPoseDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-067') return createBs12ComebackStageDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-068') return createBs12MultivitaminDemoState('difference-one')
+  if (cardNumber.trim() === 'BS12-069') return createBs12PhotocardDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-070' || cardNumber.trim() === 'BS12-070@1') return createBs12StardustDemoState('non-arena',cardNumber.trim() as 'BS12-070' | 'BS12-070@1')
+  if (cardNumber.trim() === 'BS12-071' || cardNumber.trim() === 'BS12-071@1') return createBs12IcePopDemoState('non-arena',cardNumber.trim() as 'BS12-071' | 'BS12-071@1')
+  if (cardNumber.trim() === 'BS12-072' || cardNumber.trim() === 'BS12-072@1') return createBs12CreamSodaDemoState('non-arena',cardNumber.trim() as 'BS12-072' | 'BS12-072@1')
+  if (cardNumber.trim() === 'BS12-073' || cardNumber.trim() === 'BS12-073@1') return createBs12DjMiyaDemoState('non-arena',cardNumber.trim() as 'BS12-073' | 'BS12-073@1')
+  if (cardNumber.trim() === 'BS12-074' || cardNumber.trim() === 'BS12-074@1') return createBs12PoppingCandyDemoState('extra-no-event',cardNumber.trim() as 'BS12-074' | 'BS12-074@1')
+  if (cardNumber.trim() === 'BS12-075' || cardNumber.trim() === 'BS12-075@1') return createBs12GnomeBandDemoState('four',cardNumber.trim() as 'BS12-075' | 'BS12-075@1')
+  if (cardNumber.trim() === 'BS12-076') return createBs12BlackberryDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-077') return createBs12SpotlightFanDemoState('equip-wrong-host')
+  if (cardNumber.trim() === 'BS12-078') return createBs12OnionDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-079') return createBs12CurrantCreamDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-080') return createBs12KohlrabiDemoState('no-arena')
+  if (cardNumber.trim() === 'BS12-081') return createBs12PuddingDemoState('non-arena')
+  if (cardNumber.trim() === 'BS12-082') return createBs12DjDemoState('no-hand')
+  if (cardNumber.trim() === 'BS12-083') return createBs12GuitarStringDemoState('no-blocker')
+  if (cardNumber.trim() === 'BS12-084') return createBs12SummerSodaDemoState('no-blocker')
+  if (cardNumber.trim() === 'BS12-085') return createBs12RainbowHeadphonesDemoState('four')
+  if (cardNumber.trim() === 'BS12-086') return createBs12TrueRockSpiritDemoState('no-target')
+  if (cardNumber.trim() === 'BS12-087') return createBs12UnderstandingDemoState('eight')
+  if (cardNumber.trim() === 'BS12-088' || cardNumber.trim() === 'BS12-088@1') return createBs12BlackSapphireDemoState(cardNumber.trim() as 'BS12-088' | 'BS12-088@1','non-arena')
+  if (cardNumber.trim() === 'BS12-089' || cardNumber.trim() === 'BS12-089@1') return createBs12WerewolfDemoState(cardNumber.trim() as 'BS12-089' | 'BS12-089@1','non-arena')
+  if (cardNumber.trim() === 'BS12-090' || cardNumber.trim() === 'BS12-090@1') return createBs12MilkyWayDemoState(cardNumber.trim() as 'BS12-090' | 'BS12-090@1','faint-three')
+  if (cardNumber.trim() === 'BS12-091' || cardNumber.trim() === 'BS12-091@1') return createBs12CaramelArrowDemoState(cardNumber.trim() as 'BS12-091' | 'BS12-091@1','no-blocker-target')
+  if (cardNumber.trim() === 'BS12-093' || cardNumber.trim() === 'BS12-093@1') return createBs12RockstarDemoState(cardNumber.trim() as 'BS12-093' | 'BS12-093@1','one-blocker')
   const fifteenthBaseNumber = cardNumber.trim().split('@')[0]
+  if (cardNumber.trim() === 'BS12-092' || cardNumber.trim() === 'BS12-092@1') {
+    if (options.normalAttack) throw new Error('EXTRA attacks require their dedicated entry fixture')
+    return createBs12BlackLemonadeDemoState(cardNumber.trim() as 'BS12-092' | 'BS12-092@1', 'break-two')
+  }
+  if (cardNumber.trim() === 'BS12-001' || cardNumber.trim() === 'BS12-003') {
+    return createBs12AttackDemoState(cardNumber.trim() as 'BS12-001' | 'BS12-003', false)
+  }
+  if (cardNumber.trim() === 'BS12-002' || cardNumber.trim() === 'BS12-004') {
+    const number = cardNumber.trim() as 'BS12-002' | 'BS12-004'
+    return options.normalAttack ? createBs12AttackDemoState(number, false) : createBs12FlipDemoState(number === 'BS12-002' ? 'no-hand' : 'no-arena', number)
+  }
+  if (['BS12-005', 'BS12-006', 'BS12-007', 'BS12-008', 'BS12-008@1'].includes(cardNumber.trim())) {
+    if (options.normalAttack) return createBs12AttackDemoState(cardNumber.trim() as Bs12FirstCardNumber, false)
+    if (cardNumber.trim() === 'BS12-005') return createBs12ActivateDemoState('normal-active')
+    if (cardNumber.trim() === 'BS12-006') return createBs12PositionCostDemoState('no-cost')
+    if (cardNumber.trim() === 'BS12-007') return createBs12EquipDemoState('wrong-host')
+    return createBs12ReadyDemoState('wrong-keyword', cardNumber.trim() as 'BS12-008' | 'BS12-008@1')
+  }
+  if (cardNumber.trim() === 'BS12-009') return createBs12TrapDemoState('two-rested', 'BS12-009')
+  if (cardNumber.trim() === 'BS12-010') return createBs12TrapDemoState('no-energy', 'BS12-010')
+  if (cardNumber.trim() === 'BS12-011') return createBs12StageDemoState('no-energy')
+  if (cardNumber.trim() === 'BS12-012') return createBs12GuitarDemoState('no-energy')
+  if (cardNumber.trim() === 'BS12-013') return createBs12RecordDemoState('no-energy')
+  if (cardNumber.trim() === 'BS12-014' || cardNumber.trim() === 'BS12-014@1') return createBs12ActivePhaseDemoState('solo', cardNumber.trim() as 'BS12-014' | 'BS12-014@1')
+  if (cardNumber.trim() === 'BS12-015' || cardNumber.trim() === 'BS12-015@1') return createBs12ParfaitDemoState('attack-solo', cardNumber.trim() as 'BS12-015' | 'BS12-015@1')
+  if (cardNumber.trim() === 'BS12-016' || cardNumber.trim() === 'BS12-016@1') return createBs12MochiDemoState('opponent-turn', cardNumber.trim() as 'BS12-016' | 'BS12-016@1')
+  if (cardNumber.trim() === 'BS12-017' || cardNumber.trim() === 'BS12-017@1') return createBs12CandyAppleDemoState('no-hand', cardNumber.trim() as 'BS12-017' | 'BS12-017@1')
+  if (cardNumber.trim() === 'BS12-018' || cardNumber.trim() === 'BS12-018@1') return createBs12GlitterDemoState('break-low', cardNumber.trim() as 'BS12-018' | 'BS12-018@1')
+  if (cardNumber.trim() === 'BS12-019') return createBs12MuscleDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-020') return createBs12StrawberryDemoState('three-arena')
+  if (cardNumber.trim() === 'BS12-021' || cardNumber.trim() === 'BS12-021@1') return createBs12MangoDemoState('no-event', cardNumber.trim() as 'BS12-021' | 'BS12-021@1')
+  if (cardNumber.trim() === 'BS12-022') return createBs12MintWaferDemoState('no-hand')
+  if (cardNumber.trim() === 'BS12-023') return createBs12BonbonDemoState('zero')
+  if (cardNumber.trim() === 'BS12-024') return createBs12GingerBraveDemoState('few-energy')
+  if (cardNumber.trim() === 'BS12-025') return createBs12MayorDemoState('no-choux')
+  if (cardNumber.trim() === 'BS12-026') return createBs12BananaRotiDemoState('no-hand')
+  if (cardNumber.trim() === 'BS12-027') return createBs12YappingDemoState('no-energy')
+  if (cardNumber.trim() === 'BS12-028') return createBs12CarpetDemoState('no-cost')
+  if (cardNumber.trim() === 'BS12-031') return createBs12SpotlightDemoState('no-cost')
+  if (cardNumber.trim() === 'BS12-030') return createBs12WorkshopDemoState('no-event')
+  if (cardNumber.trim() === 'BS12-029') return createBs12EntranceDemoState('one-energy')
   if (!options.bs11FifteenthFixtureBypass) {
     if (fifteenthBaseNumber === 'BS11-054') {
       return createBs11FifteenthBatchDemoState(
@@ -15634,6 +16489,3874 @@ const bs11VanillaAttackCost: Record<Bs11VanillaAttackCardNumber, number> = {
 }
 
 /** Printed neutral attacks are paid with mixed colours; the negative route has one fewer support. */
+export type Bs12FirstCardNumber = 'BS12-001' | 'BS12-002' | 'BS12-003' | 'BS12-004' | 'BS12-005' | 'BS12-006' | 'BS12-007' | 'BS12-008' | 'BS12-008@1'
+
+const getBs12CandidateCookie = (cardNumber: string, instanceId: string): CookieCard => {
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find((card) => card.cardNumber === cardNumber)
+  if (!record) throw new Error(`Missing BS12 candidate ${cardNumber}`)
+  const conversion = convertOfficialCardToGameCard(record, instanceId)
+  if (conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') throw new Error(`Cannot convert ${cardNumber}`)
+  return { ...conversion.gameCard, instanceId }
+}
+
+const getBs12CandidateBattleCookie = (cardNumber: string, instanceId: string): CookieCard => {
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find((card) => card.cardNumber === cardNumber)
+  if (!record) throw new Error(`Missing BS12 candidate ${cardNumber}`)
+  if (record.type !== 'extra') return getBs12CandidateCookie(cardNumber, instanceId)
+  const conversion = convertOfficialCardToExtraDeckCard(record, instanceId)
+  if (conversion.status !== 'converted') throw new Error(`Cannot convert ${cardNumber}`)
+  return materializeExtraDeckCookie({ ...conversion.extraDeckCard, instanceId })
+}
+
+export type Bs12ActivateScenario = 'positive' | 'normal-active' | 'previous-turn' | 'other-cookie' | 'used' | 'opponent-turn' | 'rested-after-effect' | 'reentered' | 'enable'
+
+/** Printed 4 HP -> ordinary attack REST -> Mustard damage -> Yoga FLIP Then.
+ * Reentry/other-cookie controls isolate history bookkeeping and are not printed parent acceptance.
+ */
+export const createBs12ActivateDemoState = (scenario: Bs12ActivateScenario): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const source = getBs12CandidateCookie('BS12-005', 'bs12-005-source')
+  const companion = bs12PrintedReferenceCookie('P-018', 'bs12-005-companion')
+  const enabler = bs12PrintedReferenceCookie('BS9-032', 'bs12-005-enabler')
+  const opponent = bs12PrintedReferenceCookie('BS6-008', 'bs12-005-opponent')
+  const secondOpponent = bs12PrintedReferenceCookie('BS6-008', 'bs12-005-opponent-other')
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    commandLog: [],
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [companion, bs12PrintedFixtureCard('BS12-014', 'bs12-005-hand-cost')],
+      deck: bs12PrintedFixtureCards([...BS12_PHYSICAL_FILLER_NUMBERS, ...BS12_PHYSICAL_FILLER_NUMBERS], 'bs12-005-deck'),
+      supportArea: [
+        ...bs12PrintedFixtureCards(['BS12-003', 'BS12-004', 'BS12-067'], 'bs12-005-parent-pay'),
+        ...bs12PrintedFixtureCards(['BS12-005', 'BS12-006', 'BS12-068'], 'bs12-005-pay'),
+      ].map(card => ({ card, rested: false })),
+      battleArea: [
+        cardCheckBattleEntry(source, [...bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, 3), 'bs12-005-source-hp'), enabler], 1),
+      ],
+      discardPile: [], breakArea: [], stage: null, extraDeck: [],
+    }, 'player-two': { ...base.players['player-two'],
+      hand: [], discardPile: [], breakArea: [], supportArea: [], stage: null, extraDeck: [],
+      deck: bs12PrintedFixtureCards([...BS12_PHYSICAL_FILLER_NUMBERS, ...BS12_PHYSICAL_FILLER_NUMBERS], 'bs12-005-opponent-deck'),
+      battleArea: [
+        cardCheckBattleEntry(opponent, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, opponent.hp), 'bs12-005-opponent-hp'), 3),
+        cardCheckBattleEntry(secondOpponent, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, secondOpponent.hp), 'bs12-005-opponent-other-hp'), 4),
+      ],
+    } },
+  }
+  if (scenario === 'normal-active') {
+    return { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'],
+      hand: [state.players['player-one'].hand[1]],
+      battleArea: [...state.players['player-one'].battleArea, cardCheckBattleEntry(companion,
+        bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(3, 7), 'bs12-005-companion-hp'), 2)],
+    } } }
+  }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: source.instanceId,
+    targetInstanceId: opponent.instanceId, supportPaymentIds: state.players['player-one'].supportArea.slice(0, 3).map(entry => entry.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+  for (let i = 0; state.pendingBattle?.stage === 'damage' && i < 8; i++) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-two' })
+  state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: companion.instanceId })
+  state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: companion.instanceId,
+    trigger: 'on-play', paymentIds: [], discardHandIds: ['bs12-005-hand-cost'] })
+  for (let i = 0; i < 24; i++) {
+    if (state.pendingDrawUpTo) {
+      state = applyGameCommand(state, { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount: 0 })
+    } else if (state.pendingAbilityEffect?.sourceKind === 'flip') {
+      if (scenario === 'enable') return state
+      state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [source.instanceId] })
+    } else if (state.pendingBattle?.stage === 'flip') {
+      state = applyGameCommand(state, { kind: 'resolve-flip', playerId: 'player-one', activate: true })
+    } else if (state.pendingBattle?.stage === 'damage') {
+      state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: state.pendingBattle.defenderPlayerId })
+    } else if (state.pendingAbilityEffect) {
+      state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    } else break
+  }
+  if (scenario === 'other-cookie') state = { ...state, cookiesSetActiveByEffectThisTurn: { [state.players['player-one'].battleArea[1].battleEntryId!]: true } }
+  if (scenario === 'previous-turn') state = { ...state, phase: 'end' }
+  if (scenario === 'previous-turn') state = advancePhase(state)
+  if (scenario === 'previous-turn' || scenario === 'opponent-turn') state = { ...state, phase: 'main', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one' }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId,
+    trigger: 'activate', paymentIds: [], effectTargets: [[]] })
+  if (scenario === 'rested-after-effect') {
+    state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: source.instanceId,
+      targetInstanceId: secondOpponent.instanceId, supportPaymentIds: state.players['player-one'].supportArea.slice(3).map(entry => entry.card.instanceId) })
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let i = 0; state.pendingBattle?.stage === 'damage' && i < 8; i++) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-two' })
+  }
+  if (scenario === 'reentered') state = { ...state, players: { ...state.players,
+    'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map((cookie, index) => index === 0
+      ? { ...cookie, battleEntryId: `${source.instanceId}:battle:4` } : cookie) },
+  } }
+  return state
+}
+
+export type Bs12PositionCostScenario = 'positive' | 'self' | 'no-cost' | 'wrong-keyword' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'used' | 'opponent-turn'
+
+export const createBs12PositionCostDemoState = (scenario: Bs12PositionCostScenario): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const source = getBs12CandidateCookie('BS12-006', 'bs12-006-source')
+  const companion = bs12PrintedReferenceCookie(scenario === 'wrong-keyword' ? 'ST4-001' : 'BS7-061', 'bs12-006-companion')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    skillUsesThisTurn: scenario === 'used' ? [source.instanceId + ':battle:1'] : [],
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [], deck: bs12PrintedFixtureCards([...BS12_PHYSICAL_FILLER_NUMBERS, ...BS12_PHYSICAL_FILLER_NUMBERS], 'bs12-006-deck'),
+      supportArea: scenario === 'no-energy' ? [] : [{ card: bs12PrintedFixtureCard(scenario === 'wrong-energy' ? 'BS12-068' : 'BS12-005', 'bs12-006-payment'), rested: scenario === 'rested-energy' }],
+      battleArea: [
+        { ...cardCheckBattleEntry(source, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, 3), 'bs12-006-source-hp'), 1), rested: scenario === 'self' },
+        { ...cardCheckBattleEntry(companion, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(3, 3 + companion.hp), 'bs12-006-companion-hp'), 2), rested: scenario !== 'no-cost' },
+      ],
+    }, 'player-two': { ...base.players['player-two'],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-006-opponent'), bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, 6), 'bs12-006-opponent-hp'), 4)],
+    } },
+  }
+}
+
+export type Bs12EquipScenario = 'blocked' | 'positive' | 'rested-source' | 'rested-host' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'used' | 'opponent-turn' | 'no-host' | 'wrong-host' | 'opponent-host'
+export type Bs12ReadyScenario = 'positive' | 'five' | 'three' | 'wrong-color' | 'wrong-keyword' | 'rested-support' | 'rested-source' | 'active-target' | 'cheerleader' | 'no-target' | 'opponent-turn'
+export type Bs12TrapScenario = 'positive' | 'one-rested' | 'two-rested' | 'non-arena' | 'mic-equipped' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'disabled' | 'used'
+
+export type Bs12StageScenario = 'positive' | 'active-target' | 'non-arena' | 'no-target' | 'mic-equipped' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'opponent-turn' | 'removed' | 'replaced' | 'rested-stage'
+
+export type Bs12GuitarScenario = 'positive' | 'active-target' | 'wrong-color' | 'wrong-keyword' | 'no-target' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'opponent-turn'
+
+/** Candidate item with separate color, keyword and zone counterexamples. */
+export const createBs12GuitarDemoState = (scenario: Bs12GuitarScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!
+  const conversion = convertOfficialCardToGameCard(record)
+  if (conversion.status !== 'converted' || !conversion.gameCard.item) throw new Error('BS12-012 item missing')
+  const first = scenario === 'no-target'
+    ? bs12PrintedReferenceCookie('BS4-095', 'bs12-012-first') : getBs12CandidateCookie('BS12-005', 'bs12-012-first')
+  const second = ['wrong-color', 'no-target'].includes(scenario)
+    ? bs12PrintedReferenceCookie('BS7-061', 'bs12-012-second') : scenario === 'wrong-keyword'
+      ? bs12PrintedReferenceCookie('ST1-001', 'bs12-012-second') : getBs12CandidateCookie('BS12-001', 'bs12-012-second')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: {
+      ...base.players, 'player-one': { ...base.players['player-one'], hand: [{ ...conversion.gameCard, instanceId: 'bs12-012-item' }],
+        deck: bs12PrintedFillerCards('BS12-012', 'bs12-012-deck', 12),
+        supportArea: scenario === 'no-energy' ? [] : [{
+          card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-012-payment') : getBs12CandidateCookie('BS12-001', 'bs12-012-payment'),
+          rested: scenario === 'rested-energy',
+        }],
+        battleArea: [
+          { ...cardCheckBattleEntry(first, bs12PrintedFillerCards('BS12-012', 'bs12-012-first-hp', first.hp), 1), rested: scenario !== 'active-target',
+            ...(scenario === 'no-target' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-012-mic')] } : {}) },
+          { ...cardCheckBattleEntry(second, bs12PrintedFillerCards('BS12-012', 'bs12-012-second-hp', second.hp, first.hp), 2), rested: true },
+        ], stage: null,
+      }, 'player-two': { ...base.players['player-two'],
+        deck: bs12PrintedFillerCards('BS12-012', 'bs12-012-opponent-deck', 12),
+        battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-012-opponent'), bs12PrintedFillerCards('BS12-012', 'bs12-012-opponent-hp', 4), 3), rested: true }],
+      },
+    },
+  }
+}
+
+/** Candidate item with separate color, keyword and zone counterexamples. */
+export type Bs12ActivePhaseScenario = 'positive' | 'solo' | 'non-arena' | 'green-arena' | 'other-rested' | 'already-active' | 'equipment' | 'support-only' | 'opponent-only' | 'two-copies' | 'effect-ready' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'opponent-turn'
+
+export type Bs12ActivePhaseCardNumber = 'BS12-014' | 'BS12-014@1' | 'BS12-015' | 'BS12-015@1'
+export type Bs12ParfaitScenario = Bs12ActivePhaseScenario | 'attack-solo' | 'attack-non-arena' | 'attack-equipment' | 'attack-support-only' | 'attack-opponent-only' | 'attack-green-arena' | 'target-faints' | 'few-red'
+
+export const createBs12ActivePhaseDemoState = (scenario: Bs12ActivePhaseScenario = 'positive', number: Bs12ActivePhaseCardNumber = 'BS12-014'): GameState => {
+  const prefix = `bs12-${number.split('@')[0].slice(5)}`
+  const base = baseTestState('player-one', scenario === 'rested-energy' ? 'main' : 'active')
+  const source = getBs12CandidateCookie(number, `${prefix}-source`)
+  const noOther = ['solo', 'support-only', 'opponent-only'].includes(scenario)
+  const other = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', `${prefix}-other`) : ['non-arena', 'effect-ready', 'already-active'].includes(scenario)
+    ? bs12PrintedReferenceCookie('ST1-001', `${prefix}-other`) : scenario === 'green-arena'
+      ? bs12PrintedReferenceCookie('BS7-061', `${prefix}-other`) : scenario === 'two-copies'
+        ? getBs12CandidateCookie(number, `${prefix}-other`) : getBs12CandidateCookie('BS12-001', `${prefix}-other`)
+  const itemRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!
+  const item = convertOfficialCardToGameCard(itemRecord)
+  if (item.status !== 'converted') throw new Error('Missing ready item')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: {
+    ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: scenario === 'effect-ready' ? [{ ...item.gameCard, instanceId: `${prefix}-ready-item` }] : [],
+      deck: bs12PrintedFillerCards('BS12-012', `${prefix}-deck`, 12),
+      battleArea: [{ ...cardCheckBattleEntry(source, bs12PrintedFillerCards('BS12-012', `${prefix}-hp`, source.hp), 1), rested: !['already-active', 'rested-energy'].includes(scenario) },
+        ...(noOther ? [] : [{ ...cardCheckBattleEntry(other, bs12PrintedFillerCards('BS12-012', `${prefix}-other-hp`, other.hp, source.hp), 2), rested: true,
+          ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', `${prefix}-mic`)] } : {}) }])],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 1 : 3 }, (_, i) => ({ card: scenario === 'wrong-energy'
+        ? bs12PrintedReferenceCookie('ST4-001', `${prefix}-payment-${i}`) : getBs12CandidateCookie('BS12-001', `${prefix}-payment-${i}`), rested: true })), stage: null,
+    }, 'player-two': { ...base.players['player-two'], hand: [],
+      deck: bs12PrintedFillerCards('BS12-012', `${prefix}-opponent-deck`, 12),
+      battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', `${prefix}-opponent`), bs12PrintedFillerCards('BS12-012', `${prefix}-opponent-hp`, 4), 3), rested: true }],
+    },
+  } }
+}
+
+/** BS12-015 uses the shared passive phase fixture and the normal attack command pipeline. */
+export const createBs12ParfaitDemoState = (scenario: Bs12ParfaitScenario = 'positive', number: 'BS12-015' | 'BS12-015@1' = 'BS12-015'): GameState => {
+  const phaseScenario = scenario.startsWith('attack-') ? scenario.slice(7) as Bs12ActivePhaseScenario
+    : ['target-faints', 'few-red'].includes(scenario) ? 'positive' : scenario as Bs12ActivePhaseScenario
+  const base = createBs12ActivePhaseDemoState(phaseScenario, number)
+  const player = base.players['player-one']
+  const opponent = base.players['player-two']
+  const attack = scenario.startsWith('attack-') || scenario === 'target-faints'
+  return { ...base, phase: attack ? 'main' : base.phase, players: { ...base.players,
+    'player-one': { ...player,
+      battleArea: player.battleArea.map((entry, i) => i === 0 && attack ? { ...entry, rested: false } : entry),
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 1 : scenario === 'effect-ready' ? 4 : 3 }, (_, i) => ({
+        card: scenario === 'wrong-energy' || i === 2 || (scenario === 'few-red' && i === 1)
+          ? bs12PrintedReferenceCookie('ST4-001', `bs12-015-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-015-payment-${i}`),
+        rested: !attack,
+      })),
+    },
+    'player-two': { ...opponent, battleArea: [
+      { ...opponent.battleArea[0], card: getBs12CandidateCookie(scenario === 'target-faints' ? 'BS12-008' : number, 'bs12-015-opponent'),
+        hpCards: bs12PrintedFillerCards('BS12-012', 'bs12-015-opponent-hp', scenario === 'target-faints' ? 3 : 5) },
+      cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-015-opponent-other'), bs12PrintedFillerCards('BS12-012', 'bs12-015-opponent-other-hp', 4, scenario === 'target-faints' ? 3 : 5), 4),
+    ] },
+  } }
+}
+
+export type Bs12MochiScenario = 'positive' | 'green-arena' | 'active-target' | 'source-rested' | 'solo' | 'non-arena' | 'equipment' | 'support-only' | 'opponent-only' | 'no-energy' | 'opponent-turn' | 'effect-ready' | 'attack-normal' | 'attack-other' | 'target-faints' | 'wrong-energy' | 'few-red' | 'rested-energy' | 'already-active-ready'
+
+export type Bs12CandyAppleScenario = 'positive' | 'green-arena' | 'active-target' | 'source-rested' | 'solo' | 'non-arena' | 'equipment' | 'support-only' | 'opponent-only' | 'no-energy' | 'opponent-turn' | 'no-hand' | 'one-hand' | 'no-faerie' | 'faerie-support' | 'faerie-opponent' | 'faerie-variant' | 'target-faints' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'attack' | 'faerie-only'
+
+export type Bs12GlitterScenario = 'positive' | 'extra' | 'break-low' | 'no-hand' | 'non-arena-hand' | 'full-battle' | 'green-hand' | 'item-hand' | 'first-player' | 'target-faints' | 'green-arena' | 'non-arena' | 'equipment' | 'active-target' | 'source-rested' | 'solo' | 'support-only' | 'opponent-only' | 'no-energy' | 'opponent-turn' | 'wrong-energy' | 'few-energy' | 'rested-energy'
+
+export type Bs12MuscleScenario = 'positive' | 'blue-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'target-faints'
+
+export type Bs12StrawberryScenario = 'positive' | 'three-arena' | 'five-arena' | 'non-arena-break' | 'opponent-break' | 'trash-arena' | 'high-level' | 'mixed-arena' | 'no-hand' | 'item-hand' | 'last-hp' | 'follow-up' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy'
+
+export type Bs12MangoScenario = 'positive' | 'faint' | 'green-arena' | 'hand-break' | 'removed-break' | 'old-break' | 'previous-turn' | 'non-arena' | 'opponent-break' | 'trash-arena' | 'no-event' | 'opponent-turn' | 'no-energy' | 'rested-support' | 'attack' | 'wrong-energy' | 'few-energy' | 'full-battle' | 'refresh'
+
+export type Bs12MintWaferScenario = 'positive' | 'green-arena' | 'non-arena' | 'no-arena' | 'no-hand' | 'item-hand' | 'last-hp' | 'follow-up' | 'rested-target' | 'equipment' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'opponent-turn' | 'source-rested'
+
+export type Bs12BonbonScenario = 'zero' | 'two' | 'three' | 'five' | 'six' | 'eight' | 'nine' | 'non-arena' | 'high-level' | 'green-arena' | 'opponent-break' | 'trash-arena' | 'history-only' | 'opponent-turn' | 'no-energy' | 'rested-support' | 'attack' | 'wrong-energy' | 'few-yellow' | 'few-energy' | 'rested-energy' | 'refresh'
+
+export type Bs12GingerBraveScenario = 'positive' | 'blue-energy' | 'green-energy' | 'yellow-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'target-faints' | 'deploy'
+
+export type Bs12MayorScenario = 'positive' | 'red-choux' | 'rested-choux' | 'no-choux' | 'wrong-name' | 'opponent-choux' | 'support-choux' | 'no-energy' | 'rested-support' | 'opponent-turn' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'target-faints'
+
+export type Bs12BananaRotiScenario = 'four-arena' | 'five-arena' | 'mixed-arena' | 'three-arena' | 'high-level' | 'non-arena-break' | 'opponent-break' | 'trash-arena' | 'turn-event' | 'green-event' | 'hand-event' | 'faint-event' | 'removed-event' | 'previous-turn' | 'non-arena-event' | 'opponent-event' | 'both' | 'no-condition' | 'no-hand' | 'item-hand' | 'blue-hand' | 'target-faints' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'deploy'
+
+/** Ordinary deployment and actual break movements establish the independent Then branches. */
+export const createBs12BananaRotiDemoState = (scenario: Bs12BananaRotiScenario = 'four-arena'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  const source = getBs12CandidateCookie('BS12-026', 'bs12-026-source')
+  const defender = scenario === 'target-faints'
+    ? getBs12CandidateCookie('BS12-008', 'bs12-026-opponent')
+    : bs12PrintedReferenceCookie('BS6-008', 'bs12-026-opponent')
+  const event = scenario === 'non-arena-event' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-026-event')
+    : scenario === 'green-event' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-026-event') : getBs12CandidateCookie('BS12-003', 'bs12-026-event')
+  const hasEvent = ['turn-event', 'green-event', 'hand-event', 'faint-event', 'removed-event', 'previous-turn', 'non-arena-event', 'opponent-event', 'both'].includes(scenario)
+  const hasCount = ['four-arena', 'five-arena', 'mixed-arena', 'non-arena-break', 'opponent-break', 'trash-arena', 'both', 'no-hand', 'item-hand', 'blue-hand', 'target-faints', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'deploy'].includes(scenario)
+  const breaks = scenario === 'high-level' ? [getBs12CandidateCookie('BS12-001', 'bs12-026-break-0'), getBs12CandidateCookie('BS12-019', 'bs12-026-break-1')]
+    : Array.from({ length: scenario === 'five-arena' ? 5 : hasCount ? 4 : scenario === 'three-arena' ? 3 : 0 }, (_, i) =>
+      scenario === 'non-arena-break' && i === 3 ? bs12PrintedReferenceCookie('ST4-001', `bs12-026-break-${i}`)
+        : scenario === 'mixed-arena' && i === 3 ? bs12PrintedReferenceCookie('BS7-061', `bs12-026-break-${i}`)
+          : i === 4 ? getBs12CandidateCookie('BS12-003', `bs12-026-break-${i}`) : getBs12CandidateCookie('BS12-017', `bs12-026-break-${i}`))
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === 'BS12-012')!)
+  if (item.status !== 'converted') throw new Error('Missing verified hand-cost item')
+  const handCost = scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-026-hand' }
+    : scenario === 'blue-hand' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-026-hand') : getBs12CandidateCookie('BS12-022', 'bs12-026-hand')
+  const misplaced = ['opponent-break', 'trash-arena'].includes(scenario)
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source, ...(scenario === 'no-hand' ? [] : [handCost])], deck: hp('bs12-026-deck', 18),
+      breakArea: misplaced ? [] : breaks, discardPile: scenario === 'trash-arena' ? breaks : [], stage: null,
+      battleArea: hasEvent && !['hand-event', 'opponent-event'].includes(scenario) ? [cardCheckBattleEntry(event, hp('bs12-026-event', 1), 1)] : [],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'wrong-energy' && i === 2 ? bs12PrintedReferenceCookie('ST4-001', `bs12-026-payment-${i}`)
+          : getBs12CandidateCookie('BS12-019', `bs12-026-payment-${i}`), rested: scenario === 'rested-energy' && i === 2 })) },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-026-opponent-deck', 12), breakArea: scenario === 'opponent-break' ? breaks : [],
+      discardPile: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(defender, hp('bs12-026-opponent', defender.hp), 2),
+        cardCheckBattleEntry(scenario === 'opponent-event' ? event : getBs12CandidateCookie('BS12-001', 'bs12-026-opponent-other'), hp('bs12-026-opponent-other', 4, scenario === 'target-faints' ? 3 : 7), 3)] },
+  } }
+  const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: event.instanceId }
+  if (hasEvent) {
+    if (scenario === 'hand-event') {
+      state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], hand: [...state.players['player-one'].hand, event] } } }
+      state = executeCardEffect(state, context, { kind: 'hand-to-break', amount: 1 }, [event.instanceId])
+    } else state = executeCardEffect(state, context, { kind: scenario === 'faint-event' ? 'make-faint' : 'battle-to-break',
+      target: { side: scenario === 'opponent-event' ? 'opponent' : 'self', min: 1, max: 1 } }, [event.instanceId])
+    if (scenario === 'removed-event') state = executeCardEffect(state, context, { kind: 'break-to-trash', max: 1 }, [event.instanceId])
+    state = { ...state, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingReplacement: null }
+    if (scenario === 'previous-turn') state = { ...advancePhase({ ...state, phase: 'active' }), phase: 'main' }
+  }
+  if (scenario === 'deploy') return state
+  const entered = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  return { ...entered, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...entered.players,
+    'player-one': { ...entered.players['player-one'], battleArea: entered.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' })) } } }
+}
+
+/** Candidate On Play with verified formal Caramel Choux cards as name targets. */
+export const createBs12MayorDemoState = (scenario: Bs12MayorScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  const source = getBs12CandidateCookie('BS12-025', 'bs12-025-source')
+  const defender = scenario === 'target-faints'
+    ? bs12PrintedReferenceCookie('BS6-017', 'bs12-025-opponent')
+    : bs12PrintedReferenceCookie('BS6-008', 'bs12-025-opponent')
+  const opponentDefender = scenario === 'opponent-choux'
+    ? bs12PrintedReferenceCookie('BS9-029', 'bs12-025-opponent')
+    : defender
+  const ally = ['wrong-name', 'opponent-choux', 'support-choux'].includes(scenario) ? getBs12CandidateCookie('BS12-019', 'bs12-025-ally')
+    : bs12PrintedReferenceCookie(scenario === 'red-choux' ? 'P-024' : 'BS9-029', 'bs12-025-ally')
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source], deck: hp('bs12-025-deck', 12), breakArea: [], discardPile: [], stage: null,
+      battleArea: scenario === 'no-choux' ? [] : [{ ...cardCheckBattleEntry(ally, hp('bs12-025-ally', ally.hp), 1), rested: scenario === 'rested-choux' }],
+      supportArea: ['no-energy', 'few-energy'].includes(scenario) ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-025-payment-0')
+        : scenario === 'support-choux' ? bs12PrintedReferenceCookie('BS9-029', 'bs12-025-payment-0') : getBs12CandidateCookie('BS12-019', 'bs12-025-payment-0'),
+        rested: ['rested-support', 'rested-energy'].includes(scenario) }] },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-025-opponent-deck', 12), breakArea: [], discardPile: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(opponentDefender, hp('bs12-025-opponent', opponentDefender.hp), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-025-opponent-other'), hp('bs12-025-opponent-other', 4, scenario === 'target-faints' ? 1 : 6), 4)] },
+  } }
+  if (scenario === 'opponent-turn') return executeCardEffect({ ...state, activePlayerId: 'player-two' },
+    { sourcePlayerId: 'player-one', sourceInstanceId: ally.instanceId }, { kind: 'hand-to-battle', amount: 1 }, [source.instanceId])
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'target-faints'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+    state = applyGameCommand(state, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: source.instanceId })
+    return { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'],
+      battleArea: state.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' && cookie.card.instanceId === source.instanceId })) } } }
+  }
+  return state
+}
+
+/** Local candidate fixture; printed HP is configured by the ordinary deploy command. */
+export type Bs12CakePopsScenario = 'positive' | 'no-host' | 'host-rested' | 'host-support' | 'host-hand' | 'host-trash' | 'host-break' | 'host-equipped' | 'opponent-host' | 'source-rested' | 'one-damage' | 'two-damage' | 'three-damage' | 'other-target' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'deploy' | 'effect-positive' | 'effect-no-host' | 'effect-other-target' | 'effect-zero' | 'effect-cancel-payment' | 'effect-cancel-target'
+
+/** Candidate normal deployment plus a prepared legal named host; no equipment lifecycle ruling is assumed. */
+export const createBs12CakePopsDemoState = (scenario: Bs12CakePopsScenario = 'positive'): GameState => {
+  const effectScenario = scenario.startsWith('effect-')
+  const outgoing = ['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'deploy'].includes(scenario)
+  const owner = outgoing ? 'player-one' : 'player-two'
+  const enemy = outgoing ? 'player-two' : 'player-one'
+  const base = baseTestState(owner, 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-063', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie('BS12-063', 'bs12-063-source')
+  const host = bs12PrintedReferenceCookie('P-069', 'bs12-063-host')
+  const attacker = outgoing ? bs12PrintedReferenceCookie('BS6-008', 'bs12-063-attacker') : getBs12CandidateCookie(scenario === 'one-damage' ? 'BS12-061'
+    : scenario === 'two-damage' ? 'BS12-060' : scenario === 'three-damage' ? 'BS12-063' : 'BS12-019', 'bs12-063-attacker')
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    [owner]: { ...base.players[owner], hand: [source], deck: hp('bs12-063-deck', 12, 4), breakArea: [], discardPile: [], stage: null,
+      battleArea: [], supportArea: outgoing ? [0, 1].slice(0, scenario === 'few-energy' ? 1 : 2).map(i => ({
+        card: scenario === 'wrong-energy' && i === 1 ? getBs12CandidateCookie('BS12-001', `bs12-063-payment-${i}`)
+          : bs12PrintedReferenceCard('ST4-001', `bs12-063-payment-${i}`), rested: scenario === 'rested-energy' && i === 1 })) : [] },
+    [enemy]: { ...base.players[enemy], hand: [], deck: hp('bs12-063-enemy-deck', 12, 10), breakArea: [], discardPile: [], stage: null,
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-063-attacker', attacker.hp), 3)], supportArea: outgoing ? []
+        : Array.from({ length: scenario === 'one-damage' ? 1 : ['two-damage', 'three-damage'].includes(scenario) ? 2 : 3 }, (_, i) => ({
+          card: bs12PrintedReferenceCard('ST4-001', `bs12-063-payment-${i}`), rested: false })) },
+  } }
+  if (scenario === 'deploy') return state
+  state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: owner, instanceId: source.instanceId })
+  const inBattle = !['effect-no-host', 'no-host', 'host-support', 'host-hand', 'host-trash', 'host-break', 'host-equipped', 'opponent-host'].includes(scenario)
+  const hostEntry = { ...cardCheckBattleEntry(host, hp('bs12-063-host', 2, 8), 4), rested: scenario === 'host-rested' }
+  return { ...state, activePlayerId: 'player-one', ...(effectScenario ? { cookiesFaintedThisTurn: { 'player-one': 2, 'player-two': 0 } } : {}), players: { ...state.players,
+    [owner]: { ...state.players[owner], hand: scenario === 'host-hand' ? [host] : [],
+      discardPile: scenario === 'host-trash' ? [host] : [], breakArea: scenario === 'host-break' ? [host] : [],
+      supportArea: scenario === 'host-support' ? [{ card: host, rested: false }] : state.players[owner].supportArea,
+      battleArea: [ { ...state.players[owner].battleArea[0], rested: scenario === 'source-rested',
+        ...(scenario === 'host-equipped' ? { equippedCards: [host] } : {}) }, ...(inBattle ? [hostEntry] : []) ] },
+    [enemy]: { ...state.players[enemy], battleArea: [...state.players[enemy].battleArea, ...(scenario === 'opponent-host' ? [hostEntry] : [])],
+      ...(effectScenario ? { hand: [bs12PrintedReferenceCard('BS11-012', 'bs12-063-damage-item')],
+        supportArea: [0, 1].map(i => ({ card: getBs12CandidateCookie('BS12-001', `bs12-063-payment-${i}`), rested: false })),
+        breakArea: [getBs12CandidateCookie('BS12-001', 'bs12-063-previous-faint-1'), getBs12CandidateCookie('BS12-061', 'bs12-063-previous-faint-2')] } : {}) },
+  } }
+}
+
+export type Bs12RuledEquipScenario = 'equip-positive' | 'equip-rested-source' | 'equip-rested-host' | 'equip-wrong-host' | 'equip-no-energy' | 'equip-wrong-energy' | 'equip-rested-energy' | 'equip-opponent-turn' | 'equip-outside-main' | 'equip-hand-five' | 'equip-hand-six' | 'equip-draw-zero' | 'equip-draw-one' | 'equip-draw-two' | 'equip-cancel-payment' | 'equip-cancel-target' | 'equip-deselect'
+
+/** Actual printed deployment precedes Equip; prepared attached states remain separate controls. */
+const createBs12RuledEquipDemoState = (number: 'BS12-062' | 'BS12-077', scenario: Bs12RuledEquipScenario): GameState => {
+  const before = number === 'BS12-062' ? createBs12AngelLightstickDemoState('equip-blocked') : createBs12SpotlightFanDemoState('equip-blocked')
+  const prefix = number.toLowerCase()
+  const host = before.players['player-one'].battleArea.find(c => c.card.instanceId === prefix + '-host')!
+  const handCount = scenario === 'equip-hand-five' ? 5 : scenario === 'equip-hand-six' ? 6 : 1
+  const wrongHost = scenario === 'equip-wrong-host'
+  const replacementHost = getBs12CandidateCookie(number === 'BS12-062' ? 'BS12-061' : 'BS12-075', host.card.instanceId)
+  const state: GameState = { ...before,
+    activePlayerId: scenario === 'equip-opponent-turn' ? 'player-two' : 'player-one',
+    phase: scenario === 'equip-outside-main' ? 'support' : 'main',
+    players: { ...before.players,
+      'player-one': { ...before.players['player-one'],
+        hand: Array.from({ length: handCount }, (_, i) => getBs12CandidateCookie(i < 4 ? 'BS12-003' : 'BS12-017', prefix + '-equip-hand-' + i)),
+        battleArea: before.players['player-one'].battleArea.map(c => c.card.instanceId === host.card.instanceId
+          ? { ...c, card: wrongHost ? replacementHost : c.card,
+              hpCards: wrongHost ? bs12PrintedFillerCards(number, prefix + '-wrong-host-hp', replacementHost.hp, 21) : c.hpCards,
+              rested: scenario === 'equip-rested-host' }
+          : { ...c, rested: scenario === 'equip-rested-source' }),
+        supportArea: scenario === 'equip-no-energy' ? [] : Array.from({ length: 2 }, (_, i) => ({
+          card: scenario === 'equip-wrong-energy' ? bs12PrintedReferenceCard('BS7-061', prefix + '-payment-' + i)
+            : number === 'BS12-062' ? bs12PrintedReferenceCard(i === 0 ? 'ST4-001' : 'P-069', prefix + '-payment-' + i)
+            : getBs12CandidateCookie('BS12-075', prefix + '-payment-' + i),
+          rested: scenario === 'equip-rested-energy',
+        })),
+      },
+      'player-two': { ...before.players['player-two'], battleArea: before.players['player-two'].battleArea.map(c =>
+        number === 'BS12-077' && c.card.instanceId === prefix + '-blocker'
+          ? { ...c, card: bs12PrintedReferenceCookie('BS4-014', c.card.instanceId) } : c) },
+    },
+  }
+  return state
+}
+
+export type Bs12AngelLightstickScenario = Bs12RuledEquipScenario | 'equipped' | 'hand-five' | 'hand-six' | 'hand-zero' | 'no-equipment' | 'wrong-host' | 'short-deck' | 'refresh' | 'equip-blocked' | 'deploy' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'cancel-payment' | 'cancel-target' | 'draw-zero' | 'draw-one' | 'skip-trigger'
+
+/** Prepared equipped scenarios isolate the attack trigger; equip-* routes use actual deployment. */
+export const createBs12AngelLightstickDemoState = (scenario: Bs12AngelLightstickScenario = 'equipped'): GameState => {
+  if (scenario.startsWith('equip-') && scenario !== 'equip-blocked') return createBs12RuledEquipDemoState('BS12-062', scenario as Bs12RuledEquipScenario)
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-062', id + '-hp', count, offset)
+  const ordinary = ['deploy', 'attack', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn'].includes(scenario)
+  const source = getBs12CandidateCookie('BS12-062', 'bs12-062-source')
+  const host = bs12PrintedReferenceCookie('P-069', 'bs12-062-host')
+  const handCount = scenario === 'hand-five' ? 5 : scenario === 'hand-six' ? 6 : scenario === 'hand-zero' ? 0 : 1
+  const hand = Array.from({ length: handCount }, (_, i) => getBs12CandidateCookie(i < 4 ? 'BS12-003' : 'BS12-017', `bs12-062-hand-${i}`))
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: ordinary || scenario === 'equip-blocked' ? [source] : hand,
+      deck: hp('bs12-062-deck', scenario === 'short-deck' || scenario === 'refresh' ? 1 : 12, 3), breakArea: [],
+      discardPile: scenario === 'refresh' ? [getBs12CandidateCookie('BS12-060', 'bs12-062-refresh-cookie'), ...bs12PrintedFillerCards('BS12-062', 'bs12-062-refresh-trash', 8, 15)] : [], stage: null,
+      battleArea: ordinary ? [] : [{ ...cardCheckBattleEntry(scenario === 'wrong-host' ? getBs12CandidateCookie('BS12-061', host.instanceId) : host, hp('bs12-062-host', 2), 1),
+        ...(scenario === 'equip-blocked' || scenario === 'no-equipment' ? {} : { equippedCards: [source] }) }],
+      supportArea: Array.from({ length: ordinary ? scenario === 'few-energy' ? 1 : 2 : 1 }, (_, i) => ({
+        card: bs12PrintedReferenceCard(ordinary ? scenario === 'wrong-energy' ? 'BS7-061' : i === 0 ? 'ST4-001' : 'P-069' : scenario === 'wrong-host' || scenario === 'equip-blocked' ? 'ST4-001' : 'P-069', `bs12-062-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 0 })) },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-062-enemy-deck', 12, 10), breakArea: [], discardPile: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-062-opponent'), hp('bs12-062-opponent', 6), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-062-opponent-other'), hp('bs12-062-opponent-other', 4, 6), 4)] },
+  } }
+  if (scenario === 'deploy') return state
+  if (ordinary || scenario === 'equip-blocked') state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  return { ...state, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...state.players,
+    'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' })) } } }
+}
+
+export type Bs12CreamPuffScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'top-only' | 'short-deck' | 'empty-deck' | 'deploy' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'draw-zero' | 'draw-one' | 'skip-skill' | 'cancel-confirm' | 'cancel-payment' | 'cancel-target'
+
+/** Normal deployment configures five HP before the actual bottom card is sampled by On Play. */
+export type Bs12FanLetterScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'no-hand' | 'short-deck' | 'empty-deck' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'disabled' | 'used' | 'main' | 'draw-zero' | 'skip-then' | 'zero-target' | 'other-target' | 'cancel-payment' | 'cancel-target' | 'cancel-then'
+
+export type Bs12EndingPoseScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'top-only' | 'short-deck' | 'refresh-defeat' | 'empty-deck' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'disabled' | 'used' | 'main' | 'zero-target' | 'other-target' | 'cancel-payment' | 'back-energy'
+
+export type Bs12ComebackStageScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'top-only' | 'short-deck' | 'refresh-defeat' | 'empty-deck' | 'replace' | 'placed' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'one-energy' | 'activation-no-energy' | 'activation-wrong-energy' | 'activation-rested-energy' | 'rested-source' | 'opponent-turn' | 'outside-main'
+
+export type Bs12MultivitaminScenario = 'positive' | 'difference-one' | 'equal-support' | 'more-own' | 'large-gap' | 'all-opponent-rested' | 'non-cookie-support' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'opponent-turn' | 'outside-main' | 'short-deck' | 'refresh-defeat' | 'empty-deck' | 'no-refresh-cookie'
+
+export type Bs12PhotocardScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'top-only' | 'short-deck' | 'refresh-defeat' | 'no-refresh-cookie' | 'empty-deck' | 'no-energy' | 'one-energy' | 'wrong-energy' | 'mixed-energy' | 'rested-energy' | 'opponent-turn' | 'outside-main' | 'target-faints' | 'target-rested' | 'flip'
+export const createBs12PhotocardDemoState = (scenario: Bs12PhotocardScenario = 'positive'): GameState => {
+  const base = createBs12CreamPuffDemoState('attack')
+  const result = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-069') as OfficialCardRecord)
+  if (result.status !== 'converted' || !result.gameCard.item) throw new Error('Missing Pop Pop Photocard')
+  const bottomScenario = ['green-arena', 'red-arena', 'yellow-arena', 'non-arena', 'level-one', 'level-three', 'arena-item', 'top-only'].includes(scenario) ? scenario as Bs12CreamPuffScenario : 'positive'
+  const bottom = { ...createBs12CreamPuffDemoState(bottomScenario).players['player-one'].deck.at(-1)!, instanceId: 'bs12-069-bottom' }
+  const deck = scenario === 'empty-deck' ? [] : ['short-deck', 'refresh-defeat', 'no-refresh-cookie'].includes(scenario) ? [bottom]
+    : [...bs12PrintedFillerCards('BS12-069', 'bs12-069-deck', 11, 5), bottom]
+  if (scenario === 'top-only') deck[0] = getBs12CandidateCookie('BS12-060', 'bs12-069-top')
+  const flipHand = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-027') as OfficialCardRecord)
+  if (flipHand.status !== 'converted') throw new Error('Missing Arena flip cost')
+  return { ...base, phase: scenario === 'outside-main' ? 'support' : 'main', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: {
+    'player-one': { ...base.players['player-one'], hand: [{ ...result.gameCard, instanceId: 'bs12-069-item' }], deck, stage: null,
+      discardPile: [...(scenario === 'no-refresh-cookie' ? [] : [getBs12CandidateCookie('BS12-059', 'bs12-069-refresh-cookie')]), ...bs12PrintedFillerCards('BS12-069', 'bs12-069-trash', 7, 17)],
+      breakArea: scenario === 'refresh-defeat' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-059', `bs12-069-break-${i}`)) : [],
+      supportArea: scenario === 'no-energy' ? [] : Array.from({ length: scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({
+        card: bs12PrintedReferenceCard(scenario === 'wrong-energy' || scenario === 'mixed-energy' && i === 1 ? 'BS7-061' : 'ST4-001', `bs12-069-payment-${i}`), rested: scenario === 'rested-energy' && i === 1 })) },
+    'player-two': { ...base.players['player-two'], hand: scenario === 'flip' ? [{ ...flipHand.gameCard, instanceId: 'bs12-069-flip-cost' }] : [],
+      battleArea: base.players['player-two'].battleArea.map((entry, i) => i !== 0 ? entry : { ...entry,
+        card: scenario === 'target-faints' ? bs12PrintedReferenceCookie('BS6-017',entry.card.instanceId) : entry.card,
+        rested: scenario === 'target-rested', hpCards: scenario === 'target-faints' ? entry.hpCards.slice(0, 1) : scenario === 'flip' ? [...entry.hpCards.slice(0, -1), getBs12CandidateCookie('BS12-058', 'bs12-069-flip')] : entry.hpCards }) },
+  } }
+}
+
+export type Bs12IcePopScenario = 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'non-arena' | 'level-one' | 'level-three' | 'arena-item' | 'top-only' | 'short-deck' | 'refresh-defeat' | 'no-refresh-cookie' | 'empty-deck' | 'no-energy' | 'one-energy' | 'wrong-energy' | 'mixed-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'outside-main' | 'two-cookies' | 'equipped' | 'once-used' | 'hand-decoy'
+export const createBs12IcePopDemoState = (scenario: Bs12IcePopScenario = 'positive', number: 'BS12-071' | 'BS12-071@1' = 'BS12-071'): GameState => {
+  const base = createBs12PhotocardDemoState(['source-rested', 'two-cookies', 'equipped', 'once-used', 'hand-decoy'].includes(scenario) ? 'positive' : scenario as Bs12PhotocardScenario)
+  const player = base.players['player-one']
+  const hp = (id:string,count:number,offset=0)=>bs12PrintedFillerCards(number,id,count,offset)
+  const sourceCard = getBs12CandidateCookie(number, 'bs12-071-source')
+  const source = { ...cardCheckBattleEntry(sourceCard,hp('bs12-071-source-hp',3),1),
+    battleEntryId: 'bs12-071-source:battle:ice-pop', rested: scenario === 'source-rested',
+    ...(scenario === 'equipped' ? { equippedCards: [bs12PrintedReferenceCard('ST4-001', 'bs12-071-equipment')] } : {}),
+  }
+  let state: GameState = { ...base, commandLog: [], players: { ...base.players, 'player-one': { ...player,
+    hand: scenario === 'hand-decoy' ? [getBs12CandidateCookie('BS12-060', 'bs12-071-hand-decoy')] : [],
+    battleArea: [source, ...(scenario === 'two-cookies' ? [{ ...player.battleArea[0],
+      card: { ...player.battleArea[0].card, instanceId: 'bs12-071-ally' }, hpCards: hp('bs12-071-ally-hp',5,3), battleEntryId: 'bs12-071-ally:battle' }] : [])],
+  } } }
+  if (scenario === 'once-used') state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one',
+    sourceInstanceId: sourceCard.instanceId, trigger: 'activate', paymentIds: [] })
+  if (scenario === 'once-used') {
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-reveal-top-deck', playerId: 'player-one' })
+    state = applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'skip' })
+  }
+  return state
+}
+
+export type Bs12CreamSodaScenario = 'then-positive' | 'then-level-one' | 'then-level-three' | 'then-non-arena' | 'then-item' | 'then-red' | 'then-yellow' | 'then-green' | 'then-purple' | 'then-black' | 'then-no-hand' | 'then-wrong-energy' | 'then-one-energy' | 'then-faints' | 'then-cost-cookie' | 'then-cost-stage' | 'then-cost-trap' | 'positive' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'level-one' | 'level-three' | 'non-arena' | 'rested-target' | 'equipped-target' | 'same-name' | 'no-target' | 'hand-only' | 'support-only' | 'stage-only' | 'no-energy' | 'one-energy' | 'wrong-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'outside-main' | 'once-used' | 'short-deck' | 'awakened-target'
+export type Bs12DjMiyaScenario = 'positive' | 'deploy' | 'green-arena' | 'red-arena' | 'yellow-arena' | 'level-one' | 'level-three' | 'non-arena' | 'arena-item' | 'top-only' | 'same-name' | 'same-name-alt' | 'five' | 'seven' | 'empty-deck' | 'short-deck' | 'receiver' | 'receiver-mismatch' | 'attack' | 'attack-item-cost' | 'attack-equipped' | 'attack-ally' | 'attack-no-hand' | 'attack-one-energy' | 'attack-wrong-energy' | 'attack-rested-energy' | 'attack-source-rested' | 'attack-opponent-turn' | 'attack-outside-main' | 'attack-target-faints' | 'attack-flip' | 'attack-awakened' | 'refresh-defeat' | 'no-refresh-cookie' | 'onplay-opponent-turn' | 'onplay-source-rested'
+
+export const BS12_POPPING_CANDY_SCENARIOS = [
+  'extra', 'extra-no-event', 'extra-non-arena', 'extra-top', 'extra-hand', 'extra-support', 'extra-opponent', 'extra-old-turn', 'extra-full', 'extra-used', 'extra-opponent-turn', 'extra-outside-main',
+  'onplay', 'onplay-first', 'onplay-short', 'onplay-refresh-defeat', 'onplay-no-refresh-cookie',
+  'positive', 'green-arena', 'red-arena', 'yellow-arena', 'bottom-dj', 'level-one', 'level-three', 'non-arena', 'arena-item', 'top-only', 'empty-deck', 'short-deck', 'refresh-defeat', 'no-refresh-cookie',
+  'one-energy', 'two-energy', 'wrong-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'target-last-hp', 'other-last-hp', 'target-faints', 'flip', 'ordinary-flip',
+] as const
+export type Bs12PoppingCandyScenario = typeof BS12_POPPING_CANDY_SCENARIOS[number]
+
+/** Candidate-only fixtures; legal EXTRA history is obtained with actual BS12-072 commands. */
+export const createBs12PoppingCandyDemoState = (scenario: Bs12PoppingCandyScenario = 'positive', number: 'BS12-074' | 'BS12-074@1' = 'BS12-074'): GameState => {
+  const base = createBs12CreamSodaDemoState()
+  const converted = convertOfficialCardToExtraDeckCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+  if (converted.status !== 'converted') throw new Error('Missing Popping Candy EXTRA')
+  const extra = { ...converted.extraDeckCard, instanceId: 'bs12-074-source' }
+  let fillerOffset=0
+  const hp = (prefix:string,count:number):GameCard[] => { const cards=bs12PrintedFillerCards(number,prefix,count,fillerOffset);fillerOffset+=count;return cards }
+  const own = base.players['player-one']
+  const target = getBs12CandidateCookie('BS12-060', 'bs12-074-event-target')
+  const blue = getBs12CandidateCookie('BS12-061', 'bs12-074-payment-template')
+  const noMovement = ['extra-no-event', 'extra-hand', 'extra-support'].includes(scenario)
+  let state: GameState = { ...base, firstPlayerId: scenario.startsWith('onplay') && scenario !== 'onplay-first' ? 'player-two' : 'player-one', commandLog: [],
+    players: { ...base.players,
+      'player-one': { ...own, discardPile: [], breakArea: [], hand: scenario === 'extra-hand' ? [target] : [], extraDeck: [extra],
+        deck: hp('bs12-074-deck', 20),
+        battleArea: [{ ...own.battleArea[0], hpCards: hp('bs12-074-ally-hp', 3) },
+          ...(!noMovement ? [cardCheckBattleEntry(scenario === 'extra-non-arena' ? bs12PrintedReferenceCookie('ST4-001', target.instanceId) : target, hp('bs12-074-event-hp', 2), 1)] : [])],
+        supportArea: Array.from({ length: 4 }, (_, index) => ({ card: index===3 ? bs12PrintedReferenceCookie('ST4-001',`bs12-074-payment-${index}`) : { ...blue, instanceId: `bs12-074-payment-${index}` }, rested: false })),
+      },
+      'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-074-opponent-deck', 12),
+        battleArea: base.players['player-two'].battleArea.map((cookie, index) => ({ ...cookie, hpCards: hp(`bs12-074-opponent-${index}-hp`, index === 0 ? 6 : 4) })),
+      },
+    },
+  }
+  if (scenario === 'extra-support') state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], supportArea: [...state.players['player-one'].supportArea, { card: target, rested: false }] } } }
+  if (!noMovement) {
+    if (['extra-non-arena', 'extra-top', 'extra-opponent'].includes(scenario)) {
+      // Isolated event counterexamples: execute the actual movement, without inventing a printed 072 target.
+      if (scenario === 'extra-opponent') state = { ...state, players: { ...state.players, 'player-two': { ...state.players['player-two'], battleArea: [state.players['player-two'].battleArea[0], cardCheckBattleEntry(target, hp('bs12-074-foreign-event-hp', 2), 1)] }, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.slice(0, 1) } } }
+      state = executeCardEffect(state, { sourcePlayerId: 'player-one', sourceInstanceId: 'bs12-072-source' }, { kind: scenario === 'extra-top' ? 'battle-to-deck-top' : 'field-to-deck-bottom', target: { side: scenario === 'extra-opponent' ? 'opponent' : 'self', min: 1, max: 1 } }, [target.instanceId])
+    } else {
+      state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-072-source', trigger: 'activate', paymentIds: ['bs12-074-payment-0'] })
+      state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [target.instanceId] })
+    }
+    if (state.pendingReplacement) state = applyGameCommand(state, { kind: 'skip-replacement', playerId: state.pendingReplacement.tasks[0].playerId })
+  }
+  if (scenario === 'extra-old-turn') state = advancePhase(advancePhase(state))
+  if (scenario === 'extra-full') state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: [...state.players['player-one'].battleArea, cardCheckBattleEntry(getBs12CandidateCookie('BS12-061', 'bs12-074-capacity'), hp('bs12-074-capacity-hp', 2), 2)] } } }
+  if (scenario.startsWith('extra')) return { ...state, extraDeckPlayUsedThisTurn: scenario === 'extra-used', activePlayerId: scenario === 'extra-opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'extra-outside-main' ? 'support' : 'main' }
+  if (scenario.startsWith('onplay') && ['onplay-short', 'onplay-refresh-defeat', 'onplay-no-refresh-cookie'].includes(scenario)) state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], deck: [...hp('bs12-074-short-entry', 5), state.players['player-one'].deck.at(-1)!] } } }
+  state = applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: extra.instanceId })
+  if (!scenario.startsWith('onplay') && state.pendingOnPlay) state = applyGameCommand(state, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: extra.instanceId })
+  let bottom = state.players['player-one'].deck.at(-1)!
+  if (!scenario.startsWith('onplay')) {
+    const shared = ['green-arena', 'red-arena', 'yellow-arena', 'level-one', 'level-three', 'non-arena', 'arena-item', 'top-only'].includes(scenario) ? scenario as Bs12CreamPuffScenario : 'positive'
+    bottom = scenario === 'bottom-dj' ? getBs12CandidateCookie('BS12-073', 'bs12-074-bottom') : { ...createBs12CreamPuffDemoState(shared).players['player-one'].deck.at(-1)!, instanceId: 'bs12-074-bottom' }
+  }
+  const refresh = ['short-deck', 'refresh-defeat', 'no-refresh-cookie', 'onplay-short', 'onplay-refresh-defeat', 'onplay-no-refresh-cookie'].includes(scenario)
+  const refreshDefeat = ['refresh-defeat', 'onplay-refresh-defeat'].includes(scenario)
+  state = { ...state, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main', players: { ...state.players,
+    'player-one': { ...state.players['player-one'],
+      deck: scenario === 'empty-deck' ? [] : refresh ? [bottom] : [...state.players['player-one'].deck.slice(0, -1), bottom],
+      discardPile: scenario.includes('no-refresh-cookie') ? hp('bs12-074-refresh-trash',8)
+        : refresh ? [...state.players['player-one'].discardPile, getBs12CandidateCookie('BS12-059', 'bs12-074-refresh-cookie'), ...hp('bs12-074-refresh-trash', 8)] : state.players['player-one'].discardPile,
+      breakArea: refreshDefeat ? ['BS12-019', 'BS12-040', 'BS12-060'].map((n, index) => getBs12CandidateCookie(n, `bs12-074-break-${index}`)) : state.players['player-one'].breakArea,
+      supportArea: state.players['player-one'].supportArea.filter((_, index) => scenario === 'one-energy' ? index < 2 : scenario === 'two-energy' ? index < 3 : true).map((support, index) => ({ ...support,
+        rested: support.rested || scenario === 'rested-energy', card: scenario === 'wrong-energy' && index === 3 ? getBs12CandidateCookie('BS12-001', support.card.instanceId) : support.card,
+      })),
+      battleArea: state.players['player-one'].battleArea.map(cookie => cookie.card.instanceId === extra.instanceId && scenario === 'source-rested' ? { ...cookie, rested: true } : cookie),
+    },
+    'player-two': { ...state.players['player-two'], battleArea: state.players['player-two'].battleArea.map((cookie, index) => ({ ...cookie,
+      card: scenario==='target-last-hp' && index===0 ? getBs12CandidateCookie('BS12-019',cookie.card.instanceId)
+        : scenario==='target-faints' && index===0 ? getBs12CandidateCookie('BS12-075',cookie.card.instanceId)
+          : scenario==='other-last-hp' && index===1 ? bs12PrintedReferenceCookie('BS6-017',cookie.card.instanceId) : cookie.card,
+      hpCards: scenario === 'target-last-hp' && index === 0 ? cookie.hpCards.slice(0, 4) : scenario === 'target-faints' && index === 0 ? cookie.hpCards.slice(0, 3) : scenario === 'other-last-hp' && index === 1 ? cookie.hpCards.slice(0, 1)
+        : ['flip', 'ordinary-flip'].includes(scenario) && index === 0 ? cookie.hpCards.map((card, hpIndex) => hpIndex === (scenario === 'flip' ? 2 : 5) ? getBs12CandidateCookie('BS12-058', 'bs12-074-flip') : card) : cookie.hpCards,
+    })) },
+  } }
+  return state
+}
+
+export type Bs12GnomeBandScenario = 'positive' | 'deploy' | 'four' | 'six' | 'repeat' | 'source-rested' | 'no-hand' | 'opponent-turn' | 'outside-main' | 'item-cost' | 'non-arena-cost' | 'same-name-cost' | 'receiver' | 'attack' | 'attack-one-energy' | 'attack-wrong-energy' | 'attack-rested-energy' | 'attack-source-rested' | 'attack-opponent-turn' | 'attack-outside-main' | 'attack-flip' | 'attack-target-faints'
+
+export type Bs12SpotlightFanScenario = Bs12RuledEquipScenario | 'equipped' | 'no-equipment' | 'wrong-host' | 'other-attacker' | 'defender' | 'defender-no-equipment' | 'defender-rested-blocker' | 'defender-trap' | 'flip' | 'equip-blocked' | 'deploy' | 'attack' | 'mixed-energy' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'outside-main'
+
+/** Attached fixtures isolate the confirmed battle text; they do not execute unresolved Cookie Equip. */
+export type Bs12OnionScenario = 'positive' | 'four' | 'six' | 'no-hand' | 'wrong-color' | 'non-arena' | 'split-cost' | 'item-cost' | 'stage-cost' | 'trap-cost' | 'last-hp' | 'decline' | 'receiver' | 'deploy' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'outside-main'
+
+/** Candidate-only; FLIP is revealed through real attack commands, never inserted as a pending effect. */
+export const createBs12OnionDemoState = (scenario: Bs12OnionScenario = 'positive'): GameState => {
+  const ordinary = ['deploy', 'attack', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const receiver = scenario === 'receiver'
+  const holder = ordinary || !receiver ? 'player-one' : 'player-two'
+  const attacker = holder === 'player-one' ? 'player-two' : 'player-one'
+  const actor = ordinary ? holder : attacker
+  const base = baseTestState(actor, 'main')
+  let fillerOffset=0
+  const hp=(prefix:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-078',prefix,count,fillerOffset);fillerOffset+=count;return cards}
+  const source = getBs12CandidateCookie('BS12-078', 'bs12-078-source')
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-086' : 'BS12-075'
+  const convertedCost = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === costNumber) as OfficialCardRecord)
+  if (convertedCost.status !== 'converted') throw new Error('Missing Onion hand-cost reference')
+  const cost = scenario === 'wrong-color' ? getBs12CandidateCookie('BS12-001', 'bs12-078-cost')
+    : ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCookie('BS4-090', 'bs12-078-cost')
+    : { ...convertedCost.gameCard, instanceId: 'bs12-078-cost' }
+  const attackerHand = Array.from({ length: scenario === 'four' ? 4 : scenario === 'six' ? 6 : 5 }, (_, i) =>
+    getBs12CandidateCookie(['BS12-001', 'BS12-019', 'BS12-040', 'BS12-060', 'BS12-075'][i % 5], `bs12-078-receiver-hand-${i}`))
+  let state: GameState = { ...base, turnNumber: 2, commandLog: [], players: { ...base.players,
+    [holder]: { ...base.players[holder], hand: ordinary ? [source] : scenario === 'no-hand' ? [] : [cost,
+      ...(scenario === 'split-cost' ? [getBs12CandidateCookie('BS12-001', 'bs12-078-red-arena-cost')] : [])],
+      deck: hp('bs12-078-holder-deck', 12), breakArea: [], discardPile: [], stage: null,
+      battleArea: ordinary ? [] : [cardCheckBattleEntry(scenario==='last-hp'?bs12PrintedReferenceCookie('BS6-017','bs12-078-bearer'):getBs12CandidateCookie('BS12-001','bs12-078-bearer'),
+        [...hp('bs12-078-bearer-hp', scenario === 'last-hp' ? 0 : 3), source], 1),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-078-ally'), hp('bs12-078-ally-hp', 4), 2)],
+      supportArea: ordinary ? Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: getBs12CandidateCookie(scenario === 'wrong-energy' && i === 2 ? 'BS12-001' : 'BS12-075', `bs12-078-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 0 })) : [] },
+    [attacker]: { ...base.players[attacker], hand: ordinary ? [] : attackerHand,
+      deck: hp('bs12-078-attacker-deck', 12), breakArea: [], discardPile: [], stage: null,
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(ordinary ? 'BS12-001' : 'BS12-003', 'bs12-078-attacker'), hp('bs12-078-attacker-hp',ordinary?4:2), 3),
+        ...(ordinary ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-078-opponent-other'), hp('bs12-078-other-hp', 4), 4)] : [])],
+      supportArea: ordinary ? [] : [{ card: getBs12CandidateCookie('BS12-075', 'bs12-078-attacker-payment'), rested: false }] },
+  } }
+  if (ordinary) {
+    if (scenario !== 'deploy') state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: holder, instanceId: source.instanceId })
+    return { ...state, activePlayerId: scenario === 'opponent-turn' ? attacker : holder, phase: scenario === 'outside-main' ? 'support' : 'main',
+      players: { ...state.players, [holder]: { ...state.players[holder], battleArea: state.players[holder].battleArea.map(c => ({ ...c, rested: scenario === 'source-rested' })) } } }
+  }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: attacker, attackerInstanceId: 'bs12-078-attacker', targetInstanceId: 'bs12-078-bearer', supportPaymentIds: ['bs12-078-attacker-payment'] })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: holder })
+  state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: holder })
+  if (receiver) state = applyGameCommand(state, { kind: 'resolve-flip', playerId: holder, activate: true, discardHandIds: ['bs12-078-cost'] })
+  return state
+}
+
+export const createBs12SpotlightFanDemoState = (scenario: Bs12SpotlightFanScenario = 'equipped'): GameState => {
+  if (scenario.startsWith('equip-') && scenario !== 'equip-blocked') return createBs12RuledEquipDemoState('BS12-077', scenario as Bs12RuledEquipScenario)
+  const base = baseTestState('player-one', 'main')
+  const ordinary = ['deploy', 'attack', 'mixed-energy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const defenderMode = scenario.startsWith('defender')
+  const actor = defenderMode ? 'player-two' : 'player-one'
+  const defender = defenderMode ? 'player-one' : 'player-two'
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-077',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const source = getBs12CandidateCookie('BS12-077', 'bs12-077-source')
+  const host = scenario === 'wrong-host' ? getBs12CandidateCookie('BS12-075', 'bs12-077-host') : bs12PrintedReferenceCookie('BS4-090', 'bs12-077-host')
+  const noEquip = ordinary || ['equip-blocked', 'no-equipment', 'defender-no-equipment', 'defender-rested-blocker'].includes(scenario)
+  const blocker = bs12PrintedReferenceCookie('BS4-014', 'bs12-077-blocker')
+  const trap = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-065') as OfficialCardRecord)
+  if (trap.status !== 'converted' || trap.gameCard.type !== 'trap') throw new Error('Missing Festival Arena Trap')
+  let state: GameState = { ...base, turnNumber: 2, activePlayerId: actor, players: { ...base.players,
+    [actor]: { ...base.players[actor], hand: ordinary || ['equip-blocked','no-equipment'].includes(scenario) ? [source] : [], deck: hp('bs12-077-deck', 12), breakArea: [], discardPile: [], stage: null,
+      battleArea: ordinary ? [] : [{ ...cardCheckBattleEntry(host, hp('bs12-077-host', host.hp), 1), ...(noEquip ? {} : { equippedCards: [source] }) },
+        ...(scenario === 'other-attacker' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-075', 'bs12-077-other-attacker'), hp('bs12-077-other-attacker', 3), 2)] : [])],
+      supportArea: Array.from({ length: ordinary ? scenario === 'few-energy' ? 1 : 2 : scenario === 'other-attacker' ? 3 : scenario === 'wrong-host' ? 2 : 1 }, (_, i) => ({
+        card: getBs12CandidateCookie(scenario === 'wrong-energy' || scenario === 'mixed-energy' && i === 1 ? 'BS12-001' : 'BS12-075', `bs12-077-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 0 })) },
+    [defender]: { ...base.players[defender], hand: scenario === 'defender-trap' ? [{ ...trap.gameCard, instanceId: 'bs12-077-trap' }] : scenario === 'flip' ? [getBs12CandidateCookie('BS12-001', 'bs12-077-flip-cost')] : [],
+      deck: hp('bs12-077-enemy-deck', 12), breakArea: [], discardPile: [], stage: null,
+      supportArea: scenario === 'defender-trap' ? [{ card: bs12PrintedReferenceCard('ST4-001', 'bs12-077-trap-payment'), rested: false }] : [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-077-opponent'),
+        scenario === 'flip' ? [...hp('bs12-077-opponent', 3), getBs12CandidateCookie('BS12-002', 'bs12-077-flip')] : hp('bs12-077-opponent', 4), 3),
+        { ...cardCheckBattleEntry(ordinary || scenario === 'equip-blocked' ? getBs12CandidateCookie('BS12-001', blocker.instanceId) : blocker,
+          hp('bs12-077-blocker', blocker.hp), 4), rested: scenario === 'defender-rested-blocker' }] },
+  } }
+  if (scenario !== 'deploy' && (ordinary || scenario === 'equip-blocked')) state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: actor, instanceId: source.instanceId })
+  if (ordinary) state = { ...state, phase: scenario === 'outside-main' ? 'support' : 'main', activePlayerId: scenario === 'opponent-turn' ? defender : actor,
+    players: { ...state.players, [actor]: { ...state.players[actor], battleArea: state.players[actor].battleArea.map(entry => ({ ...entry, rested: scenario === 'source-rested' })) } } }
+  if (defenderMode) state = applyGameCommand(state, { kind: 'declare-attack', playerId: actor, attackerInstanceId: host.instanceId,
+    targetInstanceId: 'bs12-077-opponent', supportPaymentIds: state.players[actor].supportArea.map(s => s.card.instanceId) })
+  return state
+}
+
+export const createBs12GnomeBandDemoState = (scenario: Bs12GnomeBandScenario = 'positive', number: 'BS12-075' | 'BS12-075@1' = 'BS12-075'): GameState => {
+  const base = baseTestState('player-one','main')
+  const hp = (id:string,count:number,offset=0)=>bs12PrintedFillerCards(number,id,count,offset)
+  const source = getBs12CandidateCookie(number, 'bs12-075-source')
+  const actor = scenario === 'receiver' ? 'player-two' : 'player-one'
+  const receiver = actor === 'player-one' ? 'player-two' : 'player-one'
+  const itemResult = scenario === 'item-cost' ? convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-027') as OfficialCardRecord) : null
+  if (itemResult && itemResult.status !== 'converted') throw new Error('Missing Gnome Band item cost')
+  const cost = itemResult?.status === 'converted' ? { ...itemResult.gameCard, instanceId: 'bs12-075-cost' }
+    : scenario === 'non-arena-cost' ? bs12PrintedReferenceCard('ST4-001', 'bs12-075-cost')
+    : getBs12CandidateCookie(scenario === 'same-name-cost' ? number : 'BS12-001', 'bs12-075-cost')
+  const handCount = scenario === 'four' ? 4 : ['six', 'repeat'].includes(scenario) ? 6 : 5
+  const hand = Array.from({ length: handCount }, (_, i) => getBs12CandidateCookie(['BS12-001', 'BS12-019', 'BS12-040', 'BS12-060'][i % 4], `bs12-075-receiver-hand-${i}`))
+  let state: GameState = { ...base, turnNumber:2, commandLog:[], activePlayerId: actor, players: { ...base.players,
+    [actor]: { ...base.players[actor], deck:hp('bs12-075-actor-deck',12),discardPile:[],breakArea:[],stage:null, hand: [source, cost, ...(scenario === 'repeat' ? [getBs12CandidateCookie('BS12-016', 'bs12-075-ready-source'), getBs12CandidateCookie('BS12-019', 'bs12-075-second-cost')] : [])], battleArea: [],
+      supportArea: Array.from({ length: scenario === 'attack-one-energy' ? 1 : 2 }, (_, i) => ({
+        card: getBs12CandidateCookie(scenario === 'attack-wrong-energy' && i === 1 ? 'BS12-061' : number, `bs12-075-support-${i}`),
+        rested: scenario === 'attack-rested-energy',
+      })) },
+    [receiver]: { ...base.players[receiver], hand, deck:hp('bs12-075-receiver-deck',12,10),discardPile:[],breakArea:[],stage:null,
+      battleArea:[cardCheckBattleEntry(scenario==='attack-target-faints'?getBs12CandidateCookie('BS12-060','bs12-064-opponent'):bs12PrintedReferenceCookie('BS6-008','bs12-064-opponent'),
+        scenario==='attack-target-faints'?hp('bs12-075-opponent-hp',2):scenario==='attack-flip'?[...hp('bs12-075-opponent-hp',5),getBs12CandidateCookie('BS12-058','bs12-075-flip')]:hp('bs12-075-opponent-hp',6),1),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001','bs12-064-opponent-other'),hp('bs12-075-opponent-other-hp',4,6),2)] },
+  } }
+  if (scenario === 'deploy') return state
+  if (scenario === 'repeat') state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: actor, instanceId: 'bs12-075-ready-source' })
+  state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: actor, instanceId: source.instanceId })
+  if (scenario === 'receiver') {
+    state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: actor, sourceInstanceId: source.instanceId, trigger: 'activate', paymentIds: [], discardHandIds: [cost.instanceId] })
+    return applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: actor, targetIds: [] })
+  }
+  return { ...state, activePlayerId: ['opponent-turn', 'attack-opponent-turn'].includes(scenario) ? receiver : actor,
+    phase: ['outside-main', 'attack-outside-main'].includes(scenario) ? 'support' : state.phase,
+    players: { ...state.players, [actor]: { ...state.players[actor],
+      hand: scenario === 'no-hand' ? [] : state.players[actor].hand,
+      battleArea: state.players[actor].battleArea.map(entry => ({ ...entry, rested: ['source-rested', 'attack-source-rested'].includes(scenario) })),
+    } },
+  }
+}
+
+export const createBs12DjMiyaDemoState = (scenario: Bs12DjMiyaScenario = 'positive', number: 'BS12-073' | 'BS12-073@1' = 'BS12-073'): GameState => {
+  const base = createBs12CreamPuffDemoState('deploy')
+  const source = getBs12CandidateCookie(number, 'bs12-073-source')
+  const shared = ['green-arena', 'red-arena', 'yellow-arena', 'level-one', 'level-three', 'non-arena', 'arena-item', 'top-only'].includes(scenario)
+    ? scenario as Bs12CreamPuffScenario : 'positive'
+  const bottom = scenario === 'same-name' || scenario === 'same-name-alt'
+    ? getBs12CandidateCookie(scenario === 'same-name-alt' ? (number === 'BS12-073' ? 'BS12-073@1' : 'BS12-073') : number, 'bs12-073-bottom')
+    : { ...createBs12CreamPuffDemoState(shared).players['player-one'].deck.at(-1)!, instanceId: 'bs12-073-bottom' }
+  const cost = scenario === 'attack-item-cost'
+    ? { ...createBs12CreamPuffDemoState('arena-item').players['player-one'].deck.at(-1)!, instanceId: 'bs12-073-cost' }
+    : getBs12CandidateCookie('BS12-001', 'bs12-073-cost')
+  const actualHand = (count: number) => Array.from({ length: count }, (_, i) =>
+    getBs12CandidateCookie(['BS12-001', 'BS12-019', 'BS12-040', 'BS12-060'][i % 4], `bs12-073-opponent-hand-${i}`))
+  const attack = scenario.startsWith('attack')
+  const receiver = scenario.startsWith('receiver')
+  const actor = receiver ? 'player-two' : 'player-one'
+  let state: GameState = { ...base, activePlayerId: actor, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: receiver ? actualHand(6) : [source, cost],
+      battleArea: receiver ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-073-receiver-cookie'), base.players['player-one'].deck.slice(0, 4), 1)] : [],
+      deck: receiver ? base.players['player-one'].deck.slice(4) : [...base.players['player-one'].deck.slice(0, -1), ...(scenario === 'top-only' ? [getBs12CandidateCookie('BS12-060', 'bs12-073-middle-match')] : []), bottom],
+      supportArea: base.players['player-one'].supportArea.slice(0, scenario === 'attack-one-energy' ? 1 : 2)
+        .map((support, i) => ({ ...support, rested: scenario === 'attack-rested-energy',
+          card: scenario === 'attack-wrong-energy' && i === 1 ? bs12PrintedReferenceCard('BS7-061', support.card.instanceId) : support.card })) },
+    'player-two': { ...base.players['player-two'], hand: receiver ? [source] : scenario === 'attack-target-faints' ? [] : actualHand(scenario === 'five' ? 5 : scenario === 'seven' ? 7 : 6),
+      battleArea: receiver ? [] : base.players['player-two'].battleArea.map((entry, i) => ({ ...entry,
+        card: scenario === 'attack-target-faints' && i === 0 ? getBs12CandidateCookie('BS12-060',entry.card.instanceId) : entry.card,
+        hpCards: scenario === 'attack-target-faints' && i === 0 ? entry.hpCards.slice(0, 2)
+          : scenario === 'attack-flip' && i === 0 ? [...entry.hpCards.slice(0, -1), getBs12CandidateCookie('BS12-058', 'bs12-073-flip')] : entry.hpCards })),
+      deck: receiver ? [...base.players['player-two'].deck.slice(0, -1), scenario === 'receiver-mismatch' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-073-bottom') : bottom] : base.players['player-two'].deck },
+  } }
+  if (scenario === 'deploy') return state
+  state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: actor, instanceId: source.instanceId })
+  if (receiver) {
+    state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: actor, sourceInstanceId: source.instanceId, trigger: 'on-play', paymentIds: [], targetIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-reveal-top-deck', playerId: actor })
+    return applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: actor, targetIds: [] })
+  }
+  if (attack) state = applyGameCommand(state, { kind: 'skip-on-play', playerId: actor, sourceInstanceId: source.instanceId })
+  const own = state.players['player-one']
+  return { ...state, activePlayerId: ['attack-opponent-turn', 'onplay-opponent-turn'].includes(scenario) ? 'player-two' : 'player-one', phase: scenario === 'attack-outside-main' ? 'support' : state.phase,
+    players: { ...state.players, 'player-one': { ...own,
+      hand: scenario === 'attack-no-hand' ? [] : own.hand,
+      deck: scenario === 'empty-deck' ? [] : ['short-deck', 'refresh-defeat', 'no-refresh-cookie'].includes(scenario) ? own.deck.slice(-1) : own.deck,
+      breakArea: scenario === 'refresh-defeat' ? ['BS12-019', 'BS12-040', 'BS12-060'].map((cardNumber, i) => getBs12CandidateCookie(cardNumber, `bs12-073-break-${i}`)) : own.breakArea,
+      discardPile: ['short-deck', 'refresh-defeat', 'no-refresh-cookie'].includes(scenario) ? [...own.discardPile,
+        ...(scenario === 'no-refresh-cookie' ? [] : [getBs12CandidateCookie('BS12-059', 'bs12-073-refresh-cookie')]),
+        ...base.players['player-two'].deck.slice(0, 8).map((card, i) => ({ ...card, instanceId: `bs12-073-refresh-trash-${i}` }))] : own.discardPile,
+      battleArea: [...own.battleArea.map(entry => ({ ...entry, rested: ['attack-source-rested', 'onplay-source-rested'].includes(scenario),
+        ...(scenario === 'attack-equipped' ? { equippedCards: [bs12PrintedReferenceCard('ST4-001', 'bs12-073-equipment')] } : {}),
+        ...(scenario === 'attack-awakened' ? { awakenedUnderlay: [getBs12CandidateCookie('BS12-071', 'bs12-073-underlay')] } : {}),
+      })), ...(scenario === 'attack-ally' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-060', 'bs12-073-ally'), bs12PrintedFillerCards(number,'bs12-073-ally-hp',2,3), 5)] : [])],
+    } } }
+}
+
+export const createBs12CreamSodaDemoState = (scenario: Bs12CreamSodaScenario = 'positive', number: 'BS12-072' | 'BS12-072@1' = 'BS12-072'): GameState => {
+  if (scenario.startsWith('then-')) {
+    const base = createBs12CreamSodaDemoState('positive', number)
+    const bottomNumber = ({ 'then-level-one': 'BS12-071', 'then-level-three': 'BS12-064',
+      'then-item': 'BS12-069', 'then-red': 'BS12-005', 'then-yellow': 'BS12-021',
+      'then-green': 'BS12-040', 'then-purple': 'BS12-075', 'then-black': 'BS12-112' } as Record<string, string>)[scenario] ?? 'BS12-070'
+    const bottom = scenario === 'then-non-arena' ? bs12PrintedReferenceCard('ST4-001', 'r004-bottom') : bs12PrintedFixtureCard(bottomNumber, 'r004-bottom')
+    const costNumber = ({ 'then-cost-cookie': 'BS12-024', 'then-cost-stage': 'BS12-030', 'then-cost-trap': 'BS12-029' } as Record<string, string>)[scenario] ?? 'BS12-031'
+    const own = base.players['player-one'], foe = base.players['player-two']
+    return { ...base, players: { ...base.players,
+      'player-one': { ...own, hand: scenario === 'then-no-hand' ? [] : [bs12PrintedFixtureCard(costNumber, 'r004-cost')],
+        deck: [...own.deck.slice(0, -1), bottom],
+        supportArea: (scenario === 'then-one-energy' ? ['BS12-065'] : scenario === 'then-wrong-energy' ? ['BS12-024', 'BS12-034'] : ['BS12-065', 'BS12-067'])
+          .map((n, i) => ({ card: bs12PrintedFixtureCard(n, 'r004-pay-' + i), rested: false })) },
+      'player-two': { ...foe, battleArea: scenario === 'then-faints' ? [
+        { ...foe.battleArea[0], card: getBs12CandidateCookie('BS12-079', foe.battleArea[0].card.instanceId), hpCards: foe.battleArea[0].hpCards.slice(0, 2) },
+        ...foe.battleArea.slice(1) ] : foe.battleArea },
+    } }
+  }
+  const shared = ['green-arena', 'red-arena', 'yellow-arena', 'level-one', 'level-three', 'non-arena', 'no-energy', 'one-energy', 'wrong-energy', 'opponent-turn', 'outside-main'].includes(scenario)
+    ? scenario as Bs12PhotocardScenario : 'positive'
+  const base = createBs12PhotocardDemoState(shared)
+  const player = base.players['player-one']
+  const hp = (id:string,count:number,offset=0)=>bs12PrintedFillerCards(number,id,count,offset)
+  const source = { ...cardCheckBattleEntry(getBs12CandidateCookie(number, 'bs12-072-source'),hp('bs12-072-source-hp',3),1), battleEntryId: 'bs12-072-source:battle:cream-soda', rested: scenario === 'source-rested' }
+  const targetCard = scenario === 'same-name' ? getBs12CandidateCookie(number, 'bs12-072-target')
+    : { ...player.deck.at(-1)!, instanceId: 'bs12-072-target' }
+  if (targetCard.type !== 'cookie') throw new Error('Cream Soda fixture target must be a Cookie')
+  const target = { card: targetCard, hpCards: hp('bs12-072-target-hp',targetCard.hp,3), rested: scenario === 'rested-target', battleEntryId: 'bs12-072-target:battle:target',
+    ...(scenario === 'equipped-target' ? { equippedCards: [bs12PrintedReferenceCard('ST4-001', 'bs12-072-equipment')] } : {}),
+    ...(scenario === 'awakened-target' ? { awakenedUnderlay: [getBs12CandidateCookie('BS12-071', 'bs12-072-underlay')] } : {}),
+  }
+  const stageResult = scenario === 'stage-only' ? convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-067') as OfficialCardRecord) : null
+  if (stageResult && (stageResult.status !== 'converted' || stageResult.gameCard.type !== 'stage')) throw new Error('Missing Arena stage')
+  let state: GameState = { ...base, commandLog: [], players: { ...base.players, 'player-one': { ...player,
+    hand: [getBs12CandidateCookie('BS12-071', 'bs12-072-replacement'), ...(scenario === 'hand-only' ? [targetCard] : [])],
+    battleArea: [source, ...(['no-target', 'hand-only', 'support-only', 'stage-only'].includes(scenario) ? [] : [target])],
+    deck: scenario === 'short-deck' ? player.deck.slice(-1) : player.deck,
+    stage: stageResult?.status === 'converted' && stageResult.gameCard.type === 'stage' ? { card: { ...stageResult.gameCard, instanceId: 'bs12-072-stage' }, rested: false } : null,
+    supportArea: player.supportArea.map((support, i) => ({ ...support, rested: scenario === 'rested-energy',
+      card: scenario === 'support-only' && i === 1 ? { ...targetCard, instanceId: 'bs12-072-support-target' } : support.card })),
+  } } }
+  if (scenario === 'once-used') {
+    state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-072-source', trigger: 'activate', paymentIds: ['bs12-069-payment-0'] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+  }
+  return state
+}
+
+export type Bs12StardustScenario = Bs12PhotocardScenario | 'source-rested' | 'single-opponent' | 'other-faints' | 'ordinary-flip' | 'protected' | 'all-protected' | 'short-all-protected'
+
+export const createBs12StardustDemoState = (scenario: Bs12StardustScenario = 'positive', number: 'BS12-070' | 'BS12-070@1' = 'BS12-070'): GameState => {
+  const base = createBs12PhotocardDemoState(scenario === 'short-all-protected' ? 'short-deck' : ['source-rested', 'single-opponent', 'other-faints', 'target-faints', 'flip', 'ordinary-flip', 'protected', 'all-protected'].includes(scenario) ? 'positive' : scenario as Bs12PhotocardScenario)
+  const own = base.players['player-one']
+  const foe = base.players['player-two']
+  const card = getBs12CandidateCookie(number, 'bs12-070-source')
+  const hp = (id:string,count:number,offset=0)=>bs12PrintedFillerCards(number,id,count,offset)
+  const battle = foe.battleArea.map((entry, i) => ({ ...entry,
+    hpCards: scenario === 'target-faints' && i === 0 ? entry.hpCards.slice(0, 2) : scenario === 'other-faints' && i === 1 ? entry.hpCards.slice(0, 1)
+      : (scenario === 'flip' && i === 1 || scenario === 'ordinary-flip' && i === 0) ? [...entry.hpCards.slice(0, -1), getBs12CandidateCookie('BS12-058', 'bs12-070-flip')] : ((scenario === 'protected' && i === 1) || ['all-protected', 'short-all-protected'].includes(scenario)) ? hp('bs12-070-protected-hp-'+i,3,i*3) : entry.hpCards,
+    card: scenario === 'target-faints' && i === 0 ? getBs12CandidateCookie('BS12-060',entry.card.instanceId)
+      : scenario === 'other-faints' && i === 1 ? bs12PrintedReferenceCookie('BS6-017',entry.card.instanceId)
+        : ((scenario === 'protected' && i === 1) || ['all-protected', 'short-all-protected'].includes(scenario)) ? bs12PrintedReferenceCookie('BS3-082', entry.card.instanceId) : entry.card,
+  }))
+  return { ...base, commandLog: [], players: {
+    'player-one': { ...own, hand: [], battleArea: [{ ...cardCheckBattleEntry(card,hp('bs12-070-source-hp',2),1), battleEntryId: `${card.instanceId}:battle:1`, rested: scenario === 'source-rested' }] },
+    'player-two': { ...foe, battleArea: scenario === 'single-opponent' ? battle.slice(0, 1) : battle,
+      hand: ['flip', 'ordinary-flip'].includes(scenario) ? [{ ...createBs12PhotocardDemoState('flip').players['player-two'].hand[0], instanceId: 'bs12-070-flip-cost' }] : [] },
+  } }
+}
+
+export const createBs12MultivitaminDemoState = (scenario: Bs12MultivitaminScenario = 'positive'): GameState => {
+  const base = createBs12CreamPuffDemoState('attack')
+  const record = bs12CandidateDocument.cards.find(card => card.cardNumber === 'BS12-068') as OfficialCardRecord
+  const result = convertOfficialCardToGameCard(record)
+  const itemRecord = bs12CandidateDocument.cards.find(card => card.cardNumber === 'BS12-027') as OfficialCardRecord
+  const itemResult = convertOfficialCardToGameCard(itemRecord)
+  if (result.status !== 'converted' || itemResult.status !== 'converted') throw new Error('Missing multivitamin fixture card')
+  const opponentCount = scenario === 'difference-one' ? 2 : scenario === 'equal-support' ? 1 : scenario === 'more-own' ? 0 : scenario === 'large-gap' ? 4 : 3
+  const supportNumbers = ['BS12-002', 'BS12-040', 'BS12-021', 'BS12-060']
+  const deckCount = scenario === 'empty-deck' ? 0 : ['short-deck', 'refresh-defeat', 'no-refresh-cookie'].includes(scenario) ? 1 : 12
+  return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [{ ...result.gameCard, instanceId: 'bs12-068-item' }], stage: null,
+      deck: bs12PrintedFillerCards('BS12-068', 'bs12-068-deck', deckCount, 5),
+      discardPile: [...(scenario === 'no-refresh-cookie' ? [] : [getBs12CandidateCookie('BS12-059', 'bs12-068-refresh-cookie')]), ...bs12PrintedFillerCards('BS12-068', 'bs12-068-trash', 7, 17)],
+      breakArea: scenario === 'refresh-defeat' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-059', `bs12-068-break-${i}`)) : [],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: bs12PrintedReferenceCard(scenario === 'wrong-energy' ? 'BS7-061' : 'ST4-001', 'bs12-068-payment'), rested: scenario === 'rested-energy' }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, discardPile: [], breakArea: [],
+      supportArea: Array.from({ length: opponentCount }, (_, i) => ({
+        card: scenario === 'non-cookie-support' && i === 2 ? { ...itemResult.gameCard, instanceId: `bs12-068-opponent-support-${i}` }
+          : getBs12CandidateCookie(supportNumbers[i], `bs12-068-opponent-support-${i}`),
+        rested: scenario === 'all-opponent-rested' || i === 1,
+      })),
+    },
+  } }
+}
+
+export const createBs12ComebackStageDemoState = (scenario: Bs12ComebackStageScenario = 'positive'): GameState => {
+  const base = createBs12CreamPuffDemoState('attack')
+  const record = bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-067') as OfficialCardRecord
+  const result = convertOfficialCardToGameCard(record, 'comeback-stage')
+  if (result.status !== 'converted' || !result.gameCard.stageAbility) throw new Error('Missing Comeback Stage')
+  const bottomScenario = ['green-arena', 'red-arena', 'yellow-arena', 'non-arena', 'level-one', 'level-three', 'arena-item', 'top-only'].includes(scenario)
+    ? scenario as Bs12CreamPuffScenario : 'positive'
+  const bottom = { ...createBs12CreamPuffDemoState(bottomScenario).players['player-one'].deck.at(-1)!, instanceId: 'bs12-067-bottom' }
+  const deck = scenario === 'empty-deck' ? [] : ['short-deck', 'refresh-defeat'].includes(scenario) ? [bottom]
+    : [...bs12PrintedFillerCards('BS12-067', 'bs12-067-deck', 11, 5), bottom]
+  if (scenario === 'top-only') deck[0] = getBs12CandidateCookie('BS12-060', 'bs12-067-top')
+  const oldResult = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-011') as OfficialCardRecord, 'comeback-old')
+  if (oldResult.status !== 'converted') throw new Error('Missing old Stage')
+  const before: GameState = { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'],
+    hand: [{ ...result.gameCard, instanceId: 'bs12-067-stage' }], deck,
+    discardPile: [getBs12CandidateCookie('BS12-059', 'bs12-067-refresh-cookie'), ...bs12PrintedFillerCards('BS12-067', 'bs12-067-trash', 7, 17)],
+    breakArea: scenario === 'refresh-defeat' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-059', `bs12-067-break-${i}`)) : [],
+    stage: scenario === 'replace' ? { card: { ...oldResult.gameCard, instanceId: 'bs12-067-old-stage' }, rested: false } : null,
+    supportArea: scenario === 'no-energy' ? [] : Array.from({ length: scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({
+      card: bs12PrintedReferenceCard(scenario === 'wrong-energy' ? 'BS7-061' : 'ST4-001', `bs12-067-payment-${i}`), rested: scenario === 'rested-energy' })),
+  } } }
+  if (!['placed', 'activation-no-energy', 'activation-wrong-energy', 'activation-rested-energy', 'rested-source', 'opponent-turn', 'outside-main'].includes(scenario)) return before
+  const placed = applyGameCommand(before, { kind: 'play-stage', playerId: 'player-one', instanceId: 'bs12-067-stage', paymentIds: ['bs12-067-payment-0'] })
+  return { ...placed, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main', players: { ...placed.players,
+    'player-one': { ...placed.players['player-one'], stage: { ...placed.players['player-one'].stage!, rested: scenario === 'rested-source' },
+      supportArea: scenario === 'activation-no-energy' ? [] : placed.players['player-one'].supportArea.map((s, i) => ({ ...s,
+        card: scenario === 'activation-wrong-energy' && i === 1 ? bs12PrintedReferenceCard('BS7-061', s.card.instanceId) : s.card,
+        rested: scenario === 'activation-rested-energy' ? true : s.rested })) } } }
+}
+
+export const createBs12EndingPoseDemoState = (scenario: Bs12EndingPoseScenario = 'positive'): GameState => {
+  const base = createBs12FanLetterDemoState('main')
+  const record = bs12CandidateDocument.cards.find(c => c.cardNumber === 'BS12-066') as OfficialCardRecord
+  const result = convertOfficialCardToGameCard(record, 'ending-pose')
+  if (result.status !== 'converted') throw new Error('Missing Ending Pose')
+  const bottomScenario = ['green-arena', 'red-arena', 'yellow-arena', 'non-arena', 'level-one', 'level-three', 'arena-item', 'top-only'].includes(scenario)
+    ? scenario as Bs12CreamPuffScenario : 'positive'
+  const bottom = { ...createBs12CreamPuffDemoState(bottomScenario).players['player-one'].deck.at(-1)!, instanceId: 'bs12-066-bottom' }
+  const deck = scenario === 'empty-deck' ? [] : ['short-deck', 'refresh-defeat'].includes(scenario) ? [bottom]
+    : [...base.players['player-one'].deck.slice(0, 11), bottom]
+  if (scenario === 'top-only') deck[0] = getBs12CandidateCookie('BS12-060', 'bs12-066-top')
+  const source = base.players['player-two'].battleArea[0]
+  const attacker = { ...source.card, instanceId: 'bs12-066-attacker' }
+  const before: GameState = { ...base, activePlayerId: 'player-two', players: {
+    'player-one': { ...base.players['player-one'], hand: [{ ...result.gameCard, instanceId: 'bs12-066-trap' }], deck,
+      discardPile: [getBs12CandidateCookie('BS12-059', 'bs12-066-refresh-cookie'), ...base.players['player-one'].discardPile.slice(1)],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: bs12PrintedReferenceCard(scenario === 'wrong-energy' ? 'BS7-061' : 'ST4-001', 'bs12-066-payment'), rested: scenario === 'rested-energy' }],
+      breakArea: scenario === 'refresh-defeat' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-059', `bs12-066-break-${i}`)) : [] },
+    'player-two': { ...base.players['player-two'], battleArea: [{ ...source, card: attacker }, base.players['player-two'].battleArea[1]] },
+  } }
+  if (scenario === 'main') return before
+  const state = beginAttack(before, attacker.instanceId, 'bs12-064-source', before.players['player-two'].supportArea.map(s => s.card.instanceId))
+  return { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : {}),
+    ...(scenario === 'used' ? { trapUsed: true, stage: 'damage' as const } : {}) } }
+}
+
+export const createBs12FanLetterDemoState = (scenario: Bs12FanLetterScenario = 'positive'): GameState => {
+  const base = createBs12CreamPuffDemoState('attack')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-065', id + '-hp', count, offset)
+  const convert = (number: string, id: string) => {
+    const result = convertOfficialCardToGameCard(bs12CandidateDocument.cards.find(c => c.cardNumber === number) as OfficialCardRecord, id)
+    if (result.status !== 'converted') throw new Error(`Missing candidate ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const handCost = scenario === 'non-arena' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-065-hand-cost')
+    : convert(scenario === 'green-arena' ? 'BS12-040' : scenario === 'red-arena' ? 'BS12-002'
+      : scenario === 'yellow-arena' ? 'BS12-021' : scenario === 'level-one' ? 'BS12-061'
+        : scenario === 'level-three' ? 'BS12-019' : scenario === 'arena-item' ? 'BS12-027' : 'BS12-060', 'bs12-065-hand-cost')
+  const attacker = getBs12CandidateCookie('BS12-059', 'bs12-065-attacker')
+  const before: GameState = { ...base, activePlayerId: 'player-two', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [convert('BS12-065', 'bs12-065-trap'), ...(scenario === 'no-hand' ? [] : [handCost])],
+      deck: hp('bs12-065-deck', scenario === 'short-deck' ? 1 : scenario === 'empty-deck' ? 0 : 12, 5),
+      discardPile: [getBs12CandidateCookie('BS12-059', 'bs12-065-refresh-cookie'), ...hp('bs12-065-trash', 6, 17)],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: bs12PrintedReferenceCard(scenario === 'wrong-energy' ? 'BS7-061' : 'ST4-001', 'bs12-065-payment'), rested: scenario === 'rested-energy' }] },
+    'player-two': { ...base.players['player-two'],
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-065-attacker', 4), 3), base.players['player-two'].battleArea[1]],
+      supportArea: Array.from({ length: 3 }, (_, i) => ({ card: bs12PrintedReferenceCard(i === 2 ? 'BS7-061' : 'ST4-001', `bs12-065-attack-payment-${i}`), rested: false })) },
+  } }
+  if (scenario === 'main') return before
+  const state = beginAttack(before, attacker.instanceId, 'bs12-064-source', before.players['player-two'].supportArea.map(s => s.card.instanceId))
+  return { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : {}),
+    ...(scenario === 'used' ? { trapUsed: true, stage: 'damage' as const } : {}) } }
+}
+
+export const createBs12CreamPuffDemoState = (scenario: Bs12CreamPuffScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-064', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie('BS12-064', 'bs12-064-source')
+  const bottom = scenario === 'green-arena' ? getBs12CandidateCookie('BS12-040', 'bs12-064-bottom')
+    : scenario === 'red-arena' ? getBs12CandidateCookie('BS12-002', 'bs12-064-bottom')
+      : scenario === 'yellow-arena' ? getBs12CandidateCookie('BS12-021', 'bs12-064-bottom')
+        : scenario === 'non-arena' || scenario === 'top-only' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-064-bottom')
+          : scenario === 'level-one' ? getBs12CandidateCookie('BS12-061', 'bs12-064-bottom')
+            : scenario === 'level-three' ? getBs12CandidateCookie('BS12-019', 'bs12-064-bottom')
+              : scenario === 'arena-item' ? (() => {
+                const record = bs12CandidateDocument.cards.find(card => card.cardNumber === 'BS12-027') as OfficialCardRecord
+                const result = convertOfficialCardToGameCard(record, 'bs12-064-bottom')
+                if (result.status !== 'converted') throw new Error('Missing Arena item')
+                return result.gameCard
+              })()
+                : getBs12CandidateCookie('BS12-060', 'bs12-064-bottom')
+  const top = scenario === 'top-only' ? [getBs12CandidateCookie('BS12-060', 'bs12-064-top-match')] : []
+  const before: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source], deck: [...hp('bs12-064-deck', 5), ...top,
+      ...hp('bs12-064-draw-deck', scenario === 'short-deck' || scenario === 'empty-deck' ? 0 : 6, 5), ...(scenario === 'empty-deck' ? [] : [bottom])],
+      breakArea: [], discardPile: scenario === 'short-deck' || scenario === 'empty-deck' ? [getBs12CandidateCookie('BS12-059', 'bs12-064-refresh-cookie'), ...hp('bs12-064-refresh-trash', 8, 17)] : [], stage: null, battleArea: [],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: bs12PrintedReferenceCard(scenario === 'wrong-energy' && i === 1 || i === 2 ? 'BS7-061' : 'ST4-001', `bs12-064-payment-${i}`), rested: scenario === 'rested-energy' && i === 0 })) },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-064-enemy-deck', 12, 10), discardPile: [], breakArea: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-064-opponent'), hp('bs12-064-opponent', 6), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-064-opponent-other'), hp('bs12-064-opponent-other', 4, 6), 4)] } } }
+  if (scenario === 'deploy') return before
+  let entered = applyGameCommand(before, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'cancel-payment', 'cancel-target'].includes(scenario)) entered = applyGameCommand(entered, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: source.instanceId })
+  return { ...entered, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...entered.players,
+    'player-one': { ...entered.players['player-one'], battleArea: entered.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' })) } } }
+}
+
+export const createBs12SonicWaterDemoState = (scenario: Bs12GingerBraveScenario | 'outside-main' = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-061', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie('BS12-061', 'bs12-061-source')
+  const payment = scenario === 'blue-energy' ? bs12PrintedReferenceCard('ST4-001', 'bs12-061-payment-0')
+    : scenario === 'green-energy' ? bs12PrintedReferenceCard('BS7-061', 'bs12-061-payment-0')
+      : getBs12CandidateCookie(scenario === 'yellow-energy' ? 'BS12-019' : 'BS12-001', 'bs12-061-payment-0')
+  const before: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source], deck: hp('bs12-061-deck', 12, 2), breakArea: [], discardPile: [], stage: null,
+      battleArea: [], supportArea: scenario === 'few-energy' ? [] : [{ card: payment, rested: scenario === 'rested-energy' }] },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-061-opponent-deck', 12, 10), breakArea: [], discardPile: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie(scenario === 'target-faints' ? 'BS6-017' : 'BS6-008', 'bs12-061-opponent'), hp('bs12-061-opponent', scenario === 'target-faints' ? 1 : 6), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-061-opponent-other'), hp('bs12-061-opponent-other', 4, 6), 3)] },
+  } }
+  if (scenario === 'deploy') return before
+  const entered = applyGameCommand(before, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  return { ...entered, phase: scenario === 'outside-main' ? 'support' : 'main', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    players: { ...entered.players, 'player-one': { ...entered.players['player-one'],
+      battleArea: entered.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' })) } } }
+}
+
+export const createBs12GingerBraveDemoState = (scenario: Bs12GingerBraveScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  const source = getBs12CandidateCookie('BS12-024', 'bs12-024-source')
+  const defender = scenario === 'target-faints'
+    ? bs12PrintedReferenceCookie('BS6-017', 'bs12-024-opponent')
+    : bs12PrintedReferenceCookie('BS6-008', 'bs12-024-opponent')
+  const payment = scenario === 'blue-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-024-payment-0')
+    : scenario === 'green-energy' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-024-payment-0')
+      : getBs12CandidateCookie(scenario === 'yellow-energy' ? 'BS12-019' : 'BS12-001', 'bs12-024-payment-0')
+  const before: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source], deck: hp('bs12-024-deck', 12), breakArea: [], discardPile: [], stage: null,
+      battleArea: [], supportArea: scenario === 'few-energy' ? [] : [{ card: payment, rested: scenario === 'rested-energy' }] },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-024-opponent-deck', 12), breakArea: [], discardPile: [], supportArea: [], stage: null,
+      battleArea: [cardCheckBattleEntry(defender, hp('bs12-024-opponent', defender.hp), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-024-opponent-other'), hp('bs12-024-opponent-other', 4, scenario === 'target-faints' ? 1 : 6), 3)] },
+  } }
+  if (scenario === 'deploy') return before
+  const entered = applyGameCommand(before, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  return { ...entered, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    players: { ...entered.players, 'player-one': { ...entered.players['player-one'],
+      battleArea: entered.players['player-one'].battleArea.map(cookie => ({ ...cookie, rested: scenario === 'source-rested' })) } } }
+}
+
+/** Break thresholds stay below LV10 and at most four copies of each known card number. */
+export const createBs12BonbonDemoState = (scenario: Bs12BonbonScenario = 'three'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const source = getBs12CandidateCookie('BS12-023', 'bs12-023-source')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  const count = scenario === 'zero' || scenario === 'history-only' ? 0 : scenario === 'two' ? 2 : scenario === 'five' ? 5 : scenario === 'six' || scenario === 'refresh' ? 6 : scenario === 'eight' ? 8 : scenario === 'nine' ? 9 : 3
+  const breaks = scenario === 'high-level' ? [getBs12CandidateCookie('BS12-019', 'bs12-023-break-0'), getBs12CandidateCookie('BS12-001', 'bs12-023-break-1')]
+    : Array.from({ length: count }, (_, i) => scenario === 'non-arena' && i === 2 ? bs12PrintedReferenceCookie('ST4-001', `bs12-023-break-${i}`)
+      : scenario === 'green-arena' && i === 2 ? bs12PrintedReferenceCookie('BS7-061', `bs12-023-break-${i}`)
+        : getBs12CandidateCookie(i < 4 ? 'BS12-003' : i < 8 ? 'BS12-017' : 'BS12-022', `bs12-023-break-${i}`))
+  const wrongZone = ['opponent-break', 'trash-arena'].includes(scenario)
+  let state: GameState = { ...base, turnNumber: 2, arenaCookiesPlacedInBreakThisTurn: scenario === 'history-only' ? { 'player-one': 3 } : {}, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [source], deck: hp('bs12-023-deck', scenario === 'refresh' ? 5 : 20),
+      breakArea: wrongZone ? [] : breaks, discardPile: scenario === 'trash-arena' ? breaks : scenario === 'refresh'
+        ? [getBs12CandidateCookie('BS12-022', 'bs12-023-refresh-cookie'), ...hp('bs12-023-refresh-trash', 12, 4)] : [], stage: null,
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-023-ally'), hp('bs12-023-ally', 4), 1)],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'wrong-energy' || scenario === 'few-yellow' && i === 1 || i === 2 ? bs12PrintedReferenceCookie('ST4-001', `bs12-023-payment-${i}`)
+          : getBs12CandidateCookie('BS12-019', `bs12-023-payment-${i}`), rested: scenario === 'rested-support' || scenario === 'rested-energy' && i === 2 })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-023-opponent-deck', 12), stage: null, supportArea: [],
+      breakArea: scenario === 'opponent-break' ? breaks : [], discardPile: [], battleArea: [
+        cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-023-opponent'), hp('bs12-023-opponent', 6), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-023-opponent-other'), hp('bs12-023-opponent-other', 4, 6), 4)],
+    },
+  } }
+  if (scenario === 'opponent-turn') return executeCardEffect({ ...state, activePlayerId: 'player-two' },
+    { sourcePlayerId: 'player-one', sourceInstanceId: 'bs12-023-ally' }, { kind: 'hand-to-battle', amount: 1 }, [source.instanceId])
+  if (['attack', 'wrong-energy', 'few-yellow', 'few-energy', 'rested-energy'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+    return applyGameCommand(state, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: source.instanceId })
+  }
+  return state
+}
+
+/** Candidate-only Chamomile: real HP reveal, hand payment and normal attack commands. */
+export type Bs12ChamomileScenario = Bs12MintWaferScenario | 'deploy' | 'red-arena' | 'refresh' | 'follow-up-live'
+
+export type Bs12SorbetSharkScenario = Bs12ChamomileScenario | 'blue-arena' | 'stage-hand' | 'non-arena-hand'
+
+export const createBs12SorbetSharkDemoState = (scenario: Bs12SorbetSharkScenario = 'positive'): GameState => {
+  const physicalBase = (state: GameState): GameState => {
+    const foe = state.players['player-two']
+    return { ...state, players: { ...state.players, 'player-two': { ...foe,
+      battleArea: foe.battleArea.map((cookie, index) => index === 0 ? { ...cookie, card: bs12PrintedReferenceCookie('BS6-008', cookie.card.instanceId) } : cookie),
+    } } }
+  }
+  if (scenario === 'deploy') {
+    const base = physicalBase(createBs12BasilDemoState('deploy'))
+    return { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'], hand: [getBs12CandidateCookie('BS12-060', 'bs12-060-source')] } } }
+  }
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-060', id + '-hp', count, offset)
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'opponent-turn', 'source-rested'].includes(scenario)) {
+    const base = physicalBase(createBs12MuscleDemoState())
+    return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-060', 'bs12-060-source'), hp('bs12-060-source', 2), 1), rested: scenario === 'source-rested' }],
+        supportArea: Array.from({ length: scenario === 'few-energy' ? 1 : 2 }, (_, i) => ({ card: bs12PrintedReferenceCard(scenario === 'wrong-energy' && i === 1 ? 'BS7-061' : 'ST4-001', `bs12-060-payment-${i}`), rested: scenario === 'rested-energy' && i === 1 })),
+      },
+    } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie('BS12-060', 'bs12-060-revealed')
+  const bearer = scenario === 'follow-up' ? getBs12CandidateCookie('BS12-039', 'bs12-060-bearer') : scenario === 'no-arena' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-060-bearer') : getBs12CandidateCookie('BS12-021', 'bs12-060-bearer')
+  const companion = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-060-companion') : ['non-arena', 'no-arena'].includes(scenario) ? bs12PrintedReferenceCookie('ST4-001', 'bs12-060-companion')
+    : scenario === 'blue-arena' ? getBs12CandidateCookie('BS12-060', 'bs12-060-companion') : scenario === 'red-arena' ? getBs12CandidateCookie('BS12-003', 'bs12-060-companion') : scenario === 'green-arena' ? getBs12CandidateCookie('BS12-041', 'bs12-060-companion') : getBs12CandidateCookie('BS12-019', 'bs12-060-companion')
+  const attacker = scenario === 'follow-up' ? getBs12CandidateCookie('BS12-019', 'bs12-060-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-060-attacker')
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!)
+  const stage = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-011')!)
+  if (stage.status !== 'converted') throw new Error('Missing Arena Stage')
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const supports = Array.from({ length: attacker.attackCost }, (_, i) => ({ card: getBs12CandidateCookie('BS12-001', `bs12-060-attack-payment-${i}`), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: hp('bs12-060-deck', scenario === 'refresh' ? 1 : 12, 8), hand: scenario === 'no-hand' ? []
+      : [scenario === 'non-arena-hand' ? bs12PrintedReferenceCard('ST4-001', 'bs12-060-hand') : scenario === 'stage-hand' ? { ...stage.gameCard, instanceId: 'bs12-060-hand' } : scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-060-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-060-hand')],
+      stage: null, breakArea: [], discardPile: scenario === 'refresh' ? [bs12PrintedReferenceCard('ST4-001', 'bs12-060-refresh'), ...Array.from({ length: 5 }, (_, i) => getBs12CandidateCookie(i < 3 ? 'BS12-024' : 'BS12-038', `bs12-060-refresh-trash-${i}`))] : [], supportArea: [{ card: getBs12CandidateCookie('BS12-019', 'bs12-060-support'), rested: false }],
+      battleArea: [{ ...cardCheckBattleEntry(bearer, [...hp('bs12-060-bottom', scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? 3 : 1), flip], 1), rested: scenario === 'rested-target' },
+        { ...cardCheckBattleEntry(companion, hp('bs12-060-companion', companion.hp, 4), 2), rested: true,
+          ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-060-equipped')] } : {}) }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-060-opponent-deck', 12, 4),
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-060-attacker', attacker.hp), 3)], supportArea: supports },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+export type Bs12KohlrabiScenario = Bs12ChamomileScenario | 'outside-main' | 'purple-arena' | 'stage-hand' | 'trap-hand'
+
+export const createBs12KohlrabiDemoState = (scenario: Bs12KohlrabiScenario = 'positive'): GameState => {
+  if (scenario === 'deploy') {
+    const base = createBs12BasilDemoState('deploy')
+    return { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'], hand: [getBs12CandidateCookie('BS12-080', 'bs12-080-source')] }, 'player-two': {...base.players['player-two'],battleArea:base.players['player-two'].battleArea.map((cookie,index)=>({...cookie,card:index===0?bs12PrintedReferenceCookie('BS6-008',cookie.card.instanceId):cookie.card}))} } }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-080',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'opponent-turn', 'source-rested', 'outside-main'].includes(scenario)) {
+    const initial = createBs12MuscleDemoState()
+    const base = {...initial,players:{...initial.players,'player-two':{...initial.players['player-two'],battleArea:initial.players['player-two'].battleArea.map((cookie,index)=>({...cookie,card:index===0?bs12PrintedReferenceCookie('BS6-008',cookie.card.instanceId):cookie.card}))}}}
+    return { ...base, phase: scenario === 'outside-main' ? 'support' : 'main', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-080', 'bs12-080-source'), hp('bs12-080-source', 1), 1), rested: scenario === 'source-rested' }],
+        supportArea: scenario === 'few-energy' ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCard('ST4-001', 'bs12-080-payment-0') : getBs12CandidateCookie('BS12-079', 'bs12-080-payment-0'), rested: scenario === 'rested-energy' }],
+      },
+    } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie('BS12-080', 'bs12-080-revealed')
+  const bearer = scenario==='no-arena'?bs12PrintedReferenceCookie('ST3-001','bs12-080-bearer'):getBs12CandidateCookie(scenario==='last-hp'?'BS12-080':scenario==='follow-up'?'BS12-064':'BS12-021','bs12-080-bearer')
+  const companion = scenario==='equipment'?bs12PrintedReferenceCookie('BS4-095','bs12-080-companion'):['non-arena','no-arena'].includes(scenario)?bs12PrintedReferenceCookie('ST4-001','bs12-080-companion')
+    : scenario === 'purple-arena' ? getBs12CandidateCookie('BS12-079', 'bs12-080-companion') : scenario === 'red-arena' ? getBs12CandidateCookie('BS12-003', 'bs12-080-companion') : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-080-companion') : getBs12CandidateCookie('BS12-019', 'bs12-080-companion')
+  const attacker = scenario === 'follow-up' ? getBs12CandidateCookie('BS12-019', 'bs12-080-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-080-attacker')
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === (scenario === 'stage-hand' ? 'BS12-030' : scenario === 'trap-hand' ? 'BS12-069' : 'BS12-012'))!)
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const supports = Array.from({ length: attacker.attackCost }, (_, i) => ({ card: getBs12CandidateCookie('BS12-001', `bs12-080-attack-payment-${i}`), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: hp('bs12-080-deck', scenario === 'refresh' ? 1 : 12), hand: scenario === 'no-hand' ? []
+      : [['item-hand', 'stage-hand', 'trap-hand'].includes(scenario) ? { ...item.gameCard, instanceId: 'bs12-080-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-080-hand')],
+      stage: null, breakArea: [], discardPile: scenario === 'refresh' ? [bs12PrintedReferenceCard('ST4-001', 'bs12-080-refresh'), ...hp('bs12-080-refresh-trash', 5)] : [], supportArea: [{ card: getBs12CandidateCookie('BS12-019', 'bs12-080-support'), rested: false }],
+      battleArea: [{ ...cardCheckBattleEntry(bearer, [...hp('bs12-080-bottom', scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? 4 : 1), flip], 1), rested: scenario === 'rested-target' },
+        { ...cardCheckBattleEntry(companion, hp('bs12-080-companion',companion.hp), 2), rested: true,
+          ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-080-equipped')] } : {}) }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-080-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-080-attacker',attacker.hp), 3)], supportArea: supports },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+export const createBs12ChamomileDemoState = (scenario: Bs12ChamomileScenario = 'positive'): GameState => {
+  if (scenario === 'deploy') {
+    const base = createBs12BasilDemoState('deploy')
+    return { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'], hand: [getBs12CandidateCookie('BS12-042', 'bs12-042-source')] } } }
+  }
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-042', id, count, offset)
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'opponent-turn', 'source-rested'].includes(scenario)) {
+    const base = createBs12MuscleDemoState()
+    return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-042', 'bs12-042-source'), hp('bs12-042-source', 1), 1), rested: scenario === 'source-rested' }],
+        supportArea: scenario === 'few-energy' ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-042-payment-0') : bs12PrintedReferenceCookie('BS7-061', 'bs12-042-payment-0'), rested: scenario === 'rested-energy' }],
+      },
+    } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie('BS12-042', 'bs12-042-revealed')
+  const bearer = scenario === 'no-arena' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-042-bearer') : getBs12CandidateCookie('BS12-021', 'bs12-042-bearer')
+  const companion = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-042-companion') : ['non-arena', 'no-arena'].includes(scenario) ? bs12PrintedReferenceCookie('ST4-001', 'bs12-042-companion')
+    : scenario === 'red-arena' ? getBs12CandidateCookie('BS12-003', 'bs12-042-companion') : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-042-companion') : getBs12CandidateCookie('BS12-019', 'bs12-042-companion')
+  const attacker = ['follow-up', 'follow-up-live'].includes(scenario) ? getBs12CandidateCookie('BS12-019', 'bs12-042-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-042-attacker')
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!)
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const supports = Array.from({ length: attacker.attackCost }, (_, i) => ({ card: getBs12CandidateCookie('BS12-001', `bs12-042-attack-payment-${i}`), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: hp('bs12-042-deck', scenario === 'refresh' ? 1 : 12), hand: scenario === 'no-hand' ? []
+      : [scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-042-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-042-hand')],
+      stage: null, breakArea: [], discardPile: scenario === 'refresh' ? [bs12PrintedReferenceCookie('ST4-001', 'bs12-042-refresh'), ...hp('bs12-042-refresh-trash', 5, 1)] : [], supportArea: [{ card: getBs12CandidateCookie('BS12-019', 'bs12-042-support'), rested: false }],
+      battleArea: [{ ...cardCheckBattleEntry(bearer, [...hp('bs12-042-bottom', scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? bearer.hp - 1 : 1), flip], 1), rested: scenario === 'rested-target' },
+        ...(scenario === 'follow-up-live' ? [] : [{ ...cardCheckBattleEntry(companion, hp('bs12-042-companion', scenario === 'red-arena' ? companion.hp : scenario === 'follow-up' ? companion.hp : 3, scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? 4 : 1), 2), rested: true,
+          ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-042-equipped')] } : {}) }])],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-042-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-042-attacker', attacker.hp), 3)], supportArea: supports },
+  } }
+  if (scenario === 'follow-up-live') return state
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+export const createBs12MintWaferDemoState = (scenario: Bs12MintWaferScenario = 'positive'): GameState => {
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'opponent-turn', 'source-rested'].includes(scenario)) {
+    const base = createBs12MuscleDemoState()
+    return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-022', 'bs12-022-source'), hp('bs12-022-source', 1), 1), rested: scenario === 'source-rested' }],
+        supportArea: scenario === 'few-energy' ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-022-payment-0') : getBs12CandidateCookie('BS12-019', 'bs12-022-payment-0'), rested: scenario === 'rested-energy' }],
+      },
+    } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie('BS12-022', 'bs12-022-revealed')
+  const bearer = scenario === 'no-arena' ? bs12PrintedReferenceCookie('ST1-001', 'bs12-022-bearer') : getBs12CandidateCookie(scenario === 'last-hp' ? 'BS12-022' : scenario === 'follow-up' ? 'BS12-015' : 'BS12-021', 'bs12-022-bearer')
+  const companion = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-022-companion') : ['non-arena', 'no-arena'].includes(scenario) ? bs12PrintedReferenceCookie('ST4-001', 'bs12-022-companion')
+    : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-022-companion') : getBs12CandidateCookie('BS12-019', 'bs12-022-companion')
+  const attacker = scenario === 'follow-up' ? getBs12CandidateCookie('BS12-019', 'bs12-022-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-022-attacker')
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!)
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const supports = Array.from({ length: attacker.attackCost }, (_, i) => ({ card: getBs12CandidateCookie('BS12-001', `bs12-022-attack-payment-${i}`), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: hp('bs12-022-deck', 12), hand: scenario === 'no-hand' ? []
+      : [scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-022-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-022-hand')],
+      stage: null, breakArea: [], discardPile: [], supportArea: [{ card: getBs12CandidateCookie('BS12-019', 'bs12-022-support'), rested: false }],
+      battleArea: [{ ...cardCheckBattleEntry(bearer, [...hp('bs12-022-bottom', bearer.hp - 1), flip], 1), rested: scenario === 'rested-target' },
+        { ...cardCheckBattleEntry(companion, hp('bs12-022-companion', companion.hp, bearer.hp - 1), 2), rested: true,
+          ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-022-equipped')] } : {}) }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-022-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-022-attacker', attacker.hp), 3)], supportArea: supports },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+/** Candidate-only On Play; positive history comes from original printed card commands. */
+export const createBs12MangoDemoState = (scenario: Bs12MangoScenario = 'positive', number: 'BS12-021' | 'BS12-021@1' = 'BS12-021'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const mango = getBs12CandidateCookie(number, 'bs12-021-source')
+  const event = scenario === 'non-arena' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-021-event')
+    : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-021-event') : getBs12CandidateCookie('BS12-022', 'bs12-021-event')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  const noMovement = ['old-break', 'no-event', 'attack', 'wrong-energy', 'few-energy', 'full-battle', 'refresh'].includes(scenario)
+  const spotlight = ['positive', 'removed-break', 'previous-turn', 'no-energy', 'rested-support'].includes(scenario)
+  const tower = ['faint', 'green-arena', 'non-arena'].includes(scenario)
+  const handMovement = scenario === 'hand-break'
+  const historyRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === (handMovement ? 'BS12-028' : 'BS12-031'))!
+  const historyConversion = convertOfficialCardToGameCard(historyRecord)
+  if (historyConversion.status !== 'converted') throw new Error('Missing Mango printed history Item')
+  const historyItem = { ...historyConversion.gameCard, instanceId: 'bs12-021-history-item' }
+  const parent = tower || scenario === 'removed-break' ? bs12PrintedReferenceCard('BS8-025', 'bs12-021-history-stage')
+    : historyItem
+  const historyPayments = (tower || scenario === 'removed-break' || scenario === 'opponent-break' ? ['BS12-003', 'BS12-004', 'BS12-006']
+    : spotlight || handMovement ? ['BS12-024', 'BS12-026'] : []).map((n, i) => ({ card: getBs12CandidateCookie(n, `bs12-021-history-payment-${i}`), rested: false }))
+  const declineReplacement = (before: GameState): GameState => {
+    let next = before
+    for (let i = 0; next.pendingReplacement && i < 4; i++) {
+      const task = getCurrentReplacementTask(next)
+      if (!task) throw new Error('Missing Mango parent replacement task')
+      next = applyGameCommand(next, { kind: 'skip-replacement', playerId: task.playerId })
+    }
+    return next
+  }
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [mango,
+      ...(spotlight ? [historyItem] : []),
+      ...(tower || handMovement || scenario === 'removed-break' ? [parent] : []),
+      ...(handMovement ? [event] : []),
+      ...(scenario === 'removed-break' ? [bs12PrintedReferenceCookie('ST2-008', 'bs12-021-recovery')] : [])],
+      stage: null, breakArea: scenario === 'old-break' ? [event] : [], discardPile: [],
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-021-deck', scenario === 'removed-break' ? 21 : 16),
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-021-ally'), hp('bs12-021-ally', 4), 1),
+        ...(!noMovement && !['hand-break', 'opponent-break'].includes(scenario) || scenario === 'full-battle' ? [cardCheckBattleEntry(event, hp('bs12-021-event', event.hp, 4), 2)] : [])],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'few-energy' ? 1 : 2 }, (_, i) => ({
+        card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-021-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-021-payment-${i}`), rested: scenario === 'rested-support' })).concat(historyPayments,
+          scenario === 'removed-break' ? ['BS12-024', 'BS12-026'].map((n, i) => ({ card: getBs12CandidateCookie(n, `bs12-021-spotlight-payment-${i}`), rested: false })) : []),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [],
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-021-opponent-deck', 12), supportArea: [],
+      battleArea: [cardCheckBattleEntry(scenario === 'opponent-break' ? getBs12CandidateCookie('BS12-001', 'bs12-021-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-021-opponent'), hp('bs12-021-opponent', scenario === 'opponent-break' ? 4 : 6), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-021-opponent-other'), hp('bs12-021-opponent-other', 4, scenario === 'opponent-break' ? 4 : 6), 4)],
+    },
+  } }
+  const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'bs12-021-ally' }
+  if (scenario === 'refresh') {
+    const player = state.players['player-one']
+    state = { ...state, players: { ...state.players, 'player-one': { ...player, deck: [], discardPile: [event, ...player.deck] } } }
+    state = applyGameCommand(state, { kind: 'refresh-deck', playerId: 'player-one', cookieInstanceId: event.instanceId, shuffleSeed: 3 })
+  }
+  if (spotlight || handMovement) {
+    state = applyGameCommand(state, { kind: 'begin-play-item', playerId: 'player-one', instanceId: 'bs12-021-history-item',
+      paymentIds: handMovement ? ['bs12-021-history-payment-0'] : (scenario === 'removed-break' ? ['bs12-021-spotlight-payment-0', 'bs12-021-spotlight-payment-1'] : ['bs12-021-history-payment-0', 'bs12-021-history-payment-1']),
+      ...(handMovement ? { handToBreakAreaIds: [event.instanceId] } : { trashBattleCookieIds: [event.instanceId] }) })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount: 0 })
+    if (spotlight) state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] })
+    state = declineReplacement(state)
+  }
+  if (scenario === 'removed-break') {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: 'bs12-021-recovery' })
+    state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-021-recovery', trigger: 'on-play',
+      paymentIds: ['bs12-021-payment-0', 'bs12-021-payment-1'], effectTargets: [[event.instanceId]] })
+  }
+  if (tower || scenario === 'removed-break') {
+    state = applyGameCommand(state, { kind: 'play-stage', playerId: 'player-one', instanceId: parent.instanceId, paymentIds: ['bs12-021-history-payment-0', 'bs12-021-history-payment-1'] })
+    state = applyGameCommand(state, { kind: 'activate-stage', playerId: 'player-one', paymentIds: ['bs12-021-history-payment-2'],
+      trashBattleCookieIds: [scenario === 'removed-break' ? 'bs12-021-recovery' : event.instanceId], effectTargets: [[]] })
+    state = declineReplacement(state)
+  }
+  if (scenario === 'opponent-break') {
+    state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: 'bs12-021-ally', targetInstanceId: 'bs12-021-opponent', supportPaymentIds: historyPayments.map(entry => entry.card.instanceId) })
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let i = 0; state.pendingBattle?.stage === 'damage' && i < 8; i++) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-two' })
+    state = declineReplacement(state)
+  }
+  if (scenario === 'trash-arena' || scenario === 'opponent-turn') {
+    // Prepared non-faint movement/timing controls; their printed parent remains unaccepted.
+    state = executeCardEffect(state, context, { kind: scenario === 'trash-arena' ? 'field-to-trash' : 'battle-to-break', target: { side: 'self', min: 1, max: 1 } }, [event.instanceId])
+    state = declineReplacement(continuePendingReplacements(state))
+  }
+  if (scenario === 'previous-turn') {
+    state = applyGameCommand(state, { kind: 'advance-phase', playerId: state.activePlayerId })
+    for (let i = 0; (state.activePlayerId !== 'player-one' || state.phase !== 'main') && i < 20; i++) state = applyGameCommand(state, { kind: 'advance-phase', playerId: state.activePlayerId })
+    if (state.activePlayerId !== 'player-one' || state.phase !== 'main') throw new Error('Mango history did not reach the next real main phase')
+  }
+  if (scenario === 'opponent-turn') {
+    state = { ...state, activePlayerId: 'player-two' }
+    return executeCardEffect(state, context, { kind: 'hand-to-battle', amount: 1 }, [mango.instanceId])
+  }
+  if (['attack', 'wrong-energy', 'few-energy'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: mango.instanceId })
+    return applyGameCommand(state, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: mango.instanceId })
+  }
+  return state
+}
+
+/** Real HP reveal and FLIP decision, isolated from the formal card registry. */
+export const createBs12StrawberryDemoState = (scenario: Bs12StrawberryScenario = 'positive'): GameState => {
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy'].includes(scenario)) {
+    const base = createBs12MuscleDemoState()
+    return { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-020', 'bs12-020-source'), bs12PrintedFillerCards('BS12-012', 'bs12-020-source-hp', 3), 1)],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({ card: scenario === 'wrong-energy'
+        ? bs12PrintedReferenceCookie('ST4-001', `bs12-020-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-020-payment-${i}`), rested: scenario === 'rested-energy' && i === 2 })),
+    } } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie('BS12-020', 'bs12-020-revealed')
+  const bearer = getBs12CandidateCookie(scenario === 'last-hp' ? 'BS12-022' : scenario === 'follow-up' ? 'BS12-015' : 'BS12-001', 'bs12-020-bearer')
+  const companion = bs12PrintedReferenceCookie('ST4-001', 'bs12-020-companion')
+  const attacker = scenario === 'follow-up' ? getBs12CandidateCookie('BS12-001', 'bs12-020-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-020-attacker')
+  const breaks = scenario === 'high-level' ? [getBs12CandidateCookie('BS12-001', 'bs12-020-break-0'), getBs12CandidateCookie('BS12-019', 'bs12-020-break-1')]
+    : Array.from({ length: scenario === 'five-arena' ? 5 : scenario === 'three-arena' ? 3 : 4 }, (_, i) => scenario === 'non-arena-break' && i === 3
+      ? bs12PrintedReferenceCookie('ST4-001', `bs12-020-break-${i}`) : (scenario === 'mixed-arena' && i === 3) || (scenario === 'five-arena' && i === 4)
+        ? bs12PrintedReferenceCookie('BS7-061', `bs12-020-break-${i}`) : getBs12CandidateCookie('BS12-017', `bs12-020-break-${i}`))
+  const misplaced = ['opponent-break', 'trash-arena'].includes(scenario)
+  const item = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === 'BS12-012')!)
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const supports = Array.from({ length: attacker.attackCost }, (_, i) => ({ card: getBs12CandidateCookie('BS12-001', `bs12-020-attack-payment-${i}`), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-020-deck', 12), stage: null,
+      hand: scenario === 'no-hand' ? [] : [scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-020-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-020-hand')],
+      breakArea: misplaced ? [] : breaks, discardPile: scenario === 'trash-arena' ? breaks : [],
+      supportArea: [{ card: getBs12CandidateCookie('BS12-019', 'bs12-020-support'), rested: false }],
+      battleArea: [cardCheckBattleEntry(bearer, [...bs12PrintedFillerCards('BS12-012', 'bs12-020-bottom-hp', bearer.hp - 1), flip], 1),
+        { ...cardCheckBattleEntry(companion, bs12PrintedFillerCards('BS12-012', 'bs12-020-companion-hp', companion.hp, bearer.hp - 1), 2), rested: true }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-020-opponent-deck', 12), breakArea: scenario === 'opponent-break' ? breaks : [],
+      battleArea: [cardCheckBattleEntry(attacker, bs12PrintedFillerCards('BS12-012', 'bs12-020-attacker-hp', attacker.hp), 3)], supportArea: supports,
+    },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+/** Candidate-only ordinary attack; payment and settlement use normal commands. */
+export const createBs12BasilDemoState = (scenario: Bs12MuscleScenario | 'deploy' = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-041', id, count, offset)
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-041', 'bs12-041-source')] : [], breakArea: [], stage: null,
+      deck: hp('bs12-041-deck', 12),
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-041-ally'), hp('bs12-041-ally', 2), 1) : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-041', 'bs12-041-source'), hp('bs12-041-source', 2), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 0 : 1 }, (_, i) => ({
+        card: scenario === 'blue-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-041-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-041-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 0,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: hp('bs12-041-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie(scenario === 'target-faints' ? 'BS6-017' : 'BS6-008', 'bs12-041-opponent'), hp('bs12-041-opponent', scenario === 'target-faints' ? 1 : 6), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-041-opponent-other'), hp('bs12-041-opponent-other', 4, 6), 3)],
+    },
+  } }
+}
+
+
+export const createBs12MelonDemoState = (scenario: Bs12MuscleScenario | 'deploy' = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-039', id, count, offset)
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-039', 'bs12-039-source')] : [], breakArea: [], stage: null,
+      deck: hp('bs12-039-deck', 12),
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-039-ally'), hp('bs12-039-ally', 2), 1) : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-039', 'bs12-039-source'), hp('bs12-039-source', 4), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'blue-energy' || i === 1 ? bs12PrintedReferenceCookie('ST4-001', `bs12-039-payment-${i}`)
+          : i === 2 ? bs12PrintedReferenceCookie('BS7-061', `bs12-039-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-039-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 2,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: hp('bs12-039-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-001', 'bs12-039-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-039-opponent'), hp('bs12-039-opponent', scenario === 'target-faints' ? 4 : 6), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-039-opponent-other'), hp('bs12-039-opponent-other', 4, 6), 3)],
+    },
+  } }
+}
+
+
+export const createBs12SourBeltDemoState = (scenario: Bs12MuscleScenario | 'deploy' | 'outside-main' = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-059', id + '-hp', count, offset)
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-059', 'bs12-059-source')] : [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-059', 'bs12-059-deck', 12, 4),
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-059-ally'), hp('bs12-059-ally', 2), 1) : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-059', 'bs12-059-source'), hp('bs12-059-source', 4), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'blue-energy' || i === 1 ? bs12PrintedReferenceCard('ST4-001', `bs12-059-payment-${i}`)
+          : i === 2 ? bs12PrintedReferenceCard('BS7-061', `bs12-059-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-059-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 2,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-059', 'bs12-059-opponent-deck', 12, 10),
+      battleArea: [cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-001', 'bs12-059-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-059-opponent'), hp('bs12-059-opponent', scenario === 'target-faints' ? 4 : 6), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-059-opponent-other'), hp('bs12-059-opponent-other', 4, 6), 3)],
+    },
+  } }
+}
+
+export type Bs12CurrantCreamScenario = 'positive' | 'blue-energy' | 'purple-energy' | 'green-energy' | 'yellow-energy' | 'spare-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'target-faints' | 'deploy' | 'outside-main'
+
+export type Bs12PuddingScenario = 'response' | 'no-hand' | 'wrong-color' | 'non-arena' | 'split-cost' | 'item-cost' | 'stage-cost' | 'trap-cost' | 'rested-source' | 'original-target' | 'twice' | 'second-response' | 'attack' | 'deploy' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'source-rested' | 'opponent-turn' | 'outside-main'
+
+export type Bs12DjScenario = 'multi-positive' | 'multi-cookie' | 'multi-item' | 'multi-stage' | 'multi-trap' | 'multi-rested' | 'multi-original' | 'multi-twice' | 'positive' | 'rested-source' | 'cookie-cost' | 'item-cost' | 'stage-cost' | 'trap-cost' | 'no-hand' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'source-hand' | 'source-support' | 'source-discard' | 'source-break' | 'own-source' | 'twice' | 'original-cost' | 'missing-original-cost' | 'multiple-source' | 'attack' | 'deploy' | 'source-rested' | 'opponent-turn' | 'outside-main' | 'hand-threshold' | 'hand-above-threshold'
+
+export type Bs12GuitarStringScenario = 'positive' | 'red-blocker' | 'two-blockers' | 'no-blocker' | 'full-field' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'opponent-turn' | 'outside-main' | 'dj-new-target' | 'dj-existing-target' | 'dj-no-hand' | 'short-deck' | 'refresh-defeat' | 'no-refresh-cookie'
+
+export type Bs12SummerSodaScenario = 'positive' | 'five' | 'seven' | 'three-blockers' | 'one-blocker' | 'no-blocker' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'rested-source' | 'opponent-turn' | 'outside-main' | 'place' | 'replace' | 'one-energy' | 'placement-wrong-energy' | 'placement-rested-energy' | 'placement-no-energy' | 'receiver'
+
+export type Bs12RainbowHeadphonesScenario = 'positive' | 'four' | 'six' | 'zero' | 'wrong-zones' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'opponent-turn' | 'outside-main' | 'short-deck' | 'spare-energy' | 'dj-four' | 'dj-five' | 'dj-no-hand'
+
+export type Bs12TrueRockSpiritScenario = 'positive' | 'rested-target' | 'non-blocker' | 'no-target' | 'wrong-zones' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'spare-energy' | 'disabled' | 'used' | 'main' | 'after-battle' | 'next-turn'
+
+export type Bs12UnderstandingScenario = 'nine' | 'eight' | 'ten' | 'mixed' | 'non-arena' | 'opponent-trash' | 'other-zones' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'one-energy' | 'one-rested' | 'spare-energy' | 'disabled' | 'used' | 'main' | 'after-battle' | 'dj' | 'expired'
+
+/** Genuine Arena cards of several colors and types; PP Trap joins trash before Then. */
+export const createBs12UnderstandingDemoState = (scenario: Bs12UnderstandingScenario = 'nine'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(source => source.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Understanding fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const nonArena=(id:string)=>bs12PrintedReferenceCookie('BS1-009',id)
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-087',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const trash = (id: string, count: number) => Array.from({ length: count }, (_, i) => card(['BS12-024', 'BS12-024', 'BS12-024', 'BS12-039', 'BS12-039', 'BS12-039', 'BS12-085', 'BS12-084', 'BS12-083', 'BS12-085'][i], `${id}-${i}`))
+  const wrongZone = ['opponent-trash', 'other-zones'].includes(scenario)
+  const trashCount = wrongZone ? 0 : ['eight', 'non-arena'].includes(scenario) ? 8 : scenario === 'ten' ? 10 : 9
+  const supportCount = scenario === 'no-energy' ? 0 : scenario === 'one-energy' ? 1 : 3
+  const before: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: deck('bs12-087-own'), stage: null,
+      hand: [card('BS12-087', 'bs12-087-trap'), ...(scenario === 'other-zones' ? trash('bs12-087-hand-witness', 3) : [])],
+      discardPile: [...trash('bs12-087-trash', trashCount), ...(scenario === 'non-arena' ? Array.from({ length: 3 }, (_, i) => nonArena(`bs12-087-non-arena-${i}`)) : [])],
+      breakArea: scenario === 'other-zones' ? ['BS12-024', 'BS12-039', 'BS12-004'].map((number, i) => getBs12CandidateCookie(number, `bs12-087-break-${i}`)) : [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-087-defender'), hp('bs12-087-defender', 4), 1),
+        cardCheckBattleEntry(getBs12CandidateCookie(scenario === 'dj' ? 'BS12-082' : 'BS12-075', 'bs12-087-ally'), hp('bs12-087-ally',scenario==='dj'?2:3), 2)],
+      supportArea: Array.from({ length: supportCount }, (_, i) => ({
+        card: getBs12CandidateCookie(scenario === 'wrong-energy' || (scenario === 'one-rested' && i === 2) ? 'BS12-004' : 'BS12-079', `bs12-087-payment-${i}`),
+        rested: scenario === 'rested-energy' || (scenario === 'one-rested' && i === 1),
+      })),
+    },
+    'player-two': { ...base.players['player-two'], deck: deck('bs12-087-enemy'), hand: [], stage: null, breakArea: [],
+      discardPile: wrongZone ? trash('bs12-087-opponent-trash', 9) : [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-016', 'bs12-087-attacker'), hp('bs12-087-attacker', 4), 3),
+        { ...cardCheckBattleEntry(nonArena('bs12-087-other'), hp('bs12-087-other',3), 4), rested: true }],
+      supportArea: Array.from({ length: 3 }, (_, i) => ({ card: getBs12CandidateCookie('BS12-004', `bs12-087-attack-payment-${i}`), rested: false })),
+    },
+  } }
+  if (scenario === 'main') return { ...before, activePlayerId: 'player-one' }
+  if (scenario === 'after-battle') return before
+  const state = beginAttack(before, 'bs12-087-attacker', 'bs12-087-defender', before.players['player-two'].supportArea.map(support => support.card.instanceId))
+  if (scenario === 'expired') {
+    let next = applyGameCommand(state, { kind: 'play-trap', playerId: 'player-one', trapInstanceId: 'bs12-087-trap', paymentIds: ['bs12-087-payment-0', 'bs12-087-payment-1'], targetIds: [], effectTargets: [['bs12-087-attacker']] })
+    for (let i = 0; next.pendingBattle && i < 12; i++) next = applyGameCommand(next, next.pendingBattle.stage === 'attack-effect'
+      ? { kind: 'resolve-attack-effect', playerId: 'player-two', targetIds: [] }
+      : { kind: 'resolve-next-damage', playerId: 'player-one' })
+    next = advancePhase(advancePhase(next))
+    return advancePhase(advancePhase(advancePhase(next)))
+  }
+  return { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : {}), ...(scenario === 'used' ? { trapUsed: true, stage: 'damage' as const } : {}) } }
+}
+
+/** Genuine Blockers of different colors; normal one-damage attack survives for the next turn. */
+export const createBs12TrueRockSpiritDemoState = (scenario: Bs12TrueRockSpiritScenario = 'positive'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const candidate = (number: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing True Rock Spirit fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const red=(id:string)=>bs12PrintedReferenceCookie('BS1-009',id)
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-086',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const blocker = getBs12CandidateCookie(['non-blocker', 'no-target', 'wrong-zones'].includes(scenario) ? 'BS12-075' : 'BS12-081', 'bs12-086-blocker')
+  const second = ['no-target', 'wrong-zones'].includes(scenario) ? getBs12CandidateCookie('BS12-079', 'bs12-086-second') : red('bs12-086-second')
+  const before: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], deck: deck('bs12-086-own'),
+        hand: [candidate('BS12-086', 'bs12-086-trap'), ...(scenario === 'wrong-zones' ? [red('bs12-086-hand-blocker')] : [])],
+        discardPile: scenario === 'wrong-zones' ? [red('bs12-086-trash-blocker')] : [],
+        breakArea: scenario === 'wrong-zones' ? [red('bs12-086-break-blocker')] : [], stage: null,
+        battleArea: [cardCheckBattleEntry(blocker, hp('bs12-086-blocker',blocker.hp), 1),
+          { ...cardCheckBattleEntry(second, hp('bs12-086-second', second.hp, 2), 2), rested: scenario === 'rested-target' }],
+        supportArea: scenario === 'no-energy' ? [] : Array.from({ length: ['spare-energy', 'wrong-zones'].includes(scenario) ? 2 : 1 }, (_, i) => ({
+          card: scenario === 'wrong-zones' && i === 1 ? red('bs12-086-support-blocker') : getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-079', `bs12-086-payment-${i}`),
+          rested: scenario === 'rested-energy',
+        })),
+      },
+      'player-two': { ...base.players['player-two'], deck: deck('bs12-086-enemy'), hand: [], stage: null, breakArea: [], discardPile: [],
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-086-attacker'), hp('bs12-086-attacker', 2), 3),
+          cardCheckBattleEntry(getBs12CandidateCookie(scenario === 'wrong-zones' ? 'BS12-081' : 'BS12-016', 'bs12-086-opponent'), hp('bs12-086-opponent',scenario==='wrong-zones'?2:4), 4)],
+        supportArea: [{ card: getBs12CandidateCookie('BS12-004', 'bs12-086-attack-payment'), rested: false }],
+      },
+    },
+  }
+  if (scenario === 'main') return { ...before, activePlayerId: 'player-one' }
+  if (scenario === 'after-battle') return before
+  const state = beginAttack(before, 'bs12-086-attacker', 'bs12-086-blocker', ['bs12-086-attack-payment'])
+  if (scenario === 'next-turn') {
+    let next = applyGameCommand(state, { kind: 'play-trap', playerId: 'player-one', trapInstanceId: 'bs12-086-trap', paymentIds: ['bs12-086-payment-0'], targetIds: [], effectTargets: [['bs12-086-blocker']] })
+    for (let i = 0; next.pendingBattle && i < 12; i++) next = applyGameCommand(next, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    next = advancePhase(advancePhase(next))
+    return advancePhase(advancePhase(advancePhase(next)))
+  }
+  return { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : {}), ...(scenario === 'used' ? { trapUsed: true, stage: 'damage' as const } : {}) } }
+}
+
+/** Genuine mixed-color Blockers and all ordinary trash types, with no hidden fifth Blocker. */
+export const createBs12RainbowHeadphonesDemoState = (scenario: Bs12RainbowHeadphonesScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const candidate = (number: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Rainbow Headphones fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-085',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const red=(id:string)=>bs12PrintedReferenceCookie('BS1-009',id)
+  const blockerCount = scenario === 'zero' ? 0 : ['four', 'wrong-zones', 'dj-four'].includes(scenario) ? 4 : scenario === 'six' ? 6 : 5
+  const blockers = Array.from({ length: blockerCount }, (_, i) => i < blockerCount - 2
+    ? candidate('BS12-081', `bs12-085-trash-blocker-${i}`) : red(`bs12-085-trash-blocker-${i}`))
+  const dj = scenario.startsWith('dj-')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      deck: hp('bs12-085-own-deck',scenario==='short-deck'?1:12),
+      hand: [candidate('BS12-085', 'bs12-085-item'), ...(scenario === 'dj-no-hand' ? [] : [red('bs12-085-hand-blocker'), candidate('BS12-075', 'bs12-085-hand-non-blocker')])],
+      discardPile: [...blockers, candidate('BS12-075', 'bs12-085-trash-non-blocker'), candidate('BS12-012', 'bs12-085-trash-item'), candidate('BS12-030', 'bs12-085-trash-stage'), candidate('BS12-086', 'bs12-085-trash-trap')],
+      stage: null, breakArea: [red('bs12-085-break-blocker')],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(scenario === 'wrong-zones' ? 'BS12-081' : 'BS12-003', 'bs12-085-ally'), hp('bs12-085-ally', 2), 1)],
+      supportArea: scenario === 'no-energy' ? [] : Array.from({ length: scenario === 'spare-energy' ? 2 : 1 }, (_, i) => ({ card: getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : scenario === 'wrong-zones' ? 'BS12-081' : 'BS12-079', `bs12-085-payment-${i}`), rested: scenario === 'rested-energy' })),
+    },
+    'player-two': { ...base.players['player-two'], deck: hp('bs12-085-enemy-deck', 12), hand: [], stage: null, breakArea: [], supportArea: [],
+      discardPile: [candidate('BS12-081', 'bs12-085-enemy-blocker')],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(dj ? 'BS12-082' : 'BS12-003', 'bs12-085-opponent'), hp('bs12-085-opponent', 2), 2)],
+    },
+  } }
+}
+
+/** Candidate Stage with genuine printed Blockers; payment order stays a public command. */
+export const createBs12SummerSodaDemoState = (scenario: Bs12SummerSodaScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const candidate = (number: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Summer Soda fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-084',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const placement = ['place', 'replace', 'one-energy'].includes(scenario) || scenario.startsWith('placement-')
+  const stage = candidate('BS12-084', 'bs12-084-stage')
+  const blockerCount = scenario === 'no-blocker' ? 0 : scenario === 'one-blocker' ? 1 : scenario === 'three-blockers' ? 3 : 2
+  const handCount = scenario === 'five' ? 5 : scenario === 'seven' ? 7 : 6
+  const energyCount = ['no-energy', 'placement-no-energy'].includes(scenario) ? 0 : placement && scenario !== 'one-energy' ? 2 : 1
+  const state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      deck: hp('bs12-084-own-deck',12),
+      hand: [...(placement ? [stage] : []), candidate('BS12-081', 'bs12-084-hand-blocker')],
+      stage: placement ? scenario === 'replace' ? { card: candidate('BS12-030', 'bs12-084-old-stage'), rested: false } : null : { card: stage, rested: scenario === 'rested-source' },
+      discardPile: [...(blockerCount > 0 ? [candidate('BS12-081', 'bs12-084-blocker')] : []),
+        ...(blockerCount > 1 ? [bs12PrintedReferenceCookie('BS1-009','bs12-084-red-blocker')] : []),
+        ...(blockerCount > 2 ? [bs12PrintedReferenceCookie('BS1-009','bs12-084-third-blocker')] : []),
+        candidate('BS12-075', 'bs12-084-non-blocker'), candidate('BS12-012', 'bs12-084-non-cookie')],
+      breakArea: [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-084-ally'), hp('bs12-084-ally', 2), 1)],
+      supportArea: Array.from({ length: energyCount }, (_, i) => ({ card: getBs12CandidateCookie(['wrong-energy', 'placement-wrong-energy'].includes(scenario) ? 'BS12-004' : 'BS12-081', `bs12-084-payment-${i}`), rested: ['rested-energy', 'placement-rested-energy'].includes(scenario) })),
+    },
+    'player-two': { ...base.players['player-two'], deck: hp('bs12-084-enemy-deck', 12), stage: null,
+      hand: Array.from({ length: handCount }, (_, i) => candidate(['BS12-075', 'BS12-012', 'BS12-030'][i % 3], `bs12-084-enemy-hand-${i}`)),
+      discardPile: [candidate('BS12-081', 'bs12-084-opponent-blocker')], breakArea: [], supportArea: [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-084-opponent'), hp('bs12-084-opponent', 2), 2)],
+    },
+  } }
+  if (scenario !== 'receiver') return state
+  const receiverState: GameState = { ...state, activePlayerId: 'player-two', players: {
+    'player-one': { ...state.players['player-two'], id: 'player-one', name: base.players['player-one'].name },
+    'player-two': { ...state.players['player-one'], id: 'player-two', name: base.players['player-two'].name },
+  } }
+  return applyGameCommand(receiverState, { kind: 'begin-activate-stage', playerId: 'player-two', paymentIds: ['bs12-084-payment-0'], trashToDeckBottomIds: ['bs12-084-red-blocker', 'bs12-084-blocker'], targetIds: [] })
+}
+
+/** Isolated candidate Item; all selectable cards retain their official identities. */
+export const createBs12GuitarStringDemoState = (scenario: Bs12GuitarStringScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const candidate = (number: string, id: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Guitar String fixture ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-083',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const redBlocker = bs12PrintedReferenceCookie('BS1-009','bs12-083-red-blocker')
+  const dj = scenario.startsWith('dj-')
+  const noTrashBlocker = ['no-blocker', 'dj-new-target'].includes(scenario)
+  const deck = hp('bs12-083-deck',['short-deck','refresh-defeat','no-refresh-cookie'].includes(scenario)?1:12)
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck, stage: null,
+      hand: [candidate('BS12-083', 'bs12-083-item'), ...(scenario === 'dj-no-hand' ? [] : [candidate('BS12-081', 'bs12-083-hand-blocker')])],
+      discardPile: [...(noTrashBlocker ? [] : [scenario === 'red-blocker' ? redBlocker : candidate('BS12-081', 'bs12-083-blocker')]),
+        ...(scenario === 'two-blockers' ? [redBlocker] : []), ...(scenario === 'no-refresh-cookie' ? [] : [candidate('BS12-075', 'bs12-083-non-blocker')]), candidate('BS12-012', 'bs12-083-non-cookie')],
+      breakArea: scenario === 'refresh-defeat' ? ['BS12-001', 'BS12-005', 'BS12-075', 'BS12-008'].map((number, i) => getBs12CandidateCookie(number, `bs12-083-old-break-${i}`)) : [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-083-ally'), hp('bs12-083-ally',4), 1),
+        ...(scenario === 'full-field' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-075', 'bs12-083-ally-two'), hp('bs12-083-ally-two',3), 2)] : [])],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-001' : 'BS12-081', 'bs12-083-payment'), rested: scenario === 'rested-energy' }],
+    },
+    'player-two': { ...base.players['player-two'], deck: hp('bs12-083-enemy-deck', 12), stage: null, hand: [], breakArea: [], supportArea: [],
+      discardPile: [candidate('BS12-081', 'bs12-083-opponent-blocker')],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(dj ? 'BS12-082' : 'BS12-001', 'bs12-083-opponent'), hp('bs12-083-opponent',dj?2:4), 3)],
+    },
+  } }
+}
+
+/** Candidate-only DJ: the Item, tax and all printed costs use public commands. */
+export const createBs12DjDemoState = (scenario: Bs12DjScenario = 'positive'): GameState => {
+  if (scenario.startsWith('multi-')) {
+    const state = createBs12DjDemoState(scenario === 'multi-original' ? 'original-cost' : scenario === 'multi-twice' ? 'twice' : 'positive')
+    const owner = state.players['player-one'], opponent = state.players['player-two']
+    const taxNumber = ({ 'multi-cookie': 'BS12-024', 'multi-item': 'BS12-012', 'multi-stage': 'BS12-030' } as Record<string, string>)[scenario] ?? 'BS12-086'
+    return { ...state, players: { ...state.players,
+      'player-one': { ...owner, hand: [...owner.hand, bs12PrintedFixtureCard(taxNumber, 'r005-second-tax'),
+        ...(scenario === 'multi-twice' ? [bs12PrintedFixtureCard('BS12-086', 'r005-fourth-tax')] : [])] },
+      'player-two': { ...opponent, battleArea: [...opponent.battleArea.map(cookie => ({ ...cookie, rested: scenario === 'multi-rested' })),
+        { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-082', 'bs12-082-source-two'), bs12PrintedFillerCards('BS12-082', 'r005-source-two-hp', 2, 14), 4), rested: scenario === 'multi-rested' }] },
+    } }
+  }
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-082',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const source = getBs12CandidateCookie('BS12-082', 'bs12-082-source')
+  const fromCandidate = (number: string, id: string) => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing DJ fixture ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const ordinary = ['attack', 'deploy', 'source-rested'].includes(scenario)
+  const handThreshold = ['hand-threshold', 'hand-above-threshold'].includes(scenario)
+  const originalCost = ['original-cost', 'missing-original-cost'].includes(scenario)
+  const outside = ['source-hand', 'source-support', 'source-discard', 'source-break', 'own-source'].includes(scenario)
+  const taxNumber = scenario === 'item-cost' ? 'BS12-012' : scenario === 'stage-cost' ? 'BS12-030' : scenario === 'trap-cost' ? 'BS12-086' : 'BS12-075'
+  const hand = handThreshold ? [bs12PrintedReferenceCard('BS8-096','bs12-082-item'),
+    ...Array.from({ length: scenario === 'hand-threshold' ? 3 : 4 }, (_, i) => fromCandidate('BS12-075', i === 0 ? 'bs12-082-tax' : `bs12-082-remaining-${i}`))]
+    : ordinary ? scenario === 'deploy' ? [source] : [] : [fromCandidate(originalCost ? 'BS12-028' : 'BS12-012', 'bs12-082-item'),
+    ...(scenario === 'no-hand' ? [] : [originalCost ? getBs12CandidateCookie('BS12-001', 'bs12-082-tax') : fromCandidate(taxNumber, 'bs12-082-tax')]),
+    ...(scenario === 'original-cost' ? [getBs12CandidateCookie('BS12-075', 'bs12-082-original-cost')] : []),
+    ...(scenario === 'twice' ? [fromCandidate('BS12-012', 'bs12-082-item-two'), getBs12CandidateCookie('BS12-001', 'bs12-082-tax-two')] : [])]
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], deck: handThreshold
+      ? Array.from({ length: 12 }, (_, i) => fromCandidate(['BS12-001', 'BS12-025', 'BS12-012', 'BS12-030'][Math.floor(i / 3)], `bs12-082-deck-${i}`))
+      : hp('bs12-082-deck', 12), discardPile: [], breakArea: [], stage: null, hand,
+      battleArea: ordinary && scenario !== 'deploy' || scenario === 'own-source'
+        ? [{ ...cardCheckBattleEntry(source, hp('bs12-082-source', 2), 1), rested: scenario === 'source-rested' }]
+        : [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-082-receiver'), hp('bs12-082-receiver',4), 1), rested: scenario !== 'deploy' }],
+      supportArea: scenario === 'no-energy' ? [] : Array.from({ length: ordinary && scenario !== 'deploy' || scenario === 'twice' || handThreshold ? 2 : 1 }, (_, i) => ({
+        card: getBs12CandidateCookie(handThreshold ? 'BS12-061' : scenario === 'wrong-energy' || ordinary && scenario !== 'deploy' ? 'BS12-075' : originalCost ? 'BS12-025' : 'BS12-001', `bs12-082-payment-${i}`), rested: scenario === 'rested-energy',
+      })),
+    },
+    'player-two': { ...base.players['player-two'], deck: hp('bs12-082-enemy-deck', 12), stage: null,
+      hand: scenario === 'source-hand' ? [source] : [], discardPile: scenario === 'source-discard' ? [source] : [], breakArea: scenario === 'source-break' ? [source] : [],
+      supportArea: scenario === 'source-support' ? [{ card: source, rested: false }] : [],
+      battleArea: [ordinary || outside ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-082-opponent'), hp('bs12-082-opponent', 4), 3)
+        : { ...cardCheckBattleEntry(source, hp('bs12-082-source', 2), 3), rested: scenario === 'rested-source' },
+        ...(scenario === 'multiple-source' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-082', 'bs12-082-source-two'), hp('bs12-082-source-two', 2), 4)] : [])],
+    },
+  } }
+}
+
+export const BS12_BLACK_SAPPHIRE_SCENARIOS = ['response', 'item-cost', 'stage-cost', 'trap-cost', 'rested-source', 'wrong-color', 'non-arena', 'split-cost', 'no-hand', 'faint', 'only-block-cost', 'no-faint-cost', 'faint-red-item', 'faint-purple-trap', 'direct-attack', 'short-deck', 'empty-deck', 'refresh-defeat', 'lv10-defeat', 'twice', 'second-response', 'last-hp-flip', 'attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'] as const
+export type Bs12BlackSapphireScenario = typeof BS12_BLACK_SAPPHIRE_SCENARIOS[number]
+
+/** Genuine printed cards; initial declarations use the same public commands as normal play. */
+export const createBs12BlackSapphireDemoState = (number: 'BS12-088' | 'BS12-088@1' = 'BS12-088', scenario: Bs12BlackSapphireScenario = 'response'): GameState => {
+  if (scenario === 'second-response') {
+    let state = createBs12BlackSapphireDemoState(number, 'twice')
+    state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: 'bs12-088-source', paymentIds: [], discardHandIds: ['bs12-088-block-cost'] })
+    state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-088-attacker-two', targetInstanceId: 'bs12-088-ally', supportPaymentIds: ['bs12-088-attack-payment-1'] })
+  }
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const base = baseTestState(ordinary ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(source => source.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Black Sapphire fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-088',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const source = getBs12CandidateCookie(number, 'bs12-088-source')
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-087' : scenario === 'wrong-color' ? 'BS12-001' : 'BS12-079'
+  const blockCost = ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCard('BS4-090', 'bs12-088-block-cost') : card(costNumber, 'bs12-088-block-cost')
+  const faintCost = scenario === 'no-faint-cost' ? bs12PrintedReferenceCard('BS4-090', 'bs12-088-faint-cost') : card(scenario === 'faint-red-item' ? 'BS12-013' : scenario === 'faint-purple-trap' ? 'BS12-087' : 'BS12-024', 'bs12-088-faint-cost')
+  const shouldFaint = ['faint', 'only-block-cost', 'no-faint-cost', 'faint-red-item', 'faint-purple-trap', 'direct-attack', 'short-deck', 'empty-deck', 'refresh-defeat', 'lv10-defeat', 'last-hp-flip'].includes(scenario)
+  const initial: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : base.activePlayerId,
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, discardPile: [],
+        deck: scenario === 'empty-deck' ? [] : ['short-deck', 'refresh-defeat'].includes(scenario) ? deck('bs12-088-own').slice(0, 1) : deck('bs12-088-own'),
+        breakArea: ['refresh-defeat', 'lv10-defeat'].includes(scenario) ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie(scenario === 'refresh-defeat' && i === 0 ? 'BS12-016' : 'BS12-026', `bs12-088-break-${i}`)) : [],
+        hand: scenario === 'deploy' ? [source] : ordinary || scenario === 'no-hand' ? [] : [blockCost,
+          ...(!['only-block-cost', 'split-cost', 'wrong-color', 'non-arena'].includes(scenario) ? [faintCost] : []),
+          ...(scenario === 'split-cost' ? [card('BS12-001', 'bs12-088-red-arena')] : []),
+          ...(scenario === 'twice' ? [card('BS12-083', 'bs12-088-block-cost-two')] : [])],
+        battleArea: scenario === 'deploy' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-088-ally'), hp('bs12-088-ally', 4, 3), 2)] : [
+          { ...cardCheckBattleEntry(source, scenario==='last-hp-flip'?[card('BS12-002','bs12-088-source-final-hp'),...hp('bs12-088-source',2)]:hp('bs12-088-source',3), 1), rested: ['rested-source', 'source-rested'].includes(scenario) },
+          ...(!ordinary ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-088-ally'), hp('bs12-088-ally', 4, 3), 2)] : [])],
+        supportArea: Array.from({ length: scenario === 'few-energy' ? 1 : 3 }, (_, i) => ({ card: getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-075', `bs12-088-payment-${i}`), rested: scenario === 'rested-energy' })),
+      },
+      'player-two': { ...base.players['player-two'], stage: null, hand: [], discardPile: [], breakArea: [], deck: deck('bs12-088-enemy'),
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(shouldFaint?'BS12-078':'BS12-003','bs12-088-attacker'),hp('bs12-088-attacker',shouldFaint?3:2), 3),
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-088-attacker-two'), hp('bs12-088-attacker-two',2), 4)],
+        supportArea: Array.from({ length: shouldFaint?3:2 }, (_, i) => ({ card: getBs12CandidateCookie(shouldFaint?'BS12-079':'BS12-004', `bs12-088-attack-payment-${i}`), rested: false })),
+      },
+    } }
+  return ordinary ? initial : applyGameCommand(initial, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-088-attacker', targetInstanceId: scenario === 'direct-attack' ? source.instanceId : 'bs12-088-ally', supportPaymentIds: shouldFaint?['bs12-088-attack-payment-0','bs12-088-attack-payment-1','bs12-088-attack-payment-2']:['bs12-088-attack-payment-0'] })
+}
+
+export const BS12_MILKY_WAY_SCENARIOS = ['response', 'item-cost', 'stage-cost', 'trap-cost', 'rested-source', 'wrong-color', 'non-arena', 'split-cost', 'no-hand',
+  'faint-four', 'faint-three', 'faint-five', 'mixed-break', 'wrong-zones', 'no-target', 'other-color', 'non-arena-target', 'no-hand-faint', 'direct-attack', 'last-hp-flip', 'lv10-defeat',
+  'attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'twice', 'second-response'] as const
+export type Bs12MilkyWayScenario = typeof BS12_MILKY_WAY_SCENARIOS[number]
+
+export const BS12_BLACK_LEMONADE_SCENARIOS = ['extra', 'extra-lv1', 'extra-non-arena', 'extra-rested', 'extra-full',
+  'break-two', 'split-break', 'non-arena-blocker', 'wrong-zones', 'cost-red', 'cost-lv3', 'no-cost', 'outside-main', 'extra-used', 'extra-opponent-turn',
+  'attack', 'first-player', 'then-one', 'then-zero', 'wrong-energy', 'few-energy', 'rested-energy',
+  'friendly-faint', 'hand-two', 'source-rested', 'friendly-turn', 'opponent-faint', 'source-faint', 'last-hp-flip',
+  'damage-faint', 'direct-faint', 'battle-to-trash', 'lv10-defeat'] as const
+export type Bs12BlackLemonadeScenario = typeof BS12_BLACK_LEMONADE_SCENARIOS[number]
+
+/** Candidate-only Black Lemonade scenarios; all entry and faint decisions use real commands. */
+export const createBs12BlackLemonadeDemoState = (number: 'BS12-092' | 'BS12-092@1' = 'BS12-092', scenario: Bs12BlackLemonadeScenario = 'extra'): GameState => {
+  const entering = ['extra', 'extra-lv1', 'extra-non-arena', 'extra-rested', 'extra-full', 'break-two', 'split-break', 'non-arena-blocker', 'wrong-zones', 'cost-red', 'cost-lv3', 'no-cost', 'outside-main', 'extra-used', 'extra-opponent-turn'].includes(scenario)
+  const attacking = ['attack', 'first-player', 'then-one', 'then-zero', 'wrong-energy', 'few-energy', 'rested-energy'].includes(scenario)
+  const activePlayerId = entering || attacking || scenario === 'friendly-turn' ? 'player-one' : 'player-two'
+  const base = baseTestState(activePlayerId, scenario === 'outside-main' ? 'support' : 'main')
+  const card = (cardNumber: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === cardNumber)!)
+    if (result.status !== 'converted') throw new Error(`Missing Black Lemonade fixture ${cardNumber}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const conversion = convertOfficialCardToExtraDeckCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+  if (conversion.status !== 'converted') throw new Error('Missing Black Lemonade EXTRA')
+  const extra = { ...conversion.extraDeckCard, instanceId: 'bs12-092-source' }
+  const source = materializeExtraDeckCookie(extra)
+  let fillerOffset=0
+  const hp=(id:string,numbers:string[])=>{const cards=bs12PrintedFillerCards('BS12-092',id+'-hp',numbers.length,fillerOffset);fillerOffset+=numbers.length;return cards}
+  const deck=(id:string)=>hp(id+'-deck',Array.from({length:12},()=> 'BS12-009'))
+  const cost = scenario === 'extra-non-arena' ? bs12PrintedReferenceCookie('BS4-090', 'bs12-092-cost')
+    : getBs12CandidateCookie(scenario === 'cost-red' ? 'BS12-001' : scenario === 'cost-lv3' ? 'BS12-076' : scenario === 'extra-lv1' ? 'BS12-079' : 'BS12-075', 'bs12-092-cost')
+  const breaks = ['BS12-088', 'BS12-089', 'BS12-090'].slice(0, scenario === 'break-two' ? 2 : 3)
+    .map((n, i) => getBs12CandidateCookie(n, `bs12-092-blocker-${i}`))
+  if (scenario === 'split-break') breaks[2] = getBs12CandidateCookie('BS12-079', 'bs12-092-non-blocker')
+  if (scenario === 'non-arena-blocker') breaks[2] = bs12PrintedReferenceCookie('BS4-014', 'bs12-092-non-arena-blocker')
+  const opponentHand = ['BS12-087', 'BS12-086', 'BS12-085'].slice(0, scenario === 'hand-two' ? 2 : scenario === 'then-one' ? 1 : scenario === 'then-zero' ? 0 : 3)
+    .map((n, i) => card(n, `bs12-092-enemy-hand-${i}`))
+  let state: GameState = { ...base, firstPlayerId: scenario === 'first-player' ? 'player-one' : 'player-two', turnNumber: 2,
+    activePlayerId: scenario === 'extra-opponent-turn' ? 'player-two' : activePlayerId,
+    extraDeckPlayUsedThisTurn: scenario === 'extra-used',
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, hand: scenario === 'last-hp-flip' ? [card('BS12-012', 'bs12-092-flip-cost')] : [], discardPile: [], deck: deck('bs12-092-own'),
+        extraDeck: entering ? [extra] : [],
+        breakArea: entering ? scenario === 'wrong-zones' ? breaks.slice(0, 2) : breaks : scenario === 'lv10-defeat'
+          ? ['BS12-019', 'BS12-019', 'BS12-023'].map((n, i) => getBs12CandidateCookie(n, `bs12-092-old-break-${i}`)) : [],
+        battleArea: entering ? scenario === 'no-cost' ? [] : [
+          { ...cardCheckBattleEntry(cost, hp('bs12-092-cost',Array.from({length:cost.hp},()=> 'BS12-009')), 1), rested: scenario === 'extra-rested' },
+          ...(scenario === 'extra-full' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-024', 'bs12-092-other'), hp('bs12-092-other',['BS12-009','BS12-010']), 2)] : []),
+        ] : [
+          { ...cardCheckBattleEntry(source, hp('bs12-092-source',Array.from({length:5},()=> 'BS12-009')), 1), rested: scenario === 'source-rested' },
+          ...(!attacking ? [cardCheckBattleEntry(scenario==='last-hp-flip'?getBs12CandidateCookie('BS12-080','bs12-092-ally'):bs12PrintedReferenceCookie('BS6-017','bs12-092-ally'),scenario==='last-hp-flip'?[card('BS12-002','bs12-092-final-flip')]:hp('bs12-092-ally',['BS12-009']),2)] : []),
+        ],
+        supportArea: Array.from({ length: scenario === 'few-energy' ? 3 : 4 }, (_, i) => ({ card: getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-081', `bs12-092-payment-${i}`), rested: scenario === 'rested-energy' })),
+      },
+      'player-two': { ...base.players['player-two'], stage: null, hand: opponentHand, discardPile: [], breakArea: [], deck: deck('bs12-092-enemy'), extraDeck: [],
+        battleArea:[cardCheckBattleEntry(getBs12CandidateCookie(scenario==='source-faint'?'BS12-019':scenario==='opponent-faint'?'BS12-080':!entering&&!attacking?'BS12-003':'BS12-064','bs12-092-opponent'),hp('bs12-092-opponent',Array.from({length:scenario==='source-faint'?4:scenario==='opponent-faint'?1:!entering&&!attacking?2:5},()=> 'BS12-009')),3),
+          cardCheckBattleEntry(getBs12CandidateCookie(scenario==='source-faint'?'BS12-003':'BS12-024','bs12-092-opponent-other'),hp('bs12-092-opponent-other',['BS12-009','BS12-010']),4)],
+        supportArea:Array.from({length:scenario==='source-faint'?4:1},(_,i)=>({card:getBs12CandidateCookie('BS12-004',scenario==='source-faint'?`bs12-092-enemy-payment-${i}`:'bs12-092-enemy-payment'),rested:false})),
+      },
+    } }
+  if (scenario === 'wrong-zones') state.players['player-one'].discardPile = [breaks[2]]
+  if(scenario==='source-faint'){
+    state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-two',attackerInstanceId:'bs12-092-opponent-other',targetInstanceId:source.instanceId,supportPaymentIds:['bs12-092-enemy-payment-3']})
+    state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-one'})
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-one'})
+    return applyGameCommand(state,{kind:'declare-attack',playerId:'player-two',attackerInstanceId:'bs12-092-opponent',targetInstanceId:source.instanceId,supportPaymentIds:['bs12-092-enemy-payment-0','bs12-092-enemy-payment-1','bs12-092-enemy-payment-2']})
+  }
+  if (!entering && !attacking && !['damage-faint', 'direct-faint', 'battle-to-trash', 'opponent-faint', 'friendly-turn', 'lv10-defeat'].includes(scenario)) {
+    return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-092-opponent', targetInstanceId: 'bs12-092-ally', supportPaymentIds: ['bs12-092-enemy-payment'] })
+  }
+  return state
+}
+
+export const BS12_BUTTER_ROLL_SCENARIOS = ['attack', 'red-energy', 'blue-energy', 'green-energy', 'yellow-energy', 'purple-energy', 'black-energy', 'spare-energy',
+  'few-energy', 'no-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'deploy', 'target-faints', 'target-flip'] as const
+export type Bs12ButterRollScenario = typeof BS12_BUTTER_ROLL_SCENARIOS[number]
+
+export const BS12_JASMINE_SCENARIOS = ['attack', 'red-energy', 'blue-energy', 'green-energy', 'yellow-energy', 'purple-energy', 'black-energy', 'spare-energy',
+  'no-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'deploy', 'target-faints', 'target-flip'] as const
+export type Bs12JasmineScenario = typeof BS12_JASMINE_SCENARIOS[number]
+
+export const BS12_BLUEBERRY_SCENARIOS = ['special', 'special-non-arena', 'special-rested', 'special-full', 'special-two-candidates', 'special-refresh', 'special-refresh-defeat',
+  'special-wrong-color', 'special-wrong-level', 'special-wrong-zone', 'special-no-cost', 'special-opponent-only', 'special-other-turn', 'special-outside-main', 'special-licorice',
+  'deploy', 'attack', 'attack-spare-energy', 'attack-wrong-energy', 'attack-few-energy', 'attack-rested-energy', 'attack-source-rested', 'attack-opponent-turn', 'attack-outside-main', 'attack-faint',
+  'flip', 'flip-red', 'flip-blue', 'flip-green', 'flip-purple', 'flip-black', 'flip-yellow', 'flip-rested', 'flip-non-arena', 'flip-support-only', 'flip-opponent-only',
+  'flip-no-hand', 'flip-two-hand', 'flip-last-hp', 'flip-refresh', 'flip-refresh-defeat'] as const
+export type Bs12BlueberryScenario = typeof BS12_BLUEBERRY_SCENARIOS[number]
+
+/** Distinct actual cards: Special Play costs and HP FLIP are independent decisions. */
+export const createBs12BlueberryDemoState = (scenario: Bs12BlueberryScenario = 'special'): GameState => {
+  const flip = scenario.startsWith('flip'), attack = scenario.startsWith('attack')
+  const base = baseTestState(flip || ['special-other-turn', 'attack-opponent-turn'].includes(scenario) ? 'player-two' : 'player-one',
+    scenario.endsWith('outside-main') ? 'support' : 'main')
+  const card = (number: string, id: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, id)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Blueberry fixture ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const cookie = (number: string, id: string) => number.startsWith('BS12-') ? getBs12CandidateCookie(number, id) : bs12PrintedReferenceCookie(number, id)
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-hp-${i}`))
+  const fullHp = (id:string,count:number,offset=0) => hp(id,Array.from({length:count},(_,i)=>['BS12-011','BS12-030','BS12-031','BS12-046','BS12-013','BS12-085','BS12-084','BS12-087'][Math.floor((i+offset)/2)]))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const source = cookie('BS12-095', 'bs12-095-source')
+  const noOwnArena = ['flip-non-arena', 'flip-support-only', 'flip-opponent-only'].includes(scenario)
+  const companionByScenario: Partial<Record<Bs12BlueberryScenario, string>> = { 'flip-blue': 'BS12-064', 'flip-green': 'BS12-040', 'flip-purple': 'BS12-079', 'flip-black': 'BS12-095', 'flip-yellow': 'BS12-024' }
+  const costNumber = ['special-non-arena', 'special-two-candidates'].includes(scenario) ? 'BS11-093' : ['special-wrong-level', 'special-licorice'].includes(scenario) ? 'BS11-092'
+    : scenario === 'special-wrong-color' ? 'BS12-003' : 'BS12-095'
+  const cost = cookie(costNumber, 'bs12-095-cost')
+  const noCost = ['special-no-cost', 'special-wrong-zone', 'special-opponent-only'].includes(scenario)
+  const bearer=cookie(noOwnArena?'ST4-001':'BS12-003','bs12-095-bearer')
+  const companion=cookie(noOwnArena?'BS11-095':companionByScenario[scenario]??'BS12-001','bs12-095-companion')
+  const bearerOtherHp=fullHp('bs12-095-bearer',bearer.hp-1)
+  const flipHp=scenario==='flip-last-hp'?[source,...bearerOtherHp]:[...bearerOtherHp,source]
+  const battle = flip ? [cardCheckBattleEntry(bearer,flipHp,1),
+    {...cardCheckBattleEntry(companion,fullHp('bs12-095-companion',companion.hp,10),2),rested:scenario==='flip-rested'}]
+    :attack?[{...cardCheckBattleEntry(source,fullHp('bs12-095-source',source.hp),1),rested:scenario==='attack-source-rested'}]
+      :[{...cardCheckBattleEntry(noCost?cookie('BS12-003','bs12-095-ally'):cost,fullHp('bs12-095-cost',noCost?2:cost.hp),1),rested:scenario==='special-rested'},
+        ...(['special-full','special-two-candidates'].includes(scenario)?[cardCheckBattleEntry(cookie(scenario==='special-two-candidates'?'BS12-095':'BS12-003','bs12-095-other-cost'),fullHp('bs12-095-other-cost',scenario==='special-two-candidates'?1:2,10),2)]:[])]
+  const enemy=cookie(flip&&scenario==='flip-last-hp'?'BS12-091':attack&&scenario!=='attack-faint'?'BS12-064':'BS12-003','bs12-095-opponent')
+  const refreshing = ['flip-refresh', 'flip-refresh-defeat', 'special-refresh', 'special-refresh-defeat'].includes(scenario)
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [],
+      deck: refreshing ? [card('BS12-028', 'bs12-095-final-deck')] : deck('bs12-095-own'),
+      discardPile: refreshing && flip ? [cookie('BS12-023', 'bs12-095-refresh-cookie'), card('BS12-061', 'bs12-095-refresh-trash')] : [],
+      breakArea: scenario === 'flip-refresh-defeat' ? ['BS12-019', 'BS12-019', 'BS12-023'].map((number, i) => cookie(number, `bs12-095-old-break-${i}`))
+        : scenario === 'special-refresh-defeat' ? Array.from({ length: 3 }, (_, i) => cookie('BS12-019', `bs12-095-old-break-${i}`)) : [],
+      hand: flip ? scenario === 'flip-no-hand' ? [] : [card('BS12-012', 'bs12-095-hand-cost'), ...(scenario === 'flip-two-hand' ? [card('ST4-001', 'bs12-095-other-hand')] : [])] : attack ? [] : [source],
+      battleArea: battle,
+      supportArea: attack ? Array.from({ length: scenario === 'attack-few-energy' ? 1 : scenario === 'attack-spare-energy' ? 3 : 2 }, (_, i) => ({ card: card(scenario === 'attack-wrong-energy' ? 'BS12-001' : 'BS11-093', `bs12-095-payment-${i}`), rested: scenario === 'attack-rested-energy' && i === 1 }))
+        : scenario === 'special-wrong-zone' ? [{ card: cost, rested: false }] : scenario === 'flip-support-only' ? [{ card: cookie('BS12-095', 'bs12-095-support-arena'), rested: false }] : [],
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], hand: [], deck: deck('bs12-095-enemy'), discardPile: [], breakArea: [],
+      battleArea:[cardCheckBattleEntry(enemy,fullHp('bs12-095-opponent',enemy.hp),3),
+        ...(scenario==='special-opponent-only'?[cardCheckBattleEntry(cookie('BS11-093','bs12-095-opponent-cost'),fullHp('bs12-095-opponent-cost',1,10),4)]:[])],
+      supportArea:flip?[{card:card(scenario==='flip-last-hp'?'BS12-079':'BS12-024','bs12-095-enemy-payment'),rested:false},
+        ...(scenario==='flip-last-hp'?[{card:card('BS12-024','bs12-095-enemy-payment-1'),rested:false}]:[])]:[],
+    },
+  } }
+  if (flip) {
+    state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-095-opponent', targetInstanceId: 'bs12-095-bearer', supportPaymentIds: state.players['player-two'].supportArea.map(s=>s.card.instanceId) })
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-one'})
+    return state
+  }
+  return state
+}
+
+type Bs12CrimsonEntryScenario = Exclude<Bs12BlueberryScenario, `flip${string}`>
+const BS12_CRIMSON_ENTRY_SCENARIOS = BS12_BLUEBERRY_SCENARIOS.filter((scenario): scenario is Bs12CrimsonEntryScenario => !scenario.startsWith('flip'))
+export const BS12_CRIMSON_SCENARIOS = [...BS12_CRIMSON_ENTRY_SCENARIOS, 'flip', 'flip-hand-one', 'flip-hand-four', 'flip-hand-five', 'flip-hand-six', 'flip-hand-seven',
+  'flip-rested', 'flip-level-three', 'flip-both-black', 'flip-no-black', 'flip-black-non-arena', 'flip-split', 'flip-support-only', 'flip-hand-only',
+  'flip-trash-only', 'flip-break-only', 'flip-opponent-only', 'flip-opponent-hand-six', 'flip-last-hp', 'flip-last-hp-five', 'flip-short-deck', 'flip-refresh-defeat', 'flip-exact-deck'] as const
+export type Bs12CrimsonScenario = typeof BS12_CRIMSON_SCENARIOS[number]
+
+/** Actual Crimson card, with shared entry controls and fresh command-driven FLIP fixtures. */
+export const createBs12CrimsonDemoState = (scenario: Bs12CrimsonScenario = 'special', waitForBrowserDamage = false): GameState => {
+  const source = getBs12CandidateCookie('BS12-096', 'bs12-096-source')
+  if (!scenario.startsWith('flip')) {
+    const before = createBs12BlueberryDemoState(scenario as Bs12CrimsonEntryScenario), owner = before.players['player-one']
+    return { ...before, players: { ...before.players, 'player-one': { ...owner,
+      hand: owner.hand.map(card => card.instanceId === 'bs12-095-source' ? source : card),
+      battleArea: owner.battleArea.map(cookie => cookie.card.instanceId === 'bs12-095-source' ? { ...cookie, card: source } : cookie),
+    } } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, instanceId)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Crimson fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const cookie = (number: string, instanceId: string) => number.startsWith('BS12-') ? getBs12CandidateCookie(number, instanceId) : bs12PrintedReferenceCookie(number, instanceId)
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-hp-${i}`))
+  const fullHp = (id:string,count:number,offset=0) => hp(id,Array.from({length:count},(_,i)=>['BS12-011','BS12-030','BS12-031','BS12-046','BS12-013','BS12-085','BS12-084','BS12-087'][Math.floor((i+offset)/2)]))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const lastHp = scenario.startsWith('flip-last-hp'), noBlack = ['flip-no-black', 'flip-support-only', 'flip-hand-only', 'flip-trash-only', 'flip-break-only', 'flip-opponent-only'].includes(scenario)
+  const nonArena = scenario === 'flip-black-non-arena', split = scenario === 'flip-split'
+  const bearerNumber = lastHp || scenario === 'flip-both-black' ? 'BS12-095' : nonArena || split ? 'BS11-093' : 'BS12-003'
+  const companionNumber = noBlack || lastHp || split ? 'BS12-003' : nonArena ? 'BS11-095' : ['flip-level-three', 'flip-both-black'].includes(scenario) ? 'BS12-094' : 'BS12-095'
+  const handSize = scenario === 'flip-hand-one' || scenario === 'flip-hand-only' ? 1 : scenario === 'flip-hand-four' ? 4 : ['flip-hand-five', 'flip-last-hp-five'].includes(scenario) ? 5 : scenario === 'flip-hand-six' ? 6 : scenario === 'flip-hand-seven' ? 7 : 0
+  const hand = Array.from({ length: handSize }, (_, i) => card(i < 4 ? 'BS12-012' : 'BS12-013', `bs12-096-hand-${i}`))
+  if (scenario === 'flip-hand-only') hand[0] = cookie('BS12-095', 'bs12-096-hand-arena')
+  const refreshing = ['flip-short-deck', 'flip-refresh-defeat', 'flip-exact-deck'].includes(scenario)
+  const ownDeck = refreshing ? [card('BS12-028', 'bs12-096-final-deck'), ...(scenario === 'flip-exact-deck' ? [card('BS12-029', 'bs12-096-second-deck')] : [])] : deck('bs12-096-own')
+  if (lastHp) ownDeck[0] = cookie('BS12-024', 'bs12-096-drawn-cookie')
+  const bearer=cookie(bearerNumber,'bs12-096-bearer'),companion=cookie(companionNumber,'bs12-096-companion')
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], hand, deck: ownDeck,
+      battleArea: [cardCheckBattleEntry(bearer,[...fullHp('bs12-096-bearer',bearer.hp-1),source],1),
+        { ...cardCheckBattleEntry(companion,fullHp('bs12-096-companion',companion.hp,10),2), rested: scenario === 'flip-rested' }],
+      supportArea: scenario === 'flip-support-only' ? [{ card: cookie('BS12-095', 'bs12-096-support-arena'), rested: false }] : [],
+      discardPile: refreshing ? [cookie('BS12-023', 'bs12-096-refresh-cookie'), card('BS12-012', 'bs12-096-refresh-item')]
+        : scenario === 'flip-trash-only' ? [cookie('BS12-095', 'bs12-096-trash-arena')] : [],
+      breakArea: scenario === 'flip-refresh-defeat' ? ['BS12-019', 'BS12-019', 'BS12-023'].map((number, i) => cookie(number, `bs12-096-old-break-${i}`))
+        : scenario === 'flip-break-only' ? [cookie('BS12-095', 'bs12-096-break-arena')] : [],
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], deck: deck('bs12-096-enemy'), discardPile: [], breakArea: [],
+      hand: scenario === 'flip-opponent-hand-six' ? Array.from({ length: 6 }, (_, i) => card(i < 3 ? 'BS12-012' : 'BS12-013', `bs12-096-enemy-hand-${i}`)) : [],
+      battleArea: [cardCheckBattleEntry(cookie('BS12-003', 'bs12-096-opponent'), fullHp('bs12-096-opponent',2), 3),
+        ...(scenario === 'flip-opponent-only' ? [cardCheckBattleEntry(cookie('BS12-095', 'bs12-096-opponent-arena'), hp('bs12-096-opponent-arena', ['BS12-011']), 4)] : [])],
+      supportArea: [{ card: card('BS12-024', 'bs12-096-enemy-payment'), rested: false }],
+    },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-096-opponent', targetInstanceId: 'bs12-096-bearer', supportPaymentIds: ['bs12-096-enemy-payment'] })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  if (waitForBrowserDamage) return state
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+export const BS12_CAKE_HOUND_SCENARIOS = ['faint', 'old-target', 'same-name', 'lv-one', 'non-arena', 'wrong-color', 'split', 'zero-target', 'zones',
+  'own-turn', 'rested-source', 'hand-and-support', 'short-deck', 'empty-deck', 'exact-deck', 'unpayable', 'refresh-defeat', 'last-hp-flip',
+  'effect-damage', 'direct-faint', 'non-faint-trash', 'non-faint-hand', 'attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'attack-rested',
+  'opponent-turn', 'outside-main', 'spare-energy'] as const
+export type Bs12CakeHoundScenario = typeof BS12_CAKE_HOUND_SCENARIOS[number]
+
+/** Actual Cake Hound is installed before every trigger; payment exposes only newly public trash. */
+export const createBs12CakeHoundDemoState = (scenario: Bs12CakeHoundScenario = 'faint', waitForBrowserDamage = false): GameState => {
+  const card = (number: string, instanceId: string): GameCard => number.startsWith('BS12-')
+    ? bs12PrintedFixtureCard(number, instanceId) : bs12PrintedReferenceCard(number, instanceId)
+  const cookie = (number: string, instanceId: string): CookieCard => number.startsWith('BS12-')
+    ? getBs12CandidateCookie(number, instanceId) : bs12PrintedReferenceCookie(number, instanceId)
+  const hpPool = ['BS12-011', 'BS12-030', 'BS12-031', 'BS12-046', 'BS12-013', 'BS12-085', 'BS12-084', 'BS12-087']
+  const hp = (id: string, count: number, offset = 0) => Array.from({ length: count }, (_, i) => card(hpPool[Math.floor((offset + i) / 2)], `${id}-hp-${i}`))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const source = cookie('BS12-099', 'bs12-099-source')
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'attack-rested', 'opponent-turn', 'outside-main', 'spare-energy', 'non-faint-trash', 'non-faint-hand'].includes(scenario)
+  const direct = ['direct-faint', 'own-turn'].includes(scenario)
+  const effect = scenario === 'effect-damage'
+  const base = baseTestState(scenario !== 'opponent-turn' && (ordinary || direct) ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  const targetNumber = scenario === 'same-name' ? 'BS12-099' : scenario === 'lv-one' ? 'BS12-095' : scenario === 'wrong-color' ? 'BS12-003' : 'BS12-094'
+  const target = ['non-arena', 'split'].includes(scenario) ? card('BS11-092', 'bs12-099-milled-target')
+    : card(['zero-target', 'zones'].includes(scenario) ? 'BS12-013' : targetNumber, 'bs12-099-milled-target')
+  let ownDeck = [target, card('BS12-012', 'bs12-099-milled-item'), card('BS12-003', 'bs12-099-milled-red'), ...deck('bs12-099-own').slice(3)]
+  if (['short-deck', 'refresh-defeat'].includes(scenario)) ownDeck = ownDeck.slice(0, 1)
+  if (scenario === 'exact-deck') ownDeck = ownDeck.slice(0, 3)
+  if (['empty-deck', 'unpayable'].includes(scenario)) ownDeck = []
+  const refreshing = ['short-deck', 'empty-deck', 'refresh-defeat'].includes(scenario)
+  const trash = refreshing ? [card('BS12-003', 'bs12-099-refresh-cookie'), ...Array.from({ length: 5 }, (_, i) => card(i < 3 ? 'BS12-027' : 'BS12-085', `bs12-099-refresh-item-${i}`))]
+    : scenario === 'old-target' ? [card('BS12-097', 'bs12-099-old-target'), card('BS11-092', 'bs12-099-old-non-arena')]
+    : scenario === 'split' ? [card('BS12-001', 'bs12-099-old-red-arena')] : []
+  const ally = cookie(direct ? 'BS8-010' : effect ? 'BS12-019' : scenario === 'zones' ? 'BS12-098' : 'BS12-001', 'bs12-099-ally')
+  const opponent = cookie(effect ? 'BS8-010' : direct ? 'BS12-019' : ordinary ? 'BS12-064' : 'BS12-091', 'bs12-099-opponent')
+  const enemyPayments = direct ? [] : effect ? ['BS12-004', 'BS12-005', 'BS12-024'] : ordinary ? [] : ['BS12-079', 'BS12-024']
+  const ownPayments = direct ? ['BS12-004', 'BS12-005', 'BS12-024'] : scenario==='non-faint-hand'?['ST4-001']: Array.from({ length: scenario === 'few-energy' ? 1 : ordinary || ['hand-and-support', 'zones'].includes(scenario) ? 3 : 0 }, (_, i) => i === 2 ? 'BS12-079' : scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-097')
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], deck: ownDeck, discardPile: trash,
+      hand: scenario === 'deploy' ? [source] : scenario === 'non-faint-hand' ? [card('ST4-017','bs12-099-return-item')] : scenario === 'non-faint-trash' ? [card('BS12-095', 'bs12-099-special')]
+        : ['last-hp-flip', 'hand-and-support'].includes(scenario) ? [card('BS12-012', 'bs12-099-hand-cost')]
+        : scenario === 'zones' ? [card('BS12-097', 'bs12-099-hand-target')] : [],
+      breakArea: scenario === 'refresh-defeat' ? ['BS12-026', 'BS12-019', 'BS12-003'].map((n, i) => cookie(n, `bs12-099-old-break-${i}`))
+        : scenario === 'zones' ? [cookie('BS12-095', 'bs12-099-break-target')] : [],
+      battleArea: [
+        ...(scenario === 'deploy' ? [] : [{ ...cardCheckBattleEntry(source, scenario === 'last-hp-flip' ? [card('BS12-002', 'bs12-099-last-hp'), ...hp('bs12-099-source', 1)] : hp('bs12-099-source', source.hp), 1), rested: ['rested-source', 'attack-rested'].includes(scenario) }]),
+        cardCheckBattleEntry(ally, hp('bs12-099-ally', ally.hp, 2), 2),
+      ],
+      supportArea: ownPayments.map((n, i) => ({ card: card(n, `bs12-099-payment-${i}`), rested: scenario === 'rested-energy' })),
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], hand: effect ? [cookie('BS8-010', 'bs12-099-red-velvet-second')] : [], deck: deck('bs12-099-enemy'),
+      discardPile: scenario === 'zones' ? [card('BS12-094', 'bs12-099-opponent-trash-target')] : [], breakArea: [],
+      battleArea: [cardCheckBattleEntry(opponent, hp('bs12-099-opponent', opponent.hp), 3),
+        ...(effect ? [cardCheckBattleEntry(cookie('BS12-003', 'bs12-099-parent-faint-cost'), hp('bs12-099-parent-faint-cost', 2, 4), 4)] : [])],
+      supportArea: enemyPayments.map((n, i) => ({ card: card(n, i === 0 ? 'bs12-099-enemy-payment' : `bs12-099-enemy-payment-${i}`), rested: false })),
+    },
+  } }
+  if (ordinary) return state
+  if (direct || effect) {
+    const owner = direct ? 'player-one' : 'player-two'
+    const defender = direct ? 'player-two' : 'player-one'
+    state = applyGameCommand(state, { kind: 'declare-attack', playerId: owner, attackerInstanceId: direct ? ally.instanceId : opponent.instanceId,
+      targetInstanceId: direct ? opponent.instanceId : ally.instanceId, supportPaymentIds: state.players[owner].supportArea.map(s => s.card.instanceId) })
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: defender })
+    while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: defender })
+    state = applyGameCommand(state, { kind: 'resolve-attack-effect', playerId: owner, targetIds: [direct ? source.instanceId : 'bs12-099-parent-faint-cost'] })
+    if (direct) return state
+    state = applyGameCommand(state, { kind: 'replace-cookie', playerId: 'player-two', instanceId: 'bs12-099-red-velvet-second' })
+    for (const sourceInstanceId of [opponent.instanceId, 'bs12-099-red-velvet-second']) state = applyGameCommand(state, {
+      kind: 'activate-skill', playerId: 'player-two', sourceInstanceId, trigger: 'activate', paymentIds: [], effectTargets: [[source.instanceId]],
+    })
+    return state
+  }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: opponent.instanceId, targetInstanceId: source.instanceId, supportPaymentIds: state.players['player-two'].supportArea.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  if (waitForBrowserDamage) return state
+  while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+  return state
+}
+
+export const BS12_CARAMEL_PUDDING_SCENARIOS = [...BS12_CRIMSON_ENTRY_SCENARIOS, 'flip', 'flip-level-three', 'flip-black-bearer', 'flip-non-arena-bearer',
+  'flip-lv-one', 'flip-rested', 'flip-level-three-condition', 'flip-no-black', 'flip-black-non-arena', 'flip-split', 'flip-support-only', 'flip-hand-only',
+  'flip-trash-only', 'flip-break-only', 'flip-opponent-only', 'flip-last-hp', 'flip-last-hp-self', 'flip-last-hp-lv-one', 'flip-refresh', 'flip-refresh-defeat'] as const
+export type Bs12CaramelPuddingScenario = typeof BS12_CARAMEL_PUDDING_SCENARIOS[number]
+
+export const BS12_CHESS_CHOCO_SCENARIOS = ['positive', 'red-hand', 'green-hand', 'yellow-hand', 'blue-hand', 'purple-hand', 'high-level',
+  'same-name', 'flip-cost', 'two-costs', 'mixed-hand', 'arena-item', 'arena-stage', 'non-arena', 'split', 'no-hand', 'wrong-zones',
+  'large-hand', 'no-energy', 'wrong-energy', 'rested-energy', 'spare-energy', 'source-rested', 'opponent-turn', 'outside-main',
+  'first-turn', 'deploy', 'full-battle', 'target-faints', 'flip-before-then', 'source-faints', 'short-deck', 'empty-deck',
+  'refresh-defeat', 'one-deck'] as const
+export type Bs12ChessChocoScenario = typeof BS12_CHESS_CHOCO_SCENARIOS[number]
+
+/** Printed K1 attack first; every optional hand cost is a real isolated candidate or official card. */
+export const createBs12ChessChocoDemoState = (scenario: Bs12ChessChocoScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, instanceId)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Chess Choco fixture ${number}`)
+    return {...result.gameCard, instanceId}
+  }
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-${i}`))
+  const deck = (id: string) => Array.from({length: 12}, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][i % 4], `${id}-${i}`))
+  const source = getBs12CandidateCookie('BS12-101', 'bs12-101-source')
+  const costNumber = scenario === 'red-hand' || scenario === 'two-costs' ? 'BS12-003' : scenario === 'green-hand' ? 'BS12-041'
+    : scenario === 'yellow-hand' ? 'BS12-024' : scenario === 'blue-hand' ? 'BS12-061' : scenario === 'purple-hand' ? 'BS12-079'
+      : scenario === 'high-level' ? 'BS12-019' : scenario === 'same-name' ? 'BS12-101' : scenario === 'flip-cost' ? 'BS12-002' : 'BS12-095'
+  const cost = card(costNumber, 'bs12-101-cost')
+  const item = card('BS12-012', 'bs12-101-item'), stage = card('BS12-011', 'bs12-101-stage-cost'), nonArena = card('ST4-001', 'bs12-101-non-arena')
+  const hand = scenario === 'no-hand' || scenario === 'wrong-zones' ? [] : scenario === 'arena-item' ? [item] : scenario === 'arena-stage' ? [stage]
+    : scenario === 'non-arena' ? [nonArena] : scenario === 'split' ? [item, nonArena] : [cost,
+      ...(scenario === 'two-costs' ? [card('BS12-095', 'bs12-101-other-cost')] : []),
+      ...(['mixed-hand', 'large-hand'].includes(scenario) ? [item, stage, nonArena] : []),
+      ...(scenario === 'large-hand' ? [card('BS12-097', 'bs12-101-extra-cost'), card('BS12-013', 'bs12-101-extra-item')] : [])]
+  const refresh = ['empty-deck', 'refresh-defeat'].includes(scenario)
+  const ownDeck = refresh ? [] : ['short-deck', 'one-deck'].includes(scenario) ? deck('bs12-101-deck').slice(0, 1) : deck('bs12-101-deck')
+  const flip = ['flip-before-then', 'source-faints'].includes(scenario)
+  const target=getBs12CandidateCookie(scenario==='source-faints'?'BS12-003':['target-faints','flip-before-then'].includes(scenario)?'BS12-080':'BS12-019','bs12-101-opponent')
+  const enemyHp=hp('bs12-101-enemy-hp',scenario==='source-faints'?['BS12-011','BS12-004']:scenario==='flip-before-then'?['BS12-002']:scenario==='target-faints'?['BS12-011']:['BS12-030','BS12-030','BS12-011','BS12-011'])
+  const ownSupport = scenario === 'no-energy' ? [] : [
+    {card: card(scenario === 'wrong-energy' ? 'ST4-001' : 'BS12-097', 'bs12-101-payment'), rested: scenario === 'rested-energy'},
+    ...(scenario === 'spare-energy' ? [{card: card('BS12-094', 'bs12-101-spare-payment'), rested: false}] : [])]
+  let state:GameState={...base, turnNumber: scenario === 'first-turn' ? 1 : 2, firstPlayerId: 'player-one',
+    activePlayerId: ['opponent-turn','source-faints'].includes(scenario) ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main',
+    players: {...base.players,
+      'player-one': {...base.players['player-one'], stage: null, extraDeck: [], hand: scenario === 'deploy' || scenario === 'full-battle' ? [source, ...hand] : hand,
+        deck: ownDeck, discardPile: refresh || scenario === 'short-deck' ? [card('BS12-003', 'bs12-101-refresh-cookie'), card('BS12-012', 'bs12-101-refresh-item'), card('BS12-013', 'bs12-101-refresh-other')]
+          : scenario === 'wrong-zones' ? [cost] : [],
+        breakArea: scenario === 'refresh-defeat' ? ['BS12-019', 'BS12-019', 'BS12-019'].map((number, i) => getBs12CandidateCookie(number, `bs12-101-old-break-${i}`))
+          : scenario === 'wrong-zones' ? [getBs12CandidateCookie('BS12-095', 'bs12-101-break-cost')] : [],
+        supportArea: [...ownSupport, ...(scenario === 'wrong-zones' ? [{card: card('BS12-095', 'bs12-101-support-cost'), rested: false}] : [])],
+        battleArea: [
+          ...(scenario === 'deploy' || scenario === 'full-battle' ? [] : [{...cardCheckBattleEntry(source, hp('bs12-101-source-hp', ['BS12-011','BS12-011']), 1), rested: scenario === 'source-rested'}]),
+          ...(['deploy', 'full-battle', 'source-faints', 'wrong-zones'].includes(scenario) ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-101-ally'), hp('bs12-101-ally-hp',['BS12-030','BS12-030']), 2)] : []),
+          ...(scenario === 'full-battle' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-097', 'bs12-101-full-ally'), hp('bs12-101-full-ally-hp',['BS12-031','BS12-031']), 3)] : [])],
+      },
+      'player-two': {...base.players['player-two'], stage: null, extraDeck: [], deck: deck('bs12-101-enemy-deck'), discardPile: [], breakArea: [],
+        hand: flip ? [card('BS12-012', 'bs12-101-enemy-flip-cost')] : scenario === 'wrong-zones' ? [card('BS12-095', 'bs12-101-enemy-hand-cost')] : [],
+        battleArea: [cardCheckBattleEntry(target, enemyHp, 4), cardCheckBattleEntry(getBs12CandidateCookie(scenario === 'source-faints' ? 'BS12-001' : 'BS12-097', 'bs12-101-opponent-other'), hp('bs12-101-other-hp',scenario==='source-faints'?['BS12-013','BS12-013','BS12-046','BS12-046']:['BS12-031','BS12-031']), 5)],
+        supportArea:scenario==='source-faints'?[{card:card('BS12-004','bs12-101-parent-payment'),rested:false}]:[],
+      },
+    },
+  }
+  if(scenario==='source-faints'){
+    state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-two',attackerInstanceId:'bs12-101-opponent',targetInstanceId:source.instanceId,supportPaymentIds:['bs12-101-parent-payment']})
+    state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-one'})
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-one'})
+    for(let step=0;step<12&&(state.activePlayerId!=='player-one'||state.phase!=='main');step++)state=applyGameCommand(state,{kind:'advance-phase',playerId:state.activePlayerId})
+    if(state.activePlayerId!=='player-one'||state.phase!=='main')throw new Error('Real Peach parent failed to reach Chess main phase')
+  }
+  return state
+}
+
+/** Fixed original HP bearer; fresh FLIP states start with the actual Pudding card before damage. */
+export const BS12_STRATEGIST_SCENARIOS = [...BS12_CRIMSON_ENTRY_SCENARIOS, 'flip', 'flip-two-targets', 'flip-same-name', 'flip-pudding',
+  'flip-only-arena', 'flip-only-special', 'flip-split', 'flip-non-cookie', 'flip-no-target', 'flip-zones', 'flip-rested', 'flip-hand-and-support',
+  'flip-last-hp', 'flip-last-hp-same-name', 'flip-last-hp-no-target', 'flip-last-hp-faint-chain'] as const
+export type Bs12StrategistScenario = typeof BS12_STRATEGIST_SCENARIOS[number]
+
+/** Install the real source before any reveal; free recovery selects from current own trash. */
+export const createBs12StrategistDemoState = (scenario: Bs12StrategistScenario = 'flip', waitForBrowserDamage = false): GameState => {
+  const source = getBs12CandidateCookie('BS12-100', 'bs12-100-source')
+  if (!scenario.startsWith('flip')) {
+    const before = createBs12BlueberryDemoState(scenario as Bs12CrimsonEntryScenario), owner = before.players['player-one']
+    return { ...before, players: { ...before.players, 'player-one': { ...owner,
+      hand: owner.hand.map(card => card.instanceId === 'bs12-095-source' ? source : card),
+      battleArea: owner.battleArea.map(cookie => cookie.card.instanceId === 'bs12-095-source' ? { ...cookie, card: source } : cookie),
+    } } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, instanceId)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Strategist fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const cookie = (number: string, instanceId: string) => number.startsWith('BS12-') ? getBs12CandidateCookie(number, instanceId) : bs12PrintedReferenceCookie(number, instanceId)
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const lastHp = scenario.startsWith('flip-last-hp')
+  const onlyInvalid = ['flip-only-arena', 'flip-only-special', 'flip-split', 'flip-non-cookie', 'flip-no-target', 'flip-zones', 'flip-last-hp-no-target'].includes(scenario)
+  const targetNumber = ['flip-same-name', 'flip-last-hp-same-name'].includes(scenario) ? 'BS12-100' : scenario === 'flip-pudding' ? 'BS12-098' : 'BS12-095'
+  const trash: GameCard[] = onlyInvalid ? [] : [cookie(targetNumber, 'bs12-100-target')]
+  if (scenario === 'flip-two-targets') trash.push(cookie('BS12-096', 'bs12-100-other-target'))
+  if (!['flip-only-special', 'flip-non-cookie', 'flip-no-target', 'flip-last-hp-no-target'].includes(scenario)) trash.push(cookie('BS12-003', 'bs12-100-arena-only'))
+  if (!['flip-only-arena', 'flip-non-cookie', 'flip-no-target', 'flip-last-hp-no-target'].includes(scenario)) trash.push(cookie('BS11-111', 'bs12-100-special-only'))
+  if (scenario === 'flip-non-cookie') trash.push(card('BS12-012', 'bs12-100-trash-item'), card('BS12-011', 'bs12-100-trash-stage'))
+  const bearer=cookie(scenario==='flip-last-hp-faint-chain'?'BS12-099':'BS12-003','bs12-100-bearer')
+  const attacker=cookie(lastHp?'BS12-091':'BS12-003','bs12-100-attacker')
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], deck: deck('bs12-100-own'), discardPile: trash,
+      hand: scenario === 'flip-zones' ? [cookie('BS12-096', 'bs12-100-hand-target')] : scenario === 'flip-hand-and-support' ? [card('BS12-012', 'bs12-100-spare-hand')] : [],
+      breakArea: scenario === 'flip-zones' ? [cookie('BS12-098', 'bs12-100-break-target')] : [],
+      supportArea: scenario === 'flip-zones' ? [{ card: cookie('BS12-095', 'bs12-100-support-target'), rested: false }]
+        : scenario === 'flip-hand-and-support' ? [{ card: cookie('BS12-097', 'bs12-100-spare-support'), rested: false }] : [],
+      battleArea: [{ ...cardCheckBattleEntry(bearer,
+        lastHp ? [source,card('BS12-011','bs12-100-bottom-hp')] : [card('BS12-011', 'bs12-100-bottom-hp'), source], 1), rested: scenario === 'flip-rested' },
+        cardCheckBattleEntry(cookie('BS12-097', 'bs12-100-companion'), [card('BS12-012', 'bs12-100-companion-hp-0'), card('BS12-013', 'bs12-100-companion-hp-1')], 2)],
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], hand: [], deck: deck('bs12-100-enemy'), breakArea: [],
+      discardPile: scenario === 'flip-zones' ? [cookie('BS12-095', 'bs12-100-opponent-target')] : [],
+      battleArea: [cardCheckBattleEntry(attacker, [card('BS12-011', 'bs12-100-attacker-hp-0'), card('BS12-013', 'bs12-100-attacker-hp-1')], 3)],
+      supportArea: [{card:cookie(lastHp?'BS12-079':'BS12-024','bs12-100-enemy-payment'),rested:false},...(lastHp?[{card:cookie('BS12-024','bs12-100-enemy-payment-1'),rested:false}]:[])],
+    },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-100-attacker', targetInstanceId: 'bs12-100-bearer', supportPaymentIds: state.players['player-two'].supportArea.map(s=>s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  if(waitForBrowserDamage)return state
+  while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-one'})
+  return state
+}
+
+export const createBs12CaramelPuddingDemoState = (scenario: Bs12CaramelPuddingScenario = 'special', waitForBrowserDamage = false): GameState => {
+  const source = getBs12CandidateCookie('BS12-098', 'bs12-098-source')
+  if (!scenario.startsWith('flip')) {
+    const before = createBs12BlueberryDemoState(scenario as Bs12CrimsonEntryScenario), owner = before.players['player-one']
+    return { ...before, players: { ...before.players, 'player-one': { ...owner,
+      hand: owner.hand.map(card => card.instanceId === 'bs12-095-source' ? source : card),
+      battleArea: owner.battleArea.map(cookie => cookie.card.instanceId === 'bs12-095-source' ? { ...cookie, card: source } : cookie),
+    } } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, instanceId)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Pudding fixture ${number}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const cookie = (number: string, instanceId: string) => number.startsWith('BS12-') ? getBs12CandidateCookie(number, instanceId) : bs12PrintedReferenceCookie(number, instanceId)
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-hp-${i}`))
+  const fullHp = (id:string,count:number,offset=0) => hp(id,Array.from({length:count},(_,i)=>['BS12-011','BS12-030','BS12-031','BS12-046','BS12-013','BS12-085','BS12-084','BS12-087'][Math.floor((i+offset)/2)]))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-028', 'BS12-029', 'BS12-010', 'BS12-009'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const lastHp = scenario.startsWith('flip-last-hp'), refreshing = scenario.startsWith('flip-refresh')
+  const noBlack = ['flip-no-black', 'flip-support-only', 'flip-hand-only', 'flip-trash-only', 'flip-break-only', 'flip-opponent-only'].includes(scenario)
+  const nonArena = scenario === 'flip-black-non-arena', split = scenario === 'flip-split'
+  const bearerNumber = ['flip-lv-one', 'flip-last-hp-lv-one'].includes(scenario) ? 'BS12-003'
+    : ['flip-level-three', 'flip-black-bearer', 'flip-last-hp-self'].includes(scenario) ? 'BS12-094'
+      : ['flip-non-arena-bearer', 'flip-black-non-arena', 'flip-split'].includes(scenario) ? 'BS11-092' : 'BS12-040'
+  const companionNumber = noBlack || scenario === 'flip-last-hp-self' ? 'BS12-003' : nonArena ? 'BS11-095' : split ? 'BS12-040'
+    : ['flip-lv-one', 'flip-last-hp-lv-one', 'flip-level-three-condition'].includes(scenario) ? 'BS12-094' : 'BS12-097'
+  const bearer=cookie(bearerNumber,'bs12-098-bearer'),companion=cookie(companionNumber,'bs12-098-companion')
+  const otherHp=fullHp('bs12-098-bearer',bearer.hp-1)
+  const attackerNumber=lastHp?bearer.hp===2?'BS12-091':bearer.hp===3?'BS12-078':'BS12-019':'BS12-003'
+  const attacker=cookie(attackerNumber,'bs12-098-opponent')
+  const paymentNumbers=attackerNumber==='BS12-078'?['BS12-079','BS12-079','BS12-079']:attackerNumber==='BS12-019'?['BS12-004','BS12-004','BS12-004']:attackerNumber==='BS12-091'?['BS12-079','BS12-024']:['BS12-024']
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [],
+      hand: scenario === 'flip-hand-only' ? [cookie('BS12-097', 'bs12-098-hand-arena')] : [],
+      deck: refreshing ? [card('BS12-028', 'bs12-098-final-deck')] : deck('bs12-098-own'),
+      battleArea: [{ ...cardCheckBattleEntry(bearer,lastHp?[source,...otherHp]:[...otherHp,source],1), rested: scenario === 'flip-rested' },
+        { ...cardCheckBattleEntry(companion,fullHp('bs12-098-companion',companion.hp,10),2), rested: scenario === 'flip-rested' }],
+      supportArea: scenario === 'flip-support-only' ? [{ card: cookie('BS12-097', 'bs12-098-support-arena'), rested: false }] : [],
+      discardPile: refreshing ? [cookie('BS12-023', 'bs12-098-refresh-cookie'), card('BS12-012', 'bs12-098-refresh-item')]
+        : scenario === 'flip-trash-only' ? [cookie('BS12-097', 'bs12-098-trash-arena')] : [],
+      breakArea: scenario === 'flip-refresh-defeat' ? Array.from({ length: 3 }, (_, i) => cookie('BS12-019', `bs12-098-old-break-${i}`))
+        : scenario === 'flip-break-only' ? [cookie('BS12-097', 'bs12-098-break-arena')] : [],
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], hand: [], deck: deck('bs12-098-enemy'), discardPile: [], breakArea: [],
+      battleArea: [cardCheckBattleEntry(attacker,fullHp('bs12-098-opponent',attacker.hp),3),
+        ...(scenario === 'flip-opponent-only' ? [cardCheckBattleEntry(cookie('BS12-097', 'bs12-098-opponent-arena'), fullHp('bs12-098-opponent-arena',2,10), 4)] : [])],
+      supportArea:paymentNumbers.map((number,i)=>({card:card(number,`bs12-098-enemy-payment${i?'-'+i:''}`),rested:false})),
+    },
+  } }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-098-opponent', targetInstanceId: 'bs12-098-bearer', supportPaymentIds:state.players['player-two'].supportArea.map(s=>s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  if (waitForBrowserDamage) return state
+  while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-one'})
+  return state
+}
+
+/** Local candidate vanilla attack: three real supports, distinct HP and no invented ability. */
+/** Candidate-only Jasmine: N1 ordinary one, two printed HP, actual support and HP cards. */
+export const createBs12JasmineDemoState = (scenario: Bs12JasmineScenario = 'attack'): GameState => {
+  const base = baseTestState(scenario === 'opponent-turn' ? 'player-two' : 'player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (number: string, id: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, id)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Jasmine fixture ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-hp-${i}`))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-012', 'BS12-013', 'BS12-028', 'BS12-029'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const source = getBs12CandidateCookie('BS12-097', 'bs12-097-source')
+  const monoByScenario: Partial<Record<Bs12JasmineScenario, string>> = { 'red-energy': 'BS12-005', 'blue-energy': 'ST4-001', 'green-energy': 'BS12-040',
+    'yellow-energy': 'BS12-024', 'purple-energy': 'BS12-079', 'black-energy': 'BS12-094' }
+  const supportNumbers = scenario === 'no-energy' ? [] : [monoByScenario[scenario] ?? 'BS12-003']
+  if (scenario === 'spare-energy') supportNumbers.push('BS12-079')
+  const opponentHp = scenario === 'target-flip' ? ['BS12-002'] : scenario === 'target-faints' ? ['BS12-061'] : ['BS12-061', 'BS12-062']
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], breakArea: [], discardPile: [], deck: deck('bs12-097-own'),
+      hand: scenario === 'deploy' ? [source] : [],
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-097-ally'), hp('bs12-097-ally', ['BS12-001', 'BS12-001']), 1)
+        : { ...cardCheckBattleEntry(source, hp('bs12-097-source', ['BS12-011', 'BS12-030']), 1), rested: scenario === 'source-rested' }],
+      supportArea: supportNumbers.map((number, i) => ({ card: card(number, `bs12-097-payment-${i}`), rested: scenario === 'rested-energy' })),
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], breakArea: [], discardPile: [], deck: deck('bs12-097-enemy'),
+      hand: scenario === 'target-flip' ? [card('BS12-012', 'bs12-097-flip-hand-cost')] : [], supportArea: [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(['target-faints','target-flip'].includes(scenario)?'BS12-080':'BS12-003', 'bs12-097-opponent'), hp('bs12-097-opponent', opponentHp), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-097-opponent-other'), hp('bs12-097-opponent-other', ['BS12-001','BS12-001','BS12-003','BS12-003']), 3)],
+    },
+  } }
+}
+
+export const createBs12ButterRollDemoState = (scenario: Bs12ButterRollScenario = 'attack'): GameState => {
+  const base = baseTestState(scenario === 'opponent-turn' ? 'player-two' : 'player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (number: string, id: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, id)
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === number)!)
+    if (result.status !== 'converted') throw new Error(`Missing Butter Roll fixture ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const hp = (id: string, numbers: string[]) => numbers.map((number, i) => card(number, `${id}-hp-${i}`))
+  const deck = (id: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-012', 'BS12-013', 'BS12-028', 'BS12-029'][Math.floor(i / 3)], `${id}-deck-${i}`))
+  const source = getBs12CandidateCookie('BS12-094', 'bs12-094-source')
+  const monoByScenario: Partial<Record<Bs12ButterRollScenario, string>> = { 'red-energy': 'BS12-005', 'blue-energy': 'ST4-001', 'green-energy': 'BS12-040', 'yellow-energy': 'BS12-024',
+    'purple-energy': 'BS12-079', 'black-energy': 'BS12-094' }
+  const mono = monoByScenario[scenario]
+  const supportNumbers = scenario === 'no-energy' ? [] : mono ? [mono, mono, mono] : ['BS12-003', 'BS12-024', 'ST4-001']
+  if (scenario === 'few-energy') supportNumbers.pop()
+  if (scenario === 'spare-energy') supportNumbers.push('BS12-079')
+  const opponentHp=scenario==='target-flip'?['BS12-002','BS12-061','BS12-061','BS12-062','BS12-062']:scenario==='target-faints'?['BS12-061','BS12-061','BS12-062','BS12-062']:['BS12-061','BS12-061','BS12-062','BS12-062','BS12-062']
+  const initial:GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], breakArea: [], discardPile: [], deck: deck('bs12-094-own'),
+      hand: scenario === 'deploy' ? [source] : [],
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-094-ally'), hp('bs12-094-ally', ['BS12-001', 'BS12-001']), 1)
+        : { ...cardCheckBattleEntry(source, hp('bs12-094-source', ['BS12-011', 'BS12-011', 'BS12-030', 'BS12-030']), 1), rested: scenario === 'source-rested' },...(scenario==='target-flip'?[cardCheckBattleEntry(getBs12CandidateCookie('BS12-003','bs12-094-preparation-peach'),hp('bs12-094-preparation-peach',['BS12-031','BS12-031']),4)]:[])],
+      supportArea: [...supportNumbers.map((number, i) => ({ card: card(number, `bs12-094-payment-${i}`), rested: scenario === 'rested-energy' && i === 2 })),...(scenario==='target-flip'?[{card:card('BS12-004','bs12-094-preparation-payment'),rested:false}]:[])],
+    },
+    'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], breakArea: [], discardPile: [], deck: deck('bs12-094-enemy'),
+      hand: scenario === 'target-flip' ? [card('BS12-012', 'bs12-094-flip-hand-cost')] : [], supportArea: [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(scenario==='target-faints'?'BS12-019':'BS12-026', 'bs12-094-opponent'), hp('bs12-094-opponent', opponentHp), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-094-opponent-other'), hp('bs12-094-opponent-other', ['BS12-001', 'BS12-001', 'BS12-003', 'BS12-003']), 3)],
+    },
+  } }
+  if(scenario!=='target-flip')return initial
+  let state=applyGameCommand(initial,{kind:'declare-attack',playerId:'player-one',attackerInstanceId:'bs12-094-preparation-peach',targetInstanceId:'bs12-094-opponent',supportPaymentIds:['bs12-094-preparation-payment']})
+  state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-two'})
+  while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-two'})
+  return state
+}
+
+export const BS12_ROCKSTAR_SCENARIOS = ['attack', 'two-blockers', 'one-blocker', 'no-blocker', 'wrong-zones', 'ordinary-faint', 'damage-faint', 'last-hp-flip', 'refresh', 'refresh-defeat',
+  'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main',
+  'response', 'item-cost', 'stage-cost', 'trap-cost', 'no-hand', 'wrong-hand-color', 'non-arena-hand', 'split-hand', 'rested-blocker', 'second-response'] as const
+export type Bs12RockstarScenario = typeof BS12_ROCKSTAR_SCENARIOS[number]
+
+/** Candidate-only Rockstar: printed identities, actual public trash and independent Blocker hand payment. */
+export const createBs12RockstarDemoState = (number: 'BS12-093' | 'BS12-093@1' = 'BS12-093', scenario: Bs12RockstarScenario = 'attack'): GameState => {
+  const responding = ['response', 'item-cost', 'stage-cost', 'trap-cost', 'no-hand', 'wrong-hand-color', 'non-arena-hand', 'split-hand', 'rested-blocker', 'second-response'].includes(scenario)
+  const base = baseTestState(responding || scenario === 'opponent-turn' ? 'player-two' : 'player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const converted = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === n)!)
+    if (converted.status !== 'converted') throw new Error(`Missing Rockstar fixture ${n}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  let fillerOffset=0
+  const hp=(id:string,numbers:string[])=>{const cards=bs12PrintedFillerCards('BS12-093',id+'-hp',numbers.length,fillerOffset);fillerOffset+=numbers.length;return cards}
+  const deck=(id:string)=>hp(id+'-deck',Array.from({length:12},()=> 'BS12-009'))
+  const source = getBs12CandidateCookie(number, 'bs12-093-source')
+  const blockers = [getBs12CandidateCookie('BS12-081', 'bs12-093-blocker'), bs12PrintedReferenceCookie('BS4-014', 'bs12-093-red-blocker'), getBs12CandidateCookie('BS12-088', 'bs12-093-third-blocker')]
+  const legalTrash = scenario === 'no-blocker' ? [] : scenario === 'one-blocker' || scenario === 'wrong-zones' ? blockers.slice(0, 1) : scenario === 'two-blockers' ? blockers.slice(0, 2) : blockers
+  const handCost = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-087' : scenario === 'wrong-hand-color' ? 'BS12-001' : scenario === 'non-arena-hand' || scenario === 'split-hand' ? 'BS4-090' : 'BS12-079'
+  const flip = ['last-hp-flip', 'refresh', 'refresh-defeat'].includes(scenario)
+  const initial: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, extraDeck: [], deck: deck('bs12-093-own'), breakArea: scenario === 'wrong-zones' ? [blockers[1]] : [],
+        discardPile: [...legalTrash, card('BS12-079', 'bs12-093-non-blocker'), card('BS12-083', 'bs12-093-non-cookie')],
+        hand: scenario === 'deploy' ? [source] : responding && scenario !== 'no-hand' ? [card(handCost, 'bs12-093-hand-cost'),
+          ...(scenario === 'split-hand' ? [card('BS12-001', 'bs12-093-red-arena')] : []), ...(scenario === 'second-response' ? [card('BS12-083', 'bs12-093-hand-cost-two')] : [])] : [],
+        battleArea: [...(scenario === 'deploy' ? [] : [{ ...cardCheckBattleEntry(source, hp('bs12-093-source', ['BS12-011', 'BS12-011', 'BS12-030', 'BS12-030']), 1), rested: ['source-rested', 'rested-blocker'].includes(scenario) }]),
+          ...(responding || scenario === 'deploy' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-026', 'bs12-093-ally'), hp('bs12-093-ally',Array.from({length:5},()=> 'BS12-009')), 2)] : [])],
+        supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({ card: card(scenario === 'wrong-energy' ? 'BS12-004' : i === 2 ? 'ST4-001' : 'BS12-075', `bs12-093-payment-${i}`), rested: scenario === 'rested-energy' })),
+      },
+      'player-two': { ...base.players['player-two'], stage: null, extraDeck: [],
+        deck: ['refresh', 'refresh-defeat'].includes(scenario) ? [card('BS12-010', 'bs12-093-enemy-deck-final')] : deck('bs12-093-enemy'),
+        hand: flip ? [card('BS12-012', 'bs12-093-flip-hand-cost')] : [],
+        discardPile: scenario === 'wrong-zones' ? [blockers[2]] : ['refresh', 'refresh-defeat'].includes(scenario) ? [getBs12CandidateCookie('BS12-001', 'bs12-093-refresh-cookie')] : [],
+        breakArea: scenario === 'refresh-defeat' ? ['BS12-019', 'BS12-019', 'BS12-023'].map((n, i) => getBs12CandidateCookie(n, `bs12-093-old-break-${i}`)) : [],
+        battleArea:[cardCheckBattleEntry(getBs12CandidateCookie(responding?'BS12-003':scenario==='ordinary-faint'?'BS12-075':'BS12-064','bs12-093-opponent'),hp('bs12-093-opponent',Array.from({length:responding?2:scenario==='ordinary-faint'?3:5},()=> 'BS12-009')),3),
+          cardCheckBattleEntry(getBs12CandidateCookie(scenario==='second-response'?'BS12-003':flip||scenario==='damage-faint'?'BS12-080':'BS12-024','bs12-093-opponent-other'),flip?[card('BS12-002','bs12-093-final-flip')]:hp('bs12-093-opponent-other',Array.from({length:scenario==='damage-faint'?1:2},()=> 'BS12-009')),4)],
+        supportArea: Array.from({ length: scenario === 'second-response' ? 2 : 1 }, (_, i) => ({ card: getBs12CandidateCookie('BS12-004', `bs12-093-enemy-payment-${i}`), rested: false })),
+      },
+    },
+  }
+  if (!responding) return initial
+  let state = applyGameCommand(initial, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-093-opponent', targetInstanceId: 'bs12-093-ally', supportPaymentIds: ['bs12-093-enemy-payment-0'] })
+  if (scenario !== 'second-response') return state
+  state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: source.instanceId, paymentIds: [], discardHandIds: ['bs12-093-hand-cost'] })
+  while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-093-opponent-other', targetInstanceId: 'bs12-093-ally', supportPaymentIds: ['bs12-093-enemy-payment-1'] })
+}
+
+export const BS12_CARAMEL_ARROW_SCENARIOS = ['response', 'item-cost', 'stage-cost', 'trap-cost', 'rested-source', 'wrong-color', 'non-arena', 'split-cost', 'no-hand',
+  'faint', 'direct-attack', 'no-hand-faint', 'old-target', 'zero-target', 'same-name-only', 'other-color', 'non-arena-target', 'no-blocker-target', 'short-deck', 'empty-deck', 'exact-deck', 'unpayable', 'refresh-defeat', 'last-hp-flip',
+  'attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main', 'second-response'] as const
+export type Bs12CaramelArrowScenario = typeof BS12_CARAMEL_ARROW_SCENARIOS[number]
+
+export const createBs12CaramelArrowDemoState = (number: 'BS12-091' | 'BS12-091@1' = 'BS12-091', scenario: Bs12CaramelArrowScenario = 'response'): GameState => {
+  const card = (cardNumber: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === cardNumber)!)
+    if (result.status !== 'converted') throw new Error(`Missing Caramel Arrow fixture ${cardNumber}`)
+    return { ...result.gameCard, instanceId }
+  }
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const faint = !ordinary && !['response', 'item-cost', 'stage-cost', 'trap-cost', 'rested-source', 'wrong-color', 'non-arena', 'split-cost', 'no-hand', 'second-response'].includes(scenario)
+  const base = baseTestState(ordinary ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  const source = getBs12CandidateCookie(number, 'bs12-091-source')
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-091',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-087' : scenario === 'wrong-color' ? 'BS12-001' : 'BS12-079'
+  const cost = ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCard('BS4-090', 'bs12-091-cost') : card(costNumber, 'bs12-091-cost')
+  const target = ['non-arena-target', 'other-color'].includes(scenario) ? bs12PrintedReferenceCard('BS4-014', 'bs12-091-milled-blocker')
+    : card(scenario === 'same-name-only' ? number : scenario === 'no-blocker-target' ? 'BS12-079' : 'BS12-090', 'bs12-091-milled-blocker')
+  let ownDeck = [target, card('BS12-012', 'bs12-091-milled-item'), card(number, 'bs12-091-milled-same-name'), ...deck('bs12-091-own').slice(3)]
+  if (scenario === 'zero-target') ownDeck = [card('BS12-013', 'bs12-091-milled-blocker'), ...ownDeck.slice(1)]
+  if (['short-deck', 'refresh-defeat'].includes(scenario)) ownDeck = ownDeck.slice(0, 1)
+  if (scenario === 'exact-deck') ownDeck = ownDeck.slice(0, 3)
+  if (['empty-deck', 'unpayable'].includes(scenario)) ownDeck = []
+  const trash = ['old-target', 'empty-deck', 'short-deck', 'refresh-defeat'].includes(scenario)
+    ? [card('BS12-088', 'bs12-091-old-blocker'), ...Array.from({ length: 5 }, (_, i) => card(i < 3 ? 'BS12-027' : 'BS12-085', `bs12-091-refresh-${i}`))] : []
+  const initial: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : base.activePlayerId,
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, deck: ownDeck, discardPile: trash,
+        breakArea: scenario === 'refresh-defeat' ? ['BS12-026', 'BS12-026', 'BS12-081', 'BS12-088'].map((cardNumber, i) => getBs12CandidateCookie(cardNumber, `bs12-091-break-${i}`)) : [],
+        hand: scenario === 'deploy' ? [source] : ordinary || ['no-hand', 'no-hand-faint', 'unpayable'].includes(scenario) ? [] : [cost,
+          ...(scenario === 'split-cost' ? [card('BS12-001', 'bs12-091-red-arena')] : []), ...(scenario === 'second-response' ? [card('BS12-083', 'bs12-091-cost-two')] : [])],
+        battleArea: scenario === 'deploy' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-026', 'bs12-091-ally'), hp('bs12-091-ally',5), 2)] : [
+          { ...cardCheckBattleEntry(source, scenario==='last-hp-flip'?[card('BS12-002','bs12-091-last-hp'),...hp('bs12-091-source',1)]:hp('bs12-091-source',2), 1), rested: ['rested-source', 'source-rested'].includes(scenario) },
+          ...(!ordinary ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-026', 'bs12-091-ally'), hp('bs12-091-ally',5), 2)] : [])],
+        supportArea: Array.from({ length: scenario === 'few-energy' ? 1 : 2 }, (_, i) => ({ card: i === 1 && scenario !== 'wrong-energy'
+          ? bs12PrintedReferenceCard('ST4-001', `bs12-091-payment-${i}`) : getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-075', `bs12-091-payment-${i}`), rested: scenario === 'rested-energy' })),
+      },
+      'player-two': { ...base.players['player-two'], stage: null, deck: deck('bs12-091-enemy'), hand: [], discardPile: [], breakArea: [],
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(faint?'BS12-091':'BS12-003','bs12-091-attacker'),hp('bs12-091-attacker',2), 3), cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-091-attacker-two'), hp('bs12-091-attacker-two', 2, 2), 4)],
+        supportArea: Array.from({ length: 2 }, (_, i) => ({ card: getBs12CandidateCookie(faint&&i===0?'BS12-079':'BS12-004',`bs12-091-attack-payment-${i}`), rested: false })),
+      },
+    } }
+  if (ordinary) return initial
+  let state = applyGameCommand(initial, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-091-attacker', targetInstanceId: ['direct-attack', 'no-hand-faint', 'last-hp-flip', 'unpayable'].includes(scenario) ? source.instanceId : 'bs12-091-ally', supportPaymentIds:faint?['bs12-091-attack-payment-0','bs12-091-attack-payment-1']:['bs12-091-attack-payment-0'] })
+  if (scenario !== 'second-response') return state
+  state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: source.instanceId, paymentIds: [], discardHandIds: ['bs12-091-cost'] })
+  while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-091-attacker-two', targetInstanceId: 'bs12-091-ally', supportPaymentIds: ['bs12-091-attack-payment-1'] })
+}
+
+export const createBs12MilkyWayDemoState = (number: 'BS12-090' | 'BS12-090@1' = 'BS12-090', scenario: Bs12MilkyWayScenario = 'response'): GameState => {
+  if (scenario === 'second-response') {
+    let state = createBs12MilkyWayDemoState(number, 'twice')
+    state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: 'bs12-090-source', paymentIds: [], discardHandIds: ['bs12-090-cost'] })
+    while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-090-attacker-two', targetInstanceId: 'bs12-090-ally', supportPaymentIds: ['bs12-090-attack-payment-1'] })
+  }
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const faint = ['faint-four', 'faint-three', 'faint-five', 'mixed-break', 'wrong-zones', 'no-target', 'other-color', 'non-arena-target', 'no-hand-faint', 'direct-attack', 'last-hp-flip', 'lv10-defeat'].includes(scenario)
+  const base = baseTestState(ordinary ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (cardNumber: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === cardNumber)!)
+    if (result.status !== 'converted') throw new Error(`Missing Milky Way fixture ${cardNumber}`)
+    return { ...result.gameCard, instanceId }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-090',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const source = getBs12CandidateCookie(number, 'bs12-090-source')
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-087' : scenario === 'wrong-color' ? 'BS12-001' : 'BS12-079'
+  const cost = ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCard('BS4-090', 'bs12-090-cost') : card(costNumber, 'bs12-090-cost')
+  const blockerNumbers = scenario === 'no-target' ? ['BS12-089', 'BS12-089', 'BS12-089']
+    : scenario === 'mixed-break' ? ['BS12-081', 'BS12-088', 'BS4-014']
+      : scenario === 'lv10-defeat' ? ['BS12-081', 'BS12-088', 'BS12-089', 'BS12-026']
+        : Array.from({ length: scenario === 'faint-five' ? 4 : ['faint-three', 'wrong-zones'].includes(scenario) ? 2 : faint ? 3 : 0 }, (_, i) => i < 2 ? 'BS12-081' : 'BS12-088')
+  const breaks = blockerNumbers.map((number, i) => number === 'BS4-014' ? bs12PrintedReferenceCookie(number, `bs12-090-blocker-${i}`) : getBs12CandidateCookie(number, `bs12-090-blocker-${i}`))
+  if (faint && scenario !== 'no-target') breaks.push(scenario === 'non-arena-target' ? bs12PrintedReferenceCookie('ST4-002', 'bs12-090-target')
+    : getBs12CandidateCookie(scenario === 'other-color' ? 'BS12-024' : 'BS12-079', 'bs12-090-target'))
+  const initial: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : base.activePlayerId,
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, deck: deck('bs12-090-own'),
+        discardPile: scenario === 'wrong-zones' ? [bs12PrintedReferenceCard('BS4-014', 'bs12-090-trash-blocker')] : [], breakArea: breaks,
+        hand: scenario === 'deploy' ? [source] : ordinary || ['no-hand', 'no-hand-faint'].includes(scenario) ? [] : [cost,
+          ...(scenario === 'split-cost' ? [card('BS12-001', 'bs12-090-red-arena')] : []),
+          ...(scenario === 'twice' ? [card('BS12-083', 'bs12-090-cost-two')] : []),
+          ...(scenario === 'wrong-zones' ? [card('BS12-089', 'bs12-090-hand-blocker')] : [])],
+        battleArea: scenario === 'deploy' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-026', 'bs12-090-ally'), hp('bs12-090-ally', 5), 2)] : [
+          { ...cardCheckBattleEntry(source, scenario==='last-hp-flip'?[card('BS12-002','bs12-090-last-hp'),...hp('bs12-090-source',3)]:hp('bs12-090-source',4), 1), rested: ['rested-source', 'source-rested'].includes(scenario) },
+          ...(!ordinary ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-026', 'bs12-090-ally'), hp('bs12-090-ally', 5, faint ? 1 : 4), 2)] : [])],
+        supportArea: [
+          ...Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({ card: i === 2 && scenario !== 'wrong-energy'
+            ? bs12PrintedReferenceCard('ST4-001', `bs12-090-payment-${i}`)
+            : getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-004' : 'BS12-075', `bs12-090-payment-${i}`), rested: scenario === 'rested-energy' })),
+          ...(scenario === 'wrong-zones' ? [{ card: getBs12CandidateCookie('BS12-081', 'bs12-090-support-blocker'), rested: false }] : []),
+        ],
+      },
+      'player-two': { ...base.players['player-two'], stage: null, deck: deck('bs12-090-enemy'), hand: [], discardPile: [],
+        breakArea: scenario === 'wrong-zones' ? [getBs12CandidateCookie('BS12-088', 'bs12-090-enemy-blocker')] : [],
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(faint?'BS12-019':'BS12-003','bs12-090-attacker'),hp('bs12-090-attacker',faint?4:2), 3),
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-090-attacker-two'), hp('bs12-090-attacker-two', 2, 2), 4)],
+        supportArea: Array.from({length:faint?3:2},(_,i)=>({card:getBs12CandidateCookie('BS12-004',`bs12-090-attack-payment-${i}`), rested: false })),
+      },
+    } }
+  return ordinary ? initial : applyGameCommand(initial, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-090-attacker',
+    targetInstanceId: ['direct-attack', 'no-hand-faint', 'last-hp-flip'].includes(scenario) ? source.instanceId : 'bs12-090-ally', supportPaymentIds:faint?['bs12-090-attack-payment-0','bs12-090-attack-payment-1','bs12-090-attack-payment-2']:['bs12-090-attack-payment-0'] })
+}
+
+export const BS12_WEREWOLF_SCENARIOS = ['response', 'item-cost', 'stage-cost', 'trap-cost', 'rested-source', 'wrong-color', 'non-arena', 'split-cost', 'no-hand',
+  'direct-attack', 'unrelated', 'faints', 'lv2', 'lv5', 'support-source', 'trash-source', 'break-source', 'hand-source', 'last-hp-flip', 'zero-damage', 'redirect-away',
+  'attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main',
+  'attacker-lv3', 'attacker-lv2', 'attacker-lv5', 'attacker-faints', 'attacker-unrelated', 'twice', 'second-battle', 'second-response', 'all-opponents', 'attacker-all-opponents'] as const
+export type Bs12WerewolfScenario = typeof BS12_WEREWOLF_SCENARIOS[number]
+
+/** Isolated candidate fixture: every card keeps its printed identity, level, HP and text. */
+export const createBs12WerewolfDemoState = (number: 'BS12-089' | 'BS12-089@1' = 'BS12-089', scenario: Bs12WerewolfScenario = 'response'): GameState => {
+  if (scenario === 'second-battle' || scenario === 'second-response') {
+    let state = createBs12WerewolfDemoState(number, 'twice')
+    state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: 'bs12-089-source', paymentIds: [], discardHandIds: ['bs12-089-cost'] })
+    while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    state = applyGameCommand(state, { kind: 'resolve-attack-effect', playerId: 'player-two', targetIds: [] })
+    return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-089-attacker-other', targetInstanceId: 'bs12-089-ally',
+      supportPaymentIds: ['bs12-089-enemy-payment-3', 'bs12-089-enemy-payment-4', 'bs12-089-enemy-payment-5'] })
+  }
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const humanAttacker = scenario.startsWith('attacker-')
+  const sourcePlayerId: PlayerId = humanAttacker ? 'player-two' : 'player-one'
+  const attackerPlayerId: PlayerId = humanAttacker ? 'player-one' : 'player-two'
+  const base = baseTestState(ordinary || humanAttacker ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  const card = (cardNumber: string, instanceId: string): GameCard => {
+    const result = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(record => record.cardNumber === cardNumber)!)
+    if (result.status !== 'converted') throw new Error(`Missing Werewolf fixture ${cardNumber}`)
+    return { ...result.gameCard, instanceId }
+  }
+  let fillerOffset=0
+  const hp=(id:string,count:number,_offset=0)=>{const cards=bs12PrintedFillerCards('BS12-089',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const deck=(id:string)=>hp(id+'-deck',12)
+  const source = getBs12CandidateCookie(number, 'bs12-089-source')
+  const levelTwo = ['lv2', 'attacker-lv2'].includes(scenario)
+  const levelFive = ['lv5', 'attacker-lv5'].includes(scenario)
+  const allOpponents = ['all-opponents', 'attacker-all-opponents'].includes(scenario)
+  let attacker = getBs12CandidateCookie(ordinary ? 'BS12-026' : levelTwo ? 'BS12-015' : allOpponents ? 'BS12-053' : 'BS12-026', 'bs12-089-attacker')
+  if (levelFive) attacker = materializeExtraDeckCookie(getBs11CandidateExtra('BS11-116', attacker.instanceId))
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-087' : scenario === 'wrong-color' ? 'BS12-001' : 'BS12-079'
+  const blockCost = ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCard('BS4-090', 'bs12-089-cost') : card(costNumber, 'bs12-089-cost')
+  const sourceOut = ['support-source', 'trash-source', 'break-source', 'hand-source'].includes(scenario)
+  const sourceFaints = ['faints', 'attacker-faints'].includes(scenario)
+  const prepareDamage=sourceFaints||scenario==='last-hp-flip'
+  const sourceHand = ordinary ? scenario === 'deploy' ? [source] : [] : humanAttacker || scenario === 'no-hand' ? [] : [blockCost,
+    ...(scenario === 'split-cost' ? [card('BS12-001', 'bs12-089-red-arena')] : []), ...(scenario === 'twice' ? [card('BS12-083', 'bs12-089-cost-two')] : [])]
+  const sourcePlayer = { ...base.players[sourcePlayerId], stage: null, deck: deck('bs12-089-own'),
+    hand: [...sourceHand, ...(scenario === 'hand-source' ? [source] : []), ...(scenario === 'zero-damage' ? [card('BS12-009', 'bs12-089-trap')] : [])],
+    discardPile: scenario === 'trash-source' ? [source] : [], breakArea: scenario === 'break-source' ? [source] : [],
+    battleArea: [
+      ...(!sourceOut && scenario !== 'deploy' ? [{ ...cardCheckBattleEntry(source, scenario === 'last-hp-flip'
+        ?[card('BS12-002','bs12-089-last-hp'),...hp('bs12-089-source',4)]:hp('bs12-089-source',5), 1), rested: ['rested-source', 'source-rested'].includes(scenario) }] : []),
+      ...(!ordinary || scenario === 'deploy' ? [cardCheckBattleEntry(scenario === 'redirect-away' ? bs12PrintedReferenceCookie('BS4-014', 'bs12-089-ally')
+        : getBs12CandidateCookie('BS12-026', 'bs12-089-ally'), hp('bs12-089-ally', scenario === 'redirect-away' ? 4 : 5, sourceOut || scenario === 'deploy' ? 0 : sourceFaints ? 1 : 5), 2)] : []),
+    ],
+    supportArea: [
+      ...Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({ card: i === 2 ? bs12PrintedReferenceCard('ST4-001', `bs12-089-payment-${i}`)
+        : getBs12CandidateCookie(scenario === 'wrong-energy' || scenario === 'zero-damage' && i === 0 ? 'BS12-004' : 'BS12-079', `bs12-089-payment-${i}`), rested: scenario === 'rested-energy' })),
+      ...(scenario === 'support-source' ? [{ card: source, rested: false }] : []),
+    ],
+  }
+  const attackPaymentCount = levelFive || allOpponents ? 4 : 3
+  const attackingPlayer = { ...base.players[attackerPlayerId], stage: null, deck: deck('bs12-089-enemy'), discardPile: [],
+    hand: ordinary ? [] : [card('BS12-001', 'bs12-089-then-cost')],
+    breakArea: Array.from({ length: 4 }, (_, i) => getBs12CandidateCookie('BS12-040', `bs12-089-break-${i}`)),
+    battleArea: [cardCheckBattleEntry(attacker, hp('bs12-089-attacker', attacker.hp), 3),
+      cardCheckBattleEntry(getBs12CandidateCookie(prepareDamage?'BS12-082':scenario==='twice'?'BS12-026':'BS12-003','bs12-089-attacker-other'), hp('bs12-089-attacker-other', scenario === 'twice' ? 5 : 2, attacker.hp), 4)],
+    supportArea:[...Array.from({length:scenario==='twice'?6:attackPaymentCount},(_,i)=>({card:getBs12CandidateCookie(allOpponents?i===3?'BS12-044':'BS12-043':levelTwo||levelFive?i===3?'BS12-004':'BS12-003':i>=3?'BS12-021':'BS12-024',`bs12-089-enemy-payment-${i}`),rested:false})),...(prepareDamage?Array.from({length:2},(_,i)=>({card:getBs12CandidateCookie('BS12-079',`bs12-089-preparation-payment-${i}`),rested:false})):[])],
+  }
+  let initial: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : base.activePlayerId,
+    players: { ...base.players, [sourcePlayerId]: sourcePlayer, [attackerPlayerId]: attackingPlayer } }
+  if (levelFive) {
+    const target = { ...cardCheckBattleEntry(getBs11CandidateCookie('BS11-115', 'bs12-089-awaken-underlay'), hp('bs12-089-awaken-underlay',6), 5),
+      enteredFrom: 'hand' as const, enteredTurn: initial.turnNumber }
+    initial = { ...initial, activePlayerId: attackerPlayerId,
+      players: { ...initial.players, [attackerPlayerId]: { ...attackingPlayer,
+        extraDeck: [getBs11CandidateExtra('BS11-116', attacker.instanceId)],
+        stage: { card: getBs11CandidateStage('BS11-108', 'bs12-089-awaken-castle'), rested: false },
+        breakArea: [getBs12CandidateCookie('BS12-001', 'bs12-089-break-0'), getBs12CandidateCookie('BS12-001', 'bs12-089-break-1'),
+          getBs12CandidateCookie('BS12-003', 'bs12-089-break-2')],
+        battleArea: [target, cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-089-attacker-other'), hp('bs12-089-attacker-other', 2, 3), 4)],
+        supportArea: Array.from({ length: 4 }, (_, i) => ({ card: getBs11CandidateCookie('BS11-111', `bs12-089-enemy-payment-${i}`), rested: false })),
+      } } }
+    initial = applyGameCommand(initial, { kind: 'play-extra-deck-cookie', playerId: attackerPlayerId, instanceId: attacker.instanceId })
+  }
+  if(prepareDamage){
+    initial=applyGameCommand(initial,{kind:'declare-attack',playerId:attackerPlayerId,attackerInstanceId:'bs12-089-attacker-other',targetInstanceId:source.instanceId,supportPaymentIds:['bs12-089-preparation-payment-0','bs12-089-preparation-payment-1']})
+    initial=applyGameCommand(initial,{kind:'skip-trap',playerId:sourcePlayerId})
+    while(initial.pendingBattle?.stage==='damage')initial=applyGameCommand(initial,{kind:'resolve-next-damage',playerId:sourcePlayerId})
+  }
+  if (ordinary || humanAttacker) return initial
+  return applyGameCommand(initial, { kind: 'declare-attack', playerId: attackerPlayerId, attackerInstanceId: attacker.instanceId,
+    targetInstanceId: ['direct-attack', 'faints', 'last-hp-flip', 'zero-damage', 'redirect-away'].includes(scenario) ? source.instanceId : 'bs12-089-ally',
+    supportPaymentIds: Array.from({ length: attackPaymentCount }, (_, i) => `bs12-089-enemy-payment-${i}`) })
+}
+
+export const createBs12PuddingDemoState = (scenario: Bs12PuddingScenario = 'response'): GameState => {
+  if (scenario === 'second-response') {
+    let state = createBs12PuddingDemoState('twice')
+    state = applyGameCommand(state, { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: 'bs12-081-source', paymentIds: [], discardHandIds: ['bs12-081-cost'] })
+    while (state.pendingBattle?.stage === 'damage') state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    return applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-081-attacker-two', targetInstanceId: 'bs12-081-ally', supportPaymentIds: ['bs12-081-attacker-payment-1'] })
+  }
+  const ordinary = ['attack', 'deploy', 'wrong-energy', 'few-energy', 'rested-energy', 'source-rested', 'opponent-turn', 'outside-main'].includes(scenario)
+  const base = baseTestState(ordinary ? 'player-one' : 'player-two', scenario === 'outside-main' ? 'support' : 'main')
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-081',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const source = getBs12CandidateCookie('BS12-081', 'bs12-081-source')
+  const costNumber = scenario === 'item-cost' ? 'BS12-083' : scenario === 'stage-cost' ? 'BS12-084' : scenario === 'trap-cost' ? 'BS12-086' : scenario === 'wrong-color' ? 'BS12-001' : 'BS12-075'
+  const costResult = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === costNumber)!)
+  if (costResult.status !== 'converted') throw new Error('Missing Pudding hand cost card')
+  const cost = ['non-arena', 'split-cost'].includes(scenario) ? bs12PrintedReferenceCard('BS4-090', 'bs12-081-cost') : { ...costResult.gameCard, instanceId: 'bs12-081-cost' }
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : base.activePlayerId, players: { ...base.players,
+      'player-one': { ...base.players['player-one'], deck: hp('bs12-081-deck', 12), discardPile: [], breakArea: [], stage: null,
+        hand: ordinary ? scenario === 'deploy' ? [source] : [] : scenario === 'no-hand' ? [] : [cost,
+          ...(scenario === 'split-cost' ? [getBs12CandidateCookie('BS12-001', 'bs12-081-red-arena')] : []),
+          ...(scenario === 'twice' ? [getBs12CandidateCookie('BS12-080', 'bs12-081-cost-two')] : [])],
+        battleArea: scenario === 'deploy' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-079', 'bs12-081-ally'), hp('bs12-081-ally', 2), 1)] : [
+          { ...cardCheckBattleEntry(source, hp('bs12-081-source', 2), 1), rested: ['rested-source', 'source-rested'].includes(scenario) },
+          ...(!ordinary ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-081-ally'), hp('bs12-081-ally', 4), 2)] : [])],
+        supportArea: ordinary && scenario !== 'few-energy' ? [{ card: getBs12CandidateCookie(scenario === 'wrong-energy' ? 'BS12-001' : 'BS12-075', 'bs12-081-payment'), rested: scenario === 'rested-energy' }] : [],
+      },
+      'player-two': { ...base.players['player-two'], deck: hp('bs12-081-enemy-deck', 12), hand: [], discardPile: [], breakArea: [], stage: null,
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(ordinary ? 'BS12-001' : 'BS12-003', 'bs12-081-attacker'), hp('bs12-081-attacker',ordinary?4:2), 3),
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-081-attacker-two'), hp('bs12-081-attacker-two',2), 4)],
+        supportArea: ordinary ? [] : Array.from({ length: 2 }, (_, i) => ({ card: getBs12CandidateCookie('BS12-075', `bs12-081-attacker-payment-${i}`), rested: false })),
+      },
+    } }
+  if (!ordinary) state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: 'bs12-081-attacker',
+    targetInstanceId: scenario === 'original-target' ? source.instanceId : 'bs12-081-ally', supportPaymentIds: ['bs12-081-attacker-payment-0'] })
+  return state
+}
+
+export const createBs12CurrantCreamDemoState = (scenario: Bs12CurrantCreamScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  let fillerOffset=0
+  const hp=(id:string,count:number)=>{const cards=bs12PrintedFillerCards('BS12-079',id+'-hp',count,fillerOffset);fillerOffset+=count;return cards}
+  const supportNumber = scenario === 'purple-energy' ? 'BS12-079' : scenario === 'yellow-energy' ? 'BS12-019' : scenario === 'green-energy' ? 'BS12-040' : 'BS12-001'
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-079', 'bs12-079-source')] : [], breakArea: [], stage: null,
+      deck: hp('bs12-079-deck',12),
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-079-ally'), hp('bs12-079-ally', 2), 1) : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-079', 'bs12-079-source'), hp('bs12-079-source', 2), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 0 : scenario === 'spare-energy' ? 2 : 1 }, (_, i) => ({
+        card: scenario === 'blue-energy' || i === 1 ? bs12PrintedReferenceCard('ST4-001', `bs12-079-payment-${i}`) : getBs12CandidateCookie(supportNumber, `bs12-079-payment-${i}`),
+        rested: scenario === 'rested-energy',
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: hp('bs12-079-opponent-deck',12),
+      battleArea: [cardCheckBattleEntry(scenario==='target-faints'?bs12PrintedReferenceCookie('BS6-017','bs12-079-opponent'):getBs12CandidateCookie('BS12-001','bs12-079-opponent'),hp('bs12-079-opponent',scenario==='target-faints'?1:4), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-079-opponent-other'), hp('bs12-079-opponent-other', 4), 3)],
+    },
+  } }
+}
+
+export const createBs12BlackberryDemoState = (scenario: Bs12MuscleScenario | 'deploy' | 'outside-main' | 'purple-energy' = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'support' : 'main')
+  const hp = (id:string,count:number,offset=0)=>bs12PrintedFillerCards('BS12-076',id+'-hp',count,offset)
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-076', 'bs12-076-source')] : [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-076','bs12-076-deck',12,4),
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-076-ally'), hp('bs12-076-ally', 2), 1) : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-076', 'bs12-076-source'), hp('bs12-076-source', 4), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'purple-energy' ? getBs12CandidateCookie('BS12-076', `bs12-076-payment-${i}`) : scenario === 'blue-energy' || i === 1 ? bs12PrintedReferenceCard('ST4-001', `bs12-076-payment-${i}`)
+          : i === 2 ? bs12PrintedReferenceCard('BS7-061', `bs12-076-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-076-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 2,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-076','bs12-076-opponent-deck',12,10),
+      battleArea: [cardCheckBattleEntry(scenario==='target-faints'?getBs12CandidateCookie('BS12-001','bs12-076-opponent'):bs12PrintedReferenceCookie('BS6-008','bs12-076-opponent'),hp('bs12-076-opponent',scenario==='target-faints'?4:6),2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-076-opponent-other'), hp('bs12-076-opponent-other',4,6), 3)],
+    },
+  } }
+}
+
+export const createBs12MuscleDemoState = (scenario: Bs12MuscleScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', `${id}-hp`, count, offset)
+  return { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-019-deck', 12),
+      battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-019-source'), hp('bs12-019-source', 4), 1), rested: scenario === 'source-rested' }],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({
+        card: scenario === 'blue-energy' || i === 1 ? bs12PrintedReferenceCookie('ST4-001', `bs12-019-payment-${i}`)
+          : i === 2 ? bs12PrintedReferenceCookie('BS7-061', `bs12-019-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-019-payment-${i}`),
+        rested: scenario === 'rested-energy' && i === 2,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], breakArea: [], stage: null,
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-019-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-001', 'bs12-019-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-019-opponent'), hp('bs12-019-opponent', scenario === 'target-faints' ? 4 : 6), 2),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-019-opponent-other'), hp('bs12-019-opponent-other', 4, scenario === 'target-faints' ? 4 : 6), 3)],
+    },
+  } }
+}
+
+/** Candidate-only EXTRA: entry and skill costs stay in their normal command paths. */
+export const createBs12GlitterDemoState = (scenario: Bs12GlitterScenario = 'positive', number: 'BS12-018' | 'BS12-018@1' = 'BS12-018'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!
+  const conversion = convertOfficialCardToExtraDeckCard(record)
+  if (conversion.status !== 'converted') throw new Error('Missing BS12 Glitter EXTRA')
+  const extra = { ...conversion.extraDeckCard, instanceId: 'bs12-018-source' }
+  const entering = ['extra', 'break-low', 'no-hand', 'non-arena-hand', 'full-battle', 'green-hand', 'item-hand'].includes(scenario)
+  const noOther = ['solo', 'support-only', 'opponent-only'].includes(scenario)
+  const other = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-018-other')
+    : scenario === 'non-arena' ? bs12PrintedReferenceCookie('ST1-001', 'bs12-018-other')
+      : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-018-other') : getBs12CandidateCookie('BS12-001', 'bs12-018-other')
+  const itemRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!
+  const item = convertOfficialCardToGameCard(itemRecord)
+  if (item.status !== 'converted') throw new Error('Missing Arena Item')
+  const handCost = scenario === 'green-hand' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-018-hand')
+    : scenario === 'non-arena-hand' ? bs12PrintedReferenceCookie('ST1-001', 'bs12-018-hand')
+      : scenario === 'item-hand' ? { ...item.gameCard, instanceId: 'bs12-018-hand' } : getBs12CandidateCookie('BS12-003', 'bs12-018-hand')
+  const ally = { ...cardCheckBattleEntry(other, bs12PrintedFillerCards('BS12-012', 'bs12-018-other-hp', other.hp, 5), 2),
+    rested: scenario !== 'active-target', ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-018-mic')] } : {}) }
+  let state: GameState = { ...base, turnNumber: 10, firstPlayerId: scenario === 'first-player' ? 'player-one' : 'player-two',
+    activePlayerId: 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], hand: scenario === 'no-hand' ? [] : [handCost],
+        extraDeck: [extra],
+        deck: bs12PrintedFillerCards('BS12-012', 'bs12-018-deck', 16), stage: null,
+        breakArea: Array.from({ length: scenario === 'break-low' ? 3 : 4 }, (_, i) => getBs12CandidateCookie('BS12-017', `bs12-018-break-${i}`)),
+        battleArea: [...(noOther ? [] : [ally]), ...(scenario === 'full-battle' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-018-full'), bs12PrintedFillerCards('BS12-012', 'bs12-018-full-hp', 2, 5 + other.hp), 5)] : [])],
+        supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'few-energy' ? 3 : 4 }, (_, i) => ({
+          card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-018-payment-${i}`)
+            : getBs12CandidateCookie(['BS12-003', 'BS12-004', 'BS12-006', 'BS12-007'][i], `bs12-018-payment-${i}`), rested: scenario === 'rested-energy',
+        })),
+      },
+      'player-two': { ...base.players['player-two'], hand: [], deck: bs12PrintedFillerCards('BS12-012', 'bs12-018-opponent-deck', 12),
+        battleArea: [cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-001', 'bs12-018-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-018-opponent'), bs12PrintedFillerCards('BS12-012', 'bs12-018-opponent-hp', scenario === 'target-faints' ? 4 : 6), 3),
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-018-opponent-other'), bs12PrintedFillerCards('BS12-012', 'bs12-018-opponent-other-hp', 4, scenario === 'target-faints' ? 4 : 6), 4)],
+      },
+    } }
+  if (entering) return state
+  // The preview earns its EXTRA origin, payment and HP through normal commands.
+  state = applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: extra.instanceId })
+  state = applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay', discardCardIds: [handCost.instanceId], paymentIds: [] })
+  if (scenario === 'source-rested') {
+    state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: extra.instanceId,
+      targetInstanceId: 'bs12-018-opponent', supportPaymentIds: state.players['player-one'].supportArea.map(entry => entry.card.instanceId) })
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let i = 0; state.pendingBattle?.stage === 'damage' && i < 8; i++) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-two' })
+    state = applyGameCommand(state, { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] })
+  }
+  // Timing-only control; the completed opponent-turn transition remains separate.
+  if (scenario === 'opponent-turn') state = { ...state, activePlayerId: 'player-two' }
+  return state
+}
+
+/** Candidate-only BS12-017; cost and all effects are performed by normal commands. */
+export const createBs12CandyAppleDemoState = (scenario: Bs12CandyAppleScenario = 'positive', number: 'BS12-017' | 'BS12-017@1' = 'BS12-017'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const source = getBs12CandidateCookie(number, 'bs12-017-source')
+  const noOther = ['solo', 'support-only', 'opponent-only'].includes(scenario)
+  const faerie = bs12PrintedReferenceCookie(scenario === 'faerie-variant' ? 'BS9-037@1' : 'BS9-037', 'bs12-017-faerie')
+  const withFaerie = ['attack', 'faerie-only', 'faerie-variant', 'target-faints'].includes(scenario)
+  const other = withFaerie ? faerie : scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-017-other')
+    : scenario === 'non-arena' ? bs12PrintedReferenceCookie('ST1-001', 'bs12-017-other')
+      : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-017-other') : getBs12CandidateCookie('BS12-001', 'bs12-017-other')
+  const itemRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!
+  const item = convertOfficialCardToGameCard(itemRecord)
+  if (item.status !== 'converted') throw new Error('Missing candidate ready item')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      hand: scenario === 'no-hand' ? [] : [getBs12CandidateCookie('BS12-003', 'bs12-017-hand-cookie'),
+        ...(scenario === 'one-hand' ? [] : [{ ...item.gameCard, instanceId: 'bs12-017-hand-item' }])],
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-017-deck', 12), stage: null,
+      battleArea: [{ ...cardCheckBattleEntry(source, bs12PrintedFillerCards('BS12-012', 'bs12-017-hp', 2), 1), rested: scenario === 'source-rested' },
+        ...(noOther ? [] : [{ ...cardCheckBattleEntry(other, bs12PrintedFillerCards('BS12-012', 'bs12-017-other-hp', other.hp, 2), 2),
+          rested: scenario !== 'active-target', ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-017-mic')] } : {}) }])],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'few-energy' ? 1 : 2 }, (_, i) => ({
+        card: i === 1 && ['support-only', 'faerie-support'].includes(scenario) ? { ...faerie, instanceId: `bs12-017-payment-${i}` }
+          : scenario === 'wrong-energy' || i === 1 ? bs12PrintedReferenceCookie('ST4-001', `bs12-017-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-017-payment-${i}`),
+        rested: scenario === 'rested-energy',
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], deck: bs12PrintedFillerCards('BS12-012', 'bs12-017-opponent-deck', 12),
+      battleArea: [
+        { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-017-opponent'), bs12PrintedFillerCards('BS12-012', 'bs12-017-opponent-hp', scenario === 'target-faints' ? 2 : 4), 3), rested: true },
+        cardCheckBattleEntry(['opponent-only', 'faerie-opponent'].includes(scenario) ? { ...faerie, instanceId: 'bs12-017-opponent-other' } : getBs12CandidateCookie('BS12-001', 'bs12-017-opponent-other'),
+          bs12PrintedFillerCards('BS12-012', 'bs12-017-opponent-other-hp', ['opponent-only', 'faerie-opponent'].includes(scenario) ? faerie.hp : 4, scenario === 'target-faints' ? 2 : 4), 4),
+      ],
+    },
+  } }
+}
+
+/** Candidate-only BS12-016 fixture; effect readiness is earned through ordinary UI commands. */
+export const createBs12MochiDemoState = (scenario: Bs12MochiScenario = 'positive', number: 'BS12-016' | 'BS12-016@1' = 'BS12-016'): GameState => {
+  const base = baseTestState('player-one', scenario === 'attack-normal' ? 'active' : 'main')
+  const source = getBs12CandidateCookie(number, 'bs12-016-source')
+  const noOther = ['solo', 'support-only', 'opponent-only'].includes(scenario)
+  const other = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-016-other')
+    : scenario === 'non-arena' ? bs12PrintedReferenceCookie('ST1-001', 'bs12-016-other')
+      : scenario === 'green-arena' ? bs12PrintedReferenceCookie('BS7-061', 'bs12-016-other') : getBs12CandidateCookie('BS12-001', 'bs12-016-other')
+  const enabler = ['effect-ready', 'attack-other', 'target-faints', 'already-active-ready'].includes(scenario)
+  const readyRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-012')!
+  const ready = convertOfficialCardToGameCard(readyRecord)
+  if (ready.status !== 'converted') throw new Error('Missing ready item')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      hand: enabler ? [{ ...ready.gameCard, instanceId: 'bs12-016-ready-item' }] : [],
+      deck: bs12PrintedFillerCards('BS12-012', 'bs12-016-deck', 12), stage: null,
+      battleArea: [{ ...cardCheckBattleEntry(source, bs12PrintedFillerCards('BS12-012', 'bs12-016-hp', 4), 1),
+        rested: ['source-rested', 'effect-ready', 'target-faints', 'attack-normal'].includes(scenario) },
+        ...(noOther ? [] : [{ ...cardCheckBattleEntry(other, bs12PrintedFillerCards('BS12-012', 'bs12-016-other-hp', other.hp, 4), 2),
+          rested: scenario !== 'active-target', ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-016-mic')] } : {}) }])],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : enabler ? 4 : 3 }, (_, i) => ({
+        card: scenario === 'wrong-energy' || i === 2 || (scenario === 'few-red' && i === 1)
+          ? bs12PrintedReferenceCookie('ST4-001', `bs12-016-payment-${i}`) : getBs12CandidateCookie('BS12-001', `bs12-016-payment-${i}`),
+        rested: ['rested-energy', 'attack-normal'].includes(scenario),
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], deck: bs12PrintedFillerCards('BS12-012', 'bs12-016-opponent-deck', 12),
+      battleArea: [
+        { ...cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-008', 'bs12-016-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-016-opponent'), bs12PrintedFillerCards('BS12-012', 'bs12-016-opponent-hp', scenario === 'target-faints' ? 3 : 6), 3), rested: true },
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-016-opponent-other'), bs12PrintedFillerCards('BS12-012', 'bs12-016-opponent-other-hp', 4, scenario === 'target-faints' ? 3 : 6), 4),
+      ],
+    },
+  } }
+}
+
+export const createBs12RecordDemoState = (scenario: Bs12GuitarScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-013')!
+  const conversion = convertOfficialCardToGameCard(record)
+  if (conversion.status !== 'converted' || !conversion.gameCard.item) throw new Error('BS12-013 item missing')
+  const first = scenario === 'no-target'
+    ? bs12PrintedReferenceCookie('BS4-095', 'bs12-013-first') : getBs12CandidateCookie('BS12-005', 'bs12-013-first')
+  const second = ['wrong-color', 'no-target'].includes(scenario)
+    ? bs12PrintedReferenceCookie('BS7-061', 'bs12-013-second') : scenario === 'wrong-keyword'
+      ? bs12PrintedReferenceCookie('ST1-001', 'bs12-013-second') : getBs12CandidateCookie('BS12-001', 'bs12-013-second')
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: {
+      ...base.players, 'player-one': { ...base.players['player-one'], hand: [{ ...conversion.gameCard, instanceId: 'bs12-013-item' }],
+        deck: bs12PrintedFillerCards('BS12-013', 'bs12-013-deck', 12),
+        supportArea: scenario === 'no-energy' ? [] : Array.from({ length: 4 }, (_, index) => ({
+          card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-013-payment-${index}`) : getBs12CandidateCookie(['BS12-003', 'BS12-004', 'BS12-006', 'BS12-007'][index], `bs12-013-payment-${index}`),
+          rested: scenario === 'rested-energy',
+        })),
+        battleArea: [
+          { ...cardCheckBattleEntry(first, bs12PrintedFillerCards('BS12-013', 'bs12-013-first-hp', first.hp), 1), rested: scenario !== 'active-target',
+            ...(scenario === 'no-target' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-013-mic')] } : {}) },
+          { ...cardCheckBattleEntry(second, bs12PrintedFillerCards('BS12-013', 'bs12-013-second-hp', second.hp, first.hp), 2), rested: true },
+        ], stage: null,
+      }, 'player-two': { ...base.players['player-two'],
+        deck: bs12PrintedFillerCards('BS12-013', 'bs12-013-opponent-deck', 12),
+        battleArea: [0, 1].map(index => ({ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', `bs12-013-opponent-${index}`), bs12PrintedFillerCards('BS12-013', `bs12-013-opponent-${index}-hp`, 4, index * 4), index + 3), rested: true })),
+      },
+    },
+  }
+}
+
+/** Isolated candidate stage; end-phase decisions are created by public commands. */
+export const createBs12StageDemoState = (scenario: Bs12StageScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-011')!
+  const conversion = convertOfficialCardToGameCard(record, 'bs12-011-stage')
+  if (conversion.status !== 'converted' || !conversion.gameCard.stageAbility) throw new Error('BS12-011 stage missing')
+  const stage = { ...conversion.gameCard, instanceId: 'bs12-011-stage' }
+  const first = ['mic-equipped', 'no-target'].includes(scenario)
+    ? bs12PrintedReferenceCookie('BS4-095', 'bs12-011-first') : getBs12CandidateCookie('BS12-005', 'bs12-011-first')
+  const second = ['non-arena', 'no-target'].includes(scenario)
+    ? bs12PrintedReferenceCookie('ST4-001', 'bs12-011-second') : bs12PrintedReferenceCookie('BS7-061', 'bs12-011-second')
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: {
+    ...base.players, 'player-one': { ...base.players['player-one'], hand: [stage],
+      deck: bs12PrintedFillerCards('BS12-011', 'bs12-011-deck', 12),
+      supportArea: scenario === 'no-energy' ? [] : [{
+        card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-011-payment') : getBs12CandidateCookie('BS12-001', 'bs12-011-payment'),
+        rested: scenario === 'rested-energy',
+      }],
+      battleArea: [
+        { ...cardCheckBattleEntry(first, bs12PrintedFillerCards('BS12-011', 'bs12-011-first-hp', first.hp), 1), rested: scenario !== 'active-target',
+          ...(['mic-equipped', 'no-target'].includes(scenario) ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-011-mic')] } : {}) },
+        { ...cardCheckBattleEntry(second, bs12PrintedFillerCards('BS12-011', 'bs12-011-second-hp', second.hp, first.hp), 2), rested: true },
+      ],
+      stage: scenario === 'replaced' ? { card: { ...stage, instanceId: 'bs12-011-old-stage' }, rested: true } : null,
+    }, 'player-two': { ...base.players['player-two'],
+      deck: bs12PrintedFillerCards('BS12-011', 'bs12-011-opponent-deck', 12),
+      battleArea: [{ ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-011-opponent'), bs12PrintedFillerCards('BS12-011', 'bs12-011-opponent-hp', 4), 3), rested: true }],
+    },
+  } }
+  if (['opponent-turn', 'removed', 'rested-stage'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'play-stage', playerId: 'player-one', instanceId: stage.instanceId, paymentIds: ['bs12-011-payment'] })
+    if (scenario === 'removed') state = executeCardEffect(state, { sourcePlayerId: 'player-one', sourceInstanceId: stage.instanceId }, { kind: 'stage-source-to-trash' }, [])
+    if (scenario === 'rested-stage') state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], stage: { ...state.players['player-one'].stage!, rested: true } } } }
+    if (scenario === 'opponent-turn') state = { ...state, activePlayerId: 'player-two' }
+  }
+  return state
+}
+
+/** Same real attack as 009, with the independently mapped optional-Then trap. */
+export const createBs12OptionalTrapDemoState = (scenario: Bs12TrapScenario = 'positive'): GameState => {
+  return createBs12TrapDemoState(scenario, 'BS12-010')
+}
+
+/** The opponent really declares a paid attack; the viewer responds with candidate Clumsy Day. */
+export type Bs12YappingScenario = 'four' | 'three' | 'five' | 'arena-only' | 'yellow-only' | 'non-arena' | 'high-level' | 'opponent-break' | 'trash-arena' | 'support-arena' | 'battle-arena' | 'free-no-energy' | 'free-wrong-energy' | 'free-rested-energy' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'disabled' | 'used' | 'main' | 'after-battle'
+export type Bs12CarpetScenario = 'positive' | 'no-cost' | 'non-arena' | 'arena-item' | 'red-only' | 'wrong-energy' | 'rested-energy' | 'no-energy' | 'opponent-turn' | 'outside-main' | 'break-nine' | 'short-deck'
+
+export const createBs12CarpetDemoState = (scenario: Bs12CarpetScenario = 'positive'): GameState => {
+  const base = createBs12YappingDemoState('main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-028')!
+  const converted = convertOfficialCardToGameCard(record)
+  if (converted.status !== 'converted' || converted.gameCard.type !== 'item') throw new Error('028 item missing')
+  const carpet = { ...converted.gameCard, instanceId: 'bs12-028-item' }
+  const yellow = getBs12CandidateCookie('BS12-024', 'bs12-028-yellow-cost')
+  const red = getBs12CandidateCookie('BS12-004', 'bs12-028-red-cost')
+  const nonArena = bs12PrintedReferenceCookie('ST2-002', 'bs12-028-non-arena')
+  const arenaItem = base.players['player-one'].hand[0]
+  const handCosts = scenario === 'no-cost' ? [] : scenario === 'non-arena' ? [nonArena] : scenario === 'arena-item' ? [arenaItem] : scenario === 'red-only' ? [red] : [yellow, red, nonArena, arenaItem]
+  const breakArea = scenario === 'break-nine'
+    ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-026', `bs12-028-break-${i}`))
+    : Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-024', `bs12-028-break-${i}`))
+  const player = base.players['player-one']
+  return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main',
+    players: { ...base.players, 'player-one': { ...player, hand: [carpet, ...handCosts], breakArea,
+      deck: bs12PrintedFillerCards('BS12-028', 'bs12-028-draw', scenario === 'short-deck' ? 2 : 12),
+      discardPile: scenario === 'short-deck' ? [getBs12CandidateCookie('BS12-019', 'bs12-028-refresh-cost'), ...bs12PrintedFillerCards('BS12-028', 'bs12-028-refresh', 6, 6)] : [],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-028-payment') : getBs12CandidateCookie('BS12-019', 'bs12-028-payment'), rested: scenario === 'rested-energy' }],
+    } },
+  }
+}
+
+export const createBs12YappingDemoState = (scenario: Bs12YappingScenario = 'four'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', prefix, count, offset)
+  const printedBs8 = (number: string, instanceId: string): GameCard => {
+    const record = (bs8FormalDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)
+    if (!record) throw new Error(`Missing physical control ${number}`)
+    const conversion = convertOfficialCardToGameCard(record)
+    if (conversion.status !== 'converted') throw new Error(`Unconverted physical control ${number}`)
+    return { ...conversion.gameCard, instanceId }
+  }
+  const attacker = scenario === 'disabled' ? printedBs8('BS8-009', 'bs12-027-attacker') : getBs12CandidateCookie('BS12-001', 'bs12-027-attacker')
+  if (attacker.type !== 'cookie') throw new Error('027 control attacker must be a printed Cookie')
+  const equipment = scenario === 'disabled' ? [printedBs8('BS8-021', 'bs12-027-lock-equip')] : []
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-027')!
+  const converted = convertOfficialCardToGameCard(record, 'bs12-027-trap')
+  if (converted.status !== 'converted' || converted.gameCard.type !== 'trap') throw new Error('027 trap missing')
+  let resting = Array.from({ length: 4 }, (_, i) => getBs12CandidateCookie('BS12-024', `bs12-027-break-${i}`))
+  if (['three', 'no-energy', 'wrong-energy', 'rested-energy'].includes(scenario)) resting = resting.slice(0, 3)
+  if (scenario === 'five') resting.push(getBs12CandidateCookie('BS12-019', 'bs12-027-break-extra'))
+  if (scenario === 'arena-only') resting[3] = bs12PrintedReferenceCookie('BS7-061', 'bs12-027-green-break')
+  if (scenario === 'yellow-only') resting[3] = bs12PrintedReferenceCookie('ST2-001', 'bs12-027-non-arena-break')
+  if (scenario === 'non-arena') resting = Array.from({ length: 4 }, (_, i) => bs12PrintedReferenceCookie('ST2-002', `bs12-027-non-arena-${i}`))
+  if (scenario === 'high-level') resting = ['BS12-019', 'BS12-026'].map((n, i) => getBs12CandidateCookie(n, `bs12-027-high-${i}`))
+  const witness = resting
+  if (['opponent-break', 'trash-arena', 'support-arena'].includes(scenario)) resting = []
+  if (scenario === 'battle-arena') resting = resting.slice(0, 3)
+  const payment = scenario.includes('wrong-energy') ? bs12PrintedReferenceCookie('ST4-001', 'bs12-027-payment') : getBs12CandidateCookie('BS12-019', 'bs12-027-payment')
+  const defender = getBs12CandidateCookie('BS12-026', 'bs12-027-defender')
+  const ally = getBs12CandidateCookie(scenario === 'battle-arena' ? 'BS12-019' : 'BS12-025', 'bs12-027-ally')
+  const before: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [{ ...converted.gameCard, instanceId: 'bs12-027-trap' }, ...(scenario === 'used' ? [{ ...converted.gameCard, instanceId: 'bs12-027-used-trap' }] : [])], deck: hp('bs12-027-own-deck', 12),
+      breakArea: resting, discardPile: scenario === 'trash-arena' ? witness : [],
+      supportArea: scenario.includes('no-energy') ? [] : scenario === 'support-arena' ? witness.map(card => ({ card, rested: false })) : [{ card: payment, rested: scenario.includes('rested-energy') }],
+      battleArea: [cardCheckBattleEntry(defender, hp('bs12-027-defender-hp', 5), 1),
+        cardCheckBattleEntry(ally, hp('bs12-027-ally-hp', ally.hp, 5), 2)],
+    }, 'player-two': { ...base.players['player-two'],
+      hand: [], deck: hp('bs12-027-opponent-deck', 12), breakArea: scenario === 'opponent-break' ? witness : scenario === 'disabled' ? ['BS12-001', 'BS12-001', 'BS12-002'].map((number, index) => getBs12CandidateCookie(number, `bs12-027-lock-break-${index}`)) : [],
+      supportArea: Array.from({ length: 3 }, (_, i) => ({ card: getBs12CandidateCookie('BS12-003', `bs12-027-attack-payment-${i}`), rested: false })),
+      battleArea: [{ ...cardCheckBattleEntry(attacker, hp('bs12-027-attacker-hp', 4), 3), equippedCards: equipment },
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-027-other'), hp('bs12-027-other-hp', 2, 4), 4)],
+    } },
+  }
+  if (scenario === 'main') return { ...before, activePlayerId: 'player-one' }
+  if (scenario === 'after-battle') return before
+  const state = beginAttack(before, 'bs12-027-attacker', 'bs12-027-defender', before.players['player-two'].supportArea.map(s => s.card.instanceId))
+  if (scenario === 'used') return applyGameCommand(state, { kind: 'play-trap', playerId: 'player-one', trapInstanceId: 'bs12-027-used-trap', paymentIds: [], targetIds: [], effectTargets: [[]] })
+  return state
+}
+
+export type Bs12EntranceScenario = Exclude<Bs12YappingScenario, 'free-no-energy' | 'free-wrong-energy' | 'free-rested-energy'> | 'one-energy' | 'mixed-energy' | 'one-rested' | 'short-deck' | 'event-only'
+
+export type Bs12WorkshopScenario = 'positive' | 'faint' | 'green-arena' | 'hand-break' | 'removed-break' | 'old-break' | 'previous-turn' | 'non-arena' | 'opponent-break' | 'trash-arena' | 'no-event' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'one-energy' | 'rested-source' | 'opponent-turn' | 'wrong-phase' | 'non-arena-target' | 'red-target' | 'rested-target' | 'equipment' | 'support-only' | 'no-target' | 'replace' | 'placed' | 'refresh'
+
+/** Candidate Stage: earlier Arena movement uses the same engine as ordinary play. */
+export type Bs12SpotlightScenario = 'positive' | 'two-costs' | 'no-cost' | 'red-arena' | 'yellow-non-arena' | 'equipment-only' | 'support-only' | 'rested-cost' | 'no-energy' | 'one-energy' | 'wrong-energy' | 'mixed-energy' | 'rested-energy' | 'opponent-turn' | 'outside-main' | 'break-nine' | 'single-cookie' | 'equipped-cost' | 'opponent-faints' | 'no-target' | 'short-deck'
+
+export type Bs12ChouxScenario = 'hp-cost' | 'hp-cost-survives' | 'mechanism-faint' | 'mechanism-faint-opponent-turn' | 'mechanism-faint-non-arena' | 'arena-faint' | 'arena-faint-nested' | 'arena-faint-no-condition' | 'on-play' | 'on-play-opponent-turn' | 'on-play-non-arena' | 'on-play-rested' | 'on-play-equipped' | 'on-play-short-deck' | 'on-play-break-nine' | 'positive' | 'non-arena' | 'opponent-turn' | 'rested-source' | 'equipped-source' | 'cost' | 'cost-rested' | 'cost-equipped' | 'cost-wrong-energy' | 'cost-one-energy' | 'cost-rested-energy' | 'cost-other-cookie' | 'cost-hand' | 'cost-short-deck' | 'cost-break-nine' | 'cost-prevented' | 'attack' | 'mixed-energy' | 'wrong-energy' | 'one-energy' | 'rested-energy' | 'refresh' | 'old-break' | 'ui-choice' | 'ui-choice-rested' | 'ui-choice-refresh' | 'ui-choice-prevented' | 'ui-choice-public-source'
+
+export const createBs12ChouxDemoState = (scenario: Bs12ChouxScenario = 'positive', number: 'BS12-032' | 'BS12-032@1' | 'BS12-033' | 'BS12-033@1' = 'BS12-032'): GameState => {
+  if (scenario === 'hp-cost' || scenario === 'hp-cost-survives') {
+    let state = createBs12ChouxDemoState('positive', number)
+    const owner = state.players['player-one']
+    const opponent = state.players['player-two']
+    const defender = opponent.battleArea[1]
+    const parentId = 'r001-earl-grey'
+    state = { ...state, activePlayerId: scenario === 'hp-cost' ? 'player-two' : 'player-one', players: { ...state.players,
+      'player-one': { ...owner, battleArea: [owner.battleArea[0]], hand: [bs12PrintedReferenceCookie('BS7-008', parentId)],
+        supportArea: ['BS12-003', 'BS12-004'].map((n, i) => ({ card: getBs12CandidateCookie(n, `r001-own-pay-${i}`), rested: false })),
+      },
+      'player-two': { ...opponent, battleArea: [defender], supportArea: [{ card: bs12PrintedReferenceCookie('ST4-002', 'r001-foe-pay'), rested: false }] },
+    } }
+    if (scenario === 'hp-cost') {
+      state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: defender.card.instanceId,
+        targetInstanceId: 'bs12-032-source', supportPaymentIds: ['r001-foe-pay'] })
+      state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+      state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+      for (let i = 0; i < 8 && (state.activePlayerId !== 'player-one' || state.phase !== 'main'); i++) {
+        state = applyGameCommand(state, { kind: 'advance-phase', playerId: state.activePlayerId })
+      }
+      if (state.activePlayerId !== 'player-one' || state.phase !== 'main') throw new Error('R001 actual turn sequence did not reach main')
+    }
+    return applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: parentId })
+  }
+  const base = baseTestState('player-one', 'main')
+  const choux = getBs12CandidateCookie(number, 'bs12-032-source')
+  const costScenario = scenario.startsWith('cost')
+  const attackScenario = ['attack', 'mixed-energy', 'wrong-energy', 'one-energy', 'rested-energy'].includes(scenario) || scenario.startsWith('arena-faint')
+  const mover = scenario.startsWith('mechanism-faint') ? bs12PrintedReferenceCookie('BS8-010', 'bs12-032-mover') : costScenario && scenario === 'cost-equipped' ? bs12PrintedReferenceCookie('P-106', 'bs12-032-mover') : scenario === 'equipped-source' ? bs12PrintedReferenceCookie('P-106', 'bs12-032-mover') : costScenario ? scenario === 'cost-other-cookie' ? getBs12CandidateCookie('BS12-024', 'bs12-032-mover') : bs12PrintedReferenceCookie('ST4-001', 'bs12-032-mover') : attackScenario ? getBs12CandidateCookie('BS12-024', 'bs12-032-mover') : bs12PrintedReferenceCookie(scenario === 'non-arena' || scenario === 'mechanism-faint-non-arena' ? 'BS11-032' : 'BS7-033', 'bs12-032-mover')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-032', id, count, offset)
+  const itemRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === (scenario === 'cost-hand' ? 'BS12-028' : 'BS12-031'))!
+  const item = convertOfficialCardToGameCard(itemRecord)
+  if (item.status !== 'converted') throw new Error('Arena movement-cost item missing for 032 preview')
+  let state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: costScenario ? [{ ...item.gameCard, instanceId: 'bs12-032-item' }] : [], stage: null, breakArea: scenario === 'old-break' ? [choux] : [], discardPile: [],
+      battleArea: [{ ...cardCheckBattleEntry(scenario === 'old-break' ? getBs12CandidateCookie('BS12-024', 'bs12-032-old-ally') : choux, hp('bs12-032-source-hp', 2), 401),
+        rested: scenario === 'rested-source' || scenario === 'cost-rested',  },
+        { ...cardCheckBattleEntry(mover, hp('bs12-032-mover-hp', mover.hp, 2), 402), rested: false, ...(['equipped-source', 'cost-equipped'].includes(scenario) ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-032-equipped')] } : {}) }],
+      deck: scenario === 'refresh' || scenario === 'cost-short-deck' ? hp('bs12-032-deck', 1) : hp('bs12-032-deck', 12),
+      supportArea: Array.from({ length: scenario.startsWith('mechanism-faint') ? 3 : scenario === 'one-energy' || scenario === 'cost-one-energy' ? 1 : 2 }, (_, i) => ({ card: scenario.startsWith('mechanism-faint') ? getBs12CandidateCookie(i < 2 ? 'BS12-001' : 'BS12-024', `bs12-032-payment-${i}`) : scenario === 'wrong-energy' || scenario === 'cost-wrong-energy' || (scenario === 'mixed-energy' && i === 1) ? bs12PrintedReferenceCookie('ST4-001', `bs12-032-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-032-payment-${i}`), rested: scenario === 'rested-energy' || scenario === 'cost-rested-energy' })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-032-opponent-deck', 12), supportArea: [],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-032-opponent'), hp('bs12-032-opponent-hp', 6), 403),
+        cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-032-opponent-other'), hp('bs12-032-opponent-other-hp', 3, 6), 404)],
+    },
+  } }
+  if (scenario.startsWith('arena-faint')) {
+    // A real attack reveals BS12-004: its printed Arena FLIP can faint the
+    // attacking 032 on the owner's turn. No pending HP gain is preinstalled.
+    const owner = state.players['player-one']
+    const opponent = state.players['player-two']
+    state = { ...state, pendingOnPlay: null, players: { ...state.players,
+      'player-one': { ...owner, battleArea: owner.battleArea.map((entry, i) => i === 0 ? { ...entry,
+        hpCards: scenario === 'arena-faint-nested' ? [getBs12CandidateCookie('BS12-002', 'bs12-032-own-flip')] : hp('bs12-032-source-hp', 1),
+      } : entry) },
+      'player-two': { ...opponent, battleArea: [
+        { ...opponent.battleArea[0], card: getBs12CandidateCookie('BS12-001', 'bs12-032-opponent'), hpCards: [getBs12CandidateCookie('BS12-004', 'bs12-032-arena-flip')] },
+        { ...opponent.battleArea[1],
+          card: scenario === 'arena-faint-no-condition' ? opponent.battleArea[1].card : getBs12CandidateCookie('BS12-003', 'bs12-032-opponent-other'),
+          hpCards: scenario === 'arena-faint-no-condition' ? opponent.battleArea[1].hpCards : hp('bs12-032-opponent-other-hp', 2, 6),
+        },
+      ] },
+    } }
+  }
+  if (!costScenario && !attackScenario) {
+    // Isolated direct-effect fixtures do not activate BS7-033's printed cost.
+    state = { ...state, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', pendingOnPlay: null }
+  }
+  if (scenario.startsWith('mechanism-faint')) {
+    // Legacy aliases use actual nonArena Red Velvet attack Then, never a made-up skill.
+    // The opponent-turn alias is a blocked declaration control, not a turn change in a pending battle.
+    state = { ...state, pendingOnPlay: null, activePlayerId: scenario === 'mechanism-faint-opponent-turn' ? 'player-two' : 'player-one' }
+    if (scenario !== 'mechanism-faint-opponent-turn') {
+      state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: mover.instanceId, targetInstanceId: 'bs12-032-opponent', supportPaymentIds: state.players['player-one'].supportArea.map(entry => entry.card.instanceId) })
+      state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-two' })
+      for (let i = 0; state.pendingBattle?.stage === 'damage' && i < 8; i++) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-two' })
+    }
+  }
+  if (scenario.startsWith('on-play')) {
+    const owner = state.players['player-one']
+    if (scenario === 'on-play-equipped') state = { ...state, players: { ...state.players, 'player-two': { ...state.players['player-two'], battleArea: state.players['player-two'].battleArea.map((entry, i) => i === 1 ? { ...entry, card: bs12PrintedReferenceCookie('P-106', entry.card.instanceId), hpCards: hp('bs12-032-opponent-other-hp', 2, 6), equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-032-equip')] } : entry) } } }
+    state = { ...state, activePlayerId: scenario === 'on-play-opponent-turn' ? 'player-two' : 'player-one', pendingOnPlay: { playerId: 'player-one', sourceInstanceId: mover.instanceId, origin: 'hand' },
+      players: { ...state.players, 'player-one': { ...owner,
+        battleArea: owner.battleArea.map(entry => entry.card.instanceId === choux.instanceId ? { ...entry,
+          ...(scenario === 'on-play-non-arena' ? { card: bs12PrintedReferenceCookie('ST4-001', 'bs12-032-source') } : {}),
+          rested: scenario === 'on-play-rested',
+        } : entry),
+        ...(scenario === 'on-play-short-deck' ? { deck: hp('bs12-032-deck', 1),
+          discardPile: [getBs12CandidateCookie('BS12-019', 'bs12-032-refresh-cost'), ...hp('bs12-032-refresh-trash', 4)],
+        } : {}),
+        ...(scenario === 'on-play-break-nine' ? { breakArea: ['BS12-003', 'BS12-003', 'BS12-003', 'BS12-003', 'BS12-024', 'BS12-024', 'BS12-024', 'BS12-024', 'BS12-034'].map((n, i) => getBs12CandidateCookie(n, `bs12-032-old-break-${i}`)) } : {}),
+      } },
+    }
+  }
+  if (costScenario) {
+    const owner = state.players['player-one']
+    state = { ...state, players: { ...state.players, 'player-one': { ...owner,
+      ...(scenario === 'cost-hand' ? {
+        hand: [...owner.hand, choux],
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-024', 'bs12-032-ally'), hp('bs12-032-ally-hp', 2), 405), owner.battleArea[1]],
+      } : {}),
+      ...(scenario === 'cost-short-deck' ? { discardPile: [getBs12CandidateCookie('BS12-019', 'bs12-032-refresh-cost'), ...hp('bs12-032-refresh-trash', 4)] } : {}),
+      ...(scenario === 'cost-break-nine' ? { breakArea: ['BS12-003', 'BS12-003', 'BS12-003', 'BS12-003', 'BS12-024', 'BS12-024', 'BS12-024', 'BS12-024', 'BS12-034'].map((n, i) => getBs12CandidateCookie(n, `bs12-032-old-break-${i}`)) } : {}),
+    } }, ...(scenario === 'cost-prevented' ? { preventHpGainThisTurn: { 'player-one': true } } : {}) }
+  }
+  if (scenario.startsWith('ui-choice')) {
+    // Prepared pending-choice UI only: this does not attest to any printed
+    // Arena card's movement, cost, or faint trigger while rulings are pending.
+    const red = getBs12CandidateCookie('BS12-024', 'bs12-032-ally')
+    const blue = bs12PrintedReferenceCookie('ST4-001', 'bs12-032-ally-other')
+    const owner = state.players['player-one']
+    const effect = choux.skill?.effects[0]
+    if (!effect || effect.kind !== 'gain-hp') throw new Error('032 choice fixture requires HP effect')
+    const shortDeck = scenario === 'ui-choice-refresh'
+    const triggerContext = { sourcePlayerId: 'player-one' as const, sourceInstanceId: choux.instanceId, sourceCardName: choux.name }
+    state = { ...state,
+      players: { ...state.players, 'player-one': { ...owner,
+        breakArea: [choux],
+        battleArea: [
+          { ...cardCheckBattleEntry(red, hp('bs12-032-ally-hp', 2), 405), rested: scenario === 'ui-choice-rested' },
+          cardCheckBattleEntry(blue, hp('bs12-032-ally-other-hp', 3, 2), 406),
+        ],
+        deck: shortDeck ? hp('bs12-032-ui-deck', 1) : hp('bs12-032-ui-deck', 12),
+        discardPile: [ ...owner.battleArea[0].hpCards, ...(shortDeck ? [
+          getBs12CandidateCookie('BS12-001', 'bs12-032-refresh-cost'), ...hp('bs12-032-refresh-trash', 4),
+        ] : []) ],
+      } },
+      pendingAfterDamageEffects: [{ ...triggerContext, triggerReason: 'break-by-arena-effect', context: triggerContext, effect }],
+      ...(scenario === 'ui-choice-prevented' ? { preventHpGainThisTurn: { 'player-one': true } } : {}),
+    }
+    if (scenario === 'ui-choice-public-source') {
+      state = executeCardEffect(state, { sourcePlayerId: 'player-one', sourceInstanceId: red.instanceId }, { kind: 'break-to-trash', max: 1 }, [choux.instanceId])
+    }
+  }
+  return state
+}
+
+/** Same Arena-entry mechanisms as 032, with the independently converted 033 source. */
+export const createBs12EspressoDemoState = (scenario: Bs12ChouxScenario = 'on-play', number: 'BS12-033' | 'BS12-033@1' = 'BS12-033'): GameState => {
+  if (scenario === 'hp-cost' || scenario === 'hp-cost-survives') return createBs12ChouxDemoState(scenario, number)
+  const base = createBs12ChouxDemoState(scenario)
+  const source = getBs12CandidateCookie(number, 'bs12-032-source')
+  const replace = (card: GameCard): GameCard => card.instanceId === source.instanceId ? source : card
+  const owner = base.players['player-one']
+  return { ...base, ...(base.pendingAfterDamageEffects ? { pendingAfterDamageEffects: base.pendingAfterDamageEffects.map(pending => ({ ...pending, sourceCardName: source.name, context: { ...pending.context, sourceCardName: source.name }, effect: source.skill!.effects[0] })) } : {}), players: { ...base.players, 'player-one': { ...owner,
+    hand: [...owner.hand.map(replace), ...(scenario === 'on-play-non-arena' ? [source] : [])],
+    breakArea: owner.breakArea.map(card => card.instanceId === source.instanceId ? source : card),
+    battleArea: owner.battleArea.map(entry => entry.card.instanceId === source.instanceId ? { ...entry,
+      card: scenario === 'on-play-non-arena' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-033-non-arena-ally') : source,
+    } : entry),
+  } } }
+}
+
+export type Bs12KouignScenario = 'then-four' | 'then-three' | 'then-non-arena' | 'then-opponent' | 'then-level' | 'then-faints' | 'positive' | 'peach-cost' | 'no-cost' | 'wrong-energy' | 'no-energy' | 'rested-energy' | 'opponent-turn' | 'break-nine' | 'attack' | 'attack-rested'
+export type Bs12GreenbellScenario = 'positive' | 'equal-before' | 'equal-after' | 'more-after' | 'foe-zero' | 'zero-after' | 'source-rested' | 'opponent-rested' | 'hand' | 'full-battle' | 'short-deck' | 'last-deck' | 'attack' | 'attack-wrong' | 'attack-few' | 'attack-rested-energy' | 'attack-rested-source' | 'isolated-opponent-turn'
+export const createBs12GreenbellDemoState = (scenario: Bs12GreenbellScenario = 'positive', number: 'BS12-038' | 'BS12-038@1' = 'BS12-038'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-038', id, count, offset)
+  const source = getBs12CandidateCookie(number, 'bs12-038-source')
+  const supportCount = scenario === 'zero-after' ? 1 : scenario === 'foe-zero' || scenario === 'attack-few' ? 2 : scenario === 'equal-after' ? 4 : scenario === 'more-after' ? 5 : 3
+  const deck = [...hp('bs12-038-setup', 2), bs12PrintedReferenceCookie('ST3-001', 'bs12-038-top-card'), ...hp('bs12-038-deck', 9)]
+  let state: GameState = { ...base, turnNumber: 2, nextBattleEntrySequence: 5, players: {
+    'player-one': { ...base.players['player-one'], hand: scenario === 'hand' ? [source] : [], extraDeck: [], stage: null, breakArea: [],
+      deck: scenario === 'short-deck' ? deck.slice(0, 2) : scenario === 'last-deck' ? deck.slice(0, 3) : deck,
+      discardPile: ['short-deck', 'last-deck'].includes(scenario) ? [bs12PrintedReferenceCookie('ST4-001', 'bs12-038-refresh'), ...hp('bs12-038-refresh-deck', 5)] : [],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS7-055', 'bs12-038-deployer'), hp('bs12-038-deployer-hp', 5), 1), ...(scenario === 'full-battle' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-032', 'bs12-038-ally'), hp('bs12-038-ally-hp', 2), 2)] : [])],
+      supportArea: Array.from({ length: supportCount }, (_, i) => ({ card: i === 0 ? source : bs12PrintedReferenceCookie(i === 1 && scenario !== 'attack-wrong' ? 'ST3-001' : 'ST4-001', `bs12-038-payment-${i}`), rested: scenario === 'source-rested' && i === 0 || scenario === 'attack-rested-energy' && i === 2 })).filter(s => scenario !== 'hand' || s.card.instanceId !== source.instanceId),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], extraDeck: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-038-foe-deck', 12),
+      supportArea: Array.from({ length: scenario === 'foe-zero' ? 0 : scenario === 'zero-after' ? 1 : 3 }, (_, i) => ({ card: bs12PrintedReferenceCookie('ST4-001', `bs12-038-foe-support-${i}`), rested: scenario === 'opponent-rested' })),
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-038-opponent'), hp('bs12-038-foe-hp', 6), 3), cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-038-opponent-other'), hp('bs12-038-other-hp', 3, 6), 4)],
+    },
+  } }
+  if (scenario.startsWith('attack')) {
+    state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-038-deployer', trigger: 'activate', paymentIds: [], effectTargets: [[source.instanceId]] })
+    state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId, trigger: 'on-play', paymentIds: [], effectTargets: [[]] })
+    if (scenario === 'attack-rested-source') state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(c => c.card.instanceId === source.instanceId ? { ...c, rested: true } : c) } } }
+  }
+  if (scenario === 'isolated-opponent-turn') {
+    state = { ...state, activePlayerId: 'player-two' }
+    state = executeCardEffect(state, { sourcePlayerId: 'player-one', sourceInstanceId: 'bs12-038-deployer' }, { kind: 'support-to-battle', amount: 1 }, [source.instanceId])
+  }
+  return state
+}
+export type Bs12BaguetteScenario = 'positive' | 'item-hand' | 'stage-hand' | 'yellow-hand' | 'returned-arena' | 'rested-cost' | 'non-arena-cost' | 'non-arena-hand' | 'item-support-only' | 'no-support' | 'source-rested' | 'all-support-rested' | 'opponent-turn' | 'outside-main' | 'used' | 'attack' | 'attack-wrong' | 'attack-few' | 'attack-rested-energy' | 'attack-rested-source' | 'deploy'
+export const createBs12BaguetteDemoState = (scenario: Bs12BaguetteScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-012', id, count, offset)
+  const source = getBs12CandidateCookie('BS12-040', 'bs12-040-source')
+  const arenaCard = (number: string, id: string): GameCard => {
+    const converted = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)!, id)
+    if (converted.status !== 'converted') throw new Error(`Missing ${number}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  let state: GameState = { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'active' : 'main', players: {
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [source] : scenario === 'returned-arena' ? [] : [
+      ['item-hand', 'stage-hand'].includes(scenario) ? arenaCard(scenario === 'item-hand' ? 'BS12-012' : 'BS12-011', 'bs12-040-hand')
+        : scenario === 'non-arena-hand' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-040-hand') : getBs12CandidateCookie(scenario === 'yellow-hand' ? 'BS12-024' : 'BS12-003', 'bs12-040-hand'),
+      bs12PrintedReferenceCookie('ST4-001', 'bs12-040-wrong-hand'),
+    ], deck: hp('bs12-040-deck', 12), discardPile: [], breakArea: [], extraDeck: [], stage: null,
+      battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-040-ally'), hp('bs12-040-ally-hp', 2), 1) : cardCheckBattleEntry(source, hp('bs12-040-source-hp', 3), 1, ['source-rested', 'attack-rested-source'].includes(scenario))],
+      supportArea: Array.from({ length: scenario === 'no-support' ? 0 : scenario === 'attack-few' ? 2 : 4 }, (_, i) => ({
+        card: scenario === 'item-support-only' || i === 3 ? arenaCard('BS12-012', `bs12-040-payment-${i}`)
+          : i === 0 && !['non-arena-cost', 'non-arena-hand', 'attack-wrong'].includes(scenario) ? getBs12CandidateCookie('BS12-038', `bs12-040-payment-${i}`)
+            : i === 1 && !['attack-wrong', 'attack-few'].includes(scenario) ? bs12PrintedReferenceCookie('ST3-001', `bs12-040-payment-${i}`) : bs12PrintedReferenceCookie('ST4-001', `bs12-040-payment-${i}`),
+        rested: scenario === 'all-support-rested' || scenario === 'rested-cost' && i === 0 || scenario === 'attack-rested-energy' && i === 1,
+      })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-040-foe-deck', 12), discardPile: [], breakArea: [], extraDeck: [], stage: null, supportArea: [],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-040-opponent'), hp('bs12-040-foe-hp', 6), 2), cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-040-opponent-other'), hp('bs12-040-other-hp', 3, 6), 3)],
+    },
+  } }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId, trigger: 'activate', paymentIds: [], supportToHandIds: ['bs12-040-payment-0'], effectTargets: [[]] })
+  return state
+}
+
+export type Bs12FinancierScenario = 'four' | 'zero' | 'three' | 'five' | 'seven' | 'eight' | 'mixed-colors' | 'non-arena' | 'high-level' | 'opponent-break' | 'trash-arena' | 'support-arena' | 'wrong-energy' | 'no-energy' | 'rested-energy' | 'opponent-turn' | 'outside-main' | 'used' | 'source-rested' | 'attack' | 'attack-three-energy' | 'attack-wrong' | 'attack-rested' | 'target-faints' | 'deploy'
+export const createBs12FinancierDemoState = (scenario: Bs12FinancierScenario = 'four', number: 'BS12-037' | 'BS12-037@1' = 'BS12-037'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-037', id, count, offset)
+  const arenaNumbers = ['BS12-032', 'BS12-033', 'BS12-034', 'BS12-035', 'BS12-003', 'BS12-004', 'BS12-014', 'BS12-024']
+  const counts: Partial<Record<Bs12FinancierScenario, number>> = { zero: 0, three: 3, five: 5, seven: 7, eight: 8, 'non-arena': 3, 'opponent-break': 0, 'trash-arena': 0, 'support-arena': 0 }
+  const breaks = (scenario === 'high-level' ? ['BS12-001', 'BS12-019', 'BS12-037'] : scenario === 'mixed-colors' ? ['BS12-003', 'BS12-032', 'BS12-038', 'BS12-019'] : arenaNumbers.slice(0, counts[scenario] ?? 4)).map((n, i) => getBs12CandidateCookie(n, `bs12-037-break-${i}`))
+  if (scenario === 'non-arena') breaks.push(bs12PrintedReferenceCookie('ST4-001', 'bs12-037-non-arena'))
+  const supportCount = scenario === 'no-energy' ? 0 : scenario === 'attack-three-energy' ? 3 : 4
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-two', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'active' : 'main',
+    players: {
+      'player-one': { ...base.players['player-one'], hand: [getBs12CandidateCookie('BS12-003', 'bs12-037-hand')], extraDeck: [], deck: hp('bs12-037-deck', 12), stage: null, breakArea: breaks,
+        discardPile: scenario === 'trash-arena' ? arenaNumbers.slice(0, 4).map((n, i) => getBs12CandidateCookie(n, `bs12-037-trash-${i}`)) : [],
+        battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(number, 'bs12-037-source'), hp('bs12-037-hp', 5), 1, scenario === 'source-rested' || scenario === 'attack-rested'), cardCheckBattleEntry(getBs12CandidateCookie('BS12-032', 'bs12-037-ally'), hp('bs12-037-ally-hp', 2), 2)],
+        supportArea: Array.from({ length: supportCount }, (_, i) => ({ card: scenario === 'support-arena' && i === 3 ? getBs12CandidateCookie('BS12-003', `bs12-037-payment-${i}`) : scenario === 'wrong-energy' || scenario === 'attack-wrong' || i === 3 ? bs12PrintedReferenceCookie('ST4-001', `bs12-037-payment-${i}`) : getBs12CandidateCookie('BS12-024', `bs12-037-payment-${i}`), rested: scenario === 'rested-energy' })),
+      },
+      'player-two': { ...base.players['player-two'], hand: [], extraDeck: [], deck: hp('bs12-037-foe-deck', 12), discardPile: [], stage: null, supportArea: [],
+        breakArea: scenario === 'opponent-break' ? arenaNumbers.slice(0, 4).map((n, i) => getBs12CandidateCookie(n, `bs12-037-foe-break-${i}`)) : [],
+        battleArea: [cardCheckBattleEntry(scenario === 'target-faints' ? getBs12CandidateCookie('BS12-008', 'bs12-037-opponent') : bs12PrintedReferenceCookie('BS6-008', 'bs12-037-opponent'), hp('bs12-037-foe-hp', scenario === 'target-faints' ? 3 : 6), 3), cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-037-opponent-other'), hp('bs12-037-other-hp', 3, 6), 4)],
+      },
+    },
+  }
+  if (scenario === 'deploy') state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], hand: [state.players['player-one'].battleArea[0].card], battleArea: state.players['player-one'].battleArea.slice(1) } } }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-037-source', trigger: 'activate', paymentIds: ['bs12-037-payment-0'], effectTargets: [[]] })
+  return state
+}
+export type Bs12ClottedScenario = 'then-positive' | 'then-rested' | 'then-same-number' | 'then-same-alt' | 'then-red' | 'then-green' | 'then-blue' | 'then-purple' | 'then-black' | 'then-non-arena-cost' | 'then-no-cost' | 'then-no-target' | 'positive' | 'first-player' | 'three-arena' | 'wrong-color' | 'non-arena' | 'high-level' | 'opponent-break' | 'full-battle' | 'opponent-turn' | 'outside-main' | 'attack' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'rested-source'
+/** Printed EXTRA, On Play and R003 cost-first Break revival. */
+export const createBs12ClottedDemoState = (scenario: Bs12ClottedScenario = 'positive', number: 'BS12-036' | 'BS12-036@1' = 'BS12-036'): GameState => {
+  if (scenario.startsWith('then-')) {
+    let state = createBs12ClottedDemoState('positive', number)
+    const player = state.players['player-one']
+    const costCard = scenario === 'then-non-arena-cost' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-036-ally')
+      : getBs12CandidateCookie(scenario === 'then-same-alt' ? 'BS12-032@1' : scenario === 'then-same-number' ? 'BS12-032' : 'BS12-024', 'bs12-036-ally')
+    const ally = { ...player.battleArea[0], card: costCard,
+      hpCards: bs12PrintedFillerCards('BS12-036', 'r003-cost-hp', costCard.hp, 16), rested: scenario === 'then-rested' }
+    const revivalNumber = ({ 'then-red': 'BS12-003', 'then-green': 'BS12-045', 'then-blue': 'BS12-071', 'then-purple': 'BS12-079', 'then-black': 'BS12-097' } as Record<string, string>)[scenario]
+    state = { ...state, players: { ...state.players, 'player-one': { ...player,
+      battleArea: scenario === 'then-no-cost' ? [] : [ally],
+      breakArea: scenario === 'then-no-target'
+        ? Array.from({ length: 4 }, (_, i) => getBs12CandidateCookie('BS12-021', `r003-high-break-${i}`))
+        : [...player.breakArea, ...(revivalNumber ? [getBs12CandidateCookie(revivalNumber, 'r003-revival')] : []),
+          ...(scenario === 'then-same-alt' ? [getBs12CandidateCookie('BS12-032@1', 'r003-same-alt')] : [])],
+    } } }
+    state = applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: 'bs12-036-source' })
+    state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-036-source', trigger: 'on-play', paymentIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: ['bs12-036-source'] })
+    return state
+  }
+  const base = baseTestState('player-one', 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-036', id, count, offset)
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!
+  const converted = convertOfficialCardToExtraDeckCard(record)
+  if (converted.status !== 'converted') throw new Error('Missing BS12-036 EXTRA')
+  const extra = { ...converted.extraDeckCard, instanceId: 'bs12-036-source' }
+  let breaks = ['BS12-032', 'BS12-033', 'BS12-034', 'BS12-035'].map((n, i) => getBs12CandidateCookie(n, `bs12-036-break-${i}`))
+  if (scenario === 'three-arena') breaks = breaks.slice(0, 3)
+  if (scenario === 'wrong-color') breaks[3] = getBs12CandidateCookie('BS12-003', 'bs12-036-break-3')
+  if (scenario === 'non-arena') breaks[3] = bs12PrintedReferenceCookie('ST2-002', 'bs12-036-break-3')
+  if (scenario === 'high-level') breaks = ['BS12-026', 'BS12-019'].map((n, i) => getBs12CandidateCookie(n, `bs12-036-break-${i}`))
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: scenario === 'first-player' ? 'player-one' : 'player-two',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [], extraDeck: [extra], deck: hp('bs12-036-deck', 14), discardPile: [], stage: null,
+      breakArea: scenario === 'opponent-break' ? [] : breaks,
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-032', 'bs12-036-ally'), hp('bs12-036-ally-hp', 2), 1),
+        ...(scenario === 'full-battle' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-033', 'bs12-036-other-ally'), hp('bs12-036-other-ally-hp', 2), 2)] : [])],
+      supportArea: Array.from({ length: scenario === 'few-energy' ? 2 : 3 }, (_, i) => ({ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-036-payment-${i}`) : getBs12CandidateCookie('BS12-024', `bs12-036-payment-${i}`), rested: scenario === 'rested-energy' && i === 2 })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], extraDeck: [], deck: hp('bs12-036-foe-deck', 12), discardPile: [], stage: null, supportArea: [],
+      breakArea: scenario === 'opponent-break' ? breaks : [],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-036-opponent'), hp('bs12-036-foe-hp', 6), 3), cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-036-opponent-other'), hp('bs12-036-other-hp', 3, 6), 4)],
+    },
+  } }
+  if (['attack', 'wrong-energy', 'few-energy', 'rested-energy', 'rested-source'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: extra.instanceId })
+    state = applyGameCommand(state, { kind: 'begin-activate-skill', playerId: 'player-one', sourceInstanceId: extra.instanceId, trigger: 'on-play', paymentIds: [] })
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [extra.instanceId] })
+    return { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(cookie => cookie.card.instanceId === extra.instanceId ? { ...cookie, rested: scenario === 'rested-source' } : cookie) } } }
+  }
+  return state
+}
+
+/** Printed 035 deployment and R002 optional opponent damage. */
+export const createBs12KouignDemoState = (scenario: Bs12KouignScenario = 'positive', number: 'BS12-035' | 'BS12-035@1' = 'BS12-035'): GameState => {
+  if (scenario.startsWith('then-')) {
+    const state = createBs12KouignDemoState('attack', number)
+    const owner = state.players['player-one']
+    const opponent = state.players['player-two']
+    let breaks = ['BS12-003', 'BS12-004', 'BS12-024', 'BS12-034'].map((n, i) => getBs12CandidateCookie(n, `r002-break-${i}`))
+    if (scenario === 'then-three') breaks = breaks.slice(0, 3)
+    if (scenario === 'then-non-arena') breaks[3] = bs12PrintedReferenceCookie('ST4-001', 'r002-break-3')
+    if (scenario === 'then-level') breaks = ['BS12-001', 'BS12-024'].map((n, i) => getBs12CandidateCookie(n, `r002-break-${i}`))
+    return { ...state, players: { ...state.players,
+      'player-one': { ...owner, breakArea: scenario === 'then-opponent' ? [] : breaks },
+      'player-two': { ...opponent, breakArea: scenario === 'then-opponent' ? breaks : [],
+        battleArea: opponent.battleArea.map((c, i) => scenario === 'then-faints' && i === 0
+          ? { ...c, card: getBs12CandidateCookie('BS12-025', c.card.instanceId), hpCards: c.hpCards.slice(0, 1) } : c),
+      },
+    } }
+  }
+  const base = baseTestState('player-one', 'main')
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-035', prefix, count, offset)
+  const source = getBs12CandidateCookie(number, 'bs12-035-source')
+  const state: GameState = { ...base, turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      hand: [source, ...(scenario === 'no-cost' ? [] : [getBs12CandidateCookie(scenario === 'peach-cost' ? 'BS12-003' : 'BS12-033', 'bs12-035-cost')]), bs12PrintedReferenceCookie('ST4-001', 'bs12-035-wrong-cost')],
+      deck: hp('bs12-035-deck', 14), discardPile: [], stage: null,
+      breakArea: scenario === 'break-nine' ? ['BS12-001', 'BS12-026', 'BS12-001'].map((n, i) => getBs12CandidateCookie(n, `bs12-035-break-${i}`)) : [],
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-032', 'bs12-035-ally'), hp('bs12-035-ally-hp', 2), 1)],
+      supportArea: scenario === 'no-energy' ? [] : [{ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-035-payment') : getBs12CandidateCookie('BS12-024', 'bs12-035-payment'), rested: scenario === 'rested-energy' }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], supportArea: [], breakArea: [], discardPile: [], stage: null,
+      deck: hp('bs12-035-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-035-opponent'), hp('bs12-035-opponent-hp', 6), 3),
+        cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-035-opponent-other'), hp('bs12-035-other-hp', 3, 6), 4)],
+    },
+  } }
+  if (!['opponent-turn', 'attack', 'attack-rested'].includes(scenario)) return state
+  let entered = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+  if (scenario === 'opponent-turn') return { ...entered, activePlayerId: 'player-two' }
+  entered = applyGameCommand(entered, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: source.instanceId })
+  return { ...entered, players: { ...entered.players, 'player-one': { ...entered.players['player-one'],
+    battleArea: entered.players['player-one'].battleArea.map(cookie => cookie.card.instanceId === source.instanceId ? { ...cookie, rested: scenario === 'attack-rested' } : cookie),
+  } } }
+}
+
+export type Bs12MadeleineScenario = 'positive' | 'four-arena' | 'three-arena' | 'non-arena-break' | 'opponent-break' | 'high-level' | 'wrong-energy' | 'one-energy' | 'rested-energy' | 'rested-source' | 'rested-ally' | 'lv2-ally' | 'non-arena-ally' | 'equipped-ally' | 'break-nine' | 'short-deck' | 'espresso-ally'
+export const createBs12MadeleineDemoState = (scenario: Bs12MadeleineScenario = 'positive', number: 'BS12-034' | 'BS12-034@1' = 'BS12-034'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-034', prefix, count, offset)
+  const source = getBs12CandidateCookie(number, 'bs12-034-source')
+  const ally = scenario === 'equipped-ally' ? bs12PrintedReferenceCookie('P-106', 'bs12-034-ally') : scenario === 'non-arena-ally' ? bs12PrintedReferenceCookie('ST4-002', 'bs12-034-ally')
+    : getBs12CandidateCookie(scenario === 'lv2-ally' ? 'BS12-002' : scenario === 'espresso-ally' ? 'BS12-033' : 'BS12-024', 'bs12-034-ally')
+  const breaks = scenario === 'break-nine' ? ['BS12-001', 'BS12-026', 'BS12-001'] : scenario === 'high-level' ? ['BS12-001', 'BS12-026']
+    : ['four-arena', 'non-arena-break', 'opponent-break'].includes(scenario) ? ['BS12-003', 'BS12-004', 'BS12-024', 'BS12-034']
+      : scenario === 'three-arena' ? ['BS12-003', 'BS12-004', 'BS12-024'] : []
+  const breakCards = breaks.map((n, i) => scenario === 'non-arena-break' && i === 3
+    ? bs12PrintedReferenceCookie('ST4-001', `bs12-034-break-${i}`) : getBs12CandidateCookie(n, `bs12-034-break-${i}`))
+  return { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [getBs12CandidateCookie('BS12-003', 'bs12-034-hand'), bs12PrintedReferenceCookie('ST4-001', 'bs12-034-wrong-hand')],
+      stage: null, discardPile: scenario === 'short-deck' ? [getBs12CandidateCookie('BS12-019', 'bs12-034-refresh'), ...hp('bs12-034-refresh-trash', 5)] : [],
+      deck: hp('bs12-034-deck', scenario === 'short-deck' ? 1 : 12), breakArea: scenario === 'opponent-break' ? [] : breakCards,
+      supportArea: Array.from({ length: scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({ card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-034-payment-${i}`) : getBs12CandidateCookie('BS12-024', `bs12-034-payment-${i}`), rested: scenario === 'rested-energy' && i === 1 })),
+      battleArea: [{ ...cardCheckBattleEntry(source, hp('bs12-034-source-hp', 2), 341), rested: scenario === 'rested-source' },
+        { ...cardCheckBattleEntry(ally, hp('bs12-034-ally-hp', ally.hp, 2), 342), rested: scenario === 'rested-ally',
+          ...(scenario === 'equipped-ally' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-034-equipped')] } : {}) }],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, supportArea: [], discardPile: [],
+      breakArea: scenario === 'opponent-break' ? breakCards : [], deck: hp('bs12-034-opponent-deck', 12),
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-034-opponent'), hp('bs12-034-opponent-hp', 6), 343),
+        cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-034-opponent-other'), hp('bs12-034-other-hp', 3, 6), 344)],
+    },
+  } }
+}
+
+export const createBs12SpotlightDemoState = (scenario: Bs12SpotlightScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-031')!
+  const converted = convertOfficialCardToGameCard(record, 'bs12-031-item')
+  if (converted.status !== 'converted' || !converted.gameCard.item) throw new Error('BS12-031 item missing')
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-031', prefix, count, offset)
+  const cost = ['equipment-only', 'equipped-cost'].includes(scenario) ? bs12PrintedReferenceCookie('BS7-055', 'bs12-031-cost') : scenario === 'red-arena' ? getBs12CandidateCookie('BS12-001', 'bs12-031-cost')
+    : scenario === 'yellow-non-arena' ? bs12PrintedReferenceCookie('ST2-002', 'bs12-031-cost')
+      : scenario === 'equipment-only' ? getBs12CandidateCookie('BS12-001', 'bs12-031-cost')
+        : getBs12CandidateCookie('BS12-024', 'bs12-031-cost')
+  const other = scenario === 'two-costs' ? getBs12CandidateCookie('BS12-025', 'bs12-031-other')
+    : getBs12CandidateCookie('BS12-001', 'bs12-031-other')
+  const battleArea = ['no-cost', 'support-only'].includes(scenario) ? [cardCheckBattleEntry(other, hp('bs12-031-other-hp', other.hp, cost.hp), 302)]
+    : [{ ...cardCheckBattleEntry(cost, hp('bs12-031-cost-hp', cost.hp), 301), rested: scenario === 'rested-cost',
+      ...(['equipment-only', 'equipped-cost'].includes(scenario) ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-031-equipped')] } : {}) },
+      ...(scenario === 'single-cookie' ? [] : [cardCheckBattleEntry(other, hp('bs12-031-other-hp', other.hp), 302)])]
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'end' : 'main',
+    players: { ...base.players, 'player-one': { ...base.players['player-one'], battleArea, stage: null,
+      hand: [{ ...converted.gameCard, instanceId: 'bs12-031-item' }, ...(scenario === 'single-cookie' ? [getBs12CandidateCookie('BS12-024', 'bs12-031-replacement')] : [])],
+      deck: scenario === 'short-deck' ? hp('bs12-031-last-draw', 1) : hp('bs12-031-deck', 12),
+      discardPile: scenario === 'short-deck' ? [getBs12CandidateCookie('BS12-019', 'bs12-031-refresh-cost'), ...hp('bs12-031-refresh-trash', 5, 1)] : [],
+      breakArea: scenario === 'break-nine' ? [getBs12CandidateCookie('BS12-026', 'bs12-031-break-0'), getBs12CandidateCookie('BS12-026', 'bs12-031-break-1'), getBs12CandidateCookie('BS12-026', 'bs12-031-break-2')] : [],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({
+        card: scenario === 'wrong-energy' || (scenario === 'mixed-energy' && i === 1)
+          ? bs12PrintedReferenceCookie('ST4-001', `bs12-031-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-031-payment-${i}`),
+        rested: scenario === 'rested-energy',
+      })),
+    }, 'player-two': { ...base.players['player-two'], hand: [], supportArea: [], stage: null, breakArea: [], discardPile: [],
+      deck: hp('bs12-031-opponent-deck', 12), battleArea: scenario === 'no-target' ? [] : [
+        { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-031-opponent'), hp('bs12-031-opponent-hp', scenario === 'opponent-faints' ? 1 : 4), 303), rested: true },
+        cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-031-opponent-other'), hp('bs12-031-opponent-other-hp', 3, scenario === 'opponent-faints' ? 1 : 4), 304),
+      ],
+    } },
+  }
+}
+
+export const BS12_PERFECT_STAGE_SCENARIOS = ['positive', 'two-black', 'single-black', 'rested-witness', 'rested-defender',
+  'yellow-arena', 'black-non-arena', 'split', 'hand-only', 'support-only', 'trash-only', 'break-only', 'opponent-only',
+  'wrong-energy', 'rested-energy', 'no-energy', 'spare-energy', 'disabled', 'used', 'main', 'after-battle',
+  'one-opponent', 'other-black', 'other-yellow', 'other-green', 'other-purple', 'other-red', 'flip', 'faint', 'replacement', 'refresh'] as const
+export type Bs12PerfectStageScenario = typeof BS12_PERFECT_STAGE_SCENARIOS[number]
+
+/** Isolated Trap responses with genuine printed cards; no candidate enters the formal registry. */
+export const createBs12PerfectStageDemoState = (scenario: Bs12PerfectStageScenario = 'positive'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const card = (number: string, instanceId: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(source => source.cardNumber === number)
+    const result = record ? convertOfficialCardToGameCard(record) : undefined
+    const face = result?.status === 'converted' ? result.gameCard : bs12PrintedReferenceCookie(number, instanceId)
+    return { ...face, instanceId }
+  }
+  const cookie = (number: string, id: string): CookieCard => {
+    const face = card(number, id)
+    if (face.type !== 'cookie') throw new Error(`Invalid Perfect Stage Cookie ${number}`)
+    return face
+  }
+  const hpPool=['BS12-011','BS12-031','BS12-046','BS12-085','BS12-084','BS12-087','BS12-009','BS12-027']
+  let ownHpOffset = 0, enemyHpOffset = 0
+  const entry = (number: string, id: string, owner: 'own' | 'enemy') => {
+    const face = cookie(number, id), offset = owner === 'own' ? ownHpOffset : enemyHpOffset
+    if (owner === 'own') ownHpOffset += face.hp
+    else enemyHpOffset += face.hp
+    return cardCheckBattleEntry(face, Array.from({ length: face.hp }, (_, i) => card(hpPool[Math.floor((offset+i)/2)], `${id}-hp-${i}`)), 1)
+  }
+  const falseCondition = ['yellow-arena', 'black-non-arena', 'split', 'hand-only', 'support-only', 'trash-only', 'break-only', 'opponent-only'].includes(scenario)
+  const small = ['faint', 'replacement', 'refresh'].includes(scenario)
+  const defender = entry(['single-black', 'two-black'].includes(scenario) ? 'BS12-094' : scenario === 'black-non-arena' ? 'BS11-111' : small ? 'BS12-024' : 'BS12-019', 'bs12-105-defender', 'own')
+  const ally = entry(falseCondition ? scenario === 'split' ? 'BS11-111' : 'ST4-001' : 'BS12-097', 'bs12-105-witness', 'own')
+  const ownBattle = scenario === 'single-black' ? [defender] : [defender, { ...ally, rested: scenario === 'rested-witness' }]
+  if (scenario === 'rested-defender') ownBattle[0] = { ...defender, rested: true }
+  if (scenario === 'flip' || scenario === 'refresh') ownBattle[0] = { ...ownBattle[0], hpCards: [...ownBattle[0].hpCards.slice(0, -1), card('BS12-022', 'bs12-105-flip-hp')] }
+  const otherNumber = scenario === 'opponent-only' ? 'BS12-097' : scenario === 'other-black' ? 'BS11-111' :
+    scenario === 'other-yellow' ? 'BS12-024' : scenario === 'other-green' ? 'BS12-039' : scenario === 'other-purple' ? 'BS12-079' : scenario === 'other-red' ? 'BS12-001' : 'ST4-001'
+  const attacker = entry(scenario==='disabled'?'BS6-008':'BS12-019', 'bs12-105-attacker', 'enemy')
+  const other = { ...entry(otherNumber, 'bs12-105-other', 'enemy'), rested: true }
+  const tail = (owner: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-012', 'BS12-013', 'BS12-028', 'BS12-029'][Math.floor(i / 3)], `bs12-105-${owner}-deck-${i}`))
+  const witness = (zone: string) => cookie('BS12-097', `bs12-105-${zone}-witness`)
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], extraDeck: [], stage: null, battleArea: ownBattle,
+      deck: scenario === 'refresh' ? [card('BS12-013', 'bs12-105-last-hp')] : tail('own'),
+      hand: [card('BS12-105', 'bs12-105-trap'), ...(scenario==='used'?[card('BS12-105','bs12-105-second-trap')]:[]), ...(scenario === 'hand-only' ? [witness('hand')] : []),
+        ...(['flip', 'refresh'].includes(scenario) ? [card('BS12-012', 'bs12-105-flip-cost')] : []),
+        ...(scenario === 'replacement' ? [cookie('BS12-097', 'bs12-105-replacement')] : [])],
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario==='disabled'?4:scenario === 'spare-energy' ? 3 : 2 }, (_, i) => ({
+        card: cookie(scenario === 'wrong-energy' ? 'BS12-004' : scenario==='disabled'&&i>=2?'BS12-098':'BS12-097', `bs12-105-payment-${i}`), rested: scenario === 'rested-energy',
+      })),
+      discardPile: scenario === 'trash-only' ? [witness('trash')] : scenario === 'refresh' ? [cookie('BS12-003', 'bs12-105-refresh-cookie'),
+        ...Array.from({ length: 6 }, (_, i) => card(i < 3 ? 'BS12-030' : 'BS12-052', `bs12-105-refresh-trash-${i}`))] : [],
+      breakArea: scenario === 'break-only' ? [witness('break')] : [],
+    },
+    'player-two': { ...base.players['player-two'], extraDeck: [], stage: null, hand: [], deck: tail('enemy'), discardPile: [], breakArea: [],
+      battleArea: scenario === 'one-opponent' ? [attacker] : [attacker, other],
+      supportArea: Array.from({ length: 3 }, (_, i) => ({ card: cookie('BS12-004', `bs12-105-attack-payment-${i}`), rested: false })),
+    },
+  } }
+  if (scenario === 'main') return { ...state, activePlayerId: 'player-one' }
+  if (scenario === 'after-battle') return state
+  if(scenario==='disabled'){
+    state={...state,activePlayerId:'player-one'}
+    state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-one',attackerInstanceId:'bs12-105-defender',targetInstanceId:'bs12-105-attacker',supportPaymentIds:state.players['player-one'].supportArea.slice(0,3).map(s=>s.card.instanceId)})
+    state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-two'})
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-two'})
+    for(let step=0;step<12&&(state.activePlayerId!=='player-two'||state.phase!=='main');step++)state=applyGameCommand(state,{kind:'advance-phase',playerId:state.activePlayerId})
+    if(state.activePlayerId!=='player-two'||state.phase!=='main')throw new Error('Actual Sugar Swan parent failed to reach main')
+  }
+  state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-two',attackerInstanceId:'bs12-105-attacker',targetInstanceId:'bs12-105-defender',supportPaymentIds:state.players['player-two'].supportArea.map(s=>s.card.instanceId)})
+  if(scenario==='used')state=applyGameCommand(state,{kind:'play-trap',playerId:'player-one',trapInstanceId:'bs12-105-trap',targetIds:[],paymentIds:['bs12-105-payment-0'],effectTargets:[['bs12-105-attacker']]})
+  return state
+}
+
+export const BS12_RECIPE_SCENARIOS = ['positive', 'two-targets', 'non-arena', 'pudding', 'strategist', 'rested-target', 'mixed', 'ordinary', 'arena-only',
+  'hand-only', 'support-only', 'trash-only', 'break-only', 'opponent-only', 'no-target',
+  'no-energy', 'wrong-energy', 'rested-energy', 'spare-energy', 'opponent-turn', 'outside-main',
+  'one-card', 'empty-deck', 'no-refresh', 'break-nine', 'stack'] as const
+export type Bs12RecipeScenario = typeof BS12_RECIPE_SCENARIOS[number]
+
+/** Printed Item and real printed Special Play targets; candidate remains isolated. */
+export const createBs12RecipeDemoState = (scenario: Bs12RecipeScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const card = (number: string, id: string): GameCard => number.startsWith('BS12-') ? bs12PrintedFixtureCard(number,id) : bs12PrintedReferenceCard(number,id)
+  const cookie = (number: string, id: string): CookieCard => {
+    const result = card(number, id)
+    if (result.type !== 'cookie') throw new Error(`Recipe reference is not a Cookie: ${number}`)
+    return result
+  }
+  const entry = (number: string, id: string, owner = 'own') => {
+    const face = cookie(number, id)
+    return cardCheckBattleEntry(face, Array.from({ length: face.hp }, (_, index) => card(index % 2 ? 'BS12-027' : 'BS12-009', `bs12-104-${owner}-${id}-hp-${index}`)), 1)
+  }
+  const invalid = ['ordinary', 'arena-only', 'hand-only', 'support-only', 'trash-only', 'break-only', 'opponent-only', 'no-target'].includes(scenario)
+  const targetNumber = scenario === 'non-arena' ? 'BS11-111' : scenario === 'pudding' ? 'BS12-098' : scenario === 'strategist' ? 'BS12-100' : 'BS12-095'
+  const battle = [entry(invalid ? scenario === 'ordinary' ? 'ST4-001' : 'BS12-097' : targetNumber, 'bs12-104-target')]
+  if (scenario === 'rested-target') battle[0].rested = true
+  if (scenario === 'two-targets') battle.push(entry('BS11-111', 'bs12-104-other'))
+  if (scenario === 'mixed') battle.push(entry('BS12-097', 'bs12-104-ordinary'))
+  const zoneTarget = (where: string) => cookie('BS12-095', `bs12-104-${where}-target`)
+  const shortened = ['one-card', 'empty-deck', 'no-refresh', 'break-nine'].includes(scenario)
+  const tail = (owner: string) => Array.from({ length: 12 }, (_, index) => card(['BS12-012', 'BS12-013', 'BS12-028', 'BS12-029'][Math.floor(index / 3)], `bs12-104-${owner}-deck-${index}`))
+  const deck = shortened ? scenario === 'empty-deck' ? [] : [card('BS12-011', 'bs12-104-draw')] : tail('own')
+  const trash = shortened && scenario !== 'no-refresh'
+    ? [cookie('BS12-003', 'bs12-104-refresh'), ...Array.from({ length: 6 }, (_, index) => card(index < 3 ? 'BS12-030' : 'BS12-052', `bs12-104-refresh-trash-${index}`))] : []
+  let state: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one', phase: scenario === 'outside-main' ? 'draw' : 'main',
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    players: {
+      'player-one': { ...base.players['player-one'], extraDeck: [], stage: null, battleArea: battle, deck,
+        hand: [card('BS12-104', 'bs12-104-item'), ...(scenario === 'hand-only' ? [zoneTarget('hand')] : []), ...(scenario === 'stack' ? [card('BS12-104', 'bs12-104-item-2')] : [])],
+        supportArea: [...Array.from({ length: scenario === 'no-energy' ? 0 : ['spare-energy', 'stack'].includes(scenario) ? 4 : 3 }, (_, index) => ({
+          card: cookie(scenario === 'wrong-energy' ? 'BS12-019' : 'BS12-097', `bs12-104-payment-${index}`), rested: scenario === 'rested-energy',
+        })), ...(scenario === 'support-only' ? [{ card: zoneTarget('support'), rested: true }] : [])],
+        discardPile: [...trash, ...(scenario === 'trash-only' ? [zoneTarget('trash')] : [])],
+        breakArea: scenario === 'break-nine' ? [0, 1, 2].map(index => cookie('BS12-094', `bs12-104-break-${index}`)) : scenario === 'break-only' ? [zoneTarget('break')] : [],
+      },
+      'player-two': { ...base.players['player-two'], extraDeck: [], stage: null, hand: [], supportArea: [], breakArea: [], discardPile: [], deck: tail('enemy'),
+        battleArea: [entry(scenario === 'opponent-only' ? 'BS12-095' : 'BS12-094', 'bs12-104-opponent', 'enemy')],
+      },
+    },
+  }
+  if(scenario==='empty-deck'){
+    state={...state,players:{...state.players,'player-one':{...state.players['player-one'],battleArea:[...state.players['player-one'].battleArea,entry('BS12-101','bs12-104-refresh-parent')],hand:[...state.players['player-one'].hand,card('BS12-095','bs12-104-parent-hand-cost')]}}}
+    state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-one',attackerInstanceId:'bs12-104-refresh-parent',targetInstanceId:'bs12-104-opponent',supportPaymentIds:['bs12-104-payment-0']})
+    state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-two'})
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-two'})
+    state=applyGameCommand(state,{kind:'resolve-attack-effect',playerId:'player-one',targetIds:[]})
+    state=applyGameCommand(state,{kind:'resolve-optional-cost-attack',playerId:'player-one',action:'pay',paymentIds:[],discardCardIds:['bs12-104-parent-hand-cost'],targetIds:[]})
+    state=applyGameCommand(state,{kind:'resolve-draw-up-to',playerId:'player-one',drawCount:1})
+  }
+  return state
+}
+
+export const BS12_SUNGLASSES_SCENARIOS = ['positive', 'mixed', 'cookie', 'stage', 'item', 'trap', 'two-valid', 'no-target',
+  'wrong-color', 'wrong-keyword', 'split', 'hand-only', 'trash-only', 'support-only', 'break-only', 'opponent-only',
+  'no-energy', 'wrong-energy', 'rested-energy', 'spare-energy', 'opponent-turn', 'outside-main', 'short-deck',
+  'one-card', 'three-cards', 'exact-four', 'empty-deck', 'no-refresh', 'break-nine'] as const
+export type Bs12SunglassesScenario = typeof BS12_SUNGLASSES_SCENARIOS[number]
+
+/** Printed candidate Item; all peek/payment/zone cards retain their real official definitions. */
+export const createBs12SunglassesDemoState = (scenario: Bs12SunglassesScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const card = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(value => value.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const result = convertOfficialCardToGameCard(record, id)
+    if (result.status !== 'converted') throw new Error(`Missing Sunglasses reference ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const cookie = (number: string, id: string): CookieCard => {
+    const result = card(number, id)
+    if (result.type !== 'cookie') throw new Error(`Sunglasses reference is not a Cookie: ${number}`)
+    return result
+  }
+  const invalid = ['no-target', 'wrong-keyword', 'hand-only', 'trash-only', 'support-only', 'break-only', 'opponent-only'].includes(scenario)
+  const peekNumbers = invalid ? ['BS11-111', 'BS11-111', 'BS11-111', 'BS11-111']
+    : scenario === 'wrong-color' ? ['BS12-001', 'BS12-009', 'BS12-013', 'BS12-030']
+    : ['mixed', 'split', 'two-valid'].includes(scenario) ? ['BS12-094', 'BS12-013', 'BS11-111', 'BS12-102']
+    : ['BS12-094', 'BS12-102', 'BS12-103', 'BS12-105']
+  if (scenario === 'split') peekNumbers.splice(0, 4, 'BS12-013', 'BS11-111', 'BS12-001', 'BS12-030')
+  const top = peekNumbers.map((number, index) => card(number, `bs12-103-peek-${index}`))
+  const shortened = ['short-deck', 'one-card', 'three-cards', 'exact-four', 'empty-deck', 'no-refresh', 'break-nine'].includes(scenario)
+  const count = scenario === 'empty-deck' ? 0 : scenario === 'one-card' ? 1 : scenario === 'three-cards' ? 3 : scenario === 'exact-four' ? 4 : 2
+  const tail = (owner: string) => Array.from({ length: 12 }, (_, index) => card(['BS12-009', 'BS12-010', 'BS12-027', 'BS12-028'][Math.floor(index / 3)], `bs12-103-${owner}-deck-${index}`))
+  const zone = (where: string) => cookie('BS12-094', `bs12-103-${where}-target`)
+  const refreshTrash = shortened && scenario !== 'no-refresh'
+    ? [cookie('BS12-003', 'bs12-103-refresh'), ...Array.from({ length: 6 }, (_, index) => card(index < 3 ? 'BS12-012' : 'BS12-029', `bs12-103-refresh-trash-${index}`))] : []
+  let state:GameState={ ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'draw' : 'main',
+    players: {
+      'player-one': { ...base.players['player-one'], extraDeck: [], stage: null,
+        hand: [card('BS12-103', 'bs12-103-item'),...(scenario==='empty-deck'?[card('BS12-095','bs12-103-parent-cost')]:[]), ...(scenario === 'hand-only' ? [zone('hand')] : [])],
+        deck: shortened ? top.slice(0, count) : [...top, ...tail('own')],
+        discardPile: [...refreshTrash, ...(scenario === 'trash-only' ? [zone('trash')] : [])],
+        breakArea: scenario === 'break-only' ? [zone('break')] : scenario === 'break-nine' ? Array.from({ length: 3 }, (_, index) => zone(`break-${index}`)) : [],
+        battleArea: [cardCheckBattleEntry(cookie('ST4-001', 'bs12-103-ally'),Array.from({length:3},(_,i)=>card('BS12-011',`bs12-103-ally-hp-${i}`)),1),...(scenario==='empty-deck'?[cardCheckBattleEntry(cookie('BS12-101','bs12-103-parent-source'),[card('BS12-030','bs12-103-parent-hp-0'),card('BS12-030','bs12-103-parent-hp-1')],3)]:[])],
+        supportArea: [...Array.from({ length: scenario === 'no-energy' ? 0 : ['spare-energy','empty-deck'].includes(scenario) ? 2 : 1 }, (_, index) => ({
+          card: cookie(scenario === 'wrong-energy' ? 'BS12-019' : 'BS12-097', `bs12-103-payment-${index}`), rested: scenario === 'rested-energy',
+        })), ...(scenario === 'support-only' ? [{ card: zone('support'), rested: true }] : [])],
+      },
+      'player-two': { ...base.players['player-two'], extraDeck: [], hand: [], supportArea: [], stage: null, breakArea: [],
+        deck: tail('enemy'), discardPile: scenario === 'opponent-only' ? [zone('opponent')] : [],
+        battleArea: [cardCheckBattleEntry(cookie('BS12-003', 'bs12-103-opponent'), [card('BS12-012', 'bs12-103-opponent-hp-0'), card('BS12-013', 'bs12-103-opponent-hp-1')], 2)],
+      },
+    },
+  }
+  if(scenario==='empty-deck'){
+    state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-one',attackerInstanceId:'bs12-103-parent-source',targetInstanceId:'bs12-103-opponent',supportPaymentIds:['bs12-103-payment-1']})
+    state=applyGameCommand(state,{kind:'skip-trap',playerId:'player-two'})
+    while(state.pendingBattle?.stage==='damage')state=applyGameCommand(state,{kind:'resolve-next-damage',playerId:'player-two'})
+    state=applyGameCommand(state,{kind:'resolve-attack-effect',playerId:'player-one',targetIds:[]})
+    state=applyGameCommand(state,{kind:'resolve-optional-cost-attack',playerId:'player-one',action:'pay',paymentIds:[],discardCardIds:['bs12-103-parent-cost'],targetIds:[]})
+    state=applyGameCommand(state,{kind:'resolve-draw-up-to',playerId:'player-one',drawCount:1})
+    if(!state.pendingRefresh)throw new Error('PrintedChess draw from emptyDeck did not create Refresh')
+  }
+  return state
+}
+
+export const BS12_COFFEE_TRUCK_SCENARIOS = ['positive', 'four-targets', 'crimson', 'pudding', 'strategist', 'mixed', 'no-target',
+  'arena-only', 'special-only', 'split', 'stage-only', 'opponent-only', 'hand-only', 'support-only', 'break-only', 'zones',
+  'no-energy', 'wrong-energy', 'rested-energy', 'one-energy', 'spare-energy', 'placed', 'rested-source',
+  'opponent-turn', 'outside-main', 'no-energy-activate', 'wrong-energy-activate', 'rested-energy-activate', 'replace'] as const
+export type Bs12CoffeeTruckScenario = typeof BS12_COFFEE_TRUCK_SCENARIOS[number]
+
+/** Isolated printed Stage and real Special Play trash candidates; never promoted. */
+export const createBs12CoffeeTruckDemoState = (scenario: Bs12CoffeeTruckScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const card = (number: string, id: string) => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(value => value.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const result = convertOfficialCardToGameCard(record, id)
+    if (result.status !== 'converted') throw new Error(`Missing Coffee Truck reference ${number}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const cookie = (number: string, id: string): CookieCard => {
+    const result = card(number, id)
+    if (result.type !== 'cookie') throw new Error(`Coffee Truck reference is not a Cookie: ${number}`)
+    return result
+  }
+  const source = card('BS12-102', 'bs12-102-stage')
+  const prepared = ['placed', 'rested-source', 'opponent-turn', 'outside-main', 'no-energy-activate', 'wrong-energy-activate', 'rested-energy-activate'].includes(scenario)
+  const invalid = ['no-target', 'arena-only', 'special-only', 'split', 'stage-only', 'opponent-only', 'hand-only', 'support-only', 'break-only'].includes(scenario)
+  const targetNumber = scenario === 'crimson' || scenario === 'zones' ? 'BS12-096' : scenario === 'pudding' ? 'BS12-098' : scenario === 'strategist' ? 'BS12-100' : 'BS12-095'
+  const trash = invalid ? [] : [card(targetNumber, 'bs12-102-target')]
+  if (scenario === 'four-targets') trash.push(...['BS12-096', 'BS12-098', 'BS12-100'].map((number, i) => card(number, `bs12-102-other-${i}`)))
+  if (['arena-only', 'split', 'mixed'].includes(scenario)) trash.push(card('BS12-101', 'bs12-102-arena-only'))
+  if (['special-only', 'split', 'mixed'].includes(scenario)) trash.push(card('BS11-111', 'bs12-102-special-only'))
+  if (['stage-only', 'mixed'].includes(scenario)) trash.push(card('BS12-102', 'bs12-102-trash-stage'))
+  const deck = (owner: string) => Array.from({ length: 12 }, (_, i) => card(['BS12-012', 'BS12-013', 'BS12-028', 'BS12-029'][Math.floor(i / 3)], `bs12-102-${owner}-deck-${i}`))
+  const zoneCard = (zone: string) => cookie('BS12-095', `bs12-102-${zone}-target`)
+  const own = base.players['player-one'], enemy = base.players['player-two']
+  return { ...base, firstPlayerId: 'player-one', turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    phase: scenario === 'outside-main' ? 'draw' : 'main', players: {
+      'player-one': { ...own, extraDeck: [], hand: [...(prepared ? [] : [source]), ...(['hand-only', 'zones'].includes(scenario) ? [zoneCard('hand')] : [])],
+        stage: prepared ? { card: source, rested: scenario === 'rested-source' } : scenario === 'replace' ? { card: card('BS12-030', 'bs12-102-old-stage'), rested: false } : null,
+        deck: deck('own'), discardPile: trash, breakArea: ['break-only', 'zones'].includes(scenario) ? [zoneCard('break')] : [],
+        battleArea: [cardCheckBattleEntry(cookie('ST4-001', 'bs12-102-ally'), Array.from({length:3},(_,i)=>card('BS12-011',`bs12-102-ally-hp-${i}`)), 1)],
+        supportArea: [...Array.from({ length: ['no-energy', 'no-energy-activate'].includes(scenario) ? 0 : scenario === 'one-energy' ? 1 : scenario === 'spare-energy' ? 3 : 2 }, (_, i) => ({
+          card: cookie(['wrong-energy', 'wrong-energy-activate'].includes(scenario) ? 'BS12-019' : 'BS12-097', `bs12-102-payment-${i}`),
+          rested: ['rested-energy', 'rested-energy-activate'].includes(scenario),
+        })), ...(['support-only', 'zones'].includes(scenario) ? [{ card: zoneCard('support'), rested: true }] : [])],
+      },
+      'player-two': { ...enemy, extraDeck: [], hand: [], stage: null, deck: deck('enemy'), discardPile: ['opponent-only', 'zones'].includes(scenario) ? [zoneCard('opponent')] : [], breakArea: [],
+        battleArea: [cardCheckBattleEntry(cookie('BS12-003', 'bs12-102-opponent'), [card('BS12-009', 'bs12-102-opponent-hp-0'), card('BS12-010', 'bs12-102-opponent-hp-1')], 2)],
+        supportArea: [],
+      },
+    } }
+}
+
+export const createBs12WorkshopDemoState = (scenario: Bs12WorkshopScenario = 'positive'): GameState => {
+  const eventScenario: Bs12MangoScenario = ['faint', 'green-arena', 'hand-break', 'removed-break', 'old-break', 'previous-turn', 'non-arena', 'opponent-break', 'trash-arena', 'no-event'].includes(scenario)
+    ? scenario as Bs12MangoScenario : 'positive'
+  const base = createBs12MangoDemoState(eventScenario)
+  const player = base.players['player-one']
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-030')!
+  const converted = convertOfficialCardToGameCard(record)
+  if (converted.status !== 'converted' || !converted.gameCard.stageAbility) throw new Error('Missing candidate Workshop Stage')
+  const stage = { ...converted.gameCard, instanceId: 'bs12-030-stage' }
+  // The actual removal parent now preserves Eclair's five discarded HP cards.
+  // Allocate the new preview resources away from those reserved printed copies.
+  let removalFillerOffset = 6
+  const hp = (id: string, count: number) => {
+    const cards = bs12PrintedFillerCards('BS12-030', id, count, scenario === 'removed-break' ? removalFillerOffset : 0)
+    if (scenario === 'removed-break') removalFillerOffset += count
+    return cards
+  }
+  const target = scenario === 'equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-030-target') : scenario === 'non-arena-target' ? bs12PrintedReferenceCookie('ST4-001', 'bs12-030-target')
+    : scenario === 'red-target' ? getBs12CandidateCookie('BS12-001', 'bs12-030-target') : getBs12CandidateCookie('BS12-024', 'bs12-030-target')
+  const noTarget = ['no-target', 'support-only'].includes(scenario)
+  const oldRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-011')!
+  const oldConverted = convertOfficialCardToGameCard(oldRecord)
+  if (oldConverted.status !== 'converted') throw new Error('Missing candidate Crown Stage')
+  const state: GameState = { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'wrong-phase' ? 'draw' : 'main',
+    players: { ...base.players, 'player-one': { ...player, hand: [stage], stage: scenario === 'replace' ? { card: { ...oldConverted.gameCard, instanceId: 'bs12-030-old-stage' }, rested: false } : null,
+      battleArea: noTarget ? [] : [{ ...cardCheckBattleEntry(target, hp('bs12-030-target-hp', target.hp), 201), rested: scenario === 'rested-target',
+        ...(scenario === 'equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-030-equipped')] } : {}) },
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-025', 'bs12-030-other'), hp('bs12-030-other-hp', 1), 202)],
+      deck: scenario === 'refresh' ? bs12PrintedFillerCards('BS12-030', 'bs12-030-last-hp', 1) : hp('bs12-030-deck', 12),
+      discardPile: scenario === 'refresh' ? [getBs12CandidateCookie('BS12-019', 'bs12-030-refresh-cost'), ...bs12PrintedFillerCards('BS12-030', 'bs12-030-refresh', 6, 1)] : player.discardPile,
+      supportArea: Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({
+        card: scenario === 'wrong-energy' ? bs12PrintedReferenceCookie('ST4-001', `bs12-030-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-030-payment-${i}`), rested: scenario === 'rested-energy',
+      })),
+    } },
+  }
+  if (['placed', 'rested-source', 'opponent-turn', 'wrong-phase'].includes(scenario)) {
+    return { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], hand: [], stage: { card: stage, rested: scenario === 'rested-source' } } } }
+  }
+  return state
+}
+
+export const createBs12EntranceDemoState = (scenario: Bs12EntranceScenario = 'four'): GameState => {
+  const base = createBs12YappingDemoState(scenario === 'used' ? 'four' : scenario === 'event-only' ? 'three' : ['one-energy', 'mixed-energy', 'one-rested', 'short-deck'].includes(scenario) ? 'four' : scenario as Bs12YappingScenario)
+  const source = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === 'BS12-029')!
+  const converted = convertOfficialCardToGameCard(source, 'bs12-029-trap')
+  if (converted.status !== 'converted' || !converted.gameCard.trap) throw new Error('029 trap missing')
+  const player = base.players['player-one']
+  const supports = scenario === 'support-arena' ? player.supportArea : Array.from({ length: scenario === 'no-energy' ? 0 : scenario === 'one-energy' ? 1 : 2 }, (_, i) => ({
+    card: scenario === 'wrong-energy' || (scenario === 'mixed-energy' && i === 1) ? bs12PrintedReferenceCookie('ST4-001', `bs12-029-payment-${i}`) : getBs12CandidateCookie('BS12-019', `bs12-029-payment-${i}`),
+    rested: scenario === 'rested-energy' || (scenario === 'one-rested' && i === 1),
+  }))
+  let state: GameState = { ...base, ...(scenario === 'event-only' ? { arenaCookiesPlacedInBreakThisTurn: { 'player-one': 1, 'player-two': 0 } } : {}),
+    players: { ...base.players, 'player-one': { ...player, hand: [{ ...converted.gameCard, instanceId: 'bs12-029-trap' }, ...(scenario === 'used' ? [{ ...converted.gameCard, instanceId: 'bs12-029-used-trap' }] : [])], supportArea: supports,
+      ...(scenario === 'short-deck' ? { deck: bs12PrintedFillerCards('BS12-029', 'bs12-029-last-draw', 1), discardPile: [getBs12CandidateCookie('BS12-019', 'bs12-029-refresh-cost'), ...bs12PrintedFillerCards('BS12-029', 'bs12-029-refresh', 6, 1)] } : {}),
+    } },
+  }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'play-trap', playerId: 'player-one', trapInstanceId: 'bs12-029-used-trap', paymentIds: supports.map(entry => entry.card.instanceId), effectTargets: [[]], targetIds: [] })
+  if (scenario === 'used' && state.pendingDrawUpTo) state = applyGameCommand(state, { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount: 0 })
+  return state
+}
+
+export const createBs12TrapDemoState = (scenario: Bs12TrapScenario = 'positive', trapNumber: 'BS12-009' | 'BS12-010' = 'BS12-009'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const trapRecord = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === trapNumber)!
+  const trapId = `${trapNumber.toLowerCase()}-trap`
+  const converted = convertOfficialCardToGameCard(trapRecord, trapId)
+  if (converted.status !== 'converted' || converted.gameCard.type !== 'trap') throw new Error('BS12-009 trap missing')
+  const defender = scenario === 'mic-equipped' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-009-defender') : getBs12CandidateCookie('BS12-001', 'bs12-009-defender')
+  const ally = bs12PrintedReferenceCookie(scenario === 'non-arena' ? 'ST4-001' : 'BS7-061', 'bs12-009-ally')
+  const before: GameState = { ...base, turnNumber: 2, firstPlayerId: 'player-one',
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [{ ...converted.gameCard, instanceId: trapId }], deck: bs12PrintedFillerCards(trapNumber, 'bs12-009-own-deck', 12),
+      supportArea: scenario === 'no-energy' ? [] : [{ card: bs12PrintedFixtureCard(scenario === 'wrong-energy' ? 'BS12-068' : 'BS12-005', 'bs12-009-payment'), rested: scenario === 'rested-energy' }],
+      battleArea: [{ ...cardCheckBattleEntry(defender, bs12PrintedFillerCards(trapNumber, 'bs12-009-defender-hp', defender.hp), 1), rested: ['one-rested', 'two-rested'].includes(scenario),
+        ...(scenario === 'mic-equipped' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-009-mic')] } : {}) },
+        { ...cardCheckBattleEntry(ally, bs12PrintedFillerCards(trapNumber, 'bs12-009-ally-hp', ally.hp, defender.hp), 2), rested: scenario === 'two-rested' }],
+    }, 'player-two': { ...base.players['player-two'],
+      hand: [], deck: bs12PrintedFillerCards(trapNumber, 'bs12-009-opponent-deck', 12),
+      supportArea: Array.from({ length: 3 }, (_, i) => ({ card: bs12PrintedFixtureCard('BS12-068', `bs12-009-attack-payment-${i}`), rested: false })),
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-009-attacker'), bs12PrintedFillerCards(trapNumber, 'bs12-009-attacker-hp', 4), 3),
+        cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-009-other'), bs12PrintedFillerCards(trapNumber, 'bs12-009-other-hp', 2, 4), 4)],
+    } },
+  }
+  const state = beginAttack(before, 'bs12-009-attacker', 'bs12-009-defender', before.players['player-two'].supportArea.map(s => s.card.instanceId))
+  return { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : {}), ...(scenario === 'used' ? { trapUsed: true, stage: 'damage' as const } : {}) } }
+}
+
+/** Candidate skill with actual printed support cards and an eligible replacement witness. */
+export const createBs12ReadyDemoState = (scenario: Bs12ReadyScenario = 'positive', cardNumber: 'BS12-008' | 'BS12-008@1' = 'BS12-008'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const source = getBs12CandidateCookie(cardNumber, 'bs12-008-source')
+  const target = scenario === 'cheerleader' ? getBs12CandidateCookie('BS12-005', 'bs12-008-target') : bs12PrintedReferenceCookie('ST4-001', 'bs12-008-target')
+  const count = scenario === 'three' ? 3 : scenario === 'five' ? 5 : 4
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [bs12PrintedReferenceCookie('ST2-007', 'bs12-008-replacement')],
+      deck: bs12PrintedFixtureCards([...BS12_PHYSICAL_FILLER_NUMBERS, 'BS12-009', 'BS12-010'], 'bs12-008-deck'),
+      supportArea: Array.from({ length: count }, (_, i) => ({
+        card: i === count - 1 && scenario === 'wrong-keyword' ? bs12PrintedReferenceCookie('ST1-001', `bs12-008-support-${i}`)
+          : i === count - 1 && scenario === 'wrong-color' ? bs12PrintedReferenceCookie('BS7-061', `bs12-008-support-${i}`)
+          : getBs12CandidateCookie(['BS12-001', 'BS12-003', 'BS12-005', 'BS12-006', 'BS12-007'][i], `bs12-008-support-${i}`),
+        rested: scenario === 'rested-support',
+      })),
+      battleArea: [{ ...cardCheckBattleEntry(source, Array.from({ length: 3 }, (_, i) => bs12PrintedReferenceCookie('ST2-007', `bs12-008-hp-${i}`)), 1), rested: scenario === 'rested-source' },
+        ...(scenario === 'no-target' ? [] : [{ ...cardCheckBattleEntry(target, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(2, 2 + target.hp), 'bs12-008-target-hp'), 2), rested: scenario !== 'active-target' }])],
+    }, 'player-two': { ...base.players['player-two'],
+      hand: [], deck: bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS, 'bs12-008-opponent-deck'),
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-001', 'bs12-008-opponent'), bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(0, 4), 'bs12-008-opponent-hp'), 3)],
+    } },
+  }
+}
+/** Equip through the actual skill before the host attacks; eligible replacement stays in hand. */
+export const createBs12EquipDemoState = (scenario: Bs12EquipScenario = 'positive'): GameState => {
+  const base = createBs12EquippedAttackDemoState(false)
+  const source = getBs12CandidateCookie('BS12-007', 'bs12-007-source')
+  const host = scenario === 'wrong-host'
+    ? bs12PrintedReferenceCookie('ST4-001', 'bs12-007-host')
+    : getBs12CandidateBattleCookie('BS12-018', 'bs12-007-host')
+  const hostEntry = { ...cardCheckBattleEntry(host, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(2, 2 + host.hp), 'bs12-007-host-hp'), 2), rested: scenario === 'rested-host' }
+  const attackSupports = scenario === 'no-energy' ? [] : base.players['player-one'].supportArea.map((entry, index) => ({
+    card: ['wrong-energy', 'blocked'].includes(scenario)
+      ? bs12PrintedFixtureCard('BS12-084', `bs12-007-attack-pay-${index}`)
+      : entry.card,
+    rested: scenario === 'rested-energy' || entry.rested,
+  }))
+  return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one',
+    skillUsesThisTurn: scenario === 'used' ? [source.instanceId + ':battle:1'] : [],
+    players: { ...base.players, 'player-one': { ...base.players['player-one'],
+      hand: [bs12PrintedReferenceCookie('ST2-007', 'bs12-007-replacement')],
+      supportArea: [...(scenario === 'no-energy' ? [] : [{ card: bs12PrintedFixtureCard(['wrong-energy', 'blocked'].includes(scenario) ? 'BS12-068' : 'BS12-005', 'bs12-007-payment'), rested: scenario === 'rested-energy' }]), ...attackSupports],
+      battleArea: [{ ...cardCheckBattleEntry(source, Array.from({ length: 3 }, (_, i) => bs12PrintedReferenceCookie('ST2-007', 'bs12-007-source-hp-' + i)), 1), rested: scenario === 'rested-source' },
+        ...(['no-host', 'opponent-host'].includes(scenario) ? [] : [hostEntry])],
+    }, 'player-two': { ...base.players['player-two'],
+      battleArea: [...base.players['player-two'].battleArea, ...(scenario === 'opponent-host' ? [hostEntry] : [])],
+    } },
+  }
+}
+
+/** Prepared equipment witness only; deliberately does not simulate Cookie Equip HP/replacement. */
+export const createBs12EquippedAttackDemoState = (equipped: boolean): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const host = getBs12CandidateBattleCookie('BS12-018', 'bs12-007-host')
+  const mic = getBs12CandidateCookie('BS12-007', 'bs12-007-equipped')
+  const bearer = bs12PrintedReferenceCookie('BS6-008', 'bs12-007-defender')
+  const hpCards = [bs12PrintedFixtureCard('BS12-009', 'bs12-007-defender-bottom-0'),
+    bs12PrintedFixtureCard('BS12-010', 'bs12-007-defender-bottom-1'), ...Array.from({ length: 4 }, (_, i) =>
+    bs12PrintedReferenceCookie('ST2-007', 'bs12-007-defender-flip-' + i))]
+  return { ...base, turnNumber: 2, firstPlayerId: 'player-one', players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [],
+      deck: bs12PrintedFixtureCards([...BS12_PHYSICAL_FILLER_NUMBERS, 'BS12-009', 'BS12-010'], 'bs12-007-own-deck'),
+      supportArea: Array.from({ length: host.attackCost }, (_, i) => ({ card: bs12PrintedFixtureCard('BS12-004', 'bs12-007-attack-pay-' + i), rested: false })),
+      battleArea: [{ ...cardCheckBattleEntry(host, bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS.slice(2, 2 + host.hp), 'bs12-007-host-hp'), 1),
+        equippedCards: equipped ? [mic] : [] }],
+    }, 'player-two': { ...base.players['player-two'], hand: [],
+      deck: bs12PrintedFixtureCards(BS12_PHYSICAL_FILLER_NUMBERS, 'bs12-007-opponent-draw'),
+      battleArea: [cardCheckBattleEntry(bearer, hpCards, 2)],
+    },
+  } }
+}
+
+export type Bs12FlipScenario = 'positive' | 'no-hand' | 'no-arena' | 'wrong-color' | 'two-targets'
+const bs12PrintedFixtureCard = (number: string, instanceId: string): GameCard => {
+  const card = getBs12CandidateTestCard(number)
+  if (!card) throw new Error(`Missing physical BS12 fixture card ${number}`)
+  return { ...card, instanceId }
+}
+const bs12PrintedFixtureCards = (numbers: readonly string[], prefix: string): GameCard[] =>
+  numbers.map((number, index) => bs12PrintedFixtureCard(number, `${prefix}-${index}`))
+const BS12_PHYSICAL_FILLER_NUMBERS = ['BS12-009', 'BS12-010', 'BS12-011', 'BS12-012', 'BS12-013', 'BS12-028', 'BS12-029', 'BS12-030', 'BS12-031', 'BS12-046'] as const
+/** Reserve the tested face, including a replaced stage, before assigning physical HP/deck cards. */
+const bs12PrintedFillerCards = (sourceNumber: string, prefix: string, amount: number, offset = 0): GameCard[] => {
+  const numbers = BS12_PHYSICAL_FILLER_NUMBERS.filter(number => number !== sourceNumber)
+  return Array.from({ length: amount }, (_, i) => bs12PrintedFixtureCard(numbers[(offset + i) % numbers.length], `${prefix}-${i}`))
+}
+const bs12PrintedReferenceCard = (number: string, instanceId: string): GameCard => {
+  const record = ([...bs3FormalDocument.cards, ...bs6FormalDocument.cards, ...blueFormalDocument.cards, ...bs4FormalDocument.cards, ...redFormalDocument.cards, ...yellowFormalDocument.cards, ...bs7CandidateDocument.cards, ...bs9CandidateDocument.cards, ...bs11CandidateDocument.cards, ...pPromotionFormalDocument.cards, ...pFormalDocument.cards, ...bs8FormalDocument.cards, ...greenFormalDocument.cards, ...bs1FormalDocument.cards, ...pCompleteFormalDocument.cards] as OfficialCardRecord[]).find(card => card.cardNumber === number)
+  if (!record) throw new Error(`Missing physical reference ${number}`)
+  const conversion = convertOfficialCardToGameCard(record)
+  if (conversion.status !== 'converted') throw new Error(`Cannot convert physical reference ${number}`)
+  return { ...conversion.gameCard, instanceId }
+}
+const bs12PrintedReferenceCookie = (number: string, instanceId: string): CookieCard => {
+  const card = bs12PrintedReferenceCard(number, instanceId)
+  if (card.type !== 'cookie') throw new Error(`Physical reference is not a Cookie: ${number}`)
+  return card
+}
+
+export const createBs12FlipDemoState = (scenario: Bs12FlipScenario, cardNumber: 'BS12-002' | 'BS12-004' = 'BS12-002'): GameState => {
+  const base = baseTestState('player-two', 'main')
+  const flip = getBs12CandidateCookie(cardNumber, 'bs12-flip-revealed')
+  const bearer = cardNumber === 'BS12-002' && scenario === 'no-arena'
+    ? bs12PrintedReferenceCookie('ST4-001', 'bs12-flip-bearer')
+    : getBs12CandidateCookie('BS12-001', 'bs12-flip-bearer')
+  const arenaCompanion = cardNumber === 'BS12-004' || scenario === 'two-targets'
+  const companion = scenario === 'no-arena' || !arenaCompanion
+    ? bs12PrintedReferenceCookie('ST4-001', 'bs12-non-arena')
+    : getBs12CandidateCookie(scenario === 'wrong-color' ? 'BS12-024' : 'BS12-006', 'bs12-arena-companion')
+  const attacker = bs12PrintedReferenceCookie('BS6-017', 'bs12-flip-attacker')
+  const companionHp = bs12PrintedFixtureCards(['BS12-012', 'BS12-013', 'BS12-009'].slice(0, companion.hp), 'bs12-companion-hp')
+  const attackerHp = bs12PrintedFixtureCards(['BS12-009', 'BS12-010', 'BS12-011', 'BS12-012'].slice(0, attacker.hp), 'bs12-attacker-hp')
+  const supports = bs12PrintedFixtureCards(['BS12-005', 'BS12-006', 'BS12-007', 'BS12-008'].slice(0, attacker.attackCost), 'bs12-flip-attack-pay').map(card => ({ card, rested: false }))
+  let state: GameState = {
+    ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'],
+        deck: bs12PrintedFixtureCards(['BS12-009', 'BS12-010', 'BS12-011', 'BS12-012', 'BS12-013', 'BS12-009', 'BS12-010', 'BS12-011', 'BS12-012', 'BS12-013'], 'bs12-flip-deck'),
+        hand: scenario === 'no-hand' ? [] : [bs12PrintedFixtureCard('BS12-028', 'bs12-flip-hand-cost')],
+        battleArea: [
+          cardCheckBattleEntry(bearer, [bs12PrintedFixtureCard('BS12-011', 'bs12-flip-bottom-hp'), flip], 1),
+          cardCheckBattleEntry(companion, companionHp, 2),
+        ],
+      },
+      'player-two': { ...base.players['player-two'],
+        battleArea: [cardCheckBattleEntry(attacker, attackerHp, 3),
+          ...(cardNumber === 'BS12-004' && ['positive', 'two-targets'].includes(scenario)
+            ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-019', 'bs12-opponent-other'), bs12PrintedFixtureCards(['BS12-013', 'BS12-009', 'BS12-010', 'BS12-011'], 'bs12-other-hp'), 4)] : []),
+        ],
+        supportArea: supports,
+      },
+    },
+  }
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId, supportPaymentIds: supports.map(({ card }) => card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+  // False printed conditions correctly bypass the FLIP window; preserve that
+  // result as the Browser negative witness rather than forcing a prompt.
+  if (cardNumber === 'BS12-002' || scenario === 'positive' || scenario === 'two-targets') {
+    if (state.pendingBattle?.stage !== 'flip' || state.pendingBattle.revealedHpCard?.id !== cardNumber) throw new Error('BS12 fixture must reveal the actual candidate FLIP')
+  }
+  return state
+}
+
+/** Isolated candidate route: uses real conversion/commands without registry promotion. */
+export const createBs12AttackDemoState = (cardNumber: Bs12FirstCardNumber, payable: boolean, blockedColor = false, blockedRest = false): GameState => {
+  const source = getBs12CandidateCookie(cardNumber, `bs12-${cardNumber}-source`)
+  const base = baseTestState('player-one', 'main')
+  const count = source.attackCost - (payable ? 0 : 1)
+  const colors: EnergyColor[] = cardNumber === 'BS12-001' || cardNumber === 'BS12-003'
+    ? ['yellow', 'green', 'blue'] : ['BS12-006', 'BS12-007', 'BS12-008', 'BS12-008@1'].includes(cardNumber) ? ['red', 'blue'] : ['red', 'red', 'blue']
+  const paymentNumber: Partial<Record<EnergyColor, string>> = { red: 'BS12-012', yellow: 'BS12-028', green: 'BS12-046', blue: 'BS12-068' }
+  const deckNumbers = ['BS12-009', 'BS12-010', 'BS12-011', 'BS12-012', 'BS12-013', 'BS12-028', 'BS12-029', 'BS12-030', 'BS12-031', 'BS12-046', 'BS12-048', 'BS12-068']
+  return {
+    ...base, turnNumber: 2, firstPlayerId: 'player-two',
+    players: { ...base.players, 'player-one': {
+      ...base.players['player-one'],
+      deck: bs12PrintedFixtureCards(deckNumbers, 'bs12-own-deck'),
+      battleArea: [cardCheckBattleEntry(source, bs12PrintedFixtureCards(deckNumbers.slice(0, source.hp), 'bs12-source-hp'), 1)],
+      supportArea: Array.from({ length: count }, (_, index) => ({ card: bs12PrintedFixtureCard(paymentNumber[blockedColor ? 'blue' : colors[index]]!, `bs12-payment-${index}`), rested: blockedRest && index === 0 })),
+    }, 'player-two': {
+      ...base.players['player-two'],
+      deck: bs12PrintedFixtureCards(deckNumbers, 'bs12-enemy-deck'),
+      battleArea: [cardCheckBattleEntry(getBs12CandidateCookie('BS12-037', 'bs12-attack-opponent'), bs12PrintedFixtureCards(deckNumbers.slice(0, 5), 'bs12-opponent-hp'), 2)],
+    } },
+  }
+}
+
 export const createBs11VanillaAttackDemoState = (
   cardNumber: Bs11VanillaAttackCardNumber,
   payable: boolean,
@@ -17404,7 +22127,9 @@ export const createBs11FourteenthBatchDemoState = (
   }
 
   const baseCardNumber = cardNumber.split('@')[0]
-  const isPositive = scenario === 'positive' || scenario === 'activate-positive'
+  const isFlipScenario = scenario.startsWith('flip-')
+  if (isFlipScenario && baseCardNumber !== 'BS11-052') throw new Error('FLIP continuation fixture requires BS11-052')
+  const isPositive = scenario === 'positive' || scenario === 'activate-positive' || scenario === 'flip-positive'
   const prefix = `bs11-${baseCardNumber.toLowerCase()}-fourteenth`
   const base = createCardCheckDemoState(cardNumber, { normalAttack: 'payable' })
   const player = base.players['player-one']
@@ -17476,6 +22201,8 @@ export const createBs11FourteenthBatchDemoState = (
         ? 4
         : 5
   const target = opponentCookie('attack-target', targetHp)
+  // Normal attack removes two plain HP; the optional Then reveals this real FLIP.
+  if (isFlipScenario) target.hpCards[2] = cardCheckOfficialCard('BS11-095', `${prefix}-then-flip`)
   const hand = baseCardNumber === 'BS11-052'
     ? isPositive
       ? [
@@ -19466,4 +24193,791 @@ export const createSoulJam115ProtectionDemoState = (): GameState => {
     pendingRefresh: null,
     pendingBattle: null,
   }
+}
+
+
+export type Bs12CoffeeCandyScenario = 'positive' | 'four' | 'six' | 'rested-own' | 'item-count' | 'stage-count' | 'non-arena' | 'wrong-color' | 'intersection' | 'opponent-only' | 'battle-only' | 'all-target-rested' | 'last-hp' | 'follow-up' | 'follow-up-live' | 'attack' | 'attack-wrong' | 'attack-few' | 'attack-rested' | 'attack-source-rested' | 'opponent-turn' | 'deploy'
+
+/** Candidate Coffee Candy: actual attack HP reveal and intersected support count. */
+export const createBs12CoffeeCandyDemoState = (scenario: Bs12CoffeeCandyScenario = 'positive'): GameState => {
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-043', id, count, offset)
+  const arena = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const conversion = convertOfficialCardToGameCard(record)
+    if (conversion.status !== 'converted') throw new Error(`Missing Coffee Candy reference ${number}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  if (scenario === 'deploy' || scenario === 'opponent-turn' || scenario.startsWith('attack')) {
+    const base = createBs12MelonDemoState()
+    return { ...base, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-043', 'bs12-043-source')] : [],
+        battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-043-ally'), hp('bs12-043-ally', 2), 1)
+          : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-043', 'bs12-043-source'), hp('bs12-043-source', 3), 1), rested: scenario === 'attack-source-rested' }],
+        supportArea: Array.from({ length: scenario === 'attack-few' ? 2 : 3 }, (_, i) => ({
+          card: scenario === 'attack-wrong' ? bs12PrintedReferenceCard('ST4-001', `bs12-043-payment-${i}`) : arena(['BS12-038', 'BS12-039', 'BS12-041'][i], `bs12-043-payment-${i}`),
+          rested: scenario === 'attack-rested' && i === 2,
+        })),
+      },
+    } }
+  }
+  const base = baseTestState('player-two', 'main')
+  const ownNumbers = ['BS12-038', 'BS12-039', 'BS12-040', 'BS12-041', 'BS12-042']
+  if (['four', 'opponent-only', 'battle-only', 'intersection'].includes(scenario)) ownNumbers.pop()
+  if (scenario === 'six') ownNumbers.push('BS12-038')
+  if (scenario === 'item-count') ownNumbers[4] = 'BS7-063'
+  if (scenario === 'stage-count') ownNumbers[4] = 'BS7-065'
+  if (scenario === 'non-arena') ownNumbers[4] = 'ST3-001'
+  if (scenario === 'wrong-color') ownNumbers[4] = 'BS12-024'
+  if (scenario === 'intersection') ownNumbers.push('ST3-001', 'BS12-001', 'BS12-001', 'BS12-001', 'BS12-001')
+  const attacker = ['follow-up', 'follow-up-live'].includes(scenario) ? getBs12CandidateCookie('BS12-019', 'bs12-043-attacker') : bs12PrintedReferenceCookie('BS6-017', 'bs12-043-attacker')
+  const bearer = getBs12CandidateCookie(scenario === 'battle-only' ? 'BS12-041' : 'BS12-021', 'bs12-043-bearer')
+  const companion = getBs12CandidateCookie('BS12-019', 'bs12-043-companion')
+  const foeNumbers = scenario === 'opponent-only' ? ['BS12-001', 'BS12-038', 'BS12-039', 'BS12-040', 'BS12-041', 'BS12-042'] : ['BS12-001', 'BS12-012', 'BS12-011', 'ST4-001']
+  const foeSupports = foeNumbers.map((n, i) => ({ card: arena(n, `bs12-043-opponent-support-${i}`), rested: scenario === 'all-target-rested' }))
+  // The attacker pays active support before the all-rested response case begins.
+  for (let i = 0; i < attacker.attackCost; i++) foeSupports[i].rested = false
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-043-deck', 12),
+      supportArea: ownNumbers.map((n, i) => ({ card: arena(n, `bs12-043-own-support-${i}`), rested: scenario === 'rested-own' })),
+      battleArea: [cardCheckBattleEntry(bearer, [...hp('bs12-043-bottom', scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? bearer.hp - 1 : 1), getBs12CandidateCookie('BS12-043', 'bs12-043-revealed')], 1),
+        ...(scenario === 'follow-up-live' ? [] : [cardCheckBattleEntry(companion, hp('bs12-043-companion', scenario === 'follow-up' ? companion.hp : 3, scenario === 'last-hp' ? 0 : scenario === 'follow-up' ? 4 : 1), 2)])],
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-043-opponent-deck', 12),
+      supportArea: foeSupports, battleArea: [cardCheckBattleEntry(attacker, hp('bs12-043-attacker', attacker.hp), 3)] },
+  } }
+  if (scenario === 'follow-up-live') return state
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: bearer.instanceId,
+    supportPaymentIds: foeSupports.slice(0, attacker.attackCost).map(support => support.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  return applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+}
+
+
+export type Bs12HerbTeapotScenario = 'positive' | 'not-herb' | 'wrong-name' | 'rested-herb' | 'source-rested' | 'active-target' | 'all-active' | 'blue-target' | 'no-arena' | 'item-only' | 'no-support' | 'full-battle' | 'existing-herb' | 'opponent-turn' | 'outside-main' | 'used' | 'last-deck' | 'short-deck' | 'refresh-lv10' | 'attack' | 'attack-wrong' | 'attack-few' | 'attack-rested' | 'deploy'
+
+export type Bs12OrchestraScenario = 'positive' | 'placed' | 'replace' | 'rested-entry' | 'blue-entry' | 'no-arena' | 'item-only' | 'no-support' | 'full-battle' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'entry-only-energy' | 'rested-source' | 'opponent-turn' | 'outside-main' | 'no-opponent-support' | 'rested-target' | 'last-deck' | 'short-deck' | 'refresh-lv10'
+
+/** Orchestra Hall's candidate scene starts with printed supports and normal Stage placement. */
+export const createBs12OrchestraDemoState = (scenario: Bs12OrchestraScenario = 'positive'): GameState => {
+  const base = createBs12HerbTeapotDemoState(scenario === 'outside-main' ? 'outside-main' : scenario === 'opponent-turn' ? 'opponent-turn' : scenario === 'full-battle' ? 'full-battle' : 'positive')
+  const arena = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const converted = convertOfficialCardToGameCard(record)
+    if (converted.status !== 'converted') throw new Error(`Missing Orchestra reference ${number}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  const stage = arena('BS12-048', 'bs12-048-stage')
+  const prepared = ['placed', 'rested-source', 'opponent-turn', 'outside-main', 'entry-only-energy', 'no-support'].includes(scenario)
+  const numbers = scenario === 'no-support' ? [] : scenario === 'item-only' ? ['BS12-012', 'BS12-011', 'BS12-046'] :
+    [scenario === 'no-arena' ? 'ST4-001' : ['blue-entry', 'wrong-energy'].includes(scenario) ? 'BS12-070' : 'BS12-055', 'BS12-041', 'BS12-046', 'BS12-011']
+  if (['no-energy', 'wrong-energy'].includes(scenario)) numbers.splice(1, numbers.length - 1, 'ST4-001', 'BS12-012')
+  if (scenario === 'entry-only-energy') numbers.splice(1)
+  const refresh = ['last-deck', 'short-deck', 'refresh-lv10'].includes(scenario)
+  return { ...base, players: { ...base.players,
+    'player-one': { ...base.players['player-one'],
+      hand: prepared ? [] : [stage], stage: prepared ? { card: stage, rested: scenario === 'rested-source' } :
+        scenario === 'replace' ? { card: arena('BS12-011', 'bs12-048-old-stage'), rested: false } : null,
+      supportArea: numbers.map((n, i) => ({ card: arena(n, `bs12-048-support-${i}`),
+        rested: scenario === 'no-energy' || scenario === 'rested-energy' || i === 3 || (i === 0 && scenario === 'rested-entry'),
+      })),
+      deck: refresh ? bs12PrintedFillerCards('BS12-048', 'bs12-048-deck', scenario === 'short-deck' ? 1 : 2) : base.players['player-one'].deck,
+      discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-048-refresh'), ...bs12PrintedFillerCards('BS12-048', 'bs12-048-trash', 5, 1)] : [],
+      breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-048-break-${i}`)) : [],
+    },
+    'player-two': { ...base.players['player-two'], supportArea: scenario === 'no-opponent-support' ? [] :
+      ['ST4-001', 'BS12-012', 'BS12-011'].map((n, i) => ({ card: arena(n, `bs12-048-foe-support-${i}`), rested: i === 2 || scenario === 'rested-target' })),
+    },
+  } }
+}
+
+export type Bs12AudienceScenario = 'positive' | 'rested-cost' | 'non-arena-only' | 'opponent-only' | 'battle-only' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'disabled' | 'used' | 'main' | 'after-battle' | 'last-deck' | 'refresh-lv10'
+
+/** Actual attack response with optional Arena support return before drawing. */
+export const createBs12AudienceDemoState = (scenario: Bs12AudienceScenario = 'positive'): GameState => {
+  const base = createBs12HarmonyDemoState(['disabled', 'used', 'main', 'after-battle'].includes(scenario) ? scenario as Bs12HarmonyScenario : 'seven')
+  const arena = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const converted = convertOfficialCardToGameCard(record)
+    if (converted.status !== 'converted') throw new Error(`Missing Audience reference ${number}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  const numbers = scenario === 'no-energy' ? [] : ['non-arena-only', 'opponent-only', 'battle-only'].includes(scenario) ? ['ST3-001', 'ST4-001'] :
+    [scenario === 'wrong-energy' ? 'BS12-070' : 'BS12-041', 'ST4-001', 'BS12-012', 'BS12-011', 'BS12-070']
+  const refresh = ['last-deck', 'refresh-lv10'].includes(scenario)
+  return { ...base, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [arena('BS12-049', 'bs12-049-trap')],
+      supportArea: numbers.map((n, i) => ({ card: arena(n, `bs12-049-support-${i}`), rested: i === 3 || (scenario === 'rested-energy' && i === 0) || (scenario === 'rested-cost' && i === 2) })),
+      deck: refresh ? bs12PrintedFillerCards('BS12-049', 'bs12-049-last-draw', 1) : base.players['player-one'].deck,
+      discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-049-refresh'), ...bs12PrintedFillerCards('BS12-049', 'bs12-049-trash', 5, 1)] : [],
+      breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-049-break-${i}`)) : [],
+    },
+    'player-two': { ...base.players['player-two'], supportArea: scenario === 'opponent-only'
+      ? [...base.players['player-two'].supportArea, { card: arena('BS12-011', 'bs12-049-opponent-arena'), rested: true }]
+      : base.players['player-two'].supportArea },
+  } }
+}
+
+export type Bs12MelodyScenario = 'positive' | 'empty-trash' | 'non-arena-only' | 'opponent-only' | 'battle-only' | 'no-energy' | 'wrong-energy' | 'few-energy' | 'rested-energy' | 'opponent-turn' | 'outside-main' | 'last-deck'
+
+/** Wonderful Melody uses mixed printed cards in trash and pays fixed GGG before optional selection. */
+export const createBs12MelodyDemoState = (scenario: Bs12MelodyScenario = 'positive'): GameState => {
+  const base = createBs12HerbTeapotDemoState(scenario === 'outside-main' ? 'outside-main' : scenario === 'opponent-turn' ? 'opponent-turn' : 'positive')
+  const printed = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const converted = convertOfficialCardToGameCard(record)
+    if (converted.status !== 'converted') throw new Error(`Missing Melody reference ${number}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  const noCandidate = ['non-arena-only', 'opponent-only', 'battle-only'].includes(scenario)
+  const trash = scenario === 'empty-trash' ? [] : noCandidate ? ['ST3-001', 'BS12-012', 'BS12-011'] : ['BS12-041', 'BS12-039', 'BS12-070', 'BS12-019', 'ST3-001', 'BS12-012', 'BS12-011']
+  const support = scenario === 'no-energy' ? [] : scenario === 'wrong-energy' ? ['ST4-001', 'ST4-001', 'ST4-001'] : ['BS12-038', 'BS12-046', 'BS12-048', 'ST4-001']
+  if (scenario === 'few-energy') support.splice(2)
+  return { ...base, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], stage: null, hand: [printed('BS12-050', 'bs12-050-item')],
+      discardPile: trash.map((n, i) => printed(n, `bs12-050-trash-${i}`)),
+      supportArea: support.map((n, i) => ({ card: printed(n, `bs12-050-support-${i}`), rested: i === 3 || (scenario === 'rested-energy' && i === 2) })),
+      deck: scenario === 'last-deck' ? base.players['player-one'].deck.slice(0, 1) : base.players['player-one'].deck },
+    'player-two': { ...base.players['player-two'], discardPile: scenario === 'opponent-only' ? [printed('BS12-019', 'bs12-050-opponent-trash')] : [] },
+  } }
+}
+
+export type Bs12FerretScenario = 'positive' | 'rested-entry' | 'high-level' | 'no-arena' | 'item-only' | 'full-battle' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'source-rested' | 'source-support' | 'opponent-turn' | 'outside-main' | 'target-last-hp' | 'last-deck' | 'short-deck' | 'refresh-lv10'
+
+/** Cream Ferret's normal G attack precedes optional support entry and printed HP. */
+export const createBs12FerretDemoState = (scenario: Bs12FerretScenario = 'positive', cardNumber: 'BS12-051' | 'BS12-051@1' = 'BS12-051'): GameState => {
+  const base = createBs12MelodyDemoState(scenario === 'opponent-turn' ? 'opponent-turn' : scenario === 'outside-main' ? 'outside-main' : 'positive')
+  const printed = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const converted = convertOfficialCardToGameCard(record)
+    if (converted.status !== 'converted') throw new Error(`Missing Cream Ferret reference ${number}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-051', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie(cardNumber, 'bs12-051-source')
+  const numbers = scenario === 'no-energy' ? [] : scenario === 'wrong-energy' ? ['ST4-001', 'BS12-012', 'BS12-011'] : scenario === 'no-arena' ? ['ST3-001', 'ST4-001', 'BS12-012', 'BS12-011'] : scenario === 'item-only' ? ['BS12-046', 'BS12-012', 'BS12-011'] : ['BS12-041', scenario === 'high-level' ? 'BS12-039' : 'BS12-070', 'BS12-012', 'ST4-001', 'BS12-011']
+  const supports = numbers.map((n, i) => ({ card: printed(n, `bs12-051-support-${i}`), rested: i >= 3 || (scenario === 'rested-energy' && i === 0) || (scenario === 'rested-entry' && i === 1) }))
+  if (scenario === 'source-support') supports.unshift({ card: source, rested: false })
+  const refresh = ['last-deck', 'short-deck', 'refresh-lv10'].includes(scenario)
+  return { ...base, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [], supportArea: supports,
+      battleArea: scenario === 'source-support' ? [] : [{ ...cardCheckBattleEntry(source, hp('bs12-051-source', 2), 1), rested: scenario === 'source-rested' },
+        ...(scenario === 'full-battle' ? base.players['player-one'].battleArea : [])],
+      deck: refresh ? hp('bs12-051-deck', scenario === 'last-deck' ? 2 : 1) : base.players['player-one'].deck,
+      discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-051-refresh'), ...hp('bs12-051-trash', 5, 1)] : [],
+      breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-051-break-${i}`)) : [] },
+    'player-two': { ...base.players['player-two'], battleArea: base.players['player-two'].battleArea.map((cookie, i) => scenario === 'target-last-hp' && i === 0 ? { ...cookie, hpCards: cookie.hpCards.slice(0, 1) } : cookie) },
+  } }
+}
+
+export type Bs12CocoaScenario = 'positive' | 'rested-entry' | 'no-hand' | 'item-hand' | 'stage-hand' | 'non-arena-hand' | 'hand' | 'stage-entry' | 'full-battle' | 'last-hp' | 'short-deck' | 'last-deck' | 'refresh-lv10' | 'isolated-opponent-turn' | 'attack' | 'attack-blue' | 'attack-wrong' | 'attack-few' | 'attack-rested-energy' | 'attack-rested-source'
+
+/** Candidate Cocoa enters through the printed Ferret attack or Orchestra activation. */
+export const createBs12CocoaDemoState = (scenario: Bs12CocoaScenario = 'positive', number: 'BS12-052' | 'BS12-052@1' = 'BS12-052'): GameState => {
+  const refresh = ['short-deck', 'last-deck', 'refresh-lv10'].includes(scenario)
+  const base = createBs12FerretDemoState(refresh ? scenario as 'short-deck' | 'last-deck' | 'refresh-lv10' : scenario === 'full-battle' ? 'full-battle' : 'positive')
+  const source = getBs12CandidateCookie(number, 'bs12-052-source')
+  const printed = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const conversion = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)!)
+    if (conversion.status !== 'converted') throw new Error(`Missing Cocoa reference ${n}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  const attack = scenario.startsWith('attack')
+  const handCost = printed(scenario === 'item-hand' ? 'BS12-050' : scenario === 'stage-hand' ? 'BS12-048' : scenario === 'non-arena-hand' ? 'ST4-001' : 'BS12-019', 'bs12-052-hand-0')
+  const own = base.players['player-one']
+  const supports = attack
+    ? (scenario === 'attack-few' ? ['BS12-041'] : scenario === 'attack-wrong' ? ['ST4-001', 'ST4-001'] : ['BS12-041', 'ST4-001', 'BS12-012']).map((n, i) => ({ card: printed(n, `bs12-052-payment-${i}`), rested: scenario === 'attack-rested-energy' && i === 0 }))
+    : [own.supportArea[0], { card: source, rested: scenario === 'rested-entry' }, own.supportArea[2]]
+  let state: GameState = { ...base, players: { ...base.players,
+    'player-one': { ...own, stage: scenario === 'stage-entry' ? { card: printed('BS12-048', 'bs12-052-stage'), rested: false } : null,
+      hand: scenario === 'no-hand' || attack ? [] : [...(scenario === 'hand' ? [source] : []), handCost, printed('BS12-012', 'bs12-052-hand-1')],
+      battleArea: attack ? [{ ...own.battleArea[0], card: source, rested: scenario === 'attack-rested-source' }] : own.battleArea,
+      supportArea: supports.filter(entry => scenario !== 'hand' || entry.card.instanceId !== source.instanceId),
+    },
+    'player-two': { ...base.players['player-two'], battleArea: base.players['player-two'].battleArea.map((entry, i) => scenario === 'last-hp' && i === 1 ? { ...entry, hpCards: entry.hpCards.slice(0, 1) } : entry) },
+  } }
+  if (scenario === 'isolated-opponent-turn') {
+    state = executeCardEffect({ ...state, activePlayerId: 'player-two' }, { sourcePlayerId: 'player-one', sourceInstanceId: 'bs12-051-source' }, { kind: 'support-to-battle', amount: 1, optional: true, keyword: 'arena' }, [source.instanceId])
+  }
+  return state
+}
+
+export type Bs12KumihoScenario = 'response' | 'response-rested-source' | 'response-other' | 'response-no-support' | 'response-rested-support' | 'response-used' | 'response-last-hp' | 'attack' | 'attack-active-fifth' | 'attack-rested-fifth' | 'attack-few' | 'attack-wrong' | 'attack-rested-energy' | 'attack-rested-source' | 'attack-source-support' | 'attack-opponent-turn' | 'attack-outside-main' | 'attack-target-faint' | 'attack-other-faint' | 'attack-flip'
+
+export type Bs12MintChocoScenario = 'positive' | 'empty-trash' | 'item-trash' | 'item-only-support' | 'no-support' | 'rested-cost' | 'all-rested' | 'source-rested' | 'opponent-turn' | 'outside-main' | 'used' | 'source-support' | 'attack' | 'attack-few' | 'attack-wrong' | 'attack-rested-energy' | 'attack-rested-source' | 'deploy'
+
+/** Printed support cost and public trash candidates, with no pre-paid or synthetic recovery state. */
+export const createBs12MintChocoDemoState = (scenario: Bs12MintChocoScenario = 'positive', number: 'BS12-054' | 'BS12-054@1' = 'BS12-054'): GameState => {
+  const base = baseTestState('player-one', 'main')
+  const printed = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const conversion = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)!)
+    if (conversion.status !== 'converted') throw new Error(`Missing Mint Choco reference ${n}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-054', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie(number, 'bs12-054-source')
+  const supportNumbers = scenario === 'no-support' ? [] : scenario === 'item-only-support' ? ['BS12-050'] : scenario === 'attack-few' ? ['BS12-041', 'ST4-001'] : scenario === 'attack-wrong' ? ['BS12-041', 'ST4-001', 'ST4-001', 'ST4-001'] : ['BS12-041', 'BS12-038', 'ST4-001', 'BS12-050', 'BS12-048']
+  const supports = supportNumbers.map((n, i) => ({ card: printed(n, `bs12-054-support-${i}`), rested: scenario === 'all-rested' || (scenario === 'rested-cost' && i === 0) || (scenario === 'attack-rested-energy' && [1, 3, 4].includes(i)) }))
+  if (scenario === 'source-support') supports.push({ card: source, rested: false })
+  const trash = ['empty-trash', 'item-trash'].includes(scenario) ? [] : ['BS12-039', 'ST4-001', 'BS12-024'].map((n, i) => printed(n, `bs12-054-trash-${i}`))
+  if (scenario !== 'empty-trash') trash.push(printed('BS12-050', 'bs12-054-trash-item'), printed('BS12-048', 'bs12-054-trash-stage'))
+  let state: GameState = { ...base, turnNumber: 2, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'active' : 'main', players: {
+    'player-one': { ...base.players['player-one'], hand: scenario === 'deploy' ? [source] : [printed('BS12-038', 'bs12-054-hand')], deck: hp('bs12-054-deck', 12, 4), discardPile: trash,
+      breakArea: [getBs12CandidateCookie('BS12-003', 'bs12-054-break')], extraDeck: [], stage: null, supportArea: supports,
+      battleArea: scenario === 'source-support' ? [] : [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-054-ally'), hp('bs12-054-ally', 2), 1)
+        : cardCheckBattleEntry(source, hp('bs12-054-source', 4), 1, ['source-rested', 'attack-rested-source'].includes(scenario))] },
+    'player-two': { ...base.players['player-two'], hand: [], deck: hp('bs12-054-foe-deck', 12, 9), discardPile: [printed('BS12-039', 'bs12-054-foe-trash')], breakArea: [], extraDeck: [], stage: null,
+      supportArea: [{ card: printed('ST4-001', 'bs12-054-foe-support'), rested: false }],
+      battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-054-opponent'), hp('bs12-054-foe', 6), 2), cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-054-opponent-other'), hp('bs12-054-other', 3, 6), 3)] },
+  } }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: source.instanceId, trigger: 'activate', paymentIds: [], costSupportToTrashIds: ['bs12-054-support-0'], effectTargets: [[]] })
+  return state
+}
+
+export type Bs12AppleFaerieScenario = 'extra-named' | 'extra-named-rested' | 'extra-seven' | 'extra-seven-rested' | 'extra-six' | 'extra-seven-mixed' | 'extra-non-arena' | 'extra-wrong-name' | 'extra-support-name' | 'extra-opponent-name' | 'extra-equipment' | 'extra-full' | 'extra-used' | 'extra-outside-main' | 'extra-opponent-turn' | 'extra-refresh' | 'positive' | 'active-target' | 'first-player' | 'no-hand' | 'all-blue' | 'few-energy' | 'rested-energy' | 'source-rested' | 'outside-main' | 'opponent-turn' | 'target-faints'
+
+/** The attack fixture obtains three HP and EXTRA origin through the real EXTRA command. */
+export const createBs12AppleFaerieDemoState = (scenario: Bs12AppleFaerieScenario = 'positive', number: 'BS12-056' | 'BS12-056@1' = 'BS12-056'): GameState => {
+  const base = createBs12MintChocoDemoState()
+  const conversion = convertOfficialCardToExtraDeckCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)!)
+  if (conversion.status !== 'converted') throw new Error('Missing BS12 Apple Faerie EXTRA')
+  const extra = { ...conversion.extraDeckCard, instanceId: 'bs12-056-source' }
+  const printed = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const converted = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)!)
+    if (converted.status !== 'converted') throw new Error(`Missing Apple Faerie reference ${n}`)
+    return { ...converted.gameCard, instanceId: id }
+  }
+  const noNamed = ['extra-seven', 'extra-seven-rested', 'extra-six', 'extra-seven-mixed', 'extra-wrong-name', 'extra-support-name', 'extra-opponent-name', 'extra-equipment'].includes(scenario)
+  const ally = scenario === 'extra-equipment' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-056-ally') : scenario === 'extra-non-arena' ? bs12PrintedReferenceCookie('BS9-014', 'bs12-056-ally') : getBs12CandidateCookie(noNamed ? 'BS12-041' : 'BS12-017', 'bs12-056-ally')
+  const numbers = scenario === 'extra-six' ? ['BS12-041', 'BS12-050', 'BS12-048', 'BS12-041', 'BS12-050', 'BS12-048']
+    : ['extra-seven', 'extra-seven-rested', 'extra-seven-mixed'].includes(scenario) ? ['BS12-041', 'BS12-050', 'BS12-048', 'BS12-041', 'BS12-050', 'BS12-048', scenario === 'extra-seven-mixed' ? 'ST4-001' : 'BS12-041']
+      : [scenario === 'all-blue' ? 'ST4-001' : 'BS12-003', 'ST4-001', 'BS12-050', 'BS12-048']
+  const supports = numbers.map((n, i) => ({ card: printed(n, `bs12-056-support-${i}`), rested: scenario === 'extra-seven-rested' || scenario === 'rested-energy' || (scenario === 'few-energy' ? i > 0 : scenario === 'active-target' ? i > 2 : i > 1) }))
+  if (scenario === 'extra-support-name') supports.push({ card: getBs12CandidateCookie('BS12-017', 'bs12-056-support-candy'), rested: false })
+  const entry = { ...cardCheckBattleEntry(ally, bs12PrintedFillerCards('BS12-056', 'bs12-056-ally-hp', ally.hp, 16), 1), rested: scenario === 'extra-named-rested',
+    ...(scenario === 'extra-equipment' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-056-equipped-arena')] } : {}) }
+  let state: GameState = { ...base, firstPlayerId: scenario === 'first-player' ? 'player-one' : 'player-two', extraDeckPlayUsedThisTurn: false,
+    activePlayerId: 'player-one', phase: 'main', commandLog: [], players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, breakArea: [], discardPile: scenario === 'extra-refresh' ? Array.from({ length: 3 }, (_, i) => printed(i === 0 ? 'BS12-003' : 'BS12-024', `bs12-056-refresh-${i}`)) : [], extraDeck: [extra],
+        hand: scenario === 'no-hand' ? [] : [printed('BS12-003', 'bs12-056-hand-0'), printed('BS12-050', 'bs12-056-hand-1'), printed('ST4-001', 'bs12-056-hand-2')],
+        deck: bs12PrintedFillerCards('BS12-056', 'bs12-056-deck', scenario === 'extra-refresh' ? 2 : 16), supportArea: supports,
+        battleArea: [entry, ...(scenario === 'extra-full' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-041', 'bs12-056-full'), bs12PrintedFillerCards('BS12-056', 'bs12-056-full-hp', 1, 18), 2)] : [])],
+      },
+      'player-two': { ...base.players['player-two'], hand: [],
+        battleArea: base.players['player-two'].battleArea.map((cookie, i) => ({ ...cookie, ...(scenario === 'extra-opponent-name' && i === 0 ? { card: getBs12CandidateCookie('BS12-017', cookie.card.instanceId) } : {}),
+          hpCards: ['target-faints', 'extra-opponent-name'].includes(scenario) && i === 0 ? cookie.hpCards.slice(0, 2) : cookie.hpCards })),
+      },
+    } }
+  if (!scenario.startsWith('extra-')) state = applyGameCommand(state, { kind: 'play-extra-deck-cookie', playerId: 'player-one', instanceId: extra.instanceId })
+  return { ...state, commandLog: [], extraDeckPlayUsedThisTurn: scenario === 'extra-used' || state.extraDeckPlayUsedThisTurn,
+    activePlayerId: scenario.endsWith('opponent-turn') ? 'player-two' : 'player-one', phase: scenario.endsWith('outside-main') ? 'support' : 'main',
+    players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(cookie => cookie.card.instanceId === extra.instanceId && scenario === 'source-rested' ? { ...cookie, rested: true } : cookie) } },
+  }
+}
+
+export type Bs12HerbScenario = 'positive' | 'rested-entry' | 'source-rested' | 'hand-origin' | 'other-cookie' | 'old-turn' | 'no-hand' | 'source-support' | 'opponent-turn' | 'outside-main' | 'deck-item' | 'deck-stage' | 'deck-blue' | 'refresh' | 'refresh-lv10' | 'source-only' | 'source-only-no-cookie' | 'empty-deck' | 'attack' | 'attack-wrong' | 'attack-rested-energy' | 'attack-rested-source' | 'deploy'
+
+/** Entry histories come from the shared deployment authority, never a pre-set source origin. */
+export const createBs12HerbDemoState = (scenario: Bs12HerbScenario = 'positive', number: 'BS12-055' | 'BS12-055@1' = 'BS12-055'): GameState => {
+  const base = createBs12MintChocoDemoState()
+  const printed = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const conversion = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)!)
+    if (conversion.status !== 'converted') throw new Error(`Missing Herb reference ${n}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  const source = getBs12CandidateCookie(number, 'bs12-055-source')
+  const ally = getBs12CandidateCookie('BS12-044', 'bs12-055-ally')
+  const handOrigin = ['hand-origin', 'other-cookie', 'deploy'].includes(scenario)
+  const topNumber = scenario === 'deck-item' ? 'BS12-050' : scenario === 'deck-stage' ? 'BS12-048' : scenario === 'deck-blue' ? 'ST4-001' : 'BS12-039'
+  let state: GameState = { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'],
+    hand: [printed('BS12-003', 'bs12-055-hand-0'), printed('BS12-050', 'bs12-055-hand-1'), printed('ST4-001', 'bs12-055-hand-2'), ...(handOrigin ? [source] : [])],
+    deck: bs12PrintedFillerCards('BS12-055', 'bs12-055-deck', 14, 2).map((card, i) => i === (scenario === 'other-cookie' ? 4 : 2) ? printed(topNumber, card.instanceId) : card),
+    discardPile: [], breakArea: [], supportArea: ['BS12-041', 'ST4-001', 'BS12-050', 'BS12-048'].map((n, i) => ({ card: printed(n, `bs12-055-support-${i}`), rested: scenario === 'attack-rested-energy' && i !== 1 })),
+    battleArea: scenario === 'other-cookie' ? [] : [cardCheckBattleEntry(ally, bs12PrintedFillerCards('BS12-055', 'bs12-055-ally-hp', 2), 1)],
+  } } }
+  if (scenario === 'other-cookie') {
+    state.players['player-one'].supportArea.push({ card: ally, rested: true })
+    state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], stage: { card: printed('BS12-048', 'bs12-055-other-entry-stage'), rested: false } } } }
+    state = applyGameCommand(state, { kind: 'activate-stage', playerId: 'player-one', paymentIds: [], effectTargets: [[ally.instanceId]] })
+    if (state.pendingOptionalCostAttack) state = applyGameCommand(state, { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'skip' })
+  }
+  if (!handOrigin) state.players['player-one'].supportArea.push({ card: source, rested: scenario === 'rested-entry' })
+  if (scenario !== 'source-support' && scenario !== 'deploy') {
+    state = handOrigin
+      ? applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+      : applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: ally.instanceId, trigger: 'activate', paymentIds: [], effectTargets: [[source.instanceId], []] })
+  }
+  const player = state.players['player-one']
+  state = { ...state, commandLog: [], players: { ...state.players, 'player-one': { ...player,
+    hand: scenario === 'no-hand' ? [] : scenario === 'source-only-no-cookie' ? player.hand.slice(0, 1) : player.hand,
+    deck: ['refresh', 'refresh-lv10'].includes(scenario) ? player.deck.slice(0, 1) : scenario === 'empty-deck' ? [] : player.deck,
+    breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-055-break-${i}`)) : player.breakArea,
+    battleArea: player.battleArea.filter(cookie => !scenario.startsWith('source-only') || cookie.card.instanceId === source.instanceId).map(cookie => cookie.card.instanceId === source.instanceId && ['source-rested', 'attack-rested-source'].includes(scenario) ? { ...cookie, rested: true } : cookie),
+    supportArea: scenario === 'attack-wrong' ? player.supportArea.filter(s => s.card.energyColor !== 'green') : [...player.supportArea, ...(scenario.startsWith('source-only') ? [{ card: ally, rested: true }] : [])],
+  } }, turnNumber: scenario === 'old-turn' ? state.turnNumber + 1 : state.turnNumber,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'active' : 'main',
+  }
+  return state
+}
+
+/** Printed Kumiho response begins from an actual opponent declaration, never an injected response window. */
+export const createBs12KumihoDemoState = (scenario: Bs12KumihoScenario = 'response', number: 'BS12-053' | 'BS12-053@1' = 'BS12-053'): GameState => {
+  const base = createBs12FerretDemoState()
+  const printed = (n: string, id: string): GameCard => {
+    if (!n.startsWith('BS12-')) return bs12PrintedReferenceCard(n, id)
+    const conversion = convertOfficialCardToGameCard((bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)!)
+    if (conversion.status !== 'converted') throw new Error(`Missing Kumiho reference ${n}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-053', id + '-hp', count, offset)
+  const source = getBs12CandidateCookie(number, 'bs12-053-source')
+  const response = scenario.startsWith('response')
+  const supportNumbers = scenario === 'response-no-support' ? [] : scenario === 'attack-few' ? ['BS12-041', 'BS12-041', 'ST4-001'] : scenario === 'attack-wrong' ? ['BS12-041', 'ST4-001', 'ST4-001', 'BS12-012'] : ['BS12-041', 'BS12-038', 'BS12-050', 'ST4-001']
+  if (scenario.endsWith('fifth')) supportNumbers.push('ST4-001')
+  const supportArea = supportNumbers.map((n, i) => ({ card: printed(n, `bs12-053-support-${i}`), rested: response ? scenario === 'response-rested-support' || i === 3 : (i === 4 && scenario === 'attack-rested-fifth') || (i === 0 && scenario === 'attack-rested-energy') }))
+  if (scenario === 'attack-source-support') supportArea.push({ card: source, rested: false })
+  const own = base.players['player-one']
+  const sourceEntry = { ...cardCheckBattleEntry(source, hp('bs12-053-source', scenario === 'response-last-hp' ? 1 : 6), 1), rested: scenario === 'response-rested-source' || scenario === 'attack-rested-source' }
+  const foe = base.players['player-two']
+  let state: GameState = { ...base, activePlayerId: response || scenario === 'attack-opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'attack-outside-main' ? 'active' : 'main',
+    skillUsesThisTurn: scenario === 'response-used' ? [sourceEntry.battleEntryId!] : [],
+    players: { ...base.players,
+      'player-one': { ...own, supportArea, hand: [printed('BS12-012', 'bs12-053-hand')], battleArea: scenario === 'attack-source-support' ? [] : [sourceEntry,
+        ...(scenario === 'response-other' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-039', 'bs12-053-ally'), hp('bs12-053-ally', 4, 6), 2)] : [])] },
+      'player-two': { ...foe, supportArea: ['ST4-001', 'BS12-012', 'BS12-041'].map((n, i) => ({ card: printed(n, `bs12-053-foe-support-${i}`), rested: false })),
+        battleArea: foe.battleArea.map((entry, i) => ({ ...entry, rested: false,
+          hpCards: scenario === 'attack-target-faint' && i === 0 ? entry.hpCards.slice(0, 3) : scenario === 'attack-other-faint' && i === 1 ? entry.hpCards.slice(0, 1) : scenario === 'attack-flip' && i === 1 ? [...entry.hpCards.slice(1), printed('BS12-022', 'bs12-053-flip')] : entry.hpCards,
+          // Response cases pay three mixed-color supports for the printed NNN
+          // attack. Keep that parent independent of the six-HP target used by 044.
+          ...(response && i === 0 ? {
+            card: getBs12CandidateCookie('BS12-001', entry.card.instanceId),
+            hpCards: entry.hpCards.slice(0, 4),
+          } : {}),
+        })) },
+    } }
+  if (response) state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: foe.battleArea[0].card.instanceId,
+    targetInstanceId: scenario === 'response-other' ? 'bs12-053-ally' : source.instanceId, supportPaymentIds: state.players['player-two'].supportArea.map(entry => entry.card.instanceId) })
+  return state
+}
+
+/** Candidate-only Herb Teapot, including the actual named Arena Herb print. */
+export const createBs12HerbTeapotDemoState = (scenario: Bs12HerbTeapotScenario = 'positive'): GameState => {
+  const base = baseTestState('player-one', scenario === 'outside-main' ? 'active' : 'main')
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-044', id, count, offset)
+  const arena = (number: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)
+    if (!record) return bs12PrintedReferenceCard(number, id)
+    const conversion = convertOfficialCardToGameCard(record)
+    if (conversion.status !== 'converted') throw new Error(`Missing Herb Teapot reference ${number}`)
+    return { ...conversion.gameCard, instanceId: id }
+  }
+  const supportNumbers = scenario === 'no-support' ? [] : scenario === 'item-only' ? ['BS12-012', 'BS12-011'] :
+    [scenario === 'not-herb' ? 'BS12-038' : scenario === 'wrong-name' ? 'BS12-044' : scenario === 'no-arena' ? 'ST4-001' : 'BS12-055',
+      scenario === 'blue-target' ? 'ST4-001' : 'BS12-041', 'BS12-012', 'BS12-011']
+  if (scenario === 'attack-wrong') supportNumbers.splice(0, 2, 'ST4-001', 'ST4-001')
+  if (scenario === 'attack-few') supportNumbers.splice(1, 1)
+  const refresh = ['last-deck', 'short-deck', 'refresh-lv10'].includes(scenario)
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2,
+    activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null,
+        hand: scenario === 'deploy' ? [getBs12CandidateCookie('BS12-044', 'bs12-044-source')] : [],
+        deck: hp('bs12-044-deck', refresh ? scenario === 'short-deck' ? 1 : 2 : 12),
+        discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-044-refresh'), ...hp('bs12-044-refresh-trash', 5, 1)] : [],
+        breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-044-break-${i}`)) : [],
+        battleArea: [scenario === 'deploy' ? cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-044-ally'), hp('bs12-044-ally', 2), 1)
+          : { ...cardCheckBattleEntry(getBs12CandidateCookie('BS12-044', 'bs12-044-source'), hp('bs12-044-source', 2), 1), rested: scenario === 'source-rested' },
+          ...(['full-battle', 'existing-herb'].includes(scenario) ? [cardCheckBattleEntry(getBs12CandidateCookie(scenario === 'existing-herb' ? 'BS12-055' : 'BS12-003', 'bs12-044-existing'), hp('bs12-044-existing', 2, 2), 2)] : [])],
+        supportArea: supportNumbers.map((n, i) => ({ card: arena(n, `bs12-044-support-${i}`),
+          rested: scenario.startsWith('attack') ? scenario === 'attack-rested' && i === 1
+            : scenario === 'all-active' ? false : i === 0 ? scenario === 'rested-herb' : i === 1 ? scenario !== 'active-target' : true,
+        })),
+      },
+      'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], supportArea: [], deck: hp('bs12-044-opponent-deck', 12),
+        battleArea: [cardCheckBattleEntry(bs12PrintedReferenceCookie('BS6-008', 'bs12-044-opponent'), hp('bs12-044-opponent', 6), 3),
+          cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-044-opponent-other'), hp('bs12-044-opponent-other', 3, 6), 4)] },
+    } }
+  if (scenario === 'used') state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-044-source', trigger: 'activate', paymentIds: [], effectTargets: [[]] })
+  return state
+}
+
+export type Bs12CloverScenario = 'five' | 'four' | 'six' | 'zero' | 'all-rested' | 'non-arena' | 'opponent-only' | 'battle-only' | 'support-five' | 'support-four' | 'opponent-turn' | 'short-deck' | 'last-deck' | 'refresh-lv10' | 'attack' | 'attack-blue' | 'attack-wrong' | 'attack-few' | 'attack-rested' | 'attack-rested-source'
+
+/** Candidate Clover enters through an actual hand or support command. */
+export const createBs12CloverDemoState = (scenario: Bs12CloverScenario = 'five'): GameState => {
+  const base = createBs12HerbTeapotDemoState()
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-045', id, count, offset)
+  const source = getBs12CandidateCookie('BS12-045', 'bs12-045-source')
+  const supportEntry = scenario.startsWith('support-')
+  const attack = scenario.startsWith('attack')
+  const refresh = ['short-deck', 'last-deck', 'refresh-lv10'].includes(scenario)
+  const count = ['zero', 'opponent-only'].includes(scenario) ? 0 : ['four', 'battle-only', 'support-four'].includes(scenario) ? 4 : scenario === 'six' ? 6 : 5
+  const numbers = scenario === 'non-arena' ? Array.from({ length: count }, (_, i) => ['ST4-001', 'ST4-002', 'ST4-003', 'ST4-004', 'ST4-005'][i]) : Array.from({ length: count }, (_, i) => ['BS12-041', 'ST4-001', 'BS12-012', 'BS12-011', 'BS12-001'][i % 5])
+  if (scenario === 'attack-wrong') numbers[0] = 'ST4-001'
+  if (scenario === 'attack-few') numbers.splice(1)
+  if (scenario === 'attack-blue') numbers[1] = 'ST4-001'
+  const support = numbers.map((number, i) => ({ card: number.startsWith('BS12-') ? (() => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === number)!
+    const result = convertOfficialCardToGameCard(record)
+    if (result.status !== 'converted') throw new Error(`Clover reference ${number}`)
+    return { ...result.gameCard, instanceId: `bs12-045-support-${i}` }
+  })() : bs12PrintedReferenceCard(number, `bs12-045-support-${i}`), rested: scenario === 'all-rested' || (scenario === 'attack-rested' && i === 0) }))
+  const state: GameState = { ...base, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: attack || supportEntry ? [] : [source],
+      deck: hp('bs12-045-deck', refresh ? scenario === 'short-deck' ? 1 : 3 : 12),
+      discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-045-refresh'), ...hp('bs12-045-trash', 5, 1)] : [],
+      breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-045-break-${i}`)) : [],
+      battleArea: attack ? [{ ...cardCheckBattleEntry(source, hp('bs12-045-hp', 2), 1), rested: scenario === 'attack-rested-source' }]
+        : [cardCheckBattleEntry(supportEntry ? bs12PrintedReferenceCookie('BS7-055', 'bs12-045-deployer') : getBs12CandidateCookie('BS12-003', 'bs12-045-ally'), hp('bs12-045-ally', supportEntry ? 5 : 2), 1)],
+      supportArea: [...support, ...(supportEntry ? [{ card: source, rested: false }] : [])],
+    },
+    'player-two': { ...base.players['player-two'], supportArea: scenario === 'opponent-only' ? ['ST4-002', 'ST4-003', 'ST4-004', 'ST4-005', 'BS12-012'].map((n, i) => ({ card: n.startsWith('BS12-') ? bs12PrintedFixtureCard(n, 'bs12-045-foe-support-' + i) : bs12PrintedReferenceCard(n, 'bs12-045-foe-support-' + i), rested: false })) : [], },
+  } }
+  return scenario === 'opponent-turn'
+    ? { ...applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId }), activePlayerId: 'player-two' }
+    : state
+}
+
+export type Bs12CameraScenario = 'positive' | 'no-event' | 'removed' | 'old-turn' | 'hand-entry' | 'opponent-entry' | 'no-energy' | 'wrong-energy' | 'rested-energy' | 'rested-entry' | 'short-deck' | 'last-deck' | 'refresh-lv10' | 'opponent-turn' | 'outside-main'
+
+export type Bs12HarmonyScenario = 'seven' | 'six' | 'eight' | 'non-arena' | 'rested-other' | 'opponent-only' | 'battle-only' | 'no-energy' | 'one-energy' | 'wrong-energy' | 'mixed-energy' | 'rested-energy' | 'one-rested' | 'disabled' | 'used' | 'main' | 'after-battle' | 'short-deck' | 'refresh-lv10'
+
+/** Printed Harmony with mixed support cards; seven is a total, not an intersection. */
+export const createBs12HarmonyDemoState = (scenario: Bs12HarmonyScenario = 'seven'): GameState => {
+  const base = baseTestState(scenario === 'main' ? 'player-one' : 'player-two', 'main')
+  const printed = (n: string, id: string): GameCard => n.startsWith('BS12-') ? bs12PrintedFixtureCard(n, id) : bs12PrintedReferenceCard(n, id)
+  const hp = (id: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-047', id, count, offset)
+  const count = scenario === 'eight' ? 8 : ['six', 'opponent-only', 'battle-only'].includes(scenario) ? 6 : scenario === 'no-energy' ? 0 : scenario === 'one-energy' ? 1 : 7
+  const numbers = Array.from({ length: count }, (_, i) => i < 2
+    ? scenario === 'wrong-energy' || (scenario === 'mixed-energy' && i === 1) ? 'ST4-001' : scenario === 'non-arena' ? 'ST3-001' : 'BS12-041'
+    : scenario === 'non-arena' ? ['ST4-001', 'ST4-002', 'ST4-003', 'ST4-004', 'ST4-005'][i - 2] : ['ST4-001', 'BS12-012', 'BS12-011', 'BS12-001', 'BS12-019'][(i - 2) % 5])
+  const defender = bs12PrintedReferenceCookie('BS7-055', 'bs12-009-defender')
+  const ally = bs12PrintedReferenceCookie('BS7-061', 'bs12-009-ally')
+  const refresh = ['short-deck', 'refresh-lv10'].includes(scenario)
+  const attacker = getBs12CandidateCookie('BS12-001', 'bs12-009-attacker')
+  const attackPayments = ['BS12-005', 'BS12-006', 'ST4-001'].map((n, i) => ({ card: printed(n, 'bs12-047-attack-payment-' + i), rested: false }))
+  let state: GameState = { ...base, firstPlayerId: 'player-one', turnNumber: 2, players: { ...base.players,
+    'player-one': { ...base.players['player-one'], hand: [printed('BS12-047', 'bs12-047-trap')], stage: null,
+      deck: hp('bs12-047-deck', refresh ? 1 : 12),
+      discardPile: refresh ? [bs12PrintedReferenceCard('ST4-001', 'bs12-047-refresh'), ...hp('bs12-047-refresh-trash', 5, 1)] : [],
+      breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', 'bs12-047-break-' + i)) : [],
+      battleArea: [cardCheckBattleEntry(defender, hp('bs12-047-defender', defender.hp), 1), cardCheckBattleEntry(ally, hp('bs12-047-ally', ally.hp, defender.hp), 2)],
+      supportArea: numbers.map((n, i) => ({ card: printed(n, 'bs12-047-payment-' + i), rested: scenario === 'rested-energy' || (scenario === 'one-rested' && i === 1) || (scenario === 'rested-other' && i >= 2) })),
+    },
+    'player-two': { ...base.players['player-two'], hand: [], stage: null, breakArea: [], discardPile: [], deck: hp('bs12-047-foe-deck', 12),
+      battleArea: [cardCheckBattleEntry(attacker, hp('bs12-047-attacker', attacker.hp), 3), cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-009-other'), hp('bs12-047-other', 2, attacker.hp), 4)],
+      supportArea: attackPayments,
+    },
+  } }
+  if (!['main', 'after-battle'].includes(scenario)) state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: defender.instanceId, supportPaymentIds: attackPayments.map(s => s.card.instanceId) })
+  if (scenario === 'opponent-only') state = { ...state, players: { ...state.players, 'player-two': { ...state.players['player-two'], supportArea: [...state.players['player-two'].supportArea, ...['ST4-002', 'BS12-012', 'BS12-011', 'BS12-003'].map((n, i) => ({ card: printed(n, 'bs12-047-foe-support-' + i), rested: true }))] } } }
+  if (scenario === 'disabled' || scenario === 'used') state = { ...state, pendingBattle: { ...state.pendingBattle!, ...(scenario === 'disabled' ? { trapsDisabled: true } : { trapUsed: true, stage: 'damage' as const }) } }
+  return state
+}
+
+/** Camera live routes enter Herb through 044 before playing the item. */
+export const createBs12CameraDemoState = (scenario: Bs12CameraScenario = 'positive'): GameState => {
+  const base = createBs12HerbTeapotDemoState('active-target')
+  const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === 'BS12-046')!
+  const result = convertOfficialCardToGameCard(record)
+  if (result.status !== 'converted') throw new Error('Missing Camera')
+  let state: GameState = { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'],
+    hand: [{ ...result.gameCard, instanceId: 'bs12-046-item' }],
+    stage: scenario === 'removed' ? { card: bs12PrintedReferenceCard('BS8-025', 'bs12-046-removal-stage'), rested: false } : null,
+    supportArea: base.players['player-one'].supportArea.map((support, i) => ({ ...support, rested: i === 0 ? scenario === 'rested-entry' : support.rested })),
+  } } }
+  if (scenario === 'hand-entry') {
+    state = { ...state, players: { ...state.players, 'player-one': { ...state.players['player-one'], hand: [...state.players['player-one'].hand, getBs12CandidateCookie('BS12-003', 'camera-hand-entry')] } } }
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: 'camera-hand-entry' })
+  }
+  if (['removed', 'old-turn', 'no-energy', 'wrong-energy', 'rested-energy', 'short-deck', 'last-deck', 'refresh-lv10', 'opponent-turn', 'outside-main'].includes(scenario)) {
+    state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-one', sourceInstanceId: 'bs12-044-source', trigger: 'activate', paymentIds: [], effectTargets: [['bs12-044-support-0'], scenario === 'removed' ? ['bs12-044-support-2'] : []] })
+  }
+  if (scenario === 'removed') state = applyGameCommand(state, { kind: 'activate-stage', playerId: 'player-one', paymentIds: ['bs12-044-support-2'], trashBattleCookieIds: ['bs12-044-support-0'], effectTargets: [[]] })
+  if (scenario === 'old-turn') state = advancePhase({ ...state, phase: 'active' })
+  if (scenario === 'opponent-entry') {
+    const foe = state.players['player-two']
+    const deployer = bs12PrintedReferenceCookie('BS7-055', 'bs12-044-opponent')
+    state = { ...state, activePlayerId: 'player-two', players: { ...state.players, 'player-two': { ...foe,
+      battleArea: [cardCheckBattleEntry(deployer, bs12PrintedFillerCards('BS12-046', 'camera-foe-parent-hp', deployer.hp), 3)],
+      supportArea: [{ card: getBs12CandidateCookie('BS12-003', 'camera-foe-support'), rested: false }],
+    } } }
+    state = applyGameCommand(state, { kind: 'activate-skill', playerId: 'player-two', sourceInstanceId: deployer.instanceId, trigger: 'activate', paymentIds: [], effectTargets: [['camera-foe-support']] })
+  }
+  const refresh = ['short-deck', 'last-deck', 'refresh-lv10'].includes(scenario)
+  state = { ...state, activePlayerId: scenario === 'opponent-turn' ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'active' : 'main', players: { ...state.players, 'player-one': { ...state.players['player-one'],
+    supportArea: scenario === 'no-energy' ? [] : state.players['player-one'].supportArea.map(support => support.card.instanceId === 'bs12-044-support-1'
+      ? { ...support, rested: scenario === 'rested-energy', card: scenario === 'wrong-energy' ? bs12PrintedReferenceCard('ST4-001', 'bs12-044-support-1') : support.card } : support),
+    ...(refresh ? { deck: state.players['player-one'].deck.slice(0, scenario === 'short-deck' ? 1 : 2),
+      discardPile: [bs12PrintedReferenceCard('ST4-001', 'bs12-046-refresh'), ...bs12PrintedFillerCards('BS12-046', 'bs12-046-trash', 5, 1)] } : {}),
+    ...(scenario === 'refresh-lv10' ? { breakArea: Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-039', `bs12-046-break-${i}`)) } : {}),
+  } } }
+  return state
+}
+
+export type Bs12MarbleberryScenario = 'positive' | 'cost-item' | 'cost-stage' | 'no-cost' | 'cost-non-arena' | 'cost-wrong-color' | 'cost-split' | 'opponent-cost-only' | 'rested-target' | 'only-high' | 'no-target' | 'target-only' | 'target-equipped' | 'movement-blocked' | 'full-battle' | 'opponent-turn' | 'outside-main' | 'refresh' | 'refresh-lv10' | 'isolated-opponent-on-play' | 'support-entry' | 'rested-support-entry' | 'attack' | 'attack-all-blue' | 'attack-wrong' | 'attack-few' | 'attack-rested-energy' | 'attack-source-rested'
+
+/** Marbleberry starts in hand; entry and four HP come from deploy-cookie. */
+export type Bs12PeppermintScenario = 'positive' | 'red-hand' | 'green-hand' | 'item-hand' | 'stage-hand' | 'no-hand' | 'non-arena-hand' | 'opponent-cost-only' | 'last-hp' | 'last-hp-refresh' | 'follow-up' | 'short-deck' | 'last-deck' | 'refresh-lv10' | 'isolated-own-turn' | 'attack' | 'attack-wrong' | 'attack-few' | 'attack-rested-energy' | 'attack-source-rested' | 'deploy'
+
+/** Real attack reveals Peppermint; the owner publicly pays one Arena hand card before the draw decision. */
+export const createBs12PeppermintDemoState = (scenario: Bs12PeppermintScenario = 'positive', number: 'BS12-058' | 'BS12-058@1' = 'BS12-058'): GameState => {
+  const base = createBs12MarbleberryDemoState()
+  const printed = (n: string, id: string): GameCard => {
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(c => c.cardNumber === n)
+    if (!record) return bs12PrintedReferenceCard(n, id)
+    const result = convertOfficialCardToGameCard(record, id)
+    if (result.status !== 'converted') throw new Error(`Missing ${n}`)
+    return { ...result.gameCard, instanceId: id }
+  }
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-058', prefix, count, offset)
+  const flip = getBs12CandidateCookie(number, 'bs12-058-source')
+  const attack = scenario.startsWith('attack') || scenario === 'deploy'
+  const costNumber = scenario === 'red-hand' ? 'BS12-003' : scenario === 'green-hand' ? 'BS12-050' : scenario === 'item-hand' ? 'BS12-068' : scenario === 'stage-hand' ? 'BS12-067' : scenario === 'non-arena-hand' ? 'ST4-001' : 'BS12-057'
+  const cost = printed(costNumber, 'bs12-058-hand')
+  const strongAttack = scenario === 'follow-up'
+  const attacker = getBs12CandidateCookie(strongAttack ? 'BS12-019' : 'BS12-003', 'bs12-058-attacker')
+  const attackSupport = Array.from({ length: strongAttack ? 3 : 1 }, (_, i) => ({ card: printed('BS12-003', `bs12-058-foe-support-${i}`), rested: false }))
+  let state: GameState = { ...base, commandLog: [], turnNumber: 2, firstPlayerId: 'player-one', activePlayerId: attack ? 'player-one' : 'player-two',
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'],
+        hand: attack ? [flip] : scenario === 'no-hand' ? [] : scenario === 'opponent-cost-only' ? [printed('ST4-001', 'bs12-058-invalid-hand')] : [cost, printed('ST4-001', 'bs12-058-invalid-hand')],
+        deck: hp('bs12-058-deck', ['last-deck', 'last-hp-refresh', 'refresh-lv10'].includes(scenario) ? 1 : scenario === 'short-deck' ? 2 : 12, 5),
+        discardPile: ['last-deck', 'last-hp-refresh', 'refresh-lv10'].includes(scenario) ? Array.from({ length: 6 }, (_, i) => printed(i < 2 ? 'ST4-001' : i < 5 ? 'BS12-024' : 'BS12-038', `bs12-058-refresh-${i}`)) : [],
+        breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-053', `bs12-058-break-${i}`)) : [],
+        supportArea: scenario === 'attack-few' ? [] : [{ card: printed(scenario === 'attack-wrong' ? 'BS12-003' : 'ST4-001', 'bs12-058-payment'), rested: scenario === 'attack-rested-energy' }],
+        battleArea: attack ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-058-ally'), hp('bs12-058-ally-hp', 2, 3), 1)] : [
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-057', 'bs12-058-bearer'), [...hp('bs12-058-bottom', ['last-hp', 'last-hp-refresh'].includes(scenario) ? 0 : 3), flip], 1),
+          cardCheckBattleEntry(getBs12CandidateCookie('BS12-003', 'bs12-058-ally'), hp('bs12-058-ally-hp', 2, 3), 1),
+        ],
+      },
+      'player-two': { ...base.players['player-two'], hand: scenario === 'opponent-cost-only' ? [cost] : [],
+        deck: hp('bs12-058-foe-deck', 12, 4), discardPile: [], breakArea: [], supportArea: attackSupport,
+        battleArea: attack ? [cardCheckBattleEntry(bs12PrintedReferenceCookie('ST4-001', 'bs12-058-opponent'), hp('bs12-058-foe-hp', 3), 1)] : [cardCheckBattleEntry(attacker, hp('bs12-058-attacker-hp', attacker.hp), 1)],
+      },
+    },
+  }
+  if (attack && scenario !== 'deploy') {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: flip.instanceId })
+    return { ...state, commandLog: [], players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(c => c.card.instanceId === flip.instanceId ? { ...c, rested: scenario === 'attack-source-rested' } : c) } } }
+  }
+  if (attack) return state
+  state = applyGameCommand(state, { kind: 'declare-attack', playerId: 'player-two', attackerInstanceId: attacker.instanceId, targetInstanceId: 'bs12-058-bearer', supportPaymentIds: attackSupport.map(s => s.card.instanceId) })
+  state = applyGameCommand(state, { kind: 'skip-trap', playerId: 'player-one' })
+  state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+  return { ...state, ...(scenario === 'isolated-own-turn' ? { activePlayerId: 'player-one' as const } : {}), commandLog: [] }
+}
+
+export const createBs12MarbleberryDemoState = (scenario: Bs12MarbleberryScenario = 'positive'): GameState => {
+  const base = createBs12MintChocoDemoState()
+  const printed = (number: string, instanceId: string): GameCard => {
+    if (!number.startsWith('BS12-')) return bs12PrintedReferenceCard(number, instanceId)
+    const record = (bs12CandidateDocument.cards as OfficialCardRecord[]).find(card => card.cardNumber === number)!
+    const converted = convertOfficialCardToGameCard(record)
+    if (converted.status !== 'converted') throw new Error(`Missing Marbleberry reference ${number}`)
+    return { ...converted.gameCard, instanceId }
+  }
+  const hp = (prefix: string, count: number, offset = 0) => bs12PrintedFillerCards('BS12-057', prefix, count, offset)
+  const source = getBs12CandidateCookie('BS12-057', 'bs12-057-source')
+  const fromSupport = scenario.includes('support-entry')
+  const costNumber = scenario === 'cost-item' ? 'BS12-068' : scenario === 'cost-stage' ? 'BS12-067' : scenario === 'cost-non-arena' ? 'ST4-001' : scenario === 'cost-wrong-color' ? 'BS12-050' : 'BS12-057'
+  const invalidOnly = ['cost-split', 'opponent-cost-only'].includes(scenario)
+  const supports = (fromSupport ? ['BS12-041', 'ST4-001', 'BS12-003'] : scenario === 'attack-few' ? ['ST4-001', 'ST4-001'] : scenario === 'attack-wrong' ? ['ST4-001', 'BS12-003', 'BS12-003'] : ['ST4-001', 'ST4-001', scenario === 'attack-all-blue' ? 'ST4-001' : 'BS12-003'])
+    .map((number, i) => ({ card: printed(number, `bs12-057-payment-${i}`), rested: scenario === 'attack-rested-energy' && i === 1 }))
+  if (fromSupport) supports.push({ card: source, rested: scenario === 'rested-support-entry' })
+  const high = ['only-high', 'no-target'].includes(scenario)
+  const foeOne = scenario === 'target-equipped' ? bs12PrintedReferenceCookie('BS4-095', 'bs12-057-opponent-0') : getBs12CandidateCookie(high ? 'BS12-019' : 'BS12-003', 'bs12-057-opponent-0')
+  const foeTwo = high ? getBs12CandidateCookie('BS12-053', 'bs12-057-opponent-1') : bs12PrintedReferenceCookie(scenario === 'movement-blocked' ? 'BS6-010' : 'ST4-001', 'bs12-057-opponent-1')
+  const foeBattle = [
+    { ...cardCheckBattleEntry(foeOne, hp('bs12-057-foe-hp-0', foeOne.hp), 1), rested: scenario === 'rested-target', ...(scenario === 'target-equipped' ? { equippedCards: [getBs12CandidateCookie('BS12-007', 'bs12-057-foe-equip')] } : {}) },
+    cardCheckBattleEntry(foeTwo, hp('bs12-057-foe-hp-1', foeTwo.hp, foeOne.hp), 1),
+  ]
+  const refresh = ['refresh', 'refresh-lv10'].includes(scenario)
+  let state: GameState = { ...base, activePlayerId: 'player-one', firstPlayerId: 'player-two', phase: 'main', turnNumber: 2, commandLog: [],
+    players: { ...base.players,
+      'player-one': { ...base.players['player-one'], stage: null, extraDeck: [],
+        hand: [...(!fromSupport ? [source] : []), ...(scenario === 'no-cost' ? [] : [
+          ...(!invalidOnly ? [printed(costNumber, 'bs12-057-hand-0')] : []),
+          printed('ST4-001', 'bs12-057-invalid-blue'), printed('BS12-050', 'bs12-057-invalid-arena'),
+        ])],
+        deck: hp('bs12-057-deck', refresh ? 2 : 16, 3), discardPile: refresh ? Array.from({ length: 6 }, (_, i) => printed(i === 0 ? 'ST4-001' : i <= 3 ? 'BS12-024' : 'BS12-038', `bs12-057-refresh-${i}`)) : [],
+        breakArea: scenario === 'refresh-lv10' ? Array.from({ length: 3 }, (_, i) => getBs12CandidateCookie('BS12-053', `bs12-057-break-${i}`)) : [],
+        supportArea: supports, battleArea: [cardCheckBattleEntry(getBs12CandidateCookie(fromSupport ? 'BS12-051' : 'BS12-003', 'bs12-057-ally'), hp('bs12-057-ally-hp', 2), 1),
+          ...(scenario === 'full-battle' ? [cardCheckBattleEntry(getBs12CandidateCookie('BS12-041', 'bs12-057-full'), hp('bs12-057-full-hp', 1, 2), 1)] : [])],
+      },
+      'player-two': { ...base.players['player-two'], stage: null, extraDeck: [], supportArea: [], breakArea: [], discardPile: [],
+        hand: scenario === 'target-only' ? [getBs12CandidateCookie('BS12-003', 'bs12-057-replacement')] : scenario === 'opponent-cost-only' ? [printed('BS12-057', 'bs12-057-foe-hand')] : [],
+        deck: hp('bs12-057-foe-deck', 10, foeOne.hp + foeTwo.hp), battleArea: scenario === 'target-only' ? foeBattle.slice(0, 1) : foeBattle,
+      },
+    },
+  }
+  if (scenario.startsWith('attack') || scenario === 'isolated-opponent-on-play') {
+    state = applyGameCommand(state, { kind: 'deploy-cookie', playerId: 'player-one', instanceId: source.instanceId })
+    if (scenario.startsWith('attack')) state = applyGameCommand(state, { kind: 'skip-on-play', playerId: 'player-one', sourceInstanceId: source.instanceId })
+  }
+  return { ...state, commandLog: [], activePlayerId: ['opponent-turn', 'isolated-opponent-on-play'].includes(scenario) ? 'player-two' : 'player-one', phase: scenario === 'outside-main' ? 'support' : 'main',
+    players: { ...state.players, 'player-one': { ...state.players['player-one'], battleArea: state.players['player-one'].battleArea.map(cookie => cookie.card.instanceId === source.instanceId && scenario === 'attack-source-rested' ? { ...cookie, rested: true } : cookie) } },
+  }
+}
+
+
+export const BS12_TAIL_PHYSICAL_SCENARIOS={
+ 'BS12-106':['positive','no-hand','cookie-cost','stage-cost','trap-cost','new-cost-target','no-special','arena-item','non-arena-special','empty-trash','no-energy','wrong-energy','rested-energy','other-target'] as const,
+ 'BS12-107':['positive','no-hand','cookie-cost','stage-cost','trap-cost','new-cost-target','ordinary-arena','arena-item','non-arena-special','empty-trash','no-energy','wrong-energy','rested-energy','other-target','deploy'] as const,
+ 'BS12-108':['positive','hand-five','hand-six','single','black-non-arena','blue-arena','hand-only','support-only','trash-only','break-only','opponent-only','rested-other','rested-source','opponent-turn','attack','attack-wrong-energy','deploy'] as const,
+}
+export type Bs12TailPrintedNumber='BS12-106'|'BS12-107'|'BS12-107@1'|'BS12-108'|'BS12-108@1'
+export type Bs12TailPhysicalScenario=typeof BS12_TAIL_PHYSICAL_SCENARIOS[keyof typeof BS12_TAIL_PHYSICAL_SCENARIOS][number]
+export const createBs12TailPhysicalDemoState=(number:'BS12-106'|'BS12-107'|'BS12-107@1'|'BS12-108'|'BS12-108@1',scenario:string):GameState=>{
+ const printed=(number:string,id:string):GameCard=>number.startsWith('BS12-')?bs12PrintedFixtureCard(number,id):bs12PrintedReferenceCard(number,id)
+ const cookie=(number:string,id:string):CookieCard=>{const c=printed(number,id);if(c.type!=='cookie')throw new Error('Not printed Cookie '+number);return c}
+ const hpNumbers=['BS12-009','BS12-027','BS12-011','BS12-031','BS12-046','BS12-084','BS12-085','BS12-087']
+ const handNumbers=['BS12-012','BS12-013']
+ let state:GameState={...baseTestState('player-one','main'),firstPlayerId:'player-two',turnNumber:2,nextBattleEntrySequence:5};const own=state.players['player-one'],enemy=state.players['player-two'],baseNumber=number.split('@')[0] as keyof typeof BS12_TAIL_PHYSICAL_SCENARIOS
+ own.extraDeck=[];enemy.extraDeck=[]
+ let ownHp=0,enemyHp=0
+ const entry=(n:string,id:string,side:'own'|'enemy')=>{const c=cookie(n,id),offset=side==='own'?ownHp:enemyHp;if(side==='own')ownHp+=c.hp;else enemyHp+=c.hp;return {card:c,hpCards:Array.from({length:c.hp},(_,i)=>printed(hpNumbers[(offset+i)%hpNumbers.length],id+'-hp-'+i)),rested:false,battleEntryId:id+':battle:1'}}
+ const tail=(side:string)=>Array.from({length:12},(_,i)=>printed(['BS12-028','BS12-029','BS12-030','BS12-052'][Math.floor(i/3)],'future-'+side+'-deck-'+i))
+ own.deck=tail('own');enemy.deck=tail('enemy');enemy.battleArea=[entry('BS12-094','future-enemy','enemy'),entry('ST4-001','future-enemy-other','enemy')]
+ if(baseNumber==='BS12-108'){
+  own.battleArea=[{...entry(number,'future-source','own'),rested:scenario==='rested-source'}]
+  const absent=['single','hand-only','support-only','trash-only','break-only','opponent-only'].includes(scenario)
+  if(!absent)own.battleArea.push({...entry(scenario==='black-non-arena'?'BS11-111':scenario==='blue-arena'?'ST4-001':'BS12-097','future-witness','own'),rested:scenario==='rested-other'})
+  own.hand=Array.from({length:scenario==='hand-six'?6:scenario==='hand-five'?5:1},(_,i)=>printed(handNumbers[Math.floor(i/3)],'future-hand-'+i))
+  const witness=()=>cookie('BS12-097','future-zone-witness')
+  if(scenario==='hand-only')own.hand.push(witness())
+  if(scenario==='support-only')own.supportArea=[{card:witness(),rested:true}]
+  if(scenario==='trash-only')own.discardPile=[witness()]
+  if(scenario==='break-only')own.breakArea=[witness()]
+  if(scenario==='opponent-only')enemy.battleArea=[entry('BS12-097','future-opponent-witness','enemy')]
+  if(scenario==='opponent-turn')state.activePlayerId='player-two'
+  if(['attack','attack-wrong-energy','deploy'].includes(scenario))own.supportArea=[{card:cookie(scenario==='attack-wrong-energy'?'ST4-001':'BS12-097','future-payment-0'),rested:false}]
+ }else{
+  own.battleArea=[entry(baseNumber==='BS12-107'?number:'BS12-097','future-source','own')]
+  const cost=scenario==='cookie-cost'?'BS12-097':scenario==='stage-cost'?'BS12-102':scenario==='trap-cost'?'BS12-105':scenario==='new-cost-target'?'BS12-095':'BS12-012'
+  own.hand=[...(baseNumber==='BS12-106'?[printed(number,'future-trap')]:[]),...(scenario==='no-hand'?[]:[printed(cost,'future-hand-cost')])]
+  own.discardPile=scenario==='empty-trash'||scenario==='new-cost-target'?[]:[printed(scenario==='no-special'||scenario==='ordinary-arena'?'BS12-094':scenario==='arena-item'?'BS12-103':scenario==='non-arena-special'?'BS11-111':'BS12-095','future-recovery')]
+  own.supportArea=Array.from({length:scenario==='no-energy'?0:2},(_,i)=>({card:cookie(scenario==='wrong-energy'?'ST4-001':'BS12-097','future-payment-'+i),rested:scenario==='rested-energy'}))
+  if(baseNumber==='BS12-106'){
+   state.activePlayerId='player-two';enemy.supportArea=Array.from({length:3},(_,i)=>({card:cookie('BS12-004','future-attack-payment-'+i),rested:false}))
+   // A real ordinary attack opens the Trap window; no trapUsed/trapsDisabled flags are fabricated.
+   enemy.battleArea[0]=entry('BS12-019','future-attacker','enemy')
+   state=applyGameCommand(state,{kind:'declare-attack',playerId:'player-two',attackerInstanceId:'future-attacker',targetInstanceId:'future-source',supportPaymentIds:enemy.supportArea.map(s=>s.card.instanceId)})
+  }
+ }
+ if(scenario==='deploy'&&baseNumber!=='BS12-106'){
+  const source=own.battleArea.find(c=>c.card.instanceId==='future-source')!.card
+  own.battleArea=own.battleArea.filter(c=>c.card.instanceId!=='future-source');own.hand=[source,...own.hand]
+ }
+ return state
+}
+
+export const BS12_FINAL_PHYSICAL_SCENARIOS = {
+  'BS12-109': ['positive','few-opponent-support','attack','attack-wrong-energy','rested-energy','deploy','then-isolated','then-positive','then-source','then-one-hp','then-rested','then-two-support','then-no-special','then-non-arena-special'] as const,
+  'BS12-110': ['positive','two-black','mixed-support','rested-source','opponent-turn','outside-main','draw-zero','draw-one','attack','attack-wrong-energy','deploy','single-source','short-deck'] as const,
+  'BS12-111': ['positive','three-support','no-special','non-arena-special','hand-only','support-only','trash-only','break-only','opponent-only','full-battle','first-player','rested-witness','attack','attack-wrong-energy','attack-first-player'] as const,
+  'BS12-112': ['positive','special-no-skill','special-wrong-level','special-rested-cost','ordinary','attack','attack-wrong-energy','then-zero','then-one','then-two','new-hp-target','invalid-lv','invalid-non-arena','invalid-non-cookie','single-source','rested-source','deploy'] as const,
+}
+export type Bs12FinalPrintedNumber='BS12-109'|'BS12-109@1'|'BS12-109@2'|'BS12-110'|'BS12-110@1'|'BS12-111'|'BS12-111@1'|'BS12-111@2'|'BS12-111@3'|'BS12-112'|'BS12-112@1'
+export type Bs12FinalPhysicalScenario=typeof BS12_FINAL_PHYSICAL_SCENARIOS[keyof typeof BS12_FINAL_PHYSICAL_SCENARIOS][number]
+export const createBs12FinalPhysicalDemoState=(number:Bs12FinalPrintedNumber,scenario:string):GameState=>{
+  const printed=(n:string,id:string):GameCard=>n.startsWith('BS12-')?bs12PrintedFixtureCard(n,id):bs12PrintedReferenceCard(n,id)
+  const cookie=(n:string,id:string):CookieCard=>{const c=printed(n,id);if(c.type!=='cookie')throw new Error('Not printed Cookie '+n);return c}
+  const hpNumbers=['BS12-009','BS12-027','BS12-011','BS12-031','BS12-046','BS12-084','BS12-085','BS12-087']
+  let ownOffset=0,enemyOffset=0
+  const entry=(n:string,id:string,own=true)=>{const c=cookie(n,id),offset=own?ownOffset:enemyOffset;if(own)ownOffset+=c.hp;else enemyOffset+=c.hp;return {card:c,hpCards:Array.from({length:c.hp},(_,i)=>printed(hpNumbers[(offset+i)%hpNumbers.length],id+'-hp-'+i)),rested:false,battleEntryId:id+':entry'}}
+  const state:GameState={...baseTestState('player-one','main'),firstPlayerId:'player-two',turnNumber:2,nextBattleEntrySequence:5,commandLog:[]}
+  const one=state.players['player-one'],two=state.players['player-two'],base=number.split('@')[0]
+  for(const p of [one,two]){p.stage=null;p.extraDeck=[];p.hand=[];p.battleArea=[];p.supportArea=[];p.discardPile=[];p.breakArea=[]}
+  one.deck=['BS12-095','BS12-003','BS12-108','BS12-103','BS12-009','BS12-027','BS12-011','BS12-031','BS12-046','BS12-084','BS12-085','BS12-087'].map((n,i)=>printed(n,'final-own-deck-'+i))
+  two.deck=['BS12-028','BS12-029','BS12-030','BS12-052'].flatMap(n=>[n,n,n]).map((n,i)=>printed(n,'final-enemy-deck-'+i))
+  two.battleArea=[entry('BS12-094','final-enemy',false),entry('ST4-001','final-enemy-other',false)]
+  const payments=(count:number,wrong=false)=>Array.from({length:count},(_,i)=>({card:cookie(wrong?'ST4-001':'BS12-097','final-payment-'+i),rested:scenario==='rested-energy'}))
+  if(base==='BS12-109'){
+    one.battleArea=[entry(number,'final-source'),entry('BS12-094','final-companion')]
+    one.hand=[printed('BS12-095','final-hand-special'),printed('BS11-111','final-hand-non-arena-special'),printed('BS12-097','final-hand-no-special')]
+    one.supportArea=payments(2,scenario==='attack-wrong-energy')
+    two.supportArea=['BS12-012','ST4-001','BS12-103'].slice(0,scenario==='few-opponent-support'?2:3).map((n,i)=>({card:printed(n,'final-opponent-support-'+i),rested:i===0}))
+    if(scenario==='then-one-hp')one.battleArea[1]=entry('BS12-025','final-companion')
+    if(scenario==='then-rested')one.battleArea[1]={...one.battleArea[1],rested:true}
+    if(scenario==='then-two-support')two.supportArea=two.supportArea.slice(0,2)
+    if(scenario==='then-no-special')one.hand=['BS12-097','BS12-103','BS12-102','BS12-105'].map((n,i)=>printed(n,'r006-illegal-hand-'+i))
+  }else if(base==='BS12-110'){
+    one.battleArea=[{...entry(number,'final-source'),rested:scenario==='rested-source'},...(scenario==='single-source'?[]:[entry('BS12-095','final-companion')])]
+    one.supportArea=['BS12-103','BS12-105',scenario==='mixed-support'?'ST4-001':'BS12-097'].slice(0,scenario==='two-black'?2:3).map((n,i)=>({card:printed(n,'final-payment-'+i),rested:true}))
+    if(scenario.startsWith('attack')||scenario==='deploy')one.supportArea=payments(2,scenario==='attack-wrong-energy')
+    if(scenario==='opponent-turn')state.activePlayerId='player-two'
+    if(scenario==='outside-main')state.phase='support'
+    if(scenario==='short-deck')one.deck=one.deck.slice(0,1)
+  }else if(base==='BS12-111'){
+    const r=(bs12CandidateDocument.cards as OfficialCardRecord[]).find(r=>r.cardNumber===number);if(!r)throw new Error('Missing printed EXTRA '+number)
+    const c=convertOfficialCardToExtraDeckCard(r,'final-extra');if(c.status!=='converted')throw new Error('Unconverted original EXTRA '+number)
+    one.extraDeck=[{...c.extraDeckCard,instanceId:'final-extra'}]
+    const witness=entry(scenario==='non-arena-special'?'BS11-111':scenario==='no-special'?'BS12-094':'BS12-095','final-witness')
+    one.battleArea=[{...witness,rested:scenario==='rested-witness'}]
+    one.supportArea=payments(2,scenario==='attack-wrong-energy')
+    two.supportArea=['BS12-012','BS12-103','BS12-097','ST4-001'].slice(0,scenario==='three-support'?3:4).map((n,i)=>({card:printed(n,'final-opponent-support-'+i),rested:i%2===0}))
+    if(['hand-only','support-only','trash-only','break-only','opponent-only'].includes(scenario)){
+      one.battleArea=[]
+      if(scenario==='hand-only')one.hand=[witness.card]
+      if(scenario==='support-only')one.supportArea.push({card:witness.card,rested:true})
+      if(scenario==='trash-only')one.discardPile=[witness.card]
+      if(scenario==='break-only')one.breakArea=[witness.card]
+      if(scenario==='opponent-only')two.battleArea=[entry('BS12-095','final-opponent-witness',false)]
+    }
+    if(scenario==='full-battle')one.battleArea.push(entry('BS12-097','final-companion'))
+    if(scenario==='first-player'||scenario==='attack-first-player')state.firstPlayerId='player-one'
+    if(scenario.startsWith('attack'))return applyGameCommand(state,{kind:'play-extra-deck-cookie',playerId:'player-one',instanceId:'final-extra'})
+    return state
+  }else{
+    one.hand=[printed(number,'final-source')]
+    one.battleArea=[{...entry(scenario==='special-no-skill'?'BS12-097':scenario==='special-wrong-level'?'BS11-111':'BS12-095','final-special-cost'),rested:scenario==='special-rested-cost'},...(scenario==='single-source'?[]:[entry(scenario==='special-no-skill'?'BS12-094':'BS12-097','final-companion')])]
+    one.supportArea=payments(3,scenario==='attack-wrong-energy')
+    one.discardPile=[printed('BS12-003','final-recovery-red'),printed('BS12-108','final-recovery-black'),printed('BS12-019','final-invalid-level'),printed('BS11-111','final-invalid-non-arena'),printed('BS12-103','final-invalid-item')]
+    if(scenario==='new-hp-target')one.discardPile=[]
+    if(scenario==='deploy'||scenario==='ordinary')one.battleArea=one.battleArea.filter(c=>c.card.instanceId!=='final-special-cost')
+    else if(!scenario.startsWith('special')&&scenario!=='positive'){
+      let deployed=applyGameCommand(state,{kind:'deploy-cookie',playerId:'player-one',instanceId:'final-source',specialPlayCookieInstanceIds:['final-special-cost']})
+      if(deployed.pendingReplacement)deployed=applyGameCommand(deployed,{kind:'skip-replacement',playerId:'player-one'})
+      if(scenario==='rested-source')return {...deployed,players:{...deployed.players,'player-one':{...deployed.players['player-one'],battleArea:deployed.players['player-one'].battleArea.map(c=>c.card.instanceId==='final-source'?{...c,rested:true}:c)}}}
+      return deployed
+    }
+  }
+  if(scenario==='deploy'&&base!=='BS12-112'){
+    const source=one.battleArea.find(c=>c.card.instanceId==='final-source')!.card
+    one.battleArea=one.battleArea.filter(c=>c.card.instanceId!=='final-source');one.hand=[source,...one.hand]
+  }
+  return state
+}
+
+export const BS12_RULING_LIFECYCLE_SCENARIOS = [
+  'r008-return','r008-zero','r009-bottom','r009-bottom-alt','r009-bottom-zero','r009-bottom-cancel',
+  'r009-all','r009-all-cancel','r009-cost','r009-cost-skip','r009-cost-cancel',
+] as const
+export type Bs12RulingLifecycleScenario = typeof BS12_RULING_LIFECYCLE_SCENARIOS[number]
+
+export const createBs12RulingsDemoState = (scenario: Bs12RulingLifecycleScenario): GameState => {
+  const factories=createBs12RulingLifecycleFactories({
+    base:()=>createBs12FinalPhysicalDemoState('BS12-109','positive'),
+    owner:scenario.startsWith('r008-')?'player-two':'player-one',
+    printed:(number,id)=>number.startsWith('BS12-')?bs12PrintedFixtureCard(number,id):bs12PrintedReferenceCard(number,id),
+    extra:(number,id)=>{
+      const record=([...bs12CandidateDocument.cards,...bs8FormalDocument.cards] as OfficialCardRecord[]).find(c=>c.cardNumber===number)
+      if(!record)throw new Error('Missing original EXTRA '+number)
+      const converted=convertOfficialCardToExtraDeckCard(record,id)
+      if(converted.status!=='converted')throw new Error('Unconverted original EXTRA '+number)
+      return {...converted.extraDeckCard,instanceId:id}
+    },
+  })
+  if(scenario.startsWith('r008-'))return factories.openActualAwakenReturn()
+  if(scenario.startsWith('r009-all'))return factories.createActualExtraTrashParent()
+  if(scenario.startsWith('r009-cost'))return factories.createActualMainDeckCostParent()
+  return factories.createActualExtraDeckReturnParent(scenario==='r009-bottom-alt'?'BS12-036@1':'BS12-036')
 }

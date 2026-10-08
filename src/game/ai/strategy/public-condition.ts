@@ -61,8 +61,8 @@ const combineAny = (
 
 /**
  * 只用 PlayerView 評估能由盤面、公開區域與張數證明的 EffectCondition。
- * 來源本身、隱藏卡面或本回合歷程依賴的條件一律回傳 unknown，避免 AI 偽造
- * 已完成的 Combo 前置。
+ * 來源本身、隱藏卡面或未投影的歷程條件回傳 unknown；已公開投影的精確事件
+ * 可直接評估，避免 AI 偽造已完成的 Combo 前置。
  */
 export const assessPublicCondition = (
   view: PlayerView,
@@ -70,6 +70,14 @@ export const assessPublicCondition = (
 ): PublicConditionAssessment => {
   if (!condition) return unknown('沒有可公開驗證的結構化前置。')
   switch (condition.kind) {
+    case 'arena-cookie-placed-from-battle-to-deck-bottom-this-turn':
+      return view.arenaCookiesPlacedFromBattleToDeckBottomThisTurn?.[sideFor(view, condition.side).id]
+        ? met('本回合指定玩家戰鬥區的 Arena 餅乾已放入其牌庫底。')
+        : unmet('本回合尚未有指定玩家戰鬥區的 Arena 餅乾放入其牌庫底。')
+    case 'player-started-second':
+      return view.firstPlayerId !== view.viewerId
+        ? met('開局為後攻玩家。')
+        : unmet('開局為先攻玩家。')
     case 'all-of':
       return combineAll(condition.conditions.map((child) => assessPublicCondition(view, child)))
     case 'any-of':
@@ -161,6 +169,10 @@ export const assessPublicCondition = (
       return view.self.discardPile.filter((card) => includesKeyword(card, condition.keyword)).length >= condition.count
         ? met('己方指定關鍵字棄牌數已達門檻。')
         : unmet('己方指定關鍵字棄牌數尚未達門檻。')
+    case 'trash-blocker-cookie-count-at-least':
+      return view.self.discardPile.filter(card => card.type === 'cookie' && card.skill?.trigger === 'block').length >= condition.count
+        ? met('己方棄牌區 Blocker 餅乾數已達門檻。')
+        : unmet('己方棄牌區 Blocker 餅乾數尚未達門檻。')
     case 'trash-flip-count-at-least':
       return view.self.discardPile.filter((card) => Boolean(card.flip)).length >= condition.count
         ? met('己方 FLIP 棄牌數已達門檻。')
@@ -234,7 +246,8 @@ export const assessPublicCondition = (
     case 'battle-area-has-named-cookie': {
       if (condition.excludeSource) return unknown('條件需要辨識來源實體。')
       const side = sideFor(view, condition.side)
-      return side.battleArea.some((cookie) => cookie.card.name === condition.name)
+      return side.battleArea.some((cookie) => cookie.card.name === condition.name &&
+        (!condition.keyword || includesKeyword(cookie.card, condition.keyword)))
         ? met('指定戰鬥區存在指定名稱餅乾。')
         : unmet('指定戰鬥區沒有指定名稱餅乾。')
     }

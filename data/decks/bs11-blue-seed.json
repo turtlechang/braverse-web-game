@@ -1,0 +1,76 @@
+{
+  "id": "bs11-blue-seed",
+  "name": "藍色｜海流控制",
+  "color": "blue",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-054",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-056",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-057",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-058",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-059",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-060",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-061",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-063",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-064",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-065",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-066",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-068",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-069",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-070",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-090",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-091",
+      "count": 4
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}

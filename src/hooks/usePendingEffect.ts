@@ -14,6 +14,7 @@ import {
   canActivateCookieSkill,
   getCookieSkillUnavailableReason,
   getEnergyCostTotal,
+  getEffectDamageAmount,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
@@ -27,6 +28,8 @@ import {
   getNestedSequentialDamageSelectionEffect,
   getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
+  getItemActivateDiscardRequirement,
+  isItemEffectConditionSatisfiedAfterAdditionalCost,
   getCookieSkillCost,
   getActiveOnPlayReplacement,
   getHandCountAfterFixedSkillCost,
@@ -35,10 +38,13 @@ import {
   getDiscardHandCostCandidates,
   getPendingDecision,
   hasRequiredEffectTargets,
+  hasApplicableOptionalAttackEffect,
+  getBattleAttackEffectPrevention,
   getPairedTargetSelectionError,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
   getBattleCookieToHandCostCandidates,
+  getBattleCookiePositionCostCandidates,
   getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashToDeckCostCandidates,
@@ -145,10 +151,17 @@ export function usePendingEffect(params: {
 
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
+  // DJ's additional discard can create a new revival target. Select from
+  // the authoritative trash after paying, rather than freezing an empty list.
+  const itemDiscardBeforeRevival = Boolean(
+    pendingEffect?.sourceKind === 'item' && !pendingEffect.skillActivated &&
+      currentEffect?.kind === 'trash-to-battle' &&
+      getItemActivateDiscardRequirement(game, pendingEffect.context.sourcePlayerId),
+  )
   const breakAreaCostSelectionPending = Boolean(
     pendingEffect && !pendingEffect.skillActivated &&
       (pendingEffect.skill.cost.trashCookieToBreakArea || pendingEffect.skill.cost.handToBreakArea ||
-        pendingEffect.skill.cost.trashBattleCookie?.faint),
+        pendingEffect.skill.cost.trashBattleCookie?.faint || itemDiscardBeforeRevival),
   )
   const currentEffectConditionMet =
     pendingEffect && currentEffect
@@ -174,6 +187,43 @@ export function usePendingEffect(params: {
   // now, so the chosen order travels with that outer command.
   const selectionEffect =
     getNestedSequentialDamageSelectionEffect(currentEffect) ?? currentEffect
+  // Support costs stay uncommitted until confirmation. Enumerate the hand or
+  // trash against the same pure begin command that will pay the cost, so a
+  // returned or trashed Cookie is selectable without inventing UI movement.
+  const selectionGame = useMemo(() => {
+    const supportCost = currentEffect?.kind === 'hand-to-support'
+      ? pendingEffect?.skill.cost.supportToHand
+      : currentEffect?.kind === 'trash-to-support'
+        ? pendingEffect?.skill.cost.supportToTrash : undefined
+    // HP costs may faint a prospective HP recipient. Use the authoritative
+    // payment command only for public battle targets; never enumerate its
+    // projected trash/HP cards before actual payment.
+    const hpCost = currentEffect?.kind === 'gain-hp' && pendingEffect?.skill.cost.hpToTrash &&
+      pendingEffect.selectedHpToTrashTargetIds.length > 0
+    if (!pendingEffect || pendingEffect.skillActivated || pendingEffect.sourceKind !== 'cookie' ||
+      (!(supportCost && pendingEffect.selectedCostSupportToTrashIds.length === supportCost) && !hpCost) ||
+      (pendingEffect.trigger !== 'activate' && pendingEffect.trigger !== 'on-play')) return game
+    try {
+      return applyGameCommand(game, {
+        kind: 'begin-activate-skill', playerId: pendingEffect.context.sourcePlayerId,
+        sourceInstanceId: pendingEffect.sourceCard.instanceId, trigger: pendingEffect.trigger,
+        paymentIds: pendingEffect.selectedPaymentIds,
+        supportToHandIds: pendingEffect.skill.cost.supportToHand ? pendingEffect.selectedCostSupportToTrashIds : [],
+        costSupportToTrashIds: pendingEffect.skill.cost.supportToTrash ? pendingEffect.selectedCostSupportToTrashIds : [],
+        discardHandIds: pendingEffect.selectedDiscardHandIds,
+        hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds,
+        trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+        battleToHandIds: pendingEffect.selectedBattleToHandIds,
+        trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
+        trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
+        chooseOneModes: pendingEffect.chooseOneModes,
+      })
+    } catch {
+      // Incomplete payment drafts expose only the current zone. Confirmation
+      // still executes the command and reports its authoritative validation.
+      return game
+    }
+  }, [game, pendingEffect, currentEffect])
   const currentTargetSelector: EffectTargetSelector | null =
     selectionEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
       ? {
@@ -241,14 +291,14 @@ export function usePendingEffect(params: {
   const effectDecisionDescriptor =
     pendingEffect && selectionEffect
       ? compileEffectDecisionDescriptor({
-          state: game,
+          state: selectionGame,
           playerId: pendingEffect.context.sourcePlayerId,
           sourcePlayerId: pendingEffect.context.sourcePlayerId,
           sourceInstanceId: pendingEffect.context.sourceInstanceId,
           sourceCardName: pendingEffect.sourceCard.name,
           context: pendingEffect.context,
           effect: selectionEffect,
-          cost: pendingEffect.skillActivated
+          cost: pendingEffect.skillActivated || selectionGame !== game
             ? undefined
             : pendingEffect.skill.cost,
           commandKind:
@@ -298,7 +348,7 @@ export function usePendingEffect(params: {
   const rawEffectTargetCandidates =
     pendingEffect &&
     selectionEffect &&
-    currentTargetSelector
+    currentTargetSelector && !(pendingEffect.sourceKind === 'stage' && !currentEffectConditionMet)
       ? selectionEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
         ? []
         : (selectionEffect.kind === 'field-to-trash' && selectionEffect.stageOnly)
@@ -347,7 +397,7 @@ export function usePendingEffect(params: {
     currentEffect &&
     (currentEffect.kind === 'support-to-trash' ||
       currentEffect.kind === 'support-to-hand')
-      ? getSupportEffectCandidates(game, pendingEffect.context).filter(
+      ? getSupportEffectCandidates(game, pendingEffect.context, { side: currentEffect.side }).filter(
           (support) =>
             currentEffect.kind !== 'support-to-hand' ||
             ((currentEffect.cardType === undefined ||
@@ -369,7 +419,7 @@ export function usePendingEffect(params: {
         ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect).filter(
             (card) => isDescriptorCandidate(card.instanceId),
           )
-        : getTrashToSupportCandidates(game, pendingEffect.context, currentEffect).filter(
+        : getTrashToSupportCandidates(selectionGame, pendingEffect.context, currentEffect).filter(
             (card) => isDescriptorCandidate(card.instanceId),
           )
       : []
@@ -416,7 +466,7 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
           ? getEffectSelectionCandidates(
-              game,
+              selectionGame,
               pendingEffect.context,
               currentEffect,
             ).filter(
@@ -753,6 +803,14 @@ export function usePendingEffect(params: {
     skillTrashBattleCookieCandidates.map((card) => card.instanceId),
   )
 
+  const selectedPositionCostTargetIds = new Set(pendingEffect?.selectedPositionCostTargetIds ?? [])
+  const positionCost = pendingEffect?.skill.cost.battleCookiePosition
+  const positionCostCandidates = pendingEffect && !pendingEffect.skillActivated
+    ? getBattleCookiePositionCostCandidates(pendingEffect.skill.cost,
+        game.players[pendingEffect.context.sourcePlayerId].battleArea, pendingEffect.context.sourceInstanceId).map(cookie => cookie.card)
+    : []
+  const positionCostCandidateIds = new Set(positionCostCandidates.map(card => card.instanceId))
+
   const selectedSkillBattleToHandIds = new Set(
     pendingEffect?.selectedBattleToHandIds ?? [],
   )
@@ -885,7 +943,8 @@ export function usePendingEffect(params: {
       )?.card ??
       (player.stage?.card.instanceId === pendingAbility.sourceInstanceId
         ? player.stage.card
-        : null) ?? {
+        : null) ??
+      game.commandLog?.slice().reverse().find(entry => entry.card?.instanceId === pendingAbility.sourceInstanceId)?.card ?? {
         id: 'unknown',
         instanceId: pendingAbility.sourceInstanceId,
         name: pendingAbility.sourceCardName ?? '效果',
@@ -893,11 +952,15 @@ export function usePendingEffect(params: {
       }
 
     const isEndPhaseEffect = pendingAbility.trigger === 'passive'
+    const isAttackContinuation = pendingAbility.battleContinuation === 'attack-effect'
+    const responseSkill = pendingAbility.sourceKind === 'skill' && sourceCard.skill?.trigger === 'opponent-attack' ? sourceCard.skill : undefined
     const pendingTrigger: SkillTrigger = isEndPhaseEffect
       ? 'passive'
-      : 'activate'
+      : responseSkill ? 'opponent-attack' : 'activate'
     const triggerLabel = isEndPhaseEffect
       ? '回合結束效果'
+      : isAttackContinuation ? '攻擊後續效果'
+      : responseSkill ? '攻擊回應技能效果'
       : pendingAbility.sourceKind === 'trap'
         ? '陷阱效果'
         : pendingAbility.sourceKind === 'flip'
@@ -920,11 +983,11 @@ export function usePendingEffect(params: {
           ? sourceCard.skill
           : {
           trigger: pendingTrigger,
-          oncePerTurn: false,
+          oncePerTurn: responseSkill?.oncePerTurn ?? false,
           yourTurn: false,
           restSource: false,
           cost: {},
-          text: '',
+          text: isAttackContinuation && 'attackText' in sourceCard ? sourceCard.attackText ?? '' : responseSkill?.text ?? '',
           effects: pendingAbility.effects,
         },
         trigger: pendingTrigger,
@@ -1125,7 +1188,8 @@ export function usePendingEffect(params: {
       !card?.skill ||
       (card.skill.trigger !== trigger &&
         !(trigger === 'on-play' && Boolean(card.skill.onPlayEffects?.length))) ||
-      nextGame.status !== 'playing'
+      nextGame.status !== 'playing' ||
+      (trigger === 'on-play' && Boolean(nextGame.pendingRefresh))
     ) {
       return
     }
@@ -1167,7 +1231,7 @@ export function usePendingEffect(params: {
           }),
         )
       }
-      setMessage(`${card.name}的效果尚未滿足發動條件。`)
+      setMessage(getCookieSkillUnavailableReason(nextGame, playerId, card.instanceId, trigger) ?? `${card.name}的效果尚未滿足發動條件。`)
       return
     }
 
@@ -1309,7 +1373,7 @@ export function usePendingEffect(params: {
       triggerLabel,
       sourceKind: 'cookie',
     })
-    setMessage(hasFixedModifierTargets(availableEffects[0] ?? null)
+    setMessage(trigger === 'on-play' ? `${card.name}的登場效果等待確認。` : hasFixedModifierTargets(availableEffects[0] ?? null)
       ? `${card.name}的技能等待支付代價並確認固定效果。`
       : `${card.name}的技能等待支付技能代價並選擇目標。`)
     },
@@ -1356,9 +1420,9 @@ export function usePendingEffect(params: {
       (effect) =>
         isEffectConditionMet(game, context, effect) ||
         isCardAbilityEffectConditionDeferredUntilCost(ability, effect) ||
-        (sourceKind === 'stage' &&
-          'allowInactiveConditionalEffects' in ability &&
-          ability.allowInactiveConditionalEffects === true &&
+        (sourceKind === 'item' &&
+          isItemEffectConditionSatisfiedAfterAdditionalCost(game, viewerPlayerId, ability, effect)) ||
+        (ability.allowInactiveConditionalEffects === true &&
           'condition' in effect &&
           effect.condition !== undefined),
     )
@@ -1439,12 +1503,12 @@ export function usePendingEffect(params: {
       sourcePlayerId: viewerPlayerId,
       sourceInstanceId: battle.attackerInstanceId,
     }
-    const hasApplicableEffect =
+    const attackEffectPrevention = getBattleAttackEffectPrevention(game, viewerPlayerId)
+    const hasApplicableEffect = !attackEffectPrevention && (
       currentAttackEffect.kind === 'optional-cost-attack'
-        ? currentAttackEffect.effects.some(
-            (effect) =>
-              isEffectConditionMet(game, attackContext, effect) &&
-              hasRequiredEffectTargets(game, attackContext, effect),
+        ? hasApplicableOptionalAttackEffect(
+            game, attackContext, currentAttackEffect.effects,
+            currentAttackEffect.cost, currentAttackEffect.payBeforeCondition,
           )
         : isEffectConditionMet(game, attackContext, currentAttackEffect) &&
           hasRequiredEffectTargets(game, attackContext, currentAttackEffect) &&
@@ -1457,7 +1521,7 @@ export function usePendingEffect(params: {
               attackContext,
               currentAttackEffect,
             ).length === 0
-          )
+          ))
 
     if (!hasApplicableEffect) {
       const timer = window.setTimeout(() => {
@@ -1478,7 +1542,9 @@ export function usePendingEffect(params: {
             targetIds: [],
           })
         })
-        setMessage(`已略過 ${sourceCard.name} 的攻擊後續效果。`)
+        setMessage(attackEffectPrevention
+          ? `${attackEffectPrevention.sourceCardName}：對手 LV.${attackEffectPrevention.level} 餅乾在本次戰鬥中無法發動攻擊效果。`
+          : `已略過 ${sourceCard.name} 的攻擊後續效果。`)
       }, 0)
       return () => window.clearTimeout(timer)
     }
@@ -1561,6 +1627,7 @@ export function usePendingEffect(params: {
     if (
       !game.pendingOnPlay ||
       game.pendingOnPlay.playerId !== viewerPlayerId ||
+      game.pendingRefresh ||
       pendingEffect ||
       faintActive ||
       game.pendingOpponentHandDiscard
@@ -1841,7 +1908,11 @@ export function usePendingEffect(params: {
         ? [...pendingEffect.selectedCostSupportToTrashIds, instanceId]
         : pendingEffect.selectedCostSupportToTrashIds
 
-    setPendingEffect({ ...pendingEffect, selectedCostSupportToTrashIds })
+    setPendingEffect({ ...pendingEffect, selectedCostSupportToTrashIds,
+      ...((pendingEffect.skill.cost.supportToHand && currentEffect?.kind === 'hand-to-support') ||
+        (pendingEffect.skill.cost.supportToTrash && currentEffect?.kind === 'trash-to-support')
+        ? { selectedTargetIds: [] } : {}),
+    })
   }
 
   const toggleSkillDiscardHand = (instanceId: string) => {
@@ -1954,6 +2025,15 @@ export function usePendingEffect(params: {
     setPendingEffect({ ...pendingEffect, selectedTrashBattleCookieIds })
   }
 
+  const togglePositionCost = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated || !positionCostCandidateIds.has(instanceId)) return
+    const ids = pendingEffect.selectedPositionCostTargetIds ?? []
+    const selected = ids.includes(instanceId)
+    if (!selected && ids.length >= (positionCost?.count ?? 0)) return
+    setPendingEffect({ ...pendingEffect, selectedPositionCostTargetIds: selected
+      ? ids.filter(id => id !== instanceId) : [...ids, instanceId] })
+  }
+
   const toggleSkillBattleToHand = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     if (!pendingEffect.skill.cost.battleCookieToHand) return
@@ -1987,6 +2067,7 @@ export function usePendingEffect(params: {
       selectedHpToTrashTargetIds: isSelected
         ? selected.filter((id) => id !== instanceId)
         : [...selected, instanceId],
+      selectedTargetIds: [],
     })
   }
 
@@ -2173,7 +2254,9 @@ export function usePendingEffect(params: {
     )
 
     const targetNames =
-      currentEffect.kind === 'break-to-trash'
+      'target' in currentEffect && currentEffect.target?.previousEffectTargetOnly
+        ? getEffectTargetCandidates(game, pendingEffect.context, currentEffect.target).map(cookie => cookie.card.name)
+      : currentEffect.kind === 'break-to-trash'
         ? pendingEffect.selectedTargetIds.map(
             (instanceId) =>
               breakToTrashCandidates.find(
@@ -2188,7 +2271,7 @@ export function usePendingEffect(params: {
                   (support) => support.card.instanceId === instanceId,
                 )?.card.name ?? instanceId,
             )
-          : currentEffect.kind === 'hand-to-support' ||
+          : currentEffect.kind === 'field-to-deck-bottom' || currentEffect.kind === 'hand-to-support' ||
               currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
             ? pendingEffect.selectedTargetIds.map(
                 (instanceId) =>
@@ -2255,8 +2338,10 @@ export function usePendingEffect(params: {
                 ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
                 : {}),
               trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+              handToBreakAreaIds: pendingEffect.selectedHandToBreakAreaIds,
               chooseOneModes: pendingEffect.chooseOneModes,
-              ...(currentEffect.kind === 'reveal-hand' && currentEffect.asCost
+              ...((currentEffect.kind === 'reveal-hand' && currentEffect.asCost) ||
+                (getItemActivateDiscardRequirement(game, pendingEffect.context.sourcePlayerId) && !itemDiscardBeforeRevival)
                 ? { targetIds: pendingEffect.selectedTargetIds } : {}),
             })
           : pendingEffect.sourceKind === 'stage'
@@ -2271,6 +2356,7 @@ export function usePendingEffect(params: {
                   ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
                   : {}),
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+                ...(pendingEffect.skill.cost.trashToDeckBottom ? { trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds } : {}),
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
             : applyGameCommand(game, {
@@ -2289,6 +2375,7 @@ export function usePendingEffect(params: {
                   : {}),
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 battleToHandIds: pendingEffect.selectedBattleToHandIds ?? [],
+                positionCostTargetIds: pendingEffect.selectedPositionCostTargetIds,
                 trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
                 trashCookieToBreakAreaIds: pendingEffect.selectedTrashCookieToBreakAreaIds,
                 handToBreakAreaIds: pendingEffect.selectedHandToBreakAreaIds,
@@ -2302,6 +2389,14 @@ export function usePendingEffect(params: {
         setGame(activatedGame)
         setPendingEffect(null)
         setMessage(`${pendingEffect.sourceCard.name}已支付代價並確認雙方目標。`)
+        return
+      }
+      if (!pendingEffect.skillActivated && pendingEffect.sourceKind === 'item' &&
+        activatedGame.pendingOpponentHandDiscard?.itemActivation) {
+        setGame(activatedGame)
+        setPendingEffect(null)
+        setSuspendedEffect(null)
+        setMessage(`${pendingEffect.sourceCard.name}等待額外棄牌；道具費用尚未支付，可取消使用。`)
         return
       }
       const activationInterrupted =
@@ -2348,8 +2443,11 @@ export function usePendingEffect(params: {
         return
       }
 
-      if (!pendingEffect.skillActivated && pendingEffect.sourceKind === 'stage' &&
-        !activatedGame.pendingAbilityEffect) {
+      if (!pendingEffect.skillActivated &&
+        (pendingEffect.sourceKind === 'stage' ||
+          (pendingEffect.sourceKind === 'item' && pendingEffect.sourceCard.item?.allowInactiveConditionalEffects === true)) &&
+        (!activatedGame.pendingAbilityEffect ||
+          activatedGame.pendingAbilityEffect.effectIndex >= activatedGame.pendingAbilityEffect.effects.length)) {
         const result = `${pendingEffect.sourceCard.name}已支付代價；效果條件未滿足，效果未執行。`
         setGame(activatedGame)
         setPendingEffect(null)
@@ -2378,7 +2476,7 @@ export function usePendingEffect(params: {
           selectedTrashToDeckIds: [],
           skillActivated: true,
         } : null)
-        setMessage(`${pendingEffect.sourceCard.name}已支付代價，請選擇效果目標。`)
+        setMessage(`${pendingEffect.sourceCard.name}已支付代價，${currentEffect.kind === 'draw-up-to' ? '請繼續選擇抽牌數量' : '請選擇效果目標'}。`)
         return
       }
 
@@ -2461,9 +2559,22 @@ export function usePendingEffect(params: {
         pendingEffect.context,
         currentEffect,
       )
-      const result = conditionMetAfterCost
-        ? describeEffectResult(currentEffect, targetNames)
+      const observedSourceHpGain = currentEffect.kind === 'gain-hp' && currentEffect.perBreakCard && currentEffect.target?.sourceOnly
+        ? Math.max(0, (nextGame.players[pendingEffect.context.sourcePlayerId].battleArea.find(cookie => cookie.card.instanceId === pendingEffect.context.sourceInstanceId)?.hpCards.length ?? 0)
+          - (activatedGame.players[pendingEffect.context.sourcePlayerId].battleArea.find(cookie => cookie.card.instanceId === pendingEffect.context.sourceInstanceId)?.hpCards.length ?? 0))
+        : undefined
+      let result = conditionMetAfterCost
+        ? describeEffectResult(currentEffect, observedSourceHpGain !== undefined ? [pendingEffect.sourceCard.name] : targetNames, observedSourceHpGain,
+          currentEffect.kind === 'damage' ? pendingEffect.selectedTargetIds.map((id, index) => getEffectDamageAmount(
+            activatedGame, pendingEffect.context, amountByTargetIndex?.[index] ?? currentEffect.amount, id,
+          )) : undefined)
         : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
+
+      const returnedExtraCards = Object.values(nextGame.players).flatMap(player =>
+        (player.extraDeck ?? []).filter(card => !(activatedGame.players[player.id].extraDeck ?? []).some(previous => previous.instanceId === card.instanceId)))
+      if (conditionMetAfterCost && returnedExtraCards.length > 0) {
+        result = `${returnedExtraCards.map(card => card.name).join('、')} 已返回 EXTRA Deck；其他卡牌已依效果結算。`
+      }
 
       if (nextGame.pendingBattle?.effectDamageSequence) {
         setGame(nextGame)
@@ -2539,9 +2650,15 @@ export function usePendingEffect(params: {
       const nextEffectIndex = pendingEffect.effectIndex + 1
       // 規則層可能在本步成功後才展開條件式 thenEffects（例如 BS2-014
       // 的「If you did」）；下一個面板必須使用更新後的效果佇列，不能沿用
-      // 本機啟動時快取的舊陣列。
+      // 本機啟動時快取的舊陣列。巢狀 OnPlay 完成後可能已接回父效果；
+      // 只有同一來源的續接才能更新目前面板，避免把場景 Then 掛到餅乾上。
+      const sameSourceContinuation =
+        nextGame.pendingAbilityEffect?.sourceInstanceId === pendingEffect.context.sourceInstanceId &&
+        nextGame.pendingAbilityEffect?.playerId === pendingEffect.context.sourcePlayerId
       const nextEffectQueue =
-        nextGame.pendingAbilityEffect?.effects ?? pendingEffect.effects
+        sameSourceContinuation && nextGame.pendingAbilityEffect
+          ? nextGame.pendingAbilityEffect.effects
+          : pendingEffect.effects
       const nextEffect =
         nextGame.status === 'playing' &&
         nextEffectIndex < nextEffectQueue.length
@@ -2776,6 +2893,10 @@ export function usePendingEffect(params: {
     selectedSkillTrashBattleCookieIds,
     skillTrashBattleCookieCandidates,
     skillTrashBattleCookieTargetIds,
+    selectedPositionCostTargetIds,
+    positionCostCandidates,
+    positionCost,
+    togglePositionCost,
     selectedSkillBattleToHandIds,
     skillBattleToHandCandidates,
     skillBattleToHandTargetIds,

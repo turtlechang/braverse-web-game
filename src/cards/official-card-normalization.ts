@@ -84,6 +84,93 @@ const BS4_VARIANT_DAMAGE_ERRATA: Record<
 export const normalizeKnownOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
+  // Both complete Peppermint prints have B/1 and the same FLIP. The P API misplaced the attack in skill.
+  if (['BS12-058', 'BS12-058@1'].includes(sourceCard.cardNumber) && sourceCard.name === 'Peppermint Cookie' &&
+    ['https://cookierunbraverse.com/data/en_storage/YWOZpSkubKPuMduhbpKvyQ.webp', 'https://cookierunbraverse.com/data/en_storage/pIdsbTerZCo9bbYa5ZIfhA.webp'].includes(sourceCard.imageUrl)) {
+    sourceCard = { ...sourceCard, skill: { ...sourceCard.skill, text: null },
+      attackText: '<{B}> Signed Merch Getup {da} 1',
+      flipText: '<Reveal 1 【Arena】 card from your hand and place it on the bottom of your deck.> Draw up to 2 cards from your deck.' }
+  }
+  // Inspected Clover has GN/2; preserve the raw next-card API text.
+  if (sourceCard.cardNumber === 'BS12-045' && sourceCard.name === 'Clover Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/Zv3em6Q9GP9YYLIcUAflLg.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}{N}> Small Melody {da} 2' }
+  }
+  // Inspected Herb Teapot has GG/2; the API repeats Clover's attack.
+  if (sourceCard.cardNumber === 'BS12-044' && sourceCard.name === 'Herb Teapot' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/VZsrq8wVJuctrMFFyNAGFA.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}{G}> Sprinkle Water {da} 2' }
+  }
+  // Inspected Coffee Candy print has GGG/3; the API repeats Herb Teapot's attack.
+  if (sourceCard.cardNumber === 'BS12-043' && sourceCard.name === 'Coffee Candy Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/gWjb9OIpZalYEUf_NstcwA.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}{G}{G}> Luggage Carrying {da} 3' }
+  }
+  // Inspected Chamomile print has G/1; the API repeats Coffee Candy's attack.
+  if (sourceCard.cardNumber === 'BS12-042' && sourceCard.name === 'Chamomile Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/CXEqheEoYrpaakhAqMuHrA.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}> Chamomile Breeze {da} 1' }
+  }
+  // Independently inspected Basil Pesto print uses N/1 without a skill or Then.
+  if (sourceCard.cardNumber === 'BS12-041' && sourceCard.name === 'Basil Pesto Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/Qod-fFChavfLfTKstCJeKQ.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{N}> Ultimate Culinary Treat {da} 1' }
+  }
+  if (sourceCard.cardNumber === 'BS12-040' && sourceCard.name === 'Baguette Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/cuQ0ULLnKmqsMBxHG5csfw.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}{G}{N}> Troubleshooting {da} 3' }
+  }
+  // Inspected Melon Soda print has NNN/4 and no skill or Then.
+  if (sourceCard.cardNumber === 'BS12-039' && sourceCard.name === 'Melon Soda Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/4y0FnGvUF5ftjGZyTZZU6A.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{N}{N}{N}> Soda Splash Party {da} 4' }
+  }
+  // Both inspected Greenbell prints use GN/2 without an attack Then.
+  if (sourceCard.cardNumber === 'BS12-038' && sourceCard.name === 'Greenbell Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/EHLaDNwURpOwNf9sKjp8lw.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{G}{N}> Vento Marcato {da} 2' }
+  }
+  // Both inspected Financier prints show YYY/3 and separately paid N/1 Then.
+  if (sourceCard.cardNumber === 'BS12-037@1' && sourceCard.name === 'Financier Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/L7dt66zp3ww2nsTPOK7APw.webp') {
+    sourceCard = { ...sourceCard, attackText: "<{Y}{Y}{Y}> Ending Fairy {da} 3\nThen, <{N}> select up to 1 of your opponent's Cookies. That Cookie receives 1 damage." }
+  }
+  // Both inspected Clotted Cream prints show this attack; its play origin remains R003.
+  if (sourceCard.cardNumber === 'BS12-036@1' && sourceCard.name === 'Clotted Cream Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/xQ0t-RkTTcj3TENaQbwFpw.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{Y}{Y}{Y}> aka. Genius Idol {da} 3\nThen, <place 1 other 【Arena】 Cookie from your battle area into your break area.> Play up to 1 LV.1 【Arena】 Cookie with a different card number than the Cookie placed in your break area.' }
+  }
+  // Both inspected Kouign-Amann prints show Y/1; the omitted Then target remains unresolved.
+  if (sourceCard.cardNumber === 'BS12-035@1' && sourceCard.name === 'Kouign-Amann Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/-u7p-lCY9k_PwJrAmASTQw.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{Y}> Shy Ending {da} 1\nThen, if there are 4 【Arena】 Cookies or more in your break area, deals 1 damage.' }
+  }
+  // Both independently inspected Madeleine prints have the same YY/2 attack and Then.
+  if (sourceCard.cardNumber === 'BS12-034@1' && sourceCard.name === 'Madeleine Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/7If0ZpVdwbTBpbyIzPds2w.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{Y}{Y}> Excellent Explosion! {da} 2\nThen, <place 1 【Arena】 Cookie from your hand or battle area into your break area.> Select up to 1 LV.1 Cookie in your battle area. That Cookie gains +2 HP.' }
+  }
+  // Both BS12-033 prints independently show Bean Scatter YN/1 without Then.
+  if (sourceCard.cardNumber === 'BS12-033@1' && sourceCard.name === 'Espresso Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/_8qtdK4FnBwqfsh5m__K2Q.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{Y}{N}> Bean Scatter {da} 1' }
+  }
+  // Both independently inspected BS12-032 prints use Full of Energy, not Espresso's attack.
+  if (sourceCard.cardNumber === 'BS12-032@1' && sourceCard.name === 'Caramel Choux Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/FHr0LwXF6cp4fcvSbE1wmw.webp') {
+    sourceCard = { ...sourceCard, attackText: '<{Y}{N}> Full of Energy {da} 1' }
+  }
+  // BS12-031's complete printed card spells Fashionista; preserve the raw API record.
+  if (sourceCard.cardNumber === 'BS12-031' && sourceCard.name === 'Fashonista Spotlight' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/_OkSPOpnVZR_X8eImX73FQ.webp') {
+    sourceCard = { ...sourceCard, name: 'Fashionista Spotlight' }
+  }
+  // BS12-021 P prints Mango Cookie; the English API mislabeled this one record.
+  // https://cookierunbraverse.com/data/en_storage/Rd4Td_KAJPv3ItGRjvE97A.webp
+  if (sourceCard.cardNumber === 'BS12-021@1' && sourceCard.name === 'Greenbell Cookie' &&
+    sourceCard.imageUrl === 'https://cookierunbraverse.com/data/en_storage/Rd4Td_KAJPv3ItGRjvE97A.webp') {
+    sourceCard = { ...sourceCard, name: 'Mango Cookie' }
+  }
   // BS8-024 P 的官方實圖與 U 版均為 R 配置、RR 橫置、全體 1 傷害。
   // 英文 JSON 的 @1 誤放 BS8-025 卡文；只修正這筆已核對的錯誤文字。
   // https://cookierunbraverse.com/data/en_storage/RRMhMXvgUbkb1vWw5saNjA.webp

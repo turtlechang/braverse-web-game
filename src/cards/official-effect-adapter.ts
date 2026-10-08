@@ -44,7 +44,8 @@ export type OfficialEffectConversion =
     }
 
 // 官方文字對「Rest this card.」的措辭不一致，BS2-051 用「Card Rests.」，需一併比對
-const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
+// Cookie REST is a declaration cost only when bracketed, not an optional Then effect (BS12-016).
+const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests|<\s*Rest this Cookie[.!]?\s*>/i
 const STAGE_ACTIVATE_MARKER_PATTERN = /\{mob\}|【Activate】/i
 // 昏厥觸發措辭不一致：多數卡是「When this Cookie faints」，P-011 用「If this Cookie has fainted」
 const FAINT_TRIGGER_PATTERN = /When this Cookie faints|If this Cookie has fainted/i
@@ -426,6 +427,153 @@ export const convertOfficialCardEffects = (
   }
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
+    'BS12-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 3, energyColor: 'black' } }],
+    'BS12-112': [],
+    'BS12-106': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: {}, discardHand: 1 }, effectText: card.skill.text ?? '',
+        effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }] }],
+    'BS12-108': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'all-of', conditions: [
+      { kind: 'hand-count-at-most', count: 5 },
+      { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena', excludeSource: true },
+    ] } }],
+    'BS12-105': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
+    // Special Play is a deployment cost; the FLIP is a separate printed ability.
+    'BS12-100': card.type === 'cookie' ? [] : [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
+    'BS12-095': card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    'BS12-096': card.type === 'cookie' ? [] : [{ kind: 'draw-up-to', max: 2, condition: {
+      kind: 'all-of', conditions: [{ kind: 'hand-count-at-most', count: 5 },
+        { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' }],
+    } }],
+    'BS12-099': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, energyColor: 'black', keyword: 'arena' }],
+    'BS12-098': card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true, minLevel: 2 },
+      condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
+    'BS12-055': [{ kind: 'choose-one', modes: [
+      { label: '將牌庫頂 1 張卡以疲勞狀態放入支援區', effects: [{ kind: 'deck-to-support', amount: 1, rested: true }] },
+      { label: '不放置卡牌', effects: [{ kind: 'deck-to-support', amount: 0, rested: true }] },
+    ] }],
+    'BS12-057': [{ kind: 'field-to-deck-bottom', target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 } }],
+    'BS12-054': [{ kind: 'trash-to-support', amount: 1, cookieOnly: true, rested: true, optional: true }],
+    'BS12-053': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS12-052': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS12-050': [{ kind: 'trash-to-support', amount: 1, cookieOnly: true, keyword: 'arena', rested: true, optional: true }],
+    'BS12-046': [{ kind: 'draw-up-to', max: 2, condition: { kind: 'cookie-played-from-support-this-turn' } }],
+    'BS12-045': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 5 } }],
+    'BS12-044': [{ kind: 'support-to-battle', amount: 1, optional: true, keyword: 'arena', thenEffects: [
+      { kind: 'set-active', supportCount: 1, selectable: true, optional: true, restedOnly: false,
+        condition: { kind: 'previous-effect-target-card-name', cardName: 'Herb Cookie' } },
+    ] }],
+    'BS12-040': [{ kind: 'hand-to-support', amount: 1, keyword: 'arena', rested: true, optional: true }],
+    'BS12-038': [{ kind: 'deck-to-support', amount: 1, rested: true, condition: { kind: 'support-count-less-than-opponent', difference: 1 } }],
+    'BS12-037': [{ kind: 'damage-by-break-count', perCount: 1, groupSize: 4, keyword: 'arena', target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS12-035': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS12-034': [{ kind: 'modify-attack', amount: 1, duration: 'persistent', target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' } }],
+    'BS12-033': [{ kind: 'draw-up-to', max: 1 }],
+    'BS12-032': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 } }],
+    'BS12-031': [{ kind: 'draw-up-to', max: 1 }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    'BS12-028': [{ kind: 'draw-up-to', max: 3 }],
+    'BS12-083': [{ kind: 'trash-to-battle', amount: 1, optional: true, blockerOnly: true }],
+    'BS12-085': [{ kind: 'trash-to-deck-all', side: 'self', condition: { kind: 'trash-blocker-cookie-count-at-least', count: 5 } }],
+    'BS12-086': [{ kind: 'modify-attack', amount: 2, duration: 'own-next-turn', target: { side: 'self', min: 0, max: 1, blockerOnly: true } }],
+    'BS12-087': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
+      thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+        condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 10 } }] }],
+    'BS12-017': [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true } }],
+    // BS12-016: the optional source REST is a second effect, not an activation cost.
+    'BS12-016': [
+      { kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true } },
+      { kind: 'rest-cookie', target: { side: 'self', min: 0, max: 1, sourceOnly: true } },
+    ],
+    'BS12-015': [{ kind: 'prevent-source-active-phase', condition: {
+      kind: 'battle-area-cookie-count', side: 'self', count: 0, keyword: 'arena', excludeSource: true,
+    } }],
+    'BS12-014': [{ kind: 'prevent-source-active-phase', condition: {
+      kind: 'battle-area-cookie-count', side: 'self', count: 0, keyword: 'arena', excludeSource: true,
+    } }],
+    'BS12-013': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn',
+      target: { side: 'self', min: 0, max: 1, energyColor: 'red', keyword: 'arena' },
+      thenEffects: [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, energyColor: 'red', keyword: 'arena', previousEffectTargetOnly: true } }],
+    }],
+    'BS12-012': [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 2, energyColor: 'red', keyword: 'arena' } }],
+    'BS12-008': [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1 },
+      condition: { kind: 'support-count-at-least', count: 4, energyColor: 'red', keyword: 'arena' } }],
+    'BS12-007': [{ kind: 'equip-source', sourceZone: 'battle',
+      // User ruling, 2026-09-30: source HP goes to trash; no replacement.
+      battleSourceDisposition: { hp: 'trash', replacement: 'none' },
+      target: { side: 'self', min: 1, max: 1, cardName: 'Shining Glitter Cookie' } }],
+    'BS12-005': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 },
+      condition: { kind: 'source-set-active-by-effect-this-turn' } }],
+    // BS12-002: independent card-image transcription; optional Arena target.
+    'BS12-002': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    'BS12-022': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    'BS12-042': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    'BS12-062': [{ kind: 'equip-source', sourceZone: 'battle',
+      // R007: original source HP goes to trash without replacement.
+      battleSourceDisposition: { hp: 'trash', replacement: 'none' },
+      target: { side: 'self', min: 1, max: 1, cardName: 'Popping Candy Cookie' } }],
+    'BS12-077': [{ kind: 'equip-source', sourceZone: 'battle',
+      // R007: original source HP goes to trash without replacement.
+      battleSourceDisposition: { hp: 'trash', replacement: 'none' },
+      target: { side: 'self', min: 1, max: 1, cardName: 'Rockstar Cookie' } }],
+    'BS12-063': [{ kind: 'modify-damage-received', amount: 0, duration: 'persistent', damageType: 'all',
+      minimumDamage: 2, setDamageTo: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Popping Candy Cookie' } }],
+    'BS12-064': [{ kind: 'reveal-bottom-deck', requireCard: true,
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+      effects: [{ kind: 'draw-up-to', max: 2 }] }],
+    'BS12-065': [
+      { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'optional-cost-attack', resolution: 'ability',
+        cost: { energy: {}, discardHand: 1, discardHandType: 'cookie', discardHandLevel: 2,
+          discardHandKeyword: 'arena', handCostDestination: 'deck-bottom' },
+        effectText: 'Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.',
+        effects: [{ kind: 'draw-up-to', max: 1 }] },
+    ],
+    'BS12-071': [{ kind: 'reveal-bottom-deck',
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, playMatchedAfterSourceTrash: true }],
+    'BS12-072': [{ kind: 'field-to-deck-bottom',
+      target: { side: 'self', min: 0, max: 1, maxLevel: 2, keyword: 'arena', excludeSource: true } }],
+    'BS12-073': [
+      { kind: 'reveal-bottom-deck', requireCard: true,
+        match: { type: 'cookie', level: 2, keyword: 'arena', excludeCardName: 'DJ Miya' }, addMatchedToHand: true },
+      { kind: 'opponent-discard-hand', count: 1, condition: { kind: 'opponent-hand-count-at-least', count: 6 } },
+    ],
+    'BS12-075': [{ kind: 'opponent-discard-hand', count: 1,
+      condition: { kind: 'opponent-hand-count-at-least', count: 5 } }],
+    'BS12-081': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-088': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-089': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-090': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-091': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-093': [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-082': [{ kind: 'require-item-activate-discard-hand', count: 1 }],
+    'BS12-069': [{ kind: 'reveal-bottom-deck', requireCard: true,
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] }],
+    'BS12-068': [{ kind: 'draw-up-to', max: 1 }, {
+      kind: 'support-to-hand', side: 'opponent', amount: 2, optional: true,
+      condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+    }],
+    'BS12-067': [{ kind: 'reveal-bottom-deck', requireCard: true,
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true }],
+    'BS12-066': [{ kind: 'reveal-bottom-deck', requireCard: true,
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }] }],
+    'BS12-060': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    'BS12-043': [{ kind: 'rest-support', side: 'opponent', amount: 1, optional: true,
+      condition: { kind: 'support-count-at-least', count: 5, energyColor: 'green', keyword: 'arena' } }],
+    'BS12-020': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 2 },
+      condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' } }],
+    'BS12-021': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'arena-cookie-placed-in-break-this-turn' } }],
+    'BS12-023': [{ kind: 'gain-hp', amount: 1, perBreakCard: { keyword: 'arena', divisor: 3 },
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    'BS12-025': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, cardName: 'Caramel Choux Cookie' } }],
+    'BS12-004': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-cookie-count', side: 'self', count: 2, energyColor: 'red', keyword: 'arena' } }],
     // 複合效果（含 Then）仍需硬編碼，因通用解析器不處理 Then
     'ST1-002': [
       {
@@ -3012,6 +3160,16 @@ export const convertOfficialCardEffects = (
       filterHasSpecialPlay: true,
       optionalPick: true,
     }],
+    // BS12-104：抽0～1後獨立選0～1己方具有印刷Special Play的Cookie；不限顏色或Arena。
+    'BS12-104': [
+      { kind: 'draw-up-to', max: 1 },
+      { kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 1, hasSpecialPlay: true } },
+    ],
+    // BS12-103：K1，檢視四張，展示0～1黑色且Arena的任意卡入手，其餘棄置。
+    'BS12-103': [{
+      kind: 'inspect-deck', lookCount: 4, pickCount: 1, restDestination: 'trash',
+      filterColor: 'black', filterKeyword: 'arena', optionalPick: true, revealPicked: true,
+    }],
     // BS11-110 Draining Magic Circle：陷阱的 Then 需保留第一段選定目標，
     // 並在條件成立時對同一目標再套用 -1。
     'BS11-110': [{
@@ -4091,19 +4249,8 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS7-033 Candy Drop Cookie：登場時先將另一張己方 Arena Cookie
-    // 放入休息區，再選對手餅乾造成 2 傷害；前段是必須選擇的移動效果，
-    // 不能只把後段傷害交給通用 parser，否則會漏掉成本的目標邊界。
+    // 放入休息區作為代價，再選對手餅乾造成 2 傷害。
     'BS7-033': [
-      {
-        kind: 'battle-to-break',
-        target: {
-          side: 'self',
-          min: 1,
-          max: 1,
-          keyword: 'arena',
-          excludeSource: true,
-        },
-      },
       {
         kind: 'damage',
         amount: 2,
@@ -6985,6 +7132,15 @@ export const convertOfficialItemAbility = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'BS12-104': { energy: { black: 1 }, discardHand: 0 },
+    'BS12-103': { energy: { black: 1 }, discardHand: 0 },
+    'BS12-052': { energy: {}, discardHand: 1 },
+    'BS12-050': { energy: { green: 3 }, discardHand: 0 },
+    'BS12-046': { energy: { green: 1 }, discardHand: 0 },
+    'BS12-031': { energy: { yellow: 2 }, discardHand: 0, trashBattleCookie: { count: 1, toBreakArea: true, energyColor: 'yellow', keyword: 'arena' } },
+    'BS12-028': { energy: { yellow: 1 }, discardHand: 0, handToBreakArea: { count: 1, keyword: 'arena' } },
+    'BS12-083': { energy: { purple: 1 }, discardHand: 0 },
+    'BS12-085': { energy: { purple: 1 }, discardHand: 0 },
     'BS1-022': { energy: { red: 3 }, discardHand: 1 },
     'BS1-023': {
       energy: { red: 1 },
@@ -7117,6 +7273,7 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.trashBattleCookie)
   return {
     cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
+    ...(cardKey === 'BS12-046' || cardKey === 'BS12-085' ? { allowInactiveConditionalEffects: true } : {}),
     text: abilityText,
     effects: conversion.effects,
     ...(exactEquippedAttackEffects[cardKey]
@@ -7166,6 +7323,20 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    'BS12-102': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
+    'BS12-084': [{ kind: 'opponent-discard-hand', count: 1, condition: { kind: 'opponent-hand-count-at-least', count: 6 } }],
+    'BS12-067': [{ kind: 'reveal-bottom-deck', requireCard: true,
+      match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true }],
+    'BS12-048': [{ kind: 'support-to-battle', amount: 1, optional: true, keyword: 'arena', thenEffects: [{
+      kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: { green: 1 }, discardHand: 0 },
+      effectText: '<{G}> Select up to 1 card in your opponent\'s support area. Set that card as rested.',
+      effects: [{ kind: 'rest-support', side: 'opponent', amount: 1, optional: true }],
+    }] }],
+    'BS12-030': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 },
+      condition: { kind: 'arena-cookie-placed-in-break-this-turn' } }],
+    // Crown Stage has no Activate marker: placement costs R, readying waits
+    // for its owner's end phase and may select any colour of Arena Cookie.
+    'BS12-011': [{ kind: 'set-cookie-active', target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
     'BS10-019': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn', target: { side: 'self', min: 0, max: 1, cardName: 'Hollyberry Cookie' } }],
     'BS10-040': [{ kind: 'hp-to-trash', amount: 1, target: { side: 'self', min: 1, max: 1, energyColor: 'yellow' } }, { kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, previousEffectTargetOnly: true } }],
     // BS10-067 Mossy Silver Bridge：回合結束時只計算休息中的支援卡，
@@ -7817,6 +7988,11 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    'BS12-102': { energy: { black: 1 }, discardHand: 0 },
+    'BS12-084': { energy: { purple: 1 }, discardHand: 0, trashToDeckBottom: { count: 2, cookieOnly: true, blockerOnly: true } },
+    'BS12-067': { energy: { blue: 1 }, discardHand: 0 },
+    'BS12-030': { energy: { yellow: 1 }, discardHand: 0 },
+    'BS12-048': { energy: {}, discardHand: 0 },
     // BS10-019 requires both the red activation energy and one hand discard;
     // the stage itself is rested separately through `restSource`.
     'BS10-019': { energy: { red: 1 }, discardHand: 1 },
@@ -7960,7 +8136,7 @@ export const convertOfficialStageAbility = (
       ...(card.cardNumber === 'BS9-118' || card.baseCardNumber === 'BS9-118'
         ? { ownerIndependent: true, oncePerTurn: true }
         : {}),
-      ...(card.baseCardNumber === 'BS11-083'
+      ...(card.baseCardNumber === 'BS11-083' || card.baseCardNumber === 'BS12-030' || card.baseCardNumber === 'BS12-084'
         ? { allowInactiveConditionalEffects: true }
         : {}),
       ...(activation?.markers.includes('t1') ? { oncePerTurn: true } : {}),
@@ -8008,7 +8184,90 @@ export const convertOfficialAttackEffects = (
     : card.cardNumber
   // BS9-079@3 is a distinct printed variant without the Extra Deck Then clause.
   if (card.cardNumber === 'BS9-079@3') return undefined
+  // R003: the user confirms revival from the owner's Break area.
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    // User rulings 2026-10-05: 035 selects an opponent; 072 keeps the original defender.
+    'BS12-035': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' } }],
+    'BS12-072': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 1 }, effectText: card.attackText,
+      effects: [{ kind: 'reveal-bottom-deck', requireCard: true, match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+        effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true } }] }] }],
+    'BS12-074': [{ kind: 'optional-cost-attack', cost: { energy: {} }, effectText: card.attackText,
+      effects: [{ kind: 'reveal-bottom-deck', requireCard: true, match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+        effects: [{ kind: 'field-to-deck-bottom', hpOnly: true, target: { side: 'opponent', min: 0, max: 1 } }] }],
+    }],
+    'BS12-073': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 1 }, effectText: card.attackText,
+      effects: [{ kind: 'field-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    }],
+    'BS12-070': [{ kind: 'optional-cost-attack', cost: { energy: {} }, effectText: card.attackText,
+      effects: [{ kind: 'reveal-bottom-deck', requireCard: true, match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true, target: { side: 'opponent', min: 1, max: 2 } }] }],
+    }],
+    'BS12-056': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 1 }, effectText: card.attackText,
+      effects: [{ kind: 'set-active', supportCount: 1, selectable: true, optional: true, restedOnly: false, condition: { kind: 'player-started-second' } }],
+    }],
+    'BS12-037': [{ kind: 'optional-cost-attack', cost: { energy: { neutral: 1 } }, effectText: card.attackText,
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    }],
+    'BS12-036': [{ kind: 'optional-cost-attack', cost: { energy: {}, cookieToBreakArea: { count: 1, zones: ['battle'], keyword: 'arena', excludeSource: true } },
+      payBeforeCondition: true, effectText: card.attackText,
+      effects: [{ kind: 'break-to-battle', amount: 1, optional: true, exactLevel: 1, keyword: 'arena', excludeBreakPaymentCardNumber: true }],
+    }],
+    'BS12-034': [{ kind: 'optional-cost-attack', cost: { energy: {}, cookieToBreakArea: { count: 1, zones: ['hand', 'battle'], keyword: 'arena' } },
+      payBeforeCondition: true, effectText: card.attackText,
+      effects: [{ kind: 'gain-hp', amount: 2, target: { side: 'self', min: 0, max: 1, minLevel: 1, maxLevel: 1 } }],
+    }],
+    // English paper TOP versus Chinese feed BOTTOM remains unresolved; isolate the entire Then.
+    'BS12-109': [{ kind: 'hand-to-hp', condition: { kind: 'opponent-support-count-at-least', count: 3 },
+      target: { side: 'self', min: 0, max: 1 }, selectTarget: true, optional: true,
+      handHasSpecialPlay: true, handPlacementRequired: true, faceUp: true, hpPlacement: 'top' }],
+    'BS12-111': [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 1, max: 1, sourceOnly: true }, condition: { kind: 'player-started-second' } }],
+    'BS12-112': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 0, selfToTrash: true }, effectText: card.attackText,
+      effects: [{ kind: 'trash-to-hand', max: 2, cookieOnly: true, keyword: 'arena', minLevel: 1, maxLevel: 1 }] }],
+    'BS12-107': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 1 }, effectText: card.attackText,
+      effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena' }] }],
+    'BS12-101': [{ kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 1, discardHandType: 'cookie', discardHandKeyword: 'arena' },
+      effectText: card.attackText,
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }],
+    // User ruling 2026-10-01: the one damage remains on the original defender.
+    'BS12-026': [{ kind: 'optional-cost-attack', cost: { energy: {}, discardHand: 1 }, payBeforeCondition: true,
+      effectText: card.attackText,
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'any-of', conditions: [
+          { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' },
+          { kind: 'arena-cookie-placed-in-break-this-turn' },
+        ] },
+      }],
+    }],
+    'BS12-053': [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true, target: { side: 'opponent', min: 1, max: 2 }, condition: { kind: 'all-support-rested', side: 'self' } }],
+    'BS12-051': [{ kind: 'support-to-battle', amount: 1, optional: true, keyword: 'arena' }],
+    'BS12-092': [{ kind: 'opponent-discard-hand', count: 1, condition: { kind: 'player-started-second' } }],
+    'BS12-093': [{ kind: 'optional-cost-attack',
+      cost: { energy: {}, trashToDeckBottom: { count: 2, cookieOnly: true, blockerOnly: true } },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+      effectText: '將 2 張己方棄牌區 Blocker 餅乾依選定順序放到牌庫底，再選擇最多 1 張對手餅乾造成 1 傷害。',
+    }],
+    'BS12-018': [{ kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'player-started-second' },
+    }],
+    'BS12-017': [{ kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Apple Faerie Cookie' },
+    }],
+    // User ruling 2026-10-01: BS12-016 also damages the original defender.
+    'BS12-016': [{ kind: 'damage', amount: 2,
+      target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+      condition: { kind: 'source-set-active-by-effect-this-turn' },
+    }],
+    // User ruling 2026-10-01: the extra point is dealt to the original defender.
+    'BS12-015': [{ kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+      condition: { kind: 'battle-area-has-keyword', side: 'self', keyword: 'arena', excludeSource: true },
+    }],
     // BS8 EXTRA cards remain outside the main-deck GameCard pool, but after
     // materialization their attacks use the same attack-effect pipeline.  Keep
     // these mappings here so the effect is derived from the official card
@@ -10807,9 +11066,76 @@ export const convertOfficialFlipAbility = (
   const exactFlipEffects: Partial<Record<string, {
     effects: CardEffect[]
     cost?: AbilityCost
+    handCostDestination?: 'deck-bottom'
     attachedHpBonus?: number
     attachedHpAlternateTarget?: EffectTargetSelector
   }>> = {
+    'BS12-100': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
+    },
+    'BS12-078': {
+      cost: { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+      effects: [{ kind: 'opponent-discard-hand', count: 2,
+        condition: { kind: 'opponent-hand-count-at-least', count: 5 } }],
+    },
+    'BS12-095': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-096': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to', max: 2, condition: { kind: 'all-of', conditions: [
+        { kind: 'hand-count-at-most', count: 5 },
+        { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' },
+      ] } }],
+    },
+    'BS12-098': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'gain-hp', amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true, minLevel: 2 },
+        condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
+    },
+    'BS12-060': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-058': {
+      cost: { energy: {}, discardHand: 1, discardHandKeyword: 'arena' },
+      handCostDestination: 'deck-bottom',
+      effects: [{ kind: 'draw-up-to', max: 2 }],
+    },
+    'BS12-002': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-022': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-042': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-080': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
+    },
+    'BS12-043': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'rest-support', side: 'opponent', amount: 1, optional: true,
+        condition: { kind: 'support-count-at-least', count: 5, energyColor: 'green', keyword: 'arena' } }],
+    },
+    'BS12-020': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 2 },
+        condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' } }],
+    },
+    'BS12-004': {
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'battle-area-cookie-count', side: 'self', count: 2, energyColor: 'red', keyword: 'arena' } }],
+    },
     // BS9-001 Icicle Yeti Cookie: the selected Cookie receives less effect
     // damage for the rest of this turn.  Keep this separate from the attack
     // damage modifiers used by cards such as BS7-097.
@@ -11430,6 +11756,7 @@ export const convertOfficialFlipAbility = (
       text: flipText,
       cost: exactFlip.cost ?? parseAbilityCost(flipText),
       effects: exactFlip.effects,
+      ...(exactFlip.handCostDestination ? { handCostDestination: exactFlip.handCostDestination } : {}),
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
         : {}),
@@ -11745,6 +12072,95 @@ export const convertOfficialTrapAbility = (
       }
     >
   > = {
+    'BS12-106': { cost: { energy: { black: 2 }, discardHand: 0 }, ignoreParsedCondition: true, effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: {}, discardHand: 1 }, effectText: card.skill.text ?? '',
+        effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }] }] },
+    'BS12-105': {
+      cost: { energy: { black: 1 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
+    },
+    'BS12-066': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [{ kind: 'reveal-bottom-deck', requireCard: true,
+        match: { type: 'cookie', level: 2, keyword: 'arena' }, addMatchedToHand: true,
+        effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }] }],
+    },
+    'BS12-086': {
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [{ kind: 'modify-attack', amount: 2, duration: 'own-next-turn', target: { side: 'self', min: 0, max: 1, blockerOnly: true } }],
+    },
+    'BS12-087': {
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 10 } }] }],
+    },
+    'BS12-065': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'optional-cost-attack', resolution: 'ability',
+          cost: { energy: {}, discardHand: 1, discardHandType: 'cookie', discardHandLevel: 2,
+            discardHandKeyword: 'arena', handCostDestination: 'deck-bottom' },
+          effectText: 'Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.',
+          effects: [{ kind: 'draw-up-to', max: 1 }] },
+      ],
+    },
+    'BS12-047': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        { kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 7 } },
+      ],
+    },
+    'BS12-049': {
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: {}, discardHand: 0, supportToHand: 1, supportToHandKeyword: 'arena' },
+          effectText: 'Then, <return 1 【Arena】 card from your support area to your hand.> Draw up to 1 card from your deck.',
+          effects: [{ kind: 'draw-up-to', max: 1 }],
+        },
+      ],
+    },
+    'BS12-009': {
+      cost: { energy: { red: 1 }, discardHand: 0, battleCookiePosition: { count: 2, position: 'rested', keyword: 'arena' } },
+      effects: [{ kind: 'modify-attack', amount: -3, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }],
+    },
+    'BS12-027': {
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      conditionalCost: {
+        condition: { kind: 'break-area-card-count-at-least', count: 4, color: 'yellow', keyword: 'arena' },
+        cost: { energy: {}, discardHand: 0 },
+      },
+      effects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } }],
+    },
+    'BS12-029': {
+      cost: { energy: { yellow: 2 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'draw-up-to', max: 1, condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, color: 'yellow', keyword: 'arena' } },
+      ],
+    },
+    'BS12-010': {
+      cost: { energy: { red: 1 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'optional-cost-attack', resolution: 'ability',
+          cost: { energy: {}, discardHand: 0, battleCookiePosition: { count: 2, position: 'rested', keyword: 'arena' } },
+          effectText: 'Then, <set 2 【Arena】 Cookies in your battle area as rested.> Draw up to 1 card from your deck, and that Cookie deals an additional -1 attack damage.',
+          effects: [{ kind: 'draw-up-to', max: 1 },
+            { kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true } }],
+        },
+      ],
+    },
     'P-036': {
       cost: { energy: { red: 3 } },
       effects: [
@@ -13086,6 +13502,11 @@ export const convertOfficialTrapAbility = (
 }
 
 const exactCookieSkillSpecialPlayCosts: Partial<Record<string, AbilityCost>> = {
+  'BS12-112': { energy: {}, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'black', level: 1, hasSpecialPlay: true } },
+  'BS12-100': { energy: {}, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'black', level: 1 } },
+  'BS12-095': { energy: {}, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'black', level: 1 } },
+  'BS12-096': { energy: {}, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'black', level: 1 } },
+  'BS12-098': { energy: {}, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'black', level: 1 } },
   // BS11-111～113 的 Special Play 共用「送 1 張黑色 LV.1 Cookie 進 trash」
   // 代價；On Play／攻擊 Then 的手牌代價另由一般 skill／attack cost 表示。
   'BS11-111': {
@@ -13118,6 +13539,40 @@ const exactCookieSkillSpecialPlayCosts: Partial<Record<string, AbilityCost>> = {
 }
 
 const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
+  'BS12-110': { energy: {}, discardHand: 0, selfToTrash: true },
+  'BS12-112': { energy: {}, discardHand: 0 },
+  'BS12-108': { energy: {}, discardHand: 0 },
+  'BS12-100': { energy: {}, discardHand: 0 },
+  'BS12-095': { energy: {}, discardHand: 0 },
+  'BS12-096': { energy: {}, discardHand: 0 },
+  'BS12-099': { energy: {}, discardHand: 0, deckToTrash: { amount: 3 } },
+  'BS12-098': { energy: {}, discardHand: 0 },
+  'BS12-081': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-088': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-089': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-090': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-091': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-093': { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+  'BS12-082': { energy: {}, discardHand: 0 },
+  // The conditional cost comes after the public reveal, not on declaration.
+  'BS12-071': { energy: {} },
+  'BS12-073': { energy: {} },
+  'BS12-075': { energy: {}, discardHand: 1 },
+  'BS12-072': { energy: { blue: 1 } },
+  'BS12-062': { energy: { blue: 1 }, discardHand: 0 },
+  'BS12-077': { energy: { purple: 1 } },
+  'BS12-057': { energy: {}, discardHand: 1, discardHandColor: 'blue', discardHandKeyword: 'arena' },
+  'BS12-055': { energy: {}, discardHand: 1, selfToTrash: true },
+  'BS12-054': { energy: {}, supportToTrash: 1 },
+  'BS12-053': { energy: {}, supportToTrash: 1 },
+  'BS12-045': { energy: {}, discardHand: 0 },
+  'BS12-044': { energy: {}, discardHand: 0 },
+  'BS12-040': { energy: {}, discardHand: 0, supportToHand: 1, supportToHandType: 'cookie' },
+  'BS12-037': { energy: { yellow: 1 }, discardHand: 0 },
+  'BS12-035': { energy: { yellow: 1 }, discardHand: 0, handToBreakArea: { count: 1, keyword: 'arena' } },
+  'BS12-008': { energy: {}, discardHand: 0, selfToTrash: true },
+  'BS12-007': { energy: { red: 1 }, discardHand: 0 },
+  'BS12-006': { energy: { red: 1 }, discardHand: 0, battleCookiePosition: { count: 1, position: 'active', keyword: 'arena' } },
   // BS8 候選流程中有些尖括號是來源離場或手牌／戰鬥區移動成本；明確保留
   // 可防止通用英文 parser 漏掉 self reference 而讓技能無成本發動。
   // BS11-002 的代價文字帶有「from your hand」，沿用這張卡的精確代價
@@ -13439,9 +13894,10 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   'BS7-029': { energy: { yellow: 1 }, discardHand: 0 },
   'BS7-031': { energy: { yellow: 1 }, discardHand: 1 },
   'BS7-032': { energy: {}, discardHand: 0 },
-  // BS7-033 的尖括號是登場時的戰鬥區移動成本；先以零能量技能成本
-  // 開啟 pending effect，再由第一個 battle-to-break 效果完成選卡。
-  'BS7-033': { energy: {}, discardHand: 0 },
+  // 尖括號移動先支付；排除來源自身，Arena不限顏色或活躍狀態。
+  'BS7-033': { energy: {}, discardHand: 0,
+    trashBattleCookie: { count: 1, keyword: 'arena', excludeSource: true, toBreakArea: true },
+  },
   'BS7-036': { energy: {}, discardHand: 0 },
   // BS7-037 的 Activate 代價是將自身放入休息區，不是一般能量支付。
   'BS7-037': { energy: {}, discardHand: 0, selfToBreakArea: true },
@@ -13811,6 +14267,13 @@ const exactCookieSkillSourceEnergy: Partial<
  * 一般解析會誤判成 passive，需要明確覆寫。
  */
 const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
+  'BS12-057': 'on-play',
+  'BS12-053': 'opponent-attack',
+  'BS12-052': 'on-play',
+  'BS12-038': 'on-play',
+  'BS12-035': 'on-play',
+  'BS12-032': 'break-by-arena-effect',
+  'BS12-033': 'break-by-arena-effect',
   'BS3-025': 'activate',
   'BS4-004': 'on-play',
   'BS5-081': 'opponent-attack',
@@ -13839,6 +14302,13 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS11-072': 'activate',
   'BS11-087': 'on-play',
   'BS11-094': 'block',
+  'BS12-081': 'block',
+  'BS12-088': 'block',
+  'BS12-089': 'block',
+  'BS12-090': 'block',
+  'BS12-091': 'block',
+  'BS12-093': 'block',
+  'BS12-082': 'passive',
   'BS11-111': 'on-play',
   'BS11-112': 'on-play',
   'BS11-113': 'on-play',
@@ -13852,6 +14322,9 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
  * 導致 yourTurn 被判成 false。P-001（紅版本）文字正確，不需要覆寫。
  */
 const exactCookieSkillYourTurn: Partial<Record<string, boolean>> = {
+  'BS12-035': true,
+  'BS12-032': true,
+  'BS12-033': true,
   'P-002': true,
   'P-003': true,
   'P-013': true,
@@ -13912,6 +14385,11 @@ export const convertOfficialCookieSkill = (
             ? 'on-play'
             : 'passive'),
     oncePerTurn: parsed.markers.includes('t1'),
+    ...(cardKey === 'BS12-007' ? { equippedAttackDisablesFlip: true } : {}),
+    ...(cardKey === 'BS12-077' ? { equippedAttackBlockerPrevention: { hostCardName: 'Rockstar Cookie' } } : {}),
+    ...(cardKey === 'BS12-089' ? { battleOpponentAttackEffectPrevention: { level: 3 } } : {}),
+    ...(cardKey === 'BS12-062' ? { equippedAttackTrigger: { hostCardName: 'Popping Candy Cookie',
+      effects: [{ kind: 'draw-up-to' as const, max: 2, condition: { kind: 'hand-count-at-most' as const, count: 5 } }] } } : {}),
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(skillText),
     cost,
@@ -13929,11 +14407,25 @@ export const convertOfficialCookieSkill = (
       : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
+    ...(cardKey === 'BS12-088' ? {
+      faintEffects: [{ kind: 'draw-up-to' as const, max: 2 }],
+      faintCost: { energy: {}, discardHand: 1, discardHandKeyword: 'arena' as const },
+    } : {}),
+    ...(cardKey === 'BS12-090' ? {
+      faintEffects: [{ kind: 'break-to-trash' as const, max: 1, exactLevel: 1,
+        condition: { kind: 'break-blocker-cookie-count-at-least' as const, count: 4 } }],
+      faintCost: { energy: {} },
+    } : {}),
+    ...(cardKey === 'BS12-091' ? {
+      faintEffects: [{ kind: 'trash-to-hand' as const, max: 1, cookieOnly: true, blockerOnly: true, excludeCardName: 'Caramel Arrow Cookie' }],
+      faintCost: { energy: {}, deckToTrash: { amount: 3 } },
+    } : {}),
+    ...(cardKey === 'BS12-055' ? { activationOriginThisTurn: 'support' as const } : {}),
     // Official Korean FAQ: HP >= 2 still permits the BS8-003 discard cost;
     // only its HP-gain effect is skipped. BS8-002 has the opposite ruling.
     // BS11-089 likewise always permits the On Play cost; its Refresh-gated
     // HP gain is checked after the automatic mill cost and any Refresh.
-    ...(cardKey === 'BS8-003' || cardKey === 'BS11-089'
+    ...(cardKey === 'BS8-003' || cardKey === 'BS11-089' || cardKey === 'BS12-073' || cardKey === 'BS12-075'
       ? { effectConditionsAtResolution: true }
       : {}),
     ...(exactCookieSkillPassiveEffects[cardKey]
@@ -13970,6 +14462,8 @@ export const convertOfficialCookieSkill = (
       P_FROM_TRASH.has(cardKey) ||
       /(?:when|if) this Cookie (?:is|was) played from (?:(?:your|the) )?trash/i.test(skillText),
     fromSupportArea:
+      cardKey === 'BS12-052' ||
+      cardKey === 'BS12-038' ||
       P_FROM_SUPPORT.has(cardKey) ||
       /when this Cookie is played from the support area/i.test(skillText),
   }

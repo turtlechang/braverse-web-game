@@ -17,6 +17,7 @@ export function CardPreviewPanel({
   if (!card) return null
 
   const effectText =
+    (card.type === 'cookie' ? card.skill?.text : undefined) ??
     card.effectText ??
     card.skill?.text ??
     card.item?.text ??

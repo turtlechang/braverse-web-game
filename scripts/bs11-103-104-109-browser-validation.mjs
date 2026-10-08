@@ -186,7 +186,7 @@ const run104 = async (page, positive) => {
     assert.match(await inspect.innerText(), /沒有符合條件的卡牌/)
   }
 
-  const confirm = inspect.getByRole('button', { name: '確認並放回', exact: true })
+  const confirm = inspect.getByRole('button', { name: '確認並結算', exact: true })
   assert.equal(await confirm.isEnabled(), true)
   await confirm.click({ force: true })
   await inspect.waitFor({ state: 'hidden' })
@@ -235,7 +235,7 @@ const run109 = async (page, positive) => {
     )
     assert.match(await inspect.innerText(), /沒有符合條件的卡牌/)
   }
-  await inspect.getByRole('button', { name: '確認並放回', exact: true }).click({ force: true })
+  await inspect.getByRole('button', { name: '確認並結算', exact: true }).click({ force: true })
   await inspect.waitFor({ state: 'hidden' })
   await wait(180)
   const trace = await readTrace(page)
@@ -254,7 +254,7 @@ const browser = await chromium.launch({
 const output = []
 try {
   for (const viewport of viewports) {
-    for (const cardNumber of Object.keys(cards)) {
+    for (const cardNumber of Object.keys(cards).filter(number => !process.env.BS11_BROWSER_CARDS || process.env.BS11_BROWSER_CARDS.split(',').includes(number))) {
       for (const positive of [true, false]) {
         const page = await browser.newPage({ viewport })
         await routeBs11OfficialArt(page)
@@ -286,7 +286,7 @@ try {
       }
     }
   }
-  const outputDir = resolve(root, 'test-results/bs11-103-104-109-browser')
+  const outputDir = resolve(root, process.env.BS11_BROWSER_OUT ?? 'test-results/bs11-103-104-109-browser')
   await mkdir(outputDir, { recursive: true })
   const outputPath = resolve(outputDir, `bs11-103-104-109-browser-${Date.now()}.json`)
   await writeFile(outputPath, JSON.stringify({

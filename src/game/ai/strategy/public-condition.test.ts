@@ -4,6 +4,14 @@ import { createBattleState, item } from '../../test-helpers/battle-helpers'
 import { assessPublicCondition } from './public-condition'
 
 describe('Lv.5 公開 Combo 前置判定', () => {
+  it('後攻條件以開局玩家而非當前回合判斷', () => {
+    const state = createBattleState()
+    state.firstPlayerId = 'player-two'
+    state.activePlayerId = 'player-one'
+    state.turnNumber = 20
+    expect(assessPublicCondition(createPlayerView(state, 'player-one'), { kind: 'player-started-second' }).state).toBe('met')
+    expect(assessPublicCondition(createPlayerView(state, 'player-two'), { kind: 'player-started-second' }).state).toBe('unmet')
+  })
   it('保留支援區的實際數值門檻，而非只判斷是否存在支援卡', () => {
     const state = createBattleState()
     const view = createPlayerView(state, 'player-two')

@@ -1,0 +1,195 @@
+import { describe, expect, it } from 'vitest'
+import { createBs12MarbleberryDemoState, parseTestStateConfig } from './demo'
+import { applyGameCommand } from './commands'
+import { canActivateCookieSkill } from './skills'
+import { getEffectSelectionCandidates, executeCardEffect } from './effects'
+import { hasPendingCardResolution } from './pending'
+
+const playerId = 'player-one' as const
+const sourceId = 'bs12-057-source'
+type State = ReturnType<typeof createBs12MarbleberryDemoState>
+const enter = (state: State) => applyGameCommand(state, { kind: 'deploy-cookie', playerId, instanceId: sourceId })
+const begin = (state: State, discardHandIds = ['bs12-057-hand-0']) => applyGameCommand(state, { kind: 'begin-activate-skill', playerId, sourceInstanceId: sourceId, trigger: 'on-play', paymentIds: [], discardHandIds })
+const resolve = (state: State, targetIds = ['bs12-057-opponent-0']) => applyGameCommand(state, { kind: 'resolve-ability-effect', playerId, targetIds })
+const pay = (state: State, targetIds = ['bs12-057-opponent-0']) => resolve(begin(state), targetIds)
+
+describe('BS12-057 printed On Play hand cost and opponent deck-bottom movement', () => {
+  it('routes only through localhost candidate fixtures', () => {
+    expect(parseTestStateConfig('?test-state=bs12-057:positive', 'localhost')).toEqual({ kind: 'bs12-057', scenario: 'positive' })
+    expect(parseTestStateConfig('?test-state=bs12-057:positive', 'example.com')).toBeNull()
+  })
+  it.each(['positive', 'cost-item', 'cost-stage', 'rested-target', 'target-equipped'] as const)('real hand entry, four HP, then any blue Arena hand type and LV1 opponent movement: %s', scenario => {
+    const before = createBs12MarbleberryDemoState(scenario)
+    const snapshot = structuredClone(before)
+    const entered = enter(before)
+    expect(entered.pendingOnPlay).toMatchObject({ sourceInstanceId: sourceId, origin: 'hand' })
+    expect(entered.players[playerId].battleArea.at(-1)?.hpCards).toHaveLength(4)
+    expect(entered.players[playerId].deck).toHaveLength(12)
+    const target = entered.players['player-two'].battleArea[0]
+    const paid = begin(entered)
+    expect(paid.players[playerId].hand).toHaveLength(2)
+    expect(paid.players[playerId].discardPile).toEqual([before.players[playerId].hand[1]])
+    expect(paid.players['player-two']).toEqual(entered.players['player-two'])
+    const after = resolve(paid)
+    expect(after.players['player-two'].deck).toEqual([...entered.players['player-two'].deck, target.card])
+    expect(after.players['player-two'].battleArea.map(c => c.card.instanceId)).toEqual(['bs12-057-opponent-1'])
+    expect(after.players['player-two'].discardPile).toEqual([...target.hpCards, ...(target.equippedCards ?? [])])
+    expect(after.players['player-two'].breakArea).toEqual([])
+    expect(after.players[playerId].supportArea).toEqual(before.players[playerId].supportArea)
+    expect(after.players[playerId].battleArea.at(-1)?.rested).toBe(false)
+    expect(after.players[playerId].deck).toHaveLength(12)
+    expect(after.cookiesPlacedFromBattleToDeckThisTurn?.['player-two']).toBe(true)
+    expect(before).toEqual(snapshot)
+  })
+  it('may move a non-Arena LV2 blue opponent instead, with exact bottom identity', () => {
+    const entered = enter(createBs12MarbleberryDemoState())
+    const target = entered.players['player-two'].battleArea[1]
+    const after = pay(entered, [target.card.instanceId])
+    expect(after.players['player-two'].deck.at(-1)).toEqual(target.card)
+    expect(after.players['player-two'].discardPile).toEqual(target.hpCards)
+    expect(after.players['player-two'].battleArea[0].card.instanceId).toBe('bs12-057-opponent-0')
+  })
+  it('may select zero while still discarding the blue Arena card', () => {
+    const entered = enter(createBs12MarbleberryDemoState())
+    const after = pay(entered, [])
+    expect(after.players[playerId].hand).toHaveLength(2)
+    expect(after.players[playerId].discardPile).toHaveLength(1)
+    expect(after.players['player-two']).toEqual(entered.players['player-two'])
+    expect(hasPendingCardResolution(after)).toBe(false)
+  })
+  it.each(['no-cost', 'cost-non-arena', 'cost-wrong-color', 'cost-split', 'opponent-cost-only'] as const)('missing same blue AND Arena card only blocks the skill, not four-HP deployment: %s', scenario => {
+    const entered = enter(createBs12MarbleberryDemoState(scenario))
+    expect(entered.players[playerId].battleArea.at(-1)?.hpCards).toHaveLength(4)
+    expect(canActivateCookieSkill(entered, playerId, sourceId, 'on-play')).toBe(false)
+    expect(() => begin(entered)).toThrow()
+    const skipped = applyGameCommand(entered, { kind: 'skip-on-play', playerId, sourceInstanceId: sourceId })
+    expect(skipped.players).toEqual(entered.players)
+    expect(hasPendingCardResolution(skipped)).toBe(false)
+  })
+  it.each(['positive', 'only-high', 'movement-blocked'] as const)('skip does not pay or move any card: %s', scenario => {
+    const entered = enter(createBs12MarbleberryDemoState(scenario))
+    const after = applyGameCommand(entered, { kind: 'skip-on-play', playerId, sourceInstanceId: sourceId })
+    expect(after.players).toEqual(entered.players)
+    expect(after.pendingOnPlay).toBeNull()
+  })
+  it.each(['only-high', 'no-target', 'movement-blocked'] as const)('no legal movement candidate still permits paying and selecting zero: %s', scenario => {
+    const entered = enter(createBs12MarbleberryDemoState(scenario))
+    const paid = begin(entered)
+    const effect = paid.pendingAbilityEffect!.effects[0]
+    expect(getEffectSelectionCandidates(paid, { sourcePlayerId: playerId, sourceInstanceId: sourceId }, effect)).toEqual([])
+    const after = resolve(paid, [])
+    expect(after.players['player-two']).toEqual(entered.players['player-two'])
+    expect(after.players[playerId].discardPile).toHaveLength(1)
+    expect(hasPendingCardResolution(after)).toBe(false)
+  })
+  it('last opponent Cookie goes to deck bottom and then requires replacement', () => {
+    const entered = enter(createBs12MarbleberryDemoState('target-only'))
+    const after = pay(entered)
+    expect(after.players['player-two'].battleArea).toEqual([])
+    expect(after.players['player-two'].deck.at(-1)?.instanceId).toBe('bs12-057-opponent-0')
+    expect(after.pendingReplacement?.tasks[0].playerId).toBe('player-two')
+    const replaced = applyGameCommand(after, { kind: 'replace-cookie', playerId: 'player-two', instanceId: 'bs12-057-replacement' })
+    expect(replaced.players['player-two'].battleArea[0].card.instanceId).toBe('bs12-057-replacement')
+    expect(replaced.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+    expect(replaced.players['player-two'].deck).toHaveLength(9)
+  })
+  it.each([[], ['bs12-057-invalid-blue'], ['bs12-057-invalid-arena'], ['bs12-057-payment-0'], [sourceId], ['bs12-057-hand-0', 'bs12-057-hand-0'], ['bs12-057-hand-0', 'bs12-057-invalid-blue']].map(ids => ({ ids })))('rejects illegal hand cost $ids without partial payment', ({ ids }) => {
+    const entered = enter(createBs12MarbleberryDemoState())
+    const snapshot = structuredClone(entered)
+    expect(() => begin(entered, ids)).toThrow()
+    expect(entered).toEqual(snapshot)
+  })
+  it.each([[sourceId], ['bs12-057-ally'], ['bs12-057-payment-0'], ['bs12-057-invalid-blue'], ['bs12-057-opponent-0', 'bs12-057-opponent-1'], ['bs12-057-opponent-0', 'bs12-057-opponent-0']].map(ids => ({ ids })))('rejects invalid side/zone/count target $ids without partial movement', ({ ids }) => {
+    const paid = begin(enter(createBs12MarbleberryDemoState()))
+    const snapshot = structuredClone(paid)
+    expect(() => resolve(paid, ids)).toThrow()
+    expect(paid).toEqual(snapshot)
+  })
+  it('rejects LV3 target even though the blue Arena cost was available', () => {
+    const paid = begin(enter(createBs12MarbleberryDemoState('only-high')))
+    expect(() => resolve(paid)).toThrow()
+  })
+  it('does not acquire an Activate skill or re-use On Play after skipping', () => {
+    const entered = enter(createBs12MarbleberryDemoState())
+    expect(canActivateCookieSkill(entered, playerId, sourceId, 'activate')).toBe(false)
+    const after = applyGameCommand(entered, { kind: 'skip-on-play', playerId, sourceInstanceId: sourceId })
+    expect(() => begin(after)).toThrow()
+  })
+  it.each(['full-battle', 'opponent-turn', 'outside-main'] as const)('rejects illegal deployment before HP or cost payment: %s', scenario => {
+    const before = createBs12MarbleberryDemoState(scenario)
+    const snapshot = structuredClone(before)
+    expect(() => enter(before)).toThrow()
+    expect(before).toEqual(snapshot)
+  })
+  it('On Play remains valid in an isolated opponent-turn resolution', () => {
+    const entered = createBs12MarbleberryDemoState('isolated-opponent-on-play')
+    expect(canActivateCookieSkill(entered, playerId, sourceId, 'on-play')).toBe(true)
+    expect(pay(entered).players['player-two'].deck.at(-1)?.instanceId).toBe('bs12-057-opponent-0')
+  })
+  it('support-origin deployment also opens the printed On Play', () => {
+    const before = createBs12MarbleberryDemoState()
+    const source = before.players[playerId].hand[0]
+    const supported = { ...before, players: { ...before.players, [playerId]: { ...before.players[playerId], hand: before.players[playerId].hand.slice(1), supportArea: [...before.players[playerId].supportArea, { card: source, rested: true }] } } }
+    const entered = executeCardEffect(supported, { sourcePlayerId: playerId, sourceInstanceId: 'bs12-057-ally' }, { kind: 'support-to-battle', amount: 1 }, [sourceId])
+    expect(entered.pendingOnPlay).toMatchObject({ sourceInstanceId: sourceId, origin: 'support' })
+    expect(entered.players[playerId].battleArea.at(-1)?.hpCards).toHaveLength(4)
+    expect(canActivateCookieSkill(entered, playerId, sourceId, 'on-play')).toBe(true)
+  })
+  it.each(['support-entry', 'rested-support-entry'] as const)('real Ferret attack plays Arena support, then Marbleberry pays and moves the opponent: %s', scenario => {
+    const before = createBs12MarbleberryDemoState(scenario)
+    const attacking = applyGameCommand(before, { kind: 'declare-attack', playerId, attackerInstanceId: 'bs12-057-ally', targetInstanceId: 'bs12-057-opponent-1', supportPaymentIds: ['bs12-057-payment-0'] })
+    let damaged = applyGameCommand(attacking, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let i = 0; damaged.pendingBattle?.stage === 'damage' && i < 5; i++) damaged = applyGameCommand(damaged, { kind: 'resolve-next-damage', playerId: 'player-two' })
+    const entered = applyGameCommand(damaged, { kind: 'resolve-attack-effect', playerId, targetIds: [sourceId] })
+    expect(entered.pendingOnPlay).toMatchObject({ sourceInstanceId: sourceId, origin: 'support' })
+    expect(entered.players[playerId].battleArea.at(-1)?.hpCards).toHaveLength(4)
+    expect(entered.players[playerId].battleArea.at(-1)?.rested).toBe(false)
+    const after = pay(entered)
+    expect(after.players['player-two'].deck.at(-1)?.instanceId).toBe('bs12-057-opponent-0')
+    expect(after.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+    expect(after.pendingAbilityEffect).toBeUndefined()
+  })
+  it('Refresh completes four HP before the payable On Play', () => {
+    const waiting = enter(createBs12MarbleberryDemoState('refresh'))
+    expect(waiting.pendingRefresh).toBeTruthy()
+    expect(canActivateCookieSkill(waiting, playerId, sourceId, 'on-play')).toBe(false)
+    const entered = applyGameCommand(waiting, { kind: 'refresh-deck', playerId, cookieInstanceId: 'bs12-057-refresh-0', shuffleSeed: 3 })
+    expect(entered.players[playerId].battleArea.at(-1)?.hpCards).toHaveLength(4)
+    expect(entered.players[playerId].deck).toHaveLength(3)
+    expect(entered.pendingOnPlay).toMatchObject({ sourceInstanceId: sourceId })
+    expect(canActivateCookieSkill(entered, playerId, sourceId, 'on-play')).toBe(true)
+  })
+  it('Refresh reaching LV10 stops On Play without discarding the hand cost', () => {
+    const waiting = enter(createBs12MarbleberryDemoState('refresh-lv10'))
+    const after = applyGameCommand(waiting, { kind: 'refresh-deck', playerId, cookieInstanceId: 'bs12-057-refresh-0', shuffleSeed: 3 })
+    expect(after.result?.winnerId).toBe('player-two')
+    expect(after.players[playerId].hand).toEqual(waiting.players[playerId].hand)
+    expect(after.pendingOnPlay).toBeNull()
+  })
+  it.each(['attack', 'attack-all-blue'] as const)('ordinary BBN deals two with no Then: %s', scenario => {
+    const before = createBs12MarbleberryDemoState(scenario)
+    const attacking = applyGameCommand(before, { kind: 'declare-attack', playerId, attackerInstanceId: sourceId, targetInstanceId: 'bs12-057-opponent-1', supportPaymentIds: [0, 1, 2].map(i => `bs12-057-payment-${i}`) })
+    let after = applyGameCommand(attacking, { kind: 'skip-trap', playerId: 'player-two' })
+    for (let i = 0; after.pendingBattle?.stage === 'damage' && i < 5; i++) after = applyGameCommand(after, { kind: 'resolve-next-damage', playerId: 'player-two' })
+    expect(after.players['player-two'].battleArea[1].hpCards).toHaveLength(1)
+    expect(after.players[playerId].supportArea.every(c => c.rested)).toBe(true)
+    expect(after.pendingOnPlay).toBeNull()
+    expect(hasPendingCardResolution(after)).toBe(false)
+    expect(after.pendingOptionalCostAttack).toBeUndefined()
+  })
+  it.each(['attack-wrong', 'attack-few', 'attack-rested-energy', 'attack-source-rested'] as const)('rejects illegal BBN payment or source: %s', scenario => {
+    const before = createBs12MarbleberryDemoState(scenario)
+    expect(() => applyGameCommand(before, { kind: 'declare-attack', playerId, attackerInstanceId: sourceId, targetInstanceId: 'bs12-057-opponent-1', supportPaymentIds: before.players[playerId].supportArea.map(s => s.card.instanceId) })).toThrow()
+  })
+  it('public interactive trace identifies actual cost and deck-bottom target, and zero explicitly', () => {
+    const entered = enter(createBs12MarbleberryDemoState())
+    const moved = pay(entered)
+    const movedText = (moved.commandLog ?? []).map(entry => (entry.steps ?? []).map(s => s.text).join(' '))
+    expect(movedText.at(-2)).toContain('Marbleberry Cookie')
+    expect(movedText.at(-1)).toMatch(/Peach Cookie.*牌庫底/)
+    const zero = pay(entered, [])
+    const zeroText = (zero.commandLog?.at(-1)?.steps ?? []).map(s => s.text).join(' ')
+    expect(zeroText).toContain('未選擇目標')
+    expect(zeroText).not.toContain('放到持有者牌庫底')
+  })
+})

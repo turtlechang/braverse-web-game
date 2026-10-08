@@ -514,7 +514,7 @@
   background: rgba(20, 20, 20, 0.9);
   color: #d9b3ff;
   border-left: 3px solid #b366ff;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .target-hint {

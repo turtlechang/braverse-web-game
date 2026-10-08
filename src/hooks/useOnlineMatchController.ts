@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { getBattleCookiePositionCostCandidates } from '../game/battle-position-cost'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { describeOpeningDeal } from '../game/presentation'
 import type {
   CookieCard,
@@ -12,6 +13,7 @@ import type {
 import {
   buildReplayIssueBundle,
   getAfterDamageEffectCandidates,
+  getAfterDamageEffectSourceCard,
   getAfterDamageEffectMinMax,
   getAttackResponseSkillCandidates,
   getBlockerCandidates,
@@ -78,7 +80,12 @@ export function useOnlineMatchController(params: {
   const activePlayer = game.players[game.activePlayerId]
 
   const [message, setMessage] = useState('對局已開始。')
-  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapId, setSelectedTrapIdState] = useState<string | null>(null)
+  const [selectedTrapPositionCostIds, setSelectedTrapPositionCostIds] = useState<string[]>([])
+  const setSelectedTrapId = useCallback((trapId: string | null) => {
+    if (trapId !== selectedTrapId) setSelectedTrapPositionCostIds([])
+    setSelectedTrapIdState(trapId)
+  }, [selectedTrapId])
   const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
   const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
     useState<string[]>([])
@@ -100,7 +107,9 @@ export function useOnlineMatchController(params: {
   >(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedBlockerPaymentIds, setSelectedBlockerPaymentIds] = useState<string[]>([])
+  const [selectedBlockerDiscardIds, setSelectedBlockerDiscardIds] = useState<string[]>([])
   const [selectedAttackResponseId, setSelectedAttackResponseId] = useState<string | null>(null)
+  const [selectedAttackResponseSupportToTrashIds, setSelectedAttackResponseSupportToTrashIds] = useState<string[]>([])
   const [selectedAttackResponseTrashToDeckIds, setSelectedAttackResponseTrashToDeckIds] =
     useState<string[]>([])
   const [selectedAttackResponseDiscardIds, setSelectedAttackResponseDiscardIds] =
@@ -256,6 +265,7 @@ export function useOnlineMatchController(params: {
       battle.defenderPlayerId !== viewerPlayerId ||
       // 顯示卡牌造成的封鎖理由，由防守方明確確認後再送 skip-trap。
       battle.trapsDisabled ||
+      game.pendingAbilityEffect ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
       getBlockerCandidates(game, viewerPlayerId).length > 0 ||
       getAttackResponseSkillCandidates(game, viewerPlayerId).length > 0
@@ -264,7 +274,8 @@ export function useOnlineMatchController(params: {
     }
 
     const timer = window.setTimeout(() => {
-      setSelectedTrapId(null)
+      setSelectedTrapPositionCostIds([])
+      setSelectedTrapIdState(null)
       setSelectedTrapDiscardIds([])
       setSelectedTrapHandToBreakIds([])
       setSelectedTrapTargetId(null)
@@ -331,6 +342,7 @@ export function useOnlineMatchController(params: {
       : {})
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
   const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
+  const faintCostDeckToTrashAmount = pendingFaint?.cost?.deckToTrash?.amount ?? 0
   const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
   const faintCostSupportToHandAmount = pendingFaint?.cost?.supportToHand ?? 0
   const faintOptional = pendingFaint?.optional === true
@@ -438,23 +450,7 @@ export function useOnlineMatchController(params: {
     game.pendingAfterDamageEffects && game.pendingAfterDamageEffects.length > 0
       ? game.pendingAfterDamageEffects[0]
       : null
-  const afterDamageSourceCard = pendingAfterDamage
-    ? (() => {
-        for (const player of Object.values(game.players) as PlayerState[]) {
-          const found =
-            player.breakArea.find(
-              (cookie: CookieCard) =>
-                cookie.instanceId === pendingAfterDamage.sourceInstanceId,
-            ) ??
-            player.battleArea.find(
-              (cookie: CookieInBattle) =>
-                cookie.card.instanceId === pendingAfterDamage.sourceInstanceId,
-            )?.card
-          if (found) return found
-        }
-        return null
-      })()
-    : null
+  const afterDamageSourceCard = getAfterDamageEffectSourceCard(game)
   const afterDamageCandidates =
     pendingAfterDamage &&
     pendingAfterDamage.sourcePlayerId === viewerPlayerId
@@ -541,6 +537,8 @@ export function useOnlineMatchController(params: {
     })
   }
   const selectedTrapDiscardCost = selectedTrapCost?.discardHand ?? 0
+  const selectedTrapPositionCost = selectedTrapCost?.battleCookiePosition
+  const selectedTrapPositionCostCandidates = getBattleCookiePositionCostCandidates(selectedTrapCost ?? {}, game.players[viewerPlayerId].battleArea, selectedTrapId ?? undefined)
   const selectedTrapTrashBattleCookieCost =
     selectedTrapCost?.trashBattleCookie?.count ?? 0
   const selectedTrapTrashBattleCookieCandidates = selectedTrapCost
@@ -582,6 +580,7 @@ export function useOnlineMatchController(params: {
   )
   const selectTrapCostOption = (index: number) => {
     if (index < 0 || index >= trapCostOptions.length) return
+    setSelectedTrapPositionCostIds([])
     setSelectedTrapCostOptionIndex(index)
     setSelectedTrapPaymentIds([])
     setSelectedTrapTrashCookieToBreakAreaIds([])
@@ -914,6 +913,16 @@ export function useOnlineMatchController(params: {
     (cookie) => cookie.card.instanceId === selectedAttackResponseId,
   )
   const attackResponseCost = selectedAttackResponse?.card.skill?.cost ?? {}
+  const attackResponseSupportToTrashAmount = attackResponseCost.supportToTrash ?? 0
+  const attackResponseSupportToTrashCandidates = selectedAttackResponse
+    ? getSupportEffectCandidates(game, { sourcePlayerId: viewerPlayerId, sourceInstanceId: selectedAttackResponse.card.instanceId }, { side: 'self', keyword: attackResponseCost.supportToTrashKeyword }).map(entry => entry.card)
+    : []
+  const toggleAttackResponseSupportToTrash = (instanceId: string) => {
+    if (!attackResponseSupportToTrashCandidates.some(card => card.instanceId === instanceId)) return
+    setSelectedAttackResponseSupportToTrashIds(current => current.includes(instanceId)
+      ? current.filter(id => id !== instanceId)
+      : current.length < attackResponseSupportToTrashAmount ? [...current, instanceId] : current)
+  }
   const attackResponseTrashToDeckAmount =
     attackResponseCost.trashToDeck?.count ?? 0
   const attackResponseTrashToDeckCandidates =
@@ -1010,6 +1019,7 @@ export function useOnlineMatchController(params: {
     selectedTrapHandToBreakIds,
     setSelectedTrapHandToBreakIds,
     selectedTrapTrashBattleCookieIds,
+    selectedTrapPositionCostIds, setSelectedTrapPositionCostIds, selectedTrapPositionCost, selectedTrapPositionCostCandidates,
     setSelectedTrapTrashBattleCookieIds,
     trapSelectNoTarget,
     setTrapSelectNoTarget,
@@ -1069,6 +1079,8 @@ export function useOnlineMatchController(params: {
     setSelectedBlockerId,
     selectedBlockerPaymentIds,
     setSelectedBlockerPaymentIds,
+    selectedBlockerDiscardIds,
+    setSelectedBlockerDiscardIds,
     blockerEnergyCost,
     blockerEnergyCostTotal,
     blockerPaymentCandidates,
@@ -1091,6 +1103,11 @@ export function useOnlineMatchController(params: {
     attackResponseDiscardCandidates,
     attackResponseDiscardAmount,
     toggleAttackResponseDiscard,
+    selectedAttackResponseSupportToTrashIds,
+    setSelectedAttackResponseSupportToTrashIds,
+    attackResponseSupportToTrashCandidates,
+    attackResponseSupportToTrashAmount,
+    toggleAttackResponseSupportToTrash,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,
@@ -1111,6 +1128,7 @@ export function useOnlineMatchController(params: {
     faintPaymentValid,
     toggleFaintPayment,
     faintCostHandAmount,
+    faintCostDeckToTrashAmount,
     faintCostHandCandidates,
     toggleFaintCostHand,
     faintCostSupportAmount,

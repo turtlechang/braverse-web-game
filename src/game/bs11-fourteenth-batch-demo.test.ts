@@ -13,6 +13,19 @@ const variants: Bs11FourteenthBatchCardNumber[] = [
 ]
 
 describe('BS11-050～053 第十四批 Browser fixtures', () => {
+  it.each(['BS11-052', 'BS11-052@1'] as const)('%s exposes a real FLIP only after the two normal attack HP', (cardNumber) => {
+    for (const scenario of ['flip-positive', 'flip-negative'] as const) {
+      const state = createBs11FourteenthBatchDemoState(cardNumber, scenario)
+      const hp = state.players['player-two'].battleArea[0].hpCards
+      expect(hp[0].flip).toBeUndefined()
+      expect(hp[1].flip).toBeUndefined()
+      expect(hp[2].id).toBe('BS11-095')
+      expect(hp[2].flip?.effects).toEqual([{ kind: 'draw-up-to', max: 1 }])
+      expect(hp).toHaveLength(5)
+      expect(parseTestStateConfig(`?test-state=bs11-fourteenth-batch:${cardNumber}:${scenario}`, 'localhost'))
+        .toEqual({ kind: 'bs11-fourteenth-batch', cardNumber, scenario })
+    }
+  })
   it.each(variants)('%s opens a normal attack route with the intended A/B witness', (cardNumber) => {
     const baseCardNumber = cardNumber.split('@')[0]
     const positive = createBs11FourteenthBatchDemoState(cardNumber, 'positive')

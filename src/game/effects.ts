@@ -1,5 +1,6 @@
 export {
   getBreakCount,
+  getPlaceHandHpCandidates,
   getBreakToBattleCandidates,
   getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
@@ -15,6 +16,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  isFixedAttackTargetDamage,
   getEffectTargetSelectionLimits,
   getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
@@ -27,6 +29,7 @@ export {
   getTrashToSupportCandidates,
   isBlockedByOpponentEffectProtection,
   isEffectConditionMet,
+  isCookieActivePhasePrevented,
   isProtectedBySoulJamResolution,
   requiresEffectCardSelection,
   requiresTargetSelection,

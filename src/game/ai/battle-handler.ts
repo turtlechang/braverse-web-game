@@ -1,3 +1,4 @@
+import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
 import {
   getAttackResponseSkillCandidates,
   getTrapCandidates,
@@ -14,6 +15,7 @@ import {
   getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectiveAttack,
+  getSupportEffectCandidates,
   getTrashToDeckCandidates,
   isEffectConditionMet,
 } from '../effects'
@@ -430,7 +432,6 @@ const selectTrapEffectTargets = (
   universal: PendingSelectionStrategy,
 ): string[] => {
   if (
-    effect.kind === 'support-to-trash' ||
     effect.kind === 'support-to-hand' ||
     effect.kind === 'hand-to-support'
   ) {
@@ -440,6 +441,7 @@ const selectTrapEffectTargets = (
   }
 
   const cardSelection =
+    effect.kind === 'support-to-trash' ||
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
     effect.kind === 'trash-to-battle' ||
@@ -492,6 +494,7 @@ export const handleAiPendingBattle = (
   playerId: PlayerId,
   level?: AiLevel,
   knowledgeState?: KnowledgeState,
+  shuffleSeed?: number,
 ): AiDecision | null => {
   if (
     !state.pendingBattle ||
@@ -566,7 +569,7 @@ export const handleAiPendingBattle = (
         kind: 'resolve-attack-effect',
         playerId,
         targetIds,
-      }),
+      }, { shuffleSeed }),
       action: 'resolve-attack-effect',
       description:
         targetIds.length > 0
@@ -593,18 +596,19 @@ export const handleAiPendingBattle = (
   ) {
     const revealed = battle.revealedHpCard
     const discardCount = revealed?.flip?.cost.discardHand ?? 0
+    const flipCost = { ...revealed?.flip?.cost, handCostDestination: revealed?.flip?.handCostDestination ?? revealed?.flip?.cost.handCostDestination }
     // R7: Lv.3+ 優先棄「捨得丟」的卡（手牌品質最低的），而不是照手牌
     // 順序砍前 N 張——後者等於把要不要丟到關鍵卡交給手牌排列運氣。
     const discardCandidates = useR7
       ? getDiscardHandCostCandidates(
-          revealed?.flip?.cost ?? {},
+          flipCost,
           state.players[playerId].hand,
           revealed?.instanceId,
         ).sort(
           (a, b) => handCardDiscardValue(a) - handCardDiscardValue(b),
         )
       : getDiscardHandCostCandidates(
-          revealed?.flip?.cost ?? {},
+          flipCost,
           state.players[playerId].hand,
           revealed?.instanceId,
         )
@@ -785,6 +789,10 @@ export const handleAiPendingBattle = (
         : undefined
     if (attackResponse) {
       const skill = attackResponse.card.skill!
+      const supportCandidates = getSupportEffectCandidates(state, { sourcePlayerId: playerId, sourceInstanceId: attackResponse.card.instanceId }, { side: 'self', keyword: skill.cost.supportToTrashKeyword }).map(entry => entry.card.instanceId)
+      const supportToTrashIds = universal.enabled
+        ? universal.orderCostIds(supportCandidates, skill.cost.supportToTrash ?? 0)
+        : supportCandidates.slice(0, skill.cost.supportToTrash ?? 0)
       const hand = state.players[playerId].hand
       const discardHandIds = universal.enabled
         ? universal.orderCostIds(
@@ -813,6 +821,7 @@ export const handleAiPendingBattle = (
           sourceInstanceId: attackResponse.card.instanceId,
           discardHandIds,
           trashToDeckIds,
+          supportToTrashIds,
         }),
         action: 'play-attack-response',
         revealedCard: attackResponse.card,
@@ -1110,6 +1119,8 @@ export const handleAiPendingBattle = (
       // set-active，造成「不在合法範圍」或「Invalid support target」。
       const hasIndependentTrapSelection = trapCard.trap.effects.some(
         (effect) =>
+          (effect.kind === 'modify-attack' && effect.target.side === 'self') ||
+          effect.kind === 'support-to-trash' ||
           effect.kind === 'break-to-battle' ||
           effect.kind === 'support-to-battle' ||
           effect.kind === 'trash-to-battle' ||
@@ -1176,6 +1187,7 @@ export const handleAiPendingBattle = (
           handToSupportIds,
           discardHandIds,
           handToBreakIds,
+          positionCostTargetIds: getBattleCookiePositionCostCandidates(playableCost.cost, state.players[playerId].battleArea, trapCard.instanceId).slice(0, playableCost.cost.battleCookiePosition?.count ?? 0).map(cookie => cookie.card.instanceId),
           trashBattleCookieIds,
           trashCookieToBreakAreaIds,
           trashToDeckIds,
@@ -1226,12 +1238,18 @@ export const handleAiPendingBattle = (
           skill.cost.energy ?? skill.cost,
           orderedSupports,
         ) ?? []
+        const handCandidates = getDiscardHandCostCandidates(skill.cost, state.players[playerId].hand, blocker.card.instanceId)
+          .map(card => card.instanceId)
+        const discardHandIds = universal.enabled
+          ? universal.orderCostIds(handCandidates, skill.cost.discardHand ?? 0)
+          : handCandidates.slice(0, skill.cost.discardHand ?? 0)
         return withBattlePendingReason({
           state: applyGameCommand(state, {
             kind: 'play-blocker',
             playerId,
             sourceInstanceId: blocker.card.instanceId,
             paymentIds,
+            ...(discardHandIds.length > 0 ? { discardHandIds } : {}),
           }),
           action: 'play-blocker',
           revealedCard: blocker.card,

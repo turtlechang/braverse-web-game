@@ -304,7 +304,15 @@ describe('BS10-003 Raspberry Mousse Cookie FLIP rules', () => {
     expect(resolved.pendingDrawUpTo).toBeNull()
     expect(resolved.players['player-one'].hand).toHaveLength(drawCount)
     expect(resolved.players['player-one'].deck).toHaveLength(1 - drawCount)
-    expect(resolved.pendingBattle).toBeNull()
+    if (drawCount === 0) {
+      expect(resolved.pendingBattle).toBeNull()
+    } else {
+      expect(resolved.pendingRefresh).toMatchObject({ playerId: 'player-one', remainingDraws: 0 })
+      expect(resolved.pendingBattle?.stage).toBe('damage')
+      const refreshed = applyGameCommand(resolved, { kind: 'refresh-deck', playerId: 'player-one', cookieInstanceId: state.pendingBattle!.revealedHpCard!.instanceId, shuffleSeed: 3 })
+      expect(refreshed.pendingBattle).toBeNull()
+      expect(refreshed.players['player-one'].hand).toHaveLength(1)
+    }
   })
 
   it('rejects a draw choice above the printed maximum', () => {

@@ -1,4 +1,5 @@
-import { playItem } from './card-abilities'
+import { getBattleCookiePositionCostCandidates } from './battle-position-cost'
+import { getItemActivateDiscardRequirement, playItem } from './card-abilities'
 import { getForcedAttackTargetId } from './battle'
 import { applyGameCommand } from './commands'
 import { getActingPlayerId } from './controller'
@@ -31,13 +32,15 @@ import { getRefreshCandidates } from './refresh'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
+  activateOnPlayReplacement,
   canActivateCookieSkill,
   getActiveOnPlayReplacement,
   getCookieActivateDiscardRequirement,
+  getCookieSkillCost,
+  getCookieSkillEffects,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getBattleCookieToHandCostCandidates,
-  getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
@@ -45,6 +48,7 @@ import {
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
+import { chooseAiHpToTrashIds } from './ai/hp-cost-selection'
 import { simulateAbilityEffects } from './ai/ability-effects'
 import { chooseAiEffectMode } from './ai/choose-one-mode'
 import type {
@@ -634,16 +638,8 @@ const chooseAbilityCostIds = (
     : discardCandidates.slice(0, discardCount).map((card) => card.instanceId)
   if (discardHandIds.length < discardCount) return null
 
-  const hpToTrashCandidateIds = cost.hpToTrash
-    ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .map((cookie) => cookie.card.instanceId)
-    : []
-  const hpToTrashTargetIds = cost.hpToTrash
-    ? universal?.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    : []
-  if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
+  const hpToTrashTargetIds = chooseAiHpToTrashIds(cost, player.battleArea, sourceInstanceId, universal)
+  if (!hpToTrashTargetIds) return null
 
   const trashBattleCookieCandidateIds = cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId)
@@ -702,6 +698,11 @@ const chooseAbilityCostIds = (
     return null
   }
 
+  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId)
+    .filter(card => !discardHandIds.includes(card.instanceId))
+    .slice(0, cost.handToBreakArea?.count ?? 0).map(card => card.instanceId)
+  if (handToBreakAreaIds.length < (cost.handToBreakArea?.count ?? 0)) return null
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -711,6 +712,7 @@ const chooseAbilityCostIds = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    handToBreakAreaIds,
   }
 }
 
@@ -775,6 +777,24 @@ const resolveAiCardAbility = (
   )
   if (!costIds) return null
 
+  if (getItemActivateDiscardRequirement(state, playerId)) {
+    // Keep the additional opponent-imposed cost as its own authoritative
+    // decision; the ordinary Item cost is paid only when that choice resolves.
+    const pending = applyGameCommand(state, {
+      kind: 'begin-play-item', playerId, instanceId: card.instanceId,
+      ...costIds,
+      ...(revealCost?.kind === 'reveal-hand' && revealCost.asCost ? {
+        targetIds: findRevealHandSelection(state, {
+          sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
+        }, revealCost) ?? [],
+      } : {}),
+    }, { shuffleSeed })
+    return {
+      state: pending, action: 'play-item', revealedCard: card,
+      description: `${state.players[playerId].name}宣告使用${card.name}，等待支付額外棄牌代價。`,
+    }
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: card.instanceId,
@@ -789,6 +809,7 @@ const resolveAiCardAbility = (
     costIds.discardHandIds,
     costIds.hpToTrashTargetIds,
     costIds.trashBattleCookieIds,
+    costIds.handToBreakAreaIds,
   )
   // Conditions such as BS6-084's hand limit are checked after the item and
   // its cost cards leave the hand, matching the real command path.
@@ -853,6 +874,7 @@ const resolveAiCardAbility = (
         discardHandIds: costIds.discardHandIds,
         hpToTrashTargetIds: costIds.hpToTrashTargetIds,
         trashBattleCookieIds: costIds.trashBattleCookieIds,
+        handToBreakAreaIds: costIds.handToBreakAreaIds,
         effectTargets: sim.effectTargets,
         chooseOneModes: sim.chooseOneModes,
       },
@@ -942,6 +964,8 @@ const resolveAiSkill = (
         }
       : undefined
     : baseSkill
+      ? { ...baseSkill, cost: getCookieSkillCost(baseSkill, trigger), effects: getCookieSkillEffects(baseSkill, trigger) }
+      : undefined
   if (
     !baseSkill ||
     (baseSkill.trigger !== trigger &&
@@ -1095,21 +1119,8 @@ const resolveAiSkill = (
     return null
   }
 
-  const hpToTrashCandidateIds = skill.cost.hpToTrash
-    ? getHpToTrashCostCandidates(
-        skill.cost,
-        player.battleArea,
-        source.card.instanceId,
-      ).map((cookie) => cookie.card.instanceId)
-    : []
-  const hpToTrashTargetIds = skill.cost.hpToTrash
-    ? universal?.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    : []
-  if (skill.cost.hpToTrash && hpToTrashTargetIds.length === 0) {
-    return null
-  }
+  const hpToTrashTargetIds = chooseAiHpToTrashIds(skill.cost, player.battleArea, source.card.instanceId, universal)
+  if (!hpToTrashTargetIds) return null
 
   const trashBattleCookieCandidateIds = skill.cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(
@@ -1135,6 +1146,14 @@ const resolveAiSkill = (
   ) {
     return null
   }
+
+  const positionCostCandidates = getBattleCookiePositionCostCandidates(skill.cost, player.battleArea, source.card.instanceId).map(cookie => cookie.card.instanceId)
+  const positionCostTargetIds = skill.cost.battleCookiePosition
+    ? universal?.enabled
+      ? universal.orderCostIds(positionCostCandidates, skill.cost.battleCookiePosition.count)
+      : positionCostCandidates.slice(0, skill.cost.battleCookiePosition.count)
+    : []
+  if (positionCostTargetIds.length < (skill.cost.battleCookiePosition?.count ?? 0)) return null
 
   const battleToHandCandidateIds = skill.cost.battleCookieToHand
     ? getBattleCookieToHandCostCandidates(
@@ -1250,6 +1269,7 @@ const resolveAiSkill = (
         hpToTrashTargetIds,
         trashBattleCookieIds,
         battleToHandIds,
+        ...(skill.cost.battleCookiePosition ? { positionCostTargetIds } : {}),
         trashToDeckBottomIds,
         trashToDeckIds,
         trashCookieToBreakAreaIds,
@@ -1262,7 +1282,9 @@ const resolveAiSkill = (
 
   const effectShuffleSeed = shuffleSeed ?? state.turnNumber
   const effectShuffle = createSeededShuffle(effectShuffleSeed)
-  const activated = activateCookieSkill(
+  const activated = replacement
+    ? activateOnPlayReplacement(state, playerId, source.card.instanceId, paymentIds)
+    : activateCookieSkill(
     state,
     playerId,
     source.card.instanceId,
@@ -1282,6 +1304,7 @@ const resolveAiSkill = (
     effects[0]?.kind === 'damage' && effects[0].selectionAsCost
       ? universalChooseEffectTargets(state, context, effects[0]) : [],
     activationRestrictionDiscardIds,
+    positionCostTargetIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -1310,6 +1333,7 @@ const resolveAiSkill = (
         hpToTrashTargetIds,
         trashBattleCookieIds,
         battleToHandIds,
+        ...(skill.cost.battleCookiePosition ? { positionCostTargetIds } : {}),
         trashToDeckBottomIds,
         trashToDeckIds,
         effectTargets: sim.effectTargets,
@@ -1732,6 +1756,7 @@ export const takeAiStep = (
     aiTurnStrategy.knowledgeState = options.memory?.observerId === playerId
       ? options.memory.knowledgeState
       : options.knowledgeState
+    aiTurnStrategy.searchNow = options.searchNow
     aiTurnStrategy.strategyMemory = options.memory?.observerId === playerId
       ? options.memory
       : undefined
@@ -1772,6 +1797,7 @@ export const takeAiStep = (
           p,
           level,
           aiTurnStrategy.knowledgeState,
+          shuffleSeed,
         ),
         turnHandler,
       ]) ?? {
@@ -1892,6 +1918,7 @@ export const simulateAiMatch = (
       seed: options.seed,
       memory: strategyMemories[controller],
       experienceProfile,
+      searchNow: options.searchNow,
     })
     if (decision.reason?.strategyMemory) {
       strategyMemories[controller] = decision.reason.strategyMemory

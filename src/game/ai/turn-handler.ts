@@ -15,11 +15,12 @@ import {
   getActivatableSkillSources,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
-  getHpToTrashCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
 } from '../skills'
 import { createSeededShuffle } from '../helpers'
+import { chooseAiHpToTrashIds } from './hp-cost-selection'
 import { simulateAbilityEffects } from './ability-effects'
 import type {
   CardEffect,
@@ -46,6 +47,7 @@ import {
 } from './deployment-policy'
 
 export interface AiTurnStrategy {
+  searchNow?: () => number
   currentLevel?: AiLevel
   /** Lv.5 fallback 仍保留「先下一張」節奏；Lv.4 對照組維持原策略。 */
   conservativeDeployment?: boolean
@@ -109,6 +111,7 @@ export interface AiStageCostIds {
   discardHandIds: string[]
   hpToTrashTargetIds: string[]
   trashBattleCookieIds: string[]
+  trashToDeckBottomIds?: string[]
 }
 
 export const chooseAiStageCostIds = (
@@ -188,16 +191,8 @@ export const chooseAiStageCostIds = (
     return null
   }
 
-  const hpToTrashCandidateIds = cost.hpToTrash
-    ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .map((cookie) => cookie.card.instanceId)
-    : []
-  const hpToTrashTargetIds = cost.hpToTrash
-    ? universal?.enabled
-      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
-      : hpToTrashCandidateIds.slice(0, 1)
-    : []
-  if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
+  const hpToTrashTargetIds = chooseAiHpToTrashIds(cost, player.battleArea, sourceInstanceId, universal)
+  if (!hpToTrashTargetIds) return null
 
   const trashBattleCookieCandidateIds = cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(
@@ -222,6 +217,13 @@ export const chooseAiStageCostIds = (
     return null
   }
 
+  const bottomCandidateIds = getTrashToDeckBottomCostCandidates(cost, player.discardPile).map(card => card.instanceId)
+  const bottomCount = cost.trashToDeckBottom?.count ?? 0
+  const trashToDeckBottomIds = universal?.enabled
+    ? universal.orderCostIds(bottomCandidateIds, bottomCount)
+    : bottomCandidateIds.slice(0, bottomCount)
+  if (trashToDeckBottomIds.length !== bottomCount) return null
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -229,6 +231,7 @@ export const chooseAiStageCostIds = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    ...(cost.trashToDeckBottom ? { trashToDeckBottomIds } : {}),
   }
 }
 
@@ -447,6 +450,7 @@ export const handleAiTurnState = (
           costIds.discardHandIds,
           costIds.hpToTrashTargetIds,
           costIds.trashBattleCookieIds,
+          costIds.trashToDeckBottomIds ?? [],
         )
         const stageShuffle =
           strategy.shuffleSeed === undefined
@@ -484,6 +488,7 @@ export const handleAiTurnState = (
                 discardHandIds: costIds.discardHandIds,
                 hpToTrashTargetIds: costIds.hpToTrashTargetIds,
                 trashBattleCookieIds: costIds.trashBattleCookieIds,
+                ...(costIds.trashToDeckBottomIds ? { trashToDeckBottomIds: costIds.trashToDeckBottomIds } : {}),
                 effectTargets: sim.effectTargets,
                 chooseOneModes: sim.chooseOneModes,
               },

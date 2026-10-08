@@ -1,0 +1,76 @@
+{
+  "id": "bs11-green-seed",
+  "name": "綠色｜風弓再活躍",
+  "color": "green",
+  "format": "standard",
+  "entries": [
+    {
+      "cardNumber": "BS11-038",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-039",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-040",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-041",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-042",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-043",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-044",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-045",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-046",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-048",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-049",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-051",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-052",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-053",
+      "count": 4
+    },
+    {
+      "cardNumber": "BS11-090",
+      "count": 4
+    }
+  ],
+  "extraDeckEntries": [
+    {
+      "cardNumber": "BS11-091",
+      "count": 4
+    }
+  ],
+  "createdAt": "2026-09-30T00:00:00+08:00",
+  "updatedAt": "2026-09-30T00:00:00+08:00"
+}
