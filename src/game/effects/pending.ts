@@ -76,6 +76,11 @@ export const resolveOpponentHandDiscard = (
     }
   }
 
+  // Item restriction choices are paid atomically with the saved Item command.
+  // The command resolver uses this validated choice; ordinary discard effects
+  // still move the cards here.
+  if (pending.itemActivation) return { ...state, pendingOpponentHandDiscard: null }
+
   // uniqueIds 的順序就是玩家的選擇順序，放回牌庫頂時必須沿用。
   const selectedCards = uniqueIds.map(
     (id) => player.hand.find((card) => card.instanceId === id)!,

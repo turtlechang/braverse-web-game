@@ -101,6 +101,67 @@ describe('DiscardRevealModal', () => {
 })
 
 describe('TrapResponseModal', () => {
+  it('087 shows one target step with conditional same-target Then and zero confirmation', async () => {
+    const trap: GameCard = { id: 'BS12-087', instanceId: 'understanding', name: 'Coming To An Understanding', type: 'trap',
+      trap: { text: 'Select up to 1 opponent Cookie. Then, if there are 10 Arena cards in your trash, that Cookie deals an additional -1.', cost: { energy: { purple: 2 } },
+        effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
+          thenEffects: [{ kind: 'modify-attack', amount: -1, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+            condition: { kind: 'trash-keyword-count-at-least', keyword: 'arena', count: 10 } }] }] } }
+    const payments = [createHandCard(87), createHandCard(88)]
+    const target = createBattleCookie(87)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+    try {
+      await act(() => root.render(<TrapResponseModal cards={[trap]} selectedTrapId="understanding"
+        paymentCards={payments} trapEnergyCostTotal={2} trapPaymentValid selectedPaymentIds={payments.map(card => card.instanceId)}
+        targetCards={[]} discardHandCards={[]} discardHandCost={0} selectedDiscardHandIds={[]}
+        trapEffectTargetSteps={[{ effectIndex: 0, candidates: [target], selectedTargetIds: [], max: 1, min: 0, allowEmpty: true }]}
+        onSelectTrapEffectTarget={() => undefined} onSelectTrap={() => undefined} onToggleDiscardHand={() => undefined} onConfirm={onConfirm} onSkip={() => undefined} />))
+      const next = findButton(container, '下一步')
+      if (!next) throw new Error('Missing payment navigation')
+      await click(next)
+      expect(container.textContent).toContain('本回合攻擊傷害 -2')
+      expect(container.textContent).toContain('10 張以上【Arena】牌')
+      expect(container.textContent).toContain('同一張餅乾再 -1（不能改選目標）')
+      expect(container.querySelectorAll('.trap-effect-target-step')).toHaveLength(1)
+      const confirm = findButton(container, '確認發動')
+      if (!confirm) throw new Error('Missing zero selection confirmation')
+      expect(confirm.disabled).toBe(false)
+      await click(confirm)
+      expect(onConfirm).toHaveBeenCalledOnce()
+    } finally { await act(() => root.unmount()) }
+  })
+  it.each([0, 1])('086 explains own next turn expiry with %s legal target choices and permits zero', async count => {
+    const trap: GameCard = { id: 'BS12-086', instanceId: 'true-rock', name: 'True Rock Spirit', type: 'trap',
+      trap: { text: 'Select up to 1 Cookie that has Blocker in your battle area. Until the end of your next turn, that Cookie gains +2 attack damage.', cost: { energy: { purple: 1 } }, effects: [{ kind: 'modify-attack', amount: 2, duration: 'own-next-turn', target: { side: 'self', min: 0, max: 1, blockerOnly: true } }] } }
+    const payment = createHandCard(86)
+    const target = createBattleCookie(86)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const onConfirm = vi.fn()
+    try {
+      await act(() => root.render(<TrapResponseModal cards={[trap]} selectedTrapId="true-rock"
+        paymentCards={[payment]} trapEnergyCostTotal={1} trapPaymentValid selectedPaymentIds={[payment.instanceId]}
+        targetCards={[]} discardHandCards={[]} discardHandCost={0} selectedDiscardHandIds={[]}
+        trapEffectTargetSteps={count ? [{ effectIndex: 0, candidates: [target], selectedTargetIds: [], max: 1, min: 0, allowEmpty: true }] : []}
+        allowEmptyTarget onToggleEmptyTarget={() => undefined} onSelectTrapEffectTarget={() => undefined}
+        onSelectTrap={() => undefined} onToggleDiscardHand={() => undefined} onConfirm={onConfirm} onSkip={() => undefined} />))
+      const next = findButton(container, '下一步')
+      if (!next) throw new Error('Missing energy navigation')
+      await act(() => next.click())
+      expect(container.textContent).toContain('己方戰鬥區具有 Blocker 技能')
+      expect(container.textContent).toContain('直到自己的下個回合結束')
+      expect(container.textContent).toContain('可選 0 張')
+      expect(container.textContent).not.toContain('略過傷害效果')
+      const confirm = findButton(container, '確認發動')
+      if (!confirm) throw new Error('Missing zero selection confirmation')
+      expect(confirm.disabled).toBe(false)
+      await act(() => confirm.click())
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+    } finally { await act(() => root.unmount()) }
+  })
+
   it('shows the attacker and attack target together during an attack response', () => {
     const attacker = createBattleCookie(40).card
     const target = createBattleCookie(41).card
@@ -672,6 +733,67 @@ describe('AttackResponseModal', () => {
 })
 
 describe('BlockerResponseModal', () => {
+  it('requires exact purple Arena hand cost, excludes wrong cards and preserves drafts when minimized', async () => {
+    const original = createBattleCookie(60)
+    const blocker: CookieInBattle = { ...original, rested: true, card: { ...original.card,
+      skill: { text: '【Blocker】 <Discard 1 {P} Arena card from your hand.>', trigger: 'block', oncePerTurn: false, yourTurn: false,
+        restSource: false, cost: { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+        effects: [{ kind: 'redirect-attack', target: { side: 'self', min: 1, max: 1, sourceOnly: true } }] },
+    } }
+    const legal = { ...createHandCard(1), energyColor: 'purple' as const, keywords: ['arena' as const] }
+    const wrong = { ...createHandCard(2), energyColor: 'red' as const, keywords: ['arena' as const] }
+    const nonArena = { ...createHandCard(3), energyColor: 'purple' as const }
+    const onToggleDiscard = vi.fn()
+    const onConfirm = vi.fn()
+    const onBack = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const render = async (selectedDiscardIds: string[]) => act(() => root.render(<BlockerResponseModal
+      blockerCards={[blocker]} selectedBlockerId={blocker.card.instanceId} paymentCost={{}} paymentCostTotal={0}
+      paymentCandidates={[]} selectedPaymentIds={[]} paymentValid onTogglePayment={vi.fn()} hand={[legal, wrong, nonArena]}
+      selectedDiscardIds={selectedDiscardIds} onToggleDiscard={onToggleDiscard} onSelectBlocker={vi.fn()}
+      onConfirm={onConfirm} onSkip={vi.fn()} onBack={onBack} />))
+    await render([])
+    expect(container.querySelectorAll('[aria-label="Blocker 手牌代價"] button')).toHaveLength(1)
+    expect(container.querySelector('[aria-label="Blocker 手牌代價"]')?.textContent).toContain(legal.name)
+    expect(container.querySelector('.blocker-source-cost')).toBeNull()
+    expect(container.querySelector('img[alt="紫色能量"]')).not.toBeNull()
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(true)
+    await click(findButton(container, legal.name))
+    expect(onToggleDiscard).toHaveBeenCalledWith(legal.instanceId)
+    await render([legal.instanceId])
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(false)
+    await click(findButton(container, '縮小'))
+    await click(findButton(container, 'Blocker 回應'))
+    expect(container.querySelector('[aria-label="Blocker 手牌代價"] button')?.getAttribute('aria-pressed')).toBe('true')
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(false)
+    await click(findButton(container, '返回'))
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    await render(['stale-card'])
+    expect(findButton(container, '使用 Blocker')?.disabled).toBe(true)
+    await act(() => root.unmount())
+  })
+  it('shows the selected source REST cost before confirming or returning', async () => {
+    const original = createBattleCookie(60)
+    const blocker: CookieInBattle = { ...original, card: { ...original.card,
+      skill: { text: '<Rest this card.>', trigger: 'block', oncePerTurn: false, yourTurn: false,
+        restSource: true, cost: { energy: {} }, effects: [] },
+    } }
+    const onConfirm = vi.fn()
+    const onBack = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<BlockerResponseModal blockerCards={[blocker]} selectedBlockerId={blocker.card.instanceId}
+      paymentCost={{}} paymentCostTotal={0} paymentCandidates={[]} selectedPaymentIds={[]} paymentValid
+      onTogglePayment={vi.fn()} onSelectBlocker={vi.fn()} onConfirm={onConfirm} onSkip={vi.fn()} onBack={onBack} />))
+    expect(container.textContent).toContain(`代價：橫置「${blocker.card.name}」。`)
+    await click(findButton(container, '返回'))
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(blocker.rested).toBe(false)
+    await act(() => root.unmount())
+  })
   it('exposes and requires the printed coloured energy payment', async () => {
     const blocker = createBattleCookie(60)
     const payment: GameCard = {
@@ -731,6 +853,31 @@ describe('BlockerResponseModal', () => {
 })
 
 describe('AttackResponseSkillModal', () => {
+  it('requires exactly one support trash cost and exposes selection and return without paying', async () => {
+    const response = createBattleCookie(53)
+    const costCards = [createHandCard(53), createHandCard(54)]
+    const onConfirm = vi.fn()
+    const onBack = vi.fn()
+    const onToggle = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const props = { skills: [response], selectedSkillId: response.card.instanceId, supportToTrashCards: costCards, supportToTrashAmount: 1,
+      onSelectSkill: vi.fn(), onToggleSupportToTrash: onToggle, onBack, onSkip: vi.fn(), onConfirm }
+    await act(() => root.render(<AttackResponseSkillModal {...props} selectedSupportToTrashIds={[]} />))
+    expect(findButton(container, '支付代價並發動')?.disabled).toBe(true)
+    await click(findButton(container, '測試手牌 53'))
+    expect(onToggle).toHaveBeenCalledWith(costCards[0].instanceId)
+    await click(findButton(container, '返回回應選擇'))
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    await act(() => root.render(<AttackResponseSkillModal {...props} selectedSupportToTrashIds={[costCards[0].instanceId]} />))
+    expect(findButton(container, '支付代價並發動')?.disabled).toBe(false)
+    await click(findButton(container, '支付代價並發動'))
+    expect(onConfirm).toHaveBeenCalledOnce()
+    await act(() => root.render(<AttackResponseSkillModal {...props} selectedSupportToTrashIds={costCards.map(card => card.instanceId)} />))
+    expect(findButton(container, '支付代價並發動')?.disabled).toBe(true)
+    await act(() => root.unmount())
+  })
   it('requires every trash-to-deck cost card before enabling payment', async () => {
     const responseCookie: CookieInBattle = {
       ...createBattleCookie(53),
@@ -1522,6 +1669,45 @@ describe('DecisionModal', () => {
 })
 
 describe('FlipResponseModal', () => {
+  it('renders the printed purple hand-cost icon without exposing its raw token', () => {
+    const card: CookieCard = { ...createBattleCookie(0).card, flip: {
+      text: '<Discard 1 {P} Arena card from your hand.> Your opponent discards 2 cards.',
+      cost: { energy: {}, discardHand: 1, discardHandColor: 'purple', discardHandKeyword: 'arena' },
+      effects: [{ kind: 'opponent-discard-hand', count: 2 }],
+    } }
+    const markup = renderToStaticMarkup(<FlipResponseModal card={card} hand={[]} discardCount={1}
+      selectedDiscardIds={[]} onToggleDiscard={() => undefined} onSkip={() => undefined} onActivate={() => undefined} />)
+    expect(markup).toContain('alt="紫色能量"')
+    const container = document.createElement('div')
+    container.innerHTML = markup
+    expect(container.querySelector('.flip-response-modal > p')?.textContent).not.toContain('{P}')
+    expect(markup).toContain('Your opponent discards 2 cards.')
+  })
+  it('marks and deselects every chosen target in a multi-target FLIP', async () => {
+    const card = createBattleCookie(0).card
+    const targets = [createBattleCookie(1).card, createBattleCookie(2).card]
+    const onActivate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<FlipResponseModal card={card} hand={[]} discardCount={0} selectedDiscardIds={[]}
+      onToggleDiscard={() => undefined} onSkip={() => undefined} onActivate={onActivate}
+      targetCandidates={targets} targetMin={0} targetMax={2} />))
+    const buttons = () => [...container.querySelectorAll<HTMLButtonElement>('[aria-label="FLIP 效果目標"] > button')]
+    await click(buttons()[1])
+    await click(buttons()[0])
+    expect(buttons().map(button => button.getAttribute('aria-pressed'))).toEqual(['true', 'true'])
+    await click(buttons()[0])
+    expect(buttons().map(button => button.getAttribute('aria-pressed'))).toEqual(['false', 'true'])
+    await click(buttons()[1])
+    expect(buttons().map(button => button.getAttribute('aria-pressed'))).toEqual(['false', 'false'])
+    await click(findButton(container, '發動 FLIP'))
+    expect(onActivate).toHaveBeenLastCalledWith(undefined, [])
+    await click(buttons()[1])
+    await click(buttons()[0])
+    await click(findButton(container, '發動 FLIP'))
+    expect(onActivate).toHaveBeenLastCalledWith(undefined, [targets[1].instanceId, targets[0].instanceId])
+    await act(() => root.unmount())
+  })
   it('shows the first three hand cards without rendering the remaining page', () => {
     const card: CookieCard = {
       id: 'ST1-001',

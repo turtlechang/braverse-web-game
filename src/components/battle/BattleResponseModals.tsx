@@ -117,7 +117,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
   // number of green hand cards). Keep those ids separate from battle targets
   // so the Flip modal can submit both selections in one authoritative command.
   const flipCardSelectionEffect = pendingBattle?.revealedHpCard?.flip?.effects.find(
-    (effect) => effect.kind === 'support-to-hand' || effect.kind === 'hand-to-support',
+    (effect) => effect.kind === 'support-to-hand' || effect.kind === 'hand-to-support' || effect.kind === 'rest-support' || effect.kind === 'trash-to-hand',
   )
   const flipCardSelectionCandidates =
     flipCardSelectionEffect && flipTargetContext
@@ -157,6 +157,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
       flipTargetEffect.receiverTarget &&
       flipReceiverTargetCandidates.length > 0,
   )
+
+  // A paid response owns the target decision before any further trap/block response.
+  if (pendingBattle?.stage === 'trap' && match.game.pendingAbilityEffect) return null
 
   return (
     <>
@@ -221,6 +224,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashCookieToBreakAreaIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
+              match.setSelectedTrapPositionCostIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setSelectedTrapEffectTargets([])
@@ -235,6 +239,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setPendingResponseMode('blocker')
               match.setSelectedBlockerId(id)
               match.setSelectedBlockerPaymentIds([])
+              match.setSelectedBlockerDiscardIds([])
             }}
             onSelectAttackResponse={(id) => {
               match.setPendingResponseMode('attack-response')
@@ -305,6 +310,13 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               (cookie) => cookie.card,
             )}
             battleCookieCost={match.selectedTrapTrashBattleCookieCost}
+            positionCost={match.selectedTrapPositionCost}
+            positionCostCards={match.selectedTrapPositionCostCandidates.map(cookie => cookie.card)}
+            selectedPositionCostIds={match.selectedTrapPositionCostIds}
+            onTogglePositionCost={id => match.setSelectedTrapPositionCostIds(current => current.includes(id)
+              ? current.filter(value => value !== id)
+              : current.length < (match.selectedTrapPositionCost?.count ?? 0) && match.selectedTrapPositionCostCandidates.some(cookie => cookie.card.instanceId === id)
+                ? [...current, id] : current)}
             selectedBattleCookieIds={match.selectedTrapTrashBattleCookieIds}
             trashToDeckCards={match.trapTrashToDeckCandidates}
             trashToDeckAmount={match.trapTrashToDeckAmount}
@@ -328,6 +340,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
+              match.setSelectedTrapPositionCostIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setSelectedTrapEffectTargets([])
@@ -373,7 +386,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                     match.setSelectedTrapId(null)
                     match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
-                    match.setSelectedTrapTrashBattleCookieIds([])
+                    match.setSelectedTrapPositionCostIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
                     match.setSelectedTrapTargetId(null)
                     match.setSelectedTrapEffectTargets([])
                     match.setTrapSelectNoTarget(false)
@@ -391,6 +405,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
+              match.setSelectedTrapPositionCostIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setSelectedTrapEffectTargets([])
@@ -422,6 +437,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
+              match.setSelectedTrapPositionCostIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setSelectedTrapEffectTargets([])
@@ -451,6 +467,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 handToSupportIds: match.selectedTrapHandToSupportIds,
                 discardHandIds: match.selectedTrapDiscardIds,
                 handToBreakIds: match.selectedTrapHandToBreakIds,
+                positionCostTargetIds: match.selectedTrapPositionCostIds,
                 trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
                 trashCookieToBreakAreaIds:
                   match.selectedTrapTrashCookieToBreakAreaIds,
@@ -501,9 +518,13 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             paymentValid={match.blockerPaymentValid}
             paymentValidationReason={match.blockerPaymentValidationReason}
             onTogglePayment={match.toggleBlockerPayment}
+            hand={match.game.players[match.viewerPlayerId].hand}
+            selectedDiscardIds={match.selectedBlockerDiscardIds}
+            onToggleDiscard={id => match.setSelectedBlockerDiscardIds(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id])}
             onSelectBlocker={(id) => {
               match.setSelectedBlockerId(id)
               match.setSelectedBlockerPaymentIds([])
+              match.setSelectedBlockerDiscardIds([])
             }}
             onConfirm={() => {
               if (!match.selectedBlockerId) return
@@ -513,13 +534,19 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                   playerId: match.viewerPlayerId,
                   sourceInstanceId: match.selectedBlockerId!,
                   paymentIds: match.selectedBlockerPaymentIds,
+                  ...(match.selectedBlockerDiscardIds.length > 0 ? { discardHandIds: match.selectedBlockerDiscardIds } : {}),
                 },
                 '已使用 Blocker 阻擋攻擊。',
               )
+              match.setSelectedBlockerId(null)
+              match.setSelectedBlockerPaymentIds([])
+              match.setSelectedBlockerDiscardIds([])
+              match.setPendingResponseMode(null)
             }}
             onSkip={() => {
               match.setSelectedBlockerId(null)
               match.setSelectedBlockerPaymentIds([])
+              match.setSelectedBlockerDiscardIds([])
               match.setPendingResponseMode(null)
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
@@ -529,6 +556,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onBack={() => {
               match.setSelectedBlockerId(null)
               match.setSelectedBlockerPaymentIds([])
+              match.setSelectedBlockerDiscardIds([])
               match.setPendingResponseMode(null)
             }}
           />
@@ -541,11 +569,16 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <AttackResponseSkillModal
             skills={match.playerAttackResponseCandidates}
             selectedSkillId={match.selectedAttackResponseId}
+            supportToTrashCards={match.attackResponseSupportToTrashCandidates}
+            supportToTrashAmount={match.attackResponseSupportToTrashAmount}
+            selectedSupportToTrashIds={match.selectedAttackResponseSupportToTrashIds}
+            onToggleSupportToTrash={match.toggleAttackResponseSupportToTrash}
             trashToDeckCards={match.attackResponseTrashToDeckCandidates}
             trashToDeckAmount={match.attackResponseTrashToDeckAmount}
             selectedTrashToDeckIds={match.selectedAttackResponseTrashToDeckIds}
             onSelectSkill={(id) => {
               match.setSelectedAttackResponseId(id)
+              match.setSelectedAttackResponseSupportToTrashIds([])
               match.setSelectedAttackResponseTrashToDeckIds([])
               match.setSelectedAttackResponseDiscardIds([])
             }}
@@ -559,12 +592,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onBack={() => {
               match.setPendingResponseMode(null)
               match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseSupportToTrashIds([])
               match.setSelectedAttackResponseTrashToDeckIds([])
               match.setSelectedAttackResponseDiscardIds([])
             }}
             onSkip={() => {
               match.setPendingResponseMode(null)
               match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseSupportToTrashIds([])
               match.setSelectedAttackResponseTrashToDeckIds([])
               match.setSelectedAttackResponseDiscardIds([])
               match.dispatch(
@@ -578,6 +613,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 kind: 'play-attack-response',
                 playerId: match.viewerPlayerId,
                 sourceInstanceId: match.selectedAttackResponseId,
+                supportToTrashIds: match.selectedAttackResponseSupportToTrashIds,
                 discardHandIds: match.selectedAttackResponseDiscardIds,
                 trashToDeckIds: match.selectedAttackResponseTrashToDeckIds,
               }
@@ -586,6 +622,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               )
               match.setPendingResponseMode(null)
               match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseSupportToTrashIds([])
               match.setSelectedAttackResponseTrashToDeckIds([])
               match.setSelectedAttackResponseDiscardIds([])
               match.dispatch(command, `已發動${skill?.card.name ?? '攻擊回應技能'}。`)

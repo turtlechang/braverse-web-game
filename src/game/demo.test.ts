@@ -1457,7 +1457,7 @@ describe('createCardCheckDemoState', () => {
     expect(pending.pendingDrawUpTo).toMatchObject({ playerId: 'player-one', max: 1 })
     expect(pending.players['player-one'].hand).toEqual(state.players['player-one'].hand)
     expect(pending.players['player-one'].deck).toEqual(state.players['player-one'].deck)
-    const resolved = resolveDrawUpTo(pending, 'player-one', 1)
+    const resolved = applyGameCommand(pending, { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount: 1 })
 
     expect(resolved.status).toBe('playing')
     expect(resolved.pendingBattle).toBeNull()

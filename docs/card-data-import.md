@@ -1,5 +1,33 @@
 # 官方卡牌資料匯入
 
+2026-10-04：098候選局部Browser112／112、卡牌／規則2檔93項及共用預覽4項、受影響15檔／741項（包含專項，不相加）、strict1／1、build／全域lint通過。黑色Arena LV1／HP1、黑色有效LV1戰鬥區Special Play、KK普通2及免費FLIP固定原LV2以上HP持有者補1HP已驗；LV1／交集與區域反例、最後HP救援／昏厥、Refresh／LV10通過。修正共用快速預覽漏顯Special Play，095／096／097／098雙尺寸8案另列；原生Chrome正反另確認。一般累計7,760、cursor099、剩14基礎／23印刷；1250個來源雜湊一致。719檔／11,724項與AI／ST1屬097／098修改前，097～099全套留099批末。154 inventory／0 promoted、正式BS12／逐卡online未完成；全部裁定112及所有印刷後。
+
+2026-10-04：097候選局部Browser42／42、專項2檔／53項（包含於四檔108項097／094回歸）、受影響10檔／539項（包含專項，不相加）、strict1／1、build／全域lint通過。黑色Arena LV1／HP2、N1普通1與六色支援支付、未選支援保留、取消／反選／改選目標、昏厥及最後HP控制FLIP已驗；新增strict guard拒絕16個真實runtime語意變異，普通轉接原已正確。原生Chrome紫色支付／取消／無能量阻擋／兩HP登場與原圖746×1038另確認。一般累計7,648、cursor098、剩15基礎／24印刷；719檔／11,724項（773.98秒）及AI／ST1共用驗證為094～096、097修改前歷史證據，097～099全套留099批末。154 inventory／0 promoted、正式BS12／逐卡online未完成；全部裁定112及所有印刷後。
+
+2026-10-04：096候選局部Browser126／126、專項3檔／92項、受影響19檔／806項（包含專項，不相加）、strict1／1、build／全域lint通過。黑色Arena LV1／HP1、黑色LV1戰鬥區Special Play、KK普通2、己方手牌最多五且同張己方黑色Arena戰鬥區Cookie才免費抽0～2已驗。手牌五→七、零HP來源／抽後昏厥／抽出Cookie補位、區域及交集反例、Refresh／LV10均通過；共用詳情漏顯Special Play及誤標FLIP已修正，095／096詳情四案、095操作十二案另列。一般累計7,606、cursor097、剩16基礎／25印刷；094～096批末完整Vitest 719檔／11,724項（773.98秒）、AI Browser與ST1好友房核心同步全部exit0；1242個凍結來源雜湊一致。ST1為共用核心同步，未驗完整對局至勝負或BS12逐卡online。154 inventory／0 promoted、正式BS12／逐卡online未完成；全部裁定112及所有印刷後。
+
+2026-10-04 BS12-095：官方實圖確認黑色Arena LV1／HP1、獨立Special Play與棄任意手牌的0～1己方Arena補HP FLIP、KK普通2；新增exact轉接及31個strict語意mutant。strict1／1、119項專項／605項不重疊受影響、Browser114案及build／lint通過。全候選靜態84／18／10、Then15／23、strict122 verified／32 needs-review；一般7,480、cursor096、剩17基礎／26印刷。709檔／11,457項屬094／095修改前，本批全套待096批末。154 inventory／0 promoted、正式／逐卡online未完成；裁定112及所有印刷後。下列094及更早為歷史快照。
+
+2026-10-04 BS12-094：官方實圖與事前預期確認黑色Arena LV3／HP4、任意三能量普通4、沒有未印刷技能；既有adapter正確，新增strict守門與16個runtime語意mutant。strict1／1、56項專項／623項受影響、Browser44案及build／lint通過。全候選靜態83／18／11、Then15／23、strict121 verified／33 needs-review；一般7,366、cursor095、剩18基礎／27印刷。709檔／11,457項屬094修改前，094～096全套待096批末。154 inventory／0 promoted，正式／逐卡online未完成；裁定112及全部印刷後。下列093及更早為歷史快照。
+
+2026-10-04 BS12-093／093@1：兩張原圖對照事前預期，exact獨立保存紫色Arena手牌Blocker與PPN普通3的Then兩張Blocker Cookie依序置牌庫底、0～1任意對手追加1。strict2／2及33個runtime語意mutant、119項專項／901項受影響、雙尺寸172案通過。全候選靜態83／18／11、能力83 converted／11 pending、Then15／23、strict121 verified／33 needs-review；一般7,322、cursor094、剩19基礎／28印刷。091～093完整709檔／11,457項（763.34秒）通過，154 inventory／0 promoted及候選SHA256不變；正式／逐卡online未完成，全部裁定112及所有印刷後。下列092及更早為歷史快照。
+
+2026-10-04 BS12-092／092@1：兩張完整官方卡面對照事前預期，EXTRA exact保留三張己方Arena-and-Blocker休息區門檻及紫色LV2以下戰鬥區到棄牌區代價，新增獨立friendlyFaintEffects與後攻Then。29個runtime語意mutant、strict2／2、87項專項、1,121項受影響及156案雙尺寸Browser通過。靜態82／18／12、能力82 converted／12 pending、Then14／23、strict119 verified／35 needs-review；一般7,150、cursor093／093@1、剩20基礎／30印刷。154 inventory／0 promoted，原始候選SHA256不變；正式／逐卡online未完成，最新完整700檔／11,138項屬091前，本批全套留093，裁定留112及所有印刷後。下列091及更早為歷史快照。
+
+2026-10-04 BS12-091／091@1候選：兩印刷完整原圖與事前預期逐張核對；exact保存PN普通2、紫色Arena任意手牌Blocker，以及獨立faintCost.deckToTrash.amount=3／faintEffects回收0～1己方棄牌區Blocker Cookie並排除全部同名。strict2／2、adapter29項含27個runtime語意mutant、桌機／平板188案通過。全候選靜態82 supported／18 no-effect／12 unsupported，能力82 converted／12 pending，Then13／23，strict117 verified／37 needs-review；不等同逐卡完成。一般6,994、cursor092／092@1、剩21基礎／32印刷，154 inventory／0 promoted；最新完整700檔／11,138項屬091前版本，本批全套留093批末。所有裁定仍112及全部印刷後，正式／逐卡online未完成；下列090及更早為歷史快照。
+
+2026-10-04 BS12-090／090@1候選：兩張完整官方WebP獨立目視與先存預期相符，保留各自imageUrl、SHA256及基本卡號正規化。exact Blocker成本與faintEffects／免費faintCost獨立保存；新增己方休息區Cookie-and-printed-Blocker交集四張條件，不誤用棄牌區／其他牌區或Arena限制。adapter26項包含24個實際runtime mutant、strict2／2、雙尺寸180案通過；088～090最新完整700檔／11,138項全過。全候選靜態81 supported／18 no-effect-text／13 unsupported、能力81 converted／13 pending、Then13／23、strict115 verified／39 needs-review，僅屬靜態證據。154 inventory／0 promoted維持，cursor091／091@1；091～093六張原圖及獨立預期已備，所有裁定留112及全部印刷後。下列089及更早為歷史快照。
+
+2026-10-04 BS12-089／089@1候選：兩張完整官方WebP獨立目視並核對先存預期，保留各自imageUrl、SHA256與基本卡號正規化。exact轉接及strict evidence分開保存紫色且Arena手牌Blocker成本與本次戰鬥對手LV3攻擊效果限制，adapter21項含19個實際runtime mutant、strict2／2、雙尺寸184案通過。全候選靜態80 supported／18 no-effect-text／14 unsupported、能力80 converted／14 pending、Then13／23、strict113 verified／41 needs-review；這些不能代替逐卡語意驗收。154 inventory／0 promoted維持，cursor090／090@1，所有裁定留112及全部印刷後。
+
+2026-10-04 BS12-088／088@1候選：兩張完整官方WebP各自目視後共用相同卡文預期，保留不同imageUrl及基本卡號正規化。新增exact Blocker與獨立昏厥轉接，contract evidence／guard同時核對兩組代價與效果；adapter29項、27個實際runtime語意mutant、strict2／2及雙尺寸172案通過。全候選靜態79 supported／18 no-effect-text／15 unsupported、能力79 converted／15 pending、Then13／23、strict111 verified／43 needs-review；這些是靜態盤點，不能代替逐卡語意驗收。154 inventory／0 promoted維持，cursor089／089@1，所有裁定留112及全部印刷後。
+
+2026-10-03 BS12-087候選：先目視完整Coming To An Understanding官方卡面，再新增exact主效果／陷阱轉接，修正泛用轉接遺失Then。strict以19個真正GameCard語意突變拒絕錯費用、選取範圍、期限、十張Arena交集、漏Then或另選目標；adapter20項、strict1／1及雙尺寸68案通過。全候選靜態78 supported／18 no-effect-text／16 unsupported、能力78 converted／16 pending、Then13／23、strict109 verified／45 needs-review，不能視為逐卡完整驗收。候選仍154 inventory／0 promoted，所有裁定留112及全部印刷後。
+
+2026-10-03 BS12-086候選：完整官方圖及獨立預期先於runtime轉接；exact adapter保存P1、0～1己方印刷Blocker與+2至自己下回合結束，strict以18種真實runtime mutant拒絕免費／錯色／錯期限／必選／超選／漏Blocker及額外Arena／REST／條件／Then限制。局部雙尺寸54案、strict1／1通過；全系列靜態78 supported／18 no-effect-text／16 unsupported、strict109 verified／45 needs-review，不是逐卡驗收完成數。候選仍154 inventory／0 promoted，全部裁定留112及全部印刷後。
+
+2026-10-03 BS12-082～085候選：逐張完整官方圖與獨立預期先於轉接；DJ的道具額外棄牌以exact passive effect轉接，083以`trash-to-battle.blockerOnly`保存己方棄牌區0～1張Blocker條件。084保存P1放置、P1＋REST與兩張Blocker依序放牌庫底的費用及對手六張手牌門檻。085新增己方棄牌區Cookie-and-Blocker交集至少五張的條件，P1後全部一般棄牌洗回；strict拒絕門檻4／6、錯誤種類／區域、雙方洗回、漏條件與額外限制等14種mutant。082／083／084／085局部雙尺寸分別72／52／68／50案通過；全系列靜態77 supported／18 no-effect-text／17 unsupported、strict108 verified／46 needs-review不是逐卡驗收完成數。候選仍154 inventory／0 promoted，多來源R005、EXTRA返回主牌庫及其餘裁定待112含全部印刷後統一提報。
+
 ## 來源
 
 - 官方卡牌頁：`https://cookierunbraverse.com/en/cardList`
@@ -292,6 +320,8 @@ CI 會執行 `npm run check:card-pool`，只讀檢查 `data/cards/*.json` 與 ge
 
 ## 文字與效果轉換
 
+BS12 候選的官方英文 `attackText` 在換行後的 `Card Name :` 附加中文完整卡面轉錄。匯入保留全部原文；runtime normalization 只擷取分隔前的英文攻擊（包含 Then），避免把中文技能及重複攻擊當成英文攻擊續文。來源、產品範圍與逐卡核對見 [BS12 進度](bs12-progress-2026-09-30.md)。
+
 `src/cards/official-text-parser.ts` 解析官方標記：
 
 - `{R}`、`{Y}`、`{G}`、`{B}`、`{P}`、`{K}`：指定顏色能量。
@@ -311,3 +341,24 @@ CI 會執行 `npm run check:card-pool`，只讀檢查 `data/cards/*.json` 與 ge
 - runtime `id` 使用 `baseCardNumber`，保留異圖與圖片 URL 在轉換結果 metadata。
 
 `src/cards/official-effect-adapter.ts` 目前支援直接傷害、攻擊傷害增減、全體攻擊修正、受到攻擊傷害減免、目標篩選、break area 等級條件、disable-flip、view-hp、reorder-hp、battle-to-support、trash-to-battle、support-to-hand，以及跨區的兩段式休息區移動等物品/場景效果。無法安全轉換的效果會標記為 `unsupported`，避免把尚未確認的規則誤實作成權威邏輯。
+
+## BS12-021@1 名稱來源校正（2026-10-01）
+
+官方P印刷卡圖為Mango Cookie，API候選name為Greenbell Cookie。normalization僅在`BS12-021@1`、該舊名稱及[Rd4Td_KAJPv3ItGRjvE97A.webp](https://cookierunbraverse.com/data/en_storage/Rd4Td_KAJPv3ItGRjvE97A.webp)三者符合時校正runtime名稱，保留原候選JSON與各印刷圖片URL。基本與P完整卡圖已各自目視；SHA與獨立預期見[BS12進度](bs12-progress-2026-09-30.md)。候選仍inventory／0 promoted，此校正不代表已加入正式卡池。
+
+
+## 2026-10-04 BS12-099 局部驗收
+
+2026-10-04：099候選局部Browser80／80、專項2檔／122項（卡牌33含32個runtime語意變異、規則89）、受影響13檔／460項（包含專項，不相加）、strict1／1、build／全域lint通過。黑色Arena LV1／HP2、KK普通2；來源昏厥後先支付牌庫頂三張，再回收0～1己方棄牌區黑色且Arena餅乾，同名及LV1／LV3皆可。新棄入目標、交集／區域反例、選零／不付費、FLIP救援、Refresh／LV10及非昏厥送棄已驗，原生Chrome正反另確認。一般累計7,840、cursor100、剩13基礎／22印刷；1253個來源雜湊一致。097～099批末全套及AI／ST1尚待執行，719檔／11,724項屬094～096歷史結果。154 inventory／0 promoted、正式BS12／逐卡online未完成；全部裁定112及所有印刷後。
+
+099的faint-only技能使用三張牌庫頂代價與black＋arena＋cookieOnly的trash-to-hand（max1）；付款後重新取得公開棄牌區候選，沒有同名／等級／Blocker排除。正常HP2與KK普通2分開驗證；詳見[本卡驗收](bs12-progress-2026-09-30.md#2026-10-04-bs12-099-局部驗收)。
+
+
+## 2026-10-04 BS12-100 局部驗收
+
+100以既有trash-to-hand＋cookieOnly＋arena＋hasSpecialPlay（max1）表達免費FLIP，Special Play另以己方戰鬥區黑色有效LV1 Cookie送棄支付。共用FLIP面板新增棄牌回收候選／反選／選零，公開紀錄顯示實際回收卡名；116案雙尺寸候選Browser、專項136項、受影響665項、strict1／1及build／lint通過，共用098十二案另列。一般7,956、cursor101，剩12基礎／21印刷。100～102全套留102批末；726檔／11,996項與AI／ST1是100修改前歷史結果。154 inventory／0 promoted，正式／逐卡online未完成，全部裁定112及所有印刷後；詳見[本卡驗收](bs12-progress-2026-09-30.md#2026-10-04-bs12-100-局部驗收)。
+
+
+## 2026-10-04 BS12-101 局部驗收
+
+101為黑色Arena LV1／HP2、K1普通1，Then可選支付1張己方Arena餅乾手牌，再抽0～1。公開休息區保留來源卡名／卡圖、代價明示餅乾類型，抽牌縮小保留選取；規則／實際OnlineBattleView及雙尺寸100案通過，專項126項、受影響746項、strict1／1、build／lint通過。共用026／065十六案另列；一般8,056、cursor102、剩11基礎／20印刷。154 inventory／0 promoted，正式／逐卡online未完成；100～102全套與AI／ST1待102批末，726檔／11,996項屬100／101修改前歷史結果。裁定112及所有印刷後；詳見[本卡驗收](bs12-progress-2026-09-30.md#2026-10-04-bs12-101-局部驗收)。

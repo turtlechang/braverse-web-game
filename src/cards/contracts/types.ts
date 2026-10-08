@@ -4,6 +4,7 @@ import type {
   EffectTargetSelector,
   GameCard,
   EnergyCost,
+  EffectCondition,
 } from '../../game'
 import type { OfficialCardRecord } from '../types'
 
@@ -68,6 +69,7 @@ export interface ContractCost {
     | 'hp-to-trash'
     | 'move'
     | 'rest-cookie'
+    | 'ready-cookie'
     | 'field-to-deck-bottom'
     | 'self-to-deck-bottom'
     | 'break-to-trash'
@@ -76,6 +78,7 @@ export interface ContractCost {
     | 'hp-to-hand'
     | 'trash-to-break'
     | 'reveal-hand'
+    | 'reveal-deck-bottom'
     | 'deck-to-trash'
     | 'unknown'
   amount?: number
@@ -122,13 +125,20 @@ export interface RuntimeCardEvidence {
   card: GameCard | null
   effects: CardEffect[]
   extraDeckPlayCost?: AbilityCost
+  extraDeckPlayMode?: 'enter-battle' | 'awaken'
+  extraDeckPlayRequirement?: EffectCondition
   skill?: {
     trigger?: string
     oncePerTurn?: boolean
     oncePerGame?: boolean
     yourTurn?: boolean
     restSource?: boolean
+    equippedAttackDisablesFlip?: boolean
+    equippedAttackBlockerPrevention?: { hostCardName: string }
+    equippedAttackTrigger?: { hostCardName: string; effects: CardEffect[] }
+    battleOpponentAttackEffectPrevention?: { level: number }
     cost?: AbilityCost
+    faintCost?: AbilityCost
     sourceEnergy?: EnergyCost
     effects?: CardEffect[]
   }

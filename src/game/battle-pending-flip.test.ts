@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   beginAttack,
+  applyGameCommand,
   executeCardEffect,
   getAttackDamageAgainst,
   refreshDeck,
@@ -18,6 +19,56 @@ import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 
 describe('pending battle and FLIP', () => {
+  it.each(['attack', 'effect'] as const)('resumes last-HP fainting only after a direct FLIP opponent discard: %s', damageKind => {
+    const flipCard: GameCard = { ...item('opponent-discard-flip'), officialType: 'flip', flip: {
+      text: 'Your opponent discards two cards.', cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'opponent-discard-hand', count: 2 }],
+    } }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state.players['player-two'].battleArea[0].card = cookie('attacker', 1, 1)
+    state.players['player-two'].hand = [item('chosen-a'), item('chosen-b'), item('retained')]
+    state = damageKind === 'attack'
+      ? skipTrap(declareAttack(state), 'player-one')
+      : executeCardEffect(state, {
+          sourcePlayerId: 'player-two', sourceInstanceId: 'attacker', sourceCardName: 'Effect source',
+        }, { kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }, ['defender'])
+    state = resolveNextDamage(state)
+    state = applyGameCommand(state, { kind: 'resolve-flip', playerId: 'player-one', activate: true })
+    expect(state.pendingOpponentHandDiscard).toMatchObject({ playerId: 'player-two', count: 2, battleContinuation: 'flip-damage' })
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(0)
+    expect(state.players['player-one'].breakArea).toEqual([])
+    expect(state.pendingReplacement).toBeNull()
+    state = applyGameCommand(state, { kind: 'resolve-opponent-hand-discard', playerId: 'player-two', cardIds: ['chosen-b', 'chosen-a'] })
+    expect(state.players['player-two'].hand.map(c => c.instanceId)).toEqual(['retained'])
+    expect(state.players['player-two'].discardPile.map(c => c.instanceId)).toEqual(['chosen-b', 'chosen-a'])
+    expect(state.players['player-one'].breakArea.map(c => c.instanceId)).toContain('defender')
+    expect(state.players['player-one'].discardPile).toContainEqual(flipCard)
+    expect(state.pendingBattle).toBeNull()
+  })
+  it.each([0, 1])('keeps last-HP draw-then-discard pending until all choices finish: %i', drawCount => {
+    const flipCard: GameCard = { ...item('draw-discard-flip'), officialType: 'flip', flip: {
+      text: 'Draw up to one, then discard one.', cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw-up-to-then-discard', max: 1, discardCount: 1 }],
+    } }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+    state = applyGameCommand(state, { kind: 'resolve-flip', playerId: 'player-one', activate: true })
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(0)
+    const breakBefore = state.players['player-one'].breakArea.length
+    state = applyGameCommand(state, { kind: 'resolve-draw-up-to', playerId: 'player-one', drawCount })
+    if (drawCount > 0) {
+      expect(state.pendingOpponentHandDiscard).toMatchObject({ count: 1, battleContinuation: 'flip-damage' })
+      expect(state.players['player-one'].breakArea).toHaveLength(breakBefore)
+      state = applyGameCommand(state, { kind: 'resolve-opponent-hand-discard', playerId: 'player-one', cardIds: [state.players['player-one'].hand[0].instanceId] })
+    } else {
+      expect(state.pendingOpponentHandDiscard).toBeUndefined()
+    }
+    expect(state.players['player-one'].breakArea.map(c => c.instanceId)).toContain('defender')
+    if (state.pendingBattle) state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: 'player-one' })
+    expect(state.pendingBattle).toBeNull()
+  })
   it('routes skill/item effect damage through the same FLIP flow as attack damage', () => {
     const flipCard: GameCard = {
       ...item('effect-damage-flip'),
@@ -340,6 +391,12 @@ describe('pending battle and FLIP', () => {
     expect(state.pendingRefresh).toEqual({
       playerId: 'player-one',
       remainingDraws: 0,
+      afterDrawContinuation: {
+        effects: [],
+        context: { sourcePlayerId: 'player-one', sourceInstanceId: 'refresh-flip', sourceCardName: flipCard.name },
+        sourceKind: 'flip',
+        battleContinuation: 'flip-damage',
+      },
     })
     expect(() => resolveNextDamage(state)).toThrow('Invalid battle action.')
 

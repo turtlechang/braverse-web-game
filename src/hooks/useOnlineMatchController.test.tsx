@@ -3,7 +3,8 @@
 import { act, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDemoSetupGame, skipTrap, type GameCard, type GameCommand } from '../game'
+import { applyGameCommand, createDemoSetupGame, skipTrap, type GameCard, type GameCommand } from '../game'
+import { createBs12KumihoDemoState } from '../game/demo'
 import {
   createBattleState,
   declareAttack,
@@ -14,6 +15,32 @@ import { useOnlineMatchController } from './useOnlineMatchController'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlineMatchController', () => {
+  it.each(['BS12-053', 'BS12-053@1'] as const)('%s collects only own support cost and waits for the paid response effect', async number => {
+    vi.useFakeTimers()
+    let game = createBs12KumihoDemoState('response', number)
+    const sendCommand = vi.fn<(command: GameCommand) => void>()
+    let current: ReturnType<typeof useOnlineMatchController> | undefined
+    function Harness() { current = useOnlineMatchController({ game, viewerPlayerId: 'player-one', sendCommand }); return null }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      await act(() => current!.setSelectedAttackResponseId('bs12-053-source'))
+      expect(current!.attackResponseSupportToTrashCandidates.map(card => card.instanceId)).toEqual([0, 1, 2, 3].map(i => `bs12-053-support-${i}`))
+      await act(() => current!.toggleAttackResponseSupportToTrash('bs12-053-foe-support-0'))
+      expect(current!.selectedAttackResponseSupportToTrashIds).toEqual([])
+      await act(() => current!.toggleAttackResponseSupportToTrash('bs12-053-support-2'))
+      await act(() => current!.toggleAttackResponseSupportToTrash('bs12-053-support-3'))
+      expect(current!.selectedAttackResponseSupportToTrashIds).toEqual(['bs12-053-support-2'])
+      game = applyGameCommand(game, { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'bs12-053-source', discardHandIds: [], trashToDeckIds: [], supportToTrashIds: ['bs12-053-support-2'] })
+      await act(() => root.render(<Harness />))
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+      expect(sendCommand).not.toHaveBeenCalled()
+      game = applyGameCommand(game, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: ['bs12-044-opponent'] })
+      await act(() => root.render(<Harness />))
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+      expect(sendCommand).toHaveBeenCalledWith({ kind: 'skip-trap', playerId: 'player-one' })
+    } finally { await act(() => root.unmount()); vi.useRealTimers() }
+  })
   it('finishes opening dealing under StrictMode without leaving decisions locked', async () => {
     vi.useFakeTimers()
     const game = createDemoSetupGame('player-one')

@@ -83,10 +83,37 @@ export const getCookieEffectiveHp = (cookie: CookieInBattle): number =>
 export const getCookieEffectiveLevel = (cookie: CookieInBattle): number =>
   cookie.levelOverride ?? cookie.card.level
 
+/** Call only after an explicit battle-Cookie to owner's deck-bottom movement. */
+export const recordArenaCookieDeckBottomEntries = (
+  state: GameState,
+  playerId: PlayerId,
+  movedCookies: readonly CookieInBattle[],
+): GameState => movedCookies.some(cookie => !cookie.card.extraDeckOrigin && cookie.card.keywords?.includes('arena'))
+  ? { ...state, arenaCookiesPlacedFromBattleToDeckBottomThisTurn: {
+      ...(state.arenaCookiesPlacedFromBattleToDeckBottomThisTurn ?? {}), [playerId]: true,
+    } }
+  : state
+
+/** Record actual Arena Cookie arrivals, including non-faint movement and Refresh. */
+export const recordArenaBreakEntries = (previous: GameState, next: GameState): GameState => {
+  let history = next.arenaCookiesPlacedInBreakThisTurn
+  let changed = false
+  for (const playerId of ['player-one', 'player-two'] as const) {
+    const oldIds = new Set(previous.players[playerId].breakArea.map(card => card.instanceId))
+    const added = next.players[playerId].breakArea.filter(card => !oldIds.has(card.instanceId) && card.keywords?.includes('arena')).length
+    if (added === 0) continue
+    const count = Math.max(history?.[playerId] ?? 0, (previous.arenaCookiesPlacedInBreakThisTurn?.[playerId] ?? 0) + added)
+    if (count === history?.[playerId]) continue
+    history = { ...history, [playerId]: count }
+    changed = true
+  }
+  return changed ? { ...next, arenaCookiesPlacedInBreakThisTurn: history } : next
+}
+
 export const updatePlayer = (
   state: GameState,
   player: PlayerState,
-): GameState => ({
+): GameState => recordArenaBreakEntries(state, {
   ...state,
   players: {
     ...state.players,

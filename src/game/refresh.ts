@@ -1,4 +1,5 @@
 import { GameRuleError } from './errors'
+import { partitionDeckReturn } from './card-destinations'
 import {
   defaultShuffle,
   drawCards,
@@ -183,6 +184,7 @@ const continueAfterDrawUpTo = (
         pendingOpponentHandDiscard: {
           ...updatedState.pendingOpponentHandDiscard,
           chainedFromDrawUpTo: true,
+          battleContinuation: continuation.battleContinuation,
         },
       }
     }
@@ -246,9 +248,11 @@ export const refreshDeck = (
 
   const selectedIds = new Set(selectedCookies.map((cookie) => cookie.instanceId))
   const remainingDiscard = player.discardPile.filter((card) => !selectedIds.has(card.instanceId))
+  const returned = partitionDeckReturn(remainingDiscard)
   let updatedPlayer: PlayerState = {
     ...player,
-    deck: shuffle(remainingDiscard),
+    deck: shuffle(returned.mainDeck),
+    extraDeck: [...(player.extraDeck ?? []), ...returned.extraDeck],
     discardPile: [],
     breakArea: [...player.breakArea, ...selectedCookies],
   }

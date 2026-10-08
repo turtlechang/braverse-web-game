@@ -1,4 +1,4 @@
-import { compilePendingDecisionDescriptor, getRefreshCandidates } from '../../game'
+import { compilePendingDecisionDescriptor, getRefreshCandidates, getPlaceHandHpCandidates } from '../../game'
 import {
   DecisionModal,
   InspectDeckModal,
@@ -109,6 +109,8 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
 
   const pendingStageTrigger = match.game.pendingStageTrigger
   const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
+  const isCookieEquipTrigger = pendingStageTrigger?.sourceKind === 'cookie-equip'
+  const triggeredDraw = pendingStageTrigger?.effects?.find(effect => effect.kind === 'draw-up-to')
   const mustReplaceEmptyBattleArea =
     !match.game.pendingRefresh &&
     match.pendingPlayer?.battleArea.length === 0 &&
@@ -198,6 +200,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
         match.game.pendingAbilityEffect.playerId === match.viewerPlayerId &&
         !pending.pendingEffect && (() => {
           const pendingPlace = match.game.pendingAbilityEffect!.pendingPlace!
+          const ability = match.game.pendingAbilityEffect!
+          const currentEffect = ability.effects[ability.effectIndex]
+          const placement = currentEffect?.kind === 'hand-to-hp' ? currentEffect : undefined
           const target = match.game.players[match.viewerPlayerId].battleArea.find(
             (cookie) => cookie.card.instanceId === pendingPlace.targetInstanceId,
           )
@@ -222,9 +227,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 '技能'
               }
               sourceCard={sourceCard}
-              effectText={sourceCard?.skill?.text}
+              effectText={ability.battleContinuation === 'attack-effect' && sourceCard?.type === 'cookie' ? sourceCard.attackText : sourceCard?.skill?.text}
               targetCardName={target?.card.name ?? '目標餅乾'}
-              hand={match.game.players[match.viewerPlayerId].hand}
+              hand={getPlaceHandHpCandidates(match.game, match.viewerPlayerId)}
+              required={placement?.handPlacementRequired}
+              faceUp={placement?.faceUp}
+              hpPlacement={placement?.hpPlacement}
               selectedId={match.selectedPlaceHandHpId}
               onToggleCard={(instanceId) =>
                 match.setSelectedPlaceHandHpId((current) =>
@@ -272,14 +280,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             ])
             .find((card) => card.instanceId === handDiscard.sourceInstanceId)
           const effectText =
+            (handDiscard.effectText !== 'discard-hand' && handDiscard.effectText !== 'opponent-discard-hand'
+              ? handDiscard.effectText : undefined) ??
             sourceCard?.effectText ??
             sourceCard?.skill?.text ??
             sourceCard?.trap?.text ??
-            sourceCard?.item?.text ??
-            (handDiscard.effectText !== 'discard-hand' &&
-            handDiscard.effectText !== 'opponent-discard-hand'
-              ? handDiscard.effectText
-              : undefined)
+            sourceCard?.item?.text
           const descriptorCandidates =
             decisionDescriptor?.decisionKind === 'opponent-hand-discard'
               ? new Set(decisionDescriptor.steps[0]?.candidateIds)
@@ -302,7 +308,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             <HandDiscardResponseModal
               sourceCardName={handDiscard.sourceCardName}
               sourceCard={sourceCard}
-              effectText={effectText}
+              effectText={handDiscard.itemActivation ? handDiscard.effectText : effectText}
               hand={hand}
               requiredCount={handDiscard.count}
               atLeast={handDiscard.atLeast}
@@ -317,6 +323,11 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               }
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
+              onCancelItem={handDiscard.itemActivation ? () => {
+                match.setSelectedOpponentDiscardIds([])
+                match.setSelectedOpponentDiscardPlacementById?.({})
+                match.dispatch({ kind: 'cancel-item-activation', playerId: match.viewerPlayerId }, '已取消使用道具，未支付費用。')
+              } : undefined}
               onToggleCard={(instanceId) => {
                 match.setSelectedOpponentDiscardIds((current) => {
                   if (current.includes(instanceId)) {
@@ -435,12 +446,18 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
           const sourceInSupport = match.game.players[match.viewerPlayerId].supportArea
             .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInBreak = match.game.players[match.viewerPlayerId].breakArea
+            .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInEquipment = Object.values(match.game.players)
+            .flatMap(player => player.battleArea.flatMap(cookie => cookie.equippedCards ?? []))
+            .find(card => card.instanceId === drawUpTo.sourceInstanceId)
           const sourceDisplayCard =
             sourceCard?.card ??
             sourceInHand ??
             sourceInDiscard ??
-            sourceInSupport?.card
+            sourceInSupport?.card ?? sourceInBreak ?? sourceInEquipment
           const effectText = drawUpTo.effectText
+            ?? sourceInEquipment?.effectText
             ?? sourceCard?.card.effectText
             ?? sourceInHand?.effectText
             ?? sourceInDiscard?.effectText
@@ -495,13 +512,15 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             >
               <h2>
                 {pendingStageTrigger?.sourceCardName}{' '}
-                {isCookieSkillTrigger ? '技能' : '效果'}
+                {isCookieSkillTrigger ? '技能' : isCookieEquipTrigger ? '裝備效果' : '效果'}
               </h2>
               <p className="faint-effect-text">
                 {pendingStageTrigger?.effectText}
               </p>
               <p className="faint-target-hint">
-                {isCookieSkillTrigger
+                {isCookieEquipTrigger
+                  ? `宿主已宣告攻擊，是否抽最多 ${triggeredDraw?.kind === 'draw-up-to' ? triggeredDraw.max : 0} 張牌？`
+                  : isCookieSkillTrigger
                   ? '是否發動此技能？'
                   : '是否發動效果抽 1 張牌？'}
               </p>
@@ -516,7 +535,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                         playerId: match.viewerPlayerId,
                         action: 'skip',
                       },
-                      '已略過場景效果。',
+                      isCookieEquipTrigger ? '已略過裝備的攻擊觸發效果。' : '已略過觸發效果。',
                     )
                   }}
                 >
@@ -539,7 +558,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                         playerId: match.viewerPlayerId,
                         action: 'activate',
                       },
-                      '已發動場景效果抽 1 張牌。',
+                      isCookieEquipTrigger ? '已發動裝備效果，請選擇抽牌張數。' : isCookieSkillTrigger ? '已發動技能。' : '已發動場景效果抽 1 張牌。',
                     )
                   }}
                 >
@@ -630,6 +649,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           filterKeyword={pendingInspect.filterKeyword}
           filterHasSpecialPlay={pendingInspect.filterHasSpecialPlay}
           optionalPick={pendingInspect.optionalPick}
+          revealPicked={pendingInspect.revealPicked}
           onConfirm={(pickedCardIds, restOrder, selectedRestDestination) => {
             const effectiveRestDestination =
               selectedRestDestination ?? pendingInspect.restDestination
@@ -672,7 +692,11 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           key={pendingReveal.sourceInstanceId}
           sourceCardName={pendingReveal.sourceCardName}
           revealedCard={pendingReveal.revealedCard}
-          matched={pendingReveal.matched}
+            matched={pendingReveal.matched}
+            deckPosition={pendingReveal.deckPosition}
+            addMatchedToHand={pendingReveal.addMatchedToHand}
+            playMatchedAfterSourceTrash={pendingReveal.playMatchedAfterSourceTrash}
+            hasFollowupEffects={pendingReveal.nestedEffects.length > 0}
           canConfirm={pendingReveal.playerId === match.viewerPlayerId}
           onConfirm={() => {
             if (pendingReveal.playerId !== match.viewerPlayerId) return

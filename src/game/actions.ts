@@ -1,4 +1,5 @@
 import { GameRuleError } from './errors'
+import { collectBreakEntryCostEffects } from './break-effect-triggers'
 import { findCardIndex, updatePlayer } from './helpers'
 import {
   isExtraDeckPlayRequirementMet,
@@ -178,6 +179,9 @@ export const deployCookie = (
       player.id,
       specialPayment.departedCount,
     )
+    deploymentState = collectBreakEntryCostEffects(state, deploymentState, {
+      sourcePlayerId: player.id, sourceInstanceId: instanceId,
+    }, specialPlayCost, { trashBattleCookieIds: selectedSpecialPlayCookieIds })
     player = deploymentState.players[deploymentState.activePlayerId]
   }
 
@@ -284,6 +288,9 @@ const getExtraDeckCardForPlay = (
     !isExtraDeckPlayRequirementMet(state, playerId, card)
   ) {
     const requirement = card.playRequirement
+    if (requirement?.kind === 'arena-cookie-placed-from-battle-to-deck-bottom-this-turn') {
+      throw new GameRuleError('本回合尚未有己方戰鬥區的 Arena 餅乾放入自己的牌庫底。')
+    }
     if (requirement?.kind === 'cookies-fainted-during-opponent-previous-turn-at-least') {
       const colorLabels = { red: '紅色', yellow: '黃色', green: '綠色', blue: '藍色', purple: '紫色', black: '黑色', pure: 'PURE' }
       const color = requirement.energyColor ? `${colorLabels[requirement.energyColor]} ` : ''
@@ -300,7 +307,7 @@ const getExtraDeckCardForPlay = (
     if (!getAwakenTarget(state, playerId, card)) {
       throw new GameRuleError('尚未符合此 Awakened 餅乾的覆蓋目標條件。')
     }
-  } else if (player.battleArea.length >= 2) {
+  } else if (player.battleArea.length - (card.extraDeckPlayCost?.trashBattleCookie?.count ?? 0) >= 2) {
     throw new GameRuleError('戰鬥區最多只能有兩隻餅乾。')
   }
 
@@ -352,6 +359,9 @@ export const getExtraDeckCookieUnavailableReason = (
     materializeExtraDeckCookie(card)
     const cost = card.extraDeckPlayCost
     if (cost) {
+      if (!canPayTrashBattleCookieCost(cost, state.players[playerId].battleArea, card.instanceId)) {
+        return '沒有足夠的合格戰鬥區餅乾支付 EXTRA 登場代價。'
+      }
       if (
         getDiscardHandCostCandidates(
           cost,
@@ -389,8 +399,9 @@ export const playExtraDeckCookie = (
     options,
   )
   if (extraDeckCard.extraDeckPlayCost && !entryCostPaid) {
-    if (!canPlayExtraDeckCookie(state, playerId, instanceId)) {
-      throw new GameRuleError('目前沒有足夠資源支付此 EXTRA 餅乾的登場代價。')
+    const unavailableReason = getExtraDeckCookieUnavailableReason(state, playerId, instanceId)
+    if (unavailableReason) {
+      throw new GameRuleError(unavailableReason)
     }
     return {
       ...state,

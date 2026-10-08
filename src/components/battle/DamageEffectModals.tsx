@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { FaintEffectResponseModal } from '../modals/GameModals'
 import { getFaintSourceCostUnavailableReason } from '../../game'
 import type {
@@ -22,7 +23,23 @@ const toggleFaintTargetId = (
 }
 
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {
+  const { dispatch, viewerPlayerId } = match
   const faintSourceCostError = getFaintSourceCostUnavailableReason(match.game)
+  const deckCost = match.faintCostDeckToTrashAmount ?? 0
+  const breakTrigger = match.game.pendingAfterDamageEffects?.[0]?.triggerReason === 'break-by-arena-effect'
+  const sourceEffectLabel = breakTrigger ? '休息區移入效果' : '受傷後效果'
+  const targetSideLabel = breakTrigger ? '己方' : '對手'
+  const standbyDraw = breakTrigger && match.game.pendingAfterDamageEffects?.[0]?.effect.kind === 'draw-up-to'
+    ? match.game.pendingAfterDamageEffects[0] : null
+  const openedDraw = useRef<typeof standbyDraw>(null)
+  useEffect(() => {
+    if (!pending.afterDamageActive || !standbyDraw || openedDraw.current === standbyDraw) return
+    openedDraw.current = standbyDraw
+    // The rule layer has already exposed this pending decision. The player
+    // chooses zero or one in the shared draw selector, without a target step.
+    dispatch({ kind: 'resolve-after-damage-effect', playerId: viewerPlayerId, targetIds: [] },
+      `${standbyDraw.sourceCardName ?? '休息區移入效果'}：選擇抽牌數量。`)
+  }, [pending.afterDamageActive, standbyDraw, dispatch, viewerPlayerId])
   return (
     <>
       {pending.faintActive && match.faintSourceCard && (
@@ -61,6 +78,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           onSelectPayment={match.toggleFaintPayment}
           optional={match.faintOptional}
           costHandAmount={match.faintCostHandAmount}
+          costDeckToTrashAmount={deckCost}
           costHandCandidates={match.faintCostHandCandidates}
           selectedCostHandIds={match.selectedFaintCostHandIds}
           onSelectCostHand={match.toggleFaintCostHand}
@@ -76,6 +94,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           onSelectCostSupportToHand={match.toggleFaintCostSupportToHand}
           allowSkip={
             Boolean(faintSourceCostError) ||
+            deckCost > 0 ||
             match.faintOptional ||
             match.faintEnergyCostTotal > 0 ||
             match.faintCostHandAmount > 0 ||
@@ -103,6 +122,17 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             )
           }}
           onConfirm={() => {
+            if (deckCost > 0) {
+              match.setSelectedFaintTargetIds([])
+              match.setSelectedFaintPaymentIds([])
+              match.setSelectedFaintCostHandIds([])
+              match.setSelectedFaintCostSupportIds([])
+              match.setSelectedFaintCostSupportToHandIds([])
+              match.dispatch({ kind: 'resolve-faint-effect', playerId: match.viewerPlayerId,
+                targetIds: [], payDeckToTrash: true,
+              }, `${match.faintSourceCard!.name}支付牌庫頂 ${deckCost} 張昏厥代價。`)
+              return
+            }
             const targets = match.selectedFaintTargetIds
             const paymentIds = match.selectedFaintPaymentIds
             const discardHandIds = match.selectedFaintCostHandIds
@@ -138,7 +168,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
         />
       )}
 
-      {pending.afterDamageActive && match.afterDamageSourceCard && (
+      {pending.afterDamageActive && !standbyDraw && match.afterDamageSourceCard && (
         <div
           className="modal-backdrop"
           role="presentation"
@@ -149,16 +179,16 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             role="dialog"
             style={{ pointerEvents: 'auto' }}
           >
-            <h2>{match.afterDamageSourceCard.name} 發動受傷後效果</h2>
+            <h2>{match.afterDamageSourceCard.name} 發動{sourceEffectLabel}</h2>
             <p className="faint-effect-text">
               {match.afterDamageSourceCard.effectText ??
                 match.afterDamageSourceCard.skill?.text ??
-                '受傷後效果'}
+                sourceEffectLabel}
             </p>
             <p className="faint-target-hint">
               {match.afterDamageMin === 0
-                ? `選擇最多 ${match.afterDamageMax} 個對手餅乾作為目標，或略過。`
-                : `選擇 ${match.afterDamageMin} 個對手餅乾作為目標。`}
+                ? `選擇最多 ${match.afterDamageMax} 個${targetSideLabel}餅乾作為目標，或略過。`
+                : `選擇 ${match.afterDamageMin} 個${targetSideLabel}餅乾作為目標。`}
             </p>
             <div className="faint-modal-actions">
               {match.afterDamageMin === 0 && (
@@ -173,7 +203,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                         playerId: match.viewerPlayerId,
                         targetIds: [],
                       },
-                      `${match.afterDamageSourceCard!.name}略過受傷後效果。`,
+                      `${match.afterDamageSourceCard!.name}略過${sourceEffectLabel}。`,
                     )
                   }}
                 >
@@ -196,7 +226,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                       playerId: match.viewerPlayerId,
                       targetIds: targets,
                     },
-                    `${match.afterDamageSourceCard!.name}發動對${match.afterDamageCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的受傷後效果。`,
+                    `${match.afterDamageSourceCard!.name}發動對${match.afterDamageCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的${sourceEffectLabel}。`,
                   )
                 }}
               >

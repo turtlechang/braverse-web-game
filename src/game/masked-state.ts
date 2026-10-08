@@ -89,6 +89,11 @@ export const maskGameStateForViewer = (
         }
       : state.pendingExtraDeckAttack
 
+  const maskedItemCost = state.pendingOpponentHandDiscard?.itemActivation &&
+    state.pendingOpponentHandDiscard.playerId !== viewerId
+    ? { ...state.pendingOpponentHandDiscard, itemActivation: undefined, excludedCardIds: [] }
+    : state.pendingOpponentHandDiscard
+
   return {
     ...publicState,
     players: {
@@ -97,6 +102,7 @@ export const maskGameStateForViewer = (
     },
     pendingInspectDeck: maskedInspect,
     pendingExtraDeckAttack: maskedExtraDeckAttack,
+    ...(state.pendingOpponentHandDiscard?.itemActivation ? { pendingOpponentHandDiscard: maskedItemCost } : {}),
     ...(hpInspectionResults?.[viewerId]
       ? { hpInspectionResults: { [viewerId]: hpInspectionResults[viewerId] } }
       : {}),

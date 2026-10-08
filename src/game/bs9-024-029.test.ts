@@ -408,12 +408,14 @@ describe('BS9-024～029 yellow candidate batch', () => {
 
   it('blocks BS9-030 EXTRA entry when fewer than three qualifying FLIP Cookies remain', () => {
     const state = createCardNegativeDemoState('BS9-030')
+    const before = structuredClone(state)
     expect(state.players['player-one'].hand).toHaveLength(2)
     expect(() => applyGameCommand(state, {
       kind: 'play-extra-deck-cookie',
       playerId: 'player-one',
       instanceId: state.players['player-one'].extraDeck![0]!.instanceId,
-    })).toThrow('足夠資源')
+    })).toThrow('沒有足夠的合格手牌支付 EXTRA 登場代價（需要 3 張）。')
+    expect(state).toEqual(before)
   })
 
   it('resolves Vampire in order, including optional zero hand cards', () => {

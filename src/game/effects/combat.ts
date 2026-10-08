@@ -69,7 +69,7 @@ const getAuraAttackBonus = (
             return sum + effect.amount
           }
 
-          if (effect.kind !== 'modify-attack' || !effect.target.cardName) {
+          if (effect.kind !== 'modify-attack' || (!effect.target.cardName && !effect.target.allMatching)) {
             return sum
           }
           const targetCandidates = getEffectTargetCandidates(
@@ -519,7 +519,7 @@ export const getEffectiveAttackBreakdown = (
           continue
         }
 
-        if (effect.kind !== 'modify-attack' || !effect.target.cardName) continue
+        if (effect.kind !== 'modify-attack' || (!effect.target.cardName && !effect.target.allMatching)) continue
         const targetCandidates = getEffectTargetCandidates(
           state,
           context,

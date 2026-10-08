@@ -59,6 +59,23 @@ const buildTrapUsedAwaitingRevealState = (): GameState => {
   }
 }
 
+it.each(['flip','refresh'] as const)('105 preview %s stops at the actual human FLIP decision',async scenario=>{
+  vi.useFakeTimers()
+  let captured: ReturnType<typeof useMatchController> | null = null
+  function Harness(){captured=useMatchController({testStateConfig:{kind:'bs12-105',scenario}});return null}
+  const root=createRoot(document.createElement('div'))
+  try{
+    await act(()=>root.render(<Harness/>))
+    await act(()=>captured!.setGame(current=>applyGameCommand(current,{kind:'play-trap',playerId:'player-one',trapInstanceId:'bs12-105-trap',paymentIds:['bs12-105-payment-0'],targetIds:[],effectTargets:[['bs12-105-attacker']]})))
+    await act(()=>vi.advanceTimersByTime(50))
+    expect(captured!.game.pendingBattle?.stage).toBe('flip')
+    expect(captured!.game.pendingBattle?.revealedHpCard?.id).toBe('BS12-022')
+    expect(captured!.aiControlsCurrentState).toBe(false)
+    await act(()=>vi.advanceTimersByTime(500))
+    expect(captured!.game.pendingBattle?.stage).toBe('flip')
+  }finally{await act(()=>root.unmount());vi.useRealTimers()}
+})
+
 const buildAiAttackWithoutResponsesState = (): GameState => {
   const base = createDemoGame()
   const defender = base.players['player-one'].battleArea[0]
@@ -140,6 +157,22 @@ const buildPitayaAttackAgainstKumiho = (): GameState => {
 }
 
 describe('useMatchController auto-skip-trap effect', () => {
+  it.each(['BS12-053', 'BS12-053@1'] as const)('%s waits for paid attack-response reduction before auto-skipping', async number => {
+    vi.useFakeTimers()
+    let captured: ReturnType<typeof useMatchController> | null = null
+    function Harness() { captured = useMatchController({ testStateConfig: { kind: 'bs12-053', cardNumber: number, scenario: 'response' } }); return null }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      await act(() => captured!.setGame(current => applyGameCommand(current, { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'bs12-053-source', discardHandIds: [], trashToDeckIds: [], supportToTrashIds: ['bs12-053-support-2'] })))
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+      expect(captured!.game.pendingBattle?.stage).toBe('trap')
+      expect(captured!.game.players['player-one'].battleArea[0].hpCards).toHaveLength(6)
+      await act(() => captured!.setGame(current => applyGameCommand(current, { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: ['bs12-044-opponent'] })))
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+      expect(captured!.game.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
+    } finally { await act(() => root.unmount()); vi.useRealTimers() }
+  })
   it('continues a live AI attack when the defending player has no response', async () => {
     vi.useFakeTimers()
     let captured: ReturnType<typeof useMatchController> | null = null

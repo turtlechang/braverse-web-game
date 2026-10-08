@@ -48,6 +48,8 @@
       "cards:analyze:bs10-candidate": "tsx scripts/analyze-bs10-effect-coverage.ts",
       "cards:import:bs11-candidate": "node scripts/import-bs11-candidates.mjs",
       "cards:analyze:bs11-candidate": "tsx scripts/analyze-bs11-effect-coverage.ts",
+      "cards:import:bs12-candidate": "node scripts/import-bs12-candidates.mjs",
+      "cards:analyze:bs12-candidate": "tsx scripts/analyze-bs12-effect-coverage.ts",
       "cards:import:p-candidate": "node scripts/import-p-candidates.mjs",
     "cards:analyze:bs5-candidate": "tsx scripts/analyze-bs5-effect-coverage.ts",
     "cards:analyze:bs6": "tsx scripts/analyze-bs6-effect-coverage.ts",

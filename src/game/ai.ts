@@ -1,4 +1,5 @@
-import { playItem } from './card-abilities'
+import { getBattleCookiePositionCostCandidates } from './battle-position-cost'
+import { getItemActivateDiscardRequirement, playItem } from './card-abilities'
 import { getForcedAttackTargetId } from './battle'
 import { applyGameCommand } from './commands'
 import { getActingPlayerId } from './controller'
@@ -697,6 +698,11 @@ const chooseAbilityCostIds = (
     return null
   }
 
+  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId)
+    .filter(card => !discardHandIds.includes(card.instanceId))
+    .slice(0, cost.handToBreakArea?.count ?? 0).map(card => card.instanceId)
+  if (handToBreakAreaIds.length < (cost.handToBreakArea?.count ?? 0)) return null
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -706,6 +712,7 @@ const chooseAbilityCostIds = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    handToBreakAreaIds,
   }
 }
 
@@ -770,6 +777,24 @@ const resolveAiCardAbility = (
   )
   if (!costIds) return null
 
+  if (getItemActivateDiscardRequirement(state, playerId)) {
+    // Keep the additional opponent-imposed cost as its own authoritative
+    // decision; the ordinary Item cost is paid only when that choice resolves.
+    const pending = applyGameCommand(state, {
+      kind: 'begin-play-item', playerId, instanceId: card.instanceId,
+      ...costIds,
+      ...(revealCost?.kind === 'reveal-hand' && revealCost.asCost ? {
+        targetIds: findRevealHandSelection(state, {
+          sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
+        }, revealCost) ?? [],
+      } : {}),
+    }, { shuffleSeed })
+    return {
+      state: pending, action: 'play-item', revealedCard: card,
+      description: `${state.players[playerId].name}宣告使用${card.name}，等待支付額外棄牌代價。`,
+    }
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: card.instanceId,
@@ -784,6 +809,7 @@ const resolveAiCardAbility = (
     costIds.discardHandIds,
     costIds.hpToTrashTargetIds,
     costIds.trashBattleCookieIds,
+    costIds.handToBreakAreaIds,
   )
   // Conditions such as BS6-084's hand limit are checked after the item and
   // its cost cards leave the hand, matching the real command path.
@@ -848,6 +874,7 @@ const resolveAiCardAbility = (
         discardHandIds: costIds.discardHandIds,
         hpToTrashTargetIds: costIds.hpToTrashTargetIds,
         trashBattleCookieIds: costIds.trashBattleCookieIds,
+        handToBreakAreaIds: costIds.handToBreakAreaIds,
         effectTargets: sim.effectTargets,
         chooseOneModes: sim.chooseOneModes,
       },
@@ -1120,6 +1147,14 @@ const resolveAiSkill = (
     return null
   }
 
+  const positionCostCandidates = getBattleCookiePositionCostCandidates(skill.cost, player.battleArea, source.card.instanceId).map(cookie => cookie.card.instanceId)
+  const positionCostTargetIds = skill.cost.battleCookiePosition
+    ? universal?.enabled
+      ? universal.orderCostIds(positionCostCandidates, skill.cost.battleCookiePosition.count)
+      : positionCostCandidates.slice(0, skill.cost.battleCookiePosition.count)
+    : []
+  if (positionCostTargetIds.length < (skill.cost.battleCookiePosition?.count ?? 0)) return null
+
   const battleToHandCandidateIds = skill.cost.battleCookieToHand
     ? getBattleCookieToHandCostCandidates(
         skill.cost,
@@ -1234,6 +1269,7 @@ const resolveAiSkill = (
         hpToTrashTargetIds,
         trashBattleCookieIds,
         battleToHandIds,
+        ...(skill.cost.battleCookiePosition ? { positionCostTargetIds } : {}),
         trashToDeckBottomIds,
         trashToDeckIds,
         trashCookieToBreakAreaIds,
@@ -1268,6 +1304,7 @@ const resolveAiSkill = (
     effects[0]?.kind === 'damage' && effects[0].selectionAsCost
       ? universalChooseEffectTargets(state, context, effects[0]) : [],
     activationRestrictionDiscardIds,
+    positionCostTargetIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -1296,6 +1333,7 @@ const resolveAiSkill = (
         hpToTrashTargetIds,
         trashBattleCookieIds,
         battleToHandIds,
+        ...(skill.cost.battleCookiePosition ? { positionCostTargetIds } : {}),
         trashToDeckBottomIds,
         trashToDeckIds,
         effectTargets: sim.effectTargets,

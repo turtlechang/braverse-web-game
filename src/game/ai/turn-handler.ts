@@ -17,6 +17,7 @@ import {
   getDiscardHandCostCandidates,
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
 } from '../skills'
 import { createSeededShuffle } from '../helpers'
 import { chooseAiHpToTrashIds } from './hp-cost-selection'
@@ -110,6 +111,7 @@ export interface AiStageCostIds {
   discardHandIds: string[]
   hpToTrashTargetIds: string[]
   trashBattleCookieIds: string[]
+  trashToDeckBottomIds?: string[]
 }
 
 export const chooseAiStageCostIds = (
@@ -215,6 +217,13 @@ export const chooseAiStageCostIds = (
     return null
   }
 
+  const bottomCandidateIds = getTrashToDeckBottomCostCandidates(cost, player.discardPile).map(card => card.instanceId)
+  const bottomCount = cost.trashToDeckBottom?.count ?? 0
+  const trashToDeckBottomIds = universal?.enabled
+    ? universal.orderCostIds(bottomCandidateIds, bottomCount)
+    : bottomCandidateIds.slice(0, bottomCount)
+  if (trashToDeckBottomIds.length !== bottomCount) return null
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -222,6 +231,7 @@ export const chooseAiStageCostIds = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    ...(cost.trashToDeckBottom ? { trashToDeckBottomIds } : {}),
   }
 }
 
@@ -440,6 +450,7 @@ export const handleAiTurnState = (
           costIds.discardHandIds,
           costIds.hpToTrashTargetIds,
           costIds.trashBattleCookieIds,
+          costIds.trashToDeckBottomIds ?? [],
         )
         const stageShuffle =
           strategy.shuffleSeed === undefined
@@ -477,6 +488,7 @@ export const handleAiTurnState = (
                 discardHandIds: costIds.discardHandIds,
                 hpToTrashTargetIds: costIds.hpToTrashTargetIds,
                 trashBattleCookieIds: costIds.trashBattleCookieIds,
+                ...(costIds.trashToDeckBottomIds ? { trashToDeckBottomIds: costIds.trashToDeckBottomIds } : {}),
                 effectTargets: sim.effectTargets,
                 chooseOneModes: sim.chooseOneModes,
               },

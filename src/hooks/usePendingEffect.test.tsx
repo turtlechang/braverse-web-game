@@ -11,6 +11,7 @@ import {
   createBs5StageConditionDemoState,
   createBs11083StageDemoState,
   createItemUsageDemoState,
+  createBs12CarpetDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
 import {
@@ -328,6 +329,45 @@ describe('usePendingEffect Stage activation metadata', () => {
 })
 
 describe('usePendingEffect Break area costs', () => {
+  it('pays BS12-028 hand Arena cost before opening the draw count without a target prompt', async () => {
+    const initial = createBs12CarpetDemoState()
+    const item = initial.players['player-one'].hand[0]
+    if (!item.item) throw new Error('Expected BS12-028 item ability')
+    const ability = item.item
+    const setMessage = vi.fn()
+    let currentGame = initial
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function Harness() {
+      const [game, setGame] = useState(initial)
+      currentGame = game
+      captured = usePendingEffect({
+        game, setGame, dispatch: createDispatch(game, setGame), viewerPlayerId: 'player-one', setMessage,
+        clearAttacker: () => {}, setInspectedHpPile: () => {},
+        hasFaint: false, faintTargetIds: new Set(), selectedFaintTargetIds: [], faintMinMax: { min: 0, max: 0 }, setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false, afterDamageTargetIds: new Set(), selectedAfterDamageTargetIds: [], afterDamageMinMax: { min: 0, max: 0 }, setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      await act(() => captured!.beginCardAbility(item, ability, 'item', '使用物品'))
+      expect(captured!.skillHandToBreakAreaCandidates.map(card => card.instanceId)).toEqual(['bs12-028-yellow-cost', 'bs12-028-red-cost'])
+      await act(() => captured!.toggleSkillPayment('bs12-028-payment'))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame).toBe(initial)
+      await act(() => captured!.toggleSkillHandToBreakArea('bs12-028-red-cost'))
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.players['player-one'].breakArea.at(-1)?.instanceId).toBe('bs12-028-red-cost')
+      expect(currentGame.players['player-one'].hand).toHaveLength(3)
+      expect(currentGame.players['player-one'].deck).toHaveLength(12)
+      expect(setMessage).toHaveBeenLastCalledWith('Luxury Red Carpet已支付代價，請繼續選擇抽牌數量。')
+      await act(() => captured!.confirmEffect())
+      expect(currentGame.pendingDrawUpTo?.max).toBe(3)
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
   it('BS8-022 pays the faint cost before offering the discarded HP Cookie for recovery', async () => {
     const initial = createCardCheckDemoState('BS8-022')
     const owner = initial.players['player-one']

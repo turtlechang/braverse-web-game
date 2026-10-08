@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import type {
+  AbilityCost,
   CardKeyword,
   EnergyColor,
   EnergyCost,
@@ -196,7 +197,17 @@ export function DrawUpToSelector({
   onConfirm,
 }: DrawUpToSelectorProps) {
   const [drawCount, setDrawCount] = useState(0)
-  const effectiveMax = Math.min(max, deckSize)
+  return <DrawUpToOptions max={max} deckSize={deckSize} onConfirm={onConfirm} drawCount={drawCount} onSelect={setDrawCount} />
+}
+
+function DrawUpToOptions({
+  max,
+  deckSize,
+  onConfirm,
+  drawCount,
+  onSelect,
+}: DrawUpToSelectorProps & { drawCount: number; onSelect: (count: number) => void }) {
+  const effectiveMax = max
 
   return (
     <div className="draw-up-to-selector">
@@ -206,14 +217,14 @@ export function DrawUpToSelector({
             key={i}
             type="button"
             className={`draw-up-to-option ${drawCount === i ? 'is-selected' : ''}`}
-            onClick={() => setDrawCount(i)}
+            onClick={() => onSelect(i)}
           >
             <span className="draw-up-to-option-label">
               {i === 0 ? '不抽' : `抽 ${i} 張`}
             </span>
             {i > 0 && (
               <span className="draw-up-to-option-hint">
-                從牌庫頂抽取
+                {i > deckSize ? '牌庫不足時繼續 Refresh' : '從牌庫頂抽取'}
               </span>
             )}
           </button>
@@ -259,7 +270,8 @@ export function DrawUpToResponseModal({
   followedByDiscard = false,
 }: DrawUpToResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const effectiveMax = Math.min(max, deckSize)
+  const [drawCount, setDrawCount] = useState(0)
+  const effectiveMax = max
 
   if (minimized) {
     return (
@@ -322,10 +334,12 @@ export function DrawUpToResponseModal({
         <p className="faint-target-hint">
           可以從牌庫抽取最多 {max} 張牌。選擇要抽取的牌數。
         </p>
-        <DrawUpToSelector
+        <DrawUpToOptions
           max={max}
           deckSize={deckSize}
           onConfirm={onConfirm}
+          drawCount={drawCount}
+          onSelect={setDrawCount}
         />
       </section>
     </div>
@@ -348,6 +362,7 @@ export interface HandDiscardResponseModalProps {
   placementByCardId?: Record<string, 'top' | 'bottom'>
   onSetPlacement?: (instanceId: string, placement: 'top' | 'bottom') => void
   onConfirm: () => void
+  onCancelItem?: () => void
   /**
    * 這個棄牌決策是同一張卡的抽牌步驟之後接著出現的（BS3-070／BS3-088 的
    * draw-up-to-then-discard）。顯示「步驟 2/2」讓玩家知道這不是另一張卡
@@ -370,6 +385,7 @@ export function HandDiscardResponseModal({
   placementByCardId = {},
   onSetPlacement,
   onConfirm,
+  onCancelItem,
   continuesFromDraw = false,
 }: HandDiscardResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
@@ -490,6 +506,7 @@ export function HandDiscardResponseModal({
           ))}
         </div>
         <div className="modal-actions hand-discard-actions">
+          {onCancelItem && <button type="button" onClick={onCancelItem}>取消使用道具</button>}
           <button type="button" disabled={!canSubmit} onClick={onConfirm}>
             確認{actionVerb} ({selectedIds.length})
           </button>
@@ -614,6 +631,9 @@ export interface PlaceHandHpModalProps {
   targetCardName: string
   hand: GameCard[]
   selectedId?: string
+  required?: boolean
+  faceUp?: boolean
+  hpPlacement?: 'top' | 'bottom'
   onToggleCard: (instanceId: string) => void
   onConfirm: () => void
   onSkip: () => void
@@ -621,8 +641,7 @@ export interface PlaceHandHpModalProps {
 
 /**
  * 兩階段選擇的第二階段（cycle-hp BS4-030 世外桃源 / hand-to-hp BS4-044
- * 千年寺）：第一階段選定目標餅乾後，選擇最多 1 張手牌放回該餅乾 HP 最上方。
- * 牌名不公開，只顯示手牌給持有者自己選。
+ * 千年寺）：第一階段選定餅乾，第二階段依效果選擇手牌、必選與公開方式。
  */
 export function PlaceHandHpModal({
   sourceCardName,
@@ -631,6 +650,9 @@ export function PlaceHandHpModal({
   targetCardName,
   hand,
   selectedId,
+  required = false,
+  faceUp = false,
+  hpPlacement = 'top',
   onToggleCard,
   onConfirm,
   onSkip,
@@ -676,7 +698,7 @@ export function PlaceHandHpModal({
           activePhase="place"
         />
         <span>放置 HP</span>
-        <h2>{sourceCardName}：請選擇最多 1 張手牌放置到「{targetCardName}」的 HP 最上方</h2>
+        <h2>{sourceCardName}：請選擇{required ? '恰好' : '最多'} 1 張手牌放置到「{targetCardName}」的 HP {hpPlacement === 'top' ? '最上方' : '最下方'}</h2>
         <div className="draw-up-to-source-card hand-discard-source-card">
           {sourceCard && <CardFace card={sourceCard} />}
           {effectText && (
@@ -688,7 +710,7 @@ export function PlaceHandHpModal({
             </div>
           )}
         </div>
-        <p className="faint-target-hint">放置的手牌不會公開內容。</p>
+        <p className="faint-target-hint">{faceUp ? '放置的手牌面朝上，公開內容。' : '放置的手牌不會公開內容。'}</p>
         <div className="modal-card-options hand-discard-options">
           {hand.map((card) => (
             <button
@@ -706,13 +728,13 @@ export function PlaceHandHpModal({
           ))}
         </div>
         <div className="modal-actions hand-discard-actions">
-          <button type="button" className="modal-button" onClick={onSkip}>
+          {!required && <button type="button" className="modal-button" onClick={onSkip}>
             略過放置
-          </button>
+          </button>}
           <button
             type="button"
             className="modal-button primary"
-            disabled={!selectedId}
+            disabled={!selectedId || !hand.some(card => card.instanceId === selectedId)}
             onClick={onConfirm}
           >
             確認放置 ({selectedId ? 1 : 0})
@@ -821,6 +843,10 @@ export function ReorderHpModal({
 }
 
 export interface OptionalCostAttackModalProps {
+  cookieBreakCost?: number
+  cookieBreakCandidates?: { card: GameCard; instanceId: string; zone: 'hand' | 'battle' }[]
+  positionCost?: AbilityCost['battleCookiePosition']
+  positionCostCandidates?: { card: GameCard; instanceId: string }[]
   sourceCardName: string
   sourceCard?: GameCard | ExtraDeckCard
   /** 來源餅乾可以直接提供的能量；在能量步驟以固定來源說明呈現。 */
@@ -829,6 +855,7 @@ export interface OptionalCostAttackModalProps {
   /** `ability` 用於技能 Then 的可選效果；預設為攻擊後續效果。 */
   resolution?: 'attack' | 'ability'
   discardHandCost: number
+  handCostDestination?: AbilityCost['handCostDestination']
   /** 可作為棄手牌代價的合法候選；省略時相容既有呼叫端，退回整副手牌。 */
   discardHandCandidates?: { card: GameCard; instanceId: string }[]
   supportToHandCost?: number
@@ -839,6 +866,7 @@ export interface OptionalCostAttackModalProps {
   hpToHandCost?: number
   hpToHandCandidates?: { card: GameCard; instanceId: string }[]
   trashToDeckCost?: number
+  trashToDeckDestination?: 'bottom'
   trashToDeckCandidates?: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
   /** 代價的完整說明；省略時退回依張數自行組字（來源餅乾自付的能量會顯示不出來）。 */
@@ -846,7 +874,7 @@ export interface OptionalCostAttackModalProps {
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
   supportToHandCandidates?: { card: GameCard; instanceId: string }[]
-  targetCandidates: { card: GameCard; instanceId: string }[]
+  targetCandidates: { card: GameCard; instanceId: string; requiresDiscardId?: string }[]
   needsTarget: boolean
   targetMin: number
   targetMax: number
@@ -855,6 +883,8 @@ export interface OptionalCostAttackModalProps {
   targetInstruction?: string
   /** 僅明確強制的代價隱藏 skip；一般 Then 提供支付與略過。 */
   mandatory?: boolean
+  extraDeckEntry?: boolean
+  conditionalSourcePlay?: boolean
   onSkip: () => void
   onPay: (
     discardIds: string[],
@@ -865,6 +895,8 @@ export interface OptionalCostAttackModalProps {
     trashToDeckIds: string[],
     hpToHandIds: string[],
     supportToTrashIds?: string[],
+    positionCostTargetIds?: string[],
+    cookieToBreakAreaIds?: string[],
   ) => void
   embedded?: boolean
   /**
@@ -881,12 +913,17 @@ export interface OptionalCostAttackModalProps {
 type AttackPayStep = 'decision' | 'pay'
 
 export function OptionalCostAttackModal({
+  cookieBreakCost = 0,
+  cookieBreakCandidates = [],
+  positionCost,
+  positionCostCandidates = [],
   sourceCardName,
   sourceCard,
   sourceEnergy,
   effectText,
   resolution = 'attack',
   discardHandCost,
+  handCostDestination,
   playerHand,
   discardHandCandidates = playerHand.map((card) => ({ card, instanceId: card.instanceId })),
   supportToHandCost = 0,
@@ -897,6 +934,7 @@ export function OptionalCostAttackModal({
   hpToHandCost = 0,
   hpToHandCandidates = [],
   trashToDeckCost = 0,
+  trashToDeckDestination,
   trashToDeckCandidates = [],
   energyCostTotal,
   costText,
@@ -909,6 +947,8 @@ export function OptionalCostAttackModal({
   targetLabel,
   targetInstruction,
   mandatory = false,
+  extraDeckEntry = false,
+  conditionalSourcePlay = false,
   onSkip,
   onPay,
   embedded = false,
@@ -935,12 +975,17 @@ export function OptionalCostAttackModal({
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [selectedSupportToHandIds, setSelectedSupportToHandIds] = useState<string[]>([])
   const [selectedSupportToTrashIds, setSelectedSupportToTrashIds] = useState<string[]>([])
+  const [selectedPositionCostIds, setSelectedPositionCostIds] = useState<string[]>([])
+  const [selectedCookieBreakIds, setSelectedCookieBreakIds] = useState<string[]>([])
+  const visibleTargetCandidates = targetCandidates.filter(entry => !selectedCookieBreakIds.includes(entry.instanceId) && (!entry.requiresDiscardId || selectedDiscardIds.includes(entry.requiresDiscardId)))
   const [selectedHpToTrashIds, setSelectedHpToTrashIds] = useState<string[]>([])
   const [selectedHpToHandIds, setSelectedHpToHandIds] = useState<string[]>([])
   const [selectedTrashToDeckIds, setSelectedTrashToDeckIds] = useState<string[]>([])
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
 
   const canPay =
+    cookieBreakCandidates.length >= cookieBreakCost &&
+    positionCostCandidates.length >= (positionCost?.count ?? 0) &&
     (sourceEnergyTotal === 0 || Boolean(sourceCard)) &&
     discardHandCandidates.length >= discardHandCost &&
     supportCandidates.length >= energyCostTotal &&
@@ -961,6 +1006,7 @@ export function OptionalCostAttackModal({
     (!needsTarget || targetCandidates.length >= targetMin)
 
   const toggleDiscard = useCallback((instanceId: string) => {
+    setSelectedTargetIds([])
     setSelectedDiscardIds((current) =>
       current.includes(instanceId)
         ? current.filter((id) => id !== instanceId)
@@ -1055,6 +1101,10 @@ export function OptionalCostAttackModal({
   }, [targetMax])
 
   const readyToConfirm =
+    !selectedTargetIds.some(id => !visibleTargetCandidates.some(entry => entry.instanceId === id)) &&
+    selectedCookieBreakIds.length === cookieBreakCost &&
+    !selectedTargetIds.some(id => selectedCookieBreakIds.includes(id)) &&
+    selectedPositionCostIds.length === (positionCost?.count ?? 0) &&
     selectedDiscardIds.length === discardHandCost &&
     selectedPaymentIds.length === energyCostTotal &&
     selectedSupportToTrashIds.length === supportToTrashCost &&
@@ -1077,7 +1127,11 @@ export function OptionalCostAttackModal({
       selectedTrashToDeckIds,
       selectedHpToHandIds,
     ] as const
-    if (supportToTrashCost > 0) {
+    if (cookieBreakCost) {
+      onPay(...args, selectedSupportToTrashIds, selectedPositionCostIds, selectedCookieBreakIds)
+    } else if (positionCost) {
+      onPay(...args, selectedSupportToTrashIds, selectedPositionCostIds)
+    } else if (supportToTrashCost > 0) {
       onPay(...args, selectedSupportToTrashIds)
     } else {
       onPay(...args)
@@ -1093,6 +1147,10 @@ export function OptionalCostAttackModal({
     selectedTrashToDeckIds,
     selectedHpToHandIds,
     supportToTrashCost,
+    positionCost,
+    cookieBreakCost,
+    selectedCookieBreakIds,
+    selectedPositionCostIds,
     onPay,
   ])
 
@@ -1101,6 +1159,8 @@ export function OptionalCostAttackModal({
   const phaseIds: GuidedPhaseId[] = [
     ...(sourceEnergyTotal > 0 || energyCostTotal > 0 ? (['energy'] as const) : []),
     ...(discardHandCost > 0 ? (['cost'] as const) : []),
+    ...(positionCost ? (['position-cost'] as const) : []),
+    ...(cookieBreakCost ? (['cookie-break-cost'] as const) : []),
     ...(supportToTrashCost > 0 ? (['support-trash-cost'] as const) : []),
     ...(supportToHandCost > 0 ? (['support-cost'] as const) : []),
     ...(hpToTrashCost > 0 ? (['hp-cost'] as const) : []),
@@ -1114,6 +1174,10 @@ export function OptionalCostAttackModal({
     label:
       id === 'energy'
         ? '能量'
+        : id === 'cookie-break-cost'
+          ? '休息區代價'
+        : id === 'position-cost'
+          ? '餅乾代價'
         : id === 'cost'
           ? '代價'
           : id === 'support-cost'
@@ -1126,13 +1190,18 @@ export function OptionalCostAttackModal({
                 ? 'HP 回手'
                 : id === 'trash-cost'
                   ? '棄牌區代價'
-            : '目標',
+            : extraDeckEntry ? '戰鬥區代價' : '目標',
     complete: index < phaseIndex,
   }))
   const activePhaseReady =
+    activePhase === 'cookie-break-cost'
+      ? selectedCookieBreakIds.length === cookieBreakCost
+      :
     activePhase === 'energy'
       ? (sourceEnergyTotal === 0 || Boolean(sourceCard)) &&
         selectedPaymentIds.length === energyCostTotal
+      : activePhase === 'position-cost'
+        ? selectedPositionCostIds.length === (positionCost?.count ?? 0)
       : activePhase === 'cost'
         ? selectedDiscardIds.length === discardHandCost
         : activePhase === 'support-trash-cost'
@@ -1166,6 +1235,8 @@ export function OptionalCostAttackModal({
     setSelectedPaymentIds([])
     setSelectedSupportToHandIds([])
     setSelectedSupportToTrashIds([])
+    setSelectedPositionCostIds([])
+    setSelectedCookieBreakIds([])
     setSelectedHpToTrashIds([])
     setSelectedHpToHandIds([])
     setSelectedTrashToDeckIds([])
@@ -1191,7 +1262,7 @@ export function OptionalCostAttackModal({
       >
         <span>
           <strong>
-            {isAbilityResolution
+            {extraDeckEntry ? 'EXTRA 登場代價' : isAbilityResolution
               ? mandatory
                 ? '技能 Then 代價'
                 : 'Then 可選效果'
@@ -1210,7 +1281,8 @@ export function OptionalCostAttackModal({
   // 避免畫面出現一個空白的「代價：」看起來像壞掉。
   const fallbackCostText = [
     energyCostTotal > 0 ? `支付 ${energyCostTotal} 張能量支援卡` : null,
-    discardHandCost > 0 ? `棄置 ${discardHandCost} 張手牌` : null,
+    discardHandCost > 0 ? handCostDestination === 'deck-bottom'
+      ? `公開 ${discardHandCost} 張手牌並放入牌庫底` : `棄置 ${discardHandCost} 張手牌` : null,
     supportToHandCost > 0
       ? `將 ${supportToHandCost} 張支援區卡返回手牌`
       : null,
@@ -1220,7 +1292,7 @@ export function OptionalCostAttackModal({
     hpToTrashCost > 0 ? `選擇 ${hpToTrashCost} 張餅乾支付 HP 代價` : null,
     hpToHandCost > 0 ? `將 ${hpToHandCost} 張餅乾的 HP 卡返回手牌` : null,
     trashToDeckCost > 0
-      ? `將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`
+      ? `將 ${trashToDeckCost} 張棄牌區卡${trashToDeckDestination === 'bottom' ? '依選取順序放到牌庫底' : '洗回牌庫'}`
       : null,
   ]
     .filter(Boolean)
@@ -1234,14 +1306,14 @@ export function OptionalCostAttackModal({
           type="button"
           className="minimize-reveal"
           onClick={() => setMinimized(true)}
-          title={isAbilityResolution ? '縮小 Then 可選效果' : '縮小攻擊可選效果'}
+          title={extraDeckEntry ? '縮小 EXTRA 登場代價' : isAbilityResolution ? '縮小 Then 可選效果' : '縮小攻擊可選效果'}
         >
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
       )}
         <span>
-          {isAbilityResolution
+          {conditionalSourcePlay ? '技能登場代價（可選）' : extraDeckEntry ? 'EXTRA 登場代價（必須支付）' : isAbilityResolution
             ? mandatory
               ? '技能 Then 代價（必須支付）'
               : 'Then 可選效果'
@@ -1336,11 +1408,52 @@ export function OptionalCostAttackModal({
               </div>
             )}
 
+            {activePhase === 'cookie-break-cost' && (
+              <div className="optional-cost-col optional-cookie-break-cost">
+                <span className="optional-cost-col-label">休息區代價</span>
+                <strong>從{[...new Set(cookieBreakCandidates.map(entry => entry.zone === 'hand' ? '手牌' : '己方戰鬥區'))].join('或') || '指定區域'}選擇 {cookieBreakCost} 張 Arena 餅乾放入休息區（已選 {selectedCookieBreakIds.length}）</strong>
+                <div className="modal-card-options">
+                  {cookieBreakCandidates.map(entry => (
+                    <button type="button" key={entry.instanceId} aria-pressed={selectedCookieBreakIds.includes(entry.instanceId)}
+                      onClick={() => {
+                        setSelectedCookieBreakIds(current => current.includes(entry.instanceId) ? current.filter(id => id !== entry.instanceId)
+                          : current.length < cookieBreakCost ? [...current, entry.instanceId] : current)
+                        setSelectedTargetIds([])
+                      }}>
+                      <CardFace card={entry.card} selected={selectedCookieBreakIds.includes(entry.instanceId)} />
+                      <span>{entry.zone === 'hand' ? '手牌' : '戰鬥區'}・{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activePhase === 'position-cost' && positionCost && (
+              <div className="optional-cost-col optional-position-cost">
+                <span className="optional-cost-col-label">餅乾代價</span>
+                <strong>選擇 {positionCost.count} 張{positionCost.keyword === 'arena' ? ' Arena' : ''}餅乾設為{positionCost.position === 'rested' ? '橫置' : '活躍'}（已選 {selectedPositionCostIds.length}）</strong>
+                <div className="modal-card-options">
+                  {positionCostCandidates.map(entry => (
+                    <button type="button" key={entry.instanceId}
+                      aria-pressed={selectedPositionCostIds.includes(entry.instanceId)}
+                      className={selectedPositionCostIds.includes(entry.instanceId) ? 'is-selected' : ''}
+                      onClick={() => setSelectedPositionCostIds(current => current.includes(entry.instanceId)
+                        ? current.filter(id => id !== entry.instanceId)
+                        : current.length < positionCost.count ? [...current, entry.instanceId] : current)}>
+                      <CardFace card={entry.card} selected={selectedPositionCostIds.includes(entry.instanceId)} />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activePhase === 'cost' && (
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">代價</span>
                 <strong>
-                  選擇 {discardHandCost} 張手牌棄置
+                  {handCostDestination === 'deck-bottom'
+                    ? `選擇 ${discardHandCost} 張合法餅乾手牌，公開並放入牌庫底`
+                    : `選擇 ${discardHandCost} 張手牌棄置`}
                 </strong>
                 <div className="modal-card-options">
                   {discardHandCandidates.map((entry) => (
@@ -1488,7 +1601,7 @@ export function OptionalCostAttackModal({
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">棄牌區代價</span>
                 <strong>
-                  選擇 {trashToDeckCost} 張棄牌區卡牌洗回牌庫（已選{' '}
+                  選擇 {trashToDeckCost} 張棄牌區卡牌{trashToDeckDestination === 'bottom' ? '依選取順序放到牌庫底' : '洗回牌庫'}（已選{' '}
                   {selectedTrashToDeckIds.length}）
                 </strong>
                 <div className="modal-card-options">
@@ -1508,6 +1621,9 @@ export function OptionalCostAttackModal({
                         selected={selectedTrashToDeckIds.includes(entry.instanceId)}
                       />
                       <span>{entry.card.name}</span>
+                      {trashToDeckDestination === 'bottom' && selectedTrashToDeckIds.includes(entry.instanceId) && (
+                        <span>牌庫底順序 {selectedTrashToDeckIds.indexOf(entry.instanceId) + 1}</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1516,7 +1632,7 @@ export function OptionalCostAttackModal({
 
             {activePhase === 'target' && (
               <div className="optional-cost-col">
-                <span className="optional-cost-col-label">目標</span>
+                <span className="optional-cost-col-label">{extraDeckEntry ? '戰鬥區代價' : '目標'}</span>
                 <strong>
                   {targetInstruction
                     ? `${targetInstruction}（已選 ${selectedTargetIds.length}）`
@@ -1525,7 +1641,7 @@ export function OptionalCostAttackModal({
                     : `選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`}
                 </strong>
                 <div className="modal-card-options">
-                  {targetCandidates.map((entry) => (
+                  {visibleTargetCandidates.map((entry) => (
                     <button
                       type="button"
                       key={entry.instanceId}
@@ -1593,6 +1709,7 @@ export interface InspectDeckModalProps {
   filterKeyword?: CardKeyword
   filterHasSpecialPlay?: boolean
   optionalPick?: boolean
+  revealPicked?: boolean
   onConfirm: (
     pickedCardIds: string[],
     restOrder: string[],
@@ -1620,6 +1737,7 @@ export function InspectDeckModal({
   filterKeyword,
   filterHasSpecialPlay,
   optionalPick,
+  revealPicked,
   onConfirm,
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
@@ -1779,6 +1897,9 @@ export function InspectDeckModal({
             ))}
           </div>
         )}
+        {revealPicked && pickDestination === 'hand' && (
+          <p>所選卡將公開展示後加入手牌。</p>
+        )}
         {needsRestDestination && (
           <div className="inspect-deck-placement" aria-label="牌庫放置位置">
             <strong>選擇檢視的牌要放回哪裡</strong>
@@ -1845,7 +1966,7 @@ export function InspectDeckModal({
             disabled={!canConfirm}
             onClick={handleConfirm}
           >
-            確認並放回
+            {restDestination === 'trash' || restDestination === 'support-rested' ? '確認並結算' : '確認並放回'}
           </button>
         </div>
       </section>
@@ -1857,6 +1978,10 @@ export interface RevealTopDeckModalProps {
   sourceCardName: string
   revealedCard: GameCard
   matched: boolean
+  deckPosition?: 'bottom'
+  addMatchedToHand?: boolean
+  playMatchedAfterSourceTrash?: boolean
+  hasFollowupEffects?: boolean
   /**
    * 檢視者是不是這次翻牌的擁有者。翻牌是公開資訊，對手也看得到同一張卡，
    * 但只有擁有者能按確認——非擁有者若照樣顯示可按的按鈕，按下去只會靜靜地
@@ -1870,6 +1995,10 @@ export function RevealTopDeckModal({
   sourceCardName,
   revealedCard,
   matched,
+  deckPosition,
+  addMatchedToHand,
+  playMatchedAfterSourceTrash,
+  hasFollowupEffects = true,
   canConfirm = true,
   onConfirm,
 }: RevealTopDeckModalProps) {
@@ -1904,11 +2033,18 @@ export function RevealTopDeckModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
-        <span>{sourceCardName} — 翻開牌庫頂</span>
+        <span>{sourceCardName} — {deckPosition === 'bottom' ? '展示牌庫底' : '翻開牌庫頂'}</span>
         <h2>{matched ? '條件匹配！' : '條件未匹配'}</h2>
         <CardFace card={revealedCard} className="reveal-card" />
         <strong>{revealedCard.name}</strong>
-        <p>{matched ? '翻到的卡牌符合條件，效果發動。' : '翻到的卡牌不符合條件，效果不發動。'}</p>
+        <p>{deckPosition === 'bottom'
+          ? matched ? `展示的卡牌符合條件，${playMatchedAfterSourceTrash
+            ? '確認後可支付來源餅乾進棄牌區的代價，讓這張底牌登場；不支付則保留原狀。'
+            : addMatchedToHand
+            ? hasFollowupEffects ? '確認後加入手牌並執行後段效果。' : '確認後加入手牌。'
+            : hasFollowupEffects ? '確認後執行後段效果。' : '確認後繼續。'}`
+            : `展示的卡牌不符合條件，保持在牌庫底${hasFollowupEffects ? '，後段效果不執行。' : '。'}`
+          : matched ? '翻到的卡牌符合條件，效果發動。' : '翻到的卡牌不符合條件，效果不發動。'}</p>
         <button
           type="button"
           className="reveal-confirm"

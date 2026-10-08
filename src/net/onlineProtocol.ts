@@ -234,6 +234,7 @@ interface CommandShape {
   requiredNumbers?: readonly string[]
   optionalNumbers?: readonly string[]
   requiredBooleans?: readonly string[]
+  optionalBooleans?: readonly string[]
   requiredNullableStrings?: readonly string[]
   enumFields?: Readonly<Record<string, readonly string[]>>
 }
@@ -401,6 +402,7 @@ const isCustomDeck = (value: unknown): value is CustomDeck =>
 
 const commandShapes = {
   'resolve-faint-effect': {
+    optionalBooleans: ['payDeckToTrash'],
     requiredStringArrays: ['targetIds'],
     optionalStringArrays: [
       'paymentIds',
@@ -410,6 +412,7 @@ const commandShapes = {
     ],
   },
   'resolve-opponent-hand-discard': { requiredStringArrays: ['cardIds'] },
+  'cancel-item-activation': {},
   'resolve-opponent-rest-support': { requiredStringArrays: ['cardIds'] },
   'resolve-inspect-deck': {
     requiredStringArrays: ['pickedCardIds', 'restOrder'],
@@ -418,6 +421,8 @@ const commandShapes = {
   },
   'resolve-optional-cost-attack': {
     optionalStringArrays: [
+      'positionCostTargetIds',
+      'cookieToBreakAreaIds',
       'discardCardIds',
       'targetIds',
       'paymentIds',
@@ -458,6 +463,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'battleToHandIds',
+      'positionCostTargetIds',
       'trashToDeckBottomIds',
       'supportToHandIds',
     ],
@@ -473,6 +479,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'battleToHandIds',
+      'positionCostTargetIds',
       'trashToDeckBottomIds',
       'supportToHandIds',
       'targetIds',
@@ -490,6 +497,7 @@ const commandShapes = {
       'discardHandIds',
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
+      'handToBreakAreaIds',
     ],
     optionalStringMatrices: ['effectTargets'],
   },
@@ -503,6 +511,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'targetIds',
       'trashBattleCookieIds',
+      'handToBreakAreaIds',
     ],
   },
   'play-stage': {
@@ -518,6 +527,7 @@ const commandShapes = {
       'discardHandIds',
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
+      'trashToDeckBottomIds',
       'targetIds',
     ],
     optionalStringMatrices: ['effectTargets'],
@@ -530,6 +540,7 @@ const commandShapes = {
       'discardHandIds',
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
+      'trashToDeckBottomIds',
       'targetIds',
     ],
   },
@@ -551,6 +562,7 @@ const commandShapes = {
     requiredStringArrays: ['paymentIds', 'targetIds'],
     optionalNumbers: ['costOptionIndex'],
     optionalStringArrays: [
+      'positionCostTargetIds',
       'supportTrashIds',
       'supportToHandIds',
       'handToSupportIds',
@@ -567,10 +579,12 @@ const commandShapes = {
   'play-blocker': {
     requiredStrings: ['sourceInstanceId'],
     requiredStringArrays: ['paymentIds'],
+    optionalStringArrays: ['discardHandIds'],
   },
   'play-attack-response': {
     requiredStrings: ['sourceInstanceId'],
     requiredStringArrays: ['discardHandIds', 'trashToDeckIds'],
+    optionalStringArrays: ['supportToTrashIds'],
   },
   'resolve-flip': {
     requiredBooleans: ['activate'],
@@ -617,6 +631,9 @@ const hasValidCommandShape = (
     ) &&
     (shape.requiredBooleans ?? []).every(
       (field) => typeof command[field] === 'boolean',
+    ) &&
+    (shape.optionalBooleans ?? []).every(
+      (field) => command[field] === undefined || typeof command[field] === 'boolean',
     ) &&
     (shape.requiredNullableStrings ?? []).every(
       (field) => command[field] === null || typeof command[field] === 'string',

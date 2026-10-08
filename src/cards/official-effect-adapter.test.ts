@@ -4701,17 +4701,10 @@ describe('BS7 candidate effect adapter', () => {
   it('converts BS7-033 through BS7-037 with their Arena boundaries', () => {
     expect(convertOfficialCookieSkill(findBs7Candidate('BS7-033'))).toMatchObject({
       trigger: 'on-play',
+      cost: { energy: {}, discardHand: 0,
+        trashBattleCookie: { count: 1, keyword: 'arena', excludeSource: true, toBreakArea: true },
+      },
       effects: [
-        {
-          kind: 'battle-to-break',
-          target: {
-            side: 'self',
-            min: 1,
-            max: 1,
-            keyword: 'arena',
-            excludeSource: true,
-          },
-        },
         {
           kind: 'damage',
           amount: 2,

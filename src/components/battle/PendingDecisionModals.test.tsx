@@ -4,7 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { applyGameCommand, createDemoGame } from '../../game'
-import { createCardCheckDemoState } from '../../game/demo'
+import { createCardCheckDemoState, createBs12AngelLightstickDemoState, createBs12BlackLemonadeDemoState, createBs12FinalPhysicalDemoState } from '../../game/demo'
 import type {
   BattleUiMatchLike,
   BattleUiPendingEffectLike,
@@ -12,6 +12,87 @@ import type {
 import { PendingDecisionModals } from './PendingDecisionModals'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
+it.each(['BS12-109', 'BS12-109@1', 'BS12-109@2'] as const)('%s R006 requires one legal printed Special Play hand card and displays Then/face-up/top', async number => {
+  let game = createBs12FinalPhysicalDemoState(number, 'then-positive')
+  game = applyGameCommand(game, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: 'final-source', targetInstanceId: 'final-enemy', supportPaymentIds: ['final-payment-0', 'final-payment-1'] })
+  game = applyGameCommand(game, { kind: 'skip-trap', playerId: 'player-two' })
+  for (let i = 0; i < 2; i++) game = applyGameCommand(game, { kind: 'resolve-next-damage', playerId: 'player-two' })
+  game = applyGameCommand(game, { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: ['final-companion'] })
+  const view = createReplacementView('player-one')
+  view.match = { ...view.match, game, pendingPlayer: null, pendingOptions: [], replacementTask: null,
+    selectedPlaceHandHpId: undefined, setSelectedPlaceHandHpId: vi.fn() }
+  const container = document.createElement('div'), root = createRoot(container)
+  try {
+    const render = () => root.render(<PendingDecisionModals match={view.match} pending={view.pending} />)
+    await act(render)
+    expect(container.textContent).toContain('恰好 1 張手牌')
+    expect(container.textContent).toContain('HP 最上方')
+    expect(container.textContent).toContain('放置的手牌面朝上，公開內容。')
+    expect(container.textContent).toContain('Then, if there are 3 cards or more')
+    expect(container.querySelector('.hand-discard-source-card img')?.getAttribute('src')).toBe(game.players['player-one'].battleArea[0].card.imageUrl)
+    expect([...container.querySelectorAll('.hand-discard-options button')].map(b => b.textContent)).toEqual(game.players['player-one'].hand.slice(0, 2).map(c => c.name))
+    expect(container.textContent).not.toContain('略過放置')
+    const confirm = () => [...container.querySelectorAll('button')].find(b => b.textContent?.startsWith('確認放置'))!
+    expect(confirm().disabled).toBe(true)
+    view.match = { ...view.match, selectedPlaceHandHpId: 'final-hand-no-special' }
+    await act(render)
+    expect(confirm().disabled).toBe(true)
+    view.match = { ...view.match, selectedPlaceHandHpId: 'final-hand-special' }
+    await act(render)
+    expect(confirm().disabled).toBe(false)
+    await act(() => confirm().click())
+    expect(view.dispatch).toHaveBeenCalledWith({ kind: 'resolve-place-hand-hp', playerId: 'player-one', handCardInstanceId: 'final-hand-special' }, expect.stringContaining('HP 最上方'))
+    view.match = { ...view.match, viewerPlayerId: 'player-two' }
+    await act(render)
+    expect(container.querySelector('.hand-discard-modal')).toBeNull()
+  } finally { await act(() => root.unmount()) }
+})
+
+it.each(['BS12-092', 'BS12-092@1'] as const)('%s shows the attack Then text in its opponent discard decision', async number => {
+  let game = createBs12BlackLemonadeDemoState(number, 'attack')
+  game = applyGameCommand(game, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: 'bs12-092-source', targetInstanceId: 'bs12-092-opponent', supportPaymentIds: game.players['player-one'].supportArea.map(s => s.card.instanceId) })
+  game = applyGameCommand(game, { kind: 'skip-trap', playerId: 'player-two' })
+  for (let i = 0; game.pendingBattle?.stage === 'damage' && i < 8; i++) game = applyGameCommand(game, { kind: 'resolve-next-damage', playerId: 'player-two' })
+  game = applyGameCommand(game, { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] })
+  const view = createReplacementView('player-two')
+  view.match = { ...view.match, game, pendingPlayer: null, pendingOptions: [], replacementTask: null, selectedOpponentDiscardIds: [], setSelectedOpponentDiscardIds: vi.fn() }
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<PendingDecisionModals match={view.match} pending={view.pending} />))
+    const text = container.querySelector('.hand-discard-modal')?.textContent
+    expect(text).toContain('Then, if you started the game going second')
+    expect(text).not.toContain('When one of your Cookies faints')
+    expect(container.querySelector('.hand-discard-modal img')?.getAttribute('src')).toBe(game.players['player-one'].battleArea[0].card.imageUrl)
+  } finally { await act(() => root.unmount()) }
+})
+
+it('shows the equipment attack trigger separately and keeps its art through the draw decision', async () => {
+  const before = createBs12AngelLightstickDemoState('hand-five')
+  const declared = applyGameCommand(before, { kind: 'declare-attack', playerId: 'player-one', attackerInstanceId: 'bs12-062-host',
+    targetInstanceId: 'bs12-062-opponent', supportPaymentIds: ['bs12-062-payment-0'] })
+  const view = createReplacementView('player-one')
+  view.match = { ...view.match, game: declared, pendingPlayer: null, pendingOptions: [], replacementTask: null }
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(<PendingDecisionModals match={view.match} pending={view.pending} />))
+    expect(container.textContent).toContain('Angel Lightstick 裝備效果')
+    expect(container.textContent).toContain('宿主已宣告攻擊，是否抽最多 2 張牌？')
+    const activateButton = [...container.querySelectorAll('button')].find(button => button.textContent === '發動')!
+    await act(() => activateButton.click())
+    expect(view.dispatch).toHaveBeenCalledWith({ kind: 'resolve-stage-trigger', playerId: 'player-one', action: 'activate' }, '已發動裝備效果，請選擇抽牌張數。')
+    view.match = { ...view.match, game: applyGameCommand(declared, { kind: 'resolve-stage-trigger', playerId: 'player-one', action: 'activate' }) }
+    await act(() => root.render(<PendingDecisionModals match={view.match} pending={view.pending} />))
+    expect(container.querySelector('.draw-up-to-modal img')?.getAttribute('src')).toContain('4EgvUXyfl0G8aTBKhoA5nw.webp')
+    expect([...container.querySelectorAll('.draw-up-to-option-label')].map(node => node.textContent)).toEqual(['不抽', '抽 1 張', '抽 2 張'])
+  } finally {
+    await act(() => root.unmount())
+    container.remove()
+  }
+})
 
 const createReplacementView = (viewerPlayerId: 'player-one' | 'player-two') => {
   const baseGame = createDemoGame()

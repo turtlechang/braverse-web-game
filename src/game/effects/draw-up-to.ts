@@ -19,7 +19,7 @@ export const resolveDrawUpTo = (
     throw new GameRuleError('不是目前需要執行決策的玩家。')
   }
 
-  if (drawCount < 0 || drawCount > state.pendingDrawUpTo.max) {
+  if (!Number.isInteger(drawCount) || drawCount < 0 || drawCount > state.pendingDrawUpTo.max) {
     throw new GameRuleError(`抽牌數量必須在 0 到 ${state.pendingDrawUpTo.max} 之間。`)
   }
 
@@ -106,6 +106,7 @@ export const resolveDrawUpTo = (
           pendingOpponentHandDiscard: {
             ...updatedState.pendingOpponentHandDiscard,
             chainedFromDrawUpTo: true,
+            battleContinuation: pending.battleContinuation,
           },
         }
       }

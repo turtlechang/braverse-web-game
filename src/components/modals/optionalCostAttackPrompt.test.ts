@@ -384,9 +384,8 @@ describe('getOptionalCostAttackPrompt', () => {
 
     expect(prompt?.energyCostTotal).toBe(1)
     expect(prompt?.costText).toBe('支付支援區 1 點紫色能量、將此餅乾送入棄牌區')
-    expect(prompt?.targetCandidates).toEqual([
-      { card: purpleLevelOne, instanceId: 'purple-lv1' },
-    ])
+    expect(prompt?.needsTarget).toBe(false)
+    expect(prompt?.targetCandidates).toEqual([])
   })
 
   // 使用者問「其他類型的卡有嗎」——BS3-086 這類攻擊文字裡「Then, <discard

@@ -8,13 +8,56 @@ import {
   applyGameCommand,
   type GameState,
 } from '../game'
-import { createCardCheckDemoState } from '../game/demo'
+import { createBs12CarpetDemoState, createBs12KumihoDemoState, createCardCheckDemoState } from '../game/demo'
 import type { DispatchGameCommand } from './useBattleActions'
 import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it.each(['BS12-053', 'BS12-053@1'] as const)('%s presents paid opponent-attack timing without a second cost', async number => {
+    const game = applyGameCommand(createBs12KumihoDemoState('response', number), { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'bs12-053-source', discardHandIds: [], trashToDeckIds: [], supportToTrashIds: ['bs12-053-support-2'] })
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let current: ReturnType<typeof useOnlinePendingEffect> | undefined
+    function Harness() { current = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false }); return null }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      expect(current!.pendingEffect?.skill.trigger).toBe('opponent-attack')
+      expect(current!.pendingEffect?.triggerLabel).toBe('攻擊回應技能效果')
+      expect(current!.pendingEffect?.skill.oncePerTurn).toBe(true)
+      expect(current!.pendingEffect?.skill.cost).toEqual({})
+      expect(current!.pendingEffect?.skillActivated).toBe(true)
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally { await act(() => root.unmount()) }
+  })
+  it('sends BS12-028 hand Arena cost only after both mandatory payments are chosen', async () => {
+    const game = createBs12CarpetDemoState()
+    const item = game.players['player-one'].hand[0]
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function Harness() {
+      captured = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch, hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      await act(() => captured!.beginPlayItem(item))
+      expect(captured!.draftHandToBreakAreaCandidates.map(card => card.instanceId)).toEqual(['bs12-028-yellow-cost', 'bs12-028-red-cost'])
+      await act(() => captured!.toggleDraftPayment('bs12-028-payment'))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).not.toHaveBeenCalled()
+      await act(() => captured!.toggleDraftHandToBreakArea('bs12-028-non-arena'))
+      expect(captured!.selectedDraftHandToBreakAreaIds.size).toBe(0)
+      await act(() => captured!.toggleDraftHandToBreakArea('bs12-028-red-cost'))
+      await act(() => captured!.confirmEffect())
+      expect(dispatch).toHaveBeenCalledOnce()
+      expect(dispatch.mock.calls[0][0]).toMatchObject({ kind: 'begin-play-item', instanceId: item.instanceId, paymentIds: ['bs12-028-payment'], handToBreakAreaIds: ['bs12-028-red-cost'] })
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
   it('leaves the shared modal in charge while BS9-079 waits for an Extra Deck choice', async () => {
     let game = createCardCheckDemoState('BS9-079', { normalAttack: 'payable' })
     game = applyGameCommand(game, {

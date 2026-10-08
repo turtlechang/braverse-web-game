@@ -210,7 +210,7 @@ const pendingHeadline = (game: GameState, actorId: PlayerId): string => {
   if (game.pendingRefresh) return '正在處理牌庫 Refresh'
   if (game.pendingReplacement) return '正在選擇替代餅乾'
   if (game.pendingFaintEffects?.length) return '正在處理餅乾退場效果'
-  if (game.pendingAfterDamageEffects?.length) return '正在處理傷害後效果'
+  if (game.pendingAfterDamageEffects?.length) return game.pendingAfterDamageEffects[0].triggerReason === 'break-by-arena-effect' ? '正在處理休息區移入效果' : '正在處理傷害後效果'
   return `${playerLabel(game, actorId)} 正在操作`
 }
 

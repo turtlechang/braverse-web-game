@@ -6,6 +6,40 @@ import {
 } from './onlineProtocol'
 
 describe('online protocol validation', () => {
+  it('accepts optional Blocker hand cost ids while preserving older energy-only commands', () => {
+    const command = { kind: 'play-blocker', playerId: 'player-one', sourceInstanceId: 'pudding', paymentIds: [] }
+    expect(isClientMessage({ type: 'submit-command', command })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, discardHandIds: ['arena-purple'] } })).toBe(true)
+    for (const discardHandIds of [null, 'arena-purple', [1], ['arena-purple', null]]) {
+      expect(isClientMessage({ type: 'submit-command', command: { ...command, discardHandIds } })).toBe(false)
+    }
+  })
+  it('accepts old attack responses and optional support trash cost, rejects malformed cost ids', () => {
+    const command = { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'response', discardHandIds: [], trashToDeckIds: [] }
+    expect(isClientMessage({ type: 'submit-command', command })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, supportToTrashIds: ['support'] } })).toBe(true)
+    for (const supportToTrashIds of [null, 'support', [1], ['support', null]]) expect(isClientMessage({ type: 'submit-command', command: { ...command, supportToTrashIds } })).toBe(false)
+  })
+  it.each(['play-item', 'begin-play-item'])('validates hand-to-break item cost ids for %s', kind => {
+    const command = { kind, playerId: 'player-one', instanceId: 'item', paymentIds: ['yellow'] }
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, handToBreakAreaIds: ['arena-cookie'] } })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, handToBreakAreaIds: [1] } })).toBe(false)
+  })
+  it('validates optional Then position-cost ids and rejects non-string entries', () => {
+    const command = { kind: 'resolve-optional-cost-attack', playerId: 'player-one', action: 'pay' }
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: ['arena-one', 'arena-two'] } })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: [1, 2] } })).toBe(false)
+  })
+  it('validates trap position-cost ids without accepting non-string targets', () => {
+    const command = { kind: 'play-trap', playerId: 'player-one', trapInstanceId: 'trap', paymentIds: ['red'], targetIds: [] }
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: ['arena-one', 'arena-two'] } })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: [1, 2] } })).toBe(false)
+  })
+  it.each(['activate-skill', 'begin-activate-skill'])('validates Cookie position-cost ids for %s', kind => {
+    const command = { kind, playerId: 'player-one', sourceInstanceId: 'source', trigger: 'activate', paymentIds: ['red'] }
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: ['arena'] } })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, positionCostTargetIds: [1] } })).toBe(false)
+  })
   it.each(['create-room', 'join-room'])('validates formal and candidate EXTRA payloads for %s', (type) => {
     const baseDeck = {
       id: 'extra-deck', name: 'EXTRA deck',

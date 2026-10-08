@@ -62,6 +62,7 @@ export interface PlayerView {
   firstPlayerId: PlayerId
   result: GameResult | null
   supportPlacedThisTurn: boolean
+  arenaCookiesPlacedFromBattleToDeckBottomThisTurn?: Partial<Record<PlayerId, boolean>>
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
 }
@@ -115,6 +116,7 @@ export const createPlayerView = (
     firstPlayerId: state.firstPlayerId,
     result: state.result,
     supportPlacedThisTurn: state.supportPlacedThisTurn,
+    arenaCookiesPlacedFromBattleToDeckBottomThisTurn: { ...(state.arenaCookiesPlacedFromBattleToDeckBottomThisTurn ?? {}) },
     attackModifiers: state.attackModifiers,
     damageReceivedModifiers: state.damageReceivedModifiers,
   }

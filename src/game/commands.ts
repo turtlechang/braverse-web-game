@@ -1,4 +1,5 @@
 import { mergePresentationSteps } from './presentation'
+import { isBreakEntryEffectWaiting } from './break-effect-triggers'
 import { GameRuleError } from './errors'
 import {
   advanceBattleAfterTrap,
@@ -15,6 +16,7 @@ import {
   resolveBattleAutomatically,
   resolveFaintEffect,
   resolveFlip,
+  resumeBattleAfterFlipDecision,
   resolveNextAfterDamageEffect,
   resolveNextDamage,
   resolveOptionalCostAttack,
@@ -66,6 +68,7 @@ import {
 import {
   activateStage,
   getStageActivationSource,
+  getItemActivateDiscardRequirement,
   playItem,
   playStage,
 } from './card-abilities'
@@ -73,9 +76,9 @@ import {
   getExtraDeckSkillEffects,
   materializeExtraDeckCookie,
 } from './extra-deck'
-import { refreshDeck } from './refresh'
+import { getRefreshCandidates, refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
-import { hasBlockingPending } from './pending'
+import { hasBlockingPending, hasPendingCardResolution } from './pending'
 import { createSeededShuffle, getOpponentId, updatePlayer } from './helpers'
 import {
   describeCommand,
@@ -83,7 +86,7 @@ import {
   resolveLogCard,
   resolveLogCategory,
 } from './command-log'
-import { getBreakAreaLevel } from './victory'
+import { finishWithDefeat, getBreakAreaLevel } from './victory'
 import {
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -166,6 +169,7 @@ export interface InspectDeckDecision {
   filterKeyword?: CardKeyword
   filterHasSpecialPlay?: boolean
   optionalPick?: boolean
+  revealPicked?: boolean
   extraHp?: number
 }
 
@@ -269,6 +273,7 @@ export interface PlaceHandHpDecision {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   targetInstanceId: string
+  required?: boolean
 }
 
 export interface ReorderHpDecision {
@@ -288,6 +293,8 @@ export interface ResolveFaintEffectCommand {
   discardHandIds?: string[]
   supportToTrashIds?: string[]
   supportToHandIds?: string[]
+  /** Confirm the automatic top-deck cost before choosing post-payment targets. */
+  payDeckToTrash?: boolean
 }
 
 export interface ResolveOpponentHandDiscardCommand {
@@ -313,6 +320,11 @@ export interface ResolveInspectDeckCommand {
   restDestination?: 'top' | 'bottom'
 }
 
+export interface CancelItemActivationCommand {
+  kind: 'cancel-item-activation'
+  playerId: PlayerId
+}
+
 export interface ResolveRevealTopDeckCommand {
   kind: 'resolve-reveal-top-deck'
   playerId: PlayerId
@@ -327,6 +339,8 @@ export interface ResolveExtraDeckAttackCommand {
 }
 
 export interface ResolveOptionalCostAttackCommand {
+  cookieToBreakAreaIds?: string[]
+  positionCostTargetIds?: string[]
   kind: 'resolve-optional-cost-attack'
   playerId: PlayerId
   action: 'skip' | 'pay'
@@ -341,7 +355,7 @@ export interface ResolveOptionalCostAttackCommand {
   hpToTrashIds?: string[]
   /** 將 HP 頂牌返回手牌作為攻擊後代價時選擇的戰鬥區餅乾（例如 BS7-024）。 */
   hpToHandIds?: string[]
-  /** 支付洗回牌庫代價時選擇的棄牌區卡牌（例如 BS5-094）。 */
+  /** 棄牌區牌庫代價的選卡 ID；trashToDeckBottom 依此順序放牌庫底，其餘洗牌。 */
   trashToDeckIds?: string[]
 }
 
@@ -387,6 +401,7 @@ export interface ResolveReorderHpCommand {
 export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
+  | CancelItemActivationCommand
   | ResolveOpponentRestSupportCommand
   | ResolveInspectDeckCommand
   | ResolveRevealTopDeckCommand
@@ -472,6 +487,7 @@ export interface DeclareAttackCommand {
 }
 
 export interface ActivateSkillCommand {
+  positionCostTargetIds?: string[]
   kind: 'activate-skill'
   trashCookieToBreakAreaIds?: string[]
   handToBreakAreaIds?: string[]
@@ -500,6 +516,7 @@ export interface ActivateSkillCommand {
  * 供真人互動流程使用（支援中途暫停恢復）；`activate-skill` 維持批次版本供 AI 使用。
  */
 export interface BeginActivateSkillCommand {
+  positionCostTargetIds?: string[]
   kind: 'begin-activate-skill'
   trashCookieToBreakAreaIds?: string[]
   handToBreakAreaIds?: string[]
@@ -546,6 +563,7 @@ export interface PlayItemCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  handToBreakAreaIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -561,6 +579,7 @@ export interface BeginPlayItemCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  handToBreakAreaIds?: string[]
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -582,6 +601,8 @@ export interface ActivateStageCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  /** 棄牌區代價依此順序追加到牌庫底。 */
+  trashToDeckBottomIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -596,6 +617,7 @@ export interface BeginActivateStageCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  trashToDeckBottomIds?: string[]
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -643,6 +665,7 @@ export interface RefreshDeckCommand {
 }
 
 export interface PlayTrapCommand {
+  positionCostTargetIds?: string[]
   kind: 'play-trap'
   playerId: PlayerId
   trapInstanceId: string
@@ -673,6 +696,7 @@ export interface PlayBlockerCommand {
   playerId: PlayerId
   sourceInstanceId: string
   paymentIds: string[]
+  discardHandIds?: string[]
 }
 
 /** 對手指攻回應技能（BS5-081 Squid Ink Cookie／BS5-092 Rambutan Cookie）。 */
@@ -682,6 +706,7 @@ export interface PlayAttackResponseCommand {
   sourceInstanceId: string
   discardHandIds: string[]
   trashToDeckIds: string[]
+  supportToTrashIds?: string[]
 }
 
 export interface ResolveFlipCommand {
@@ -890,12 +915,14 @@ export const getPendingDecision = (
   }
   const pendingPlace = pendingAbility?.pendingPlace
   if (pendingAbility && pendingPlace) {
+    const effect = pendingAbility.effects[pendingAbility.effectIndex]
     return {
       kind: 'place-hand-hp',
       playerId: pendingAbility.playerId,
       sourcePlayerId: pendingAbility.sourcePlayerId,
       sourceInstanceId: pendingAbility.sourceInstanceId,
       targetInstanceId: pendingPlace.targetInstanceId,
+      ...(effect?.kind === 'hand-to-hp' && effect.handPlacementRequired ? { required: true } : {}),
     }
   }
 
@@ -935,6 +962,7 @@ export const getPendingDecision = (
   if (
     state.pendingAfterDamageEffects &&
     state.pendingAfterDamageEffects.length > 0 &&
+    !isBreakEntryEffectWaiting(state, state.pendingAfterDamageEffects[0]) &&
     isAllowedByEffectOrder(
       orderedItem,
       'after-damage-effect',
@@ -1015,6 +1043,7 @@ export const getPendingDecision = (
       filterKeyword: pending.filterKeyword,
       filterHasSpecialPlay: pending.filterHasSpecialPlay,
       optionalPick: pending.optionalPick,
+      ...(pending.revealPicked !== undefined ? { revealPicked: pending.revealPicked } : {}),
       extraHp: pending.extraHp,
     }
   }
@@ -1097,6 +1126,7 @@ export const getPendingDecision = (
 const cmdToDecisionKind: Record<string, string> = {
   'resolve-faint-effect': 'faint-effect',
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
+  'cancel-item-activation': 'opponent-hand-discard',
   'resolve-opponent-rest-support': 'opponent-rest-support',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-reveal-top-deck': 'reveal-top-deck',
@@ -1126,6 +1156,7 @@ const continueBattleAfterPending = (
   continuation: BattleContinuation | undefined,
 ): GameState => {
   if (!continuation || !state.pendingBattle) return state
+  if (continuation === 'flip-damage') return resumeBattleAfterFlipDecision(state)
   if (continuation === 'finish') return finishBattle(state)
   if (continuation === 'after-trap') return advanceBattleAfterTrap(state)
   return advanceAttackEffect(state, state.pendingBattle)
@@ -1226,7 +1257,12 @@ export const applyGameCommand = (
   const commanded = isPendingDecisionCommand(command)
     ? applyPendingDecisionCommand(executionState, command, effectiveOptions)
     : applyPlayerActionCommand(executionState, command, effectiveOptions)
-  const next = clearCompletedEffectOrder(commanded)
+  const settled = clearCompletedEffectOrder(commanded)
+  const parents = settled.suspendedAbilityEffects ?? []
+  const next = settled.status === 'playing' && parents.length > 0 &&
+    !hasPendingCardResolution({ ...settled, suspendedAbilityEffects: undefined })
+    ? { ...settled, pendingAbilityEffect: parents.at(-1), suspendedAbilityEffects: parents.length > 1 ? parents.slice(0, -1) : undefined }
+    : settled
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
   // 所有多步驟卡牌效果（包含 attacker-faint）都必須完成後，才可建立補位
@@ -1259,6 +1295,10 @@ const applyPendingDecisionCommand = (
   }
 
   switch (command.kind) {
+    case 'cancel-item-activation': {
+      if (!state.pendingOpponentHandDiscard?.itemActivation) throw new GameRuleError('目前沒有可以取消的道具宣告。')
+      return { ...state, pendingOpponentHandDiscard: null }
+    }
     case 'resolve-effect-order': {
       const pending = state.pendingEffectOrder
       if (!pending || pending.playerId !== command.playerId) {
@@ -1289,10 +1329,13 @@ const applyPendingDecisionCommand = (
         discardHandIds: command.discardHandIds ?? [],
         supportToTrashIds: command.supportToTrashIds ?? [],
         supportToHandIds: command.supportToHandIds ?? [],
+        payDeckToTrash: command.payDeckToTrash,
       })
     case 'resolve-opponent-hand-discard': {
+      const itemActivation = state.pendingOpponentHandDiscard?.itemActivation
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
       const attackDeclaration = state.pendingOpponentHandDiscard?.attackDeclaration
+      const handContinuation = state.pendingOpponentHandDiscard?.battleContinuation
       const activePhaseCookieInstanceId =
         state.pendingOpponentHandDiscard?.activePhaseCookieInstanceId
       const cookieActivateSkill = state.pendingOpponentHandDiscard?.cookieActivateSkill
@@ -1302,6 +1345,12 @@ const applyPendingDecisionCommand = (
         command.cardIds,
         command.placementByCardId,
       )
+      if (itemActivation) {
+        return applyPlayerActionCommand(resolved, itemActivation, {
+          ...options,
+          ...(itemActivation.shuffleSeed === undefined ? {} : { shuffleSeed: itemActivation.shuffleSeed, shuffle: createSeededShuffle(itemActivation.shuffleSeed) }),
+        }, command.cardIds)
+      }
       if (cookieActivateSkill) {
         resolved = clearCookieActivateDiscardRequirement(
           resolved,
@@ -1311,9 +1360,9 @@ const applyPendingDecisionCommand = (
         return resumeCookieActivateSkill(resolved, cookieActivateSkill, options)
       }
       const triggerContinuation =
-        state.pendingBattle?.stage === 'attack-effect'
+        handContinuation ?? (state.pendingBattle?.stage === 'attack-effect'
           ? ('attack-effect' as const)
-          : undefined
+          : undefined)
       const startedTrigger = beginNextShadowMilkDiscardTrigger(
         resolved,
         triggerContinuation,
@@ -1336,6 +1385,7 @@ const applyPendingDecisionCommand = (
         }
         return beginAttackAfterRequiredHandDiscard(resolved, attackDeclaration)
       }
+      if (handContinuation) return continueBattleAfterPending(resolved, handContinuation)
       const activeBattle = resolved.pendingBattle
       if (
         activeBattle &&
@@ -1366,10 +1416,37 @@ const applyPendingDecisionCommand = (
         sourceInstanceId: pending.sourceInstanceId,
         sourceCardName: pending.sourceCardName,
       }
-      const nextState: GameState = { ...state, pendingRevealTopDeck: null }
+      let nextState: GameState = { ...state, pendingRevealTopDeck: null }
+      if (pending.deckPosition === 'bottom') {
+        const player = state.players[pending.playerId]
+        if (player.deck.at(-1)?.instanceId !== pending.revealedCard.instanceId) throw new GameRuleError('展示的牌已不是目前牌庫底卡。')
+        if (pending.matched && pending.playMatchedAfterSourceTrash) {
+          const source = player.battleArea.find(cookie => cookie.card.instanceId === pending.sourceInstanceId)
+          if (!source || source.battleEntryId !== pending.sourceBattleEntryId) throw new GameRuleError('原技能來源已不在戰鬥區，無法支付來源棄牌代價。')
+          const wrapper: CardEffect = { kind: 'optional-cost-attack', resolution: 'ability',
+            cost: { energy: {}, selfToTrash: true }, effectText: source.card.skill?.text ?? '',
+            effects: [{ kind: 'play-revealed-bottom-cookie', revealedInstanceId: pending.revealedCard.instanceId,
+              sourceBattleEntryId: pending.sourceBattleEntryId }],
+          }
+          return openOptionalAbilityEffect(nextState, {
+            playerId: pending.playerId, sourcePlayerId: pending.playerId, sourceInstanceId: pending.sourceInstanceId,
+            sourceCardName: pending.sourceCardName, sourceKind: 'skill', trigger: 'activate', effects: [wrapper], effectIndex: 0,
+          }, 0, context)
+        }
+        if (pending.matched && pending.addMatchedToHand) nextState = updatePlayer(nextState, {
+          ...player, deck: player.deck.slice(0, -1), hand: [...player.hand, player.deck.at(-1)!],
+        })
+      }
       const continueBattle = (candidate: GameState): GameState =>
         continueBattleAfterPending(candidate, pending.battleContinuation)
       if (pending.nestedEffects.length === 0) {
+        if (pending.deckPosition === 'bottom' && pending.matched && pending.addMatchedToHand &&
+          nextState.players[pending.playerId].deck.length === 0) {
+          if (getRefreshCandidates(nextState, pending.playerId).length === 0) {
+            return finishWithDefeat(nextState, pending.playerId, 'refresh-unavailable')
+          }
+          return { ...nextState, pendingRefresh: { playerId: pending.playerId, remainingDraws: 0 } }
+        }
         return continueBattle(nextState)
       }
       // 巢狀效果可能在傷害結算後就失去合法目標——BS3-076 的追加傷害鎖定
@@ -1383,7 +1460,13 @@ const applyPendingDecisionCommand = (
           hasRequiredEffectTargets(nextState, context, effect),
       )
       if (applicableEffects.length === 0) {
-        return continueBattle(nextState)
+        const continued = continueBattle(nextState)
+        if (pending.deckPosition === 'bottom' && pending.matched && pending.addMatchedToHand &&
+          continued.status === 'playing' && continued.players[pending.playerId].deck.length === 0) {
+          if (getRefreshCandidates(continued, pending.playerId).length === 0) return finishWithDefeat(continued, pending.playerId, 'refresh-unavailable')
+          return { ...continued, pendingRefresh: { playerId: pending.playerId, remainingDraws: 0 } }
+        }
+        return continued
       }
       // 若嵌套效果需要目標選擇，暫存在 pendingAbilityEffect 讓 UI/AI 逐步處理。
       // pendingBattle 保留，讓 attackTargetOnly 能找到攻擊目標；欠著的戰鬥動作由
@@ -1391,19 +1474,30 @@ const applyPendingDecisionCommand = (
       // 接手。
       const needsTargeting = applicableEffects.some(requiresEffectCardSelection)
       if (needsTargeting) {
-        return {
+        const targeted: GameState = {
           ...nextState,
           pendingAbilityEffect: {
             playerId: pending.playerId,
             sourcePlayerId: pending.playerId,
             sourceInstanceId: pending.sourceInstanceId,
             sourceCardName: pending.sourceCardName,
-            sourceKind: 'item',
+            sourceKind: pending.battleContinuation === 'after-trap' ? 'trap' : pending.battleContinuation === 'attack-effect' ? 'skill' : 'item',
             effects: applicableEffects,
             effectIndex: 0,
             battleContinuation: pending.battleContinuation,
           },
         }
+        // Returning the last matching bottom card empties the deck before
+        // the targeted follow-up. Keep that queue and the battle suspended
+        // until the ordinary Refresh decision has finished.
+        if (pending.deckPosition === 'bottom' && pending.matched && pending.addMatchedToHand &&
+          targeted.players[pending.playerId].deck.length === 0) {
+          if (getRefreshCandidates(targeted, pending.playerId).length === 0) {
+            return finishWithDefeat(targeted, pending.playerId, 'refresh-unavailable')
+          }
+          return { ...targeted, pendingRefresh: { playerId: pending.playerId, remainingDraws: 0 } }
+        }
+        return targeted
       }
       // 不需目標選擇的效果直接執行。
       let resolved = nextState
@@ -1474,7 +1568,6 @@ const applyPendingDecisionCommand = (
       ) {
         throw new GameRuleError('目前的攻擊效果已不在可接續的戰鬥流程中。')
       }
-
       if (pending.resolution === 'play') {
         if (!selected || selected.name !== pending.cardName) {
           throw new GameRuleError('選擇的 EXTRA 卡已不存在或無法直接登場。')
@@ -1563,14 +1656,21 @@ const applyPendingDecisionCommand = (
         },
       }
     }
-    case 'resolve-optional-cost-attack':
-      return resolveOptionalCostAttack(
+    case 'resolve-optional-cost-attack': {
+      const continuation = state.pendingAbilityEffect?.battleContinuation
+      const resolved = resolveOptionalCostAttack(
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
         command.paymentIds ?? [], command.supportToHandIds ?? [],
         command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
         command.hpToHandIds ?? [], command.supportToTrashIds ?? [],
+        command.positionCostTargetIds ?? [],
+        command.cookieToBreakAreaIds ?? [],
       )
+      return continuation && state.pendingOptionalCostAttack?.resolution === 'ability' &&
+        !resolved.pendingAbilityEffect && !resolved.pendingOptionalCostAttack
+        ? continueBattleAfterPending(resolved, continuation) : resolved
+    }
     case 'resolve-draw-up-to': {
       // BS9-030 的 detached FLIP 會把攻擊後效果暫停在 draw-up-to。
       // 抽牌確認後沿用與其他 battle continuation 相同的收尾入口，讓最後
@@ -1591,6 +1691,24 @@ const applyPendingDecisionCommand = (
         return { ...state, pendingStageTrigger: null }
       }
 
+      if (pending.sourceKind === 'cookie-equip') {
+        const host = state.players[pending.playerId].battleArea.find(cookie => cookie.card.instanceId === pending.hostInstanceId)
+        const equipment = host?.equippedCards?.find(card => card.instanceId === pending.sourceInstanceId)
+        const trigger = equipment?.skill?.equippedAttackTrigger
+        if (!host || !trigger || host.card.name !== trigger.hostCardName ||
+          state.pendingBattle?.attackerInstanceId !== host.card.instanceId ||
+          state.pendingBattle.attackerPlayerId !== pending.playerId || state.pendingBattle.stage !== 'trap') {
+          throw new GameRuleError('攻擊觸發的裝備或宿主已不存在或不相符。')
+        }
+        const context: EffectContext = { sourcePlayerId: pending.playerId, sourceInstanceId: pending.sourceInstanceId,
+          sourceCardName: pending.sourceCardName }
+        let next: GameState = { ...state, pendingStageTrigger: null }
+        for (const effect of trigger.effects) {
+          if (next.status !== 'playing') break
+          if (isEffectConditionMet(next, context, effect)) next = executeCardEffect(next, context, effect, [])
+        }
+        return next
+      }
       if (pending.sourceKind === 'cookie-skill') {
         const playerId = pending.playerId
         const player = state.players[playerId]
@@ -1769,6 +1887,7 @@ const applyPendingDecisionCommand = (
         context,
         pending.pendingPlace.targetInstanceId,
         command.handCardInstanceId,
+        pending.effects[pending.effectIndex]?.kind === 'hand-to-hp' ? pending.effects[pending.effectIndex] as Extract<CardEffect, { kind: 'hand-to-hp' }> : undefined,
       )
       return continueAbilityQueue(
         resolved,
@@ -1959,7 +2078,7 @@ const executeAbilityEffects = (
   // Linked HP Then clauses must use the same target snapshot and queue as
   // interactive commands, including suspension for Refresh. Executing only
   // the outer CardEffect silently drops the second HP gain in batch play.
-  if (effects.some((effect) => effect.kind === 'gain-hp' && effect.thenEffects?.length)) {
+  if (effects.some((effect) => (effect.kind === 'gain-hp' || effect.kind === 'support-to-battle') && effect.thenEffects?.length)) {
     nextState = { ...state, pendingAbilityEffect: {
       playerId: context.sourcePlayerId, sourcePlayerId: context.sourcePlayerId,
       sourceInstanceId: context.sourceInstanceId, sourceCardName: context.sourceCardName,
@@ -2051,6 +2170,46 @@ const executeAbilityEffects = (
   return nextState
 }
 
+const createItemActivationDiscardPending = (
+  state: GameState,
+  command: PlayItemCommand | BeginPlayItemCommand,
+  options: ApplyGameCommandOptions,
+): GameState | null => {
+  const restriction = getItemActivateDiscardRequirement(state, command.playerId)
+  if (!restriction) return null
+  if (restriction.needsRuling) throw new GameRuleError('多個道具額外棄牌來源的支付方式尚待系列末裁定。')
+  const source = state.players[command.playerId].hand.find(card => card.instanceId === command.instanceId)
+  const revealCost = source?.item?.effects[0]
+  const revealIds = revealCost?.kind === 'reveal-hand' && revealCost.asCost
+    ? (command.kind === 'begin-play-item' ? command.targetIds : command.effectTargets?.[0]) ?? []
+    : []
+  const excludedCardIds = [...new Set([command.instanceId, ...(command.discardHandIds ?? []), ...(command.handToBreakAreaIds ?? []), ...revealIds])]
+  const candidates = state.players[command.playerId].hand.filter(card => !excludedCardIds.includes(card.instanceId))
+  if (candidates.length < restriction.count) throw new GameRuleError(`發動道具前必須另外棄置 ${restriction.count} 張未被原代價選用的手牌。`)
+  // Validate all costs before opening the choice. A pure simulation keeps
+  // declaration and cancellation from changing any resource.
+  let validationError: unknown
+  let validated = false
+  const legalIds: string[] = []
+  for (const card of candidates) {
+    const ids = [card.instanceId, ...candidates.filter(other => other.instanceId !== card.instanceId).slice(0, restriction.count - 1).map(other => other.instanceId)]
+    try {
+      playItem(state, command.playerId, command.instanceId, command.paymentIds,
+        command.supportToTrashIds ?? [], command.supportToHandIds ?? [], command.discardHandIds ?? [],
+        command.hpToTrashTargetIds ?? [], command.trashBattleCookieIds ?? [], command.handToBreakAreaIds ?? [], ids)
+      validated = true
+      legalIds.push(...ids)
+    } catch (error) { validationError = error }
+  }
+  if (!validated) throw validationError ?? new GameRuleError('無法支付完整道具代價。')
+  return { ...state, pendingOpponentHandDiscard: {
+    ...restriction, playerId: command.playerId, count: restriction.count,
+    excludedCardIds: state.players[command.playerId].hand.filter(card => !legalIds.includes(card.instanceId)).map(card => card.instanceId),
+    effectText: `${restriction.sourceCardName}要求：另外棄置 ${restriction.count} 張手牌後，才能使用這張道具。確認後才支付道具的完整費用。`,
+    itemActivation: { ...command, ...(options.shuffleSeed === undefined ? {} : { shuffleSeed: options.shuffleSeed }) },
+  } }
+}
+
 type CookieActivateCommand = ActivateSkillCommand | BeginActivateSkillCommand
 
 const createCookieActivateDiscardPending = (
@@ -2112,6 +2271,8 @@ const createCookieActivateDiscardPending = (
     command.kind === 'activate-skill'
       ? command.effectTargets?.[0] ?? []
       : command.targetIds ?? [],
+    [],
+    command.positionCostTargetIds ?? [],
   )
 
   const source = findSkillSource(
@@ -2119,6 +2280,7 @@ const createCookieActivateDiscardPending = (
     command.sourceInstanceId,
   )
   const cookieActivateSkill: PendingCookieActivateSkill = {
+    positionCostTargetIds: command.positionCostTargetIds,
     kind: command.kind,
     playerId: command.playerId,
     sourceInstanceId: command.sourceInstanceId,
@@ -2224,6 +2386,8 @@ const executeActivateSkillCommand = (
     command.trashCookieToBreakAreaIds ?? [],
     command.handToBreakAreaIds ?? [],
     command.effectTargets?.[0] ?? [],
+    [],
+    command.positionCostTargetIds ?? [],
   )
   const context: EffectContext = {
     sourcePlayerId: command.playerId,
@@ -2332,6 +2496,8 @@ const executeBeginActivateSkillCommand = (
     command.trashCookieToBreakAreaIds ?? [],
     command.handToBreakAreaIds ?? [],
     command.targetIds ?? [],
+    [],
+    command.positionCostTargetIds ?? [],
   )
   const context: EffectContext = {
     sourcePlayerId: command.playerId,
@@ -2453,16 +2619,18 @@ const openOptionalAbilityEffect = (
 }
 
 /**
- * 與互動精靈（usePendingEffect.ts 的 beginCookieSkill/beginCardAbility）語意一致：
- * 條件只在啟動當下過濾一次，之後逐步解析不再重新檢查（效果順序中若前一步改變盤面，
- * 後續步驟仍照原本判定結果執行，不會臨時跳過或補上）。
+ * 一般宣告依啟動時狀態篩選效果；道具抽牌後的條件可留在佇列，
+ * 待抽牌及 Refresh 完成後由後段結算重新判定，避免提前丟失 Then。
  */
 const filterActiveEffects = (
   state: GameState,
   context: EffectContext,
   effects: readonly CardEffect[],
+  deferConditionsAfterDraw = false,
 ): CardEffect[] =>
-  effects.filter((effect) => isEffectConditionMet(state, context, effect))
+  effects.filter((effect, index) =>
+    (deferConditionsAfterDraw && effects.slice(0, index).some(previous => previous.kind === 'draw-up-to')) ||
+    isEffectConditionMet(state, context, effect))
 
 const resolvePendingAbilityEffect = (
   state: GameState,
@@ -2524,7 +2692,9 @@ const resolvePendingAbilityEffect = (
     'target' in effect && effect.target?.previousEffectTargetOnly === true
   const resolvedTargetIds =
     previousEffectTargetOnly
-      ? pending.previousEffectTargetIds ?? targetIds
+      ? (pending.previousEffectTargetIds ?? targetIds).filter(id =>
+          'target' in effect && effect.target && getEffectTargetCandidates(state, context, effect.target)
+            .some(cookie => cookie.card.instanceId === id))
       : targetIds
   if (!isEffectConditionMet(state, context, effect)) {
     const nextIndex = pending.effectIndex + 1
@@ -2754,7 +2924,7 @@ const resolvePendingAbilityEffect = (
   // 「If you did」後續效果不是獨立的同層步驟：只有前一段實際選到
   // break-to-hand／hand-to-break 目標時才加入效果佇列。這也讓玩家略過
   // 可選的第一段時，不會錯誤看到或執行後續的選擇。
-  const conditionalThenEffects =
+  const rawConditionalThenEffects =
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-break' ||
     effect.kind === 'support-to-battle' ||
@@ -2764,8 +2934,17 @@ const resolvePendingAbilityEffect = (
     effect.kind === 'support-to-hand'
       ? effect.thenEffects
       : undefined
+  // Named entry continuations describe which Cookie was just played, not
+  // whether that name happened to be present before the entry. Test them
+  // against the actual resolved selection before opening another decision.
+  const conditionalThenEffects = rawConditionalThenEffects?.filter(thenEffect =>
+    effect.kind !== 'support-to-battle' || !('condition' in thenEffect) || thenEffect.condition?.kind !== 'previous-effect-target-card-name' ||
+    isEffectConditionMet({ ...resolved, pendingAbilityEffect: {
+      ...pending, previousEffectTargetIds: [...new Set(targetIds)],
+    } }, context, thenEffect),
+  )
   const hasConditionalThen =
-    Boolean(conditionalThenEffects) && new Set(targetIds).size > 0
+    Boolean(conditionalThenEffects?.length) && new Set(targetIds).size > 0
   const resolvedConditionalThenEffects =
     hasConditionalThen && effect.kind === 'support-to-hand'
       ? (conditionalThenEffects ?? []).map((thenEffect) =>
@@ -2897,6 +3076,7 @@ const applyPlayerActionCommand = (
   state: GameState,
   command: PlayerActionCommand,
   options: ApplyGameCommandOptions,
+  itemRestrictionDiscardIds: string[] = [],
 ): GameState => {
   assertNoPendingDecision(state, command)
 
@@ -2956,6 +3136,10 @@ const applyPlayerActionCommand = (
     case 'skip-end-phase-skill':
       return skipEndPhaseSkill(state, command.playerId, command.sourceInstanceId)
     case 'play-item': {
+      if (itemRestrictionDiscardIds.length === 0) {
+        const pending = createItemActivationDiscardPending(state, command, options)
+        if (pending) return pending
+      }
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
       )
@@ -2969,6 +3153,8 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        itemRestrictionDiscardIds,
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -2986,6 +3172,10 @@ const applyPlayerActionCommand = (
       )
     }
     case 'begin-play-item': {
+      if (itemRestrictionDiscardIds.length === 0) {
+        const pending = createItemActivationDiscardPending(state, command, options)
+        if (pending) return pending
+      }
       const card = state.players[command.playerId].hand.find(
         (handCard) => handCard.instanceId === command.instanceId,
       )
@@ -3007,6 +3197,8 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.handToBreakAreaIds ?? [],
+        itemRestrictionDiscardIds,
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -3014,7 +3206,7 @@ const applyPlayerActionCommand = (
         sourceCardName: card?.name,
       }
       const effects = expandChooseOneSequence(
-        filterActiveEffects(played, context, card?.item?.effects ?? []),
+        filterActiveEffects(played, context, card?.item?.effects ?? [], true),
         command.chooseOneModes,
       )
       if (played.status !== 'playing' || effects.length === 0) {
@@ -3060,6 +3252,7 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.trashToDeckBottomIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -3087,6 +3280,7 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.trashToDeckBottomIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -3211,15 +3405,20 @@ const applyPlayerActionCommand = (
         command.shuffleSeed === undefined
           ? options.shuffle
           : createSeededShuffle(command.shuffleSeed)
-      return refreshDeck(
+      const continuation = state.pendingRefresh?.afterDrawContinuation?.battleContinuation
+      const resolved = refreshDeck(
         state,
         command.playerId,
         command.cookieInstanceId,
         refreshShuffle,
       )
+      return continuation === 'flip-damage'
+        ? continueBattleAfterPending(resolved, continuation)
+        : resolved
     }
     case 'play-trap':
       return playTrap(state, command.playerId, {
+        positionCostTargetIds: command.positionCostTargetIds,
         trapInstanceId: command.trapInstanceId,
         costOptionIndex: command.costOptionIndex,
         paymentIds: command.paymentIds,
@@ -3241,12 +3440,14 @@ const applyPlayerActionCommand = (
       return playBlocker(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         paymentIds: command.paymentIds,
+        discardHandIds: command.discardHandIds,
       })
     case 'play-attack-response':
       return playAttackResponseSkill(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         discardHandIds: command.discardHandIds,
         trashToDeckIds: command.trashToDeckIds,
+        supportToTrashIds: command.supportToTrashIds,
       })
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {

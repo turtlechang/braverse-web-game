@@ -1,4 +1,5 @@
 import { GameRuleError } from './errors'
+import { collectBreakEntryCostEffects } from './break-effect-triggers'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
   executeCardEffect,
@@ -22,13 +23,18 @@ import {
 } from './replacement'
 import {
   getDiscardHandCostCandidates,
+  getHandCountAfterFixedSkillCost,
   getHpToTrashCostCandidates,
+  getHandToBreakAreaCostCandidates,
+  getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
+  payHandToBreakAreaCost,
   isSupportToHandCostCandidate,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
   validateBattleCookieCostSelection,
 } from './skills'
-import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
+import { finishWithVictory, isSpecialVictoryConditionMet, resolveBreakLevelVictory } from './victory'
 import type {
   AbilityCost,
   CardAbility,
@@ -94,11 +100,13 @@ const restPayments = (
 
 export interface AbilityPaymentOptions {
   paymentIds: string[]
+  handToBreakAreaIds?: string[]
   supportToTrashIds?: string[]
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  trashToDeckBottomIds?: string[]
   sourceInstanceId?: string
 }
 
@@ -121,7 +129,7 @@ const canPayAbilityCost = (
   ).length
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
-  const availableSupportToHandCount = cost.supportToHandType || cost.supportToHandColor
+  const availableSupportToHandCount = cost.supportToHandType || cost.supportToHandColor || cost.supportToHandKeyword
     ? player.supportArea.filter(
         (support) =>
           !energyPaymentSet.has(support.card.instanceId) &&
@@ -141,6 +149,9 @@ const canPayAbilityCost = (
     remainingSupportCount >= supportCost &&
     availableSupportToHandCount >= (cost.supportToHand ?? 0) &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
+    getTrashToDeckBottomCostCandidates(cost, player.discardPile).length >= (cost.trashToDeckBottom?.count ?? 0) &&
+    getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId).length >= (cost.trashBattleCookie?.count ?? 0) &&
+    getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId).length >= (cost.handToBreakArea?.count ?? 0) &&
     (!cost.discardAllHand || player.hand.length > 0) &&
     (!cost.hpToTrash ||
       getHpToTrashCostCandidates(
@@ -159,9 +170,8 @@ const payAbilityCost = (
 ): GameState => {
   validateAbilityPayment(state, playerId, cost, options.paymentIds)
 
-  if (cost.trashToDeckBottom) {
-    // 只有餅乾技能路徑實作這個代價；item／stage 若之後用到必須先補上支付流程。
-    throw new GameRuleError('此代價尚未支援於物品或場景能力。')
+  if (cost.battleCookiePosition) {
+    throw new GameRuleError('此狀態代價尚未支援於物品或場景能力。')
   }
   if (cost.trashToDeck) {
     // BS3-098 目前只出現在餅乾 OnPlay 技能；避免未來 item／stage
@@ -170,6 +180,20 @@ const payAbilityCost = (
   }
 
   const player = state.players[playerId]
+  const trashToDeckBottomIds = options.trashToDeckBottomIds ?? []
+  const trashToDeckBottomSet = new Set(trashToDeckBottomIds)
+  if (trashToDeckBottomSet.size !== trashToDeckBottomIds.length) {
+    throw new GameRuleError('棄牌區放到牌庫底的代價不能重複選同一張卡。')
+  }
+  if (trashToDeckBottomIds.length !== (cost.trashToDeckBottom?.count ?? 0)) {
+    throw new GameRuleError(`必須選擇 ${cost.trashToDeckBottom?.count ?? 0} 張棄牌區卡牌放到牌庫底作為代價。`)
+  }
+  const bottomCandidates = getTrashToDeckBottomCostCandidates(cost, player.discardPile)
+  const bottomCards = trashToDeckBottomIds.map(id => {
+    const card = bottomCandidates.find(candidate => candidate.instanceId === id)
+    if (!card) throw new GameRuleError('選擇的棄牌區放到牌庫底代價不合法。')
+    return card
+  })
   if (
     cost.stageSourceToTrash &&
     player.stage?.card.instanceId !== options.sourceInstanceId
@@ -180,6 +204,11 @@ const payAbilityCost = (
   const supportToHandIds = [...new Set(options.supportToHandIds ?? [])]
   const discardHandIds = [...new Set(options.discardHandIds ?? [])]
   const hpToTrashTargetIds = [...new Set(options.hpToTrashTargetIds ?? [])]
+  const handToBreakAreaIds = options.handToBreakAreaIds ?? []
+  const handBreakPaidPlayer = payHandToBreakAreaCost(player, cost, handToBreakAreaIds, options.sourceInstanceId ?? '')
+  if (handToBreakAreaIds.some(id => discardHandIds.includes(id)) || (cost.discardAllHand && handToBreakAreaIds.length > 0)) {
+    throw new GameRuleError('同一張卡不能同時支付兩種費用。')
+  }
 
   if (supportToTrashIds.length !== (options.supportToTrashIds ?? []).length) {
     throw new GameRuleError('支援區垃圾桶費用不能重複選同一張卡。')
@@ -239,13 +268,15 @@ const payAbilityCost = (
   if (selectedSupportToHand.length !== supportToHandIds.length) {
     throw new GameRuleError('選擇的支援區回手費用不合法。')
   }
-  if (cost.supportToHandType || cost.supportToHandColor) {
+  if (cost.supportToHandType || cost.supportToHandColor || cost.supportToHandKeyword) {
     const invalidSupport = selectedSupportToHand.find(
       (support) => !isSupportToHandCostCandidate(cost, support),
     )
     if (invalidSupport) {
       throw new GameRuleError(
-        cost.supportToHandColor
+        cost.supportToHandKeyword
+          ? `支援區回手費用必須選擇 ${cost.supportToHandKeyword} 卡牌。`
+          : cost.supportToHandColor
           ? `支援區回手費用必須選擇 ${cost.supportToHandColor} 能量顏色的卡牌。`
           : `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
       )
@@ -293,6 +324,7 @@ const payAbilityCost = (
 
   let updatedPlayer: PlayerState = {
     ...player,
+    deck: [...player.deck, ...bottomCards],
     supportArea: player.supportArea
       .filter(
         (support) =>
@@ -308,12 +340,12 @@ const payAbilityCost = (
       ? selectedSupportToHand.map((support) => support.card)
       : [
           ...player.hand.filter(
-            (card) => !discardHandIds.includes(card.instanceId),
+            (card) => !discardHandIds.includes(card.instanceId) && !handToBreakAreaIds.includes(card.instanceId),
           ),
           ...selectedSupportToHand.map((support) => support.card),
         ],
     discardPile: [
-      ...player.discardPile,
+      ...player.discardPile.filter(card => !trashToDeckBottomSet.has(card.instanceId)),
       ...selectedSupportToTrash.map((support) => support.card),
       ...discardedHandCards,
       ...(cost.stageSourceToTrash && player.stage
@@ -321,6 +353,7 @@ const payAbilityCost = (
         : []),
     ],
     ...(cost.stageSourceToTrash ? { stage: null } : {}),
+    breakArea: handBreakPaidPlayer.breakArea,
   }
 
   let departedCount = 0
@@ -403,14 +436,10 @@ const payAbilityCost = (
   updatedPlayer = trashBattleCookiePayment.player
   departedCount += trashBattleCookiePayment.departedCount
 
-  let nextState: GameState = {
+  let nextState: GameState = updatePlayer({
     ...state,
     ...(costRecord ? { costRecord } : {}),
-    players: {
-      ...state.players,
-      [playerId]: updatedPlayer,
-    },
-  }
+  }, updatedPlayer)
 
   if (supportToTrashIds.length > 0 || supportToHandIds.length > 0) {
     nextState = markSupportAreaDecreased(nextState, playerId, {
@@ -433,11 +462,28 @@ const payAbilityCost = (
     }, { kind: 'make-faint', target: { side: 'self', min: faintCostCookies.length, max: faintCostCookies.length } },
     faintCostCookies.map(cookie => cookie.card.instanceId))
   }
-  return nextState
+  return collectBreakEntryCostEffects(state, nextState, {
+    sourcePlayerId: playerId, sourceInstanceId: options.sourceInstanceId ?? '',
+  }, cost, options)
 }
 
 export const getItemAbility = (card: GameCard): CardAbility | null =>
   card.type === 'item' ? card.item ?? null : null
+
+export const getItemActivateDiscardRequirement = (state: GameState, playerId: PlayerId) => {
+  const opponentId = getOpponentId(playerId)
+  const requirements = state.players[opponentId].battleArea.flatMap(source => {
+    const skill = source.card.skill
+    if (!skill || (skill.yourTurn && state.activePlayerId !== opponentId)) return []
+    const effects = [...(skill.trigger === 'passive' ? skill.effects : []), ...(skill.passiveEffects ?? [])]
+    return effects.filter(effect => effect.kind === 'require-item-activate-discard-hand' && effect.count > 0)
+      .map(effect => ({ count: effect.kind === 'require-item-activate-discard-hand' ? effect.count : 0,
+        sourcePlayerId: opponentId, sourceInstanceId: source.card.instanceId, sourceCardName: source.card.name }))
+  })
+  if (requirements.length === 0) return undefined
+  // Each opposing printed source contributes its own additional discard.
+  return { ...requirements[0], count: requirements.reduce((sum, requirement) => sum + requirement.count, 0), needsRuling: false }
+}
 
 export const getEffectiveCardAbilityCost = (
   state: GameState,
@@ -512,6 +558,24 @@ export const isCardAbilityEffectConditionDeferredUntilCost = (
   )
 }
 
+/** The opposing Item tax is paid before the Item leaves the hand and resolves. */
+export const isItemEffectConditionSatisfiedAfterAdditionalCost = (
+  state: GameState,
+  playerId: PlayerId,
+  ability: CardAbility,
+  effect: CardEffect,
+): boolean => {
+  const condition = 'condition' in effect ? effect.condition : undefined
+  if (condition?.kind !== 'hand-count-at-most') return false
+  const restriction = getItemActivateDiscardRequirement(state, playerId)
+  if (!restriction || restriction.needsRuling) return false
+  const afterFixedCost = getHandCountAfterFixedSkillCost(
+    state.players[playerId], getEffectiveCardAbilityCost(state, playerId, ability),
+  )
+  return afterFixedCost !== undefined &&
+    Math.max(0, afterFixedCost - restriction.count - 1) <= condition.count
+}
+
 const hasUsableEffect = (
   state: GameState,
   playerId: PlayerId,
@@ -519,6 +583,7 @@ const hasUsableEffect = (
   ability: CardAbility,
   options: {
     deferHandCountConditionUntilAfterDiscard?: boolean
+    deferItemAdditionalCostCondition?: boolean
     allowInactiveConditionalEffects?: boolean
   } = {},
 ): boolean => {
@@ -526,6 +591,9 @@ const hasUsableEffect = (
     sourcePlayerId: playerId,
     sourceInstanceId,
   }
+
+  if (ability.effects.some(effect => effect.kind === 'reveal-bottom-deck' && effect.requireCard) &&
+    state.players[playerId].deck.length === 0) return false
 
   const mandatoryRevealEffects = ability.effects.filter(
     (effect): effect is Extract<CardEffect, { kind: 'reveal-hand' }> =>
@@ -544,8 +612,12 @@ const hasUsableEffect = (
     const conditionMet = isEffectConditionMet(state, context, effect)
     const conditionDeferred =
       !conditionMet &&
-      options.deferHandCountConditionUntilAfterDiscard === true &&
-      isCardAbilityEffectConditionDeferredUntilCost(ability, effect)
+      (
+        (options.deferHandCountConditionUntilAfterDiscard === true &&
+          isCardAbilityEffectConditionDeferredUntilCost(ability, effect)) ||
+        (options.deferItemAdditionalCostCondition === true &&
+          isItemEffectConditionSatisfiedAfterAdditionalCost(state, playerId, ability, effect))
+      )
     // Some item costs can reduce the hand before the effect condition is
     // checked.  BS6-084 must therefore be allowed to open its discard-cost
     // flow even while the pre-payment hand is still above the threshold.
@@ -618,7 +690,7 @@ const hasUsableEffect = (
       return getBreakToBattleCandidates(state, context, effect).length > 0
     }
     if (effect.kind === 'support-to-battle') {
-      return getSupportToBattleCandidates(state, context, effect).length > 0
+      return effect.optional === true || getSupportToBattleCandidates(state, context, effect).length > 0
     }
     if (effect.kind === 'break-to-hand-by-level-sum') {
       return effect.cardCount === undefined
@@ -654,6 +726,10 @@ export const canPlayItem = (
     const cost = ability
       ? getEffectiveCardAbilityCost(state, playerId, ability)
       : undefined
+    const restriction = getItemActivateDiscardRequirement(state, playerId)
+    if (restriction?.needsRuling) return false
+    if (restriction && cost && state.players[playerId].hand.filter(card => card.instanceId !== instanceId).length <
+      restriction.count + (cost.discardHand ?? 0) + (cost.handToBreakArea?.count ?? 0)) return false
     return Boolean(
       card &&
         ability &&
@@ -662,6 +738,8 @@ export const canPlayItem = (
         hasUsableEffect(state, playerId, instanceId, ability, {
           deferHandCountConditionUntilAfterDiscard:
             cost.discardHandAtLeast === true,
+          deferItemAdditionalCostCondition: Boolean(restriction),
+          allowInactiveConditionalEffects: ability.allowInactiveConditionalEffects === true,
         }),
     )
   } catch {
@@ -679,6 +757,8 @@ export const playItem = (
   discardHandIds: string[] = [],
   hpToTrashTargetIds: string[] = [],
   trashBattleCookieIds: string[] = [],
+  handToBreakAreaIds: string[] = [],
+  itemRestrictionDiscardIds: string[] = [],
 ): GameState => {
   assertMainAction(state, playerId)
   const player = state.players[playerId]
@@ -692,20 +772,36 @@ export const playItem = (
     throw new GameRuleError('物品卡本身不能作為自己的棄手牌費用。')
   }
 
+  const restriction = getItemActivateDiscardRequirement(state, playerId)
+  if (restriction?.needsRuling) throw new GameRuleError('多個道具額外棄牌來源的支付方式尚待系列末裁定。')
+  const uniqueTaxIds = new Set(itemRestrictionDiscardIds)
+  if (uniqueTaxIds.size !== itemRestrictionDiscardIds.length || itemRestrictionDiscardIds.length !== (restriction?.count ?? 0) ||
+    itemRestrictionDiscardIds.some(id => id === instanceId || discardHandIds.includes(id) || handToBreakAreaIds.includes(id) || !player.hand.some(card => card.instanceId === id))) {
+    throw new GameRuleError('發動道具必須另外支付精確數量的合法手牌，不能與原代價共用。')
+  }
+  const taxedState = updatePlayer(state, { ...player,
+    hand: player.hand.filter(card => !uniqueTaxIds.has(card.instanceId)),
+    discardPile: [...player.discardPile, ...itemRestrictionDiscardIds.map(id => player.hand.find(card => card.instanceId === id)!)],
+  })
+
   const revealCost = ability.effects[0]
+  if (ability.effects.some(effect => effect.kind === 'reveal-bottom-deck' && effect.requireCard) && player.deck.length === 0) {
+    throw new GameRuleError('無法支付展示代價：牌庫沒有可展示的底牌。')
+  }
   if (revealCost?.kind === 'reveal-hand' && revealCost.asCost &&
-    getEffectSelectionCandidates(state, { sourcePlayerId: playerId, sourceInstanceId: instanceId }, revealCost).length < revealCost.amount) {
+    getEffectSelectionCandidates(taxedState, { sourcePlayerId: playerId, sourceInstanceId: instanceId }, revealCost).length < revealCost.amount) {
     throw new GameRuleError('無法支付展示代價：手牌沒有符合等級條件的餅乾。')
   }
 
   const cost = getEffectiveCardAbilityCost(state, playerId, ability)
-  const paidState = payAbilityCost(state, playerId, cost, {
+  const paidState = payAbilityCost(taxedState, playerId, cost, {
     paymentIds,
     supportToTrashIds,
     supportToHandIds,
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    handToBreakAreaIds,
     sourceInstanceId: instanceId,
   })
   const paidStateWithActivation: GameState = {
@@ -717,7 +813,7 @@ export const playItem = (
   }
   const paidPlayer = paidStateWithActivation.players[playerId]
 
-  return updatePlayer(paidStateWithActivation, {
+  return resolveBreakLevelVictory(updatePlayer(paidStateWithActivation, {
     ...paidPlayer,
     hand: paidPlayer.hand.filter((cardInHand) => cardInHand.instanceId !== instanceId),
     discardPile: paidPlayer.discardPile.some(
@@ -725,7 +821,7 @@ export const playItem = (
     )
       ? paidPlayer.discardPile
       : [...paidPlayer.discardPile, card],
-  })
+  }))
 }
 
 export const canPlayStage = (
@@ -815,6 +911,7 @@ export const activateStage = (
   discardHandIds: string[] = [],
   hpToTrashTargetIds: string[] = [],
   trashBattleCookieIds: string[] = [],
+  trashToDeckBottomIds: string[] = [],
 ): GameState => {
   if (!canActivateStage(state, playerId)) {
     throw new GameRuleError('目前無法啟動場景卡。')
@@ -831,6 +928,7 @@ export const activateStage = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    trashToDeckBottomIds,
     sourceInstanceId: source.stage.card.instanceId,
   })
   const ownerPlayer = paidState.players[source.ownerId]

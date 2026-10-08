@@ -274,7 +274,7 @@ export function OnlineBattleView({
         instanceId: specialPlaySourceCard.instanceId,
         specialPlayCookieInstanceIds: specialPlayCandidateIds,
       },
-      '特殊登場已支付，等待處理 On Play。',
+      '特殊登場已支付，接續登場結算。',
     )
     setSpecialPlaySourceId(null)
     setSpecialPlayCandidateIds([])
@@ -649,7 +649,7 @@ export function OnlineBattleView({
           playerId: match.activePlayer.id,
           instanceId,
         },
-        'EXTRA 餅乾已登場並配置 HP。',
+        '已宣告 EXTRA 登場，請依畫面完成後續操作。',
       ),
     onSpecialPlayCookie: (instanceId) => {
       setSpecialPlaySourceId(instanceId)
@@ -833,6 +833,10 @@ export function OnlineBattleView({
         selectedBattleToHandIds={pending.selectedDraftBattleToHandIds}
         onToggleBattleToHand={pending.toggleDraftBattleCookieToHand}
         battleCookieToHandCost={pending.draftBattleCookieToHandCost}
+        positionCost={pending.positionCost}
+        positionCostCandidates={pending.positionCostCandidates}
+        selectedPositionCostTargetIds={pending.selectedPositionCostTargetIds}
+        onTogglePositionCost={pending.togglePositionCost}
         trashCookieToBreakAreaCandidates={pending.draftTrashCookieToBreakAreaCandidates}
         selectedTrashCookieToBreakAreaIds={pending.selectedDraftTrashCookieToBreakAreaIds}
         onToggleTrashCookieToBreakArea={pending.toggleDraftTrashCookieToBreakArea}
@@ -841,6 +845,10 @@ export function OnlineBattleView({
         selectedHandToBreakAreaIds={pending.selectedDraftHandToBreakAreaIds}
         onToggleHandToBreakArea={pending.toggleDraftHandToBreakArea}
         handToBreakAreaCost={pending.draftHandToBreakAreaCost}
+        trashToDeckBottomCandidates={pending.draftTrashToDeckBottomCandidates}
+        selectedTrashToDeckBottomIds={pending.selectedDraftTrashToDeckBottomIds}
+        onToggleTrashToDeckBottom={pending.toggleDraftTrashToDeckBottom}
+        trashToDeckBottomCost={pending.draftTrashToDeckBottomCost}
         showTargetSelection={!pending.draftRequiresPaymentBeforeTargets}
         showCancelSkill={pending.abilityCostDraft?.trigger === 'activate'}
         onCancel={pending.cancelAbilityCostDraft}
@@ -855,7 +863,9 @@ export function OnlineBattleView({
                       playerId: viewerPlayerId,
                       action: 'skip',
                     },
-                    optionalCostAttackPrompt.resolution === 'ability'
+                    optionalCostAttackPrompt.conditionalSourcePlay
+                      ? '未支付技能登場代價，來源與底牌維持原位。'
+                      : optionalCostAttackPrompt.resolution === 'ability'
                       ? '已略過Then 可選效果。'
                       : '已略過攻擊後續效果。',
                   )
@@ -869,6 +879,8 @@ export function OnlineBattleView({
                   trashToDeckIds,
                   hpToHandIds,
                   supportToTrashIds = [],
+                  positionCostTargetIds = [],
+                  cookieToBreakAreaIds = [],
                 ) => {
                   match.dispatch(
                     {
@@ -883,9 +895,15 @@ export function OnlineBattleView({
                       trashToDeckIds,
                       hpToHandIds,
                       supportToTrashIds,
+                      positionCostTargetIds,
+                      cookieToBreakAreaIds,
                     },
-                    optionalCostAttackPrompt.resolution === 'ability'
-                      ? '已支付技能 Then 費用。'
+                    optionalCostAttackPrompt.extraDeckEntry
+                      ? '已支付 EXTRA 登場代價，餅乾已登場並配置 HP。'
+                      : optionalCostAttackPrompt.conditionalSourcePlay
+                        ? '已支付技能登場代價，接續同一張底牌登場。'
+                      : optionalCostAttackPrompt.resolution === 'ability'
+                        ? '已支付技能 Then 費用。'
                       : '已支付攻擊後續效果費用。',
                   )
                 },

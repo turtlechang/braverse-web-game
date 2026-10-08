@@ -4,6 +4,7 @@ import { getRefreshCandidates } from './refresh'
 import {
   executeCardEffect,
   isEffectConditionMet,
+  isCookieActivePhasePrevented,
   requiresEffectCardSelection,
 } from './effects'
 import { isChooseOneModePlayable } from './effects/choose-one'
@@ -152,7 +153,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     ...player,
     battleArea: player.battleArea.map((cookie) => ({
       ...cookie,
-      rested: preventedCookieIds.has(cookie.card.instanceId)
+      rested: preventedCookieIds.has(cookie.card.instanceId) || isCookieActivePhasePrevented(activationState, activationState.activePlayerId, cookie.card.instanceId)
         ? cookie.rested
         : false,
     })),
@@ -183,12 +184,15 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     arenaCookiesPlacedInBreakThisTurn: {},
     itemsActivatedThisTurn: {},
     cookiesHpReducedThisTurn: {},
+    cookiesSetActiveByEffectThisTurn: {},
     arenaCookieDealtEffectDamageThisTurn: {},
     cookiesPlayedFromTrashThisTurn: {},
+    cookiesPlayedFromSupportThisTurn: {},
     cookiesPlayedFromBreakThisTurn: {},
     cookieLevelsPlayedFromBreakThisTurn: {},
     cookiesPlayedViaSpecialPlayThisTurn: {},
     cookiesPlacedFromBattleToDeckThisTurn: {},
+    arenaCookiesPlacedFromBattleToDeckBottomThisTurn: {},
     extraDeckPlayUsedThisTurn: false,
   }
 }
@@ -607,11 +611,14 @@ export const advancePhase = (state: GameState): GameState => {
         cookiesGainedHpThisTurn: {},
         preventHpGainThisTurn: {},
         cookiesPlayedFromTrashThisTurn: {},
+        cookiesPlayedFromSupportThisTurn: {},
         cookiesPlayedFromBreakThisTurn: {},
         cookieLevelsPlayedFromBreakThisTurn: {},
         cookiesPlayedViaSpecialPlayThisTurn: {},
         cookiesPlacedFromBattleToDeckThisTurn: {},
+        arenaCookiesPlacedFromBattleToDeckBottomThisTurn: {},
         skillUsesThisTurn: [],
+        cookiesSetActiveByEffectThisTurn: {},
       }
     }
   }
