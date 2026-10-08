@@ -3665,6 +3665,13 @@ export const resolveOptionalCostAttack = (
     }
     return finishBattle({ ...clearedState, pendingBattle: { ...battle, attackEffectIndex: nextIndex } })
   }
+  if (pending.cost.trashBattleCookie) {
+    const paid = payTrashBattleCookieCost(state.players[playerId], pending.cost, targetIds, pending.sourceInstanceId)
+    state = recordCookieDepartures(clearDepartedCookieModifiers({
+      ...state, players: { ...state.players, [playerId]: paid.player },
+    }), playerId, paid.departedCount)
+    targetIds = []
+  }
   const player = state.players[playerId]
   const cookieBreakPayment = payCookieToBreakCost(pending.cost, player, cookieToBreakAreaIds, pending.sourceInstanceId)
   if (cookieToBreakAreaIds.some(id => discardCardIds.includes(id))) throw new GameRuleError('同一張手牌不能同時支付兩種代價。')

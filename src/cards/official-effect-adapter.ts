@@ -16,6 +16,7 @@ import type {
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
+import { DECK_ADDITION_EFFECTS, getDeckAdditionAttackEffects, getDeckAdditionTrap } from './bs12-deck-addition-effects'
 import {
   P_EXACT_ATTACK_EFFECTS,
   P_EXACT_EFFECTS,
@@ -427,6 +428,7 @@ export const convertOfficialCardEffects = (
   }
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
+    ...DECK_ADDITION_EFFECTS,
     'BS12-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 3, energyColor: 'black' } }],
     'BS12-112': [],
     'BS12-106': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
@@ -7132,6 +7134,7 @@ export const convertOfficialItemAbility = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'ST10-013': { energy: { purple: 1 }, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'purple', level: 1 } },
     'BS12-104': { energy: { black: 1 }, discardHand: 0 },
     'BS12-103': { energy: { black: 1 }, discardHand: 0 },
     'BS12-052': { energy: {}, discardHand: 1 },
@@ -8172,6 +8175,8 @@ export const convertOfficialCardEffectSet = (
 export const convertOfficialAttackEffects = (
   card: OfficialCardRecord,
 ): CardEffect[] | undefined => {
+  const deckAddition = getDeckAdditionAttackEffects(card)
+  if (deckAddition) return deckAddition
   if (
     (card.type !== 'cookie' && card.type !== 'flip' && card.type !== 'extra') ||
     !card.attackText
@@ -11906,6 +11911,8 @@ const parseTrapCondition = (
 export const convertOfficialTrapAbility = (
   card: OfficialCardRecord,
 ): TrapAbility | undefined => {
+  const deckAddition = getDeckAdditionTrap(card)
+  if (deckAddition) return deckAddition
   if (card.type !== 'trap' || !(card.skill.text ?? card.attackText)) {
     return undefined
   }

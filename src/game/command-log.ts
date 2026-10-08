@@ -2344,6 +2344,11 @@ const describeCommandCoreSteps = (
         return steps
       }
 
+      if (pending.cost.trashBattleCookie && !isAbilityResolution) {
+        const paidCookies = previous.players[command.playerId].battleArea.filter(cookie => command.targetIds?.includes(cookie.card.instanceId))
+        steps.push({ text: `攻擊後代價：將${paidCookies.map(cookie => `「${cookie.card.name}」`).join('、')}及其 HP／裝備放入棄牌區。`,
+          cards: paidCookies.flatMap(cookie => [cookie.card, ...cookie.hpCards, ...(cookie.equippedCards ?? []), ...(cookie.awakenedUnderlay ?? [])]) })
+      }
       const sourceEnergyStep = describeAttackEffectEnergyStep(
         sourceCard,
         pending.sourceEnergy,
@@ -2403,7 +2408,8 @@ const describeCommandCoreSteps = (
         !hpToHandStep &&
         !trashToDeckStep &&
         !cookieBreakStep &&
-        !positionStep
+        !positionStep &&
+        !pending.cost.trashBattleCookie
       ) {
         steps.push({
           text: `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：已支付（無需額外選牌）`,
@@ -2412,7 +2418,7 @@ const describeCommandCoreSteps = (
       const targetStep = describeAttackEffectTargetStep(
         pending.effects[0]?.kind === 'damage' && pending.effects[0].target.attackTargetOnly ? previous : state,
         pending.effects[0],
-        command.targetIds,
+        pending.cost.trashBattleCookie ? [] : command.targetIds,
         sourceCard,
         isAbilityResolution ? '技能 Then ' : '攻擊後效果',
       )

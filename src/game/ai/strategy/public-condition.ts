@@ -238,6 +238,7 @@ export const assessPublicCondition = (
       const side = sideFor(view, condition.side)
       return side.battleArea.some((cookie) =>
         includesKeyword(cookie.card, condition.keyword) &&
+        (!condition.restedOnly || cookie.rested) &&
         (condition.maxRemainingHp === undefined || cookie.hpCount <= condition.maxRemainingHp),
       )
         ? met('指定戰鬥區存在符合關鍵字條件的餅乾。')

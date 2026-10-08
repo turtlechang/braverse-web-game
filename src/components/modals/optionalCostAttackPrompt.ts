@@ -240,7 +240,7 @@ export function getOptionalCostAttackPrompt(
   const isAbilityResolution = pending.resolution === 'ability'
   // EXTRA battle payment uses the existing targetIds selection channel; these
   // are cost Cookies, and the entry resolver validates them before deployment.
-  const battleTrashCost = pending.extraDeckPlayInstanceId ? pending.cost.trashBattleCookie : undefined
+  const battleTrashCost = !isAbilityResolution || pending.extraDeckPlayInstanceId ? pending.cost.trashBattleCookie : undefined
 
   // Printed source-only movement uses the attacking Cookie automatically.
   // Keep these recipients out of the player choice, while exposing any
@@ -316,7 +316,7 @@ export function getOptionalCostAttackPrompt(
           : '對手餅乾'
 
   const targetInstruction =
-    battleTrashCost ? `EXTRA 登場代價：選擇 ${targetMax} 張己方${energyColorLabel[battleTrashCost.energyColor ?? ''] ?? ''}${battleTrashCost.maxLevel === undefined ? '' : ` LV.${battleTrashCost.maxLevel} 以下`}戰鬥區餅乾，與 HP／裝備放入棄牌區`
+    battleTrashCost ? `${pending.extraDeckPlayInstanceId ? 'EXTRA 登場' : '攻擊後'}代價：選擇 ${targetMax} 張己方${energyColorLabel[battleTrashCost.energyColor ?? ''] ?? ''}${battleTrashCost.level === undefined ? '' : ` LV.${battleTrashCost.level}`}${battleTrashCost.maxLevel === undefined ? '' : ` LV.${battleTrashCost.maxLevel} 以下`}戰鬥區餅乾，與 HP／裝備放入棄牌區`
     : targetedEffect?.kind === 'hand-to-support'
       ? `從自己的手牌選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張${
           energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'

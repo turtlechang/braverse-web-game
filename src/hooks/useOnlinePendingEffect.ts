@@ -110,7 +110,7 @@ const getTargetSelector = (
   if (effect.kind === 'opponent-battle-to-trash') {
     return {
       side: 'opponent',
-      min: 1,
+      min: effect.min ?? 1,
       max: 1,
       ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
       ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
@@ -1082,14 +1082,14 @@ export function useOnlinePendingEffect(params: {
       if (effect.kind === 'opponent-battle-to-trash') {
         return getEffectTargetCandidates(game, effectContext, {
           side: 'opponent',
-          min: 1,
+          min: effect.min ?? 1,
           max: 1,
           ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
           ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
           ...(effect.remainingHp !== undefined
             ? { remainingHp: effect.remainingHp }
             : {}),
-        }).length > 0
+        }).length >= (effect.min ?? 1)
       }
       if (effect.kind === 'field-to-deck-bottom') {
         return hasRequiredTargetsForEffect(game, effectContext, effect)

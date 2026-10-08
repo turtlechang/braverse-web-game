@@ -1,5 +1,14 @@
 import type { DeckChoice, LogCategory, TurnPhase } from '../game'
 import type { OnlineMatchStatus } from '../hooks/useOnlineMatch'
+import type { Bs12AiPresetDeckChoice } from '../game/bs12-deck-recipes'
+
+export const AI_DECK_OPTIONS: { value: Bs12AiPresetDeckChoice; label: string }[] = [
+  { value: 'bs12-blue-arena', label: 'BS12 藍色｜Arena' },
+  { value: 'bs12-green-arena', label: 'BS12 綠色｜Arena' },
+  { value: 'bs12-yellow-arena', label: 'BS12 黃色｜Arena' },
+  { value: 'bs12-red-arena', label: 'BS12 紅色｜Arena' },
+  { value: 'bs12-purple-arena', label: 'BS12 紫色｜Arena' },
+]
 
 export const phaseLabels: Record<TurnPhase, string> = {
   active: '活躍階段',
@@ -42,6 +51,11 @@ export const energyColorLabel: Record<string, string> = {
 }
 
 export const deckChoiceLabel: Record<DeckChoice, string> = {
+  'bs12-blue-arena': 'BS12 藍色｜Arena',
+  'bs12-green-arena': 'BS12 綠色｜Arena',
+  'bs12-yellow-arena': 'BS12 黃色｜Arena',
+  'bs12-red-arena': 'BS12 紅色｜Arena',
+  'bs12-purple-arena': 'BS12 紫色｜Arena',
   red: '紅色',
   yellow: '黃色',
   green: '綠色',

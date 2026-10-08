@@ -801,7 +801,7 @@ export const handleAiPendingDecision = (
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
     const isAbilityResolution = pendingDecision.resolution === 'ability'
-    const extraBattleCost = state.pendingOptionalCostAttack?.extraDeckPlayInstanceId ? pendingDecision.cost.trashBattleCookie : undefined
+    const extraBattleCost = !isAbilityResolution || state.pendingOptionalCostAttack?.extraDeckPlayInstanceId ? pendingDecision.cost.trashBattleCookie : undefined
     const extraBattleCostIds = extraBattleCost
       ? getExtraDeckTrashBattleCookieCostCandidates(pendingDecision.cost, state.players[playerId].battleArea, pendingDecision.sourceInstanceId).slice(0, extraBattleCost.count).map(cookie => cookie.card.instanceId)
       : []

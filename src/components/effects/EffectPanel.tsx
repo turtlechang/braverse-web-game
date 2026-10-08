@@ -373,7 +373,7 @@ function EffectPanelContent({
       : currentEffect?.kind === 'equipped-to-hp'
         ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'opponent-battle-to-trash'
-        ? { min: 1, max: 1 }
+        ? { min: currentEffect.min ?? 1, max: 1 }
       : currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
         ? { min: pendingEffect?.compoundEffectStep === 'follow-up' ? 0 : 1, max: 1 }
       : currentEffect?.kind === 'opponent-trash-to-break'

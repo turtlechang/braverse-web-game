@@ -569,6 +569,8 @@ export interface BattleAreaHasKeywordCondition {
   excludeSource?: boolean
   /** 只計入剩餘 HP 不超過門檻的關鍵字餅乾（BS7-017）。 */
   maxRemainingHp?: number
+  /** P-175 requires the other Arena Cookie itself to be rested. */
+  restedOnly?: boolean
 }
 
 /** 官方文字「某色 LV.N 餅乾在你的休息區」。 */

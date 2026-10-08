@@ -16,6 +16,8 @@ import {
   type CustomDeck,
 } from '../../game/custom-deck'
 import { parseTestStateConfig } from '../../game/demo'
+import { installBs12DeckPresets } from '../../game/bs12-deck-presets'
+import { BS12_DECK_PRESETS } from '../../game/bs12-deck-recipes'
 import {
   isBs8CandidateStagingDeck,
   validateBs8CandidateStagingDeck,
@@ -23,6 +25,7 @@ import {
 } from '../../game'
 import {
   OFFICIAL_DECK_RECIPES,
+  type BuiltInDeckChoice,
   type StarterDeckChoice,
 } from '../../game/starter-deck'
 import type { useMatchController } from '../../hooks/useMatchController'
@@ -91,7 +94,7 @@ export function MenuScreen({
   onEnterBattle,
 }: MenuScreenProps) {
   const [savedDecks, setSavedDecks] = useState<CustomDeck[]>(() =>
-    testStateConfig ? [] : loadCustomDecks(),
+    testStateConfig ? [] : installBs12DeckPresets(),
   )
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(() =>
     savedDecks[0]?.id ?? null,
@@ -105,7 +108,7 @@ export function MenuScreen({
   const [showTestScenario, setShowTestScenario] = useState(false)
   const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
-  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs9-red-truth')
+  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('bs12-blue-arena')
 
   const selectedCustomDeck = useMemo(
     () => savedDecks.find((deck) => deck.id === selectedDeckId) ?? null,
@@ -166,16 +169,18 @@ export function MenuScreen({
     refreshSavedDecks()
   }
 
-  const openStarterDeck = (choice: StarterDeckChoice) => {
+  const openStarterDeck = (choice: BuiltInDeckChoice) => {
+    const preset = BS12_DECK_PRESETS[choice as keyof typeof BS12_DECK_PRESETS]
     const now = new Date().toISOString()
     const starterDeck: CustomDeck = {
       id: createCustomDeckId(),
-      name: `${starterDeckLabels[choice]} Starter`,
+      name: preset?.name ?? `${starterDeckLabels[choice as StarterDeckChoice]} Starter`,
       entries: OFFICIAL_DECK_RECIPES[choice].map(({ cardNumber, count }) => ({
         cardNumber,
         count,
       })),
       format: 'standard',
+      ...(preset ? {extraDeckEntries:preset.extraDeckEntries.map(entry=>({...entry}))} : {}),
       createdAt: now,
       updatedAt: now,
     }

@@ -2501,6 +2501,7 @@ export const isEffectConditionMet = (
     return state.players[playerId].battleArea.some(
       (cookie) =>
         cookie.card.keywords?.includes(condition.keyword) &&
+        (!condition.restedOnly || cookie.rested) &&
         (!condition.excludeSource ||
           cookie.card.instanceId !== context.sourceInstanceId) &&
         (condition.maxRemainingHp === undefined ||

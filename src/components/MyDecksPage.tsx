@@ -25,9 +25,11 @@ import {
 } from '../game/custom-deck'
 import {
   OFFICIAL_DECK_RECIPES,
+  type BuiltInDeckChoice,
   type StarterDeckChoice,
 } from '../game/starter-deck'
 import { getDeckFormatLabel } from '../game/deck-rules'
+import { AI_DECK_OPTIONS } from './gameUiLabels'
 
 interface MyDecksPageProps {
   decks: CustomDeck[]
@@ -35,7 +37,7 @@ interface MyDecksPageProps {
   onSelectDeck: (deckId: string) => void
   onBack: () => void
   onCreateDeck: () => void
-  onCreateStarterDeck: (choice: StarterDeckChoice) => void
+  onCreateStarterDeck: (choice: BuiltInDeckChoice) => void
   onImportDeck: (deck: CustomDeck) => void
   onEditDeck: (deck: CustomDeck) => void
   onDuplicateDeck: (deck: CustomDeck) => void
@@ -45,7 +47,8 @@ interface MyDecksPageProps {
 const fallbackHero =
   'https://cookierunbraverse.com/data/en_storage/2HgB5QrG10BzWXr00hCI0w.webp'
 
-const starterDeckOptions: Array<{ choice: StarterDeckChoice; label: string }> = [
+const starterDeckOptions: Array<{ choice: BuiltInDeckChoice; label: string }> = [
+  ...AI_DECK_OPTIONS.map(({value,label})=>({choice:value,label})),
   { choice: 'red', label: '紅色 Starter' },
   { choice: 'yellow', label: '黃色 Starter' },
   { choice: 'green', label: '綠色 Starter' },
@@ -452,7 +455,7 @@ export function MyDecksPage({
                   }}
                 >
                   <strong>{label}</strong>
-                  <span>{starterDeckGuide[choice]}</span>
+                  <span>{starterDeckGuide[choice as StarterDeckChoice] ?? '依指定的 BS12 配方建立。'}</span>
                   <span>{OFFICIAL_DECK_RECIPES[choice].length} 種卡片配方</span>
                 </button>
               ))}

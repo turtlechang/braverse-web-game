@@ -42,6 +42,7 @@ import bs9CandidateDocument from '../../data/cards/official-a-game-of-truth-and-
 import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
 import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
 import bs12CandidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
+import { createDeckAdditionDemoState, DECK_ADDITION_CARD_NUMBERS, type DeckAdditionScenario } from './bs12-deck-addition-demo'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -616,6 +617,7 @@ export const parseTestStateConfig = (
   hostname: string,
 ):
   | { kind: 'break-to-trash'; level: 1 | 2 }
+  | { kind: 'deck-addition'; cardNumber: string; scenario: DeckAdditionScenario }
   | { kind: 'trap-response'; payable: boolean }
   | { kind: 'blocker-response'; payable: boolean }
   | { kind: 'trap-and-blocker-response'; payable: boolean }
@@ -1033,6 +1035,10 @@ export const parseTestStateConfig = (
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
   const testState = params.get('test-state')
+  const addition = testState?.match(/^deck-addition:([^:]+):(positive|negative|low|attack|attack-negative|zero)$/)
+  if (addition && DECK_ADDITION_CARD_NUMBERS.includes(addition[1])) {
+    return { kind: 'deck-addition', cardNumber: addition[1], scenario: addition[2] as DeckAdditionScenario }
+  }
   if (testState === 'bs10-008-flip') {
     const scenario = params.get('scenario')
     return isBs1008FlipPreviewScenario(scenario)
@@ -8197,6 +8203,7 @@ export const createCardCheckDemoState = (
   cardNumber: string,
   options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean; bs11FifteenthFixtureBypass?: boolean; bs11SixteenthFixtureBypass?: boolean } = {},
 ): GameState => {
+  if (DECK_ADDITION_CARD_NUMBERS.includes(cardNumber)) return createDeckAdditionDemoState(cardNumber, options.normalAttack ? 'attack' : 'positive')
   if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):'positive')
   if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')&&options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):options.normalAttack==='blocked'?'wrong-energy':'positive')
   if(cardNumber.trim()==='BS12-104')return createBs12RecipeDemoState('positive')
@@ -11357,6 +11364,7 @@ export const createCardNegativeDemoState = (
     bs11SixteenthFixtureBypass?: boolean
   } = {},
 ): GameState => {
+  if (DECK_ADDITION_CARD_NUMBERS.includes(cardNumber)) return createDeckAdditionDemoState(cardNumber, options.normalAttack ? 'attack-negative' : 'negative')
   if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,cardNumber.trim().startsWith('BS12-109')?'attack-wrong-energy':cardNumber.trim().startsWith('BS12-110')?'two-black':cardNumber.trim().startsWith('BS12-111')?'three-support':'special-no-skill')
   if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')?'hand-six':cardNumber.trim()==='BS12-106'?'no-energy':'wrong-energy')
   if(cardNumber.trim()==='BS12-104')return createBs12RecipeDemoState('no-energy')

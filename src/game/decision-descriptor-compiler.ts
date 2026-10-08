@@ -585,11 +585,11 @@ export const compilePendingDecisionDescriptor = (
         candidateIds: getTrashToDeckBottomCostCandidates(decision.cost, state.players[decision.playerId].discardPile).map(card => card.instanceId),
         candidateSource: 'public-trash', commandKinds: ['resolve-optional-cost-attack'], label: '選擇棄牌區卡依選取順序放到牌庫底作為代價' })
     }
-    if (state.pendingOptionalCostAttack?.extraDeckPlayInstanceId && decision.cost.trashBattleCookie) {
+    if ((decision.resolution !== 'ability' || state.pendingOptionalCostAttack?.extraDeckPlayInstanceId) && decision.cost.trashBattleCookie) {
       const cost = decision.cost.trashBattleCookie
       descriptor.steps.push({ id: 'battle-trash-cost', kind: 'cost', required: true, min: cost.count, max: cost.count,
         candidateIds: getExtraDeckTrashBattleCookieCostCandidates(decision.cost, state.players[decision.playerId].battleArea, decision.sourceInstanceId).map(cookie => cookie.card.instanceId),
-        candidateSource: 'public-battle', commandKinds: ['resolve-optional-cost-attack'], label: 'EXTRA 登場代價：戰鬥區餅乾與 HP／裝備放入棄牌區' })
+        candidateSource: 'public-battle', commandKinds: ['resolve-optional-cost-attack'], label: '戰鬥區餅乾與 HP／裝備放入棄牌區作為代價' })
     }
     if (nested) {
       const nestedCandidates = getEffectCandidates({

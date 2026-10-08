@@ -2,6 +2,7 @@ import { getBattleCookiePositionCostCandidates } from '../game/battle-position-c
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { describeOpeningDeal } from '../game/presentation'
 import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
+import { createDeckAdditionDemoState } from '../game/bs12-deck-addition-demo'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -793,6 +794,9 @@ export function useMatchController(params: {
         normalAttack: testStateConfig.normalAttack,
         bs8021Scenario: testStateConfig.bs8021Scenario,
       })
+    }
+    if (testStateConfig?.kind === 'deck-addition') {
+      return createDeckAdditionDemoState(testStateConfig.cardNumber, testStateConfig.scenario)
     }
     if (testStateConfig?.kind === 'bs8-084-attack-discard') {
       return createBs8084AttackRequirementDemoState(testStateConfig.payable)

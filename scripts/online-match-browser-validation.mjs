@@ -276,6 +276,8 @@ try {
   guestPage = guest.page
 
   await Promise.all([openOnlinePanel(hostPage), openOnlinePanel(guestPage)])
+  await hostPage.locator('#deck-select').selectOption(hostDeckId)
+  await guestPage.locator('#deck-select').selectOption(guestDeckId)
   assert.equal(await hostPage.locator('#deck-select').inputValue(), hostDeckId)
   assert.equal(await guestPage.locator('#deck-select').inputValue(), guestDeckId)
   await hostPage.locator('#online-player-name').fill('Host Player')

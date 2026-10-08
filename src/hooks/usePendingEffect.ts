@@ -247,7 +247,7 @@ export function usePendingEffect(params: {
         ? selectionEffect.kind === 'opponent-battle-to-trash'
           ? {
               side: 'opponent',
-              min: 1,
+              min: selectionEffect.min ?? 1,
               max: 1,
               ...(selectionEffect.maxLevel !== undefined
                 ? { maxLevel: selectionEffect.maxLevel }
@@ -1240,7 +1240,7 @@ export function usePendingEffect(params: {
         // 這類效果不能只用一般 selector 判定：BS6-010 的移動封鎖與
         // BS3-115 的 Soul Jam 保護都必須在同一份規則候選中排除，否則
         // UI 會先讓玩家進入選擇流程，最後才發現沒有合法目標。
-        return getEffectTargetCandidatesForEffect(nextGame, context, effect).length > 0
+        return getEffectTargetCandidatesForEffect(nextGame, context, effect).length >= (effect.min ?? 1)
       }
       if (effect.kind === 'support-to-hand') {
         return (

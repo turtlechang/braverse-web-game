@@ -1,0 +1,22 @@
+{
+  "name": "BS12 紅色｜Arena",
+  "entries": [
+    { "cardNumber": "BS12-002", "count": 4 },
+    { "cardNumber": "BS12-007", "count": 4 },
+    { "cardNumber": "BS12-008", "count": 4 },
+    { "cardNumber": "BS12-009", "count": 4 },
+    { "cardNumber": "BS12-010", "count": 4 },
+    { "cardNumber": "BS12-011", "count": 4 },
+    { "cardNumber": "BS12-013", "count": 4 },
+    { "cardNumber": "BS12-014", "count": 4 },
+    { "cardNumber": "BS12-015", "count": 4 },
+    { "cardNumber": "BS12-016", "count": 4 },
+    { "cardNumber": "BS7-002", "count": 4 },
+    { "cardNumber": "BS7-011", "count": 4 },
+    { "cardNumber": "P-108", "count": 4 },
+    { "cardNumber": "P-175", "count": 4 },
+    { "cardNumber": "ST1-020", "count": 4 }
+  ],
+  "extraDeckEntries": [{ "cardNumber": "BS12-018", "count": 4 }],
+  "format": "standard"
+}
