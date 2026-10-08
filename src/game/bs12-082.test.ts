@@ -10,6 +10,7 @@ import { maskGameStateForViewer } from './masked-state'
 import { describeCommandSteps } from './command-log'
 import { isOnlineGameCommand } from '../net/onlineProtocol'
 import { commandFromLogEntry, replayCommands } from './replay'
+import { printedFixtureCard } from './bs12-physical-fixtures.test-helpers'
 
 const card = (number: string, instanceId: string) => {
   const result = convertOfficialCardToGameCard(candidate.cards.find(c => c.cardNumber === number) as OfficialCardRecord)
@@ -30,6 +31,31 @@ const setup = (withCost = true) => {
   } }
 }
 const itemCommand = { kind: 'begin-play-item' as const, playerId: 'player-one' as const, instanceId: 'item', paymentIds: ['payment'] }
+
+it.each([
+  ['BS8-047', 'BS8-009', 'BS8-037', 1],
+  ['BS9-091', 'BS9-079', 'BS9-081', 2],
+] as const)('082 reserves the printed reveal cost of %s independently of its tax', (itemNumber, revealNumber, supportNumber, supportCount) => {
+  const base = setup(false)
+  const item = printedFixtureCard(itemNumber, 'item')
+  const reveal = printedFixtureCard(revealNumber, 'reveal')
+  const supportArea = Array.from({ length: supportCount }, (_, i) => ({ card: printedFixtureCard(supportNumber, `payment-${i}`), rested: false }))
+  const before = { ...base, players: { ...base.players, 'player-one': { ...base.players['player-one'], hand: [item, reveal], supportArea } } }
+  const command = { ...itemCommand, paymentIds: supportArea.map(s => s.card.instanceId), targetIds: ['reveal'] }
+  expect(item.item?.effects[0]).toMatchObject({ kind: 'reveal-hand', asCost: true })
+  expect(canPlayItem(before, 'player-one', 'item')).toBe(false)
+  expect(() => applyGameCommand(before, command)).toThrow()
+  const untaxed = { ...before, players: { ...before.players, 'player-two': { ...before.players['player-two'], battleArea: [] } } }
+  expect(canPlayItem(untaxed, 'player-one', 'item')).toBe(true)
+  const payable = { ...before, players: { ...before.players, 'player-one': { ...before.players['player-one'], hand: [...before.players['player-one'].hand, printedFixtureCard('BS12-075', 'tax')] } } }
+  expect(canPlayItem(payable, 'player-one', 'item')).toBe(true)
+  const pending = applyGameCommand(payable, command)
+  expect(pending.pendingOpponentHandDiscard?.excludedCardIds).toContain('reveal')
+  const paid = applyGameCommand(pending, { kind: 'resolve-opponent-hand-discard', playerId: 'player-one', cardIds: ['tax'] })
+  expect(paid.costRecord?.revealedHandCardInstanceIds).toEqual(['reveal'])
+  expect(paid.players['player-one'].hand).toContainEqual(reveal)
+  expect(paid.players['player-one'].discardPile.map(c => c.instanceId)).toEqual(['tax', 'item'])
+})
 
 it('082 requires a real additional card before allowing an opponent Item', () => {
   const before = setup(false)

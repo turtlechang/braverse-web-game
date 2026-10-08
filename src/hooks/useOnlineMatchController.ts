@@ -1,5 +1,5 @@
 import { getBattleCookiePositionCostCandidates } from '../game/battle-position-cost'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { describeOpeningDeal } from '../game/presentation'
 import type {
   CookieCard,
@@ -80,8 +80,12 @@ export function useOnlineMatchController(params: {
   const activePlayer = game.players[game.activePlayerId]
 
   const [message, setMessage] = useState('對局已開始。')
-  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapId, setSelectedTrapIdState] = useState<string | null>(null)
   const [selectedTrapPositionCostIds, setSelectedTrapPositionCostIds] = useState<string[]>([])
+  const setSelectedTrapId = useCallback((trapId: string | null) => {
+    if (trapId !== selectedTrapId) setSelectedTrapPositionCostIds([])
+    setSelectedTrapIdState(trapId)
+  }, [selectedTrapId])
   const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
   const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
     useState<string[]>([])
@@ -271,7 +275,7 @@ export function useOnlineMatchController(params: {
 
     const timer = window.setTimeout(() => {
       setSelectedTrapPositionCostIds([])
-      setSelectedTrapId(null)
+      setSelectedTrapIdState(null)
       setSelectedTrapDiscardIds([])
       setSelectedTrapHandToBreakIds([])
       setSelectedTrapTargetId(null)

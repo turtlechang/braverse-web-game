@@ -8,6 +8,8 @@
 
 ## 開發背景
 
+2026-10-08 PR #124 修復：server 型別檢查排除測試入口，避免由測試載入瀏覽器專用 hook；測試仍由前端型別檢查與 Vitest 驗證。BS12-082 額外棄牌可用性保留道具的展示代價，單機／線上切換陷阱時清除狀態代價草稿。
+
 2026-10-07 BS12-007 實體宿主修正：`card:BS12-007` 的 Shining Glitter Cookie 已由 BS4-095 換成指定的 EXTRA 卡 BS12-018，透過正式 EXTRA adapter 實體化為 5HP／RRRR／普通4。實際 Equip 會將 Producer Mic 原本 3 張 HP 與宿主舊裝備移入棄牌區，不補位且保留 BS12-018 的 HP；後續以 4 張實體紅色 Arena 支援付款，攻擊實體 BS6-008 Sugar Swan 6→2HP，四張 ST2-007 FLIP 全部進棄牌且 0 次發動。雙尺寸正式裝備流程 32／32、預先裝備／未裝備攻擊對照 4／4、相關 5 檔／168 項、build、全域 lint 與完整 Vitest 799 個結果檔／1,999 suites／16,986 項全部通過。候選仍為 154 inventory／0 promoted，未 commit／push；正式 BS12 與逐卡 online 尚未驗收。閘門：`test-results/bs12-007-bs12-018-gate1.json`。
 
 2026-10-07 BS12-005 使用者回報修復：`card:BS12-005` 現在先顯示實體 Yoga Cookie FLIP 目標選擇，再以 Cheerleader Cookie 本回合被效果設為活躍的條件開放技能；技能可選己方餅乾補 1 HP。修正本機控制器過度停用 AI，結束玩家回合後不再卡在對手活躍階段。5 檔／41 項相關測試、build、全域 lint、雙尺寸 Browser 26／26（通用入口 8 案）及原生 Chrome 的 Mustard Cookie 4→5 HP、AI 完成第 3 回合並進入玩家第 4 回合均通過；最新完整 Vitest 799 個結果檔／1,999 suites／16,983 項（681.48 秒）全部通過。020～023 本輪替換重驗另有 252／252 案，其中 236 案為原始印刷卡與實際父指令，16 案為明確標示的移動／裝備／時機準備式控制。最新預設 HP 診斷剩 12 個標記；正式 BS12、逐卡 online 與 promote 尚未驗收，候選仍為 154 inventory／0 promoted，未 commit／push。閘門：`test-results/bs12-005-user-repair-gate1.json`。
@@ -381,6 +383,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+- PR #124 修復：相關 7 檔／123 項回歸、最終控制器 3 檔／20 項回歸、typecheck（含 server）、全域 lint 與 build 通過；兩則留言的新問題由規則／控制器測試覆蓋。既有 BS12-009／082 雙尺寸付款正反、取消／返回 Browser 共 12 案通過，不代表新的跨陷阱切換或展示道具組合已完成 Browser／online 驗收。
+
 - 2026-10-08：BS12 154 筆印刷已 promote，正式 registry 與 BS12 系列篩選已同步。799 檔／17,048 項完整 Vitest、build、lint、strict 154／154、資料驗證及 Browser smoke 通過；驗證來源雜湊未變。正式完整對局與逐卡 online 仍未驗收，AI 對 BS12-014／015／082 採保守處理。
 
 - **BS12-091候選局部驗收**：兩印刷雙尺寸188／188、專項123項及24檔／667項回歸、strict2／2、build／lint通過；先付牌庫頂三張，再取己方棄牌區其他名稱Blocker Cookie，Chrome正反、16案可見紀錄與共用48案另列。一般6,994、cursor092／092@1、剩21基礎／32印刷。完整700檔／11,138項屬091前版本，本批全套留093批末；正式／逐卡online未完成，裁定留112及全部印刷後。
@@ -654,6 +658,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+- PR #124：推送修復後確認 GitHub CI；BS12 新增組合的完整 Browser／逐卡 online 驗收仍另列待驗。
 
 - BS12：一般累計8,144，局部cursor103；102雙尺寸88案、3檔120項專項、16檔875項受影響、strict1／1、build／全域lint通過。通用card入口修復的6項單元／12案載入回歸另列。剩10基礎／19印刷；100～102批末完整Vitest 737檔／12,384項（830.51秒）全部通過／exit0，1267個凍結來源雜湊全部一致；AI Browser六項UI／ST1核心同步以最終build重驗均exit0，full1中斷不計通過。裁定112及全部印刷後，154 inventory／0 promoted、正式／逐卡online未完成。
 

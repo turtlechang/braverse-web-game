@@ -1337,8 +1337,12 @@ export function useMatchController(params: {
     handleStartingCookie,
     resetSetup,
   } = setup
-  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapId, setSelectedTrapIdState] = useState<string | null>(null)
   const [selectedTrapPositionCostIds, setSelectedTrapPositionCostIds] = useState<string[]>([])
+  const setSelectedTrapId = useCallback((trapId: string | null) => {
+    if (trapId !== selectedTrapId) setSelectedTrapPositionCostIds([])
+    setSelectedTrapIdState(trapId)
+  }, [selectedTrapId])
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
   const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
   const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
@@ -2604,7 +2608,7 @@ export function useMatchController(params: {
     // cleanup; the current-state guard keeps nested decisions untouched.
     queueMicrotask(() => {
       setSelectedTrapPositionCostIds([])
-      setSelectedTrapId(null)
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
@@ -2652,7 +2656,7 @@ export function useMatchController(params: {
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapPositionCostIds([])
-      setSelectedTrapId(null)
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
@@ -2686,7 +2690,7 @@ export function useMatchController(params: {
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapPositionCostIds([])
-      setSelectedTrapId(null)
+      setSelectedTrapIdState(null)
       setSelectedTrapCostOptionIndex(0)
       setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])

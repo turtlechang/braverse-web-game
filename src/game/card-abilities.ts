@@ -728,8 +728,12 @@ export const canPlayItem = (
       : undefined
     const restriction = getItemActivateDiscardRequirement(state, playerId)
     if (restriction?.needsRuling) return false
+    const revealCost = ability?.effects[0]
+    const reservedRevealCount = revealCost?.kind === 'reveal-hand' && revealCost.asCost
+      ? revealCost.amount
+      : 0
     if (restriction && cost && state.players[playerId].hand.filter(card => card.instanceId !== instanceId).length <
-      restriction.count + (cost.discardHand ?? 0) + (cost.handToBreakArea?.count ?? 0)) return false
+      restriction.count + (cost.discardHand ?? 0) + (cost.handToBreakArea?.count ?? 0) + reservedRevealCount) return false
     return Boolean(
       card &&
         ability &&
