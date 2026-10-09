@@ -14,6 +14,7 @@ import {
   getEffectSelectionLimits,
   getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
+  getPlaceHandHpCandidates,
   getEffectiveAttack,
   getSupportEffectCandidates,
   getTrashToDeckCandidates,
@@ -57,6 +58,11 @@ const chooseAttackEffectTargets = (
     sourcePlayerId: playerId,
     sourceInstanceId: battle.attackerInstanceId,
   }
+
+  // Selecting a Cookie also commits to placing a legal hand card in the next
+  // step. Decline the optional target when that required card is unavailable.
+  if (effect.kind === 'hand-to-hp' && effect.selectTarget && effect.handPlacementRequired &&
+    getPlaceHandHpCandidates(state, playerId, effect).length === 0) return []
 
   // 攻擊後續也可能直接選支援區／棄牌區／手牌的卡。這些效果沒有一般
   // Cookie target selector，不能把空的戰鬥目標陣列交給 executeCardEffect。

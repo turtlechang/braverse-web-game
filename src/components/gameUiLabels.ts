@@ -8,6 +8,7 @@ export const AI_DECK_OPTIONS: { value: Bs12AiPresetDeckChoice; label: string }[]
   { value: 'bs12-yellow-arena', label: 'BS12 黃色｜Arena' },
   { value: 'bs12-red-arena', label: 'BS12 紅色｜Arena' },
   { value: 'bs12-purple-arena', label: 'BS12 紫色｜Arena' },
+  { value: 'bs12-black-arena', label: 'BS12 黑色｜Arena' },
 ]
 
 export const phaseLabels: Record<TurnPhase, string> = {
@@ -56,6 +57,7 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs12-yellow-arena': 'BS12 黃色｜Arena',
   'bs12-red-arena': 'BS12 紅色｜Arena',
   'bs12-purple-arena': 'BS12 紫色｜Arena',
+  'bs12-black-arena': 'BS12 黑色｜Arena',
   red: '紅色',
   yellow: '黃色',
   green: '綠色',

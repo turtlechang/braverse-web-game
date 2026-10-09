@@ -716,6 +716,7 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs12-yellow-arena': BS12_DECK_PRESETS['bs12-yellow-arena'].entries,
   'bs12-red-arena': BS12_DECK_PRESETS['bs12-red-arena'].entries,
   'bs12-purple-arena': BS12_DECK_PRESETS['bs12-purple-arena'].entries,
+  'bs12-black-arena': BS12_DECK_PRESETS['bs12-black-arena'].entries,
   red: OFFICIAL_RED_STARTER_DECK,
   yellow: OFFICIAL_YELLOW_STARTER_DECK,
   green: OFFICIAL_GREEN_STARTER_DECK,
@@ -1153,6 +1154,8 @@ export const DECK_CREATORS: Record<
     createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-red-arena'].entries, []),
   'bs12-purple-arena': (playerId) =>
     createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-purple-arena'].entries, []),
+  'bs12-black-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-black-arena'].entries, []),
   red: createOfficialRedStarterDeck,
   yellow: createOfficialYellowStarterDeck,
   green: createOfficialGreenStarterDeck,

@@ -1,6 +1,7 @@
 import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
   requiresEffectCardSelection,
 } from '../effects'
@@ -27,6 +28,12 @@ export const chooseSharedEffectTargets = (
   effects: readonly CardEffect[],
   universal?: PendingSelectionStrategy,
 ): SharedEffectTargetSelection => {
+  // A source-only benefit cannot be paid for after a response removed its
+  // recipient. Keep the optional command legal instead of selecting no cards
+  // and then attempting a mandatory heal on a vanished Cookie.
+  if (effects.some(effect => 'target' in effect && effect.target?.sourceOnly &&
+    effect.target.min > 0 && isEffectConditionMet(state, context, effect) &&
+    getEffectTargetCandidatesForEffect(state, context, effect).length === 0)) return { valid: false }
   if (effects.some((effect) =>
     effect.kind === 'choose-one' &&
     !effect.modes.some((mode) => isChooseOneModePlayable(state, context, mode.effects)),

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getReplacementCandidates } from './replacement'
 import {
   createDemoGame,
   deployCookie,
@@ -48,6 +49,24 @@ const createReplacementState = (): GameState => {
 }
 
 describe('replacement sequence', () => {
+  it.each(['extra', 'awakened'] as const)('excludes a returned %s Cookie from hand replacement and mandatory replacement', (origin) => {
+    const base = createReplacementState()
+    const ordinary = cookie('ordinary-replacement')
+    const returnedExtra: CookieCard = { ...cookie('returned-extra'), extraDeckOrigin: origin }
+    const state: GameState = {
+      ...base,
+      pendingReplacement: { tasks: [{ playerId: 'player-one', remaining: 1 }] },
+      players: { ...base.players, 'player-one': {
+        ...base.players['player-one'], battleArea: [], hand: [returnedExtra, ordinary],
+      } },
+    }
+    expect(getReplacementCandidates(state, 'player-one')).toEqual([ordinary])
+    expect(() => replaceDefeatedCookie(state, returnedExtra.instanceId)).toThrow('EXTRA')
+    const onlyExtra = { ...state, players: { ...state.players, 'player-one': {
+      ...state.players['player-one'], hand: [returnedExtra],
+    } } }
+    expect(skipDefeatedCookieReplacement(onlyExtra).result?.reason).toBe('no-cookie-available')
+  })
   it('queues the active player before the non-active player', () => {
     const state = finalizePendingReplacements({
       ...createReplacementState(),

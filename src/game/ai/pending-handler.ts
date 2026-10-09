@@ -72,11 +72,16 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
 
   return Boolean(
     state.pendingRefresh ||
+      // 逐點效果傷害結束後仍須由 battle handler 收尾，才可續接技能。
+      // 否則技能控制者與最後受傷者不同時，會用 idle 遮住收尾指令。
+      (state.pendingBattle?.stage === 'damage' &&
+        !canResolveCompletedFaintContinuation) ||
       state.pendingOnPlay ||
       hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
       (state.pendingAfterDamageEffects &&
-        state.pendingAfterDamageEffects.length > 0) ||
+        state.pendingAfterDamageEffects.length > 0 &&
+        getPendingDecision(state)?.kind === 'after-damage-effect') ||
       state.pendingOpponentHandDiscard ||
       state.pendingOpponentRestSupport ||
       state.pendingInspectDeck ||
@@ -461,8 +466,7 @@ export const handleAiPendingDecision = (
 
   if (
     pendingDecision?.kind === 'after-damage-effect' &&
-    !state.pendingRefresh &&
-    !state.pendingOnPlay
+    !state.pendingRefresh
   ) {
     if (pendingDecision.playerId !== playerId) {
       return {

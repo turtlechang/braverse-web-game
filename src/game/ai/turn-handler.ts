@@ -520,6 +520,7 @@ export const handleAiTurnState = (
         const deployable = chooseBestCookieToDeploy(
           player.hand.filter(
             (card) =>
+              !(card.type === 'cookie' && card.extraDeckOrigin) &&
               !shouldAvoidFlipDeployment(state, playerId, card) &&
               !(
                 strategy.conservativeDeployment &&

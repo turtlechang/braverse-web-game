@@ -45,7 +45,7 @@ export const getReplacementCandidates = (
   }
 
   return player.hand.filter(
-    (card): card is CookieCard => card.type === 'cookie',
+    (card): card is CookieCard => card.type === 'cookie' && !card.extraDeckOrigin,
   )
 }
 
