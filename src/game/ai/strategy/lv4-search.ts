@@ -126,6 +126,13 @@ export interface Lv4SearchHooks {
    * Lv.4 維持既有的單步通用評分基線，作為 challenger 的對照組。
    */
   strictComboActionability?: boolean
+  /** Conditional public-resource forecast; never resolves the defender's response. */
+  supportCostFollowup?: (
+    beforeState: GameState,
+    afterState: GameState,
+    playerId: PlayerId,
+    command: PlayerActionCommand,
+  ) => ActionScoreBreakdown['contributions'][number] | null
   /** pending、換人、結束階段等不應在本回合搜尋繼續展開的狀態。 */
   isTerminal: (state: GameState, playerId: PlayerId) => boolean
 }
@@ -233,6 +240,7 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'opponent-response-minimax' ||
     contribution.id === 'defensive-reserve' ||
     contribution.id === 'endgame-survival' ||
+    contribution.id === 'support-cost-followup' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'tournament-experience' ||
     contribution.id === 'intent-continuity' ||
@@ -522,7 +530,11 @@ export const searchLv4Commands = (
             identity,
             node.depth,
           ) ?? 0
+          const supportCostFollowup = hooks.supportCostFollowup?.(
+            node.state, afterState, playerId, command,
+          )
           const extraContributions: ActionScoreBreakdown['contributions'][number][] = [
+            ...(supportCostFollowup ? [supportCostFollowup] : []),
             ...(deploymentTempoBonus === 0
               ? []
               : [{

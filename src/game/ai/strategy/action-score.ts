@@ -35,6 +35,7 @@ export interface ActionScoreContribution {
     | 'tactical-payoff'
     | 'tactical-setup'
     | 'resource-reservation'
+    | 'support-cost-followup'
     | 'deployment-tempo'
     | 'opponent-response-minimax'
     | 'defensive-reserve'

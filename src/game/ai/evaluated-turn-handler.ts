@@ -166,6 +166,62 @@ const skillEffectBonus = (
   return bonus
 }
 
+/** An attack can rest supports that a later Activate removes as its cost.
+ * Forecast only the same visible source's simple follow-up. The real battle
+ * still stops for responses; no forecast state is returned to the game.
+ */
+const forecastSupportCostFollowup = (
+  before: GameState,
+  afterAttack: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+  resolveSkill: AiTurnStrategy['resolveSkill'],
+): ActionScoreBreakdown['contributions'][number] | null => {
+  if (command.kind !== 'attack') return null
+  const source = afterAttack.players[playerId].battleArea.find(
+    cookie => cookie.card.instanceId === command.attackerInstanceId,
+  )
+  const skill = source?.card.skill
+  if (!source || skill?.trigger !== 'activate' || skill.restSource ||
+      (source.card.attackEffects?.length ?? 0) > 0 ||
+      (skill.cost.supportToHand ?? 0) + (skill.cost.supportToTrash ?? 0) === 0) return null
+  // Limit this forecast to known support/hand costs and simple public HP
+  // effects. Mixed HP costs, draws and unmodelled conditions must not expose
+  // hidden card faces while estimating an otherwise legal continuation.
+  const knownCostFields = new Set([
+    'energy', 'red', 'yellow', 'green', 'blue', 'purple', 'black', 'neutral',
+    'discardHand', 'supportToHand', 'supportToHandColor', 'supportToHandType',
+    'supportToHandKeyword', 'supportToTrash', 'supportToTrashKeyword',
+  ])
+  if (Object.entries(skill.cost).some(([key, value]) =>
+    value !== undefined && !knownCostFields.has(key),
+  ) || skill.effects.length === 0 || skill.effects.some(effect =>
+    (effect.kind !== 'hp-to-trash' && effect.kind !== 'gain-hp') ||
+    (effect.condition !== undefined &&
+      effect.condition.kind !== 'battle-area-has-named-cookie'),
+  )) return null
+  // This is a conditional forecast after the response window, not a simulated
+  // choice of Trap/FLIP. Unknown draws and further pending decisions are excluded.
+  const forecast = { ...afterAttack, pendingBattle: null }
+  const followup = resolveSkill(forecast, playerId, source, 'activate')
+  if (!followup || followup.state.status !== 'playing' ||
+      hasBlockingPending(followup.state)) return null
+  const knownHandIds = new Set([
+    ...before.players[playerId].hand.map(card => card.instanceId),
+    ...before.players[playerId].supportArea.map(support => support.card.instanceId),
+  ])
+  if (followup.state.players[playerId].hand.some(card => !knownHandIds.has(card.instanceId))) return null
+  const amount = Math.min(200, Math.max(0,
+    evaluatePlayerView(createPlayerView(followup.state, playerId)) -
+    evaluatePlayerView(createPlayerView(forecast, playerId)) +
+    skillEffectBonus(forecast, followup.state, playerId),
+  ))
+  return amount > 0 ? {
+    id: 'support-cost-followup', amount,
+    detail: '條件式續接：若攻擊回應後來源與支援仍在場，可支付 Activate 能量並回收／棄置已疲勞支援；未替對手略過回應。',
+  } : null
+}
+
 /**
  * R9: 致命傷害偵測加分（Lv.4 專用）
  *
@@ -922,6 +978,10 @@ export const handleAiTwoPlyTurnState = (
       ? strategy.strategyMemory?.activeCombo?.planId
       : undefined,
     strictComboActionability: decisionLevel === 5,
+    supportCostFollowup: decisionLevel === 5
+      ? (before, after, nextPlayerId, command) =>
+          forecastSupportCostFollowup(before, after, nextPlayerId, command, strategy.resolveSkill)
+      : undefined,
     opponentResponseMinimax: decisionLevel === 5
       ? (view, identity) => evaluatePublicResponseMinimax(view, identity)
       : undefined,

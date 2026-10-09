@@ -1,5 +1,7 @@
 # 薑餅人對戰卡牌 Braverse
 
+2026-10-09 AI覆盤改善：依使用者BS12藍對綠紀錄，修正Lv.5先使用Mystic Flour技能退回支援、漏掉先攻擊再用疲勞支援付代價的順序盲點。新增有限的公開資源續接評分，保留真實Trap／FLIP回應及既有支付規則，策略版本為`lv5-support-cost-sequencing-v1`。專項3檔／17項、完整Vitest804檔／17,133項（1,169.49秒）、build、全域lint與完整AI Browser通過；固定種子前後各24場全部完成，逐場勝負相同，尚無勝率提升證據。完整分析與驗證紀錄見 [BS12綠色AI覆盤報告](docs/ai-bs12-green-replay-2026-10-09.md)。
+
 2026-10-09 BS12五色牌組：依提供清單建立藍／綠／黃／紅／紫各60張主牌，Extra Deck各6／6／6／4／6張；AI選單僅保留五副BS12、預設藍色，其他牌組選單優先顯示BS12。九張缺卡已經原圖逐卡驗證及授權promote，正式strict9張全數verified；雙尺寸實體卡Browser74案、五色開局及完整AI Browser、ST1好友房核心同步通過。完整Vitest803檔／17,127項（1,102.14秒）、build與lint通過。既有玩家牌組與後續編輯／刪除保留。完整證據與驗收範圍見 [BS12牌組報告](docs/bs12-deck-presets-2026-10-09.md)。
 
 2026-10-08 BS12 promote：依使用者明確授權，154 筆印刷（112 張基礎卡、42 筆變體）已由 `data/candidates/official-festival-arena-bs12.en.json` 移入 `data/cards/official-festival-arena-bs12.en.json`，重建正式 registry；只將來源狀態改為 `promotion-ready`，卡片內容逐筆比對未變。246 個測試、fixture 與 Browser 工具同步改讀正式資料。正式 validator 補辨識 Special Play 代價技能，BS12-112／@1 新增正向與缺失代價反例，未改遊戲規則；BS12 正式註冊期待、AI 卡池數量及 EXTRA 精確數量同步，新增 BS12 系列選單與篩選前綴。受影響 6 檔／297 項整合回歸通過。候選 strict／正式 strict 均 154 verified、0 needs-review、0 blocked；候選 strict validate、promote、validate:cards、check:card-pool、build、全域 lint、針對性 3 檔／63 項皆 exit 0。BS12-043 通用正反入口雙尺寸 smoke 4／4、AI Browser 與牌組編輯器 Browser PASS；正式牌組 EXTRA 列表由 42 增為 56，精確確認新增 14 筆 BS12，原有張數／儲存／匯入判定保留，牌組 UI 19 項（含 BS12 篩選／主牌組加入）回歸通過；這些不替代整系列正式對局或逐卡 online 驗收。完整 Vitest 最終第三次回歸 799 檔／17,048 項（1,011.97 秒）全部通過，exit 0，1,396 個來源雜湊一致；前兩次因舊 EXTRA 數量／候選隔離／AI 卡池數量期待失敗而中止，日誌保留。AI capability audit 無轉接失敗；BS12-014／015／082 的策略效果仍採保守處理，不宣稱 AI 能完整評估這三張。Browser 初次 sandbox 本機網路失敗保留，允許本機連線的重跑通過；Vitest 暫存目錄設於 `test-results/bs12-promote-temp` 避免 sandbox rename EPERM。證據：`test-results/bs12-promoted-contracts-2026-10-08.json`、`bs12-promoted-043-browser-final2/results.json`、`bs12-promote-ai-browser-final2.log`、`bs12-promote-full-vitest-final3-2026-10-08.log`。本輪 Git 發佈整理於 `codex/bs12-promote`；既有 AGENTS 修改與其他產物不納入提交。
@@ -9,6 +11,8 @@
 > **非官方聲明**：本專案為 CookieRun: Braverse 的**非官方粉絲研究 / 學習型實作**，與 Devsisters Corporation 沒有任何合作、授權或背書關係。CookieRun: Braverse 及其卡牌、插畫、標誌之著作權與商標權均屬 Devsisters 及其授權方所有。本專案不商用、不收費；素材使用政策見 [docs/ip-and-asset-policy.md](docs/ip-and-asset-policy.md)。
 
 ## 開發背景
+
+BS12綠色AI覆盤已重現先技能退回支援而漏掉攻擊的順序問題，修正與範圍見 [覆盤報告](docs/ai-bs12-green-replay-2026-10-09.md)。
 
 2026-10-08 PR #124 修復：server 型別檢查排除測試入口，避免由測試載入瀏覽器專用 hook；測試仍由前端型別檢查與 Vitest 驗證。BS12-082 額外棄牌可用性保留道具的展示代價，單機／線上切換陷阱時清除狀態代價草稿。
 
@@ -385,6 +389,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+- Lv.5支援代價續接評分已完成：完整Vitest804檔／17,133項、build、lint與AI Browser通過；固定種子前後各24場勝負相同。
+
 - PR #124 修復：相關 7 檔／123 項回歸、最終控制器 3 檔／20 項回歸、typecheck（含 server）、全域 lint 與 build 通過；兩則留言的新問題由規則／控制器測試覆蓋。既有 BS12-009／082 雙尺寸付款正反、取消／返回 Browser 共 12 案通過，不代表新的跨陷阱切換或展示道具組合已完成 Browser／online 驗收。
 
 - 2026-10-08：BS12 154 筆印刷已 promote，正式 registry 與 BS12 系列篩選已同步。799 檔／17,048 項完整 Vitest、build、lint、strict 154／154、資料驗證及 Browser smoke 通過；驗證來源雜湊未變。正式完整對局與逐卡 online 仍未驗收，AI 對 BS12-014／015／082 採保守處理。
@@ -660,6 +666,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+- 後續AI評估仍需驗證長期支援管理與交換收益；本次局部順序改善尚未證明勝率提升。
 
 - PR #124：推送修復後確認 GitHub CI；BS12 新增組合的完整 Browser／逐卡 online 驗收仍另列待驗。
 
