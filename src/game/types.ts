@@ -576,6 +576,8 @@ export interface BattleAreaHasKeywordCondition {
 /** 官方文字「某色 LV.N 餅乾在你的休息區」。 */
 export interface BreakAreaHasCardCondition {
   kind: 'break-area-has-card'
+  /** The same Break Cookie must match this printed name and all level filters. */
+  name?: string
   side: EffectTargetSide
   color?: EnergyColor
   keyword?: CardKeyword

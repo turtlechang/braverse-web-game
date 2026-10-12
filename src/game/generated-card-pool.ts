@@ -46,14 +46,22 @@ import official_st7_003_en_json_40 from '../../data/cards/official-st7-003.en.js
 import official_st7_004_en_json_41 from '../../data/cards/official-st7-004.en.json'
 import official_st7_006_en_json_42 from '../../data/cards/official-st7-006.en.json'
 import official_st7_007_en_json_43 from '../../data/cards/official-st7-007.en.json'
-import official_st7_009_en_json_44 from '../../data/cards/official-st7-009.en.json'
-import official_st7_011_en_json_45 from '../../data/cards/official-st7-011.en.json'
-import official_st7_012_en_json_46 from '../../data/cards/official-st7-012.en.json'
-import official_st7_013_en_json_47 from '../../data/cards/official-st7-013.en.json'
-import official_starter_deck_blue_en_json_48 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_49 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_50 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_51 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_st7_008_en_json_44 from '../../data/cards/official-st7-008.en.json'
+import official_st7_009_en_json_45 from '../../data/cards/official-st7-009.en.json'
+import official_st7_010_en_json_46 from '../../data/cards/official-st7-010.en.json'
+import official_st7_011_en_json_47 from '../../data/cards/official-st7-011.en.json'
+import official_st7_012_en_json_48 from '../../data/cards/official-st7-012.en.json'
+import official_st7_013_en_json_49 from '../../data/cards/official-st7-013.en.json'
+import official_st7_014_en_json_50 from '../../data/cards/official-st7-014.en.json'
+import official_st7_015_en_json_51 from '../../data/cards/official-st7-015.en.json'
+import official_st7_016_en_json_52 from '../../data/cards/official-st7-016.en.json'
+import official_st7_017_en_json_53 from '../../data/cards/official-st7-017.en.json'
+import official_st7_018_en_json_54 from '../../data/cards/official-st7-018.en.json'
+import official_st7_019_en_json_55 from '../../data/cards/official-st7-019.en.json'
+import official_starter_deck_blue_en_json_56 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_57 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_58 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_59 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -100,12 +108,20 @@ export const officialCardDatasets = [
   official_st7_004_en_json_41,
   official_st7_006_en_json_42,
   official_st7_007_en_json_43,
-  official_st7_009_en_json_44,
-  official_st7_011_en_json_45,
-  official_st7_012_en_json_46,
-  official_st7_013_en_json_47,
-  official_starter_deck_blue_en_json_48,
-  official_starter_deck_green_en_json_49,
-  official_starter_deck_purple_en_json_50,
-  official_starter_deck_yellow_en_json_51,
+  official_st7_008_en_json_44,
+  official_st7_009_en_json_45,
+  official_st7_010_en_json_46,
+  official_st7_011_en_json_47,
+  official_st7_012_en_json_48,
+  official_st7_013_en_json_49,
+  official_st7_014_en_json_50,
+  official_st7_015_en_json_51,
+  official_st7_016_en_json_52,
+  official_st7_017_en_json_53,
+  official_st7_018_en_json_54,
+  official_st7_019_en_json_55,
+  official_starter_deck_blue_en_json_56,
+  official_starter_deck_green_en_json_57,
+  official_starter_deck_purple_en_json_58,
+  official_starter_deck_yellow_en_json_59,
 ] as const

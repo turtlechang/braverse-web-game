@@ -16,6 +16,7 @@ export const AI_DECK_OPTIONS: { value: Bs12AiPresetDeckChoice | CommunityDeckCho
   { value: 'cookierift-83', label: '社群 紅色｜Red Arena' },
   { value: 'cookierift-568', label: '社群 紫色｜Arena & Dark Cacao' },
   { value: 'cookierift-506', label: '社群 黑色｜Deep Darkness' },
+  { value: 'cookierift-1035', label: '社群 黃色｜imortal' },
 ]
 
 export const phaseLabels: Record<TurnPhase, string> = {
@@ -65,6 +66,7 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'cookierift-83': '社群 紅色｜Red Arena',
   'cookierift-568': '社群 紫色｜Arena & Dark Cacao',
   'cookierift-506': '社群 黑色｜Deep Darkness',
+  'cookierift-1035': '社群 黃色｜imortal',
   'bs12-blue-arena': 'BS12 藍色｜Arena',
   'bs12-green-arena': 'BS12 綠色｜Arena',
   'bs12-yellow-arena': 'BS12 黃色｜Arena',

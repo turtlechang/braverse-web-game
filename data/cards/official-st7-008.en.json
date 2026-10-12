@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.256Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST7 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46892,
+      "locale": "en",
+      "cardNumber": "ST7-008",
+      "baseCardNumber": "ST7-008",
+      "variant": null,
+      "name": "Elder Faerie Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Protector of the Faerie Kingdom",
+        "text": "【On Play】 If a LV.3 [Millennial Tree Cookie] is in your battle area or break area, select up to 1 {Y} LV.1 Cookie in your break area. Place that Cookie in the trash."
+      },
+      "attackText": "<{Y}{Y}{Y}> Firm Determination {da} 3 Then, if your break area is LV.4 or above, deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 254,
+        "title": "Tree of Life",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ehtoluwb0H0vNtuZLq24hg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

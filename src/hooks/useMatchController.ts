@@ -2000,15 +2000,17 @@ export function useMatchController(params: {
           if (candidates.length === 0) return []
           const limits = getEffectTargetSelectionLimits(effect)
           const ordered = effect.kind === 'damage-all' && effect.sequential === true
+          const fixed = !ordered && 'target' in effect && effect.target?.allMatching === true
           return [
             {
               effectIndex,
               candidates,
-              selectedTargetIds: selectedTrapEffectTargets[effectIndex] ?? [],
+              selectedTargetIds: fixed ? candidates.map(candidate=>candidate.card.instanceId) : selectedTrapEffectTargets[effectIndex] ?? [],
+              ...(fixed ? {fixed:true} : {}),
               ordered,
-              min: ordered ? candidates.length : limits?.min ?? 0,
-              max: ordered ? candidates.length : limits?.max ?? 1,
-              allowEmpty: !ordered && (limits?.min ?? 0) === 0,
+              min: ordered || fixed ? candidates.length : limits?.min ?? 0,
+              max: ordered || fixed ? candidates.length : limits?.max ?? 1,
+              allowEmpty: !ordered && !fixed && (limits?.min ?? 0) === 0,
             },
           ]
         })
@@ -2018,6 +2020,7 @@ export function useMatchController(params: {
       (candidate) => candidate.effectIndex === effectIndex,
     )
     const max = step?.max ?? 1
+    if (step?.fixed) return
     setSelectedTrapEffectTargets((current) => {
       const next = current.map((ids) => [...ids])
       const selected = next[effectIndex] ?? []
@@ -2032,6 +2035,7 @@ export function useMatchController(params: {
     })
   }
   const skipTrapEffectTarget = (effectIndex: number) => {
+    if (trapEffectTargetSteps.find(step=>step.effectIndex===effectIndex)?.fixed) return
     setSelectedTrapEffectTargets((current) => {
       const next = current.map((ids) => [...ids])
       next[effectIndex] = []

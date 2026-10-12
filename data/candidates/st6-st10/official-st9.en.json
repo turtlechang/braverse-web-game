@@ -1,0 +1,780 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.265Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 19,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST9 unpromoted printings"
+    },
+    "candidateStatus": "inventory"
+  },
+  "cards": [
+    {
+      "sourceId": 47061,
+      "locale": "en",
+      "cardNumber": "ST9-001",
+      "baseCardNumber": "ST9-001",
+      "variant": null,
+      "name": "Gold Citrine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Shining Sea Jewel {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SGTDsHCACFb36IeqXYglcw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47062,
+      "locale": "en",
+      "cardNumber": "ST9-002",
+      "baseCardNumber": "ST9-002",
+      "variant": null,
+      "name": "Aquamarine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> Warm Greeting {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v2gDnd9w_gZV0KibyCCt2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47063,
+      "locale": "en",
+      "cardNumber": "ST9-003",
+      "baseCardNumber": "ST9-003",
+      "variant": null,
+      "name": "Blue Whale Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}> Loving Care {da} 3",
+      "flipText": "Return this Cookie to your hand.",
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/zCWsG18cFseGK5csTAsn9g.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47064,
+      "locale": "en",
+      "cardNumber": "ST9-004",
+      "baseCardNumber": "ST9-004",
+      "variant": null,
+      "name": "Pond Dino Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}> Sparkling Gaze {da} 3",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-dYwCwbtCqu40vyaabLzNA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47065,
+      "locale": "en",
+      "cardNumber": "ST9-005",
+      "baseCardNumber": "ST9-005",
+      "variant": null,
+      "name": "Mystic Opal Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Power of Destiny",
+        "text": "【Blocker】 <{B}> (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "<{B}{N}> Weather Control {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rf_6TAnkfS5MI5fHX0sQ9w.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47066,
+      "locale": "en",
+      "cardNumber": "ST9-006",
+      "baseCardNumber": "ST9-006",
+      "variant": null,
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Seas of Fate",
+        "text": "【Activate】 【Once Per Turn】 If there are 5 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{B}{B}> Blue Wave Surge {da} 3 Then, <discard 2 cards.> All of your opponent's Cookies receive 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/l-e0ZWSEFYr2lKgGEd_LnQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47067,
+      "locale": "en",
+      "cardNumber": "ST9-007",
+      "baseCardNumber": "ST9-007",
+      "variant": null,
+      "name": "Peppermint Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Conch Echo",
+        "text": "【Activate】 【Once Per Turn】 If there are 3 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{B}{B}> Song of the Starry Seas {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Q4hOAllEjprSIa6jh581YA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47068,
+      "locale": "en",
+      "cardNumber": "ST9-008",
+      "baseCardNumber": "ST9-008",
+      "variant": null,
+      "name": "Crimson Coral Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Coral Armor",
+        "text": "【On Play】 <Return 1 Cookie that is LV.2 or lower from your battle area to your hand.> This Cookie gains +1 HP."
+      },
+      "attackText": "<{B}{B}{B}> Crimson Spear {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TEpx0iFA1Aiip1OyRNcdAA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47069,
+      "locale": "en",
+      "cardNumber": "ST9-009",
+      "baseCardNumber": "ST9-009",
+      "variant": null,
+      "name": "Wave Drop",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] The Sea's Sincerity",
+        "text": "When this Cookie is placed from your hand into your trash by the effect of your [Sea Fairy Cookie], draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}> Cold Droplets {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/exHjDPPU2fU0LmHLLKsRwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47070,
+      "locale": "en",
+      "cardNumber": "ST9-010",
+      "baseCardNumber": "ST9-010",
+      "variant": null,
+      "name": "Parfait Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> I'm Gonna Be A Rockstar! {da} 2",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/S863ajoZGKEP6HK4Zrey5A.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47071,
+      "locale": "en",
+      "cardNumber": "ST9-011",
+      "baseCardNumber": "ST9-011",
+      "variant": null,
+      "name": "Frilled Jellyfish Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}{B}> Frilly Snare {da} 4",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mxJQbmt1doQoDzPGiWywGQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47072,
+      "locale": "en",
+      "cardNumber": "ST9-012",
+      "baseCardNumber": "ST9-012",
+      "variant": null,
+      "name": "White Pearl Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Breath of the Seas",
+        "text": "【On Play】 If there are 4 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{B}> Gem Mermaid Strength {da} 2 Then, <can be used as {B}.> If [Sea Fairy Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sIVtglS9neromqDgFxfIcg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47073,
+      "locale": "en",
+      "cardNumber": "ST9-013",
+      "baseCardNumber": "ST9-013",
+      "variant": null,
+      "name": "Shimmering Moonlit Coral",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> <Discard 1 {B} card from your hand.> Draw up to 2 cards from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3sJ0x0BCEKvXj2aHoIw9Uw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47074,
+      "locale": "en",
+      "cardNumber": "ST9-014",
+      "baseCardNumber": "ST9-014",
+      "variant": null,
+      "name": "Glittering Pearl Shell",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}{B}> <Discard 3 cards.> Select up to 1 of your Cookies. That Cookie gains +2 HP."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kiZgfYWRAZOUq93QR7zUOg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47075,
+      "locale": "en",
+      "cardNumber": "ST9-015",
+      "baseCardNumber": "ST9-015",
+      "variant": null,
+      "name": "Essence of the Ocean",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> If there are 5 cards or less in your hand, draw up to 1 card from your deck. Then, select up to 1 of your [Sea Fairy Cookie] with 5 or less HP remaining. That Cookie gains +1 HP."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5rsk02vFJ_lLnBvE4eef4w.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47077,
+      "locale": "en",
+      "cardNumber": "ST9-017",
+      "baseCardNumber": "ST9-017",
+      "variant": null,
+      "name": "Revelation of the Seas",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}{B}{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage. Then, if there are 3 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hq9P5vl9Ve9ATPhLnasNTQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47078,
+      "locale": "en",
+      "cardNumber": "ST9-018",
+      "baseCardNumber": "ST9-018",
+      "variant": null,
+      "name": "Tower of Frozen Waves",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <discard 1 card.> That Cookie deals an additional -1 attack damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ftJFsgigcpdiQPGIc1SnxA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47079,
+      "locale": "en",
+      "cardNumber": "ST9-019",
+      "baseCardNumber": "ST9-019",
+      "variant": null,
+      "name": "Curse of the Seas",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <discard 2 cards.> Select up to 1 of your opponent's Cookies that has 2 or more HP remaining. That Cookie receives 1 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lCUReNZTVvEUtU-yy7MbYQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47080,
+      "locale": "en",
+      "cardNumber": "ST9-020",
+      "baseCardNumber": "ST9-020",
+      "variant": null,
+      "name": "Tearcrown",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> Place in your stage area.\r\n\r\n【Activate】 <Rest this card.> If there are 3 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/n9wkLpXB8HeubP28aIvUeA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:03Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

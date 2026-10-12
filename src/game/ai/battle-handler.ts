@@ -1,4 +1,5 @@
 import {shouldSkipHpFlipForFatalRefresh} from './hp-flip-refresh-safety'
+import {selectSafeHandBreakPayment} from './hand-break-payment'
 import { executeCardEffect } from '../effects'
 import { maskGameStateForViewer } from '../masked-state'
 import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
@@ -518,6 +519,9 @@ const selectTrapEffectTargets = (
     : Math.min(effect.target.max, candidates.length)
   if (count < effect.target.min) return []
   const candidateIds = candidates.map((cookie) => cookie.card.instanceId)
+  // Printed "all" recipients are mandatory; optional target scoring must not
+  // drop a full-HP Cookie or turn the group into a partial selection.
+  if (effect.target.allMatching) return candidateIds
   const saving = universal.enabled ? savingTrapTarget(state, playerId, trapInstanceId, effect, candidateIds, count) : null
   if (saving) return saving
   return universal.enabled
@@ -871,7 +875,12 @@ export const handleAiPendingBattle = (
       }, 'attack-response', attackResponse.card.instanceId, skill.effects[0])
     }
 
-    const trapCandidates = getTrapCandidates(state, playerId)
+    const trapCandidates = getTrapCandidates(state, playerId).filter(candidate=>{
+      if(!candidate.trap)return false
+      const option=getPlayableTrapCostOption(state,playerId,candidate.trap,candidate.instanceId)
+      return option!==null&&selectSafeHandBreakPayment(state,playerId,option.cost,candidate.instanceId,
+        state.players[playerId].hand.map(card=>card.instanceId))!==null
+    })
 
     let trapCard: GameCard | undefined
     if (useR7 && trapCandidates.length > 0) {
@@ -1088,10 +1097,11 @@ export const handleAiPendingBattle = (
             (right.type === 'cookie' ? right.level : 0),
         )
         .map((card) => card.instanceId)
-      const handToBreakIds = universal.enabled
-        ? universal.orderCostIds(handToBreakCandidateIds, handToBreakCost?.count ?? 0)
-        : handToBreakCandidateIds.slice(0, handToBreakCost?.count ?? 0)
-      if (handToBreakCost && handToBreakIds.length < handToBreakCost.count) {
+      const handToBreakIds = selectSafeHandBreakPayment(
+        state,playerId,paidCost,trapCard.instanceId,
+        universal.enabled?universal.orderCostIds(handToBreakCandidateIds,handToBreakCandidateIds.length):handToBreakCandidateIds,
+      )
+      if (handToBreakIds===null) {
         return withBattlePendingReason({
           state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
           action: 'play-trap',
@@ -1164,6 +1174,7 @@ export const handleAiPendingBattle = (
       // set-active，造成「不在合法範圍」或「Invalid support target」。
       const hasIndependentTrapSelection = trapCard.trap.effects.some(
         (effect) =>
+          ('target' in effect && effect.target?.allMatching === true) ||
           (effect.kind === 'modify-attack' && effect.target.side === 'self') ||
           effect.kind === 'support-to-trash' ||
           effect.kind === 'break-to-battle' ||

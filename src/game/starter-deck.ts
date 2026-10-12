@@ -719,6 +719,7 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'cookierift-83': COMMUNITY_DECK_PRESETS['cookierift-83'].entries,
   'cookierift-568': COMMUNITY_DECK_PRESETS['cookierift-568'].entries,
   'cookierift-506': COMMUNITY_DECK_PRESETS['cookierift-506'].entries,
+  'cookierift-1035': COMMUNITY_DECK_PRESETS['cookierift-1035'].entries,
   'bs12-blue-arena': BS12_DECK_PRESETS['bs12-blue-arena'].entries,
   'bs12-green-arena': BS12_DECK_PRESETS['bs12-green-arena'].entries,
   'bs12-yellow-arena': BS12_DECK_PRESETS['bs12-yellow-arena'].entries,
@@ -1158,6 +1159,7 @@ export const DECK_CREATORS: Record<
   'cookierift-83': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-83'].entries, []),
   'cookierift-568': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-568'].entries, []),
   'cookierift-506': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-506'].entries, []),
+  'cookierift-1035': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1035'].entries, []),
   'bs12-blue-arena': (playerId) =>
     createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-blue-arena'].entries, []),
   'bs12-green-arena': (playerId) =>

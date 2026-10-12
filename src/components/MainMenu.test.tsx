@@ -194,7 +194,7 @@ describe('MainMenu AI opponent options', () => {
       'bs12-purple-arena',
       'bs12-black-arena',
       'cookierift-921', 'cookierift-927', 'cookierift-67',
-      'cookierift-83', 'cookierift-568', 'cookierift-506',
+      'cookierift-83', 'cookierift-568', 'cookierift-506', 'cookierift-1035',
     ])
     expect(container.textContent).toContain('BS12 紅色｜Arena')
     expect(container.textContent).not.toContain('BS6')

@@ -1,4 +1,5 @@
 import type { PlayerView, CookieInBattleView } from '../../player-view'
+import {nextActivePressureLost} from '../next-active-pressure'
 
 export interface PublicStateEvaluationBreakdown {
   /** 終局勝負分；非終局為 0。 */
@@ -19,6 +20,8 @@ export interface PublicStateEvaluationBreakdown {
   deck: number
   /** 我方場景／Stage 公開存在價值。 */
   stage: number
+  /** Known ordinary attack pressure lost to an unconditional next-Active lock. */
+  nextActivePressure: number
   total: number
 }
 
@@ -54,6 +57,7 @@ export const evaluatePlayerViewBreakdown = (
       breakPressure: 0,
       deck: 0,
       stage: 0,
+      nextActivePressure: 0,
       total: terminal,
     }
   }
@@ -77,8 +81,9 @@ export const evaluatePlayerViewBreakdown = (
     sumBreakLevel(opponent.breakArea) * 20
   const deck = self.deckCount
   const stage = self.stage ? 8 : 0
+  const nextActivePressure = nextActivePressureLost(opponent)-nextActivePressureLost(self)
   const total =
-    board + attack + hp + hand + resources + breakPressure + deck + stage
+    board + attack + hp + hand + resources + breakPressure + deck + stage + nextActivePressure
 
   return {
     terminal: 0,
@@ -90,6 +95,7 @@ export const evaluatePlayerViewBreakdown = (
     breakPressure,
     deck,
     stage,
+    nextActivePressure,
     total,
   }
 }

@@ -1,3 +1,4 @@
+import {preservesPublicWinningAttack} from './ai/break-recovery-payoff'
 import { chooseAiHandToBreakCostIds } from './ai/hand-break-cost-selection'
 import { getBattleCookiePositionCostCandidates } from './battle-position-cost'
 import { getItemActivateDiscardRequirement, playItem } from './card-abilities'
@@ -361,6 +362,8 @@ const chooseEffectTargets = (
   if (effect.kind === 'break-to-trash') {
     const candidates = getBreakToTrashCandidates(state, context, effect)
     const count = Math.min(effect.max, candidates.length)
+    const selected = candidates.slice(0, count).map(card => card.instanceId)
+    if ((aiTurnStrategy.currentLevel ?? 2) >= 3 && preservesPublicWinningAttack(state, context, effect, selected)) return []
     return candidates
       .slice(0, count)
       .map((card) => card.instanceId)
@@ -1488,6 +1491,7 @@ const universalChooseEffectTargets = (
   const max = Math.min(limits.max, candidateIds.length)
   const selected = universal.selectEffectTargetIds(effect, candidateIds, max,
     getPublicEffectDamageByTarget(state, context.sourcePlayerId, context, effect, candidateIds))
+  if (effect.kind === 'break-to-trash' && (aiTurnStrategy.currentLevel ?? 2) >= 3 && preservesPublicWinningAttack(state, context, effect, selected)) return []
   return selected.length >= limits.min
     ? selected
     : legacyChooseEffectTargets(state, context, effect)

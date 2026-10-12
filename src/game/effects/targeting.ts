@@ -2516,6 +2516,7 @@ export const isEffectConditionMet = (
         : getOpponentId(context.sourcePlayerId)
     return state.players[playerId].breakArea.some(
       (card) =>
+        (condition.name === undefined || card.name === condition.name) &&
         (condition.color === undefined || card.energyColor === condition.color) &&
         (condition.minLevel === undefined || card.level >= condition.minLevel) &&
         (condition.maxLevel === undefined || card.level <= condition.maxLevel),

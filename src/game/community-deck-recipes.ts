@@ -2,7 +2,7 @@ import inventory from '../../data/decks/cookierift-community-20261010.json'
 import type { StarterDeckEntry } from './starter-deck'
 
 export type CommunityDeckChoice = 'cookierift-921' | 'cookierift-927' | 'cookierift-67' |
-  'cookierift-83' | 'cookierift-568' | 'cookierift-506'
+  'cookierift-83' | 'cookierift-568' | 'cookierift-506' | 'cookierift-1035'
 
 const parseEntries = (text:string):StarterDeckEntry[] => text.split(/\s+/).map(part=>{
   const match=/^([A-Z0-9]+-\d{3}):(\d+)$/.exec(part)
@@ -11,7 +11,7 @@ const parseEntries = (text:string):StarterDeckEntry[] => text.split(/\s+/).map(p
 })
 
 // Explicit acceptance list. Other collected recipes remain quarantined without substitutions.
-const accepted = [921,927,67,83,568,506] as const
+const accepted = [921,927,67,83,568,506,1035] as const
 export const COMMUNITY_DECK_PRESETS = Object.fromEntries(accepted.map(sourceId=>{
   const source=inventory.decks.find(deck=>deck.sourceId===sourceId)
   if(!source)throw new Error(`Missing Cookierift source ${sourceId}`)

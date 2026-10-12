@@ -1295,7 +1295,9 @@ export function TrapResponseModal({
                       return (
                       <div className="trap-effect-target-step" key={targetStep.effectIndex}>
                         <span>
-                          {targetStep.ordered
+                          {targetStep.fixed
+                            ? `第 ${stepIndex + 1} 段固定對象（全部 ${targetStep.max} 張）`
+                            : targetStep.ordered
                             ? `第 ${stepIndex + 1} 段傷害順序（依序選擇全部 ${targetStep.max} 張）`
                             : `第 ${stepIndex + 1} 段目標（最多 ${targetStep.max} 張）`}
                         </span>
@@ -1319,6 +1321,7 @@ export function TrapResponseModal({
                                   .filter(Boolean)
                                   .join(' ')}
                                 key={candidate.card.instanceId}
+                                disabled={targetStep.fixed}
                                 onClick={() =>
                                   onSelectTrapEffectTarget(
                                     targetStep.effectIndex,
@@ -1339,7 +1342,7 @@ export function TrapResponseModal({
                           })}
                         </div>
                         <span>
-                          已選 {targetStep.selectedTargetIds.length}／{targetStep.ordered ? '全部' : '最多'} {targetStep.max}
+                          已選 {targetStep.selectedTargetIds.length}／{targetStep.ordered || targetStep.fixed ? '全部' : '最多'} {targetStep.max}
                         </span>
                         {targetStep.allowEmpty && (
                           <button

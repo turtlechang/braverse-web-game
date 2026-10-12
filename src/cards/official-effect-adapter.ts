@@ -102,6 +102,8 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
       /remaining HP is (\d+)(\s+or more)?/i,
     )
     const exactHpRemainingMatch = textAfterTarget.match(/\bwith (\d+) HP remaining\b/i)
+    const maximumHpRemainingMatch = textAfterTarget.match(/\bwith (\d+) or less HP remaining\b/i)
+    if (maximumHpRemainingMatch) target.maxRemainingHp = Number(maximumHpRemainingMatch[1])
     const minimumLevelMatch = textAfterTarget.match(/LV\.(\d+) or higher/i)
 
     if (remainingHpMatch) {
@@ -430,6 +432,12 @@ export const convertOfficialCardEffects = (
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
     ...DECK_ADDITION_EFFECTS,
+    'ST7-008': [{kind:'break-to-trash',max:1,energyColor:'yellow',exactLevel:1,condition:{kind:'any-of',conditions:[{kind:'battle-area-has-named-cookie',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3},{kind:'break-area-has-card',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3}]}}],
+    'ST7-014': [{kind:'gain-hp',amount:1,target:{side:'self',min:0,max:1},condition:{kind:'any-of',conditions:[{kind:'battle-area-has-named-cookie',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3},{kind:'break-area-has-card',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3}]}}],
+    'ST7-015': [{kind:'modify-all-attack',amount:1,duration:'this-turn',side:'self',condition:{kind:'any-of',conditions:[{kind:'battle-area-has-named-cookie',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3},{kind:'break-area-has-card',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3}]}}],
+    'ST7-016': [{kind:'prevent-cookie-active-next-phase',target:{side:'opponent',min:0,max:1,maxRemainingHp:2}}],
+    'ST7-018': [{kind:'gain-hp',amount:1,target:{side:'self',min:0,max:2,allMatching:true}}],
+    'ST7-017': [{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'break-level-at-least',level:4}}]}],
     'ST7-013': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
     'ST6-020': [{kind:'draw-up-to',max:1}],
     'ST6-019': [{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1}},{kind:'draw-up-to',max:1,condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}],
@@ -7313,7 +7321,7 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.trashBattleCookie)
   return {
     cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
-    ...(cardKey === 'BS12-046' || cardKey === 'BS12-085' ? { allowInactiveConditionalEffects: true } : {}),
+    ...(cardKey === 'BS12-046' || cardKey === 'BS12-085' || cardKey === 'ST7-014' || cardKey === 'ST7-015' ? { allowInactiveConditionalEffects: true } : {}),
     text: abilityText,
     effects: conversion.effects,
     ...(exactEquippedAttackEffects[cardKey]
@@ -8230,6 +8238,8 @@ export const convertOfficialAttackEffects = (
   if (card.cardNumber === 'BS9-079@3') return undefined
   // R003: the user confirms revival from the owner's Break area.
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST7-010': [{kind:'optional-cost-attack',cost:{energy:{},discardHand:1,discardHandType:'cookie',discardHandHasFlip:true},effects:[{kind:'draw-up-to',max:2}],effectText:'Then, <discard 1 Cookie that has FLIP from your hand.> Draw up to 2 cards from your deck.'}],
+    'ST7-008': [{kind:'damage',amount:1,target:{side:'opponent',min:1,max:1,attackTargetOnly:true},condition:{kind:'break-level-at-least',level:4}}],
     'ST7-011': [{ kind: 'gain-hp', amount: 1,
       target: { side: 'self', min: 1, max: 1, sourceOnly: true },
       condition: { kind: 'all-of', conditions: [
@@ -12138,6 +12148,8 @@ export const convertOfficialTrapAbility = (
       }
     >
   > = {
+    'ST7-018': {cost:{energy:{yellow:2},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'gain-hp',amount:1,target:{side:'self',min:0,max:2,allMatching:true}}]},
+    'ST7-017': {cost:{energy:{yellow:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'break-level-at-least',level:4}}]}]},
     'ST6-017': {cost:{energy:{red:2},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-2,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]}]},
     'ST6-018': {cost:{energy:{red:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-damage-received',amount:-1,duration:'this-turn',damageType:'attack',target:{side:'self',min:0,max:1}}]},
     'ST6-019': {cost:{energy:{red:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1}},{kind:'draw-up-to',max:1,condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]},

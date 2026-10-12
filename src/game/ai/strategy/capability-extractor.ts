@@ -261,6 +261,13 @@ const extractEffect = (
         tags: ['opponent-hand'],
       })
       break
+    case 'prevent-cookie-active-next-phase':
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath,
+        effect.discardHandToSetActive === undefined ? 'rest' : 'unsupported', {
+          tags: ['active-rest'],
+          supported: effect.discardHandToSetActive === undefined,
+        })
+      break
     case 'rest-cookie':
     case 'rest-support':
     case 'opponent-rests-support':

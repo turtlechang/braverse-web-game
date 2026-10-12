@@ -2577,6 +2577,101 @@ const buildContract = (
     }
   }
 
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-008') {
+    const card=evidence.card, skill=card?.type==='cookie'?card.skill:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const recovery=skill?.effects[0], witness=recovery?.kind==='break-to-trash'?recovery.condition:undefined
+    const alternatives=witness?.kind==='any-of'?witness.conditions:[]
+    const battle=alternatives.find(condition=>condition.kind==='battle-area-has-named-cookie')
+    const rest=alternatives.find(condition=>condition.kind==='break-area-has-card')
+    const named=(condition:typeof battle|typeof rest,kind:string)=>Boolean(condition&&condition.kind===kind&&condition.side==='self'&&condition.name==='Millennial Tree Cookie'&&condition.minLevel===3&&condition.maxLevel===3&&!extra(condition,['kind','side','name','minLevel','maxLevel']))
+    const attack=card?.type==='cookie'?card.attackEffects??[]:[], then=attack[0], target=then?.kind==='damage'?then.target:undefined
+    const threshold=then?.kind==='damage'?then.condition:undefined
+    if(card?.type!=='cookie'||card.name!=='Elder Faerie Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==2||card.hp!==4||card.attack!==3||card.attackCost!==3||!card.attackEnergyCost||card.attackEnergyCost.yellow!==3||extra(card.attackEnergyCost,['yellow'])||card.flip||(card.keywords??[]).length||
+      !skill||skill.trigger!=='on-play'||skill.restSource||skill.oncePerTurn||skill.yourTurn||!skill.cost.energy||Object.keys(skill.cost.energy).length!==0||skill.cost.discardHand!==0||extra(skill.cost,['energy','discardHand'])||skill.effects.length!==1||recovery?.kind!=='break-to-trash'||recovery.max!==1||recovery.energyColor!=='yellow'||recovery.exactLevel!==1||extra(recovery,['kind','max','energyColor','exactLevel','condition'])||witness?.kind!=='any-of'||extra(witness,['kind','conditions'])||alternatives.length!==2||!named(battle,'battle-area-has-named-cookie')||!named(rest,'break-area-has-card')||
+      attack.length!==1||then?.kind!=='damage'||then.amount!==1||extra(then,['kind','amount','target','condition'])||!target||target.side!=='opponent'||target.min!==1||target.max!==1||target.attackTargetOnly!==true||extra(target,['side','min','max','attackTargetOnly'])||threshold?.kind!=='break-level-at-least'||threshold.level!==4||extra(threshold,['kind','level'])){
+      blockers.push('ST7-008 requires original yellow LV2 HP4 YYY ordinary3; free On Play with same own named LV3 Millennial Tree in battle or Break, optional one own yellow LV1 Break Cookie to trash; Then own Break total at least4 deals exactly1 to original defender')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-014') {
+    const card=evidence.card,item=card?.type==='item'?card.item:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const heal=item?.effects[0],target=heal?.kind==='gain-hp'?heal.target:undefined
+    const witness=heal?.kind==='gain-hp'?heal.condition:undefined
+    const alternatives=witness?.kind==='any-of'?witness.conditions:[]
+    const battle=alternatives.find(condition=>condition.kind==='battle-area-has-named-cookie')
+    const rest=alternatives.find(condition=>condition.kind==='break-area-has-card')
+    const named=(condition:typeof battle|typeof rest,kind:string)=>Boolean(condition&&condition.kind===kind&&condition.side==='self'&&condition.name==='Millennial Tree Cookie'&&condition.minLevel===3&&condition.maxLevel===3&&!extra(condition,['kind','side','name','minLevel','maxLevel']))
+    if(card?.type!=='item'||card.name!=='Essence of Rejuvenation'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!item||item.cost.yellow!==1||extra(item.cost,['yellow'])||item.allowInactiveConditionalEffects!==true||extra(item,['cost','text','effects','allowInactiveConditionalEffects'])||item.effects.length!==1||heal?.kind!=='gain-hp'||heal.amount!==1||extra(heal,['kind','amount','target','condition'])||!target||target.side!=='self'||target.min!==0||target.max!==1||extra(target,['side','min','max'])||witness?.kind!=='any-of'||extra(witness,['kind','conditions'])||alternatives.length!==2||!named(battle,'battle-area-has-named-cookie')||!named(rest,'break-area-has-card')){
+      blockers.push('ST7-014 requires original yellow Item Y; same own named LV3 Millennial Tree Cookie in battle OR Break, optionally heal exactly1 own Cookie by1HP, with no color/LV/remainingHP cap or extra costs')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-015') {
+    const card=evidence.card,item=card?.type==='item'?card.item:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const boost=item?.effects[0],witness=boost?.kind==='modify-all-attack'?boost.condition:undefined
+    const alternatives=witness?.kind==='any-of'?witness.conditions:[]
+    const battle=alternatives.find(condition=>condition.kind==='battle-area-has-named-cookie')
+    const rest=alternatives.find(condition=>condition.kind==='break-area-has-card')
+    const named=(condition:typeof battle|typeof rest,kind:string)=>Boolean(condition&&condition.kind===kind&&condition.side==='self'&&condition.name==='Millennial Tree Cookie'&&condition.minLevel===3&&condition.maxLevel===3&&!extra(condition,['kind','side','name','minLevel','maxLevel']))
+    if(card?.type!=='item'||card.name!=='Budding Future'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!item||item.cost.yellow!==2||extra(item.cost,['yellow'])||item.allowInactiveConditionalEffects!==true||extra(item,['cost','text','effects','allowInactiveConditionalEffects'])||item.effects.length!==1||boost?.kind!=='modify-all-attack'||boost.amount!==1||boost.duration!=='this-turn'||boost.side!=='self'||extra(boost,['kind','amount','duration','side','condition'])||witness?.kind!=='any-of'||extra(witness,['kind','conditions'])||alternatives.length!==2||!named(battle,'battle-area-has-named-cookie')||!named(rest,'break-area-has-card')){
+      blockers.push('ST7-015 requires original yellow Item YY; same own named LV3 Millennial Tree Cookie in battle OR Break, all own Cookies gain exactly1 attack damage this turn, without target selection, color/LV restrictions or extra costs')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-019') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const cost=trap?.cost,payment=cost?.handToBreakArea,effect=trap?.effects[0],target=effect?.kind==='damage'?effect.target:undefined
+    if(card?.type!=='trap'||card.name!=="Millennial Jade Deer's Wrath"||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!trap||extra(trap,['cost','text','effects'])||!cost||cost.energy?.yellow!==1||extra(cost.energy??{},['yellow'])||cost.discardHand!==0||extra(cost,['energy','discardHand','handToBreakArea'])||!payment||payment.count!==1||extra(payment,['count'])||trap.effects.length!==1||effect?.kind!=='damage'||effect.amount!==1||extra(effect,['kind','amount','target'])||!target||target.side!=='opponent'||target.min!==0||target.max!==1||extra(target,['side','min','max'])){
+      blockers.push('ST7-019 requires original yellow Trap Y plus exactly1 unrestricted hand Cookie to own Break as mandatory cost, then0-1 opponent Cookie receives exactly1 effect damage; no extra costs, conditions or target restrictions')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-018') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const heal=trap?.effects[0],target=heal?.kind==='gain-hp'?heal.target:undefined
+    if(card?.type!=='trap'||card.name!=="Millennial Tree Cookie's Gift"||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!trap||extra(trap,['cost','text','effects'])||trap.cost.energy?.yellow!==2||extra(trap.cost.energy??{},['yellow'])||trap.cost.discardHand!==0||extra(trap.cost,['energy','discardHand'])||trap.effects.length!==1||heal?.kind!=='gain-hp'||heal.amount!==1||extra(heal,['kind','amount','target'])||!target||target.side!=='self'||target.min!==0||target.max!==2||target.allMatching!==true||extra(target,['side','min','max','allMatching'])){
+      blockers.push('ST7-018 requires original yellow Trap YY; every current own Cookie gains exactly1 HP, without target choice, color/LV/HP limits, extra costs or conditions')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-017') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const base=trap?.effects[0],target=base?.kind==='modify-attack'?base.target:undefined
+    const follow=base?.kind==='modify-attack'?base.thenEffects?.[0]:undefined
+    const thenTarget=follow?.kind==='modify-attack'?follow.target:undefined,condition=follow?.kind==='modify-attack'?follow.condition:undefined
+    if(card?.type!=='trap'||card.name!=='Vined Cavern'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!trap||extra(trap,['cost','text','effects'])||!trap.cost.energy||trap.cost.energy.yellow!==1||extra(trap.cost.energy,['yellow'])||trap.cost.discardHand!==0||extra(trap.cost,['energy','discardHand'])||trap.effects.length!==1||base?.kind!=='modify-attack'||base.amount!==-1||base.duration!=='this-turn'||extra(base,['kind','amount','duration','target','thenEffects'])||!target||target.side!=='opponent'||target.min!==0||target.max!==1||extra(target,['side','min','max'])||base.thenEffects?.length!==1||follow?.kind!=='modify-attack'||follow.amount!==-1||follow.duration!=='this-turn'||extra(follow,['kind','amount','duration','target','condition'])||!thenTarget||thenTarget.side!=='opponent'||thenTarget.min!==0||thenTarget.max!==1||thenTarget.previousEffectTargetOnly!==true||extra(thenTarget,['side','min','max','previousEffectTargetOnly'])||condition?.kind!=='break-level-at-least'||condition.level!==4||extra(condition,['kind','level'])){
+      blockers.push('ST7-017 requires original yellow Trap Y; optional one opposing Cookie receives -1 ordinary attack damage this turn, then the same target receives another -1 only when own Break level is at least4, with no activation gate, target restrictions or extra costs')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-016') {
+    const card=evidence.card,item=card?.type==='item'?card.item:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))
+    const prevention=item?.effects[0],target=prevention?.kind==='prevent-cookie-active-next-phase'?prevention.target:undefined
+    if(card?.type!=='item'||card.name!=='Tightly Tied Vine'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.flip||(card.keywords??[]).length||!item||item.cost.yellow!==2||extra(item.cost,['yellow'])||extra(item,['cost','text','effects'])||item.effects.length!==1||prevention?.kind!=='prevent-cookie-active-next-phase'||extra(prevention,['kind','target'])||!target||target.side!=='opponent'||target.min!==0||target.max!==1||target.maxRemainingHp!==2||extra(target,['side','min','max','maxRemainingHp'])){
+      blockers.push('ST7-016 requires original yellow Item YY; optional one opposing Cookie with remainingHP at most2 skips only its controller next Active Phase, with no immediate rest, extra conditions, color/LV restriction or discard escape')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-010') {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const heal=skill?.effects[0],target=heal?.kind==='gain-hp'?heal.target:undefined
+    const attack=card?.type==='cookie'?card.attackEffects??[]:[],then=attack[0]
+    const draw=then?.kind==='optional-cost-attack'?then.effects[0]:undefined
+    if(card?.type!=='cookie'||card.name!=='Millennial Tree Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==3||card.hp!==5||card.attack!==3||card.attackCost!==3||!card.attackEnergyCost||card.attackEnergyCost.yellow!==3||extra(card.attackEnergyCost,['yellow'])||card.flip||(card.keywords??[]).length||
+      !skill||skill.trigger!=='activate'||skill.oncePerTurn!==true||skill.restSource||skill.yourTurn||!skill.cost.energy||Object.keys(skill.cost.energy).length!==0||skill.cost.discardHand!==1||extra(skill.cost,['energy','discardHand'])||skill.effects.length!==1||heal?.kind!=='gain-hp'||heal.amount!==1||extra(heal,['kind','amount','target'])||!target||target.side!=='self'||target.min!==0||target.max!==1||target.maxRemainingHp!==4||extra(target,['side','min','max','maxRemainingHp'])||
+      attack.length!==1||then?.kind!=='optional-cost-attack'||then.mandatory||extra(then,['kind','cost','effects','effectText'])||!then.cost.energy||Object.keys(then.cost.energy).length!==0||then.cost.discardHand!==1||then.cost.discardHandType!=='cookie'||then.cost.discardHandHasFlip!==true||extra(then.cost,['energy','discardHand','discardHandType','discardHandHasFlip'])||then.effects.length!==1||draw?.kind!=='draw-up-to'||draw.max!==2||extra(draw,['kind','max'])){
+      blockers.push('ST7-010 requires original yellow LV3 HP5 YYY ordinary3; free Once Activate discards exactly1 arbitrary hand card and optionally heals1 own Cookie with at most4 remainingHP; Then optionally discards exactly1 hand Cookie with FLIP to draw0-2, without activating that FLIP')
+    }
+  }
+
   if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-013') {
     const card = evidence.card, item = card?.type === 'item' ? card.item : undefined
     const cost = item?.cost, payment = cost?.trashCookieToBreakArea, effect = item?.effects[0]

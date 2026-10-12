@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.256Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST7 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46899,
+      "locale": "en",
+      "cardNumber": "ST7-015",
+      "baseCardNumber": "ST7-015",
+      "variant": null,
+      "name": "Budding Future",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "<{Y}{Y}> If a LV.3 [Millennial Tree Cookie] is in your battle area or break area, during this turn, all of your Cookies gain +1 attack damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 254,
+        "title": "Tree of Life",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SWTQMSpqnigQGUeFE3iUhQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

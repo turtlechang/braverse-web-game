@@ -1725,6 +1725,7 @@ export const playTrap = (
   if (handToBreakCards.length > 0) {
     // 手牌進休息區會推進自己的 break 等級，必須立刻結算勝負。
     nextState = resolveBreakLevelVictory(nextState)
+    if (nextState.status !== 'playing') return nextState
   }
 
   const context = {
@@ -4225,6 +4226,10 @@ export const resolveOptionalCostAttack = (
         : []
     if (needsPlayerTarget) usedSubmittedTargets = true
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    if (nextState.pendingDrawUpTo?.sourceInstanceId === pending.sourceInstanceId &&
+      nextState.pendingDrawUpTo.sourcePlayerId === playerId) {
+      nextState = {...nextState, pendingDrawUpTo: {...nextState.pendingDrawUpTo, effectText: pending.effectText}}
+    }
     if (nextState.pendingRevealTopDeck?.deckPosition === 'bottom') {
       return { ...nextState, pendingRevealTopDeck: {
         ...nextState.pendingRevealTopDeck, battleContinuation: 'attack-effect',
@@ -4293,7 +4298,10 @@ export const resolveNextDamage = (state: GameState): GameState => {
     (!battle.effectDamageSequence && !attackerExists) ||
     !targetExists
   ) {
-    return battle.effectDamageSequence
+    // Then entered standby at Damage Step; a public departed source still resolves.
+    const owner = state.players[battle.attackerPlayerId]
+    const publicSource = [...owner.breakArea, ...owner.discardPile].some(card => card.instanceId === battle.attackerInstanceId)
+    return battle.effectDamageSequence || (!attackerExists && publicSource)
       ? finishDamageSequence(state)
       : finishBattle(state)
   }
@@ -5342,6 +5350,8 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
               sourcePlayerId: battle.attackerPlayerId,
               sourceInstanceId: battle.attackerInstanceId,
             }, effect).map(cookie => cookie.card.instanceId)
+          : effect?.kind === 'damage' && effect.target?.attackTargetOnly
+          ? getEffectTargetCandidatesForEffect(nextState, {sourcePlayerId: battle.attackerPlayerId, sourceInstanceId: battle.attackerInstanceId}, effect).map(cookie => cookie.card.instanceId)
           : effect?.kind === 'break-to-trash'
           ? getBreakToTrashCandidates(
               nextState,

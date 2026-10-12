@@ -3,11 +3,13 @@ import {
   getAllCardPoolEntries, getCardPoolEntry,
 } from './index'
 import { hasFlipAbility } from './card-pool'
+import { createAiFlipSequencePreview } from './ai-flip-sequence-demo'
 import type { CookieInBattle, GameCard, PlayerId } from './types'
 
 /** Original-card local fixture using an actual attack declaration before AI defense. */
-export type AiTrapTargetScenario = 'saving' | 'nonlethal' | 'no-energy'
+export type AiTrapTargetScenario = 'saving' | 'nonlethal' | 'no-energy' | 'nested-flip'
 export const createAiTrapTargetPreview = (scenario: AiTrapTargetScenario = 'saving') => {
+  if (scenario === 'nested-flip') return createAiFlipSequencePreview()
   const counts = new Map<string, number>()
   const card = (number: string, owner: PlayerId): GameCard => {
     const key = `${owner}:${number}`, copy = (counts.get(key) ?? 0) + 1

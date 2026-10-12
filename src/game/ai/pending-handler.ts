@@ -1,4 +1,5 @@
 import {selectSafeOptionalDrawCount} from './optional-draw-refresh-safety'
+import {paysForZeroSafeDraw} from './optional-draw-cost-safety'
 import {
   getAfterDamageEffectCandidates,
   getFaintEffectCardCandidates,
@@ -43,6 +44,7 @@ import { getPublicEffectDamageByTarget } from './public-effect-damage'
 import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
 import { chooseAiStageCostIds } from './turn-handler'
+import { hasDamageSequenceFlipInterruption } from '../pending'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -71,13 +73,17 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
       state.pendingBattle.effectDamageSequence.remainingTargetInstanceIds.length === 0 &&
       state.pendingAbilityEffect?.isFaintEffectContinuation,
   )
+  // A FLIP revealed by nested effect damage must finish before the sequence
+  // advances or closes. The damage handler intentionally waits for this queue.
+  const canResolveSequenceInterruption = canResolveCompletedFaintContinuation ||
+    hasDamageSequenceFlipInterruption(state)
 
   return Boolean(
     state.pendingRefresh ||
       // 逐點效果傷害結束後仍須由 battle handler 收尾，才可續接技能。
       // 否則技能控制者與最後受傷者不同時，會用 idle 遮住收尾指令。
       (state.pendingBattle?.stage === 'damage' &&
-        !canResolveCompletedFaintContinuation) ||
+        !canResolveSequenceInterruption) ||
       state.pendingOnPlay ||
       hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
@@ -95,7 +101,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
       // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
       // 不能在中途搶先執行同一條 pendingAbilityEffect。
       (state.pendingBattle?.effectDamageSequence &&
-        !canResolveCompletedFaintContinuation) ||
+        !canResolveSequenceInterruption) ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       state.pendingAbilityEffect?.pendingReorderHp ||
@@ -852,8 +858,13 @@ export const handleAiPendingDecision = (
       targetIds.length === 0 &&
       pendingDecision.effects.length > 0 &&
       pendingDecision.effects.every((effect) => effect.kind === 'battle-to-support')
+    const emptySafeDraw = (options.level ?? 2) >= 3 && !isAbilityResolution &&
+      canPay && canPayHpToTrash && canPayHpToHand && canPayTrashToDeck && hasTarget &&
+      paysForZeroSafeDraw(state,playerId,universal.enabled
+        ? universal.orderCostIds(discardHandCandidateIds,discardHandAmount)
+        : discardHandCandidateIds.slice(0,discardHandAmount),paymentIds??[])
     const canResolveOptionalEffect =
-      !emptyOptionalMovement &&
+      !emptySafeDraw && !emptyOptionalMovement &&
       canPay &&
       canPayHpToTrash &&
       canPayHpToHand &&

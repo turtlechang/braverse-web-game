@@ -19,7 +19,7 @@ describe('accepted Cookierift community recipes',()=>{
     }
   })
   it('keeps recipes with missing cards outside the playable pool',()=>{
-    expect(Object.keys(COMMUNITY_DECK_PRESETS)).toEqual(['cookierift-921','cookierift-927','cookierift-67','cookierift-83','cookierift-568','cookierift-506'])
+    expect(Object.keys(COMMUNITY_DECK_PRESETS)).toEqual(['cookierift-921','cookierift-927','cookierift-67','cookierift-83','cookierift-568','cookierift-506','cookierift-1035'])
     expect(new Set(Object.values(COMMUNITY_DECK_PRESETS).map(deck=>deck.color)).size).toBe(6)
   })
 })

@@ -86,6 +86,7 @@ describe('ST7-011 original printed identity and actual attack',()=>{
   for(let i=0;i<15;i++){
    if(result.pendingReplacement)result=apply(result,{kind:'skip-replacement',playerId:result.pendingReplacement.tasks[0].playerId})
    else if(result.pendingBattle?.stage==='damage')result=apply(result,{kind:'resolve-next-damage',playerId:'player-two'})
+   else if(result.pendingBattle?.stage==='attack-effect')result=apply(result,{kind:'resolve-attack-effect',playerId:'player-one',targetIds:[]})
    else break
   }
   expect(result.players['player-one'].breakArea.some(c=>c.id==='ST7-011')).toBe(true)

@@ -14,6 +14,7 @@ import type {
   TurnPhase,
 } from './types'
 import { getCookieEffectiveLevel } from './helpers'
+import {isCookieActivePhasePrevented} from './effects/targeting'
 
 /**
  * HP 預設隱藏；卡文指定正面朝上的 HP 則公開牌面與位置。
@@ -23,6 +24,9 @@ export interface CookieInBattleView {
   hpCount: number
   faceUpHpCards?: { position: number; card: GameCard }[]
   rested: boolean
+  /** Public unconditional mark, consumed at the controller's next Active Phase. */
+  nextActivePhasePrevented?: true
+  activePhasePreventedBySkill?: true
   battleEntryId?: string
   /** Public event for this battle entry, independent of its current rested state. */
   setActiveByEffectThisTurn?: boolean
@@ -44,6 +48,7 @@ export interface PlayerSideView {
   breakArea: CookieCard[]
   discardPile: GameCard[]
   stage: StageCard | null
+  nextActivePhasePreventedSupportIds?: string[]
 }
 
 /**
@@ -91,6 +96,12 @@ const toSideView = (
           cookie.faceUpHpCardInstanceIds?.includes(card.instanceId) ? [{ position, card }] : []),
       } : {}),
       rested: cookie.rested,
+      ...(state.preventCookieActiveNextPhase?.[playerId]?.includes(cookie.card.instanceId)
+        ? { nextActivePhasePrevented: true as const }
+        : {}),
+      ...(isCookieActivePhasePrevented(state,playerId,cookie.card.instanceId)
+        ? { activePhasePreventedBySkill: true as const }
+        : {}),
       battleEntryId: cookie.battleEntryId,
       ...(state.cookiesSetActiveByEffectThisTurn?.[cookie.battleEntryId ?? cookie.card.instanceId]
         ? { setActiveByEffectThisTurn: true }
@@ -100,6 +111,9 @@ const toSideView = (
     breakArea: player.breakArea,
     discardPile: player.discardPile,
     stage: player.stage,
+    ...(state.preventSupportActiveNextPhase?.[playerId]?.length
+      ? {nextActivePhasePreventedSupportIds:[...state.preventSupportActiveNextPhase[playerId]!]}
+      : {}),
   }
 }
 
