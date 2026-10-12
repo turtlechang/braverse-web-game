@@ -1,3 +1,4 @@
+import { seedOfflineShuffleCommand } from './offline-shuffle-command'
 import { getBattleCookiePositionCostCandidates } from '../game/battle-position-cost'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { describeOpeningDeal } from '../game/presentation'
@@ -1508,7 +1509,9 @@ export function useMatchController(params: {
    * 不在本地套用，等伺服器回傳新狀態。
    */
   const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
-    const commands = Array.isArray(command) ? command : [command]
+    const commands = (Array.isArray(command) ? command : [command]).map((cmd) =>
+      seedOfflineShuffleCommand(cmd, () => crypto.getRandomValues(new Uint32Array(1))[0]),
+    )
     runAction(
       (current) =>
         commands.reduce((state, cmd) => {
