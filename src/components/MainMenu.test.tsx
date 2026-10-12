@@ -184,7 +184,7 @@ describe('MainMenu AI opponent options', () => {
     expect(selects[0].value).toBe('bs12-red-arena')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // AI 選單只保留使用者指定的 BS12 牌組，包含後續新增黑色。
+    // BS12 六色優先，接著列出新授權的六色社群構築。
     const optionValues = [...selects[0].options].map((option) => option.value)
     expect(optionValues).toEqual([
       'bs12-blue-arena',
@@ -193,6 +193,8 @@ describe('MainMenu AI opponent options', () => {
       'bs12-red-arena',
       'bs12-purple-arena',
       'bs12-black-arena',
+      'cookierift-921', 'cookierift-927', 'cookierift-67',
+      'cookierift-83', 'cookierift-568', 'cookierift-506',
     ])
     expect(container.textContent).toContain('BS12 紅色｜Arena')
     expect(container.textContent).not.toContain('BS6')

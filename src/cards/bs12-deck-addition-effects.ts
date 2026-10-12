@@ -3,6 +3,11 @@ import type { OfficialCardRecord } from './types'
 
 /** Exact mappings transcribed from the official printed cards on 2026-10-08. */
 export const DECK_ADDITION_EFFECTS: Partial<Record<string, CardEffect[]>> = {
+  'P-163': [{ kind: 'modify-attack', amount: 1, duration: 'this-turn',
+    target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true },
+    thenEffects: [{ kind: 'set-cookie-active',
+      target: { side: 'self', min: 0, max: 1, keyword: 'arena', excludeSource: true, previousEffectTargetOnly: true } }],
+  }],
   'ST10-002': [{ kind: 'trash-to-battle', amount: 1, optional: true, energyColor: 'purple', maxLevel: 2 }],
   'ST10-008': [{ kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
     target: { side: 'opponent', min: 1, max: 2 }, condition: { kind: 'trash-count-at-least', count: 15 } }],

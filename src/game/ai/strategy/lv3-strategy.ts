@@ -56,7 +56,10 @@ export const actionIdentityFromCommand = (
       ? command.supportPaymentIds
       : 'paymentIds' in command
         ? command.paymentIds
-        : undefined,
+        : command.kind === 'deploy-cookie'
+          ? command.specialPlayCookieInstanceIds ??
+            (command.specialPlayCookieInstanceId ? [command.specialPlayCookieInstanceId] : undefined)
+          : undefined,
   }
 }
 

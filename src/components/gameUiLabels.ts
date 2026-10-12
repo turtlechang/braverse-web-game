@@ -1,14 +1,21 @@
 import type { DeckChoice, LogCategory, TurnPhase } from '../game'
 import type { OnlineMatchStatus } from '../hooks/useOnlineMatch'
 import type { Bs12AiPresetDeckChoice } from '../game/bs12-deck-recipes'
+import type { CommunityDeckChoice } from '../game/community-deck-recipes'
 
-export const AI_DECK_OPTIONS: { value: Bs12AiPresetDeckChoice; label: string }[] = [
+export const AI_DECK_OPTIONS: { value: Bs12AiPresetDeckChoice | CommunityDeckChoice; label: string }[] = [
   { value: 'bs12-blue-arena', label: 'BS12 藍色｜Arena' },
   { value: 'bs12-green-arena', label: 'BS12 綠色｜Arena' },
   { value: 'bs12-yellow-arena', label: 'BS12 黃色｜Arena' },
   { value: 'bs12-red-arena', label: 'BS12 紅色｜Arena' },
   { value: 'bs12-purple-arena', label: 'BS12 紫色｜Arena' },
   { value: 'bs12-black-arena', label: 'BS12 黑色｜Arena' },
+  { value: 'cookierift-921', label: '社群 藍色｜Blue Arena' },
+  { value: 'cookierift-927', label: '社群 綠色｜Green Arena' },
+  { value: 'cookierift-67', label: '社群 黃色｜Kane Arena' },
+  { value: 'cookierift-83', label: '社群 紅色｜Red Arena' },
+  { value: 'cookierift-568', label: '社群 紫色｜Arena & Dark Cacao' },
+  { value: 'cookierift-506', label: '社群 黑色｜Deep Darkness' },
 ]
 
 export const phaseLabels: Record<TurnPhase, string> = {
@@ -52,6 +59,12 @@ export const energyColorLabel: Record<string, string> = {
 }
 
 export const deckChoiceLabel: Record<DeckChoice, string> = {
+  'cookierift-921': '社群 藍色｜Blue Arena',
+  'cookierift-927': '社群 綠色｜Green Arena',
+  'cookierift-67': '社群 黃色｜Kane Arena',
+  'cookierift-83': '社群 紅色｜Red Arena',
+  'cookierift-568': '社群 紫色｜Arena & Dark Cacao',
+  'cookierift-506': '社群 黑色｜Deep Darkness',
   'bs12-blue-arena': 'BS12 藍色｜Arena',
   'bs12-green-arena': 'BS12 綠色｜Arena',
   'bs12-yellow-arena': 'BS12 黃色｜Arena',

@@ -1,3 +1,6 @@
+import {shouldSkipHpFlipForFatalRefresh} from './hp-flip-refresh-safety'
+import { executeCardEffect } from '../effects'
+import { maskGameStateForViewer } from '../masked-state'
 import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
 import {
   getAttackResponseSkillCandidates,
@@ -7,7 +10,7 @@ import {
   getTrapSelfTargetCandidates,
   getBlockerCandidates,
 } from '../battle'
-import { applyGameCommand } from '../commands'
+import { applyGameCommand as executeGameCommand } from '../commands'
 import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
@@ -45,6 +48,7 @@ import {
   type PendingSelectionStrategy,
 } from './strategy/pending-selection'
 import { chooseSharedEffectTargets } from './shared-selection'
+import { getPublicEffectDamageByTarget } from './public-effect-damage'
 
 const chooseAttackEffectTargets = (
   state: GameState,
@@ -189,7 +193,8 @@ const chooseAttackEffectTargets = (
     return groups.every((group) => group.length === countPerPlayer) ? groups.flat() : []
   }
   return universal?.enabled
-    ? universal.selectEffectTargetIds(effect, candidateIds, count)
+    ? universal.selectEffectTargetIds(effect, candidateIds, count,
+        getPublicEffectDamageByTarget(state, playerId, context, effect, candidateIds))
     : candidateIds.slice(0, count)
 }
 
@@ -430,6 +435,29 @@ const handCardDiscardValue = (card: GameCard): number => {
   return effects.reduce((sum, effect) => sum + (EFFECT_VALUE_MAP[effect.kind] ?? 5), 0)
 }
 
+
+/** Numeric public forecast only; no actual payment or hidden HP settlement. */
+const savingTrapTarget = (state: GameState, playerId: PlayerId, sourceInstanceId: string,
+  effect: CardEffect, candidateIds: readonly string[], max: number): string[] | null => {
+  const battle = state.pendingBattle
+  if (!battle || max !== 1 || battle.defenderPlayerId !== playerId ||
+      effect.kind !== 'modify-attack' || effect.amount >= 0 ||
+      !candidateIds.includes(battle.attackerInstanceId)) return null
+  // Do not forecast unrelated Then resources or hidden reveals.
+  if (effect.thenEffects?.some(child => child.kind !== 'modify-attack' || child.amount >= 0)) return null
+  const masked = maskGameStateForViewer({ ...state, commandLog: undefined }, playerId)
+  const context = { sourcePlayerId: playerId, sourceInstanceId }
+  if (!isEffectConditionMet(masked, context, effect)) return null
+  const defender = masked.players[playerId].battleArea.find(c => c.card.instanceId === battle.targetInstanceId)
+  if (!defender) return null
+  const prior = getAttackDamageAgainst(masked, battle.attackerInstanceId, battle.targetInstanceId)
+  if (prior < defender.hpCards.length) return null
+  const after = executeCardEffect(masked, context, effect, [battle.attackerInstanceId])
+  if (after.pendingRefresh || after.pendingDrawUpTo) return null
+  const reduced = getAttackDamageAgainst(after, battle.attackerInstanceId, battle.targetInstanceId)
+  return reduced < defender.hpCards.length ? [battle.attackerInstanceId] : null
+}
+
 const selectTrapEffectTargets = (
   state: GameState,
   playerId: PlayerId,
@@ -490,8 +518,12 @@ const selectTrapEffectTargets = (
     : Math.min(effect.target.max, candidates.length)
   if (count < effect.target.min) return []
   const candidateIds = candidates.map((cookie) => cookie.card.instanceId)
+  const saving = universal.enabled ? savingTrapTarget(state, playerId, trapInstanceId, effect, candidateIds, count) : null
+  if (saving) return saving
   return universal.enabled
-    ? universal.selectEffectTargetIds(effect, candidateIds, count)
+    ? universal.selectEffectTargetIds(effect, candidateIds, count,
+        getPublicEffectDamageByTarget(state, playerId,
+          { sourcePlayerId: playerId, sourceInstanceId: trapInstanceId }, effect, candidateIds))
     : candidateIds.slice(0, count)
 }
 
@@ -502,6 +534,9 @@ export const handleAiPendingBattle = (
   knowledgeState?: KnowledgeState,
   shuffleSeed?: number,
 ): AiDecision | null => {
+  // Every battle continuation, including Trap/FLIP effects, shares the step RNG.
+  const applyGameCommand: typeof executeGameCommand = (current, command, options) =>
+    executeGameCommand(current, command, { ...options, shuffleSeed })
   if (
     !state.pendingBattle ||
     state.pendingRefresh ||
@@ -753,7 +788,8 @@ export const handleAiPendingBattle = (
     }
     const canActivate = hasActivatableEffect &&
       discardHandIds.length === discardCount &&
-      sharedSelection.valid
+      sharedSelection.valid &&
+      !(useR7 && shouldSkipHpFlipForFatalRefresh(view,battle,discardHandIds,Boolean(state.preventHpGainThisTurn?.[playerId])))
     const targetIds = sharedSelection.targetIds
     return withBattlePendingReason({
       state: applyGameCommand(state, {
@@ -926,10 +962,13 @@ export const handleAiPendingBattle = (
         ? trapTargetEffect && 'target' in trapTargetEffect && trapTargetEffect.target
           ? (() => {
               const candidateIds = trapTargets.map((target) => target.card.instanceId)
-              const selected = universal.selectEffectTargetIds(
+              const selected = savingTrapTarget(state, playerId, trapCard.instanceId, trapTargetEffect, candidateIds,
+                Math.min(trapTargetEffect.target.max, candidateIds.length)) ?? universal.selectEffectTargetIds(
                 trapTargetEffect,
                 candidateIds,
                 Math.min(trapTargetEffect.target.max, candidateIds.length),
+                getPublicEffectDamageByTarget(state, playerId,
+                  { sourcePlayerId: playerId, sourceInstanceId: trapCard.instanceId }, trapTargetEffect, candidateIds),
               )
               return selected.length >= trapTargetEffect.target.min ? selected : []
             })()

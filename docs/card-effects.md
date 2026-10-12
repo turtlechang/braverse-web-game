@@ -165,6 +165,7 @@ BS12-007 保留1R、必要己方同名裝備目標與裝備攻擊的當次戰鬥
 | 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068、BS9-036）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走代價／目標流程。每個模式先由規則層判定是否可支付，不可支付者在本機與線上 UI 均停用且指令層拒絕；若只剩一個可支付模式，玩家仍須明確確認。`resolve-choose-one`／`begin-*` 的 `chooseOneModes` 與 AI 共用同一份展開邏輯。 |
 | 休息區→戰鬥區（來源自己） | `break-source-to-battle` | 讓技能來源自己從休息區登場，HP 卡數固定為 `hpCount`（不是卡面 HP），照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定；戰鬥區已滿（2 隻）時執行器直接丟錯，`canActivateCookieSkill` 會提前擋下（BS3-025） |
 | FLIP→休息區 | `flip-to-break` | FLIP 卡翻開並滿足條件時放入持有者休息區，而非棄牌區（BS4-031） |
+| 揭示 FLIP→手牌 | `flip-to-hand` | 只將已揭示的本張卡加入持有者手牌，不移動原 HP 持有餅乾；Then 已棄置的 FLIP 則從棄牌移動同一實體一次。略過留棄牌，最後 HP 原持有餅乾仍正常昏厥（ST6-006）。 |
 
 代價方面，`AbilityCost.trashToDeckBottom` 表示「從棄牌區選 N 張卡放到牌庫底」（BS3-112），選取順序即為放入牌庫底的順序。目前只有餅乾技能路徑（`activate-skill`／`begin-activate-skill`）實作，item／stage 的 `payAbilityCost` 會直接丟錯，避免被靜默忽略。`AbilityCost.trashBattleCookie.faint` 表示「使選定的戰鬥區 Cookie 昏厥」而非直接送入棄牌區；Cookie 技能與 item／stage 共用完整 GameState 的昏厥、休息區、HP 棄牌、昏厥觸發、補位與勝負流程（BS8-022、BS11-018）。`AbilityCost.handToBreakArea` 表示「將手牌餅乾放入自己休息區」，與棄到棄牌區的 `discardHand` 不同。餅乾技能、陷阱及道具付款會推進自己的 break 等級並立即檢查勝負；道具與技能共用候選與支付驗證，新增可選 `keyword` 限制（BS12-028 的 Arena），未指定時保留既有顏色／LV 語意。來源道具不能當餅乾代價，重複、少選、超選或與棄手牌代價重疊均拒絕。
 

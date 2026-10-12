@@ -90,10 +90,9 @@ const sourceSegments = (
   return segments
 }
 
-// `{bl}` is the printed Blocker keyword, not a skill timing marker.  Treating
-// it as timing made every item containing "cannot activate Blocker" fail the
-// contract even though the runtime effect was present.
-const TIMING_MARKERS = new Set(['mob', 'ap', 't1', 'mt'])
+// A card's own printed Blocker requires a runtime block trigger; references
+// such as "cannot activate Blocker" are excluded when extracting markers.
+const TIMING_MARKERS = new Set(['mob', 'ap', 't1', 'mt', 'bl'])
 
 const tokenize = (text: string): string[] =>
   [...text.matchAll(/\{([A-Za-z0-9_]+)\}|(?:<|《)([^>》]+)(?:>|》)/g)].map(
@@ -446,6 +445,7 @@ const runtimeSelectorForEffect = (
     'trash-to-hand',
     'trash-to-deck',
     'flip-to-support',
+    'flip-to-hand',
   ])
   if (movementKinds.has(record.kind)) {
     // break-to-battle is defined as an "up to" selection in the rules layer.
@@ -973,6 +973,10 @@ const targetClauses = (
         ? 'either'
         : 'self'
     const descriptor = match[4] ?? ''
+    // A bracketed name followed by sentence punctuation is handled by the
+    // named selector below. Do not consume the later "That Cookie" as if it
+    // were this selector's generic Cookie noun.
+    if (/^\s*\[[^\]]+\]\s*[.,;]/.test(descriptor)) continue
   const fullPhrase = text.slice(
     match.index ?? 0,
     Math.min(text.length, (match.index ?? 0) + match[0].length + 180),
@@ -1446,6 +1450,18 @@ const targetClauses = (
     addClause(clauses, source, match[0], 'target', start, end, 'pattern')
     targets.push({ selector: { side: match[4].toLowerCase() === 'your' ? 'self' : 'opponent',
       min: match[1] ? 0 : amount, max: amount, cardName: match[3].trim() }, clauseIds: [clauseId], zone: 'battle' })
+    structuredRanges.push({ start, end })
+  }
+  // Named battle targets also use "of your [Name]" without an explicit
+  // battle-area suffix. Keep the name and optionality as independent evidence.
+  const ownedNamedBattleSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+of\s+(your opponent's|your)\s+\[([^\]]+)\](?=\s*[.,;]|\s*$)/gi
+  for (const match of text.matchAll(ownedNamedBattleSelection)) {
+    const start = match.index ?? 0, end = start + match[0].length
+    if (structuredRanges.some(range => start < range.end && end > range.start)) continue
+    const amount = Number(match[2]), clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({ selector: { side: match[3].toLowerCase() === 'your' ? 'self' : 'opponent',
+      min: match[1] ? 0 : amount, max: amount, cardName: match[4].trim() }, clauseIds: [clauseId], zone: 'battle' })
     structuredRanges.push({ start, end })
   }
   // Any remaining Select / play-from-zone phrase is still a player choice.
@@ -2170,6 +2186,7 @@ const buildContract = (
           // `cannot activate On Play` describes a restriction, not this
           // card's own On Play timing.
           if (marker === 'ap' && /cannot\s+activate\s*$/i.test(prefix)) return false
+          if (marker === 'bl' && (source !== 'skill' || !/^\s*$/.test(parsed.raw.slice(0, index)))) return false
           return true
         })
       })
@@ -2266,6 +2283,323 @@ const buildContract = (
   }
   const fullSourceText = Object.values(segments).join(' ')
   const flattenedRuntimeEffects = flattenRuntimeEffects(evidence)
+  // Bind this complete draw-then-buff clause to the executed item ability,
+  // rather than its duplicate top-level presentation effects.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-013') {
+    const card = evidence.card, item = card?.type === 'item' ? card.item : undefined
+    const draw = item?.effects[0], buff = item?.effects[1]
+    const target = buff?.kind === 'modify-attack' ? buff.target : undefined
+    const other = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (card?.type !== 'item' || card.name !== 'Hot Jellyco Missile' || card.energyColor !== 'red' ||
+      !item || item.cost.red !== 1 || other(item.cost, ['red']) ||
+      other(item, ['cost', 'text', 'effects']) || item.effects.length !== 2 ||
+      draw?.kind !== 'draw-up-to' || draw.max !== 1 || other(draw, ['kind', 'max']) ||
+      buff?.kind !== 'modify-attack' || buff.amount !== 1 || buff.duration !== 'this-turn' ||
+      other(buff, ['kind', 'amount', 'duration', 'target']) || !target ||
+      target.side !== 'self' || target.min !== 0 || target.max !== 1 || target.maxRemainingHp !== 2 ||
+      other(target, ['side', 'min', 'max', 'maxRemainingHp'])) {
+      blockers.push('ST6-013 requires R draw zero-to-one, then zero-to-one own HP-at-most-two Cookie this-turn attack +1')
+    }
+  }
+
+  // Original ST6-014: paid HP is a cost, then all-opponent damage, then a
+  // separate optional named-Cookie buff. Bind executed item fields only.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-014') {
+    const card = evidence.card, item = card?.type === 'item' ? card.item : undefined
+    const cost = item?.cost, hp = cost?.hpToTrash
+    const damage = item?.effects[0], buff = item?.effects[1]
+    const target = buff?.kind === 'modify-attack' ? buff.target : undefined
+    const other = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (card?.type !== 'item' || card.name !== 'Essence of Conflagration' || card.energyColor !== 'red' ||
+      !item || !cost || cost.energy?.red !== 2 || !cost.energy || other(cost.energy, ['red']) ||
+      cost.discardHand !== 0 || other(cost, ['energy', 'discardHand', 'hpToTrash']) ||
+      !hp || hp.amount !== 1 || other(hp, ['amount']) ||
+      other(item, ['cost', 'text', 'effects']) || item.effects.length !== 2 ||
+      damage?.kind !== 'damage-all' || damage.amount !== 1 || damage.side !== 'opponent' || other(damage, ['kind', 'amount', 'side']) ||
+      buff?.kind !== 'modify-attack' || buff.amount !== 1 || buff.duration !== 'this-turn' ||
+      other(buff, ['kind', 'amount', 'duration', 'target']) || !target ||
+      target.side !== 'self' || target.min !== 0 || target.max !== 1 || target.cardName !== 'Fire Spirit Cookie' ||
+      other(target, ['side', 'min', 'max', 'cardName'])) {
+      blockers.push('ST6-014 requires RR plus one own Cookie top HP, all opponents one damage, then optional own Fire Spirit this-turn attack +1')
+    }
+  }
+
+  // Original ST6-015: RR and any own Cookie top HP, optional own Cookie
+  // attack +2 this turn. The printed card name does not restrict its target.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-015') {
+    const card = evidence.card, item = card?.type === 'item' ? card.item : undefined
+    const cost = item?.cost, hp = cost?.hpToTrash, buff = item?.effects[0]
+    const target = buff?.kind === 'modify-attack' ? buff.target : undefined
+    const other = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (card?.type !== 'item' || card.name !== "Fire Spirit Cookie's Staff" || card.energyColor !== 'red' ||
+      !item || !cost || !cost.energy || cost.energy.red !== 2 || other(cost.energy, ['red']) ||
+      cost.discardHand !== 0 || other(cost, ['energy', 'discardHand', 'hpToTrash']) ||
+      !hp || hp.amount !== 1 || other(hp, ['amount']) ||
+      other(item, ['cost', 'text', 'effects']) || item.effects.length !== 1 ||
+      buff?.kind !== 'modify-attack' || buff.amount !== 2 || buff.duration !== 'this-turn' ||
+      other(buff, ['kind', 'amount', 'duration', 'target']) || !target ||
+      target.side !== 'self' || target.min !== 0 || target.max !== 1 ||
+      other(target, ['side', 'min', 'max'])) {
+      blockers.push('ST6-015 requires RR plus one own Cookie top HP, then optional any own Cookie this-turn attack +2 without name/color/level/HP/REST restriction')
+    }
+  }
+
+  // Original ST6-016: RRR plus any one other hand card; distinct ordered
+  // optional opponent targets receive primary 2 then secondary 1 damage.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-016') {
+    const card=evidence.card,item=card?.type==='item'?card.item:undefined
+    const cost=item?.cost,effect=item?.effects[0]
+    const target=effect?.kind==='split-damage'?effect.target:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='item'||card.name!=="Dragon's Breath"||card.energyColor!=='red'||
+       !item||!cost||!cost.energy||cost.energy.red!==3||other(cost.energy,['red'])||
+       cost.discardHand!==1||other(cost,['energy','discardHand'])||
+       other(item,['cost','text','effects'])||item.effects.length!==1||
+       effect?.kind!=='split-damage'||effect.primaryAmount!==2||effect.secondaryAmount!==1||
+       other(effect,['kind','primaryAmount','secondaryAmount','target'])||!target||
+       target.side!=='opponent'||target.min!==0||target.max!==2||other(target,['side','min','max'])){
+      blockers.push('ST6-016 requires RRR and one arbitrary hand card, optional 0-2 unrestricted distinct opponent Cookies, primary 2 / secondary 1 damage')
+    }
+  }
+
+  // Original ST6-017: RR, optional opponent -2; same target -1 only
+  // when an own battle Cookie has exactly one HP. Then never gates payment.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-017') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const cost=trap?.cost,effect=trap?.effects[0]
+    const target=effect?.kind==='modify-attack'?effect.target:undefined
+    const then=effect?.kind==='modify-attack'?effect.thenEffects?.[0]:undefined,condition=then?.kind==='modify-attack'?then.condition:undefined
+    const followTarget=then?.kind==='modify-attack'?then.target:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='trap'||card.name!=='Restored Power of Fire'||card.energyColor!=='red'||
+       !trap||!cost||!cost.energy||cost.energy.red!==2||other(cost.energy,['red'])||
+       cost.discardHand!==0||other(cost,['energy','discardHand'])||
+       other(trap,['cost','text','effects'])||trap.effects.length!==1||
+       effect?.kind!=='modify-attack'||effect.amount!==-2||effect.duration!=='this-turn'||
+       other(effect,['kind','amount','duration','target','thenEffects'])||!target||
+       target.side!=='opponent'||target.min!==0||target.max!==1||other(target,['side','min','max'])||
+       effect.thenEffects?.length!==1||then?.kind!=='modify-attack'||then.amount!==-1||then.duration!=='this-turn'||
+       other(then,['kind','amount','duration','target','condition'])||!followTarget||
+       followTarget.side!=='opponent'||followTarget.min!==0||followTarget.max!==1||followTarget.previousEffectTargetOnly!==true||
+       other(followTarget,['side','min','max','previousEffectTargetOnly'])||
+       condition?.kind!=='battle-area-remaining-hp-count-at-least'||condition.side!=='self'||condition.remainingHp!==1||condition.count!==1||
+       other(condition,['kind','side','remainingHp','count'])) {
+      blockers.push('ST6-017 requires unconditional RR optional opponent -2 this turn, then same-target -1 only for an own battle Cookie at exactly one HP')
+    }
+  }
+
+  // Frozen Flame: one red, optional own Cookie, incoming attack only.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-018') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const cost=trap?.cost,effect=trap?.effects[0]
+    const target=effect?.kind==='modify-damage-received'?effect.target:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='trap'||card.name!=='Frozen Flame'||card.energyColor!=='red'||
+       !trap||!cost||!cost.energy||cost.energy.red!==1||other(cost.energy,['red'])||
+       cost.discardHand!==0||other(cost,['energy','discardHand'])||
+       other(trap,['cost','text','effects'])||trap.effects.length!==1||
+       effect?.kind!=='modify-damage-received'||effect.amount!==-1||effect.duration!=='this-turn'||effect.damageType!=='attack'||
+       other(effect,['kind','amount','duration','target','damageType'])||!target||
+       target.side!=='self'||target.min!==0||target.max!==1||other(target,['side','min','max'])) {
+      blockers.push('ST6-018 requires unconditional R, optional unrestricted own Cookie receiving -1 attack damage this turn only')
+    }
+  }
+
+  // Original Power Unleashed: Then is an independent optional draw gate.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-019') {
+    const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
+    const cost=trap?.cost,effect=trap?.effects[0],draw=trap?.effects[1]
+    const target=effect?.kind==='modify-attack'?effect.target:undefined
+    const condition=draw?.kind==='draw-up-to'?draw.condition:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='trap'||card.name!=='Power Unleashed'||card.energyColor!=='red'||
+       !trap||!cost||!cost.energy||cost.energy.red!==1||other(cost.energy,['red'])||cost.discardHand!==0||other(cost,['energy','discardHand'])||
+       other(trap,['cost','text','effects'])||trap.effects.length!==2||
+       effect?.kind!=='modify-attack'||effect.amount!==-1||effect.duration!=='this-turn'||other(effect,['kind','amount','duration','target'])||!target||
+       target.side!=='opponent'||target.min!==0||target.max!==1||other(target,['side','min','max'])||
+       draw?.kind!=='draw-up-to'||draw.max!==1||other(draw,['kind','max','condition'])||
+       condition?.kind!=='battle-area-remaining-hp-count-at-least'||condition.side!=='self'||condition.remainingHp!==1||condition.count!==1||
+       other(condition,['kind','side','remainingHp','count'])) {
+      blockers.push('ST6-019 requires unconditional R optional opponent -1 this turn, then independently optional draw0-1 only when an own battle Cookie has exactly one HP')
+    }
+  }
+
+  // Original Into the Depths: RR placement; REST stage plus any own top HP.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST6-020') {
+    const card=evidence.card,stage=card?.stageAbility,cost=stage?.cost,hp=cost?.hpToTrash,draw=stage?.effects[0]
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='stage'||card.name!=='Into the Depths'||card.energyColor!=='red'||!stage||
+       stage.placementCost.red!==2||other(stage.placementCost,['red'])||
+       !cost||!cost.energy||other(cost.energy,[])||cost.discardHand!==0||other(cost,['energy','discardHand','hpToTrash'])||
+       !hp||hp.amount!==1||other(hp,['amount'])||stage.restSource!==true||
+       other(stage,['placementCost','cost','text','effects','restSource'])||stage.effects.length!==1||
+       draw?.kind!=='draw-up-to'||draw.max!==1||other(draw,['kind','max'])) {
+      blockers.push('ST6-020 requires RR placement, free Activate REST this stage plus one unrestricted own Cookie top HP to trash, then optional draw0-1')
+    }
+  }
+
+
+  // Original ST7-001: Y plus exactly one unrestricted hand Cookie to Break.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-001') {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const cost=skill?.cost,hand=cost?.handToBreakArea,effect=skill?.effects[0]
+    const target=effect?.kind==='damage'?effect.target:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='cookie'||card.name!=='Blue Lily Cookie'||card.energyColor!=='yellow'||card.level!==3||card.hp!==5||card.attack!==3||card.attackCost!==3||
+       !card.attackEnergyCost||card.attackEnergyCost.yellow!==3||other(card.attackEnergyCost,['yellow'])||
+       !skill||skill.trigger!=='activate'||skill.oncePerTurn!==true||skill.restSource!==false||skill.yourTurn!==false||
+       skill.faint||skill.endPhase||skill.afterDamage||skill.oncePerGame||skill.fromBreakArea||skill.onPlayFromBreakArea||skill.fromTrashArea||skill.fromSupportArea||
+       other(skill,['trigger','oncePerTurn','yourTurn','restSource','cost','text','effects','faint','endPhase','afterDamage','oncePerGame','fromBreakArea','onPlayFromBreakArea','fromTrashArea','fromSupportArea'])||
+       !cost||!cost.energy||cost.energy.yellow!==1||other(cost.energy,['yellow'])||cost.discardHand!==0||other(cost,['energy','discardHand','handToBreakArea'])||
+       !hand||hand.count!==1||other(hand,['count'])||skill.effects.length!==1||effect?.kind!=='damage'||effect.amount!==2||other(effect,['kind','amount','target'])||
+       !target||target.side!=='opponent'||target.min!==0||target.max!==1||other(target,['side','min','max'])) {
+      blockers.push('ST7-001 requires original yellow LV3 HP5 YYY3, Activate Once Y plus exactly one unrestricted own hand Cookie to Break before optional opponent two damage, no REST or extra effects')
+    }
+  }
+
+
+  // A free, source-only On Play HP clause must retain its printed Break gate.
+  const simpleBreakHpOnPlay = segments.skill?.match(/^\s*(?:【On Play】|\{ap\})\s*If your break area is LV\.(\d+) or (?:higher|above), this Cookie gains \+(\d+) HP\.?\s*$/i)
+  if (simpleBreakHpOnPlay) {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const effect=skill?.effects.find(effect=>effect.kind==='gain-hp')
+    if (!skill||skill.trigger!=='on-play'||effect?.kind!=='gain-hp'||effect.amount!==Number(simpleBreakHpOnPlay[2])||
+        effect.target?.side!=='self'||effect.target.sourceOnly!==true||effect.condition?.kind!=='break-level-at-least'||effect.condition.level!==Number(simpleBreakHpOnPlay[1])) {
+      blockers.push('Free source-only On Play HP requires its printed own Break-level-at-least condition')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-002') {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const cost=skill?.cost,effect=skill?.effects[0],target=effect?.kind==='gain-hp'?effect.target:undefined
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='cookie'||card.name!=='Mango Cookie'||card.energyColor!=='yellow'||card.level!==1||card.hp!==2||card.attack!==1||card.attackCost!==1||card.flip||
+       !card.attackEnergyCost||card.attackEnergyCost.yellow!==1||other(card.attackEnergyCost,['yellow'])||
+       !skill||skill.trigger!=='on-play'||skill.oncePerTurn!==false||skill.restSource!==false||skill.yourTurn!==false||
+       skill.faint||skill.endPhase||skill.afterDamage||skill.oncePerGame||skill.fromBreakArea||skill.onPlayFromBreakArea||skill.fromTrashArea||skill.fromSupportArea||
+       other(skill,['trigger','oncePerTurn','yourTurn','restSource','cost','text','effects','faint','endPhase','afterDamage','oncePerGame','fromBreakArea','onPlayFromBreakArea','fromTrashArea','fromSupportArea'])||
+       !cost||!cost.energy||Object.keys(cost.energy).length!==0||cost.discardHand!==0||other(cost,['energy','discardHand'])||
+       skill.effects.length!==1||effect?.kind!=='gain-hp'||effect.amount!==1||other(effect,['kind','amount','target','condition'])||
+       !target||target.side!=='self'||target.min!==1||target.max!==1||target.sourceOnly!==true||other(target,['side','min','max','sourceOnly'])||
+       !effect.condition||effect.condition.kind!=='break-level-at-least'||effect.condition.level!==2||other(effect.condition,['kind','level'])) {
+      blockers.push('ST7-002 requires original yellow LV1 HP2 Y1, free On Play own Break LV2+ then this Cookie +1 actual HP, no extra costs or effects')
+    }
+  }
+
+
+  // Preserve every condition in these simple printed On Play HP clauses.
+  const printedConditionalHp = segments.skill?.match(/^\s*(?:【On Play】|\{ap\})\s*(?:<[^>]+>\s*)?If (your break area is LV\.(\d+) or (?:higher|above)|there are (\d+) cards or less in your hand), (this Cookie gains|select up to 1 of your Cookies\. That Cookie gains) \+(\d+) HP\.?\s*$/i)
+  if (printedConditionalHp) {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const effect=skill?.effects.find(effect=>effect.kind==='gain-hp')
+    const sourceOnly=/^this Cookie/i.test(printedConditionalHp[4])
+    const condition=effect?.kind==='gain-hp'?effect.condition:undefined
+    const conditionMatches=printedConditionalHp[2]
+      ? condition?.kind==='break-level-at-least' && condition.level===Number(printedConditionalHp[2])
+      : condition?.kind==='hand-count-at-most' && condition.count===Number(printedConditionalHp[3])
+    if (!skill||skill.trigger!=='on-play'||effect?.kind!=='gain-hp'||effect.amount!==Number(printedConditionalHp[5])||
+        !conditionMatches||effect.target?.side!=='self'||effect.target.min!==(sourceOnly?1:0)||effect.target.max!==1||Boolean(effect.target.sourceOnly)!==sourceOnly) {
+      blockers.push('Conditional On Play HP requires its printed hand/own-Break threshold and source/optional-own target')
+    }
+  }
+
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-003') {
+    const card=evidence.card,flip=card?.flip
+    const extraKeys=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='cookie'||card.name!=='Rainbow Sherbet Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==3||card.hp!==4||card.attack!==4||card.attackCost!==4||
+       !card.attackEnergyCost||card.attackEnergyCost.yellow!==4||extraKeys(card.attackEnergyCost,['yellow'])||
+       card.skill||(card.effects??[]).length||(card.attackEffects??[]).length||
+       !flip||flip.attachedHpBonus!==1||flip.effects.length!==0||extraKeys(flip,['text','cost','effects','attachedHpBonus'])||
+       !flip.cost.energy||Object.keys(flip.cost.energy).length!==0||flip.cost.discardHand!==1||extraKeys(flip.cost,['energy','discardHand'])) {
+      blockers.push('ST7-003 requires original yellow LV3 HP4 YYYY ordinary 4 and FLIP exactly one arbitrary hand discard for original bearer +1 actual HP, without extra skills, filters or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-004') {
+    const card=evidence.card
+    if(card?.type!=='cookie'||card.name!=='Fig Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==1||card.hp!==2||card.attack!==1||card.attackCost!==1||
+       !card.attackEnergyCost||card.attackEnergyCost.neutral!==1||Object.entries(card.attackEnergyCost).some(([key,value])=>value!==undefined&&key!=='neutral')||
+       card.skill||card.flip||(card.effects??[]).length||(card.attackEffects??[]).length||(card.keywords??[]).length) {
+      blockers.push('ST7-004 requires original yellow LV1 HP2 N ordinary 1 without extra skills, FLIP, keywords or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-006') {
+    const card=evidence.card,flip=card?.flip
+    const extras=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const drawOnly=(effects:CardEffect[])=>effects.length===1&&effects[0].kind==='draw-up-to'&&effects[0].max===1&&!extras(effects[0],['kind','max'])
+    if(card?.type!=='cookie'||card.name!=='Cream Puff Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==2||card.hp!==3||card.attack!==3||card.attackCost!==3||
+       !card.attackEnergyCost||card.attackEnergyCost.yellow!==3||Object.entries(card.attackEnergyCost).some(([key,value])=>value!==undefined&&key!=='yellow')||
+       card.skill||(card.attackEffects??[]).length||(card.keywords??[]).length||!drawOnly(card.effects??[])||!flip||!drawOnly(flip.effects)||
+       Object.values(flip.cost.energy??{}).some(value=>(value??0)!==0)||(flip.cost.discardHand??0)!==0||extras(flip.cost,['energy','discardHand'])||extras(flip,['text','cost','effects'])) {
+      blockers.push('ST7-006 requires original yellow LV2 HP3 YYY ordinary 3 and free optional draw0-1 FLIP without extra skills, costs, keywords or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-007') {
+    const card=evidence.card,flip=card?.flip
+    const extras=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const drawOnly=(effects:CardEffect[])=>effects.length===1&&effects[0].kind==='flip-to-hand'&&!extras(effects[0],['kind'])
+    if(card?.type!=='cookie'||card.name!=='Fairy Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==2||card.hp!==4||card.attack!==3||card.attackCost!==3||
+       !card.attackEnergyCost||card.attackEnergyCost.yellow!==3||Object.entries(card.attackEnergyCost).some(([key,value])=>value!==undefined&&key!=='yellow')||
+       card.skill||(card.attackEffects??[]).length||(card.keywords??[]).length||!drawOnly(card.effects??[])||!flip||!drawOnly(flip.effects)||
+       Object.values(flip.cost.energy??{}).some(value=>(value??0)!==0)||(flip.cost.discardHand??0)!==0||extras(flip.cost,['energy','discardHand'])||extras(flip,['text','cost','effects'])) {
+      blockers.push('ST7-007 requires original yellow LV2 HP4 YYY ordinary 3 and free revealed-HP-card return FLIP without extra skills, costs, keywords or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-009') {
+    const card=evidence.card
+    if(card?.type!=='cookie'||card.name!=='Lilybell Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==2||card.hp!==4||card.attack!==3||card.attackCost!==3||
+       !card.attackEnergyCost||card.attackEnergyCost.neutral!==3||Object.entries(card.attackEnergyCost).some(([key,value])=>value!==undefined&&key!=='neutral')||
+       card.skill||card.flip||(card.effects??[]).length||(card.attackEffects??[]).length||(card.keywords??[]).length) {
+      blockers.push('ST7-009 requires original yellow LV2 HP4 NNN ordinary 3 without extra skills, FLIP, keywords or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-012') {
+    const card=evidence.card,skill=card?.skill
+    const extras=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const redirectOnly=(effects:CardEffect[])=>effects.length===1&&effects[0].kind==='redirect-attack'&&
+      !extras(effects[0],['kind','target'])&&effects[0].target?.side==='self'&&effects[0].target.min===1&&effects[0].target.max===1&&
+      effects[0].target.sourceOnly===true&&!extras(effects[0].target,['side','min','max','sourceOnly'])
+    if(card?.type!=='cookie'||card.name!=='Churro Cookie'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==1||card.hp!==3||card.attack!==1||card.attackCost!==2||
+      !card.attackEnergyCost||card.attackEnergyCost.yellow!==1||card.attackEnergyCost.neutral!==1||extras(card.attackEnergyCost,['yellow','neutral'])||
+      card.flip||(card.keywords??[]).length||(card.attackEffects??[]).length||!redirectOnly(card.effects??[])||
+      !skill||skill.trigger!=='block'||skill.oncePerTurn||skill.yourTurn||skill.restSource||skill.oncePerGame||skill.faint||skill.endPhase||skill.afterDamage||skill.fromBreakArea||skill.fromTrashArea||skill.fromSupportArea||skill.onPlayFromBreakArea||
+      extras(skill,['text','trigger','oncePerTurn','yourTurn','restSource','oncePerGame','faint','endPhase','afterDamage','fromBreakArea','fromTrashArea','fromSupportArea','onPlayFromBreakArea','cost','effects'])||
+      !skill.cost.energy||skill.cost.energy.yellow!==1||extras(skill.cost.energy,['yellow'])||(skill.cost.discardHand??0)!==0||extras(skill.cost,['energy','discardHand'])||!redirectOnly(skill.effects)) {
+      blockers.push('ST7-012 requires original yellow LV1 HP3 YN ordinary1, exactly Y Blocker redirect to source, no REST/Once/extra costs or abilities')
+    }
+  }
+
+  const standaloneNamedHp = segments.skill?.match(/^\s*(?:【Activate】|\{mob\})\s*((?:【Once Per Turn】|\{t1\})\s*)?((?:<|《)(?:\{[RYGBPKN]\})+(?:>|》))\s*Select\s+(up\s+to\s+)?1\s+of\s+your\s+\[([^\]]+)\]\.\s*That\s+Cookie\s+gains\s+\+(\d+)\s+HP\.?\s*$/i)
+  if (standaloneNamedHp) {
+    // Top-level effects are presentation metadata for a Cookie. Bind this
+    // complete skill to the actually executed skill, not that duplicate.
+    const skill = evidence.card?.skill, effect = skill?.effects[0]
+    const target = effect?.kind === 'gain-hp' ? effect.target : undefined
+    const energy = parseEnergy(standaloneNamedHp[2])
+    const exactEnergy = Object.keys(ENERGY_TOKEN_TO_COLOR).every(token => {
+      const color = ENERGY_TOKEN_TO_COLOR[token]
+      return (skill?.cost.energy?.[color] ?? 0) === (energy[color] ?? 0)
+    })
+    const extraKeys = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, item]) => item !== undefined && !allowed.includes(key))
+    if (skill?.trigger !== 'activate' || skill.oncePerTurn !== Boolean(standaloneNamedHp[1]) ||
+      skill.oncePerGame || skill.yourTurn || skill.restSource || !exactEnergy ||
+      (skill.cost.discardHand ?? 0) !== 0 || extraKeys(skill.cost, ['energy', 'discardHand']) ||
+      skill.effects.length !== 1 || effect?.kind !== 'gain-hp' || effect.amount !== Number(standaloneNamedHp[5]) ||
+      extraKeys(effect, ['kind', 'amount', 'target']) || target?.side !== 'self' ||
+      target.min !== (standaloneNamedHp[3] ? 0 : 1) || target.max !== 1 ||
+      target.cardName !== standaloneNamedHp[4].trim() || extraKeys(target, ['side', 'min', 'max', 'cardName'])) {
+      blockers.push('standalone named HP skill lacks exact Activate timing, payment, target or amount')
+    }
+  }
   if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'BS12-040') {
     const card = evidence.card
     const skill = card?.type === 'cookie' ? card.skill : undefined
@@ -3967,6 +4301,28 @@ const buildContract = (
     ...(evidence.skill?.trigger ? { trigger: evidence.skill.trigger } : {}),
     ...(evidence.skill?.oncePerTurn !== undefined ? { oncePerTurn: evidence.skill.oncePerTurn } : {}),
     ...(evidence.skill?.yourTurn !== undefined ? { yourTurn: evidence.skill.yourTurn } : {}),
+  }
+  // Bind a standalone energy-paid Blocker to its own payment and redirect,
+  // rather than accidentally accepting the ordinary attack's energy cost.
+  const blockerText = parseOfficialCardText(segments.skill ?? null)
+  if (blockerText && /^\{bl\}\s*(?:<|《)(?:\{[RYGBPKN]\})+(?:>|》)\s*\(When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie\.\)\s*$/i.test(blockerText.raw)) {
+    const skill = evidence.skill
+    const redirect = skill?.effects?.[0]
+    const target = redirect?.kind === 'redirect-attack' ? redirect.target : undefined
+    const energy = skill?.cost?.energy ?? {}
+    const expectedEnergy: EnergyCost = blockerText.cost
+    const energyKeys = new Set([...Object.keys(expectedEnergy), ...Object.keys(energy)])
+    const exactEnergy = [...energyKeys].every(key =>
+      (expectedEnergy[key as keyof EnergyCost] ?? 0) === (energy[key as keyof EnergyCost] ?? 0))
+    const extraCost = Object.entries(skill?.cost ?? {}).some(([key, value]) =>
+      value !== undefined && key !== 'energy' && !(key === 'discardHand' && value === 0))
+    if (!skill || skill.trigger !== 'block' || skill.oncePerTurn || skill.oncePerGame || skill.yourTurn || skill.restSource ||
+        !exactEnergy || extraCost || skill.effects?.length !== 1 || redirect?.kind !== 'redirect-attack' ||
+        Object.keys(redirect).some(key => !['kind', 'target'].includes(key)) ||
+        target?.side !== 'self' || target.min !== 1 || target.max !== 1 || target.sourceOnly !== true ||
+        Object.keys(target).some(key => !['side', 'min', 'max', 'sourceOnly'].includes(key))) {
+      blockers.push('standalone energy Blocker lacks exact skill payment, source-only redirect or adds unprinted restrictions')
+    }
   }
   if (timingMarkers.has('mob') || timingMarkers.has('ap')) {
     if (evidence.skill === undefined && evidence.ability === undefined) blockers.push('timing marker has no runtime ability')

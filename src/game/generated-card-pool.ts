@@ -11,18 +11,47 @@ import official_arena_of_glory_bs7_en_json_5 from '../../data/cards/official-are
 import official_brave_beginning_bs1_en_json_6 from '../../data/cards/official-brave-beginning-bs1.en.json'
 import official_brave_beginning_bs2_en_json_7 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import official_bs12_deck_additions_en_json_8 from '../../data/cards/official-bs12-deck-additions.en.json'
-import official_dark_enchantress_war_bs11_en_json_9 from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
-import official_festival_arena_bs12_en_json_10 from '../../data/cards/official-festival-arena-bs12.en.json'
-import official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_11 from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
-import official_p_0xx_remaining_en_json_12 from '../../data/cards/official-p-0xx-remaining.en.json'
-import official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_13 from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
-import official_promotion_p001_p032_remaining_en_json_14 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
-import official_promotion_p001_p032_en_json_15 from '../../data/cards/official-promotion-p001-p032.en.json'
-import official_sample_en_json_16 from '../../data/cards/official-sample.en.json'
-import official_starter_deck_blue_en_json_17 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_18 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_19 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_20 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_cookierift_additions_en_json_9 from '../../data/cards/official-cookierift-additions.en.json'
+import official_dark_enchantress_war_bs11_en_json_10 from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
+import official_festival_arena_bs12_en_json_11 from '../../data/cards/official-festival-arena-bs12.en.json'
+import official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_12 from '../../data/cards/official-land-of-fire-and-ruin-realm-of-apathy-bs8.en.json'
+import official_p_0xx_remaining_en_json_13 from '../../data/cards/official-p-0xx-remaining.en.json'
+import official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_14 from '../../data/cards/official-paradise-of-passion-and-sloth-catacombs-of-silence-bs10.en.json'
+import official_promotion_p001_p032_remaining_en_json_15 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import official_promotion_p001_p032_en_json_16 from '../../data/cards/official-promotion-p001-p032.en.json'
+import official_sample_en_json_17 from '../../data/cards/official-sample.en.json'
+import official_st6_001_en_json_18 from '../../data/cards/official-st6-001.en.json'
+import official_st6_002_en_json_19 from '../../data/cards/official-st6-002.en.json'
+import official_st6_003_en_json_20 from '../../data/cards/official-st6-003.en.json'
+import official_st6_004_en_json_21 from '../../data/cards/official-st6-004.en.json'
+import official_st6_005_en_json_22 from '../../data/cards/official-st6-005.en.json'
+import official_st6_006_en_json_23 from '../../data/cards/official-st6-006.en.json'
+import official_st6_007_en_json_24 from '../../data/cards/official-st6-007.en.json'
+import official_st6_008_en_json_25 from '../../data/cards/official-st6-008.en.json'
+import official_st6_009_en_json_26 from '../../data/cards/official-st6-009.en.json'
+import official_st6_010_en_json_27 from '../../data/cards/official-st6-010.en.json'
+import official_st6_011_en_json_28 from '../../data/cards/official-st6-011.en.json'
+import official_st6_012_en_json_29 from '../../data/cards/official-st6-012.en.json'
+import official_st6_013_en_json_30 from '../../data/cards/official-st6-013.en.json'
+import official_st6_014_en_json_31 from '../../data/cards/official-st6-014.en.json'
+import official_st6_015_en_json_32 from '../../data/cards/official-st6-015.en.json'
+import official_st6_016_en_json_33 from '../../data/cards/official-st6-016.en.json'
+import official_st6_017_en_json_34 from '../../data/cards/official-st6-017.en.json'
+import official_st6_018_en_json_35 from '../../data/cards/official-st6-018.en.json'
+import official_st6_019_en_json_36 from '../../data/cards/official-st6-019.en.json'
+import official_st6_020_en_json_37 from '../../data/cards/official-st6-020.en.json'
+import official_st7_001_en_json_38 from '../../data/cards/official-st7-001.en.json'
+import official_st7_002_en_json_39 from '../../data/cards/official-st7-002.en.json'
+import official_st7_003_en_json_40 from '../../data/cards/official-st7-003.en.json'
+import official_st7_004_en_json_41 from '../../data/cards/official-st7-004.en.json'
+import official_st7_006_en_json_42 from '../../data/cards/official-st7-006.en.json'
+import official_st7_007_en_json_43 from '../../data/cards/official-st7-007.en.json'
+import official_st7_009_en_json_44 from '../../data/cards/official-st7-009.en.json'
+import official_st7_012_en_json_45 from '../../data/cards/official-st7-012.en.json'
+import official_starter_deck_blue_en_json_46 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_47 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_48 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_49 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -34,16 +63,45 @@ export const officialCardDatasets = [
   official_brave_beginning_bs1_en_json_6,
   official_brave_beginning_bs2_en_json_7,
   official_bs12_deck_additions_en_json_8,
-  official_dark_enchantress_war_bs11_en_json_9,
-  official_festival_arena_bs12_en_json_10,
-  official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_11,
-  official_p_0xx_remaining_en_json_12,
-  official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_13,
-  official_promotion_p001_p032_remaining_en_json_14,
-  official_promotion_p001_p032_en_json_15,
-  official_sample_en_json_16,
-  official_starter_deck_blue_en_json_17,
-  official_starter_deck_green_en_json_18,
-  official_starter_deck_purple_en_json_19,
-  official_starter_deck_yellow_en_json_20,
+  official_cookierift_additions_en_json_9,
+  official_dark_enchantress_war_bs11_en_json_10,
+  official_festival_arena_bs12_en_json_11,
+  official_land_of_fire_and_ruin_realm_of_apathy_bs8_en_json_12,
+  official_p_0xx_remaining_en_json_13,
+  official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_14,
+  official_promotion_p001_p032_remaining_en_json_15,
+  official_promotion_p001_p032_en_json_16,
+  official_sample_en_json_17,
+  official_st6_001_en_json_18,
+  official_st6_002_en_json_19,
+  official_st6_003_en_json_20,
+  official_st6_004_en_json_21,
+  official_st6_005_en_json_22,
+  official_st6_006_en_json_23,
+  official_st6_007_en_json_24,
+  official_st6_008_en_json_25,
+  official_st6_009_en_json_26,
+  official_st6_010_en_json_27,
+  official_st6_011_en_json_28,
+  official_st6_012_en_json_29,
+  official_st6_013_en_json_30,
+  official_st6_014_en_json_31,
+  official_st6_015_en_json_32,
+  official_st6_016_en_json_33,
+  official_st6_017_en_json_34,
+  official_st6_018_en_json_35,
+  official_st6_019_en_json_36,
+  official_st6_020_en_json_37,
+  official_st7_001_en_json_38,
+  official_st7_002_en_json_39,
+  official_st7_003_en_json_40,
+  official_st7_004_en_json_41,
+  official_st7_006_en_json_42,
+  official_st7_007_en_json_43,
+  official_st7_009_en_json_44,
+  official_st7_012_en_json_45,
+  official_starter_deck_blue_en_json_46,
+  official_starter_deck_green_en_json_47,
+  official_starter_deck_purple_en_json_48,
+  official_starter_deck_yellow_en_json_49,
 ] as const

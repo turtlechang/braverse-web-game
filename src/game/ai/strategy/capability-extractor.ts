@@ -423,6 +423,7 @@ const extractEffect = (
       })
       break
     case 'hp-to-hand':
+    case 'flip-to-hand':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'move', {
         sourceZone: 'hp',
         destinationZone: 'hand',

@@ -29,8 +29,9 @@ describe('AI capability promotion audit', () => {
       generatedAt: '2026-08-22T00:00:00.000Z',
     })
     expect(report.cardCount).toBeGreaterThan(500)
-    expect(report.inventoryEntryCount).toBe(2_030)
-    expect(report.cardCount).toBe(1_547)
+    // ST6-007/008/009/010 add four verified enabled, non-variant playable printings.
+    expect(report.inventoryEntryCount).toBe(2_060)
+    expect(report.cardCount).toBe(1_577)
     expect(report.comboCandidateCount).toBeGreaterThan(0)
     expect(report.conversionFailures).toEqual([])
     expect(report.unsupportedCardIds).toEqual([
@@ -59,5 +60,18 @@ describe('AI capability promotion audit', () => {
       'BS9-111',
     ])
     expect(report.status).toBe('conservative')
+  })
+
+  it.each(['ST6-002', 'ST6-003', 'ST6-004', 'ST6-005', 'ST6-006'])('includes promoted %s without conversion or capability gaps', cardNumber => {
+    const entries = getAllCardPoolEntries().filter(entry => entry.poolId === cardNumber)
+    expect(entries).toHaveLength(1)
+    const report = createAiCapabilityAudit(entries, {
+      generatedAt: '2026-10-10T00:00:00.000Z',
+    })
+    expect(report.inventoryEntryCount).toBe(1)
+    expect(report.cardCount).toBe(1)
+    expect(report.conversionFailures).toEqual([])
+    expect(report.unsupportedCardIds).toEqual([])
+    expect(report.status).toBe('ready')
   })
 })

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { describeOpeningDeal } from '../game/presentation'
 import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import { createDeckAdditionDemoState } from '../game/bs12-deck-addition-demo'
+import { createAiTrapTargetPreview } from '../game/ai-trap-target-demo'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -794,6 +795,9 @@ export function useMatchController(params: {
         normalAttack: testStateConfig.normalAttack,
         bs8021Scenario: testStateConfig.bs8021Scenario,
       })
+    }
+    if (testStateConfig?.kind === 'ai-trap-target') {
+      return createAiTrapTargetPreview(testStateConfig.scenario)
     }
     if (testStateConfig?.kind === 'deck-addition') {
       return createDeckAdditionDemoState(testStateConfig.cardNumber, testStateConfig.scenario)

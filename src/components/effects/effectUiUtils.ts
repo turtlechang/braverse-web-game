@@ -332,6 +332,7 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
   if (effect.kind === 'flip-to-break') return '將這張 FLIP 卡放入休息區。'
+  if (effect.kind === 'flip-to-hand') return '將這張揭示的 FLIP 卡加入自己的手牌。'
   if (effect.kind === 'trash-to-break') return effect.sourceToTrashFirst
     ? '來源餅乾先移至棄牌區，再將選定餅乾放入休息區。'
     : '棄牌區卡已放入休息區。'

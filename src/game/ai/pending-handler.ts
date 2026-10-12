@@ -1,3 +1,4 @@
+import {selectSafeOptionalDrawCount} from './optional-draw-refresh-safety'
 import {
   getAfterDamageEffectCandidates,
   getFaintEffectCardCandidates,
@@ -5,7 +6,7 @@ import {
   getFaintSourceCostUnavailableReason,
 } from '../battle'
 import {
-  applyGameCommand,
+  applyGameCommand as executeGameCommand,
   getPendingDecision,
   hasActiveEffectOrder,
 } from '../commands'
@@ -38,6 +39,7 @@ import {
   type KnowledgeState,
 } from './strategy/knowledge-state'
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
+import { getPublicEffectDamageByTarget } from './public-effect-damage'
 import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
 import { chooseAiStageCostIds } from './turn-handler'
@@ -105,6 +107,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
 export interface AiPendingDecisionOptions {
   level?: AiLevel
   knowledgeState?: KnowledgeState
+  shuffleSeed?: number
 }
 
 export const handleAiPendingDecision = (
@@ -112,6 +115,8 @@ export const handleAiPendingDecision = (
   playerId: PlayerId,
   options: AiPendingDecisionOptions = {},
 ): AiDecision | null => {
+  const applyGameCommand: typeof executeGameCommand = (current, command, commandOptions) =>
+    executeGameCommand(current, command, { ...commandOptions, shuffleSeed: options.shuffleSeed })
   const pendingDecision = getPendingDecision(state)
   const view = createPlayerView(state, playerId)
   const knowledgeState = options.knowledgeState?.observerId === playerId
@@ -237,6 +242,7 @@ export const handleAiPendingDecision = (
               effect,
               candidates,
               getEffectSelectionLimits(effect)?.max ?? 0,
+              getPublicEffectDamageByTarget(state, playerId, context, effect, candidates),
             )
           : candidates.slice(0, getEffectSelectionLimits(effect)?.max ?? 0)
     return withPendingReason({
@@ -438,6 +444,7 @@ export const handleAiPendingDecision = (
           faintEffect,
           legalTargetIds,
           pendingDecision.max,
+          pendingFaint && getPublicEffectDamageByTarget(state, playerId, pendingFaint.context, faintEffect, legalTargetIds),
         )
       : fallbackTargetIds
     return withPendingReason({
@@ -491,6 +498,8 @@ export const handleAiPendingDecision = (
           afterDamageEffect,
           legalTargetIds,
           pendingDecision.max,
+          state.pendingAfterDamageEffects?.[0] && getPublicEffectDamageByTarget(state, playerId,
+            state.pendingAfterDamageEffects[0].context, afterDamageEffect, legalTargetIds),
         )
       : fallbackTargetIds
     return withPendingReason({
@@ -915,8 +924,9 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇抽牌數量。`,
       }
     }
-    const player = state.players[playerId]
-    const drawCount = Math.min(pendingDecision.max, player.deck.length)
+    const drawCount = (options.level ?? 2) >= 3
+      ? selectSafeOptionalDrawCount(view,pendingDecision.max,state.pendingBattle?.revealedHpCard)
+      : Math.min(pendingDecision.max,view.self.deckCount)
     return withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-draw-up-to',

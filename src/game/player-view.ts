@@ -24,6 +24,8 @@ export interface CookieInBattleView {
   faceUpHpCards?: { position: number; card: GameCard }[]
   rested: boolean
   battleEntryId?: string
+  /** Public event for this battle entry, independent of its current rested state. */
+  setActiveByEffectThisTurn?: boolean
 }
 
 /**
@@ -90,6 +92,9 @@ const toSideView = (
       } : {}),
       rested: cookie.rested,
       battleEntryId: cookie.battleEntryId,
+      ...(state.cookiesSetActiveByEffectThisTurn?.[cookie.battleEntryId ?? cookie.card.instanceId]
+        ? { setActiveByEffectThisTurn: true }
+        : {}),
     })),
     supportArea: player.supportArea,
     breakArea: player.breakArea,

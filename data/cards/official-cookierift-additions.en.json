@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T08:58:47.496Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 2,
+    "importedCount": 2,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "Cookierift deck additions"
+    }
+  },
+  "cards": [
+    {
+      "sourceId": 46889,
+      "locale": "en",
+      "cardNumber": "ST7-005",
+      "baseCardNumber": "ST7-005",
+      "variant": null,
+      "name": "Caramel Choux Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> Complaint Management {da} 2",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 254,
+        "title": "Tree of Life",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CDqRt5znsmd-97kjirRpGA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 55740,
+      "locale": "en",
+      "cardNumber": "P-163",
+      "baseCardNumber": "P-163",
+      "variant": null,
+      "name": "Bacon Roll Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 6,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Wanna Play? ♥",
+        "text": "【Activate】 【Once Per Turn】 <{R}> Select up to 1 other 【Arena】 Cookie in your battle area. During this turn, that Cookie gains +1 attack damage. Then, set that Cookie as active."
+      },
+      "attackText": "<{R}{R}{R}> Bacon Slam!{da} 3",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 99,
+        "title": "The Oven Crown Cup promotion Pack vol.12",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YlrXLLOjn6zSRmgxOMAJeQ.webp",
+      "officialUpdatedAt": "2026-09-08T05:16:35.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

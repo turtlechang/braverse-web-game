@@ -1001,6 +1001,7 @@ const validateTrapTargets = (
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-damage-received' ||
       effect.kind === 'modify-attack-cost' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
@@ -1493,6 +1494,7 @@ export const playTrap = (
   state: GameState,
   playerId: PlayerId,
   options: PlayTrapOptions,
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   const battle = requirePendingBattle(state)
   if (
@@ -1778,6 +1780,7 @@ export const playTrap = (
         context,
         effect,
         supportTargetIds,
+        shuffle,
       )
       continue
     }
@@ -1919,6 +1922,7 @@ export const playTrap = (
         context,
         effect,
         options.trashToDeckIds ?? [],
+        shuffle,
       )
       continue
     }
@@ -1930,7 +1934,7 @@ export const playTrap = (
     if (effect.kind === 'trash-to-battle') {
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
-        nextState = executeCardEffect(nextState, context, effect, [])
+        nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         continue
       }
       return {
@@ -1953,13 +1957,13 @@ export const playTrap = (
     // 會把對手戰鬥區 instanceId 當成自己的棄牌區餅乾而被規則層拒絕。
     if (effect.kind === 'trash-to-support' || effect.kind === 'trash-to-hand') {
       if (hasExplicitTargetIds || requestedTargetIds.length > 0) {
-        nextState = executeCardEffect(nextState, context, effect, requestedTargetIds)
+        nextState = executeCardEffect(nextState, context, effect, requestedTargetIds, shuffle)
         continue
       }
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
         if (effect.kind === 'trash-to-support' && effect.optional) {
-          nextState = executeCardEffect(nextState, context, effect, [])
+          nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         }
         continue
       }
@@ -1989,7 +1993,7 @@ export const playTrap = (
         // 沒有合法候選時，optional 效果等同選 0；mandatory 效果則依
         // 既有 pending queue 規則略過不可完成的步驟，讓陷阱仍能收尾。
         if (effect.optional) {
-          nextState = executeCardEffect(nextState, context, effect, [])
+          nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         }
         continue
       }
@@ -2056,6 +2060,7 @@ export const playTrap = (
         context,
         effect,
         requestedTargetIds,
+        shuffle,
       )
       continue
     }
@@ -2081,6 +2086,7 @@ export const playTrap = (
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : executeTargetIds,
+      shuffle,
     )
     if (nextState.pendingRevealTopDeck) break
   }
@@ -4520,6 +4526,7 @@ export const resolveFlip = (
   let nextState = state
   let flipToSupportChoice: { rested: boolean } | null = null
   let flipToBreakChoice = false
+  let flipToHandChoice = false
   let pendingAttachedHpRefresh:
     | { targetInstanceId: string; amount: number }
     | undefined
@@ -4793,6 +4800,8 @@ export const resolveFlip = (
         }
       } else if (effect.kind === 'flip-to-support') {
         flipToSupportChoice = { rested: effect.rested ?? true }
+      } else if (effect.kind === 'flip-to-hand') {
+        flipToHandChoice = true
       } else if (effect.kind === 'flip-to-break') {
         flipToBreakChoice = true
       } else {
@@ -4869,7 +4878,9 @@ export const resolveFlip = (
                 { card: revealed, rested: flipToSupportChoice.rested },
               ],
             }
-          : flipToBreakChoice
+          : flipToHandChoice
+            ? { ...player, hand: [...player.hand, revealed] }
+            : flipToBreakChoice
             ? {
                 ...player,
                 breakArea: [...player.breakArea, revealed],
@@ -4883,6 +4894,17 @@ export const resolveFlip = (
   }
 
   nextState = recordArenaBreakEntries(state, nextState)
+  if (isDetachedFlip && flipToHandChoice) {
+    // A Then-discarded FLIP is already in discard; move exactly that instance.
+    const owner = nextState.players[playerId]
+    if (!owner.discardPile.some(card => card.instanceId === revealed.instanceId)) {
+      throw new GameRuleError('Missing detached FLIP source')
+    }
+    nextState = { ...nextState, players: { ...nextState.players, [playerId]: { ...owner,
+      discardPile: owner.discardPile.filter(card => card.instanceId !== revealed.instanceId),
+      hand: [...owner.hand, revealed],
+    } } }
+  }
   if (isDetachedFlip) {
     // 攻擊後棄置的 FLIP Cookie 在付款時已進入棄牌區；這個決策只執行
     // 其效果，不得再把同一張卡重複移動到支援／休息區，也不能走一般

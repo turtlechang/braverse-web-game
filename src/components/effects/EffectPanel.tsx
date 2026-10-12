@@ -1257,6 +1257,7 @@ function EffectPanelContent({
                         : new Set(pendingEffect.selectedTargetIds)
                     }
                     selectedOrderIds={
+                      currentEffect.kind === 'split-damage' ||
                       (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
                       (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
                         ? pendingEffect.selectedTargetIds

@@ -448,6 +448,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
           const sourceInBreak = match.game.players[match.viewerPlayerId].breakArea
             .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInStage = Object.values(match.game.players)
+            .map(player => player.stage?.card)
+            .find(card => card?.instanceId === drawUpTo.sourceInstanceId)
           const sourceInEquipment = Object.values(match.game.players)
             .flatMap(player => player.battleArea.flatMap(cookie => cookie.equippedCards ?? []))
             .find(card => card.instanceId === drawUpTo.sourceInstanceId)
@@ -455,8 +458,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             sourceCard?.card ??
             sourceInHand ??
             sourceInDiscard ??
-            sourceInSupport?.card ?? sourceInBreak ?? sourceInEquipment
+            sourceInSupport?.card ?? sourceInBreak ?? sourceInEquipment ?? sourceInStage
           const effectText = drawUpTo.effectText
+            ?? sourceInStage?.stageAbility?.text
             ?? sourceInEquipment?.effectText
             ?? sourceCard?.card.effectText
             ?? sourceInHand?.effectText

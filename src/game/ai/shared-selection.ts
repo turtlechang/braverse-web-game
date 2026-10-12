@@ -8,6 +8,7 @@ import {
 import type { CardEffect, EffectContext, GameState } from '../types'
 import type { PendingSelectionStrategy } from './strategy/pending-selection'
 import { isChooseOneModePlayable } from '../effects/choose-one'
+import { getPublicEffectDamageByTarget } from './public-effect-damage'
 
 export interface SharedEffectTargetSelection {
   valid: boolean
@@ -73,7 +74,8 @@ export const chooseSharedEffectTargets = (
 
   const first = selections[0]
   const targetIds = universal?.enabled
-    ? universal.selectEffectTargetIds(first.effect, commonIds, maximum)
+    ? universal.selectEffectTargetIds(first.effect, commonIds, maximum,
+        getPublicEffectDamageByTarget(state, context.sourcePlayerId, context, first.effect, commonIds))
     : commonIds.slice(0, maximum)
   const acceptedByEveryEffect = selections.every(
     (selection) =>

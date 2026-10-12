@@ -21,6 +21,8 @@
     "test:bs6:acceptance:browser": "tsx scripts/bs6-card-acceptance-browser.ts",
     "cards:migrate:batch": "tsx scripts/migrate-card-contract-batch.ts",
     "validate:candidate": "tsx scripts/validate-candidate-cards.ts",
+    "cards:import:cookierift-candidate": "node scripts/import-cookierift-additions.mjs",
+    "cards:import:st6-st10-candidate": "node scripts/import-st6-st10-candidates.mjs",
     "promote:candidate": "tsx scripts/promote-candidate-cards.ts",
     "generate:card-pool": "tsx scripts/generate-card-pool.ts",
     "check:card-pool": "tsx scripts/generate-card-pool.ts --check",

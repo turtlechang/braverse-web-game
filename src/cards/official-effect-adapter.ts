@@ -137,6 +137,7 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
 
 const parseCondition = (text: string): EffectCondition | undefined => {
   const breakLevelMatch = text.match(/break area is LV\.(\d+) or higher/i)
+    ?? text.match(/\byour break area is LV\.(\d+) or above/i)
   if (breakLevelMatch) {
     return {
       kind: 'break-level-at-least',
@@ -429,6 +430,24 @@ export const convertOfficialCardEffects = (
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
     ...DECK_ADDITION_EFFECTS,
+    'ST6-020': [{kind:'draw-up-to',max:1}],
+    'ST6-019': [{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1}},{kind:'draw-up-to',max:1,condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}],
+    'ST6-018': [{kind:'modify-damage-received',amount:-1,duration:'this-turn',damageType:'attack',target:{side:'self',min:0,max:1}}],
+    'ST6-017': [{kind:'modify-attack',amount:-2,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]}],
+    'ST6-016': [{kind:'split-damage',primaryAmount:2,secondaryAmount:1,target:{side:'opponent',min:0,max:2}}],
+    'ST6-015': [{ kind: 'modify-attack', amount: 2, duration: 'this-turn',
+      target: { side: 'self', min: 0, max: 1 } }],
+    'ST6-014': [
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      { kind: 'modify-attack', amount: 1, duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, cardName: 'Fire Spirit Cookie' } },
+    ],
+    'ST6-013': [
+      { kind: 'draw-up-to', max: 1 },
+      { kind: 'modify-attack', amount: 1, duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 2 } },
+    ],
+    'ST6-001': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
     'BS12-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 3, energyColor: 'black' } }],
     'BS12-112': [],
     'BS12-106': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
@@ -6578,7 +6597,19 @@ export const convertOfficialCardEffects = (
     }
   }
 
-  if (/\{bl\}/i.test(sourceText) && /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(sourceText)) {
+  // A complete, standalone named-Cookie HP clause. The whole-text match
+  // prevents trailing conditions or Then effects from being silently lost.
+  const namedCookieHp = sourceText.match(/^\s*(?:【Activate】|\{mob\})\s*(?:(?:【Once Per Turn】|\{t1\})\s*)?(?:<|《)(?:\{[RYGBPKN]\})+(?:>|》)\s*Select\s+(up\s+to\s+)?1\s+of\s+your\s+\[([^\]]+)\]\.\s*That\s+Cookie\s+gains\s+\+(\d+)\s+HP\.?\s*$/i)
+  if (namedCookieHp) {
+    return { status: 'supported', cardNumber: card.cardNumber, sourceText,
+      effects: [{ kind: 'gain-hp', amount: Number(namedCookieHp[3]),
+        target: { side: 'self', min: namedCookieHp[1] ? 0 : 1, max: 1, cardName: namedCookieHp[2].trim() } }] }
+  }
+
+  // Newer exports spell the same standalone keyword as 【Blocker】. Match
+  // the whole energy-paid clause so additional rules cannot be discarded.
+  const standaloneEnergyBlocker = /^\s*【Blocker】\s*(?:<|《)(?:\{[RYGBPKN]\})+(?:>|》)\s*\(When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie\.\)\s*$/i.test(sourceText)
+  if ((/\{bl\}/i.test(sourceText) || standaloneEnergyBlocker) && /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(sourceText)) {
     return {
       status: 'supported',
       cardNumber: card.cardNumber,
@@ -7106,6 +7137,7 @@ export const convertOfficialCardEffects = (
           kind: 'gain-hp',
           amount: Number(gainHpMatch[1]),
           target,
+          ...(condition ? { condition } : {}),
         },
       ],
     }
@@ -7134,6 +7166,9 @@ export const convertOfficialItemAbility = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'ST6-016': {energy:{red:3},discardHand:1},
+    'ST6-015': { energy: { red: 2 }, discardHand: 0, hpToTrash: { amount: 1 } },
+    'ST6-014': { energy: { red: 2 }, discardHand: 0, hpToTrash: { amount: 1 } },
     'ST10-013': { energy: { purple: 1 }, discardHand: 0, trashBattleCookie: { count: 1, energyColor: 'purple', level: 1 } },
     'BS12-104': { energy: { black: 1 }, discardHand: 0 },
     'BS12-103': { energy: { black: 1 }, discardHand: 0 },
@@ -7326,6 +7361,7 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST6-020': [{kind:'draw-up-to',max:1}],
     'BS12-102': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
     'BS12-084': [{ kind: 'opponent-discard-hand', count: 1, condition: { kind: 'opponent-hand-count-at-least', count: 6 } }],
     'BS12-067': [{ kind: 'reveal-bottom-deck', requireCard: true,
@@ -7991,6 +8027,7 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    'ST6-020': {energy:{},discardHand:0,hpToTrash:{amount:1}},
     'BS12-102': { energy: { black: 1 }, discardHand: 0 },
     'BS12-084': { energy: { purple: 1 }, discardHand: 0, trashToDeckBottom: { count: 2, cookieOnly: true, blockerOnly: true } },
     'BS12-067': { energy: { blue: 1 }, discardHand: 0 },
@@ -8191,6 +8228,15 @@ export const convertOfficialAttackEffects = (
   if (card.cardNumber === 'BS9-079@3') return undefined
   // R003: the user confirms revival from the owner's Break area.
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST6-004': [{ kind: 'optional-cost-attack', effectText: card.attackText,
+      cost: { energy: { red: 1 } },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+    }],
+    'ST6-002': [{ kind: 'optional-cost-attack', effectText: card.attackText,
+      cost: { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
+      effects: [{ kind: 'damage', amount: 2,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true } }],
+    }],
     // User rulings 2026-10-05: 035 selects an opponent; 072 keeps the original defender.
     'BS12-035': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 },
       condition: { kind: 'break-area-card-count-at-least', side: 'self', count: 4, keyword: 'arena' } }],
@@ -11068,6 +11114,10 @@ export const convertOfficialFlipAbility = (
     }
   }
 
+  if (/^Return this Cookie to your hand\.$/i.test(flipText.trim())) return {
+    text: flipText, cost: { energy: {}, discardHand: 0 }, effects: [{ kind: 'flip-to-hand' }],
+  }
+
   const exactFlipEffects: Partial<Record<string, {
     effects: CardEffect[]
     cost?: AbilityCost
@@ -12079,6 +12129,9 @@ export const convertOfficialTrapAbility = (
       }
     >
   > = {
+    'ST6-017': {cost:{energy:{red:2},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-2,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]}]},
+    'ST6-018': {cost:{energy:{red:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-damage-received',amount:-1,duration:'this-turn',damageType:'attack',target:{side:'self',min:0,max:1}}]},
+    'ST6-019': {cost:{energy:{red:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1}},{kind:'draw-up-to',max:1,condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]},
     'BS12-106': { cost: { energy: { black: 2 }, discardHand: 0 }, ignoreParsedCondition: true, effects: [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
       { kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: {}, discardHand: 1 }, effectText: card.skill.text ?? '',
         effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }] }] },
@@ -13546,6 +13599,7 @@ const exactCookieSkillSpecialPlayCosts: Partial<Record<string, AbilityCost>> = {
 }
 
 const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
+  'ST6-001': { energy: { red: 1 }, discardHand: 0, hpToTrash: { amount: 1, sourceOnly: true } },
   'BS12-110': { energy: {}, discardHand: 0, selfToTrash: true },
   'BS12-112': { energy: {}, discardHand: 0 },
   'BS12-108': { energy: {}, discardHand: 0 },

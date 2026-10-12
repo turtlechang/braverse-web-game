@@ -517,7 +517,9 @@ const executeCardEffectCore = (
       (card) => card.card.instanceId === context.sourceInstanceId,
     )
     const breakCard = sourcePlayer.breakArea.find(card => card.instanceId === context.sourceInstanceId)
-    const sourceCard = battleCard?.card ?? handCard ?? discardCard ?? supportCard?.card ?? breakCard
+    const stageCard = sourcePlayer.stage?.card.instanceId === context.sourceInstanceId
+      ? sourcePlayer.stage.card : undefined
+    const sourceCard = battleCard?.card ?? handCard ?? discardCard ?? supportCard?.card ?? breakCard ?? stageCard
     const effectText =
       sourceCard && 'effectText' in sourceCard
         ? sourceCard.effectText
@@ -546,7 +548,7 @@ const executeCardEffectCore = (
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
         sourceCardId: sourceCard?.id,
-        effectText: effectText ?? itemText,
+        effectText: effectText ?? itemText ?? stageCard?.stageAbility?.text,
         condition: effect.condition,
       },
     }
@@ -807,7 +809,8 @@ const executeCardEffectCore = (
     return { ...state }
   }
 
-  if (effect.kind === 'flip-to-break') {
+  if (effect.kind === 'flip-to-break' || effect.kind === 'flip-to-hand') {
+    // Revealed-card disposition is owned by resolveFlip, not the HP bearer.
     return { ...state }
   }
 
@@ -1063,7 +1066,10 @@ const executeCardEffectCore = (
       ),
     )
     if (targetIndexes.some((targetIndex) => targetIndex < 0)) {
-      if (isOptionalTarget) return { ...state }
+      // A pending effect can outlive its source in a public zone. Its fixed
+      // "this Cookie" recipient cannot gain HP after leaving the Battle Area.
+      // Explicit mandatory selections must still be validated and rejected.
+      if (isOptionalTarget || targetSelector.sourceOnly) return { ...state }
       throw new GameRuleError('增加 HP 的目標餅乾不在戰鬥區。')
     }
     const gainedCards = player.deck.slice(0, gainedAmount * targetInstanceIds.length)

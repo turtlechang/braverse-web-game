@@ -68,6 +68,22 @@ const view = (): PlayerView => ({
 })
 
 describe('G5 pending selection strategy', () => {
+  it.each([3,4,5] as const)('Lv.%i readies a rested Cookie instead of wasting it on an active higher-value one',level=>{
+    const state=view()
+    state.self.battleArea=[
+      {card:cookie('active',{level:3,hp:6,attack:4}),hpCount:6,rested:false},
+      {card:cookie('rested',{level:2,hp:3,attack:2}),hpCount:3,rested:true},
+    ]
+    const selection=createPendingSelectionStrategy(state,createKnowledgeState('player-one'),level)
+    const effect:CardEffect={kind:'set-cookie-active',target:{side:'self',min:0,max:1}}
+    expect(selection.selectEffectTargetIds(effect,['active','rested'],1)).toEqual(['rested'])
+    expect(selection.selectEffectTargetIds(effect,['active'],1)).toEqual([])
+    const buff:CardEffect={kind:'modify-attack',amount:1,duration:'this-turn',target:{side:'self',min:0,max:1},
+      thenEffects:[{kind:'set-cookie-active',target:{side:'self',min:0,max:1,previousEffectTargetOnly:true}}]}
+    expect(selection.selectEffectTargetIds(buff,['active','rested'],1)).toEqual(['rested'])
+    expect(selection.selectEffectTargetIds(buff,['active'],1)).toEqual(['active'])
+    expect(state.self.battleArea.map(c=>c.rested)).toEqual([false,true])
+  })
   it.each([3, 4, 5] as const)('Lv.%i 的可選張數模式優先取得非零收益', (level) => {
     const selection = createPendingSelectionStrategy(
       view(), createKnowledgeState('player-one'), level,

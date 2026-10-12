@@ -1,4 +1,5 @@
 import bs1FormalDocument from '../../data/cards/official-brave-beginning-bs1.en.json'
+import type { AiTrapTargetScenario } from './ai-trap-target-demo'
 import bs3FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import { createSeededShuffle, defaultShuffle } from './helpers'
 import { createBs12RulingLifecycleFactories } from './bs12-rulings-demo'
@@ -43,6 +44,7 @@ import bs10CandidateDocument from '../../data/cards/official-paradise-of-passion
 import bs11CandidateDocument from '../../data/cards/official-dark-enchantress-war-bs11.en.json'
 import bs12CandidateDocument from '../../data/cards/official-festival-arena-bs12.en.json'
 import { createDeckAdditionDemoState, DECK_ADDITION_CARD_NUMBERS, type DeckAdditionScenario } from './bs12-deck-addition-demo'
+import { COOKIERIFT_ADDITION_NUMBERS } from './cookierift-addition-demo'
 import {
   convertOfficialCardToExtraDeckCard,
   convertOfficialCardToGameCard,
@@ -618,6 +620,7 @@ export const parseTestStateConfig = (
 ):
   | { kind: 'break-to-trash'; level: 1 | 2 }
   | { kind: 'deck-addition'; cardNumber: string; scenario: DeckAdditionScenario }
+  | { kind: 'ai-trap-target'; scenario: AiTrapTargetScenario }
   | { kind: 'trap-response'; payable: boolean }
   | { kind: 'blocker-response'; payable: boolean }
   | { kind: 'trap-and-blocker-response'; payable: boolean }
@@ -1035,8 +1038,61 @@ export const parseTestStateConfig = (
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
   const testState = params.get('test-state')
+  for (const scenario of ['saving', 'nonlethal', 'no-energy'] as const) {
+    if (testState === `ai-trap-target:${scenario}`) return { kind: 'ai-trap-target', scenario }
+  }
+  const fireSpirit = testState?.match(/^deck-addition:ST6-002:(wrong-color|wrong-phase|used|target-faints)$/)
+  for (const scenario of ['green-arena', 'non-arena', 'wrong-color'] as const) {
+    if (testState === `deck-addition:P-163:${scenario}`) return { kind: 'deck-addition', cardNumber: 'P-163', scenario }
+  }
+  if (fireSpirit) return { kind: 'deck-addition', cardNumber: 'ST6-002', scenario: fireSpirit[1] as DeckAdditionScenario }
+  const devil = testState?.match(/^deck-addition:ST6-003:(wrong-phase|used)$/)
+  if (devil) return { kind: 'deck-addition', cardNumber: 'ST6-003', scenario: devil[1] as DeckAdditionScenario }
+  const pitaya = testState?.match(/^deck-addition:ST6-004:(wrong-color|wrong-phase|used|no-energy|rested-source|no-extra-energy|attack-wrong-color|target-faints)$/)
+  if (pitaya) return { kind: 'deck-addition', cardNumber: 'ST6-004', scenario: pitaya[1] as DeckAdditionScenario }
+  const cherry = testState?.match(/^deck-addition:ST6-006:(wrong-color|wrong-phase)$/)
+  if (cherry) return { kind: 'deck-addition', cardNumber: 'ST6-006', scenario: cherry[1] as DeckAdditionScenario }
+  const chili = testState?.match(/^deck-addition:ST6-007:(wrong-color|wrong-phase|last-no-hand)$/)
+  if (chili) return { kind: 'deck-addition', cardNumber: 'ST6-007', scenario: chili[1] as DeckAdditionScenario }
+  const candyApple = testState?.match(/^deck-addition:ST6-008:(wrong-color|wrong-phase|one-card)$/)
+  if (candyApple) return { kind: 'deck-addition', cardNumber: 'ST6-008', scenario: candyApple[1] as DeckAdditionScenario }
+  const capsaicin = testState?.match(/^deck-addition:ST6-009:(positive|negative|low|zero|wrong-color|wrong-phase|used|no-energy|rested-source|cost-cookie|cost-item|attack|attack-negative)$/)
+  if (capsaicin) return { kind: 'deck-addition', cardNumber: 'ST6-009', scenario: capsaicin[1] as DeckAdditionScenario }
+  const peperoncino = testState?.match(/^deck-addition:ST6-010:(positive|negative|low|wrong-color|rested-source|already-target|no-battle|second-attack|attack|attack-negative|attack-wrong-color|wrong-phase)$/)
+  if (peperoncino) return { kind: 'deck-addition', cardNumber: 'ST6-010', scenario: peperoncino[1] as DeckAdditionScenario }
+
+  const habanero = testState?.match(/^deck-addition:ST6-011:(positive|negative|low|wrong-phase|rested-source|reveal)$/)
+  if (habanero) return { kind: 'deck-addition', cardNumber: 'ST6-011', scenario: habanero[1] as DeckAdditionScenario }
+  const pyro = testState?.match(/^deck-addition:ST6-012:(positive|negative|zero|low|wrong-color|wrong-phase|used|no-target|rested-source|rested-target|one-card|attack|attack-negative)$/)
+  if (pyro) return { kind: 'deck-addition', cardNumber: 'ST6-012', scenario: pyro[1] as DeckAdditionScenario }
+  const missile = testState?.match(/^deck-addition:ST6-013:(positive|negative|zero|low|wrong-color|wrong-phase|no-target|rested-source|one-card)$/)
+  if (missile) return { kind: 'deck-addition', cardNumber: 'ST6-013', scenario: missile[1] as DeckAdditionScenario }
+  const conflagration = testState?.match(/^deck-addition:ST6-014:(positive|negative|zero|low|wrong-color|wrong-phase|no-target|rested-source|attack|target-faints|reveal)$/)
+  if (conflagration) return { kind: 'deck-addition', cardNumber: 'ST6-014', scenario: conflagration[1] as DeckAdditionScenario }
+  const frozen = testState?.match(/^deck-addition:ST6-018:(positive|rested-target|other|zero|negative|wrong-color|one-red|main|wrong-phase)$/)
+  if(frozen)return {kind:'deck-addition',cardNumber:'ST6-018',scenario:frozen[1] as DeckAdditionScenario}
+  const unleashed = testState?.match(/^deck-addition:ST6-019:(positive|false|rested-witness|defender-one|hand-witness|trash-witness|break-witness|support-witness|opponent-witness|other|target-zero|draw-zero|draw-refresh|negative|wrong-color|one-red|main|wrong-phase|expiry)$/)
+  if(unleashed)return {kind:'deck-addition',cardNumber:'ST6-019',scenario:unleashed[1] as DeckAdditionScenario}
+  const lily=testState?.match(/^deck-addition:ST7-001:(positive|rested-source|rested-target|negative|wrong-color|attack-wrong-color|wrong-phase|no-cost|no-target|used|break-loss)$/);if(lily)return {kind:'deck-addition',cardNumber:'ST7-001',scenario:lily[1] as DeckAdditionScenario}
+  const mango=testState?.match(/^deck-addition:ST7-002:(positive|no-supports|mango-(?:below|above|rested|skip|attack-(?:positive|cancel|no-energy|wrong-color|rested))|choux-(?:positive|below|above|zero|other|skip|no-energy)|coffee-(?:positive|below|above|no-energy|skip))$/);if(mango)return {kind:'deck-addition',cardNumber:'ST7-002',scenario:mango[1] as DeckAdditionScenario}
+  const sherbet=testState?.match(/^deck-addition:ST7-003:(positive|low|negative|last-no-hand|attack|attack-negative|wrong-color|wrong-phase)$/);if(sherbet)return {kind:'deck-addition',cardNumber:'ST7-003',scenario:sherbet[1] as DeckAdditionScenario}
+  const candidate006=testState?.match(/^deck-addition:ST7-006:(positive|low|attack|attack-negative|wrong-color|wrong-phase|last-deck|last-deck-low)$/);if(candidate006)return {kind:'deck-addition',cardNumber:'ST7-006',scenario:candidate006[1] as DeckAdditionScenario}
+  const candidate007=testState?.match(/^deck-addition:ST7-007:(positive|low|attack|attack-negative|wrong-color|wrong-phase)$/);if(candidate007)return {kind:'deck-addition',cardNumber:'ST7-007',scenario:candidate007[1] as DeckAdditionScenario}
+  const candidate012=testState?.match(/^deck-addition:ST7-012:(positive|rested-source|wrong-color|rested-energy|no-energy|already-target|wrong-zone|cancel|skip|second-attack|second-response|attack-yellow|attack-red|attack-green|attack-blue|attack-purple|attack-black|attack-insufficient|attack-wrong-color|attack-rested-source|attack-rested-energy|attack-wrong-phase|attack-faint)$/);if(candidate012)return {kind:'deck-addition',cardNumber:'ST7-012',scenario:candidate012[1] as DeckAdditionScenario}
+  const candidate009=testState?.match(/^deck-addition:ST7-009:(positive|red|yellow|green|blue|purple|black|mixed|negative|insufficient|wrong-phase|rested-source|used|faint)$/);if(candidate009)return {kind:'deck-addition',cardNumber:'ST7-009',scenario:candidate009[1] as DeckAdditionScenario}
+  const fig=testState?.match(/^deck-addition:ST7-004:(positive|red|yellow|green|blue|purple|black|negative|wrong-phase|rested-source|used|faint)$/);if(fig)return {kind:'deck-addition',cardNumber:'ST7-004',scenario:fig[1] as DeckAdditionScenario}
+  const depths = testState?.match(/^deck-addition:ST6-020:(positive|green-arena|low|rested-source|no-battle|draw-refresh|negative|wrong-color|one-red|wrong-phase)$/)
+  if(depths)return {kind:'deck-addition',cardNumber:'ST6-020',scenario:depths[1] as DeckAdditionScenario}
+  const restored = testState?.match(/^deck-addition:ST6-017:(positive|false|rested-witness|defender-one|hand-witness|trash-witness|break-witness|support-witness|opponent-witness|other|zero|negative|wrong-color|one-red|main|wrong-phase)$/)
+  if(restored)return {kind:'deck-addition',cardNumber:'ST6-017',scenario:restored[1] as DeckAdditionScenario}
+  const dragon = testState?.match(/^deck-addition:ST6-016:(positive|negative|wrong-color|wrong-phase|no-discard|faint|both-faint|reveal)$/)
+  if(dragon)return {kind:'deck-addition',cardNumber:'ST6-016',scenario:dragon[1] as DeckAdditionScenario}
+  const staff = testState?.match(/^deck-addition:ST6-015:(positive|negative|zero|low|wrong-color|wrong-phase|no-target|rested-source|attack|green-arena|no-battle)$/)
+  if (staff) return { kind: 'deck-addition', cardNumber: 'ST6-015', scenario: staff[1] as DeckAdditionScenario }
+  const agar = testState?.match(/^deck-addition:ST6-005:(wrong-color|wrong-phase|last-no-hand)$/)
+  if (agar) return { kind: 'deck-addition', cardNumber: 'ST6-005', scenario: agar[1] as DeckAdditionScenario }
   const addition = testState?.match(/^deck-addition:([^:]+):(positive|negative|low|attack|attack-negative|zero)$/)
-  if (addition && DECK_ADDITION_CARD_NUMBERS.includes(addition[1])) {
+  if (addition && [...DECK_ADDITION_CARD_NUMBERS, ...COOKIERIFT_ADDITION_NUMBERS, 'ST6-001', 'ST6-002', 'ST6-003', 'ST6-004', 'ST6-005', 'ST6-006', 'ST6-007', 'ST6-008'].includes(addition[1])) {
     return { kind: 'deck-addition', cardNumber: addition[1], scenario: addition[2] as DeckAdditionScenario }
   }
   if (testState === 'bs10-008-flip') {

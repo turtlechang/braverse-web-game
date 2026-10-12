@@ -1,5 +1,67 @@
 # 薑餅人對戰卡牌 Braverse
 
+<!-- ai-starter-current-start -->
+目前驗證摘要（2026-10-11）：ST6～ST10 **36／100已promote、64候選**，ST6=20、ST7=9、ST8=1、ST9=1、ST10=5；正式50 JSON／2116卡號／2060可轉換／1577 canonical AI cards。AI沿用12副已接受牌表（六色BS12＋Cookierift921／927／67／83／568／506），預設Lv5。
+
+**v12＋ST7-006／007／009完整Vitest已完成**：884檔／18,369項全部PASS、1430.92秒、exit0；1696份來源／設定／資料指紋一致，session88675終止、來源凍結解除。證據為output/st6-st10/st7-006-007-009-full-vitest.log、full-vitest-exit.txt及full-source-integrity.log／exit.txt。此結果不涵蓋其後v13政策修正。
+
+ST7-006／007／009正式單卡閘門已PASS：11檔／533項、build／全域lint、資料／registry／逐卡strict、ST7能力8張／12能力ready、正式Chrome76案與標準AI Browser。006有24案精確重播，另4案Refresh未記錄種子，只排除洗後牌序、逐張卡牌集合與其他狀態／支付／pending精確核對；007=18案、009=30案精確重播。候選／來源／正式重驗不重複累加，屬準備式局部操作，非逐卡完整開局至勝負或online。
+
+正式程式已整合 **v13 lv5-public-special-play-attack-v13**，補足Licorice降等→Mold特殊登場→On Play／補位→普通攻擊的公開條件式收益預估。v12新增13項回歸先得到6失敗／7通過；修正並補隱藏資訊測試後，相關4檔／56項全部PASS，build exit0。桌機／平板6案實際Chrome與獨立初始局面／全部指令重播PASS。草稿各54條分段診斷與配對audit亦PASS：三種初始局面從錯失改為獲勝、能量／傷害不足仍保守、對手真正支付ST2-020仍可擋住斬殺，六種隱藏牌面變動不影響根動作。真實Trap／FLIP仍由實際流程回應，不宣稱無法反制。此為原卡60張準備式局面，REST歷史未從完整開局重播，非逐卡實體／online驗收；Lv3／4尚未修正同類深層連段。
+
+v13最新局部驗證：相關4檔／56項、build、全域lint、六案Chrome與全部指令重播、標準AI Browser均exit0。受影響AI回歸70檔／1063項全部PASS、344.76秒、exit0，session34213終止。凍結v12／v13 bundle第一組預選seedBase2026101297之624場已全部完成、零錯誤，新版312／舊版312；312組交換政策座位配對全為各勝一場，報告／bundle／配對audit通過，這組未顯示整體提升。第二組預選seedBase2026102297也完成312比312、零錯誤；合計1248場624比624、624組交換政策座位全為各勝一場，兩bundle／報告／配對audit exit0，未量到整體勝率提升。兩場benchmark session4422／49769均已終止。第一次誤用CLI參數的部分run已主動取消並保留，不納入成果；正式結果均由環境變數設定。1696舊輸入差異audit確認只有AI evaluated-turn-handler及版本檔改變；新fixture／tests另驗。v13最終完整Vitest已結束：885檔／18,389項全部PASS，1441.78秒，exit0；1698份來源／設定／資料指紋一致，session2688終止，來源凍結解除。證據為output/st6-st10/ai-v13-full-vitest.log／exit.txt與ai-v13-full-source-integrity.log／exit.txt。此結果涵蓋正式v13，不涵蓋其後ST7-012候選草稿或未來正式修改。
+
+較早v12對v11兩組共1248場625比623（50.08%）僅是小幅AI對AI差異，不宣稱穩定提升或人類勝率；v11另624場312比312。既有12牌表能力稽核所列紅色prevent-source-active-phase及黑色set-cookie-level是保守分類，不直接當錯誤證明；紅色公開readying已有策略支援。
+
+候選待修：ST7-008缺On Play及Then（固定LV3同名見證需精確條件，傷害目標仍待規則確認）；010漏HP≤4限制且缺Then，output-only HP selector原型已證明修正非法5→6，但尚未整卡驗收。新目視011／012／013已先存獨立印刷預期再讀候選；011正式仍缺來源補HP Then；output-only草稿為named-cookie條件增加同張見證的目前LV上下限，並依印刷加入sourceHP≤2且己方同名LV3的source-only補1HP。現有Tree所有印刷都是LV3，未造LV2卡；以真正Licorice Activate從LV2降1、另一張原圖TreeLV3，九組條件／舊欄位相容探測PASS，基線五種比對不符。五個原卡60張局面的實際YY普通2／傷害／Then探測，基線＋草稿共10列PASS：正向與疲勞見證由2補至3HP；錯名（同LV3）、對手／Break見證不補；補至3後已超過原條件。隔離驗證最新結果：全app＋草稿型別零診斷、2檔70項Vitest全部PASS（6.00秒）、最新16局面preflight PASS、單卡strict verified1／needs-review0／blocked0、shadow batch limit1 ready。已覆蓋實際1／3HP父流程、Kumiho FLIP來源離場、Refresh、付款阻擋與9項同名見證目前LV相容性；雙尺寸Chrome／獨立精確重播及正式採用／promote仍待完成。第一次型別檢查6診斷已修正output草稿的pendingAbilityEffect欄位與gain-hp型別縮限，沒有修改正式來源或放寬斷言。兩份首輪草稿失敗分別為誤認Licorice印刷LV3（已依原卡修為2）及空pending的undefined／null表示（已正規化），沒有改卡名／印刷屬性，失敗紀錄保留。011／013仍needs-review，013仍缺道具轉接。012已單卡promote並完成正式局部閘門：13檔262項、build／預覽build、資料／registry／strict、受影響lint、桌機／平板Chrome44案與44案精確重播、標準AI Browser全部exit0。promote前隔離78項、型別零診斷、shadow limit1及來源255項／build／全域lint／同44案Chrome與重播均PASS；相同案例重驗不累加。原始record一致才移出候選，正式fixture只從getCardPoolEntry載入。當前36正式／64候選，ST7=9／11；50 JSON／2116卡號／2060轉換／1577 canonical AI cards。1698舊輸入對照稽核PASS：只新增5檔並修改6個預期卡牌／契約／路由／registry／計數輸入，AI政策與其他規則未變。完整Vitest首輪session20395已因worker spawn UNKNOWN／原生記憶體不足終止（exit -2147483645），不是通過；同次尾端指紋命令亦無法啟動，稍後獨立重驗1703份指紋PASS。第二輪主機forks亦出現原生Zone／MemoryChunk反序列化記憶體錯誤，session24602 handle已消失且主機程序確認無Vitest；沒有結束碼檔或通過摘要，不當作通過。獨立1703指紋再驗PASS。threads單worker預檢原有兩檔78項PASS（6.89秒），第三輪threads session30021以DataCloneError記憶體不足結束（test exit1），其尾端指紋命令exit -1073741523，之後獨立重驗1703指紋PASS。主機終止後commit使用36%／約22GB可用；本次8GB heap＋threads單worker＋記憶體監測完整run5（session67446）已終止並通過：887檔／18,467項全部PASS，1357.41秒，test exit0；1703份來源／設定／資料指紋一致、integrity exit0。證據為output/st6-st10/st7-012-full-vitest-run5.log／exit.txt及st7-012-full-source-integrity-run5.log／exit.txt。run4因NODE_OPTIONS反斜線預載路徑解析失敗未進入測試，已改正斜線並保留失敗。完整期間沒有修改src／scripts／data／config，最終來源凍結解除。此結果涵蓋正式v13及ST7-012，不涵蓋其後ST7-011／AI減傷草稿。Chrome預覽僅明列data:, favicon，不改卡圖／規則／正式HTML；舊EACCES、選擇器與favicon404失敗保留。準備式局部驗收不等於完整開局／逐卡online，尚未commit／push。
+
+本階段未commit／push。ST6～ST10全100張與AI整體勝率改善仍未完成，沿用本追蹤入口與output/st6-st10證據。
+012第二次Blocker入口以實際第一次付款／受傷／第二次攻擊指令準備，再於UI支付第二次費用，兩尺寸操作與全部指令精確重播已通過。v13 ST6-019條件抽牌評分真／假都122的診斷仍待實際決策影響證據；未修改AI政策。
+
+<!-- ai-starter-current-end -->
+
+歷史進度（現況以本文開頭摘要為準）：ST6-020 Into the Depths 已依原圖補齊 RR 放置、Activate 橫置場景＋己方任意戰鬥區餅乾最上方1HP進棄牌後抽0～1；沒有額外啟動能量或Once。61項單卡（22種執行期strict錯誤變異）、隔離20檔407項回歸與型別檢查PASS；單元另驗真實FLIP HP支付不揭示也不觸發FLIP。38案桌機1366×768／平板1164×777 Chrome及獨立重播PASS，含任意顏色／REST餅乾、1HP昏厥、抽0、取消／切換、錯色付款、抽最後一張→Refresh。修正通用draw-up-to來源查找及UI漏場景區，抽牌視窗保留原卡圖、卡號與卡文；仍屬原卡準備式局部Browser，非整副開局至勝負或online驗收。重播將準備式父指令與initialState後的操作分開；Refresh未匯出洗牌seed，只宣稱牌庫成員與其他牌區精確相符，不宣稱重現隨機牌序。實際來源回歸=PASS、build=PASS、全域lint=PASS、單卡strict=PASS、來源Browser=PASS、來源重播=PASS。020已單卡promote；正式21檔414項、build、全域lint、資料／registry／strict、38案Chrome與重播、標準AI Browser及ST1好友房核心同步皆exit0（非020逐卡online）；43 JSON／2109卡號／2053轉換／1570 canonical AI cards，ST6 ready20／44能力／10組合邊／0unsupported；目前29正式／71候選，ST6=20／0，ST7=2／18、ST8=1／19、ST9=1／19、ST10=5／15。019正式410項、46案Chrome／重播、build／資料／registry／受影響lint／標準AI Browser均PASS；本批017～020完整Vitest已終值exit0：868檔／18,016項全部PASS、1359.78秒，1652份來源／設定／資料指紋一致；此完整回歸不涵蓋其後ST7-001候選來源修改。正式AI已整合安全Break代價選擇v10，正式局部與完整Vitest驗證均通過，條件評分原型14項PASS、修正前6項失敗：019己方1HP門檻成立122分，不成立117分；僅處理已證明不改HP的代價與前段效果，未知或可能改變條件的路徑保留原估值。原型未採用、未宣稱提高勝率。全正式陷阱與12副已接受牌組的靜態掃描確認此原型目前只影響ST6-019，現有12副均未含該卡，不以未受影響牌組的對照賽當作改善證據。另一救援陷阱原型128項／4案AI Chrome PASS，但兩組各624場625／623（50.08%），未證明穩定提升，未採用。逐卡online、完整正式對局及對人類勝率未驗收／量測；未commit／push。 本輪AI診斷確認canAttack僅為主要階段／首回合門檻，舊AI卻以其排除場景啟動候選；輸出隔離原型只讓Lv3～5比較合法場景，未改正式AI。原型40項回歸PASS（原版3項反例失敗）、原圖60卡準備局面雙尺寸Chrome12案及全部實際命令獨立重播PASS；兩組各624場為314／310與312／312，合計626／622（50.16%）；624組交換policy座位配對中5組有利、3組不利、616組勝負不變；場景啟動59次對基線1次。原型型別零diagnostics，未套用正式來源，不能宣稱穩定勝率提升。ST7-001原圖已目視並建立獨立預期；隔離54項測試（31原卡規則＋23契約，含22種錯誤變異）及型別PASS，原strict漏20種的反例已確認。實際來源候選已套用，12檔321項回歸與build、strict verified=1通過；原圖60卡雙尺寸Chrome44案及全部實際指令獨立重播PASS，新增guard對2108張正式卡分析不變。全域lint首次因三處測試prefer-const失敗，已改const並重跑321項PASS；全域lint重跑exit0，ST7-001已單卡promote；正式12檔321項回歸、資料／registry／strict皆exit0。正式雙尺寸Chrome44案及獨立重播、標準AI Browser與v10共批全域lint均exit0；ST7正式AI能力稽核ready2／2能力／0unsupported／0conversionFailures。首次driver將ST1-001誤認為GingerBrave已改為原圖Princess，後續付款候選及結果視窗driver錯誤已修正，失敗紀錄保留，不計為產品缺陷。 AI主線另重現BS12-035手牌進Break代價的自敗錯誤：己方Break7時Lv3～5按手牌順序選LV3會立即敗北，LV1可實際擊倒對手並獲勝。輸出隔離修正優先低印刷LV、排除其他手牌代價並拒絕會先達Break10的可選付款；59項回歸PASS（基線6項失敗）、型別零diagnostics、雙尺寸Lv5 Chrome12案及獨立指令重播PASS。首組624場312／312（50.00%），未證明整體勝率提升；安全代價原型其後已整合正式AI v10（lv5-safe-break-cost-v10），只改手牌進Break候選選擇與其他手牌付款排除；正式94檔1370項AI／ST7回歸、build、全域lint與標準AI Browser皆exit0；正式v10原圖60卡準備局面雙尺寸Chrome6案及獨立重播PASS。正式624場預選種子對照312／312（50.00%）、零錯誤，雙方各14次手牌進Break付款、零此類付款自敗，不能宣稱整體勝率提升。當前引擎SHA be714a097c6f0bae32991608a125342d9e4954acef4a8a7d2d355796cde090f4與對照賽bundle完全一致，對照020完整回歸僅8個既有來源／資料檔為預期修改。另用實際搜尋時鐘完成六色BS12對局至勝負，340次搜尋／0逾時／0丟棄評估；仍非人類勝率或逐卡online驗收。15項正式閘門通過後凍結1660份來源／設定／資料，AI v10＋ST7-001完整Vitest已終值exit0：871檔／18,083項全部PASS、1289.13秒，1660指紋一致。完整回歸不涵蓋其後ST7-002隔離或正式修補；002尚未套用／promote，當前29正式／71候選。來源凍結已結束。場景啟動與019條件估值原型仍未套用。實體卡準備式局部Browser不等於完整對局、逐卡online或人類勝率驗收。凍結期間另以正式ST7-001原圖60卡準備局面驗證主動技能：己方來源REST／Break7、對手Break9，高LV手牌在前時舊v9的Lv3～5皆弱部署而錯過立即勝利，v10皆付Princess LV1後兩點傷害收尾；低LV在前時新舊皆收尾，共6個實際命令反例，輸入不變／60唯一實體卡／同卡至多4張，見st7-001-ai-safe-break-diagnostic.json。此為局部策略證據，不是新勝率、全場或online驗收；未修改凍結來源。
+
+最新完成：ST6-015 Fire Spirit Cookie’s Staff 已依原圖驗證並 promote：RR＋任意己方餅乾頂端1HP，0～1任意己方餅乾本回合攻擊+2，無具名／顏色／等級限制。68項單卡回歸、18種strict錯誤變異、49檔714項受影響回歸通過。候選與正式雙尺寸Chrome各重驗相同34案（32一般＋2最後餅乾代價，不重複累加），精確命令與付款、選零、離場候選、REST、異色目標、到期及普通攻擊已核對。本機目標以純付款命令投影，線上先付款再選權威目標；6項hook回歸通過，逐卡online完整對局未驗收。現23正式／77候選，ST6=15／5、ST7=1／19、ST8=1／19、ST9=1／19、ST10=5／15；37 JSON／2103卡號／2047轉換／1564 canonical AI cards。正式build、全域lint、資料／registry、strict ST6 ready=15、標準AI Browser皆exit0；修改前2102筆正式分析不變。015完整Vitest858檔／17,772項全部PASS、1273.65秒、exit0，1627份來源／設定／資料指紋一致，見output/st6-st10/st6-015-full-vitest.log；此終值不涵蓋後續016。AI正式仍v9；增攻原型兩組預選種子各624場為312／312、311／313，無穩定提升，未套入正式AI。對人類勝率未量測。未commit／push。下一cursor ST6-016；以下舊段落為歷史快照。
+
+最新進度：**ST6～ST10 共17張正式／83張候選，交集0、總數100**。ST6-009 候選雙尺寸32案及3檔34項（含Lv4／Lv5實際付費技能收尾）通過後單卡promote；ST6-001～009與AI卡池稽核受影響22檔213項PASS，最終build通過。正式009 Chrome／本批AI Browser／全域lint仍待終值；完成後啟動007～009批次完整Vitest。正式資料31 JSON／2097卡號／2041轉換、registry一致，ST6 AI strict ready。未commit／push，逐卡online未驗收。以下為歷史快照。
+
+目前核驗進度：ST6～ST10 為 **16 張正式／84 張候選**；ST6-007／008 已完成正式雙尺寸 Chrome 28／24 案、合計 50 項卡牌測試，加入全卡池 AI 稽核後 5 檔 57 項 PASS。008 的最後一張牌／Refresh／不補位父流程以匯出重播核驗。正式 build、全域及修改檔 lint、資料與 registry、AI Browser 通過。ST6-009 已目視原圖、strict verified=1、32 項專項測試及候選 build／lint，Chrome 尚待終值；未 promote。正式 AI 仍 v9；新後續攻擊減傷原型兩組各 624 場為 315／309、313／311，只略高五成，沒有當成穩定勝率提升。最新完整回歸 834 檔／17,416 項只涵蓋新增007以前的 v9／P-163。localhost:5173 已確認 HTTP200；逐卡 online 未驗收，未 commit／push。以下為先前快照。
+
+2026-10-11 最新核驗：正式 AI v9／P-163 修正的完整 Vitest 已終值通過（834 檔、17,416 項、1341.17 秒、exit 0），修改 ST6-007 前 1576 份來源指紋一致。ST6-007 其後完成原圖、strict verified=1、候選與正式各同 28 案雙尺寸 Chrome、正式 2 檔 30 項測試及單卡 promote；正式資料 29 JSON／2095 卡號／2039 轉換與 registry 一致。ST6～ST10 現為 15 正式／85 候選，007 不在前述完整回歸範圍，逐卡 online 未驗收。正式 lint 首輪因兩個未使用候選 import 失敗，已清除重跑。AI 後續減傷原型已發現盲目優先當前攻擊者會忽略可支付的第二次攻擊；公開普通攻擊預估原型僅在 output 驗證與比較，正式仍為 v9。未 commit／push。
+
+本批最終build及全域lint已exit0；完整Vitest仍在session29773，1576指紋保持一致。ST6-007隔離候選雙尺寸Chrome28案已通過，尚未整合正式路徑／測試或promote，數量仍14正式／86候選。正式開發頁面localhost:5173已確認HTTP200。
+
+
+2026-10-10 AI v9正式續批：v8完整Vitest已結束，833檔／17,396項全部通過，1420.70秒、exit0；修改前1572份來源／設定／資料指紋一致。其後正式套用「可救下當前防守者的減攻陷阱優先當前攻擊者」，版本`lv5-public-saving-trap-target-v9`；原v8的11項測試9失敗／2通過，修正後11項全通過。受影響AI回歸65檔986項、build、全域lint與標準AI Browser通過；實際AI雙尺寸6案及匯出付款／目標／resolve-battle／HP指令全部通過。前兩輪Browser driver對HP文字格式及結算指令的假設失敗保留，run3取代，不當產品失敗。六色BS12實際時鐘完整對局368次搜尋、0逾時／0丟棄評估，4次實際Special Play。
+
+勝率證據：凍結原型兩個預選種子組各624場，338／286（54.17%）及329／295（52.72%）；正式v9另用seedBase=2027022617完成624場，342／282（54.81%）、零錯誤，312組政策座位配對中38組新版雙勝／8組舊版雙勝／266組各勝一場。正式bundle除版本字串外與前兩組原型完全一致；共同規則／資料與bundle指紋、種子／座位稽核通過。正式報告SHA=632df663ef40d00570964b2febf4f02d048c5509caba744fc427d7e6a33e4311；原report.method沿用output-only範本文字，正確正式版本身份見protocol／manifest及formal-comparison-summary.json，原報告保留不覆寫。這是固定12牌表的AI對AI改善證據，不等於人類勝率或所有環境的穩定提升。
+
+P-163舊三張戰鬥區fixture已撤回合法驗收解讀，改為來源加一張紅Arena／綠Arena／非Arena的獨立兩張局面，錯色支付改用真正ST2-020，不改卡牌印刷屬性。原上限測試1失敗／11通過，修正後21項通過，正式Chrome雙尺寸14案通過；舊Browser紀錄保留但不累加。沒有新增卡牌promote，ST6～ST10仍14正式／86候選，007正式驗收及逐卡online未完成。
+
+本批最終完整Vitest已凍結1576份來源啟動，session29773，`output/ai-cookierift/formal-saving-trap-v9/full-vitest.log`，尚待終值；執行期間不改程式／測試／資料。v8的833檔結果不替v9宣稱完整通過。localhost:5173開發伺服器session26822已啟動，HTTP200／Braverse對戰卡牌；未commit／push。
+
+
+AI v8最終局部驗證：專項2檔21項、受影響65檔990項、最終build／全域lint／新增測試lint／AI Browser通過。正式新種子624場312勝／312敗，未測得整體勝率提升；8組配對行動過程不同但勝負不變。六色實際時鐘完整對局350次搜尋、0逾時／0丟棄評估、4次真實Special Play。v8完整Vitest已凍結1572來源啟動（`output/ai-cookierift/formal-resource-v8/full-vitest.log`），尚待最終結果；執行期間不改程式／測試／資料。
+
+2026-10-10 ST6-006／AI v7完整回歸已完成：832檔／17,384項全數通過，1276.56秒、exit0；1571份來源／設定／資料指紋一致，報告`output/st6-st10/st6-006-full-vitest.log`。ST6～ST10正式14張／候選86張，逐卡online尚未驗收。其後正式AI更新為`lv5-public-on-play-resources-v8`，加入登場後抽牌／公開回收與淨手牌計分、拒絕未完成Refresh預測；專項20項與build通過，AI回歸／Browser／正式v8新種子比較仍進行，前述全套不涵蓋v8。
+
+ST6-006最終局部重驗：正式Chrome雙尺寸同18案全部通過，不與候選累加；正式build修正測試型別窄化後通過，最終全域lint／AI Browser／資料／registry通過。Lv4／Lv5正常與最後HP四案實際AI均免費發動006回手且輸入不變。本批完整Vitest已凍結1571份來源／設定／資料指紋啟動，報告`output/st6-st10/st6-006-full-vitest.log`，session需等最終結果，執行期間不改程式／測試／資料。正式14張／候選86張，007尚未推進效果驗收。
+
+ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、受影響10檔435項及build／全域lint通過後已單卡promote；正式14張／候選86張（ST6正式001～006、剩14）。正式28JSON／2094卡號／2038轉換及registry一致性、promote後4檔29項通過。正式build初次發現新detached測試缺少Cookie型別窄化，已補真實type assertion；重建、正式Chrome／AI Browser與本批完整回歸仍待完成，停止後續007驗收。前版829檔17,361項全套不涵蓋006。逐卡online未驗收。
+
+2026-10-10 22:33最終完整回歸：v7／ST6-005的Vitest 829檔／17,361項全部通過，1206.63秒、exit0；1565份來源／設定／資料指紋一致。報告`output/ai-cookierift/full-vitest-on-play-v7-st6-005.log`。此結果不包含後續006或Venom原型的正式套用。
+
+本批最後狀態：ST6-005正式雙尺寸28案及promote後五檔53項通過，最終build／lint／資料／registry／AI Browser通過；最終runtime六色350次搜尋無逾時。完整Vitest已固定1565份來源指紋啟動，尚待最終結果。預組正式13／候選87；下一張ST6-006已確認印刷FLIP缺少轉接，僅隔離診斷、不提前promote。最新證據以下方報告為準，舊快照不代表本批完整驗收。
+
+最新AI v7／ST6-005：修正健康Licorice／Mold Dough登場收尾漏估，原始三反例由失敗轉通過，AI回歸63檔963項及build／lint／AI Browser通過。新種子624場全部完成零錯誤，新版313勝／舊版311勝（50.16%），僅多贏一組交換位置配對，尚不足以證明穩定勝率提升。真實時鐘六色完整對局350次搜尋無逾時／無丟棄評估；比較bundle凍結於005增加前。ST6-005完成原圖、30項卡牌／實體局面測試、strict與候選雙尺寸28案後已單卡promote，正式13張／候選87張；正式資料／registry通過，正式Browser及本批最終完整Vitest仍待完成。P-163舊非法三餅乾fixture仍待修正，不以舊證據宣稱驗收。詳見[AI報告](docs/ai-cookierift-2026-10-10.md)與[預組逐卡矩陣](docs/st6-st10-card-inventory.md)。
+
+續批AI v6：正式回歸先重現10項失敗，修補Special Play合法代價組合列舉及動作識別後，4檔29項、最終3檔39項與AI回歸62檔954項通過；build／lint／AI Browser通過，真實時鐘六色完整對局350次搜尋無逾時並記錄4次Special Play。新種子624場全部完成、零錯誤，新版310勝／舊版314勝（49.68%），仍未證明勝率提升；完整回歸尚未完成，下一版先處理已重現的On Play漏估。前批v5／ST6-004完整Vitest已結束：825檔／17,306項通過，1231.87秒、exit0；不作為v6驗收。ST6-005完成原圖重讀、strict及隔離正常／最後HP FLIP診斷，仍留候選。P-163舊fixture超出戰鬥區兩張上限，已撤回其合法實體局面驗收解讀、待拆分重驗。正式12張／候選88張。
+
+前批v5驗收：AI v5修正Arena同伴活躍收益，34項專項與AI Browser通過；新種子624場與凍結v4.1同規則比較全部完成、0錯誤，各312勝（50%），尚未測得整體勝率提升。最終程式六色完整鏡像350次搜尋無搜尋超時。ST6-002已改成合法雙餅乾局面，23項專項與正式雙尺寸Browser26案取代舊三餅乾局面。ST6-004完成原圖、28項卡牌／實體局面測試、strict與候選雙尺寸34案後單卡promote，正式同34案重驗通過；正式資料／registry／build／全域lint通過。目前正式12張／候選88張，v5／004本輪完整Vitest825檔／17,306項通過（1231.87秒、exit0）；前版822檔17,262項不替代本輪驗收。詳見[AI報告](docs/ai-cookierift-2026-10-10.md)與[預組逐卡矩陣](docs/st6-st10-card-inventory.md)。
+
+前批v4.1歷史快照（最新結果見上）：2026-10-10 Cookierift AI擴充進行中：六色社群構築已加入，AI共12副可選牌組。v4修正溢傷反例，但新種子624場僅307勝／317敗，未證明提升勝率；v4.1再修正同等擊倒收益被HP傷害重複加分的問題，正式專項、build／全域lint／AI Browser通過，新一輪624場同為307勝／317敗（49.20%）、0錯誤，尚未證明整體勝率提升。前版v3完整Vitest819檔／17,239項通過，不能當作v4.1最終驗收。ST6～ST10共100張已匯入及原圖盤點；ST6-003另完成原圖、strict、10項測試與候選Browser雙尺寸10案並promote，目前正式11張、候選89張；正式Browser同10案重驗通過，本批全套仍待完成，不能宣稱全預組完成。詳見[AI報告](docs/ai-cookierift-2026-10-10.md)及[預組逐卡矩陣](docs/st6-st10-card-inventory.md)。
+
 2026-10-09 新加坡S3牌表參考AI改善：依使用者四張圖片及正式卡文，修正Lv.5陷阱實際能量／顏色預留、Blocker指定手牌支付、免費能量Blocker的錯誤支援需求，以及唯一合格手牌被放支援的資源流失評估。五項原始反例修正，另確認不再因不存在的Blocker能量需求而跳過合法攻擊。固定種子新舊版本168場全部完成，新版85勝、舊版83勝（50.60%），尚無顯著整體勝率提升證據；未更動六副BS12牌表或採用新經驗權重。專項5檔／37項、完整Vitest806檔／17,155項（1153.51秒）、build、全域lint與完整AI Browser通過。來源、反例、對照及驗收限制見 [S3牌表與AI改善報告](docs/ai-s3-finalists-2026-10-09.md)。
 
 2026-10-09 BS12六色1,028人賽事：11輪瑞士輪5,654場及16強淘汰賽15場全部完成，冠軍黑色#0144、亞軍黑色#0036，16強全為黑色。修正六項AI決策流程缺陷，11個原始失敗種子全部完成；另以336場獨立對照評估賽事經驗權重，候選166勝（49.40%），未達採用門檻，因此保留原權重。全套805檔／17,147項通過，最後守門修改再通過受影響8檔／581項；build、lint、完整AI Browser、雙尺寸補位UI正反4／4及賽果稽核通過。六色固定牌表未更動；完整排名、顏色圓餅圖、相性矩陣與打法見 [賽事與AI分析報告](docs/bs12-1028-tournament-2026-10-09.md)。
@@ -17,6 +79,8 @@
 > **非官方聲明**：本專案為 CookieRun: Braverse 的**非官方粉絲研究 / 學習型實作**，與 Devsisters Corporation 沒有任何合作、授權或背書關係。CookieRun: Braverse 及其卡牌、插畫、標誌之著作權與商標權均屬 Devsisters 及其授權方所有。本專案不商用、不收費；素材使用政策見 [docs/ip-and-asset-policy.md](docs/ip-and-asset-policy.md)。
 
 ## 開發背景
+
+2026-10-12 已驗證里程碑：新增 Cookierift 六色構築，並以固定種子、實際 UI 與規則回歸改善 AI 決策；ST6～ST10 採逐卡驗證後 promote。
 
 BS12綠色AI覆盤已重現先技能退回支援而漏掉攻擊的順序問題，修正與範圍見 [覆盤報告](docs/ai-bs12-green-replay-2026-10-09.md)。
 
@@ -395,6 +459,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+- 2026-10-12 部分提交範圍：正式 AI v13、六副 Cookierift 構築及 ST6～ST10 已 promote 36／100 張。最新完整回歸 887 檔／18,467 項全部通過、1703 份來源指紋一致；v13 對 v12 共 1248 場各勝 624，不宣稱穩定勝率提升。
+
 - Lv.5支援代價續接評分已完成：完整Vitest804檔／17,133項、build、lint與AI Browser通過；固定種子前後各24場勝負相同。
 
 - PR #124 修復：相關 7 檔／123 項回歸、最終控制器 3 檔／20 項回歸、typecheck（含 server）、全域 lint 與 build 通過；兩則留言的新問題由規則／控制器測試覆蓋。既有 BS12-009／082 雙尺寸付款正反、取消／返回 Browser 共 12 案通過，不代表新的跨陷阱切換或展示道具組合已完成 Browser／online 驗收。
@@ -437,6 +503,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - **BS11-064～070 candidate-only Browser 與邊界補驗（2026-09-28）**：064～070 在 1280×720／1164×777 新增 66／66 條可操作的付款、代價、目標、結算正反路徑；063／@1 零目標與略過抽牌另補 8／8。062 手牌快照跨後續指令保持固定與擁有者限定。070 牌序及手牌置頂提示均有回歸。159 筆官方卡圖已取得至忽略的本機測試目錄，新 Browser 案例載入原始 WebP；一般 CDN 連線與正式環境仍待驗證。完整 Vitest 首跑 445 檔／5,593 項有 1 項舊測試筆數斷言失敗，修正後該檔 5／5 通過，全套當時未重跑；build、scoped lint、候選驗證與 strict 159／159 通過，全域 lint 仍有 4 個無關既有錯誤。候選維持 `inventory`／0 converted，正式牌組／formal battle／online／promote 未完成。詳見 [BS11 進度](docs/bs11-progress-2026-09-22.md)。
 
 - **BS11-060～063 candidate-only Browser 輕度驗收（2026-09-28，前一輪）**：060 紅色支援支付任意 1 能量攻擊、061 2B 移動對手 HP 頂牌、062 2B 場景放置／自我送棄／擁有者限定手牌快照（含空手牌）、063／@1 1B 陷阱減傷與 Sea Fairy／Ancient 條件 Then 抽牌；兩尺寸正向／阻擋／條件不成立共 26／26。前輪完整 Vitest 443 檔／5,577 項（517.37 秒）、build、scoped lint、candidate validation、strict 159／159 通過。當時 CDN 受網路限制未載入圖像，候選仍 `inventory`，正式牌組／formal battle／online 未完成；本輪已補快照後續變化與 063 邊界。
+
+2026-10-11 ST7-002正式進度：Mango 已完成原圖逐字核對、免費On Play己方休息區總LV至少2→自身補1HP及Y普通1的實際來源驗收，已單卡promote。共用解析修正同時保留BS4-033休息LV5門檻與BS6-078手牌至多5門檻；候選12檔652項、正式13檔659項回歸、候選與正式build／全域lint／單卡strict／資料及registry皆exit0。候選與正式各同46案雙尺寸原圖Chrome（補HP36＋Mango普通攻擊10）及獨立實際指令重播PASS，仍為準備式局部流程，不等於開局至勝負或逐卡online。Lv3～5另12案正式AI探針確認門檻未達略過、達標接受免費補HP；標準AI Browser也PASS，這不是新勝率證據。正式44 JSON／2110卡號／2054轉換／1571 canonical AI cards；ST7能力稽核ready3／5能力／0unsupported／0conversionFailures。ST6～ST10現為30正式／70候選（ST6=20／0、ST7=3／17、ST8=1／19、ST9=1／19、ST10=5／15）。本批完整Vitest已終值exit0：872檔／18,125項全部PASS、1309.94秒，1665份來源／設定／資料指紋一致，來源凍結已結束；此完整回歸不涵蓋其後ST7-003候選來源修改。ST7-003原圖及獨立預期、轉接基線已存output；14種執行期strict變異僅攔2／漏12，正式來源未套用，也未promote。初版兩個無效手牌篩選欄位的診斷已撤回，v2改真實discardHandType／discardHandColor重驗，統計取v2。未commit／push。
 - **BS11-054～058 candidate-only Browser 輕度驗收（2026-09-27）**：新兩尺寸路徑 24／24 通過，另重用 057 simple FLIP 4／4；覆蓋 On Play 攻擊限制／手牌代價、任意能量攻擊、Activate 條件／抽牌／Once Per Turn、FLIP 與 opponent-attack response。Astra 指出 056／058 普通攻擊負向 route precedence 問題，紅綠測試修正後 focused 2 檔／14 項、完整 Vitest 441 檔／5,565 項（522.12 秒）、build、scoped lint 通過。Browser 矩陣早於 route guard 修正，該兩條 generic attack route 在 focused 回歸中另行確認；未重跑 UI 矩陣。官方圖資實際載入與少數 timing／target 邊界未驗收；候選仍 `inventory`，正式牌組／formal battle／online 未完成。
 - **BS11-050～053 candidate-only Browser 輕度驗收（2026-09-27）**：base／@1 在 1280×720／1164×777 共 40／40 正反路徑通過；053 另驗 Activate，確認恰好 5 HP 的 Cookie 失去 1 HP、4 HP 不受影響，並在公開 trace 記錄 HP 張數變化／無符合目標原因。修正 Then self-trash 代價提示與 Browser trace steps 讀取，並將 HP 結果限定於合法效果目標；Astra 複核通過。focused 4 檔／89 項、完整 Vitest 440 檔／5,559 項（517.39 秒）、build、scoped lint、candidate validation、strict 159／159 通過。候選仍 `inventory`／converted=0；圖資、正式牌組／formal battle／online／promote 未完成。
 - **BS11-045～049 candidate-only Browser 輕度驗收（2026-09-27）**：本地 Playwright 在 1280×720／1164×777 完成 045～049 positive／negative，另驗 047 replacement follow-through，共 26／26。048 正向確認支付 G＋1N 後依 Wind Archer／Ancient 條件休息對手支援，負向付款後 no-op；命令紀錄現以陷阱技能來源判定 Then 條件。Astra 唯讀驗收通過。focused 6 檔／73 項、完整 Vitest 439 檔／5,542 項（525.49 秒）、build、BS11 strict 159／159、candidate validation 與 scoped lint 通過；候選維持 `inventory`／converted=0。外部圖資未載入，048@1 異圖 identity 未做視覺驗收；正式牌組／formal battle／online／promote 未完成。
@@ -672,6 +740,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+- 完成剩餘 64 張逐卡驗收；ST7-011、離線 Refresh 種子紀錄及防守減傷決策修正仍在隔離驗證，不納入本次正式來源提交。
 
 - 後續AI評估仍需驗證長期支援管理與交換收益；本次局部順序改善尚未證明勝率提升。
 
@@ -1046,3 +1116,30 @@ P-0XX 127 筆已完成 `127/127` Browser 路由載入；108 筆 effect-bearing �
 牌組編輯器採 Master Duel 取向的 Braverse 全頁工作台：左側卡圖與數值摘要、中間依餅乾／FLIP／物品／陷阱／場景分區的主要牌組，以及右側卡池。合法性、賽制、卡池統計與 JSON 工具均收斂至頁首；卡池篩選預設收合，卡片能更早顯示。JSON 匯入使用輔助提示框，不影響工作台版面；額外牌組已開放正式 BS8，使用選填 extraDeckEntries JSON，主牌仍須60張。完整桌面、平板與窄版驗收詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md) 與 [設計 QA](design-qa.md)。
 
 已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。牌組編輯器在手機與窄平板由頁面本身承接垂直捲動，可到達主要牌組加減按鈕與卡池；Browser gate 另涵蓋 `622×1040`、`390×844` 與 `280×720`。下一步為 P-0XX 正式牌池持續執行回歸與實戰驗證；官方新增卡牌仍先以候選資料流程隔離處理。
+
+
+2026-10-11 ST7-003候選來源進度：Rainbow Sherbet 原圖獨立預期為黃色LV3／HP4，YYYY普通4、無Cookie技能；FLIP棄任意手牌恰好1張，原HP持有者補1HP，沒有額外能量／顏色／類型限制。隔離52項規則與契約回歸PASS（基線19項失敗／33項通過），21種真實runtime錯誤變異全攔、2110筆正式卡分析不變、型別零diagnostics。28案雙尺寸實際Chrome及獨立重播PASS，含實際攻擊／傷害父指令、最後HP救援、不同顏色類型代價、取消／略過、付款不足／錯色／錯時機；均為準備式局部流程，非逐卡online或完整對局。已採用候選來源guard、fixture、52項回歸與Chrome driver；實際來源6檔126項回歸及strict verified=1通過，其他來源閘門進行中，尚未promote。初版guard錯把選填cardColor視為必填，已依實際createCard改用cardColor??energyColor並新增實際runtime正例；沒有修改卡牌規則或偽造屬性。AI政策仍v10，沒有新的整體勝率提升證據。
+
+
+2026-10-11 ST7-003正式進度：Rainbow Sherbet 已依原圖逐字驗證黃色LV3／HP4、YYYY普通4、FLIP棄任意1手牌→原HP持有者補1HP，完成單卡promote。候選6檔126項、正式7檔133項回歸，候選及正式build／全域lint／strict／資料及registry全部exit0；候選及正式各同28案桌機／平板原圖Chrome與獨立實際命令重播PASS，含真實攻擊／傷害父指令，仍是準備式局部驗收，非完整對局或逐卡online。Lv3～5共12案正式AI探針確認可付代價時補HP／最後HP救援，無手牌正常略過；標準AI Browser PASS。ST7正式AI覆蓋ready4／6能力／0unsupported／0conversionFailures。現45 JSON／2111卡號／2055轉換／1572 canonical AI cards；ST6～ST10為31正式／69候選（ST6=20／0、ST7=4／16、ST8=1／19、ST9=1／19、ST10=5／15），intersection=0。新完整Vitest首輪session14916已因Node原生Fatal process out of memory終止，無完整測試終值；原錯誤保留st7-003-full-vitest-run1-native-oom.log，不標示為產品assert失敗或通過。1670來源／設定／資料指紋仍一致；原程序不存在，已以相同命令獨立重跑session37357、st7-003-full-vitest-run2.log，重跑期間不再同時執行Chrome／型別檢查，尚待終值。ST7-004原圖獨立預期及runtime基線已確認，N代表任意色而既有runtime欄位為neutral；初次草稿誤用any欄位的assert已修正，非產品錯誤。004的12種strict錯誤變異只攔2／漏10，仍為output隔離診斷，未改來源／promote。AI政策仍v10，沒有新的整體或人類勝率提升證據；未commit／push。
+
+
+2026-10-11 ST7-004隔離驗收：Fig Cookie 原圖獨立預期及runtime基線確認黃色LV1／HP2、N普通1，無Cookie技能／FLIP／keyword。有效型別變異重驗strict基線漏10／攔2，output-only guard及38項測試全部PASS（基線10失敗／28通過）、型別零diagnostics，2111正式卡分析不變。26案桌機1366×768／平板1164×777原圖Chrome與獨立實際指令重播PASS，涵蓋六色任意能量1支付、取消、零活躍支援、錯階段、來源REST、真實首次攻擊後禁止第二次及對原圖1HP Pink Choco造成1傷害昏厥／Break1；60原卡、唯一實體ID與同卡最多4張皆核對。仍為準備式局部驗收，非開局至勝負或online。初稿BS6-017誤寫ST6-017、兩個無效Skill／FLIP變異及driver誤等無手牌補位視窗均已修正，失敗證據保留；不計為產品缺陷。004只在output隔離區，未套用凍結來源／未promote，正式數仍31／候選69。
+
+
+2026-10-11 ST7-003完整回歸終值：第二輪session37357 exit0，874檔／18,177項Vitest全部PASS，耗時1373.15秒；1670來源／設定／資料指紋一致（integrity exit0）。首輪Node原生OOM紀錄仍保留，不計為通過。此前「重跑尚待終值」為歷史狀態，現由本段取代。正式ST6～ST10仍31／100、候選69；ST7-004隔離完成，尚未套用或promote。
+
+AI補HP／Refresh決策修正原型：使用原圖ST7-003及BS10-039、雙方各60張唯一實體卡且同卡至多4張，實際普通攻擊及陷阱傷害揭示FLIP。舊v10在Lv3／4／5都會補HP耗盡牌庫，Refresh令自身Break10，將本可獲勝的攻擊變為落敗；output-only公開資訊guard在三個等級皆略過該FLIP並接續攻擊獲勝。17項回歸PASS，舊版6失敗／11通過，涵蓋安全Break8、足夠牌庫及最後HP救援；六副既有牌表有相符卡型，但這只是靜態適用範圍，不是發生率或勝率證據。原型尚未正式採用，瀏覽器A/B、型別與同種子對照仍待驗證；不宣稱整體勝率提升。
+
+
+2026-10-11 AI補HP／Refresh原型進度：TypeScript零diagnostics；桌機1366×768／平板1164×777共12案真實Chrome A/B及獨立父流程／最終指令重播全部PASS。致命Refresh舊v10落敗、原型略過FLIP後獲勝；Break8安全Refresh與足夠牌庫兩組均保留補HP並獲勝。兩次沙箱本機連線／模組解析限制及未建成prototype預覽錯誤保留，不當作產品失敗；完成兩份build後run3 exit0。624場12牌表同種子／換政策座位／換先手對照已固定快照啟動，尚待終值；原型仍未正式採用。
+
+ST7-004已在003完整回歸及來源指紋通過後套用候選來源：精確guard、原圖fixture、38項回歸與正式Chrome driver已加入；6檔／453項來源測試PASS（包含003、ledger與demo回歸）。build／全域lint及來源Chrome尚待完成，未promote，正式數仍31／100。先前「004只在output」是歷史狀態，現由本段取代。
+
+
+2026-10-11 AI補HP／Refresh同種子對照終值：624／624場有效、0 error，原型312勝／v10 312勝（50%）；不能宣稱整體勝率提高。原型補HP315次／略過11次，v10補HP316次／略過10次；交換政策座位的312對中僅1對動作數不同，seed2026142192、BS12紫對Cookierift568紫、player-one先手：原型223動作與舊版220動作，兩場皆player-two勝。這項原型消除已獨立重現的補HP自敗，但本批全局比賽未改變勝負分布。快照、種子、牌表雜湊及逐場結果保留ai-hp-flip-refresh-benchmark/，原型尚未正式採用。
+
+ST7-004來源驗證新增：build exit0；26案實體卡Chrome及獨立指令重播exit0，與來源6檔／453項測試相符。全域lint仍為已核對存活程序，尚無終值；標準AI Browser、資料閘門及promote尚未完成。ST7-006另已讀原圖並儲存獨立預期，原始黃色LV2／HP3／YYY普通3／免費FLIP抽0～1張的raw-runtime基線PASS；初稿checker對effects鏡像／draw-up-to及undefined欄位表示的錯誤已修正，並非產品缺陷；006尚無操作／Browser驗收或promote。
+
+
+2026-10-11 AI v11已套入正式來源：lv5-public-hp-flip-refresh-v11，以玩家公開資訊下界判斷純補HP FLIP是否會迫使致命Refresh，且只有原HP承載者能安全承受剩餘傷害才略過。helper不讀取隱藏牌庫或HP卡面，保留安全Refresh及補HP救援；未增加規則引擎替代實作。build exit0，正式AI來源＋隔離局面入口的桌機／平板6案Chrome與實際父流程／最終指令重播exit0，標準AI Browser exit0（開局／暫停／繼續，非完整對局或online）。來源AI回歸與新全域lint仍在執行，最後完整Vitest仍是v10＋ST7-003的874檔／18177項，不涵蓋新v11／004。此前「原型尚未正式採用」為歷史狀態，現由本段取代。624場快照對照仍為312比312，整體勝率改善未證實；此版只主張修正已重現的自敗決策。未commit／push。

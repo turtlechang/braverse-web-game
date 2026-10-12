@@ -82,6 +82,12 @@ export interface Lv4SearchHooks {
     state: GameState,
     command: PlayerActionCommand,
   ) => number | undefined
+  /** Conditional public normal-damage allocation; never settles response effects. */
+  attackAllocation?: (
+    state: GameState,
+    playerId: PlayerId,
+    command: PlayerActionCommand,
+  ) => ActionScoreBreakdown['contributions'][number] | null
   /** Lv.5 可在根節點延續上一個公開策略意圖；Lv.4 不提供此 hook。 */
   persistentIntentBonus?: (
     plan: TacticalPlan,
@@ -132,6 +138,12 @@ export interface Lv4SearchHooks {
     afterState: GameState,
     playerId: PlayerId,
     command: PlayerActionCommand,
+  ) => ActionScoreBreakdown['contributions'][number] | null
+  onPlayFollowup?: (
+    afterState: GameState,
+    playerId: PlayerId,
+    command: PlayerActionCommand,
+    beforeState: GameState,
   ) => ActionScoreBreakdown['contributions'][number] | null
   /** pending、換人、結束階段等不應在本回合搜尋繼續展開的狀態。 */
   isTerminal: (state: GameState, playerId: PlayerId) => boolean
@@ -241,6 +253,8 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'defensive-reserve' ||
     contribution.id === 'endgame-survival' ||
     contribution.id === 'support-cost-followup' ||
+    contribution.id === 'on-play-followup' ||
+    contribution.id === 'attack-allocation' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'tournament-experience' ||
     contribution.id === 'intent-continuity' ||
@@ -533,8 +547,12 @@ export const searchLv4Commands = (
           const supportCostFollowup = hooks.supportCostFollowup?.(
             node.state, afterState, playerId, command,
           )
+          const allocation = hooks.attackAllocation?.(node.state, playerId, command)
+          const onPlayFollowup = hooks.onPlayFollowup?.(afterState, playerId, command, node.state)
           const extraContributions: ActionScoreBreakdown['contributions'][number][] = [
+            ...(allocation ? [allocation] : []),
             ...(supportCostFollowup ? [supportCostFollowup] : []),
+            ...(onPlayFollowup ? [onPlayFollowup] : []),
             ...(deploymentTempoBonus === 0
               ? []
               : [{

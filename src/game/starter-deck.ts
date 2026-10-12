@@ -39,6 +39,7 @@ import bs9GreenSupportDeck from '../../data/decks/bs9-green-support.json'
 import bs9BlueDeceitDeck from '../../data/decks/bs9-blue-deceit.json'
 import bs9PurpleMillDeck from '../../data/decks/bs9-purple-mill.json'
 import { BS12_DECK_PRESETS, type Bs12AiPresetDeckChoice } from './bs12-deck-recipes'
+import { COMMUNITY_DECK_PRESETS, type CommunityDeckChoice } from './community-deck-recipes'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -157,6 +158,7 @@ export type AiPresetDeckChoice =
   | Bs7ArenaAiPresetDeckChoice
   | Bs9AiPresetDeckChoice
   | Bs12AiPresetDeckChoice
+  | CommunityDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -711,6 +713,12 @@ export const BS9_EXTRA_DECK_RECIPES: Record<
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
+  'cookierift-921': COMMUNITY_DECK_PRESETS['cookierift-921'].entries,
+  'cookierift-927': COMMUNITY_DECK_PRESETS['cookierift-927'].entries,
+  'cookierift-67': COMMUNITY_DECK_PRESETS['cookierift-67'].entries,
+  'cookierift-83': COMMUNITY_DECK_PRESETS['cookierift-83'].entries,
+  'cookierift-568': COMMUNITY_DECK_PRESETS['cookierift-568'].entries,
+  'cookierift-506': COMMUNITY_DECK_PRESETS['cookierift-506'].entries,
   'bs12-blue-arena': BS12_DECK_PRESETS['bs12-blue-arena'].entries,
   'bs12-green-arena': BS12_DECK_PRESETS['bs12-green-arena'].entries,
   'bs12-yellow-arena': BS12_DECK_PRESETS['bs12-yellow-arena'].entries,
@@ -1144,6 +1152,12 @@ export const DECK_CREATORS: Record<
   BuiltInDeckChoice,
   (playerId: PlayerId) => GameCard[]
 > = {
+  'cookierift-921': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-921'].entries, []),
+  'cookierift-927': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-927'].entries, []),
+  'cookierift-67': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-67'].entries, []),
+  'cookierift-83': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-83'].entries, []),
+  'cookierift-568': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-568'].entries, []),
+  'cookierift-506': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-506'].entries, []),
   'bs12-blue-arena': (playerId) =>
     createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-blue-arena'].entries, []),
   'bs12-green-arena': (playerId) =>
@@ -1220,7 +1234,9 @@ export const EXTRA_DECK_CREATORS: Record<
   (Object.keys(DECK_CREATORS) as BuiltInDeckChoice[]).map((choice) => {
     const bs12Recipe = (BS12_DECK_PRESETS as Partial<Record<BuiltInDeckChoice,
       { extraDeckEntries: StarterDeckEntry[] }>>)[choice]
-    const recipe = bs12Recipe?.extraDeckEntries ??
+    const communityRecipe = (COMMUNITY_DECK_PRESETS as Partial<Record<BuiltInDeckChoice,
+      { extraDeckEntries: StarterDeckEntry[] }>>)[choice]
+    const recipe = communityRecipe?.extraDeckEntries ?? bs12Recipe?.extraDeckEntries ??
       (BS9_EXTRA_DECK_RECIPES as Partial<Record<BuiltInDeckChoice, StarterDeckEntry[]>>)[choice]
     return [
       choice,

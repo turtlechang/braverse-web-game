@@ -283,6 +283,8 @@ export function useOnlinePendingEffect(params: {
   const draftEffect = draftEffects[0] ?? null
   // 移牌代價會改變後續效果候選；先讓伺服器付款，再從權威狀態選目標。
   const draftRequiresPaymentBeforeTargets = Boolean(
+    (abilityCostDraft?.sourceKind === 'item' && abilityCostDraft.ability.cost.hpToTrash &&
+      draftEffect?.kind === 'modify-attack') ||
     (abilityCostDraft?.sourceKind === 'item' && draftEffect?.kind === 'trash-to-battle' &&
       getItemActivateDiscardRequirement(game, viewerPlayerId)) ||
     (abilityCostDraft?.ability.cost.supportToTrash && draftEffect?.kind === 'trash-to-support') ||

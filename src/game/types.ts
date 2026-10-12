@@ -2263,6 +2263,12 @@ export interface ActivateExtraDeckAttackEffect {
   optional?: boolean
 }
 
+/** Moves the revealed FLIP card itself, never its former HP bearer. */
+export interface FlipToHandEffect {
+  kind: 'flip-to-hand'
+  condition?: EffectCondition
+}
+
 /** Reveal a named EXTRA Cookie and resolve its printed On Play or Activate skill. */
 export interface ActivateExtraDeckSkillEffect {
   kind: 'activate-extra-deck-skill'
@@ -2376,6 +2382,7 @@ export type CardEffect =
   | HandToBreakBySumEffect
   | FlipToSupportEffect
   | FlipToBreakEffect
+  | FlipToHandEffect
   | RevealTopDeckEffect
   | HandToBreakEffect
   | BreakToHandEffect

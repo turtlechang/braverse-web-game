@@ -3433,7 +3433,7 @@ const applyPlayerActionCommand = (
         trashCookieToBreakAreaIds: command.trashCookieToBreakAreaIds,
         trashToDeckIds: command.trashToDeckIds,
         selfTargetIds: command.selfTargetIds,
-      })
+      }, options.shuffle)
     case 'skip-trap':
       return skipTrap(state, command.playerId)
     case 'play-blocker':

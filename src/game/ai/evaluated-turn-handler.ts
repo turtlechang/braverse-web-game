@@ -1,8 +1,10 @@
-import type { AttackCommand, PlayerActionCommand } from '../commands'
-import { getAttackDamageAgainst, getEffectiveAttack } from '../effects'
+import { applyGameCommand, type AttackCommand, type PlayerActionCommand } from '../commands'
+import { createPublicAttackAllocationForecast } from './attack-allocation'
+import { getAttackDamageAgainst } from '../effects'
 import { getCookieEffectiveLevel } from '../helpers'
 import { getLegalTurnCommands } from '../legal-actions'
-import { getActivatableSkillSources } from '../skills'
+import { canActivateCookieSkill, getActivatableSkillSources } from '../skills'
+import { maskGameStateForViewer } from '../masked-state'
 import { createPlayerView } from '../player-view'
 import { hasBlockingPending } from '../pending'
 import type { PlayerView } from '../player-view'
@@ -85,7 +87,7 @@ const attackBonus = (
     (cookie) => cookie.card.instanceId === command.targetInstanceId,
   )
   if (!target) return 0
-  const damage = getEffectiveAttack(state, command.attackerInstanceId)
+  const damage = getAttackDamageAgainst(state, command.attackerInstanceId, command.targetInstanceId)
   const lethal = target.hpCards.length <= damage
   const bonus = lethal
     ? 350 + getCookieEffectiveLevel(target) * 30
@@ -164,6 +166,120 @@ const skillEffectBonus = (
   bonus += totalDamage * 15
 
   return bonus
+}
+
+/** Value an affordable public On Play continuation without settling real state. */
+const forecastOnPlayResourceFollowup = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+  resolveSkill: AiTurnStrategy['resolveSkill'],
+  before?: GameState,
+): ActionScoreBreakdown['contributions'][number] | null => {
+  if (command.kind !== 'deploy-cookie' ||
+      state.pendingOnPlay?.sourceInstanceId !== command.instanceId ||
+      state.pendingOnPlay.playerId !== playerId) return null
+  // Resolve only a masked forecast. Hidden HP can contain a rescuing FLIP;
+  // this estimates a continuation, never a guaranteed win or actual settlement.
+  const masked = maskGameStateForViewer({ ...state, commandLog: undefined }, playerId)
+  const source = masked.players[playerId].battleArea.find(
+    cookie => cookie.card.instanceId === command.instanceId,
+  )
+  const skill = source?.card.skill
+  if (!source || skill?.trigger !== 'on-play' || skill.effects.length === 0 ||
+      skill.effects.some(effect => {
+        if (effect.kind === 'damage') return effect.condition !== undefined
+        const publicResource = effect.kind === 'draw-up-to' || effect.kind === 'trash-to-hand' ||
+          (effect.kind === 'draw' && (effect.side === undefined || effect.side === 'self'))
+        return !publicResource || (effect.condition !== undefined && effect.condition.kind !== 'hand-count-at-most')
+      })) return null
+  const allowedCosts = new Set(['energy', 'discardHand', 'discardHandColor', 'discardHandCookieOnly'])
+  if (Object.entries(skill.cost).some(([key, value]) =>
+    value !== undefined && !allowedCosts.has(key),
+  ) || !canActivateCookieSkill(masked, playerId, command.instanceId, 'on-play')) return null
+  let followup = resolveSkill(masked, playerId, source, 'on-play')
+  if (!followup || followup.action !== 'activate-skill') return null
+  if (followup.state.pendingRefresh) return null
+  const pendingDraw = followup.state.pendingDrawUpTo
+  if (pendingDraw) {
+    // Drawing unknown backs values quantity only. Do not model a Refresh or
+    // its additional costs as if the whole resource continuation had settled.
+    if (pendingDraw.playerId !== playerId || pendingDraw.max >= masked.players[playerId].deck.length) return null
+    followup = { ...followup, state: applyGameCommand(followup.state, {
+      kind: 'resolve-draw-up-to', playerId, drawCount: pendingDraw.max,
+    }) }
+  }
+  if (followup.state.pendingRefresh) return null
+  // Deployment already has its own score. Value the net resource change of
+  // deployment + On Play, rather than treating a spent hand card as free.
+  const effectBonus = before
+    ? skillEffectBonus(before, followup.state, playerId) - skillEffectBonus(before, masked, playerId)
+    : skillEffectBonus(masked, followup.state, playerId)
+  const amount = Math.min(200, Math.max(0,
+    evaluatePlayerView(createPlayerView(followup.state, playerId)) -
+    evaluatePlayerView(createPlayerView(masked, playerId)) +
+    effectBonus + onPlayHandPenaltyRefund(before, masked, followup.state, playerId, command.kind),
+  ))
+  return amount > 0 ? {
+    id: 'on-play-followup', amount,
+    detail: '條件式登場續接：按公開資源估計傷害、抽牌張數與棄牌回收，合併登場消耗計分；未知牌面與 HP／FLIP 不視為保證收益，實際效果仍另行結算。',
+  } : null
+}
+
+/** Conditional Special Play payoff after the real On Play/replacement decisions.
+ * Only the masked forecast is advanced; real Trap/FLIP responses remain open.
+ */
+export const forecastOnPlayFollowup = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+  resolveSkill: AiTurnStrategy['resolveSkill'],
+  before?: GameState,
+): ActionScoreBreakdown['contributions'][number] | null => {
+  const resource = forecastOnPlayResourceFollowup(state, playerId, command, resolveSkill, before)
+  if (command.kind !== 'deploy-cookie' || !command.specialPlayCookieInstanceIds?.length ||
+      state.pendingOnPlay?.playerId !== playerId ||
+      state.pendingOnPlay.sourceInstanceId !== command.instanceId) return resource
+
+  let forecast = maskGameStateForViewer({ ...state, commandLog: undefined }, playerId)
+  const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+  const breakLevel = forecast.players[opponentId].breakArea.reduce((sum, card) => sum + card.level, 0)
+  if (!forecast.players[opponentId].battleArea.some(target =>
+    breakLevel + getCookieEffectiveLevel(target) >= 10,
+  )) return resource
+  const source = forecast.players[playerId].battleArea.find(cookie => cookie.card.instanceId === command.instanceId)
+  const skill = source?.card.skill
+  // Exclude conditional/mixed effects and attacks whose Then needs more choices.
+  if (!source || skill?.trigger !== 'on-play' || skill.effects.length !== 1 ||
+      skill.effects[0].kind !== 'damage' || skill.effects[0].condition ||
+      source.card.attackEffects?.length) return resource
+  const knownCosts = new Set(['energy', 'discardHand', 'discardHandColor', 'discardHandCookieOnly'])
+  if (Object.entries(skill.cost).some(([key, value]) =>
+    value !== undefined && !knownCosts.has(key),
+  )) return resource
+  const resolved = canActivateCookieSkill(forecast, playerId, command.instanceId, 'on-play')
+    ? resolveSkill(forecast, playerId, source, 'on-play') : null
+  forecast = resolved?.action === 'activate-skill' ? resolved.state : applyGameCommand(forecast, {
+    kind: 'skip-on-play', playerId, sourceInstanceId: command.instanceId,
+  })
+  for (let count = 0; forecast.pendingReplacement && count < 4; count++) {
+    const skip = getLegalTurnCommands(forecast, playerId).find(candidate => candidate.kind === 'skip-replacement')
+    if (!skip) return resource
+    forecast = applyGameCommand(forecast, skip)
+  }
+  if (hasBlockingPending(forecast) || forecast.status !== 'playing') return resource
+  let amount = 0
+  for (const attack of getLegalTurnCommands(forecast, playerId)) {
+    if (attack.kind !== 'attack' || attack.attackerInstanceId !== command.instanceId) continue
+    const target = forecast.players[opponentId].battleArea.find(cookie => cookie.card.instanceId === attack.targetInstanceId)
+    if (!target || breakLevel + getCookieEffectiveLevel(target) < 10 ||
+        target.hpCards.length > getAttackDamageAgainst(forecast, command.instanceId, attack.targetInstanceId)) continue
+    amount = Math.max(amount, attackBonus(forecast, playerId, attack) + lethalDetectionBonus(forecast, playerId, attack))
+  }
+  return amount > 0 ? {
+    id: 'on-play-followup', amount: Math.max(resource?.amount ?? 0, amount),
+    detail: '條件式特殊登場續接：依公開 HP 與實際剩餘支付資源預估後續補刀，真正陷阱／FLIP 回應仍另行結算。',
+  } : resource
 }
 
 /** An attack can rest supports that a later Activate removes as its cost.
@@ -247,7 +363,7 @@ const lethalDetectionBonus = (
   )
   if (!attacker || !target) return 0
 
-  const damage = getEffectiveAttack(state, command.attackerInstanceId)
+  const damage = getAttackDamageAgainst(state, command.attackerInstanceId, command.targetInstanceId)
   const targetHp = target.hpCards.length
   const isLethal = targetHp <= damage
 
@@ -276,7 +392,7 @@ const lethalDetectionBonus = (
   if (!isLethal) {
     const totalDamage = state.players[playerId].battleArea
       .filter((c) => !c.rested && c.card.instanceId !== command.attackerInstanceId)
-      .reduce((sum, c) => sum + (c.card.attack ?? 0), 0)
+      .reduce((sum, c) => sum + getAttackDamageAgainst(state, c.card.instanceId, command.targetInstanceId), 0)
     const combinedDamage = damage + totalDamage
     if (combinedDamage >= targetHp) {
       bonus += 40
@@ -356,6 +472,28 @@ const handManagementBonus = (
   return bonus
 }
 
+/** Refund only a temporary depletion penalty that the same On Play repairs.
+ * Cap the hand at its original size so this does not award draw value twice,
+ * and never introduce a new hoarding penalty into an otherwise useful draw.
+ */
+const onPlayHandPenaltyRefund = (
+  before: GameState | undefined,
+  deployed: GameState,
+  settled: GameState,
+  playerId: PlayerId,
+  actionKind: string,
+): number => {
+  if (!before || settled.players[playerId].hand.length <= deployed.players[playerId].hand.length) return 0
+  const restored = { ...settled, players: { ...settled.players, [playerId]: {
+    ...settled.players[playerId],
+    hand: settled.players[playerId].hand.slice(0, before.players[playerId].hand.length),
+  } } }
+  return Math.max(0,
+    Math.min(0, handManagementBonus(before, restored, playerId, actionKind)) -
+    Math.min(0, handManagementBonus(before, deployed, playerId, actionKind)),
+  )
+}
+
 /**
  * 目標能量數：低於此值時，AI 應優先鋪能量以維持運作。
  */
@@ -405,7 +543,7 @@ const unspentAttackOpportunityPenalty = (
 
   const bestDamage = Math.max(
     ...attacks.map((attack) =>
-      getEffectiveAttack(state, attack.attackerInstanceId),
+      getAttackDamageAgainst(state, attack.attackerInstanceId, attack.targetInstanceId),
     ),
   )
   return -(50 + Math.min(bestDamage, 3) * 10)
@@ -934,7 +1072,13 @@ export const handleAiTwoPlyTurnState = (
     ...(strategy.searchNow ? { now: strategy.searchNow } : {}),
   }
   const deadlineMs = (searchOptions.now ?? Date.now)() + searchOptions.timeBudgetMs
+  const attackAllocation = decisionLevel === 5
+    ? createPublicAttackAllocationForecast({
+        shouldStop: () => (searchOptions.now ?? Date.now)() >= deadlineMs,
+      })
+    : undefined
   const searchHooks: Lv4SearchHooks = {
+    attackAllocation,
     getLegalCommands: (nextState: GameState, nextPlayerId: PlayerId) =>
       getLegalTurnCommands(nextState, nextPlayerId).filter((command) =>
         isAllowedAiDeploymentCommand(nextState, nextPlayerId, command),
@@ -955,7 +1099,7 @@ export const handleAiTwoPlyTurnState = (
       const before = createPlayerView(beforeState, nextPlayerId)
       const identity = actionIdentityFromCommand(command)
       const effectiveDamage = command.kind === 'attack'
-        ? getEffectiveAttack(beforeState, command.attackerInstanceId)
+        ? getAttackDamageAgainst(beforeState, command.attackerInstanceId, command.targetInstanceId)
         : 0
       return beamStepBonus(beforeState, afterState, nextPlayerId, command) +
         forecastOpponentEndgame(before, identity, effectiveDamage).score
@@ -978,6 +1122,10 @@ export const handleAiTwoPlyTurnState = (
       ? strategy.strategyMemory?.activeCombo?.planId
       : undefined,
     strictComboActionability: decisionLevel === 5,
+    onPlayFollowup: decisionLevel === 5
+      ? (after, nextPlayerId, command, before) =>
+          forecastOnPlayFollowup(after, nextPlayerId, command, strategy.resolveSkill, before)
+      : undefined,
     supportCostFollowup: decisionLevel === 5
       ? (before, after, nextPlayerId, command) =>
           forecastSupportCostFollowup(before, after, nextPlayerId, command, strategy.resolveSkill)
@@ -1066,7 +1214,7 @@ export const handleAiTwoPlyTurnState = (
           beforeView,
           actionIdentityFromCommand(command),
           command.kind === 'attack'
-            ? getEffectiveAttack(state, command.attackerInstanceId)
+            ? getAttackDamageAgainst(state, command.attackerInstanceId, command.targetInstanceId)
             : 0,
         ),
         endgameSurvival: searchResult.firstStep.endgameSurvival,

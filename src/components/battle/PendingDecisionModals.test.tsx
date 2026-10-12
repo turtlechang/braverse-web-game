@@ -1,3 +1,4 @@
+import {placeSt6020} from '../../game/st6-020-demo'
 /// @vitest-environment jsdom
 
 import { act } from 'react'
@@ -419,4 +420,19 @@ describe('BS9-079 Extra Deck attack ownership', () => {
       container.remove()
     }
   })
+})
+
+it('retains original Stage source art and printed text after HP payment enters draw choice',async()=>{
+ const placed=placeSt6020(),source=placed.players['player-one'].stage!.card
+ const game=applyGameCommand(placed,{kind:'begin-activate-stage',playerId:'player-one',paymentIds:[],hpToTrashTargetIds:[placed.players['player-one'].battleArea[0].card.instanceId],targetIds:[]})
+ expect(game.pendingDrawUpTo?.sourceCardId).toBe('ST6-020')
+ expect(game.pendingDrawUpTo?.effectText).toBe(source.stageAbility?.text)
+ const view=createReplacementView('player-one')
+ view.match={...view.match,game,pendingPlayer:null,pendingOptions:[],replacementTask:null}
+ const container=document.createElement('div'),root=createRoot(container)
+ try{
+  await act(()=>root.render(<PendingDecisionModals match={view.match} pending={view.pending}/>))
+  expect(container.querySelector('.draw-up-to-modal img')?.getAttribute('src')).toBe(source.imageUrl)
+  expect(container.querySelector('.draw-up-to-modal')?.textContent).toContain('Place 1 card from the top of 1 of your Cookies')
+ }finally{await act(()=>root.unmount())}
 })

@@ -1,3 +1,4 @@
+import { chooseAiHandToBreakCostIds } from './ai/hand-break-cost-selection'
 import { getBattleCookiePositionCostCandidates } from './battle-position-cost'
 import { getItemActivateDiscardRequirement, playItem } from './card-abilities'
 import { getForcedAttackTargetId } from './battle'
@@ -44,7 +45,6 @@ import {
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
-  getHandToBreakAreaCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
@@ -71,6 +71,7 @@ import type {
 } from './ai/types'
 import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
+import { getPublicEffectDamageByTarget } from './ai/public-effect-damage'
 import { dispatchAiStep } from './ai/dispatcher'
 import { createPlayerView } from './player-view'
 import {
@@ -698,10 +699,8 @@ const chooseAbilityCostIds = (
     return null
   }
 
-  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId)
-    .filter(card => !discardHandIds.includes(card.instanceId))
-    .slice(0, cost.handToBreakArea?.count ?? 0).map(card => card.instanceId)
-  if (handToBreakAreaIds.length < (cost.handToBreakArea?.count ?? 0)) return null
+  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, cost, sourceInstanceId, discardHandIds)
+  if (!handToBreakAreaIds) return null
 
   return {
     paymentIds,
@@ -1196,9 +1195,8 @@ const resolveAiSkill = (
   const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(skill.cost, player.discardPile)
     .slice(0, skill.cost.trashCookieToBreakArea?.count ?? 0).map((card) => card.instanceId)
   if (trashCookieToBreakAreaIds.length < (skill.cost.trashCookieToBreakArea?.count ?? 0)) return null
-  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(skill.cost, player.hand, source.card.instanceId)
-    .slice(0, skill.cost.handToBreakArea?.count ?? 0).map((card) => card.instanceId)
-  if (handToBreakAreaIds.length < (skill.cost.handToBreakArea?.count ?? 0)) return null
+  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, skill.cost, source.card.instanceId, discardHandIds, trashCookieToBreakAreaIds)
+  if (!handToBreakAreaIds) return null
 
   const trashToDeckBottomCandidateIds = skill.cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
@@ -1472,7 +1470,8 @@ const universalChooseEffectTargets = (
   const candidateIds = getEffectSelectionCandidates(state, context, effect)
     .map((card) => card.instanceId)
   const max = Math.min(limits.max, candidateIds.length)
-  const selected = universal.selectEffectTargetIds(effect, candidateIds, max)
+  const selected = universal.selectEffectTargetIds(effect, candidateIds, max,
+    getPublicEffectDamageByTarget(state, context.sourcePlayerId, context, effect, candidateIds))
   return selected.length >= limits.min
     ? selected
     : legacyChooseEffectTargets(state, context, effect)
@@ -1790,7 +1789,7 @@ export const takeAiStep = (
         (current, currentPlayerId) => handleAiPendingDecision(
           current,
           currentPlayerId,
-          { level, knowledgeState: aiTurnStrategy.knowledgeState },
+          { level, knowledgeState: aiTurnStrategy.knowledgeState, shuffleSeed },
         ),
         (s, p) => handleAiPendingBattle(
           s,

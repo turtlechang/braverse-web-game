@@ -191,6 +191,29 @@ export function usePendingEffect(params: {
   // trash against the same pure begin command that will pay the cost, so a
   // returned or trashed Cookie is selectable without inventing UI movement.
   const selectionGame = useMemo(() => {
+    // Enumerate only public battle recipients against the authoritative cost
+    // command. Hidden HP/trash remain unavailable until actual confirmation.
+    if (pendingEffect?.sourceKind === 'item' && !pendingEffect.skillActivated &&
+      pendingEffect.skill.cost.hpToTrash && pendingEffect.selectedHpToTrashTargetIds.length > 0 &&
+      (currentEffect?.kind === 'modify-attack' || currentEffect?.kind === 'gain-hp')) {
+      try {
+        return applyGameCommand(game, {
+          kind: 'begin-play-item', playerId: pendingEffect.context.sourcePlayerId,
+          instanceId: pendingEffect.sourceCard.instanceId,
+          paymentIds: pendingEffect.selectedPaymentIds,
+          supportToHandIds: pendingEffect.skill.cost.supportToHand ? pendingEffect.selectedCostSupportToTrashIds : [],
+          supportToTrashIds: pendingEffect.skill.cost.supportToTrash ? pendingEffect.selectedCostSupportToTrashIds : [],
+          discardHandIds: pendingEffect.selectedDiscardHandIds,
+          hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds,
+          trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+          handToBreakAreaIds: pendingEffect.selectedHandToBreakAreaIds,
+          chooseOneModes: pendingEffect.chooseOneModes,
+        })
+      } catch {
+        // The final command validates incomplete payment drafts.
+        return game
+      }
+    }
     const supportCost = currentEffect?.kind === 'hand-to-support'
       ? pendingEffect?.skill.cost.supportToHand
       : currentEffect?.kind === 'trash-to-support'

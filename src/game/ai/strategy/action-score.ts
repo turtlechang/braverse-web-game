@@ -32,10 +32,12 @@ export interface ActionScoreContribution {
   id:
     | 'post-action-board'
     | 'public-attack'
+    | 'attack-allocation'
     | 'tactical-payoff'
     | 'tactical-setup'
     | 'resource-reservation'
     | 'support-cost-followup'
+    | 'on-play-followup'
     | 'deployment-tempo'
     | 'opponent-response-minimax'
     | 'defensive-reserve'

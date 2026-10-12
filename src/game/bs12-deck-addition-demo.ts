@@ -1,4 +1,33 @@
+import {createSt7012PreviewState} from './st7-012-demo'
+import {createSt7006PreviewState} from './st7-006-demo'
+import {createSt7007PreviewState} from './st7-007-demo'
+import {createSt7009PreviewState} from './st7-009-demo'
+import {createSt7004PreviewState} from './st7-004-demo'
+import {createSt7003PreviewState} from './st7-003-demo'
+import {createSt7002PreviewState} from './st7-002-demo'
+import {createSt7001PreviewState} from './st7-001-demo'
+import {createSt6020PreviewState} from './st6-020-demo'
+import {createSt6019PreviewState} from './st6-019-demo'
+import {createSt6018PreviewState} from './st6-018-demo'
+import {createSt6017PreviewState} from './st6-017-demo'
+import {createSt6016PreviewState} from './st6-016-demo'
+import { createSt6015PreviewState } from './st6-015-demo'
+import { createSt6014PreviewState } from './st6-014-demo'
+import { createSt6013PreviewState } from './st6-013-demo'
+import { createSt6012PreviewState } from './st6-012-demo'
+import { createSt6011PreviewState } from './st6-011-demo'
 import document from '../../data/cards/official-bs12-deck-additions.en.json'
+import { COOKIERIFT_ADDITION_NUMBERS, createCookieriftAdditionState } from './cookierift-addition-demo'
+import { createSt6001State } from './st6-001-demo'
+import { createSt6002State } from './st6-002-demo'
+import { createSt6003State } from './st6-003-demo'
+import { createSt6004State } from './st6-004-demo'
+import { createSt6005State } from './st6-005-demo'
+import { createSt6006PreviewState } from './st6-006-demo'
+import { createSt6007PreviewState } from './st6-007-demo'
+import { createSt6008PreviewState } from './st6-008-demo'
+import { createSt6009PreviewState } from './st6-009-demo'
+import { createSt6010PreviewState } from './st6-010-demo'
 import { getAllCardPoolEntries, getCardPoolEntry, hasFlipAbility } from './card-pool'
 import { createCard, createOfficialRedStarterDeck } from './starter-deck'
 import { createGame } from './setup'
@@ -7,12 +36,41 @@ import type { OfficialCardRecord } from '../cards/types'
 import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from './types'
 
 export const DECK_ADDITION_CARD_NUMBERS = document.cards.map((card) => card.cardNumber)
-export type DeckAdditionScenario = 'positive' | 'negative' | 'low' | 'attack' | 'attack-negative' | 'zero'
+export type DeckAdditionScenario = 'no-cost' | 'break-loss' | 'false' | 'rested-witness' | 'defender-one' | 'hand-witness' | 'trash-witness' | 'break-witness' | 'support-witness' | 'opponent-witness' | 'other' | 'one-red' | 'main' | 'faint' | 'both-faint' | 'no-discard' | 'positive' | 'negative' | 'low' | 'attack' | 'attack-negative' | 'zero' | 'wrong-color' | 'wrong-phase' | 'used' | 'target-faints' | 'no-energy' | 'rested-source' | 'no-extra-energy' | 'attack-wrong-color' | 'last-no-hand' | 'green-arena' | 'non-arena' | 'one-card' | 'cost-cookie' | 'cost-item' | 'already-target' | 'no-battle' | 'second-attack' | 'reveal' | 'no-target' | 'rested-target'
 
 /** Local acceptance only. Every zone contains original printed cards, at most four copies. */
 export const createDeckAdditionDemoState = (
   number: string, scenario: DeckAdditionScenario = 'positive',
 ): GameState => {
+  if (number === 'ST6-001') return createSt6001State(scenario)
+  if (number === 'ST6-002') return createSt6002State(scenario)
+  if (number === 'ST6-003') return createSt6003State(scenario)
+  if (number === 'ST6-004') return createSt6004State(scenario)
+  if (number === 'ST6-005') return createSt6005State(scenario)
+  if (number === 'ST6-006') return createSt6006PreviewState(scenario)
+  if (number === 'ST6-007') return createSt6007PreviewState(scenario)
+  if (number === 'ST6-008') return createSt6008PreviewState(scenario)
+  if (number === 'ST6-009') return createSt6009PreviewState(scenario)
+  if (number === 'ST6-010') return createSt6010PreviewState(scenario)
+  if (number === 'ST6-011') return createSt6011PreviewState(scenario)
+  if (number === 'ST6-012') return createSt6012PreviewState(scenario)
+  if (number === 'ST6-013') return createSt6013PreviewState(scenario)
+  if (number === 'ST6-014') return createSt6014PreviewState(scenario)
+  if(number === 'ST7-006')return createSt7006PreviewState(scenario)
+  if(number === 'ST7-007')return createSt7007PreviewState(scenario)
+  if(number === 'ST7-012')return createSt7012PreviewState(scenario)
+  if(number === 'ST7-009')return createSt7009PreviewState(scenario)
+  if(number === 'ST7-004')return createSt7004PreviewState(scenario)
+  if(number === 'ST7-003')return createSt7003PreviewState(scenario)
+  if(number === 'ST7-002')return createSt7002PreviewState(scenario)
+  if(number === 'ST7-001')return createSt7001PreviewState(scenario)
+  if(number === 'ST6-020')return createSt6020PreviewState(scenario)
+  if(number === 'ST6-019')return createSt6019PreviewState(scenario)
+  if(number === 'ST6-018')return createSt6018PreviewState(scenario)
+  if(number === 'ST6-017')return createSt6017PreviewState(scenario)
+  if(number === 'ST6-016')return createSt6016PreviewState(scenario)
+  if (number === 'ST6-015') return createSt6015PreviewState(scenario)
+  if (COOKIERIFT_ADDITION_NUMBERS.includes(number)) return createCookieriftAdditionState(number, scenario)
   if (!DECK_ADDITION_CARD_NUMBERS.includes(number)) throw new Error(`Unknown deck addition ${number}`)
   let sequence = 0
   const counts: Record<string, number> = {}

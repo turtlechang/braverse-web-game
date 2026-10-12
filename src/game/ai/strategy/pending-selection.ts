@@ -250,6 +250,7 @@ export interface PendingSelectionStrategy {
     effect: CardEffect,
     candidateIds: readonly string[],
     max: number,
+    damageByTarget?: ReadonlyMap<string, number>,
   ) => string[]
   /**
    * 只接受本次 pending 已合法揭露給 AI 的卡面（例如自己的 inspect-deck
@@ -302,6 +303,15 @@ export const createPendingSelectionStrategy = (
     cardRetentionValue(cardsByInstanceId.get(instanceId), context, view)
   const revealedRetention = (card: GameCard): number =>
     cardRetentionValue(card, context, view)
+  // Reapplying active can unlock an Activate or attack Then even when the
+  // recipient is already active. Read structured capabilities, never card IDs.
+  const reactivationPayoffIds = new Set(view.self.battleArea
+    .filter(cookie => !cookie.setActiveByEffectThisTurn &&
+      extractCardCapabilities(cookie.card).capabilities.some(capability =>
+        capability.kind === 'conditional-payoff' &&
+        (capability.timing === 'activate' || capability.timing === 'attack') &&
+        capability.conditionKinds.includes('source-set-active-by-effect-this-turn')))
+    .map(cookie => cookie.card.instanceId))
   const stableByRetention = (
     candidateIds: readonly string[],
     direction: 1 | -1,
@@ -310,14 +320,26 @@ export const createPendingSelectionStrategy = (
     return delta || left.localeCompare(right)
   })
 
-  const targetScore = (effect: CardEffect, instanceId: string): number => {
+  const targetScore = (effect: CardEffect, instanceId: string, damageByTarget?: ReadonlyMap<string, number>): number => {
     const cookie = publicBattleCookie(view, instanceId)
     const opponentCookie = isOpponentBattleCookie(view, instanceId)
     const effectTargetSide = 'target' in effect ? effect.target?.side : undefined
 
+    // Value both the extra action and a newly enabled public reactivation payoff.
+    // A buff followed by readying the same recipient also retains its buff value.
+    const readiesRecipient = effect.kind === 'set-cookie-active' ||
+      (effect.kind === 'modify-attack' && effect.amount > 0 &&
+        effect.thenEffects?.some(child => child.kind === 'set-cookie-active' &&
+          child.target.previousEffectTargetOnly) === true)
+    if (readiesRecipient && cookie && !opponentCookie && effectTargetSide === 'self') {
+      return (cookie.rested ? 10_000 : 0) +
+        (reactivationPayoffIds.has(instanceId) ? 1_000 : 0) + retention(instanceId)
+    }
+
     if ((effect.kind === 'damage' || effect.kind === 'damage-all') && cookie && opponentCookie) {
-      const lethal = cookie.hpCount <= effect.amount
-      return (lethal ? 10_000 : 0) - cookie.hpCount * 20 + retention(instanceId)
+      const damage = damageByTarget?.get(instanceId) ?? effect.amount
+      const lethal = damage > 0 && cookie.hpCount <= damage
+      return (lethal ? 10_000 : 0) + (damage > 0 ? 1_000 : -10_000) - cookie.hpCount * 20 + retention(instanceId)
     }
     if (
       (effect.kind === 'gain-hp' ||
@@ -374,10 +396,15 @@ export const createPendingSelectionStrategy = (
       }
       return retention(left) - retention(right) || left.localeCompare(right)
     }),
-    selectEffectTargetIds: (effect, candidateIds, max) => {
-      const ordered = [...candidateIds]
+    selectEffectTargetIds: (effect, candidateIds, max, damageByTarget) => {
+      const usefulIds = effect.kind === 'set-cookie-active' &&
+        effect.target.side === 'self' && effect.target.min === 0
+        ? candidateIds.filter(id => publicBattleCookie(view, id)?.rested ||
+          reactivationPayoffIds.has(id))
+        : candidateIds
+      const ordered = [...usefulIds]
         .sort((left, right) =>
-          targetScore(effect, right) - targetScore(effect, left) ||
+          targetScore(effect, right, damageByTarget) - targetScore(effect, left, damageByTarget) ||
           left.localeCompare(right),
         )
       const perPlayer = 'target' in effect ? effect.target?.countPerPlayer : undefined

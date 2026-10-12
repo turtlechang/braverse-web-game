@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.253Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST6-004 physically verified printing"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46848,
+      "locale": "en",
+      "cardNumber": "ST6-004",
+      "baseCardNumber": "ST6-004",
+      "variant": null,
+      "name": "Pitaya Dragon Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk}Dragon's Wrath",
+        "text": "【Activate】 【Once Per Turn】 <Discard 1 card.> During this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}{R}> Blade of Destruction {da} 3 Then, <can be used as {R}.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [
+        "DRAGON"
+      ],
+      "product": {
+        "id": 255,
+        "title": "Flames of Immortality",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TN4VLj4SJXM0biAjnoZ7BQ.webp",
+      "officialUpdatedAt": "2026-06-24T01:45:45Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}
