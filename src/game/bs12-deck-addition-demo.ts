@@ -1,3 +1,5 @@
+import {createSt7013PreviewState} from './st7-013-demo'
+import {createSt7011PreviewState} from './st7-011-demo'
 import {createSt7012PreviewState} from './st7-012-demo'
 import {createSt7006PreviewState} from './st7-006-demo'
 import {createSt7007PreviewState} from './st7-007-demo'
@@ -58,7 +60,9 @@ export const createDeckAdditionDemoState = (
   if (number === 'ST6-014') return createSt6014PreviewState(scenario)
   if(number === 'ST7-006')return createSt7006PreviewState(scenario)
   if(number === 'ST7-007')return createSt7007PreviewState(scenario)
+  if(number === 'ST7-011')return createSt7011PreviewState(scenario)
   if(number === 'ST7-012')return createSt7012PreviewState(scenario)
+  if(number === 'ST7-013')return createSt7013PreviewState(scenario)
   if(number === 'ST7-009')return createSt7009PreviewState(scenario)
   if(number === 'ST7-004')return createSt7004PreviewState(scenario)
   if(number === 'ST7-003')return createSt7003PreviewState(scenario)

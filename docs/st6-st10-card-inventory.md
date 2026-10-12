@@ -1,22 +1,31 @@
 # ST6～ST10 逐卡盤點
 
 <!-- ai-starter-current-start -->
-目前驗證摘要（2026-10-11）：ST6～ST10 **36／100已promote、64候選**，ST6=20、ST7=9、ST8=1、ST9=1、ST10=5；正式50 JSON／2116卡號／2060可轉換／1577 canonical AI cards。AI沿用12副已接受牌表（六色BS12＋Cookierift921／927／67／83／568／506），預設Lv5。
+ST7-008 隔離進度（2026-10-12，仍為候選）：原圖黃色 LV2／HP4／YYY 普通3，免費 On Play 需同張己方具名 LV3 Millennial Tree 位於戰鬥或休息區，回收0～1黃色LV1；攻擊 Then 在己方休息區總LV≥4時對原防守者追加1。新增具名休息區條件與 exact contract 草稿，18種錯誤變異全攔。實際登場／攻擊反例證實：LV4回收至LV3會失去追加傷害；Lv3～5基線都選回收，錯失公開局面的立即獲勝機會；隔離原型保留此機會，仍在不能攻擊、非致勝、LV5降至LV4時正常回收，隱藏卡順序不影響決策。另補自動 attack 缺少原防守者目標的規則入口反例及隔離修正；同組47項基線4失敗／43通過，原型47全過。桌機／平板14案真實登場UI及每個狀態欄位／完整commandLog獨立回放PASS，涵蓋正向／選零／戰鬥見證／錯名／對手見證／無見證／錯階段；初輪driver誤等負向效果面板而逾時已保留，修為檢查實際自動略過。這14案尚不涵蓋攻擊Then或新AI原型的Chrome操作，非完整對局／online驗收。所有新規則與AI修正仍在output隔離，正式AI仍v15、ST6～ST10仍38正式／62候選，未promote／commit／push，也沒有新勝率證據。證據：output/st6-st10/st7-008-ai-auto-prototype-run1.log、st7-008-onplay-browser-run2/replay-audit.json。
 
-**v12＋ST7-006／007／009完整Vitest已完成**：884檔／18,369項全部PASS、1430.92秒、exit0；1696份來源／設定／資料指紋一致，session88675終止、來源凍結解除。證據為output/st6-st10/st7-006-007-009-full-vitest.log、full-vitest-exit.txt及full-source-integrity.log／exit.txt。此結果不涵蓋其後v13政策修正。
+正式 v15 新種子對照已完成（2026-10-12）：相同正式規則、卡池與其他 AI 政策，只比較空目標可選移動 guard 開／關，兩組各 624 場共 **1,248 場，631：617（50.56%）**；成對受益 8、受損 1、互分勝負 615，全部完成且零錯誤。這是單一政策消融比較，不是全部 v15 改動對舊版，也不是人類勝率或穩定優勢證明。每色每策略各 208 場，藍 83／83、綠 64／53、黃 93／92、紅 113／111、紫 115／115、黑 163／163；分色差額同時受對手政策與配對影響。逐場、座位、先後手、牌表及 bundle／報告雜湊獨立稽核 PASS。證據：output/st6-st10/ai-v15-holdout/combined-audit.json、color-comparison-audit.json。
 
-ST7-006／007／009正式單卡閘門已PASS：11檔／533項、build／全域lint、資料／registry／逐卡strict、ST7能力8張／12能力ready、正式Chrome76案與標準AI Browser。006有24案精確重播，另4案Refresh未記錄種子，只排除洗後牌序、逐張卡牌集合與其他狀態／支付／pending精確核對；007=18案、009=30案精確重播。候選／來源／正式重驗不重複累加，屬準備式局部操作，非逐卡完整開局至勝負或online。
+ST7-013／正式 v15 本輪完整回歸已結束（2026-10-12）：**894 檔／18,614 項全部 PASS，1480.40 秒、exit0**；1717 份來源／設定／資料指紋一致、integrity exit0，來源凍結已解除。全域 lint exit0。涵蓋 ST7-013 正式付款／可選傷害、AI 安全 Break 代價、協定欄位檢查、UI 與 adapter 首次初始化效能修正，並保留 v14 空移動略過與 ST7-011 目前 LV 條件。證據：output/st6-st10/ai-v15-st7-013-full-completion.json、ai-v15-st7-013-full-vitest-run1.log。下列 v14 完整結果為歷史證據；v15 新種子單一政策消融結果見本節。
 
-正式程式已整合 **v13 lv5-public-special-play-attack-v13**，補足Licorice降等→Mold特殊登場→On Play／補位→普通攻擊的公開條件式收益預估。v12新增13項回歸先得到6失敗／7通過；修正並補隱藏資訊測試後，相關4檔／56項全部PASS，build exit0。桌機／平板6案實際Chrome與獨立初始局面／全部指令重播PASS。草稿各54條分段診斷與配對audit亦PASS：三種初始局面從錯失改為獲勝、能量／傷害不足仍保守、對手真正支付ST2-020仍可擋住斬殺，六種隱藏牌面變動不影響根動作。真實Trap／FLIP仍由實際流程回應，不宣稱無法反制。此為原卡60張準備式局面，REST歷史未從完整開局重播，非逐卡實體／online驗收；Lv3／4尚未修正同類深層連段。
+ST7-013 已 promote（2026-10-12）：依原圖支付 YY＋己方棄牌區恰好 1 張黃色 Cookie 放入 Break，之後對手 0～1 Cookie 受 2 效果傷害；代價使己方 Break 達 10 時先敗北、不結算傷害。正式 AI v15 選較低印刷 LV 的合法代價，拒絕付款自敗，並保留 v14 空移動略過。候選／正式來源／正式卡池各同 24 案雙尺寸 Chrome 及全部狀態欄位精確回放通過，不重複累加；正式 5 檔 130 項、共用 10 檔 231 項、AI 分類 9 項、build／受影響 lint／伺服器型別／資料／registry／單卡 strict 通過。協定拒絕非字串代價 ID；好友房核心雙瀏覽器同步通過，仍非逐卡 online 完整對局。首次來源回歸兩項 ST6-015 hook 逾時與建房未回應已保留；CPU profile 定位新增效果欄位放於大型展開前的效能退化，調整欄位順序後同局面首次初始化 14.47 秒回到 0.68 秒（修改前 0.67 秒），原測試不放寬時限即通過。正式 v15 新種子單一政策消融為 631／617，不把 v14 的 637／611 當成 v15 勝率。最新證據：output/st6-st10/st7-013-formal-browser-run1/replay-audit.json、st7-013-promotion.json。 全卡池 strict AI 稽核仍因既有 unsupported 清單而 exit1／conservative，9 項回歸確認清單未變、conversionFailures 為空；ST7 系列 strict ready，不能宣稱全卡池 AI 無缺口。
 
-v13最新局部驗證：相關4檔／56項、build、全域lint、六案Chrome與全部指令重播、標準AI Browser均exit0。受影響AI回歸70檔／1063項全部PASS、344.76秒、exit0，session34213終止。凍結v12／v13 bundle第一組預選seedBase2026101297之624場已全部完成、零錯誤，新版312／舊版312；312組交換政策座位配對全為各勝一場，報告／bundle／配對audit通過，這組未顯示整體提升。第二組預選seedBase2026102297也完成312比312、零錯誤；合計1248場624比624、624組交換政策座位全為各勝一場，兩bundle／報告／配對audit exit0，未量到整體勝率提升。兩場benchmark session4422／49769均已終止。第一次誤用CLI參數的部分run已主動取消並保留，不納入成果；正式結果均由環境變數設定。1696舊輸入差異audit確認只有AI evaluated-turn-handler及版本檔改變；新fixture／tests另驗。v13最終完整Vitest已結束：885檔／18,389項全部PASS，1441.78秒，exit0；1698份來源／設定／資料指紋一致，session2688終止，來源凍結解除。證據為output/st6-st10/ai-v13-full-vitest.log／exit.txt與ai-v13-full-source-integrity.log／exit.txt。此結果涵蓋正式v13，不涵蓋其後ST7-012候選草稿或未來正式修改。
+ST7-011 完整回歸 run1 已結束（2026-10-12，session85902）：890 檔中 889 通過，18,547 項中 18,546 通過、1 失敗，1271.44 秒、exit1；1709 份來源／設定／資料指紋一致、integrity exit0，來源凍結已解除。唯一失敗為卡池稽核仍預期 2060，實際為 2061；重新執行正式全卡池 AI 稽核確認 2061 inventory／1578 canonical、conversionFailures 空、unsupported 清單未變。精確計數更新並加入 ST7-011 單卡分類回歸後，該檔 8 項通過；未放寬既有 unsupported／conversionFailures 斷言；後續 v14＋ST7-011 新指紋完整回歸 891 檔／18,559 項已全部通過，首輪失敗紀錄保留。
 
-較早v12對v11兩組共1248場625比623（50.08%）僅是小幅AI對AI差異，不宣稱穩定提升或人類勝率；v11另624場312比312。既有12牌表能力稽核所列紅色prevent-source-active-phase及黑色set-cookie-level是保守分類，不直接當錯誤證明；紅色公開readying已有策略支援。
+AI 空移動代價修正已套入正式來源 v14（2026-10-12，完整回歸已通過）：原型兩組 624 場分別 323：301、314：310，合計 1248 場新策略 637／舊策略 611（51.04%），零錯誤；624 組成對比較 beneficial15／harmful2／split607。完整工作組合、bundle／牌表／報告雜湊稽核 PASS，不宣稱對人類勝率或穩定優勢。正式 handler 與受測候選的標準化可執行 JavaScript 完全相同。基線實際敗局保留；原型 9 案 PASS，正式新增 11 案涵蓋 Lv3～5 無目標略過、有目標救援、真實隱藏卡順序排列及 Lv1～2 舊行為。原型 Chrome 8 案與正式 Chrome 4 案逐欄位精確重播 PASS，標準 AI Browser 六項 PASS，正式 build／受影響 lint PASS；局部準備式 Browser 非完整 UI 對局或 online。最新證據：output/st6-st10/ai-empty-then-benchmark/combined-audit.json、ai-v14-formal-browser-run1/replay-audit.json。
 
-候選待修：ST7-008缺On Play及Then（固定LV3同名見證需精確條件，傷害目標仍待規則確認）；010漏HP≤4限制且缺Then，output-only HP selector原型已證明修正非法5→6，但尚未整卡驗收。新目視011／012／013已先存獨立印刷預期再讀候選；011正式仍缺來源補HP Then；output-only草稿為named-cookie條件增加同張見證的目前LV上下限，並依印刷加入sourceHP≤2且己方同名LV3的source-only補1HP。現有Tree所有印刷都是LV3，未造LV2卡；以真正Licorice Activate從LV2降1、另一張原圖TreeLV3，九組條件／舊欄位相容探測PASS，基線五種比對不符。五個原卡60張局面的實際YY普通2／傷害／Then探測，基線＋草稿共10列PASS：正向與疲勞見證由2補至3HP；錯名（同LV3）、對手／Break見證不補；補至3後已超過原條件。隔離驗證最新結果：全app＋草稿型別零診斷、2檔70項Vitest全部PASS（6.00秒）、最新16局面preflight PASS、單卡strict verified1／needs-review0／blocked0、shadow batch limit1 ready。已覆蓋實際1／3HP父流程、Kumiho FLIP來源離場、Refresh、付款阻擋與9項同名見證目前LV相容性；雙尺寸Chrome／獨立精確重播及正式採用／promote仍待完成。第一次型別檢查6診斷已修正output草稿的pendingAbilityEffect欄位與gain-hp型別縮限，沒有修改正式來源或放寬斷言。兩份首輪草稿失敗分別為誤認Licorice印刷LV3（已依原卡修為2）及空pending的undefined／null表示（已正規化），沒有改卡名／印刷屬性，失敗紀錄保留。011／013仍needs-review，013仍缺道具轉接。012已單卡promote並完成正式局部閘門：13檔262項、build／預覽build、資料／registry／strict、受影響lint、桌機／平板Chrome44案與44案精確重播、標準AI Browser全部exit0。promote前隔離78項、型別零診斷、shadow limit1及來源255項／build／全域lint／同44案Chrome與重播均PASS；相同案例重驗不累加。原始record一致才移出候選，正式fixture只從getCardPoolEntry載入。當前36正式／64候選，ST7=9／11；50 JSON／2116卡號／2060轉換／1577 canonical AI cards。1698舊輸入對照稽核PASS：只新增5檔並修改6個預期卡牌／契約／路由／registry／計數輸入，AI政策與其他規則未變。完整Vitest首輪session20395已因worker spawn UNKNOWN／原生記憶體不足終止（exit -2147483645），不是通過；同次尾端指紋命令亦無法啟動，稍後獨立重驗1703份指紋PASS。第二輪主機forks亦出現原生Zone／MemoryChunk反序列化記憶體錯誤，session24602 handle已消失且主機程序確認無Vitest；沒有結束碼檔或通過摘要，不當作通過。獨立1703指紋再驗PASS。threads單worker預檢原有兩檔78項PASS（6.89秒），第三輪threads session30021以DataCloneError記憶體不足結束（test exit1），其尾端指紋命令exit -1073741523，之後獨立重驗1703指紋PASS。主機終止後commit使用36%／約22GB可用；本次8GB heap＋threads單worker＋記憶體監測完整run5（session67446）已終止並通過：887檔／18,467項全部PASS，1357.41秒，test exit0；1703份來源／設定／資料指紋一致、integrity exit0。證據為output/st6-st10/st7-012-full-vitest-run5.log／exit.txt及st7-012-full-source-integrity-run5.log／exit.txt。run4因NODE_OPTIONS反斜線預載路徑解析失敗未進入測試，已改正斜線並保留失敗。完整期間沒有修改src／scripts／data／config，最終來源凍結解除。此結果涵蓋正式v13及ST7-012，不涵蓋其後ST7-011／AI減傷草稿。Chrome預覽僅明列data:, favicon，不改卡圖／規則／正式HTML；舊EACCES、選擇器與favicon404失敗保留。準備式局部驗收不等於完整開局／逐卡online，尚未commit／push。
+分色補充：兩組比較各色各策略皆 208 場；藍 91／89、綠 68／51、黃 101／100、紅 103／102、紫 116／112、黑 158／157（新／舊勝場）。逐場與報告雜湊核驗 PASS，合計 637／611；同場是新策略對舊策略，因此分色差額含對手策略改變及牌組對局的影響，不能當作各色獨立因果效果或對人類勝率。證據：output/st6-st10/ai-empty-then-benchmark/color-comparison-audit.json。
 
-本階段未commit／push。ST6～ST10全100張與AI整體勝率改善仍未完成，沿用本追蹤入口與output/st6-st10證據。
-012第二次Blocker入口以實際第一次付款／受傷／第二次攻擊指令準備，再於UI支付第二次費用，兩尺寸操作與全部指令精確重播已通過。v13 ST6-019條件抽牌評分真／假都122的診斷仍待實際決策影響證據；未修改AI政策。
+目前狀態（2026-10-12）：ST6～ST10 **38／100 已 promote、62 張候選**；ST6=20／0、ST7=11／9、ST8=1／19、ST9=1／19、ST10=5／15。正式卡池 52 JSON／2118 卡號／2062 可轉換／1579 canonical AI cards。沿用六色 BS12 與 Cookierift 921／927／67／83／568／506 共 12 副牌表，預設 Lv5、正式 AI 政策為 v15。ST7-013 本輪完整回歸已通過；下列 v14 完整回歸為較早快照。
+
+ST7-011 已逐卡驗證並 promote：印刷黃色 LV1／2HP、YY 普通 2，Then 僅在來源 HP≤2 且同張己方戰鬥區具名 Millennial Tree Cookie 的目前 LV 恰 3 時，讓來源補 1HP；來源在 FLIP 中離場不補。具名條件保留舊欄位相容性；離線 UI Refresh 捕捉並記錄一次 uint32 seed，既有種子（含 0）保留，規則引擎仍純函式。候選隔離 80 項／型別／strict、來源 31 檔 882 項及全域 lint run2、正式 32 檔 904 項／build／資料／registry／單卡 strict／受影響 lint 皆通過。正式 ST7 AI 稽核 10 張、18 能力、3 候選組合邊、零 unsupported／conversionFailures，狀態 ready。
+
+候選、來源、正式階段重驗同一組雙尺寸 Chrome 32 案，不重複累加；正式 run2 與 32 案獨立精確重播均 PASS，包括付款取消、真實 1／3HP 父流程、來源被 Kumiho FLIP 擊倒及 Refresh。所有狀態欄位、最終牌序與完整 commandLog 均比較，沒有洗牌排除項；正式桌機正向與平板 Refresh 最終畫面已目視。標準 AI Browser 開局／暫停／繼續 PASS。這些是原卡 60 張準備式局部操作，非完整開局至勝負或逐卡 online。正式 Chrome 初跑因 driver 仍讀已移出候選的卡失敗；改讀正式 JSON 後重跑，不是產品規則缺陷。全域 lint 初輪唯一失敗為 output AI 草稿 unused import，修後 run2 exit0；promote 後只改 fixture 正式載入與生成 registry，兩檔受影響 lint exit0，沿用其餘未變更來源的全域證據。
+
+AI 減傷估值原型：正式 v13 的 15 項反例有 4 失敗，改用實際對防守者普通傷害後 15 項通過、全 app 型別零診斷；兩組固定種子共 1248 場為 **624：624（50%）、零錯誤**，未證明整體勝率提升，未採用。另一個僅使用公開 Break LV 的非線性競速評分為探索性原型，首組 624 場 312：312；5 組配對動作總數改變但勝負未變，第二組亦為 312：312；兩組合計 1248 場 624：624、零錯誤，bundle／報告與配對 audit PASS，未證明提升，不採用這組權重。既有 v13 對 v12 的 1248 場亦為 624：624，不混成同一實驗；皆非人類勝率。
+
+最新完整 Vitest（2026-10-12）：正式 v14＋ST7-011／具名目前 LV 條件／已提交 Refresh 種子修正，**891 檔／18,559 項全部 PASS，1286.20 秒、exit0**；1712 份來源／設定／資料指紋一致、integrity exit0，來源凍結已解除。證據：output/st6-st10/ai-v14-st7-011-full-vitest-run1.log、ai-v14-st7-011-full-source-integrity-run1.log、ai-v14-st7-011-full-completion.json。這輪不涵蓋 ST7-013 隔離草稿；其餘未採用 AI 原型不混入正式來源。部分提交 9d523506 與 Refresh 獨立提交 be4371a9 均未 push，v14 與 ST7-011 等其餘變更尚未 commit。全 100 張逐卡驗收／promote 與對人類玩家的實測仍未完成。
+
+證據：output/st6-st10/inventory-37-formal.json、st7-011-formal-affected-run1.log、st7-011-browser-formal-run2/results.json／replay-audit.json、st7-011-formal-standard-ai-browser.log、st7-011-formal-ai-capabilities.json；AI 實驗見 ai-stored-reduction-benchmark/combined-summary.json 與 ai-break-race-benchmark/first-group-summary.json。
 
 <!-- ai-starter-current-end -->
 
@@ -212,58 +221,58 @@ ST10的20張原圖已逐張目視；以下為來源盤點，P為紫色支援能�
 2026-10-11 ST7-002正式進度：Mango 已完成原圖逐字核對、免費On Play己方休息區總LV至少2→自身補1HP及Y普通1的實際來源驗收，已單卡promote。共用解析修正同時保留BS4-033休息LV5門檻與BS6-078手牌至多5門檻；候選12檔652項、正式13檔659項回歸、候選與正式build／全域lint／單卡strict／資料及registry皆exit0。候選與正式各同46案雙尺寸原圖Chrome（補HP36＋Mango普通攻擊10）及獨立實際指令重播PASS，仍為準備式局部流程，不等於開局至勝負或逐卡online。Lv3～5另12案正式AI探針確認門檻未達略過、達標接受免費補HP；標準AI Browser也PASS，這不是新勝率證據。正式44 JSON／2110卡號／2054轉換／1571 canonical AI cards；ST7能力稽核ready3／5能力／0unsupported／0conversionFailures。ST6～ST10現為30正式／70候選（ST6=20／0、ST7=3／17、ST8=1／19、ST9=1／19、ST10=5／15）。本批完整Vitest已終值exit0：872檔／18,125項全部PASS、1309.94秒，1665份來源／設定／資料指紋一致，來源凍結已結束；此完整回歸不涵蓋其後ST7-003候選來源修改。ST7-003原圖及獨立預期、轉接基線已存output；14種執行期strict變異僅攔2／漏12，正式來源未套用，也未promote。初版兩個無效手牌篩選欄位的診斷已撤回，v2改真實discardHandType／discardHandColor重驗，統計取v2。未commit／push。
 |---|---|---|---|---|
 | ST10-001 | Dreamweaver Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST10-002 | Moonlight Cookie | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST10-002 | Moonlight Cookie | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-003 | Poison Mushroom Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-004 | Wizard Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-005 | Dreamcatcher | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-006 | Blueberry Pie Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST10-007 | Sugar Glass Cookie | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST10-008 | Stardust Cookie | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST10-007 | Sugar Glass Cookie | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST10-008 | Stardust Cookie | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-009 | Space Doughnut | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-010 | Prophet Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-011 | Cream Unicorn Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-012 | Taurus Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST10-013 | Little Star | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST10-013 | Little Star | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-014 | Lunar Compendium | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-015 | Essence of Moonlight | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-016 | Delicate Glass Flower | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-017 | Inside the Clock Tower | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-018 | Reunion of Star and Moon | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST10-019 | Sleeping Moon | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST10-019 | Sleeping Moon | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST10-020 | Wizard Archives | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST6-001 | Mala Sauce Cookie | 正式 | 已目視原圖及效果驗收 | 雙尺寸14案及正式卡池重驗14案通過 |
-| ST6-002 | Fire Spirit Cookie | 正式 | 已目視原圖；strict verified及20項卡牌／規則／實體局面測試通過 | 雙尺寸26案及正式卡池重驗26案通過 |
-| ST6-003 | Devil Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同10案候選／正式重驗通過（不重複累計） |
-| ST6-004 | Pitaya Dragon Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同34案候選／正式重驗通過（不重複累計） |
-| ST6-005 | Agar Agar Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同28案候選／正式重驗通過（不重複累計） |
-| ST6-006 | Cherry Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同18案候選／正式重驗通過（不重複累計） |
-| ST6-007 | Chili Pepper Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同28案候選／正式重驗通過（不重複累計） |
-| ST6-008 | Candy Apple Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同24案候選／正式重驗通過（不重複累計） |
-| ST6-009 | Capsaicin Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同32案候選／正式重驗通過（不重複累計） |
-| ST6-010 | Peperoncino Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同34案候選／正式重驗通過（不重複累計） |
-| ST6-011 | Habanero Cookie | 正式 | 已目視原圖；單卡規則與strict通過 | 雙尺寸同24案候選／正式重驗通過（不重複累計） |
-| ST6-012 | Picky Pyro-tiger | 正式 | 已目視原圖；技能／strict根因修正與50項單卡測試通過 | 雙尺寸同32案候選／正式重驗通過（不重複累計） |
-| ST6-013 | Hot Jellyco Missile | 正式 | 原圖、漏轉接及strict修正、33項單卡／實體規則測試通過 | 雙尺寸同28案候選／正式及60張精確重播稽核通過（不重複累計） |
-| ST6-014 | Essence of Conflagration | 正式 | 原圖、完整費用／傷害／Then轉接與strict修正，52項單卡／實體規則通過 | 雙尺寸同32案候選／正式及60張精確重播核對通過（不重複累計）；局部fixture，不等於逐卡online／完整正式對局 |
-| ST6-015 | Fire Spirit Cookie's Staff | 正式 | 原圖RR＋任意己方頂端HP；0～1任意己方本回合攻擊+2。4檔68項、strict18種變異拒絕；正式受影響49檔714項PASS | 候選／正式雙尺寸相同34案通過，不重複累計；修正HP代價離場目標，本機投影／線上先付後選；逐卡online完整對局未驗收 |
-| ST6-016 | Dragon's Breath | 正式 | 原圖RRR＋棄任意手牌1；0～2對手依選取順序2／1傷害。42項、18種strict變異拒絕，既有2103正式分析不變 | 隔離／來源候選雙尺寸相同30案與精確重播通過；新增順位，取消重選、昏厥及實際AI FLIP。正式build／lint／337項回歸／雙尺寸30案與重播／資料／registry／AI Browser通過；完整860檔17,814項PASS、1323.39秒、1632指紋一致，逐卡online未驗收 |
-| ST6-017 | Restored Power of Fire | 正式 | 原圖RR、0～1對手-2；己方戰鬥區恰1HP時同一目標再-1；51項／23種strict錯誤變異／2104既有分析不變 | 候選來源366項與雙尺寸40案及重播通過後promote；正式373項、資料／registry／strict及AI ready17通過；build PASS／lint PASS／正式40案 PASS／重播 PASS／AI Browser PASS；本批完整回歸及逐卡online尚未驗收 |
-| ST6-018 | Frozen Flame | 已單卡promote | 原圖、36項單卡、strict、雙尺寸28案／重播PASS；正式393項PASS | 正式build／資料／registry PASS；lint PENDING，AI Browser PASS；本批全套待020 |
-| ST6-019 | Power Unleashed | 已單卡promote | 原圖、53項單卡、strict、雙尺寸46案／獨立重播PASS | 候選403項／build PASS、lint PASS；正式Chrome PASS，本批全套待020 |
-| ST6-020 | Into the Depths | 已單卡promote | 原圖、61項、strict、雙尺寸38案／獨立重播PASS | 隔離407項／build／型別PASS；來源回歸 PASS、build PASS、全域lint PASS；本批全套待最後狀態 |
-| ST7-001 | Blue Lily Cookie | 已單卡 promote；共批完整Vitest PASS | 原圖、54項單卡／契約、正式321項回歸、strict verified／AI ready | 候選與正式雙尺寸各同44案／重播PASS；逐卡online未驗收 |
-| ST7-002 | Mango Cookie | 已單卡 promote；本批完整Vitest PASS | 原圖、42項新回歸；正式13檔659項、build／全域lint／strict／資料／registry PASS | 候選及正式各同46案Chrome／重播PASS；Lv3～5 AI 12案PASS；逐卡online未驗收 |
-| ST7-003 | Rainbow Sherbet Cookie | 已單卡 promote；完整Vitest執行中 | 正式7檔133項、build／全域lint／strict／資料／registry PASS | 正式28案Chrome／重播、12案AI探針PASS；逐卡online未驗收 |
-| ST7-004 | Fig Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-005 | Caramel Choux Cookie | 正式 | 已核對 | 雙尺寸正反／救援通過 |
-| ST7-006 | Cream Puff Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-007 | Fairy Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
+| ST6-001 | Mala Sauce Cookie | 正式（已 promote） | 已目視原圖及效果驗收 | 雙尺寸14案及正式卡池重驗14案通過 |
+| ST6-002 | Fire Spirit Cookie | 正式（已 promote） | 已目視原圖；strict verified及20項卡牌／規則／實體局面測試通過 | 雙尺寸26案及正式卡池重驗26案通過 |
+| ST6-003 | Devil Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同10案候選／正式重驗通過（不重複累計） |
+| ST6-004 | Pitaya Dragon Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同34案候選／正式重驗通過（不重複累計） |
+| ST6-005 | Agar Agar Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同28案候選／正式重驗通過（不重複累計） |
+| ST6-006 | Cherry Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同18案候選／正式重驗通過（不重複累計） |
+| ST6-007 | Chili Pepper Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同28案候選／正式重驗通過（不重複累計） |
+| ST6-008 | Candy Apple Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同24案候選／正式重驗通過（不重複累計） |
+| ST6-009 | Capsaicin Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同32案候選／正式重驗通過（不重複累計） |
+| ST6-010 | Peperoncino Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同34案候選／正式重驗通過（不重複累計） |
+| ST6-011 | Habanero Cookie | 正式（已 promote） | 已目視原圖；單卡規則與strict通過 | 雙尺寸同24案候選／正式重驗通過（不重複累計） |
+| ST6-012 | Picky Pyro-tiger | 正式（已 promote） | 已目視原圖；技能／strict根因修正與50項單卡測試通過 | 雙尺寸同32案候選／正式重驗通過（不重複累計） |
+| ST6-013 | Hot Jellyco Missile | 正式（已 promote） | 原圖、漏轉接及strict修正、33項單卡／實體規則測試通過 | 雙尺寸同28案候選／正式及60張精確重播稽核通過（不重複累計） |
+| ST6-014 | Essence of Conflagration | 正式（已 promote） | 原圖、完整費用／傷害／Then轉接與strict修正，52項單卡／實體規則通過 | 雙尺寸同32案候選／正式及60張精確重播核對通過（不重複累計）；局部fixture，不等於逐卡online／完整正式對局 |
+| ST6-015 | Fire Spirit Cookie's Staff | 正式（已 promote） | 原圖RR＋任意己方頂端HP；0～1任意己方本回合攻擊+2。4檔68項、strict18種變異拒絕；正式受影響49檔714項PASS | 候選／正式雙尺寸相同34案通過，不重複累計；修正HP代價離場目標，本機投影／線上先付後選；逐卡online完整對局未驗收 |
+| ST6-016 | Dragon's Breath | 正式（已 promote） | 原圖RRR＋棄任意手牌1；0～2對手依選取順序2／1傷害。42項、18種strict變異拒絕，既有2103正式分析不變 | 隔離／來源候選雙尺寸相同30案與精確重播通過；新增順位，取消重選、昏厥及實際AI FLIP。正式build／lint／337項回歸／雙尺寸30案與重播／資料／registry／AI Browser通過；完整860檔17,814項PASS、1323.39秒、1632指紋一致，逐卡online未驗收 |
+| ST6-017 | Restored Power of Fire | 正式（已 promote） | 原圖RR、0～1對手-2；己方戰鬥區恰1HP時同一目標再-1；51項／23種strict錯誤變異／2104既有分析不變 | 候選來源366項與雙尺寸40案及重播通過後promote；正式373項、資料／registry／strict及AI ready17通過；build PASS／lint PASS／正式40案 PASS／重播 PASS／AI Browser PASS；本批完整回歸及逐卡online尚未驗收 |
+| ST6-018 | Frozen Flame | 正式（已 promote） | 原圖、36項單卡、strict、雙尺寸28案／重播PASS；正式393項PASS | 正式build／資料／registry PASS；lint PENDING，AI Browser PASS；本批全套待020 |
+| ST6-019 | Power Unleashed | 正式（已 promote） | 原圖、53項單卡、strict、雙尺寸46案／獨立重播PASS | 候選403項／build PASS、lint PASS；正式Chrome PASS，本批全套待020 |
+| ST6-020 | Into the Depths | 正式（已 promote） | 原圖、61項、strict、雙尺寸38案／獨立重播PASS | 隔離407項／build／型別PASS；來源回歸 PASS、build PASS、全域lint PASS；本批全套待最後狀態 |
+| ST7-001 | Blue Lily Cookie | 正式（已 promote） | 原圖、54項單卡／契約、正式321項回歸、strict verified／AI ready | 候選與正式雙尺寸各同44案／重播PASS；逐卡online未驗收 |
+| ST7-002 | Mango Cookie | 正式（已 promote） | 原圖、42項新回歸；正式13檔659項、build／全域lint／strict／資料／registry PASS | 候選及正式各同46案Chrome／重播PASS；Lv3～5 AI 12案PASS；逐卡online未驗收 |
+| ST7-003 | Rainbow Sherbet Cookie | 正式（已 promote） | 正式7檔133項、build／全域lint／strict／資料／registry PASS | 正式28案Chrome／重播、12案AI探針PASS；逐卡online未驗收 |
+| ST7-004 | Fig Cookie | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
+| ST7-005 | Caramel Choux Cookie | 正式（已 promote） | 已核對 | 雙尺寸正反／救援通過 |
+| ST7-006 | Cream Puff Cookie | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
+| ST7-007 | Fairy Cookie | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
 | ST7-008 | Elder Faerie Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-009 | Lilybell Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
+| ST7-009 | Lilybell Cookie | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
 | ST7-010 | Millennial Tree Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-011 | Millennial Jade Deer | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-012 | Churro Cookie | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
-| ST7-013 | Miraculous Nutrient Ampoule | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
+| ST7-011 | Millennial Jade Deer | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
+| ST7-012 | Churro Cookie | 正式（已 promote） | 已 promote；正式回歸證據見現況段落 | 逐卡驗收沿用先前專項證據；逐卡online未驗收 |
+| ST7-013 | Miraculous Nutrient Ampoule | 正式（已 promote） | 正式130項、strict／build／資料／registry通過；完整894檔／18614項PASS | 正式雙尺寸24案及逐欄位精確回放PASS；逐卡online完整對局未驗收 |
 | ST7-014 | Essence of Rejuvenation | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
 | ST7-015 | Budding Future | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
 | ST7-016 | Tightly Tied Vine | 候選 inventory | 已目視原圖，待效果驗收 | 本輪未驗收 |
@@ -288,7 +297,7 @@ ST10的20張原圖已逐張目視；以下為來源盤點，P為紫色支援能�
 | ST8-015 | Essence of the Tempest | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST8-016 | Wind's Grace Earrings | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST8-017 | Hindering Darkness | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST8-018 | Piercing Arrow of Purity | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST8-018 | Piercing Arrow of Purity | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST8-019 | Bad Omen | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST8-020 | Dark Enchantress Laboratory | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-001 | Gold Citrine Cookie | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
@@ -306,7 +315,7 @@ ST10的20張原圖已逐張目視；以下為來源盤點，P為紫色支援能�
 | ST9-013 | Shimmering Moonlit Coral | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-014 | Glittering Pearl Shell | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-015 | Essence of the Ocean | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
-| ST9-016 | Bubble Wave Shell | 正式 | 已目視原圖（來源盤點） | 本輪未驗收 |
+| ST9-016 | Bubble Wave Shell | 正式（已 promote） | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-017 | Revelation of the Seas | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-018 | Tower of Frozen Waves | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |
 | ST9-019 | Curse of the Seas | 候選 inventory | 已目視原圖（來源盤點） | 本輪未驗收 |

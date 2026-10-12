@@ -2531,6 +2531,8 @@ export const isEffectConditionMet = (
       (cookie) =>
         cookie.card.name === condition.name &&
         (condition.keyword === undefined || cookie.card.keywords?.includes(condition.keyword)) &&
+        (condition.minLevel === undefined || getCookieEffectiveLevel(cookie) >= condition.minLevel) &&
+        (condition.maxLevel === undefined || getCookieEffectiveLevel(cookie) <= condition.maxLevel) &&
         (!condition.excludeSource ||
           cookie.card.instanceId !== context.sourceInstanceId),
     )

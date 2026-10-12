@@ -844,7 +844,16 @@ export const handleAiPendingDecision = (
           targetIds,
         )
       : undefined
+    // Paying for an optional movement with no selected Cookie cannot move
+    // anything. Keep the resources for later actions instead.
+    const emptyOptionalMovement =
+      (options.level ?? 2) >= 3 &&
+      !isAbilityResolution &&
+      targetIds.length === 0 &&
+      pendingDecision.effects.length > 0 &&
+      pendingDecision.effects.every((effect) => effect.kind === 'battle-to-support')
     const canResolveOptionalEffect =
+      !emptyOptionalMovement &&
       canPay &&
       canPayHpToTrash &&
       canPayHpToHand &&

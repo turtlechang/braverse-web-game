@@ -430,6 +430,7 @@ export const convertOfficialCardEffects = (
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
     ...DECK_ADDITION_EFFECTS,
+    'ST7-013': [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
     'ST6-020': [{kind:'draw-up-to',max:1}],
     'ST6-019': [{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1}},{kind:'draw-up-to',max:1,condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}],
     'ST6-018': [{kind:'modify-damage-received',amount:-1,duration:'this-turn',damageType:'attack',target:{side:'self',min:0,max:1}}],
@@ -7166,6 +7167,7 @@ export const convertOfficialItemAbility = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'ST7-013': { energy: { yellow: 2 }, discardHand: 0, trashCookieToBreakArea: { count: 1, energyColor: 'yellow' } },
     'ST6-016': {energy:{red:3},discardHand:1},
     'ST6-015': { energy: { red: 2 }, discardHand: 0, hpToTrash: { amount: 1 } },
     'ST6-014': { energy: { red: 2 }, discardHand: 0, hpToTrash: { amount: 1 } },
@@ -8228,6 +8230,13 @@ export const convertOfficialAttackEffects = (
   if (card.cardNumber === 'BS9-079@3') return undefined
   // R003: the user confirms revival from the owner's Break area.
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST7-011': [{ kind: 'gain-hp', amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'all-of', conditions: [
+        { kind: 'source-hp-at-most', amount: 2 },
+        { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Millennial Tree Cookie', minLevel: 3, maxLevel: 3 },
+      ] },
+    }],
     'ST6-004': [{ kind: 'optional-cost-attack', effectText: card.attackText,
       cost: { energy: { red: 1 } },
       effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],

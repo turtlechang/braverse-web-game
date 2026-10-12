@@ -699,7 +699,18 @@ const chooseAbilityCostIds = (
     return null
   }
 
-  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, cost, sourceInstanceId, discardHandIds)
+  const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(cost, player.discardPile)
+    .filter(card => !trashToDeckBottomIds.includes(card.instanceId) && !trashToDeckIds.includes(card.instanceId))
+    .sort((left, right) => (left.type === 'cookie' ? left.level : 0) - (right.type === 'cookie' ? right.level : 0))
+    .slice(0, cost.trashCookieToBreakArea?.count ?? 0).map(card => card.instanceId)
+  if (trashCookieToBreakAreaIds.length !== (cost.trashCookieToBreakArea?.count ?? 0)) return null
+  const paidBreakLevel = player.breakArea.reduce((sum, card) => sum + card.level, 0) +
+    trashCookieToBreakAreaIds.reduce((sum, id) => {
+      const card = player.discardPile.find(entry => entry.instanceId === id)
+      return sum + (card?.type === 'cookie' ? card.level : 0)
+    }, 0)
+  if (trashCookieToBreakAreaIds.length > 0 && paidBreakLevel >= 10) return null
+  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, cost, sourceInstanceId, discardHandIds, trashCookieToBreakAreaIds)
   if (!handToBreakAreaIds) return null
 
   return {
@@ -711,6 +722,7 @@ const chooseAbilityCostIds = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    trashCookieToBreakAreaIds,
     handToBreakAreaIds,
   }
 }
@@ -809,7 +821,10 @@ const resolveAiCardAbility = (
     costIds.hpToTrashTargetIds,
     costIds.trashBattleCookieIds,
     costIds.handToBreakAreaIds,
+    [],
+    costIds.trashCookieToBreakAreaIds,
   )
+  if (played.status !== 'playing') return null
   // Conditions such as BS6-084's hand limit are checked after the item and
   // its cost cards leave the hand, matching the real command path.
   const effects = ability.effects.filter((effect) =>
@@ -874,6 +889,7 @@ const resolveAiCardAbility = (
         hpToTrashTargetIds: costIds.hpToTrashTargetIds,
         trashBattleCookieIds: costIds.trashBattleCookieIds,
         handToBreakAreaIds: costIds.handToBreakAreaIds,
+        trashCookieToBreakAreaIds: costIds.trashCookieToBreakAreaIds,
         effectTargets: sim.effectTargets,
         chooseOneModes: sim.chooseOneModes,
       },

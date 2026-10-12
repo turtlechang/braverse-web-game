@@ -564,6 +564,7 @@ export interface PlayItemCommand {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   handToBreakAreaIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -580,6 +581,7 @@ export interface BeginPlayItemCommand {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   handToBreakAreaIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -2196,7 +2198,7 @@ const createItemActivationDiscardPending = (
     try {
       playItem(state, command.playerId, command.instanceId, command.paymentIds,
         command.supportToTrashIds ?? [], command.supportToHandIds ?? [], command.discardHandIds ?? [],
-        command.hpToTrashTargetIds ?? [], command.trashBattleCookieIds ?? [], command.handToBreakAreaIds ?? [], ids)
+        command.hpToTrashTargetIds ?? [], command.trashBattleCookieIds ?? [], command.handToBreakAreaIds ?? [], ids, command.trashCookieToBreakAreaIds ?? [])
       validated = true
       legalIds.push(...ids)
     } catch (error) { validationError = error }
@@ -3155,6 +3157,7 @@ const applyPlayerActionCommand = (
         command.trashBattleCookieIds ?? [],
         command.handToBreakAreaIds ?? [],
         itemRestrictionDiscardIds,
+        command.trashCookieToBreakAreaIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -3199,6 +3202,7 @@ const applyPlayerActionCommand = (
         command.trashBattleCookieIds ?? [],
         command.handToBreakAreaIds ?? [],
         itemRestrictionDiscardIds,
+        command.trashCookieToBreakAreaIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,

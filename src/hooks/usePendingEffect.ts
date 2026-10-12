@@ -206,6 +206,7 @@ export function usePendingEffect(params: {
           discardHandIds: pendingEffect.selectedDiscardHandIds,
           hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds,
           trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+          trashCookieToBreakAreaIds: pendingEffect.selectedTrashCookieToBreakAreaIds,
           handToBreakAreaIds: pendingEffect.selectedHandToBreakAreaIds,
           chooseOneModes: pendingEffect.chooseOneModes,
         })
@@ -2361,6 +2362,7 @@ export function usePendingEffect(params: {
                 ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
                 : {}),
               trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+              trashCookieToBreakAreaIds: pendingEffect.selectedTrashCookieToBreakAreaIds,
               handToBreakAreaIds: pendingEffect.selectedHandToBreakAreaIds,
               chooseOneModes: pendingEffect.chooseOneModes,
               ...((currentEffect.kind === 'reveal-hand' && currentEffect.asCost) ||

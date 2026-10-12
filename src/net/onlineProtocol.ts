@@ -498,6 +498,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'handToBreakAreaIds',
+      'trashCookieToBreakAreaIds',
     ],
     optionalStringMatrices: ['effectTargets'],
   },
@@ -512,6 +513,7 @@ const commandShapes = {
       'targetIds',
       'trashBattleCookieIds',
       'handToBreakAreaIds',
+      'trashCookieToBreakAreaIds',
     ],
   },
   'play-stage': {

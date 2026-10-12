@@ -769,7 +769,7 @@ const bracketClauses = (
     const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+(?:your|this)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
     const trashDeckBottom = inner.match(/(?:select|return|place)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
-    const trashToBreak = /place\s+\d+\s+(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
+    const trashToBreak = /place\s+\d+\s+(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+\s+)?cookie.*from\s+your\s+trash\s+into\s+(?:your|the)\s+break\s+area/i.test(inner)
     const revealHand =
       /(?:reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】|\[[^\]]+\]|LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)\s+)*(?:cards?|cookies?|【[^】]+】|\[[^\]]+\])(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)|reveal\s+(?:cards?|cookies?)\s+from\s+your\s+hand\s+with\s+a\s+total\s+LV\.\s+sum\s+of\s+\d+)/i.test(inner)
     const deckTrash = inner.match(
@@ -2574,6 +2574,47 @@ const buildContract = (
       extras(skill,['text','trigger','oncePerTurn','yourTurn','restSource','oncePerGame','faint','endPhase','afterDamage','fromBreakArea','fromTrashArea','fromSupportArea','onPlayFromBreakArea','cost','effects'])||
       !skill.cost.energy||skill.cost.energy.yellow!==1||extras(skill.cost.energy,['yellow'])||(skill.cost.discardHand??0)!==0||extras(skill.cost,['energy','discardHand'])||!redirectOnly(skill.effects)) {
       blockers.push('ST7-012 requires original yellow LV1 HP3 YN ordinary1, exactly Y Blocker redirect to source, no REST/Once/extra costs or abilities')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-013') {
+    const card = evidence.card, item = card?.type === 'item' ? card.item : undefined
+    const cost = item?.cost, payment = cost?.trashCookieToBreakArea, effect = item?.effects[0]
+    const target = effect?.kind === 'damage' ? effect.target : undefined
+    const extra = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (card?.type !== 'item' || card.name !== 'Miraculous Nutrient Ampoule' ||
+      (card.cardColor ?? card.energyColor) !== 'yellow' || card.energyColor !== 'yellow' ||
+      card.flip || (card.keywords ?? []).length || !item || !cost || !cost.energy ||
+      cost.energy.yellow !== 2 || extra(cost.energy, ['yellow']) || cost.discardHand !== 0 ||
+      extra(cost, ['energy', 'discardHand', 'trashCookieToBreakArea']) ||
+      !payment || payment.count !== 1 || payment.energyColor !== 'yellow' ||
+      extra(payment, ['count', 'energyColor']) || extra(item, ['cost', 'text', 'effects']) ||
+      item.effects.length !== 1 || effect?.kind !== 'damage' || effect.amount !== 2 ||
+      extra(effect, ['kind', 'amount', 'target']) || !target || target.side !== 'opponent' ||
+      target.min !== 0 || target.max !== 1 || extra(target, ['side', 'min', 'max'])) {
+      blockers.push('ST7-013 requires original yellow Item, YY plus exactly one yellow Cookie from own trash to Break as cost, then optional one opponent Cookie takes two effect damage; no extra restrictions or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-011') {
+    const card=evidence.card
+    const extras=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const attackEffects=card?.type==='cookie'?card.attackEffects??[]:[]
+    const effect=attackEffects[0]
+    const condition=effect?.kind==='gain-hp'?effect.condition:undefined
+    const conditions=condition?.kind==='all-of'?condition.conditions:[]
+    const hp=conditions.find(item=>item.kind==='source-hp-at-most')
+    const witness=conditions.find(item=>item.kind==='battle-area-has-named-cookie')
+    const thenValid=attackEffects.length===1&&effect?.kind==='gain-hp'&&effect.amount===1&&
+      !extras(effect,['kind','amount','target','condition'])&&effect.target?.side==='self'&&effect.target.min===1&&effect.target.max===1&&effect.target.sourceOnly===true&&
+      !extras(effect.target,['side','min','max','sourceOnly'])&&condition?.kind==='all-of'&&!extras(condition,['kind','conditions'])&&conditions.length===2&&
+      hp?.kind==='source-hp-at-most'&&hp.amount===2&&!extras(hp,['kind','amount'])&&
+      witness?.kind==='battle-area-has-named-cookie'&&witness.side==='self'&&witness.name==='Millennial Tree Cookie'&&witness.minLevel===3&&witness.maxLevel===3&&
+      !extras(witness,['kind','side','name','minLevel','maxLevel'])
+    if(card?.type!=='cookie'||card.name!=='Millennial Jade Deer'||(card.cardColor??card.energyColor)!=='yellow'||card.energyColor!=='yellow'||card.level!==1||card.hp!==2||card.attack!==2||card.attackCost!==2||
+      !card.attackEnergyCost||card.attackEnergyCost.yellow!==2||extras(card.attackEnergyCost,['yellow'])||card.skill||card.flip||(card.effects??[]).length||(card.keywords??[]).length||!thenValid) {
+      blockers.push('ST7-011 requires original yellow LV1 HP2 YY ordinary2; exactly source gains1HP if remainingHP<=2 and same own battle Millennial Tree Cookie currently LV3; no extra costs or abilities')
     }
   }
 

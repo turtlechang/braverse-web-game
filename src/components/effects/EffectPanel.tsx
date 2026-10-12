@@ -1085,7 +1085,7 @@ function EffectPanelContent({
                 {trashCookieToBreakAreaCost > 0 && (
                   <>
                     <small>
-                      棄牌區 → 休息區（技能代價）：已選 {(pendingEffect.selectedTrashCookieToBreakAreaIds ?? []).length}／{trashCookieToBreakAreaCost} 張餅乾
+                      棄牌區 → 休息區（{pendingEffect.sourceKind === 'item' ? '道具' : '技能'}代價）：已選 {(pendingEffect.selectedTrashCookieToBreakAreaIds ?? []).length}／{trashCookieToBreakAreaCost} 張餅乾
                     </small>
                     <CandidateButtons
                       cards={trashCookieToBreakAreaCandidates}

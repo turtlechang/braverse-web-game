@@ -1002,6 +1002,7 @@ export function useOnlinePendingEffect(params: {
           {
             kind: 'begin-play-item',
             ...sharedCost,
+            ...(cost.trashCookieToBreakArea ? { trashCookieToBreakAreaIds: abilityCostDraft.selectedTrashCookieToBreakAreaIds } : {}),
             ...(cost.handToBreakArea ? { handToBreakAreaIds: abilityCostDraft.selectedHandToBreakAreaIds } : {}),
             instanceId: abilityCostDraft.card.instanceId,
             supportToTrashIds: abilityCostDraft.selectedCostSupportToTrashIds,

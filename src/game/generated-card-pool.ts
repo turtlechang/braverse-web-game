@@ -47,11 +47,13 @@ import official_st7_004_en_json_41 from '../../data/cards/official-st7-004.en.js
 import official_st7_006_en_json_42 from '../../data/cards/official-st7-006.en.json'
 import official_st7_007_en_json_43 from '../../data/cards/official-st7-007.en.json'
 import official_st7_009_en_json_44 from '../../data/cards/official-st7-009.en.json'
-import official_st7_012_en_json_45 from '../../data/cards/official-st7-012.en.json'
-import official_starter_deck_blue_en_json_46 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_47 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_48 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_49 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_st7_011_en_json_45 from '../../data/cards/official-st7-011.en.json'
+import official_st7_012_en_json_46 from '../../data/cards/official-st7-012.en.json'
+import official_st7_013_en_json_47 from '../../data/cards/official-st7-013.en.json'
+import official_starter_deck_blue_en_json_48 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_49 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_50 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_51 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -99,9 +101,11 @@ export const officialCardDatasets = [
   official_st7_006_en_json_42,
   official_st7_007_en_json_43,
   official_st7_009_en_json_44,
-  official_st7_012_en_json_45,
-  official_starter_deck_blue_en_json_46,
-  official_starter_deck_green_en_json_47,
-  official_starter_deck_purple_en_json_48,
-  official_starter_deck_yellow_en_json_49,
+  official_st7_011_en_json_45,
+  official_st7_012_en_json_46,
+  official_st7_013_en_json_47,
+  official_starter_deck_blue_en_json_48,
+  official_starter_deck_green_en_json_49,
+  official_starter_deck_purple_en_json_50,
+  official_starter_deck_yellow_en_json_51,
 ] as const

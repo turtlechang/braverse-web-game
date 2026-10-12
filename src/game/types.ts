@@ -869,6 +869,9 @@ export interface BattleAreaHasNamedCookieCondition {
   kind: 'battle-area-has-named-cookie'
   side: EffectTargetSide
   name: string
+  /** Bounds apply to the same named Cookie and its current effective LV. */
+  minLevel?: number
+  maxLevel?: number
   /** The named Cookie itself must also have this keyword. */
   keyword?: CardKeyword
   /** 「another」：不算來源自己。 */

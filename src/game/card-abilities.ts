@@ -28,6 +28,8 @@ import {
   getHandToBreakAreaCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
+  payTrashCookieToBreakAreaCost,
   payHandToBreakAreaCost,
   isSupportToHandCostCandidate,
   markSupportAreaDecreased,
@@ -107,6 +109,7 @@ export interface AbilityPaymentOptions {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   trashToDeckBottomIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   sourceInstanceId?: string
 }
 
@@ -149,6 +152,7 @@ const canPayAbilityCost = (
     remainingSupportCount >= supportCost &&
     availableSupportToHandCount >= (cost.supportToHand ?? 0) &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
+    getTrashCookieToBreakAreaCostCandidates(cost, player.discardPile).length >= (cost.trashCookieToBreakArea?.count ?? 0) &&
     getTrashToDeckBottomCostCandidates(cost, player.discardPile).length >= (cost.trashToDeckBottom?.count ?? 0) &&
     getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId).length >= (cost.trashBattleCookie?.count ?? 0) &&
     getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId).length >= (cost.handToBreakArea?.count ?? 0) &&
@@ -206,6 +210,11 @@ const payAbilityCost = (
   const hpToTrashTargetIds = [...new Set(options.hpToTrashTargetIds ?? [])]
   const handToBreakAreaIds = options.handToBreakAreaIds ?? []
   const handBreakPaidPlayer = payHandToBreakAreaCost(player, cost, handToBreakAreaIds, options.sourceInstanceId ?? '')
+  const trashCookieToBreakAreaIds = options.trashCookieToBreakAreaIds ?? []
+  if (trashCookieToBreakAreaIds.some(id => trashToDeckBottomSet.has(id))) {
+    throw new GameRuleError('同一張棄牌區卡不能同時支付兩種費用。')
+  }
+  const trashBreakPaidPlayer = payTrashCookieToBreakAreaCost(handBreakPaidPlayer, cost, trashCookieToBreakAreaIds)
   if (handToBreakAreaIds.some(id => discardHandIds.includes(id)) || (cost.discardAllHand && handToBreakAreaIds.length > 0)) {
     throw new GameRuleError('同一張卡不能同時支付兩種費用。')
   }
@@ -345,7 +354,7 @@ const payAbilityCost = (
           ...selectedSupportToHand.map((support) => support.card),
         ],
     discardPile: [
-      ...player.discardPile.filter(card => !trashToDeckBottomSet.has(card.instanceId)),
+      ...trashBreakPaidPlayer.discardPile.filter(card => !trashToDeckBottomSet.has(card.instanceId)),
       ...selectedSupportToTrash.map((support) => support.card),
       ...discardedHandCards,
       ...(cost.stageSourceToTrash && player.stage
@@ -353,7 +362,7 @@ const payAbilityCost = (
         : []),
     ],
     ...(cost.stageSourceToTrash ? { stage: null } : {}),
-    breakArea: handBreakPaidPlayer.breakArea,
+    breakArea: trashBreakPaidPlayer.breakArea,
   }
 
   let departedCount = 0
@@ -763,6 +772,7 @@ export const playItem = (
   trashBattleCookieIds: string[] = [],
   handToBreakAreaIds: string[] = [],
   itemRestrictionDiscardIds: string[] = [],
+  trashCookieToBreakAreaIds: string[] = [],
 ): GameState => {
   assertMainAction(state, playerId)
   const player = state.players[playerId]
@@ -806,6 +816,7 @@ export const playItem = (
     hpToTrashTargetIds,
     trashBattleCookieIds,
     handToBreakAreaIds,
+    trashCookieToBreakAreaIds,
     sourceInstanceId: instanceId,
   })
   const paidStateWithActivation: GameState = {

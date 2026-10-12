@@ -2119,6 +2119,8 @@ const describeCommandCoreSteps = (
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
       if (paymentStep) steps.push(paymentStep)
       if (command.kind === 'begin-play-item' || command.kind === 'play-item') {
+        const trashBreakStep = describeCardListStep(previous, '道具代價：棄牌區餅乾放入休息區', command.trashCookieToBreakAreaIds)
+        if (trashBreakStep) steps.push(trashBreakStep)
         const handBreakStep = describeCardListStep(previous, '道具代價：手牌餅乾放入休息區', command.handToBreakAreaIds)
         if (handBreakStep) steps.push(handBreakStep)
         const source = findCard(previous, command.instanceId)
