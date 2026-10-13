@@ -1,6 +1,14 @@
 # ST6～ST10 逐卡盤點
 
 <!-- ai-starter-current-start -->
+2026-10-13 提交前終值：ST8-002／003 批末完整 Vitest **927 檔／19,369 項通過**，1520.19 秒、exit 0；1,781 份來源／設定／資料指紋一致。全域 lint、build、標準 AI Browser 與兩張正式雙尺寸 66 案／完整重播均通過。目前 **50 正式／50 候選**；ST8-004 尚未 promote，其 output 原型不列入驗收。僅更新文件，沿用未變動產品來源的測試結果；以下執行中敘述為較早紀錄。未宣稱逐卡 online 或完整 UI 對局，未 push。
+
+ST8-004 隔離準備（2026-10-13，非正式驗收）：原圖及 Kumiho 參照卡圖已目視核對。`output/st6-st10/st8-004-isolated-prototype.mjs` 證明可用 selectable／optional `set-active` 加己方支援數≥5 條件轉接 Then。原通用 strict 對 18 種錯誤 runtime 變異漏擋 16 種；`prepare-st8-004-guarded-prototype.mjs` 產生輸出區 ledger 守衛後全部 18 種被拒絕，原卡 12 組（含 Lv3～5）通過。`st8-004-source-faints-prototype.mjs` 以實際普通4＋Kumiho FLIP1使原始5HP來源昏厥後仍續接 Then，修正最初61張配置後通過60張檢查。這些只有 output 原型，產品來源未改；尚待正式套用、型別檢查、完整門檻／支付／目標／離場測試與雙尺寸 Browser，不得據此 promote。002／003 全套仍執行時保持 src／scripts／data 凍結。
+
+2026-10-13 ST8-003 逐卡 promote 與正式重驗通過：目前 **50 正式／50 候選**，ST6 20／0、ST7 20／0、ST8 4／16、ST9 1／19、ST10 5／15。NNN 普通3／HP4／LV2／無技能或 FLIP；六色及混色、負向支付、登場、AI 等正式雙尺寸 34 案與完整重播通過，專用 32 項、相關 396 項通過。002／003 全域 lint 及批末完整 Vitest 執行中，來源已凍結。下一張 ST8-004 原圖已讀；Then 應於己方支援至少 5 張時可活躍 0～1 己方支援，但現行 attackEffects 缺失，未驗收／未 promote。詳見 README 最新紀錄。
+
+2026-10-13 ST8-002 完成逐卡 promote 及正式重驗：49 正式／51 候選，ST8 為 3／17，其餘系列數量不變。原圖 GGG 普通3、被揭示卡免費 FLIP 回手，26 項專用與正式相關 378 項、雙尺寸 Chrome 32 案及完整重播（含 6 案 Lv5）、build／受影響 lint／資料／registry／strict 通過；批末完整回歸待跑，未宣稱逐卡 online。下一張 ST8-003；本批未 commit／push。詳見 README 最新進度。
+
 2026-10-13：ST8-001 已 promote，現為 48 正式／52 候選：ST6 20／0、ST7 20／0、ST8 2／18、ST9 1／19、ST10 5／15。Greenbell Cookie 原圖為綠色 LV1／HP2、N 普通1，無其他能力；正式雙尺寸 Chrome 32 案（含 4 案 Lv5）與完整重播通過。單卡 31 項、正式含能力稽核 50 項、build／lint／registry／strict 通過；本次完整回歸結果見 README 最新紀錄。尚未宣稱逐卡 online 或完整 UI 對局驗收。下一張 ST8-002。
 
 ST7-020／AI v22 完整回歸已通過（2026-10-13）：920檔／19271項全部PASS、1782.51秒、exit0；1766份程式／設定／資料指紋一致。Forest of Life已逐卡promote；ST6～ST10為47正式／53候選，ST6與ST7各20張正式。原圖Y放置、Activate Y＋REST、本回合己方實際補HP後可抽0～1；對手／前回合／選0補HP皆不成立。候選run5與正式run2各62案雙尺寸Chrome及62份完整父指令／狀態重播PASS，各含14案實際Lv5，不重複累計。正式17檔526項、共享AI10檔181項、build／全域與受影響lint／資料／registry／單卡strict／ST7能力稽核／標準AI Browser及ST1核心同步PASS。候選清空後JSON推斷never[]已修復；formal build run1與舊dist Browser run1失敗保留，run2為有效證據。AI v22解除攻擊權限誤擋場景候選，無效果／無安全抽牌時保留資源；舊版Lv3～5三項反例失敗，修後22項PASS。728場同規則對照364：364，配對受益5／受損5／互分354，新舊場景啟動92／0，未證明整體或對人類勝率提高。單一worker完整測試的30秒抽樣最高RSS為831.9MiB，8GiB為堆積上限而非實際配置。局部Chrome／核心同步不等於逐卡online或完整UI對局。本次提交保存此驗收範圍，未push；未驗收的HP支付診斷留在output。下一步ST8-001逐卡驗收與AI支付反例驗證。證據：output/st6-st10/ai-v22-st7-020-full-acceptance.json、st7-020-formal-browser-run2/replay-audit.json、ai-v22-stage-safe-benchmark/audit.json。

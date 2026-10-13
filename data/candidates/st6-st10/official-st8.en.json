@@ -8,7 +8,7 @@
     "fetchedAt": "2026-10-10T09:09:58.26Z",
     "totalAvailable": 2274,
     "matchedAvailable": 20,
-    "importedCount": 18,
+    "importedCount": 16,
     "imagesDownloaded": false,
     "filter": {
       "categoryTitle": "ST8 unpromoted printings"
@@ -16,86 +16,6 @@
     "candidateStatus": "inventory"
   },
   "cards": [
-    {
-      "sourceId": 46908,
-      "locale": "en",
-      "cardNumber": "ST8-002",
-      "baseCardNumber": "ST8-002",
-      "variant": null,
-      "name": "Muscle Cookie",
-      "type": "flip",
-      "officialType": "FLIP",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 4,
-      "energyType": "GREEN",
-      "color": "GREEN",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{G}{G}{G}> Hardened Muscles! {da} 3",
-      "flipText": "Return this Cookie to your hand.",
-      "keywords": [],
-      "product": {
-        "id": 253,
-        "title": "Guardian Winds",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/m2llFHQ66GHWulJg0H6iaA.webp",
-      "officialUpdatedAt": "2026-03-13T08:53:57Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46909,
-      "locale": "en",
-      "cardNumber": "ST8-003",
-      "baseCardNumber": "ST8-003",
-      "variant": null,
-      "name": "Leek Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 4,
-      "energyType": "GREEN MIX",
-      "color": "GREEN",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{N}{N}{N}> Triple Slash {da} 3",
-      "flipText": null,
-      "keywords": [],
-      "product": {
-        "id": 253,
-        "title": "Guardian Winds",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wSVfDj970WU8E8qFbU-eTQ.webp",
-      "officialUpdatedAt": "2026-03-13T08:53:57Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
     {
       "sourceId": 46910,
       "locale": "en",
