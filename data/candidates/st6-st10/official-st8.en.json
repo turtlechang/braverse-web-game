@@ -8,7 +8,7 @@
     "fetchedAt": "2026-10-10T09:09:58.26Z",
     "totalAvailable": 2274,
     "matchedAvailable": 20,
-    "importedCount": 19,
+    "importedCount": 18,
     "imagesDownloaded": false,
     "filter": {
       "categoryTitle": "ST8 unpromoted printings"
@@ -16,46 +16,6 @@
     "candidateStatus": "inventory"
   },
   "cards": [
-    {
-      "sourceId": 46907,
-      "locale": "en",
-      "cardNumber": "ST8-001",
-      "baseCardNumber": "ST8-001",
-      "variant": null,
-      "name": "Greenbell Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 1,
-      "hp": 2,
-      "energyType": "GREEN MIX",
-      "color": "GREEN",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{N}> Arpeggio Quadruplo {da} 1",
-      "flipText": null,
-      "keywords": [],
-      "product": {
-        "id": 253,
-        "title": "Guardian Winds",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9B1HiWPlaT4EJGpu1pfaWg.webp",
-      "officialUpdatedAt": "2026-03-13T08:53:57Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
     {
       "sourceId": 46908,
       "locale": "en",

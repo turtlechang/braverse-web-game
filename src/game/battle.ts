@@ -2758,6 +2758,9 @@ const finishDamageSequence = (state: GameState): GameState => {
     const sequenceInterruptState = {
       ...afterCurrentDamageState,
       pendingBattle: null,
+      // Suspended parents await this child sequence. They are not external
+      // interruptions; the command boundary restores them after it completes.
+      suspendedAbilityEffects: undefined,
       // Break-entry standby effects wait for this entire damage sequence;
       // they must not make the sequence wait for its own completion.
       pendingAfterDamageEffects: afterCurrentDamageState.pendingAfterDamageEffects?.filter(

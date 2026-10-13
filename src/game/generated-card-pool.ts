@@ -59,10 +59,11 @@ import official_st7_017_en_json_53 from '../../data/cards/official-st7-017.en.js
 import official_st7_018_en_json_54 from '../../data/cards/official-st7-018.en.json'
 import official_st7_019_en_json_55 from '../../data/cards/official-st7-019.en.json'
 import official_st7_020_en_json_56 from '../../data/cards/official-st7-020.en.json'
-import official_starter_deck_blue_en_json_57 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_58 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_59 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_60 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_st8_001_en_json_57 from '../../data/cards/official-st8-001.en.json'
+import official_starter_deck_blue_en_json_58 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_59 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_60 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_61 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -122,8 +123,9 @@ export const officialCardDatasets = [
   official_st7_018_en_json_54,
   official_st7_019_en_json_55,
   official_st7_020_en_json_56,
-  official_starter_deck_blue_en_json_57,
-  official_starter_deck_green_en_json_58,
-  official_starter_deck_purple_en_json_59,
-  official_starter_deck_yellow_en_json_60,
+  official_st8_001_en_json_57,
+  official_starter_deck_blue_en_json_58,
+  official_starter_deck_green_en_json_59,
+  official_starter_deck_purple_en_json_60,
+  official_starter_deck_yellow_en_json_61,
 ] as const

@@ -1,6 +1,8 @@
 # 薑餅人對戰卡牌 Braverse
 
 <!-- ai-starter-current-start -->
+2026-10-13 本次提交範圍：ST8-001 Greenbell Cookie 已依原圖驗證並 promote，ST6～ST10 為 48 正式／52 候選。正式雙尺寸 Chrome 32 案（含 4 案 Lv5）與完整指令重播通過。修正 Cookie Games Stadium 等待 Choco Drizzle 子傷害時互相等待的結算卡死；保留父效果，子傷害完成後只續接一次。原本兩場卡住的綠色鏡像對局均在原 500 動作上限內、221 動作結束。新增 6 項回歸、共享 19 檔 687 項、雙尺寸 Lv5 Chrome 與完整重播、標準 AI Browser、ST1 核心同步、build、lint、registry 與單卡 strict 均通過。完整 Vitest 923 檔／19,309 項全數通過，1500.77 秒、exit 0；1,773 份來源／設定／資料指紋一致。正式資料驗證 62 檔／2,128 卡號／2,072 成功轉換。HP 支付策略原型仍留在 output，未採用；本次不宣稱整體或人類勝率提升。局部 Browser／核心同步不等於逐卡 online 或完整 UI 對局。證據：output/st6-st10/commit-st8-stage-full.log、commit-st8-stage-full-integrity.log、commit-stage-browser.log、commit-standard-ai-browser.log、commit-online-core.log。
+
 ST7-020／AI v22 完整回歸已通過（2026-10-13）：920檔／19271項全部PASS、1782.51秒、exit0；1766份程式／設定／資料指紋一致。Forest of Life已逐卡promote；ST6～ST10為47正式／53候選，ST6與ST7各20張正式。原圖Y放置、Activate Y＋REST、本回合己方實際補HP後可抽0～1；對手／前回合／選0補HP皆不成立。候選run5與正式run2各62案雙尺寸Chrome及62份完整父指令／狀態重播PASS，各含14案實際Lv5，不重複累計。正式17檔526項、共享AI10檔181項、build／全域與受影響lint／資料／registry／單卡strict／ST7能力稽核／標準AI Browser及ST1核心同步PASS。候選清空後JSON推斷never[]已修復；formal build run1與舊dist Browser run1失敗保留，run2為有效證據。AI v22解除攻擊權限誤擋場景候選，無效果／無安全抽牌時保留資源；舊版Lv3～5三項反例失敗，修後22項PASS。728場同規則對照364：364，配對受益5／受損5／互分354，新舊場景啟動92／0，未證明整體或對人類勝率提高。單一worker完整測試的30秒抽樣最高RSS為831.9MiB，8GiB為堆積上限而非實際配置。局部Chrome／核心同步不等於逐卡online或完整UI對局。本次提交保存此驗收範圍，未push；未驗收的HP支付診斷留在output。下一步ST8-001逐卡驗收與AI支付反例驗證。證據：output/st6-st10/ai-v22-st7-020-full-acceptance.json、st7-020-formal-browser-run2/replay-audit.json、ai-v22-stage-safe-benchmark/audit.json。
 
 ST7-019／AI v21 完整回歸已通過（2026-10-13）：917檔／19,179項全部PASS、1449.83秒、exit0；1761份程式／設定／資料指紋一致。原圖Y陷阱、強制手牌餅乾進Break後對0～1對手造成1效果傷害已驗收並promote。修正代價立即達Break10後仍執行效果的核心錯誤及AI自敗支付；85項專用、正式含能力稽核102項及共享144項PASS。候選與正式各52案雙尺寸Chrome及全狀態／父指令重播PASS（各含16案實際Lv5），final build／全域lint／資料／registry／單卡strict／標準AI Browser及ST1核心同步PASS。相同規則與已驗收v20策略指紋的12準備局面對照，避免6次自敗並保留6次安全勝利；六色新種子實際時鐘Lv5對局合計1197動作／407搜尋、0錯誤／0搜尋逾時。13既有牌表無受影響陷阱支付分支，未證明整體或對人類勝率提升。全域AI仍有既有21張unsupported而strict exit1，conversionFailures為空。ST6～ST10為46正式／54候選、ST7=19／1；局部Chrome及核心同步不代替逐卡online或完整UI對局。後續修改未commit／push。證據：output/st6-st10/ai-v21-st7-019-full-acceptance.json、st7-019-promotion.json、ai-v21-break-payment-formal-comparison.json、ai-v21-real-clock-six-colors-report.json。
@@ -120,6 +122,8 @@ ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、
 > **非官方聲明**：本專案為 CookieRun: Braverse 的**非官方粉絲研究 / 學習型實作**，與 Devsisters Corporation 沒有任何合作、授權或背書關係。CookieRun: Braverse 及其卡牌、插畫、標誌之著作權與商標權均屬 Devsisters 及其授權方所有。本專案不商用、不收費；素材使用政策見 [docs/ip-and-asset-policy.md](docs/ip-and-asset-policy.md)。
 
 ## 開發背景
+
+本批依實際 AI 綠色鏡像對局的 138 筆前置指令重現子傷害卡死，修正共用結算，並延續 ST6～ST10 逐卡實體驗收。
 
 離線 Refresh 在 UI dispatch 時將隨機種子寫入正式指令，讓實際對局與匯出的重播使用同一次洗牌；既有種子（含 0）保持不變。
 
@@ -502,6 +506,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+本批新增 ST8-001 正式卡池與父場景／子傷害續接修復；提交前完整回歸終值見頁首最新紀錄。
+
 - 2026-10-12 Refresh 獨立提交：控制器／重播 4 檔 32 項測試、受影響檔案 lint 與 build 通過；測試只依賴既有 ST7-012 原卡 fixture。沿用先前雙尺寸局部 Refresh 操作與精確重播證據，未新增逐卡 online 驗收。全工作區 ST7-011 全套首輪有 1 項卡池數量預期失敗，已修正但尚未完整重跑；本次不納入 ST7-011、ST7-013、AI 原型或候選資料。
 
 - 2026-10-12 部分提交範圍：正式 AI v13、六副 Cookierift 構築及 ST6～ST10 已 promote 36／100 張。最新完整回歸 887 檔／18,467 項全部通過、1703 份來源指紋一致；v13 對 v12 共 1248 場各勝 624，不宣稱穩定勝率提升。
@@ -785,6 +791,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+- 從 ST8-002 繼續逐卡驗收；HP 支付 AI 原型須完成獨立對照評估後才決定是否採用。
 
 - Refresh 修正先獨立提交；其餘卡牌與 AI 工作保留在工作區，完成各自驗證後再提交。
 

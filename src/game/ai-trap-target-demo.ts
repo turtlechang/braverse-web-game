@@ -4,12 +4,14 @@ import {
 } from './index'
 import { hasFlipAbility } from './card-pool'
 import { createAiFlipSequencePreview } from './ai-flip-sequence-demo'
+import { createAiStageChildSequencePreview } from './ai-stage-child-sequence-demo'
 import type { CookieInBattle, GameCard, PlayerId } from './types'
 
 /** Original-card local fixture using an actual attack declaration before AI defense. */
-export type AiTrapTargetScenario = 'saving' | 'nonlethal' | 'no-energy' | 'nested-flip'
+export type AiTrapTargetScenario = 'saving' | 'nonlethal' | 'no-energy' | 'nested-flip' | 'stage-child'
 export const createAiTrapTargetPreview = (scenario: AiTrapTargetScenario = 'saving') => {
   if (scenario === 'nested-flip') return createAiFlipSequencePreview()
+  if (scenario === 'stage-child') return createAiStageChildSequencePreview()
   const counts = new Map<string, number>()
   const card = (number: string, owner: PlayerId): GameCard => {
     const key = `${owner}:${number}`, copy = (counts.get(key) ?? 0) + 1
