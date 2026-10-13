@@ -19,7 +19,7 @@ export const fixture=(scenario='break4',prepareOnly=false):GameState=>{
  }
  const state=foundation('positive'),own=state.players['player-one'],foe=state.players['player-two']
  const original=(id:string,owner:PlayerId):GameCard=>{
-  const raw=(getCardPoolEntry(id)??document.cards.find(c=>c.cardNumber===id)) as OfficialCardRecord|undefined;if(!raw)throw Error('Original '+id)
+  const raw=(getCardPoolEntry(id)??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber===id)) as OfficialCardRecord|undefined;if(!raw)throw Error('Original '+id)
   const used=new Set(zones(state,owner).map(c=>c.instanceId))
   for(let copy=1;copy<=4;copy++){const card=createCard(raw,owner,copy);if(!used.has(card.instanceId))return card}
   throw Error('Four-copy limit '+id)

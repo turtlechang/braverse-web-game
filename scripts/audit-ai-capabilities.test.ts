@@ -29,9 +29,9 @@ describe('AI capability promotion audit', () => {
       generatedAt: '2026-08-22T00:00:00.000Z',
     })
     expect(report.cardCount).toBeGreaterThan(500)
-    // Formal ST7-018 adds one enabled, non-variant playable printing.
-    expect(report.inventoryEntryCount).toBe(2_070)
-    expect(report.cardCount).toBe(1_587)
+    // Formal ST7-020 adds one enabled, non-variant playable printing.
+    expect(report.inventoryEntryCount).toBe(2_071)
+    expect(report.cardCount).toBe(1_588)
     expect(report.comboCandidateCount).toBeGreaterThan(0)
     expect(report.conversionFailures).toEqual([])
     expect(report.unsupportedCardIds).toEqual([
@@ -71,7 +71,7 @@ describe('AI capability promotion audit', () => {
     expect(report.status).toBe('ready')
   })
 
-  it.each(['ST6-002', 'ST6-003', 'ST6-004', 'ST6-005', 'ST6-006', 'ST7-011', 'ST7-013', 'ST7-008', 'ST7-010', 'ST7-014', 'ST7-015', 'ST7-016', 'ST7-017'])('includes promoted %s without conversion or capability gaps', cardNumber => {
+  it.each(['ST6-002', 'ST6-003', 'ST6-004', 'ST6-005', 'ST6-006', 'ST7-011', 'ST7-013', 'ST7-008', 'ST7-010', 'ST7-014', 'ST7-015', 'ST7-016', 'ST7-017', 'ST7-020'])('includes promoted %s without conversion or capability gaps', cardNumber => {
     const entries = getAllCardPoolEntries().filter(entry => entry.poolId === cardNumber)
     expect(entries).toHaveLength(1)
     const report = createAiCapabilityAudit(entries, {

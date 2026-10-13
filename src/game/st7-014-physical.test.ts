@@ -9,7 +9,7 @@ import type {GameCard,GameState,PlayerId} from './types'
 import {fixture as foundation} from './st7-010-demo'
 import {getCardPoolEntry} from './card-pool'
 import {createCard} from './starter-deck'
-export const raw=(getCardPoolEntry('ST7-014')??document.cards.find(card=>card.cardNumber==='ST7-014')) as OfficialCardRecord|undefined
+export const raw=(getCardPoolEntry('ST7-014')??(document.cards as OfficialCardRecord[]).find(card=>card.cardNumber==='ST7-014')) as OfficialCardRecord|undefined
 if(!raw)throw Error('Original ST7-014 required')
 export const zones=(state:GameState,owner:PlayerId):GameCard[]=>{
  const p=state.players[owner]

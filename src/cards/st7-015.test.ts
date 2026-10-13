@@ -5,7 +5,7 @@ import {createCard} from '../game/starter-deck'
 import type {GameCard} from '../game/types'
 import type {OfficialCardRecord} from './types'
 import {analyzeOfficialCardBehavior as analyze} from './contracts/ledger'
-const record=getCardPoolEntry('ST7-015')??document.cards.find(card=>card.cardNumber==='ST7-015')
+const record=getCardPoolEntry('ST7-015')??(document.cards as OfficialCardRecord[]).find(card=>card.cardNumber==='ST7-015')
 if(!record)throw Error('Original ST7-015 required')
 const raw=record as OfficialCardRecord
 const original=()=>createCard(raw,'player-one',1)

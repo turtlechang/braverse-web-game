@@ -5,7 +5,7 @@ import type {OfficialCardRecord} from './types'
 import type {CookieCard} from '../game/types'
 import {createCard} from '../game/starter-deck'
 import {analyzeOfficialCardBehavior as analyze} from './contracts/ledger'
-const record=getCardPoolEntry('ST7-010')??document.cards.find(card=>card.cardNumber==='ST7-010')
+const record=getCardPoolEntry('ST7-010')??(document.cards as OfficialCardRecord[]).find(card=>card.cardNumber==='ST7-010')
 if(!record)throw Error('Original unpromoted ST7-010 required')
 const raw=record as OfficialCardRecord
 const original=()=>{const card=createCard(raw,'player-one',1);if(card.type!=='cookie')throw Error('Original Cookie required');return card}

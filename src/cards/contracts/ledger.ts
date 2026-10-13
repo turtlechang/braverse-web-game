@@ -2621,6 +2621,20 @@ const buildContract = (
     }
   }
 
+  // Original Forest of Life: Y placement; Activate Y plus REST, conditional draw0-1.
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-020') {
+    const card=evidence.card,stage=card?.stageAbility,cost=stage?.cost,draw=stage?.effects[0]
+    const other=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='stage'||card.name!=='Forest of Life'||card.energyColor!=='yellow'||card.flip!==undefined||(card.keywords??[]).length!==0||!stage||
+       stage.placementCost.yellow!==1||other(stage.placementCost,['yellow'])||
+       !cost||!cost.energy||cost.energy.yellow!==1||other(cost.energy,['yellow'])||cost.discardHand!==0||other(cost,['energy','discardHand'])||
+       stage.restSource!==true||stage.allowInactiveConditionalEffects!==true||other(stage,['placementCost','cost','text','effects','restSource','allowInactiveConditionalEffects'])||stage.effects.length!==1||
+       draw?.kind!=='draw-up-to'||draw.max!==1||other(draw,['kind','max','condition'])||
+       draw.condition?.kind!=='cookie-gained-hp-this-turn'||other(draw.condition,['kind'])) {
+      blockers.push('ST7-020 requires original yellow Forest of Life Stage Y placement, Activate Y plus REST this stage, then draw0-1 only if an own Cookie actually gained HP during this turn; no extra costs, timing restrictions or effects')
+    }
+  }
+
   if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-019') {
     const card=evidence.card,trap=card?.type==='trap'?card.trap:undefined
     const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,value])=>value!==undefined&&!allowed.includes(key))

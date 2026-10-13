@@ -5,7 +5,7 @@ import {createCard} from '../game/starter-deck'
 import {analyzeOfficialCardBehavior as analyze} from './contracts/ledger'
 import type {OfficialCardRecord} from './types'
 import type {GameCard} from '../game/types'
-const raw=(getCardPoolEntry('ST7-018')??document.cards.find(c=>c.cardNumber==='ST7-018')) as OfficialCardRecord
+const raw=(getCardPoolEntry('ST7-018')??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber==='ST7-018')) as OfficialCardRecord
 const original=()=>createCard(raw,'player-one',1)
 const trap=(c:GameCard)=>{if(!c.trap)throw Error('Original trap');return c.trap}
 const heal=(c:GameCard)=>{const e=trap(c).effects[0];if(e?.kind!=='gain-hp')throw Error('Original HP gain');return e}

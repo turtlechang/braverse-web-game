@@ -8,7 +8,7 @@ import {commandFromLogEntry} from './replay'
 import type {OfficialCardRecord} from '../cards/types'
 import type {GameCard,GameState,PlayerId} from './types'
 import type {GameCommand} from './commands'
-const raw=(getCardPoolEntry('ST7-019')??document.cards.find(c=>c.cardNumber==='ST7-019')) as OfficialCardRecord|undefined
+const raw=(getCardPoolEntry('ST7-019')??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber==='ST7-019')) as OfficialCardRecord|undefined
 if(!raw)throw Error('Original ST7-019 required')
 let base:GameState|undefined
 /** Original sixty-card prepared fixture, isolated from production routes until promotion. */

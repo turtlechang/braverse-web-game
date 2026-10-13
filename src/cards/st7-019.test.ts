@@ -5,7 +5,7 @@ import {createCard} from '../game/starter-deck'
 import {analyzeOfficialCardBehavior as analyze} from './contracts/ledger'
 import type {OfficialCardRecord} from './types'
 import type {GameCard} from '../game/types'
-const raw=(getCardPoolEntry('ST7-019')??document.cards.find(c=>c.cardNumber==='ST7-019')) as OfficialCardRecord
+const raw=(getCardPoolEntry('ST7-019')??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber==='ST7-019')) as OfficialCardRecord
 const original=()=>createCard(raw,'player-one',1)
 const trap=(c:GameCard)=>{if(!c.trap)throw Error('Original Trap');return c.trap}
 const payment=(c:GameCard)=>{const p=trap(c).cost.handToBreakArea;if(!p)throw Error('Original mandatory Cookie cost');return p}

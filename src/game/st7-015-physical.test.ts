@@ -12,7 +12,7 @@ import type {GameState} from './types'
 
 export const fixture=(scenario='battle'):GameState=>{
  const state=foundation(scenario),own=state.players['player-one']
- const raw=(getCardPoolEntry('ST7-015')??document.cards.find(card=>card.cardNumber==='ST7-015')) as OfficialCardRecord|undefined
+ const raw=(getCardPoolEntry('ST7-015')??(document.cards as OfficialCardRecord[]).find(card=>card.cardNumber==='ST7-015')) as OfficialCardRecord|undefined
  if(!raw)throw Error('Original ST7-015 required')
  own.hand[1]=createCard(raw,'player-one',1)
  own.name='ST7-015 原卡逐卡驗收'

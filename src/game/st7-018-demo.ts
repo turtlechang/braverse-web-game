@@ -7,7 +7,7 @@ import {applyGameCommand as apply} from './commands'
 import type {OfficialCardRecord} from '../cards/types'
 import type {GameState,GameCard,PlayerId} from './types'
 import type {GameCommand} from './commands'
-const raw=(getCardPoolEntry('ST7-018')??document.cards.find(c=>c.cardNumber==='ST7-018')) as OfficialCardRecord|undefined
+const raw=(getCardPoolEntry('ST7-018')??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber==='ST7-018')) as OfficialCardRecord|undefined
 if(!raw)throw Error('Original ST7-018 required')
 /** Candidate-only original-card fixture; production routes stay isolated until promotion. */
 export const fixture=(scenario='positive',prepareOnly=false):GameState=>{

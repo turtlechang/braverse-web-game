@@ -5,7 +5,7 @@ import {createCard} from '../game/starter-deck'
 import type {GameCard} from '../game/types'
 import type {OfficialCardRecord} from './types'
 import {analyzeOfficialCardBehavior as analyze} from './contracts/ledger'
-const raw=(getCardPoolEntry('ST7-017')??document.cards.find(c=>c.cardNumber==='ST7-017')) as OfficialCardRecord
+const raw=(getCardPoolEntry('ST7-017')??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber==='ST7-017')) as OfficialCardRecord
 const original=()=>createCard(raw,'player-one',1)
 const trap=(c:GameCard)=>{if(!c.trap)throw Error('Original trap');return c.trap}
 const base=(c:GameCard)=>{const e=trap(c).effects[0];if(e?.kind!=='modify-attack')throw Error('Original base');return e}

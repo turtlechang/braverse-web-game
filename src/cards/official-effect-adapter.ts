@@ -7371,6 +7371,7 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST7-020': [{kind:'draw-up-to',max:1,condition:{kind:'cookie-gained-hp-this-turn'}}],
     'ST6-020': [{kind:'draw-up-to',max:1}],
     'BS12-102': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
     'BS12-084': [{ kind: 'opponent-discard-hand', count: 1, condition: { kind: 'opponent-hand-count-at-least', count: 6 } }],
@@ -8037,6 +8038,7 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    'ST7-020': {energy:{yellow:1},discardHand:0},
     'ST6-020': {energy:{},discardHand:0,hpToTrash:{amount:1}},
     'BS12-102': { energy: { black: 1 }, discardHand: 0 },
     'BS12-084': { energy: { purple: 1 }, discardHand: 0, trashToDeckBottom: { count: 2, cookieOnly: true, blockerOnly: true } },
@@ -8186,7 +8188,7 @@ export const convertOfficialStageAbility = (
       ...(card.cardNumber === 'BS9-118' || card.baseCardNumber === 'BS9-118'
         ? { ownerIndependent: true, oncePerTurn: true }
         : {}),
-      ...(card.baseCardNumber === 'BS11-083' || card.baseCardNumber === 'BS12-030' || card.baseCardNumber === 'BS12-084'
+      ...(card.baseCardNumber === 'ST7-020' || card.baseCardNumber === 'BS11-083' || card.baseCardNumber === 'BS12-030' || card.baseCardNumber === 'BS12-084'
         ? { allowInactiveConditionalEffects: true }
         : {}),
       ...(activation?.markers.includes('t1') ? { oncePerTurn: true } : {}),

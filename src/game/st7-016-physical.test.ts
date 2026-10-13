@@ -23,7 +23,7 @@ export const fixture=(scenario='positive',prepareOnly=false):GameState=>{
  }
  let state=foundation('skill-once',true)
  const own=state.players['player-one'],foe=state.players['player-two']
- const raw=(getCardPoolEntry('ST7-016')??document.cards.find(card=>card.cardNumber==='ST7-016')) as OfficialCardRecord|undefined
+ const raw=(getCardPoolEntry('ST7-016')??(document.cards as OfficialCardRecord[]).find(card=>card.cardNumber==='ST7-016')) as OfficialCardRecord|undefined
  if(!raw)throw Error('Original ST7-016 required')
  const original=(id:string,owner:PlayerId):GameCard=>{
   const record=id==='ST7-016'?raw:getCardPoolEntry(id);if(!record)throw Error('Original '+id)
@@ -69,7 +69,7 @@ export const aiFixture=(scenario='rested',prepareOnly=false):GameState=>{
  const removed=foe.battleArea.shift();if(!removed)throw Error('Original Cookie')
  foe.deck.push(removed.card,...removed.hpCards);foe.battleArea[0].rested=scenario!=='active'
  const original=(id:string,owner:PlayerId,copy=1)=>{
-  const raw=getCardPoolEntry(id)??document.cards.find(c=>c.cardNumber===id) as OfficialCardRecord|undefined
+  const raw=getCardPoolEntry(id)??(document.cards as OfficialCardRecord[]).find(c=>c.cardNumber===id) as OfficialCardRecord|undefined
   if(!raw)throw Error('Original '+id)
   return createCard(raw,owner,copy)
  }

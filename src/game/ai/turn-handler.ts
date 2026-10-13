@@ -11,6 +11,8 @@ import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { hasPendingCardResolution } from '../pending'
 import { advancePhase, canAttack } from '../turn'
+import { createPlayerView } from '../player-view'
+import { selectSafeOptionalDrawCount } from './optional-draw-refresh-safety'
 import {
   getActivatableSkillSources,
   getDiscardAllHandCostCandidates,
@@ -398,9 +400,7 @@ export const handleAiTurnState = (
   }
 
   if (state.phase === 'main') {
-    const stageCard = !canAttack(state)
-      ? player.hand.find((card) => card.type === 'stage' && card.stageAbility)
-      : undefined
+    const stageCard = player.hand.find((card) => card.type === 'stage' && card.stageAbility)
     if (stageCard?.stageAbility) {
       const paymentIds = selectEnergyPayment(
         stageCard.stageAbility.placementCost,
@@ -420,7 +420,7 @@ export const handleAiTurnState = (
       }
     }
 
-    if (!canAttack(state) && canActivateStage(state, playerId)) {
+    if (canActivateStage(state, playerId)) {
       const stage = player.stage!
       const ability = stage.card.stageAbility!
       const costIds = strategy.chooseStageCostIds
@@ -475,7 +475,17 @@ export const handleAiTurnState = (
           stageShuffle,
           strategy.chooseEffectMode,
         )
-        if (!sim.aborted) {
+        // Attack permission does not constrain stages. Still preserve resources
+        // when a simple energy payment produces no effect or no safe draw.
+        // Other costs may themselves have useful zone/HP consequences.
+        const simpleCost = Object.entries(ability.cost).every(([key, value]) =>
+          value === undefined || key === 'energy' || (key === 'discardHand' && value === 0))
+        const hasNoEffect = simpleCost && sim.effectSelections.length === 0 && !ability.specialVictory
+        const onlyDraw = ability.effects.length === 1 && ability.effects[0].kind === 'draw-up-to'
+          ? ability.effects[0] : undefined
+        const hasNoSafeDraw = simpleCost && onlyDraw &&
+          selectSafeOptionalDrawCount(createPlayerView(activated, playerId), onlyDraw.max) === 0
+        if (!sim.aborted && !hasNoEffect && !hasNoSafeDraw) {
           return {
             state: applyGameCommand(
               state,
