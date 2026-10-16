@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.265Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 3,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST9 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47077,
+      "locale": "en",
+      "cardNumber": "ST9-017",
+      "baseCardNumber": "ST9-017",
+      "variant": null,
+      "name": "Revelation of the Seas",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}{B}{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage. Then, if there are 3 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hq9P5vl9Ve9ATPhLnasNTQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47078,
+      "locale": "en",
+      "cardNumber": "ST9-018",
+      "baseCardNumber": "ST9-018",
+      "variant": null,
+      "name": "Tower of Frozen Waves",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <discard 1 card.> That Cookie deals an additional -1 attack damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ftJFsgigcpdiQPGIc1SnxA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47079,
+      "locale": "en",
+      "cardNumber": "ST9-019",
+      "baseCardNumber": "ST9-019",
+      "variant": null,
+      "name": "Curse of the Seas",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <discard 2 cards.> Select up to 1 of your opponent's Cookies that has 2 or more HP remaining. That Cookie receives 1 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lCUReNZTVvEUtU-yy7MbYQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 import { getPendingDecision } from './commands'
+import { isChooseOneModePlayable } from './effects/choose-one'
+import { hasPendingFaintModeCost } from './battle'
 import { getCookieToBreakCostCandidates } from './cookie-break-cost'
 import type { PendingDecision } from './commands'
 import {
@@ -216,6 +218,7 @@ const compileCostSteps = (
   const player = state.players[playerId]
   const steps: DecisionDescriptorStep[] = []
   const blockers: string[] = []
+
   const viewerOwnsPrivateZones = viewerPlayerId === undefined || viewerPlayerId === playerId
 
   const energy = cost.energy ?? Object.fromEntries(
@@ -551,6 +554,26 @@ export const compilePendingDecisionDescriptor = (
       commandKinds: ['resolve-faint-effect'], label: `先支付牌庫頂 ${faintDeckCost.amount} 張到棄牌區，再選擇效果目標`,
     }]
     descriptor.actionKinds = ['resolve-faint-effect']
+    return { ...descriptor, status: 'ready', blockers: [] }
+  }
+
+  const modeFaint = decision.kind === 'faint-effect' ? state.pendingFaintEffects?.[0] : undefined
+  if (modeFaint && hasPendingFaintModeCost(state)) {
+    const cost = { ...modeFaint.cost, energy: modeFaint.sourceEnergy ?? {} }
+    const compiled = compileCostSteps(state, modeFaint.sourcePlayerId, modeFaint.context, cost, viewerPlayerId)
+    descriptor.steps = compiled.steps.map(step => ({ ...step, commandKinds: ['resolve-faint-effect'] }))
+    descriptor.actionKinds = ['resolve-faint-effect']
+    return { ...descriptor, status: compiled.blockers.length ? 'needs-review' : 'ready', blockers: compiled.blockers }
+  }
+  if (modeFaint?.effect.kind === 'choose-one') {
+    descriptor.steps = [{ id: 'faint-mode', kind: 'resolve', required: true,
+      min: 1, max: 1,
+      candidateIds: modeFaint.effect.modes.flatMap((mode, index) =>
+        isChooseOneModePlayable(state, modeFaint.context, mode.effects) ? [String(index)] : []),
+      candidateSource: 'provided', commandKinds: ['resolve-choose-one'],
+      label: '選擇昏厥效果的一個項目',
+    }]
+    descriptor.actionKinds = ['resolve-choose-one']
     return { ...descriptor, status: 'ready', blockers: [] }
   }
 

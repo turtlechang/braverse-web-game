@@ -18,6 +18,11 @@ import {
 } from '../game/deck-rules'
 
 const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
+  ST6: 'ST6-',
+  ST7: 'ST7-',
+  ST8: 'ST8-',
+  ST9: 'ST9-',
+  ST10: 'ST10-',
   BS3: 'BS3-',
   BS4: 'BS4-',
   BS5: 'BS5-',

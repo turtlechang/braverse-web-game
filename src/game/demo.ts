@@ -10,6 +10,48 @@ import { materializeExtraDeckCookie } from './extra-deck'
 import { applyGameCommand } from './commands'
 import { continuePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { advancePhase } from './turn'
+import { fixture as createSt8005State } from './st8-005-demo'
+import { createSt8006PreviewState } from './st8-006-demo'
+import { createSt8007PreviewState } from './st8-007-demo'
+import { createSt8008PreviewState } from './st8-008-demo'
+import { createSt8009PreviewState, st8009Scenarios } from './st8-009-demo'
+import { createSt8010PreviewState, st8010Scenarios } from './st8-010-demo'
+import { createSt8011PreviewState, st8011Scenarios } from './st8-011-demo'
+import { createSt8012PreviewState } from './st8-012-demo'
+import { createSt8013PreviewState } from './st8-013-demo'
+import { createSt8014PreviewState } from './st8-014-demo'
+import { createSt8015PreviewState } from './st8-015-demo'
+import { createSt8016PreviewState } from './st8-016-demo'
+import { createSt8017PreviewState } from './st8-017-demo'
+import { createSt8019PreviewState } from './st8-019-demo'
+import { createSt9TrapPreviewState } from './st9-trap-demo'
+import { createSt9020PreviewState } from './st9-020-demo'
+import { createSt9004To006PreviewState } from './st9-004-006-demo'
+import { createSt9001To003PreviewState } from './st9-001-003-demo'
+import { createSt9007To009PreviewState } from './st9-007-009-demo'
+import { createSt9010To011PreviewState } from './st9-010-011-demo'
+import { createSt9012PreviewState, type St9012Scenario } from './st9-012-demo'
+import { createSt9013PreviewState } from './st9-013-demo'
+import { createSt9014PreviewState, type St9014Scenario } from './st9-014-demo'
+import { createSt9015PreviewState } from './st9-015-demo'
+import { createSt10001To003PreviewState } from './st10-001-003-demo'
+import { createSt10004PreviewState } from './st10-004-demo'
+import { createSt10005PreviewState } from './st10-005-demo'
+import { createSt10006PreviewState } from './st10-006-demo'
+import {
+  createSt10009PreviewState,
+} from './st10-009-demo'
+import { createSt10010PreviewState } from './st10-010-demo'
+import { createSt10011PreviewState } from './st10-011-demo'
+import type { St10012FlipScenario } from './st10-012-demo'
+import type { St10ItemCardNumber, St10ItemScenario } from './st10-014-016-demo'
+import {
+  type St1017To018TrapCardNumber,
+  type St1017To018TrapScenario,
+  type St1020StageScenario,
+} from './st10-017-018-020-demo'
+import { createSt8020PreviewState } from './st8-020-demo'
+import { fixture as createSt8004State } from './st8-004-demo'
 import { beginEffectDamageSequence, executeCardEffect } from './effects'
 import {
   createGame,
@@ -634,6 +676,10 @@ export const parseTestStateConfig = (
   | { kind: 'trap-pretzel'; attack: 4 | 5 }
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
+  | { kind: 'st10-006-cost' }
+  | { kind: 'st10-009-cost' }
+  | { kind: 'st10-009-faint' }
+  | { kind: 'st10-009-both-departure'; opponentDeck: 'normal' | 'last-card' }
   | {
       kind: 'bs8-extra-deck'
       cardNumber: Bs8ExtraDeckCardNumber
@@ -651,6 +697,10 @@ export const parseTestStateConfig = (
       negative: boolean
     }
   | { kind: 'bs10-008-flip'; scenario: Bs1008FlipPreviewScenario }
+  | { kind: 'st10-012-flip'; scenario: St10012FlipScenario }
+  | { kind: 'st10-item'; cardNumber: St10ItemCardNumber; scenario: St10ItemScenario }
+  | { kind: 'st10-trap'; cardNumber: St1017To018TrapCardNumber; scenario: St1017To018TrapScenario }
+  | { kind: 'st10-stage'; scenario: St1020StageScenario }
   | { kind: 'bs10-009-hp-cost'; scenario: Bs1009HpPreviewScenario }
   | {
       kind: 'bs11-flip'
@@ -887,6 +937,7 @@ export const parseTestStateConfig = (
       faintSourceMoved?: boolean
       normalAttack?: 'payable' | 'blocked'
       bs8021Scenario?: 'no-energy' | 'faint-flip'
+      st9012Scenario?: St9012Scenario
     }
   | {
       kind: 'card-negative'
@@ -1038,6 +1089,15 @@ export const parseTestStateConfig = (
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
   const testState = params.get('test-state')
+  if (testState === 'st10-006-cost') return { kind: 'st10-006-cost' }
+  if (testState === 'st10-009-cost') return { kind: 'st10-009-cost' }
+  if (testState === 'st10-009-faint') return { kind: 'st10-009-faint' }
+  if (testState === 'st10-009-both-departure') {
+    return { kind: 'st10-009-both-departure', opponentDeck: 'normal' }
+  }
+  if (testState === 'st10-009-both-departure-refresh') {
+    return { kind: 'st10-009-both-departure', opponentDeck: 'last-card' }
+  }
   for (const scenario of ['saving', 'nonlethal', 'no-energy', 'nested-flip', 'stage-child'] as const) {
     if (testState === `ai-trap-target:${scenario}`) return { kind: 'ai-trap-target', scenario }
   }
@@ -1076,9 +1136,27 @@ export const parseTestStateConfig = (
   const lily=testState?.match(/^deck-addition:ST7-001:(positive|rested-source|rested-target|negative|wrong-color|attack-wrong-color|wrong-phase|no-cost|no-target|used|break-loss)$/);if(lily)return {kind:'deck-addition',cardNumber:'ST7-001',scenario:lily[1] as DeckAdditionScenario}
   const mango=testState?.match(/^deck-addition:ST7-002:(positive|no-supports|mango-(?:below|above|rested|skip|attack-(?:positive|cancel|no-energy|wrong-color|rested))|choux-(?:positive|below|above|zero|other|skip|no-energy)|coffee-(?:positive|below|above|no-energy|skip))$/);if(mango)return {kind:'deck-addition',cardNumber:'ST7-002',scenario:mango[1] as DeckAdditionScenario}
   const sherbet=testState?.match(/^deck-addition:ST7-003:(positive|low|negative|last-no-hand|attack|attack-negative|wrong-color|wrong-phase)$/);if(sherbet)return {kind:'deck-addition',cardNumber:'ST7-003',scenario:sherbet[1] as DeckAdditionScenario}
+  const hpBlocked = testState?.match(/^deck-addition:ST8-007:(hp-blocked|ai-hp-blocked)$/); if(hpBlocked)return {kind:'deck-addition',cardNumber:'ST8-007',scenario:hpBlocked[1] as DeckAdditionScenario}
+  const kiwi = testState?.match(/^deck-addition:ST8-011:([a-z-]+)$/)
+  if (kiwi && (st8011Scenarios.some(scenario => scenario === kiwi[1]) || ['ai-positive','ai-negative'].includes(kiwi[1]))) {
+    return {kind:'deck-addition',cardNumber:'ST8-011',scenario:kiwi[1] as DeckAdditionScenario}
+  }
+  const cookiemals = testState?.match(/^deck-addition:ST8-010:([a-z-]+)$/)
+  if (cookiemals && (st8010Scenarios.some(scenario => scenario === cookiemals[1]) || ['ai-positive','ai-negative'].includes(cookiemals[1]))) {
+    return {kind:'deck-addition',cardNumber:'ST8-010',scenario:cookiemals[1] as DeckAdditionScenario}
+  }
+  const cucumber = testState?.match(/^deck-addition:ST8-009:([a-z-]+)$/)
+  if (cucumber && (st8009Scenarios.some(scenario => scenario === cucumber[1]) || ['ai-positive','ai-low'].includes(cucumber[1]))) {
+    return {kind:'deck-addition',cardNumber:'ST8-009',scenario:cucumber[1] as DeckAdditionScenario}
+  }
+  const swan = testState?.match(/^deck-addition:ST8-008:(ai-positive|ai-negative|positive|negative|faint-equal|faint-less|faint-more|faint-rested|faint-source-rested|faint-last-deck|faint-top-item|faint-top-stage|faint-top-blue|attack|attack-paid-wind|attack-rested-wind|attack-no-wind|attack-wind-battle|attack-wind-hand|attack-wind-deck|attack-wind-opponent|attack-no-hand|attack-last-deck|attack-negative|wrong-color|wrong-phase|attack-few|first-turn|source-rested|source-faint|play)$/)
+  if (swan) return {kind:'deck-addition',cardNumber:'ST8-008',scenario:swan[1] as DeckAdditionScenario}
+  const basil=testState?.match(/^deck-addition:ST8-006:(positive|low|negative|last-no-hand|attack|attack-negative|wrong-color|wrong-phase|play|attack-few|first-turn|source-rested|rested-carrier|last-deck|last-deck-low|over-printed|cost-yellow|cost-green|cost-blue|cost-purple|cost-black|cost-trap|cost-stage|ai-(?:positive|low|negative|last-no-hand))$/);if(basil)return {kind:'deck-addition',cardNumber:'ST8-006',scenario:basil[1] as DeckAdditionScenario}
+  const slushy=testState?.match(/^deck-addition:ST8-007:(positive|low|negative|last-no-hand|attack|attack-negative|wrong-color|wrong-phase|play|attack-few|first-turn|source-rested|rested-carrier|last-deck|last-deck-low|over-printed|cost-yellow|cost-green|cost-blue|cost-purple|cost-black|cost-trap|cost-stage|own-carrier|ai-(?:positive|low|negative|last-no-hand))$/);if(slushy)return {kind:'deck-addition',cardNumber:'ST8-007',scenario:slushy[1] as DeckAdditionScenario}
   const candidate006=testState?.match(/^deck-addition:ST7-006:(positive|low|attack|attack-negative|wrong-color|wrong-phase|last-deck|last-deck-low)$/);if(candidate006)return {kind:'deck-addition',cardNumber:'ST7-006',scenario:candidate006[1] as DeckAdditionScenario}
   const candidate007=testState?.match(/^deck-addition:ST7-007:(positive|low|attack|attack-negative|wrong-color|wrong-phase)$/);if(candidate007)return {kind:'deck-addition',cardNumber:'ST7-007',scenario:candidate007[1] as DeckAdditionScenario}
   const candidate011=testState?.match(/^deck-addition:ST7-011:(positive|rested-witness|wrong-name|opponent-witness|no-witness|break-witness|support-witness|rested-source|wrong-energy|rested-energy|few-energy|wrong-phase|short-deck|injured-one-hp|three-hp|departed-flip)$/);if(candidate011)return {kind:'deck-addition',cardNumber:'ST7-011',scenario:candidate011[1] as DeckAdditionScenario}
+  const candidate8004=testState?.match(/^deck-addition:ST8-004:(positive|three|four|six|opponent-five|already-active|rested-source|rested-energy|wrong-color|wrong-phase|first-turn|source-faints|target-faints|play|ai-positive|ai-rested-energy)$/);if(candidate8004)return {kind:'deck-addition',cardNumber:'ST8-004',scenario:candidate8004[1] as DeckAdditionScenario}
   const candidate8003=testState?.match(/^deck-addition:ST8-003:(positive|color-red|color-yellow|color-green|color-blue|color-purple|color-black|rested-source|rested-energy|no-energy|wrong-phase|first-turn|play|ai-positive|ai-rested-energy)$/);if(candidate8003)return {kind:'deck-addition',cardNumber:'ST8-003',scenario:candidate8003[1] as DeckAdditionScenario}
   const candidate8002=testState?.match(/^deck-addition:ST8-002:(positive|low|attack|attack-negative|wrong-color|wrong-phase|rested-source|first-turn|play|ai-positive|ai-low|ai-attack)$/);if(candidate8002)return {kind:'deck-addition',cardNumber:'ST8-002',scenario:candidate8002[1] as DeckAdditionScenario}
   const candidate8001=testState?.match(/^deck-addition:ST8-001:(positive|color-red|color-yellow|color-green|color-blue|color-purple|color-black|rested-source|rested-energy|no-energy|wrong-phase|first-turn|play|ai-positive|ai-rested-energy)$/);if(candidate8001)return {kind:'deck-addition',cardNumber:'ST8-001',scenario:candidate8001[1] as DeckAdditionScenario}
@@ -1090,6 +1168,7 @@ export const parseTestStateConfig = (
   const candidate015=testState?.match(/^deck-addition:ST7-015:(battle|break|both|hand|trash|support|opponent-only|rested-energy|rested-target|wrong-phase|wrong-energy|wrong-name|rested-witness|green-witness|attack|attack-inactive|ai-attack|ai-inactive)$/);if(candidate015)return {kind:'deck-addition',cardNumber:'ST7-015',scenario:candidate015[1] as DeckAdditionScenario}
   const candidate014=testState?.match(/^deck-addition:ST7-014:(battle|break|both|hand|trash|support|opponent-only|zero|source|rested-energy|rested-target|wrong-phase|wrong-energy|refresh|wrong-name|rested-witness|green-witness)$/);if(candidate014)return {kind:'deck-addition',cardNumber:'ST7-014',scenario:candidate014[1] as DeckAdditionScenario}
   const candidate010=testState?.match(/^deck-addition:ST7-010:(skill-positive|skill-zero|skill-rested-source|skill-rested-energy|skill-source4|skill-once|skill-wrong-phase|skill-refresh|skill-no-target|attack-draw0|attack-draw1|attack-draw2|attack-skip|attack-no-flip|attack-noncookie|attack-rested-source|attack-rested-support|attack-wrong-energy|attack-wrong-phase|attack-refresh1|attack-refresh2|ai-safe|ai-preserve|ai-one-safe)$/);if(candidate010)return {kind:'deck-addition',cardNumber:'ST7-010',scenario:candidate010[1] as DeckAdditionScenario}
+  const starter8005=testState?.match(/^deck-addition:ST8-005:([a-z0-9-]+)$/);if(starter8005)return {kind:'deck-addition',cardNumber:'ST8-005',scenario:starter8005[1] as DeckAdditionScenario}
   const candidate008=testState?.match(/^deck-addition:ST7-008:(positive|zero|battle|hand|trash|support|refresh|wrong-name|opponent|none|lethal|wrong-phase|rested-energy|wrong-energy|attack-positive|attack-faint|attack-departed-flip|attack-break3|attack-lethal|attack-rested-energy|attack-few-energy|attack-wrong-energy|attack-rested-source|attack-wrong-phase|ai-lethal|ai-safe)$/);if(candidate008)return {kind:'deck-addition',cardNumber:'ST7-008',scenario:candidate008[1] as DeckAdditionScenario}
   const candidate013=testState?.match(/^deck-addition:ST7-013:(positive|negative|zero|lvl2|lvl3|rested-target|break-loss|lethal|wrong-energy|rested-energy|few-energy|wrong-phase)$/);if(candidate013)return {kind:'deck-addition',cardNumber:'ST7-013',scenario:candidate013[1] as DeckAdditionScenario}
   const candidate012=testState?.match(/^deck-addition:ST7-012:(positive|rested-source|wrong-color|rested-energy|no-energy|already-target|wrong-zone|cancel|skip|second-attack|second-response|attack-yellow|attack-red|attack-green|attack-blue|attack-purple|attack-black|attack-insufficient|attack-wrong-color|attack-rested-source|attack-rested-energy|attack-wrong-phase|attack-faint)$/);if(candidate012)return {kind:'deck-addition',cardNumber:'ST7-012',scenario:candidate012[1] as DeckAdditionScenario}
@@ -1114,6 +1193,34 @@ export const parseTestStateConfig = (
     return isBs1008FlipPreviewScenario(scenario)
       ? { kind: 'bs10-008-flip', scenario }
       : null
+  }
+  const st10012FlipMatch = testState?.match(/^st10-012-flip:(positive|negative)$/)
+  if (st10012FlipMatch) {
+    return { kind: 'st10-012-flip', scenario: st10012FlipMatch[1] as St10012FlipScenario }
+  }
+  const st10ItemMatch = testState?.match(
+    /^st10-item:(ST10-(?:014|015|016)):(positive|no-material|battle-witness|trash-witness|no-witness|fifteen-trash|fourteen-trash|thirteen-trash)$/,
+  )
+  if (st10ItemMatch) {
+    return {
+      kind: 'st10-item',
+      cardNumber: st10ItemMatch[1] as St10ItemCardNumber,
+      scenario: st10ItemMatch[2] as St10ItemScenario,
+    }
+  }
+  const st10TrapMatch = testState?.match(
+    /^st10-trap:(ST10-(?:017|018)):(positive|skip-target|no-lv3|no-purple-payment)$/,
+  )
+  if (st10TrapMatch && !(st10TrapMatch[1] === 'ST10-017' && st10TrapMatch[2] === 'no-lv3')) {
+    return {
+      kind: 'st10-trap',
+      cardNumber: st10TrapMatch[1] as St1017To018TrapCardNumber,
+      scenario: st10TrapMatch[2] as St1017To018TrapScenario,
+    }
+  }
+  const st10StageMatch = testState?.match(/^st10-stage:(positive|no-target|no-purple-payment)$/)
+  if (st10StageMatch) {
+    return { kind: 'st10-stage', scenario: st10StageMatch[1] as St1020StageScenario }
   }
   if (testState === 'bs10-009-hp-cost') {
     const scenario = params.get('scenario')
@@ -2021,7 +2128,7 @@ export const parseTestStateConfig = (
     }
   }
   if (testState?.startsWith('card:')) {
-    const cardNumber = testState.slice('card:'.length).trim()
+    const cardNumber = testState.slice('card:'.length).trim().toUpperCase()
     if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber))return {kind:'bs12-final',cardNumber:cardNumber as Bs12FinalPrintedNumber,scenario:'positive'}
     if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber))return {kind:'bs12-tail',cardNumber:cardNumber as Bs12TailPrintedNumber,scenario:'positive'}
     if(cardNumber==='BS12-104')return {kind:'bs12-104',scenario:'positive'}
@@ -2152,6 +2259,15 @@ export const parseTestStateConfig = (
     const cardNumber = testState.slice('card-skill:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber, preferSkillSurface: true }
+    }
+  }
+  if (testState?.startsWith('card-attack-then-unpayable:')) {
+    const cardNumber = testState.slice('card-attack-then-unpayable:'.length).trim()
+    if (cardNumber === 'ST9-012') {
+      return {
+        kind: 'card-check', cardNumber, normalAttack: 'payable',
+        st9012Scenario: 'attack-then-unpayable',
+      }
     }
   }
   if (testState?.startsWith('card-attack:') || testState?.startsWith('card-attack-negative:')) {
@@ -8271,8 +8387,120 @@ const createBs8042EntryDemoState = (card: CookieCard): GameState => {
 
 export const createCardCheckDemoState = (
   cardNumber: string,
-  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; bs10PreviewBypass?: boolean; bs11FifteenthFixtureBypass?: boolean; bs11SixteenthFixtureBypass?: boolean } = {},
+  options: { preferSkillSurface?: boolean; sourceHpCount?: number; faintSourceMoved?: boolean; normalAttack?: 'payable' | 'blocked'; bs8021Scenario?: 'no-energy' | 'faint-flip'; st9012Scenario?: St9012Scenario; st9014Scenario?: St9014Scenario; bs10PreviewBypass?: boolean; bs11FifteenthFixtureBypass?: boolean; bs11SixteenthFixtureBypass?: boolean } = {},
 ): GameState => {
+  if (cardNumber === 'ST10-010') {
+    return createSt10010PreviewState(options.normalAttack === 'blocked' ? 'insufficient-energy' : 'attack')
+  }
+  if (cardNumber === 'ST10-011') {
+    return createSt10011PreviewState(options.normalAttack === 'blocked' ? 'insufficient-energy' : 'attack')
+  }
+  if (cardNumber === 'ST10-006') {
+    return createSt10006PreviewState('owner-turn')
+  }
+  if (cardNumber === 'ST10-009') {
+    return createSt10009PreviewState('owner-turn')
+  }
+  if (cardNumber === 'ST10-005') {
+    return createSt10005PreviewState(
+      options.normalAttack === 'blocked'
+        ? 'normal-attack-no-purple'
+        : options.normalAttack === 'payable'
+          ? 'normal-attack'
+          : 'on-play-moonlight',
+    )
+  }
+  if (cardNumber === 'ST10-004') {
+    return createSt10004PreviewState(
+      options.normalAttack === 'blocked'
+        ? 'normal-attack-insufficient-energy'
+        : options.normalAttack === 'payable'
+          ? 'normal-attack'
+          : 'blocker',
+    )
+  }
+  if (cardNumber === 'ST10-001' || cardNumber === 'ST10-003') {
+    return createSt10001To003PreviewState(cardNumber)
+  }
+  if (cardNumber === 'ST9-013') return createSt9013PreviewState('draw')
+  if (cardNumber === 'ST9-014') return createSt9014PreviewState(options.st9014Scenario ?? 'heal')
+  if (cardNumber === 'ST9-015') return createSt9015PreviewState('low-hand')
+  if (cardNumber === 'ST9-012') {
+    return createSt9012PreviewState(
+      options.st9012Scenario ?? (options.preferSkillSurface ? 'on-play' : 'attack'),
+    )
+  }
+  if (cardNumber === 'ST9-010' || cardNumber === 'ST9-011') {
+    return createSt9010To011PreviewState(cardNumber, 'positive')
+  }
+  if (cardNumber === 'ST9-007') return createSt9007To009PreviewState(cardNumber)
+  if (cardNumber === 'ST9-008') return createSt9007To009PreviewState(cardNumber)
+  if (cardNumber === 'ST9-009') return createSt9007To009PreviewState(cardNumber, 'sea-fairy-trigger')
+  if (cardNumber === 'ST9-004' || cardNumber === 'ST9-006') {
+    return createSt9004To006PreviewState(cardNumber, options.normalAttack === 'blocked' ? 'insufficient-energy' : 'positive')
+  }
+  if (cardNumber === 'ST9-005') return createSt9004To006PreviewState(cardNumber)
+  if (['ST9-001', 'ST9-002', 'ST9-003'].includes(cardNumber)) {
+    return createSt9001To003PreviewState(cardNumber as 'ST9-001' | 'ST9-002' | 'ST9-003', 'attack')
+  }
+  if (cardNumber === 'ST9-017' || cardNumber === 'ST9-018' || cardNumber === 'ST9-019') {
+    return createSt9TrapPreviewState(cardNumber)
+  }
+  if (cardNumber === 'ST9-020') {
+    return createSt9020PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-019') {
+    return createSt8019PreviewState('equal-supports')
+  }
+  if (cardNumber === 'ST8-020') {
+    return createSt8020PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-017') {
+    return createSt8017PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-016') {
+    return createSt8016PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-015') {
+    return createSt8015PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-014') {
+    return createSt8014PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-012') {
+    return createSt8012PreviewState(options.normalAttack
+      ? options.normalAttack === 'blocked' ? 'attack-no-green' : 'attack'
+      : 'positive')
+  }
+  if (cardNumber === 'ST8-013') {
+    return createSt8013PreviewState('positive')
+  }
+  if (cardNumber === 'ST8-006' && getCardPoolEntry(cardNumber)) {
+    return createSt8006PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'wrong-color' : 'attack' : 'positive')
+  }
+  if (cardNumber === 'ST8-007' && getCardPoolEntry(cardNumber)) {
+    return createSt8007PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'wrong-color' : 'attack' : 'positive')
+  }
+  if (cardNumber === 'ST8-008') {
+    return createSt8008PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'wrong-color' : 'attack' : 'positive')
+  }
+  if (cardNumber === 'ST8-009') {
+    return createSt8009PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'wrong-color' : 'attack' : 'positive')
+  }
+  if (cardNumber === 'ST8-011') {
+    return createSt8011PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'attack-wrong-color' : 'attack-green' : 'positive')
+  }
+  if (cardNumber === 'ST8-010') {
+    return createSt8010PreviewState(options.normalAttack ? options.normalAttack === 'blocked' ? 'wrong-color' : 'attack' : 'positive')
+  }
+  if (cardNumber === 'ST8-004') {
+    return createSt8004State(options.normalAttack
+      ? options.normalAttack === 'blocked' ? 'wrong-color' : 'positive' : 'play')
+  }
+  if (cardNumber === 'ST8-005') {
+    return createSt8005State(options.preferSkillSurface ? 'skill'
+      : options.normalAttack === 'blocked' ? 'wrong-color' : options.normalAttack ? 'positive' : 'manual')
+  }
   if (DECK_ADDITION_CARD_NUMBERS.includes(cardNumber)) return createDeckAdditionDemoState(cardNumber, options.normalAttack ? 'attack' : 'positive')
   if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):'positive')
   if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')&&options.normalAttack?(options.normalAttack==='blocked'?'attack-wrong-energy':'attack'):options.normalAttack==='blocked'?'wrong-energy':'positive')
@@ -11434,6 +11662,121 @@ export const createCardNegativeDemoState = (
     bs11SixteenthFixtureBypass?: boolean
   } = {},
 ): GameState => {
+  if (cardNumber === 'ST10-010') {
+    return createSt10010PreviewState('insufficient-energy')
+  }
+  if (cardNumber === 'ST10-011') {
+    return createSt10011PreviewState('insufficient-energy')
+  }
+  if (cardNumber === 'ST10-006') {
+    return createSt10006PreviewState('opponent-turn')
+  }
+  if (cardNumber === 'ST10-009') {
+    return createSt10009PreviewState('opponent-turn')
+  }
+  if (cardNumber === 'ST10-005') {
+    return createSt10005PreviewState(
+      options.normalAttack === 'blocked' ? 'normal-attack-no-purple' : 'on-play-no-moonlight',
+    )
+  }
+  if (cardNumber === 'ST10-004') {
+    return createSt10004PreviewState(
+      options.normalAttack === 'blocked' ? 'normal-attack-insufficient-energy' : 'no-purple-payment',
+    )
+  }
+  if (cardNumber === 'ST10-001' || cardNumber === 'ST10-003') {
+    return createSt10001To003PreviewState(cardNumber, 'insufficient-energy')
+  }
+  if (cardNumber === 'ST9-015') {
+    return createSt9015PreviewState(options.preferSkillSurface ? 'high-hand' : 'no-blue-support')
+  }
+  if (cardNumber === 'ST9-014') {
+    return createSt9014PreviewState(options.preferSkillSurface ? 'insufficient-hand' : 'no-blue-support')
+  }
+  if (cardNumber === 'ST9-013') {
+    return createSt9013PreviewState(options.preferSkillSurface ? 'no-blue-hand-card' : 'no-blue-support')
+  }
+  if (cardNumber === 'ST9-012') {
+    return createSt9012PreviewState(options.preferSkillSurface ? 'on-play-high-hand' : 'attack-no-sea-fairy')
+  }
+  if (cardNumber === 'ST9-010' || cardNumber === 'ST9-011') {
+    return createSt9010To011PreviewState(cardNumber, 'no-payment')
+  }
+  if (cardNumber === 'ST9-007') return createSt9007To009PreviewState(cardNumber, 'high-hand')
+  if (cardNumber === 'ST9-008') return createSt9007To009PreviewState(cardNumber, 'no-eligible-return')
+  if (cardNumber === 'ST9-009') return createSt9007To009PreviewState(cardNumber, 'other-source-trigger')
+  if (cardNumber === 'ST9-004') return createSt9004To006PreviewState(cardNumber, 'insufficient-energy')
+  if (cardNumber === 'ST9-005') return createSt9004To006PreviewState(cardNumber, 'no-blue-payment')
+  if (cardNumber === 'ST9-006') {
+    return createSt9004To006PreviewState(cardNumber, options.normalAttack ? 'insufficient-energy' : 'high-hand')
+  }
+  if (['ST9-001', 'ST9-002', 'ST9-003'].includes(cardNumber)) {
+    return createSt9001To003PreviewState(cardNumber as 'ST9-001' | 'ST9-002' | 'ST9-003', 'insufficient-energy')
+  }
+  if (cardNumber === 'ST9-017') {
+    // The legal BBB payment and attack remain; only the printed hand threshold fails.
+    return createSt9TrapPreviewState('ST9-017', 'high-hand')
+  }
+  if (cardNumber === 'ST9-018') {
+    // The paid response is still legal; Browser chooses to skip its optional discard Then.
+    return createSt9TrapPreviewState('ST9-018')
+  }
+  if (cardNumber === 'ST9-019') {
+    // Keep the 1-HP Cookie present as an illegal Then target beside the legal attacker.
+    return createSt9TrapPreviewState('ST9-019', 'one-hp-target')
+  }
+  if (cardNumber === 'ST9-020') {
+    // Keep the B placement legal; only the hand-size condition for the draw is false.
+    return createSt9020PreviewState('high-hand')
+  }
+  if (cardNumber === 'ST8-019') {
+    // Keep legal GG payment; only the printed Support-count equality is false.
+    return createSt8019PreviewState('unequal-supports')
+  }
+  if (cardNumber === 'ST8-020') {
+    return createSt8020PreviewState('no-green-payment')
+  }
+  if (cardNumber === 'ST8-017') {
+    return createSt8017PreviewState('unequal-supports')
+  }
+  if (cardNumber === 'ST8-016') {
+    return createSt8016PreviewState('support-below-threshold')
+  }
+  if (cardNumber === 'ST8-015') {
+    // Only the printed Wind Archer witness is absent; retain the legal GG payment and Then target.
+    return createSt8015PreviewState('no-wind')
+  }
+  if (cardNumber === 'ST8-014') {
+    return createSt8014PreviewState('support-below-threshold')
+  }
+  if (cardNumber === 'ST8-012') {
+    // Keep all activation and Then resources legal; only the own-Item event is absent.
+    return createSt8012PreviewState('no-item')
+  }
+  if (cardNumber === 'ST8-013') {
+    // Keep the Item payment and both support zones available; only Wind Archer is absent.
+    return createSt8013PreviewState('no-wind-archer')
+  }
+  if (cardNumber === 'ST8-006' && getCardPoolEntry(cardNumber)) {
+    return createSt8006PreviewState(options.normalAttack ? 'attack-negative' : 'negative')
+  }
+  if (cardNumber === 'ST8-007' && getCardPoolEntry(cardNumber)) {
+    return createSt8007PreviewState(options.normalAttack ? 'attack-negative' : 'negative')
+  }
+  if (cardNumber === 'ST8-008') {
+    return createSt8008PreviewState(options.normalAttack ? 'attack-negative' : 'negative')
+  }
+  if (cardNumber === 'ST8-009') {
+    // A free unconditional FLIP has no resource-based negative condition.
+    // Outside an HP reveal it cannot activate, while ordinary GGG remains available.
+    return createSt8009PreviewState(options.normalAttack ? 'negative' : 'wrong-phase')
+  }
+  if (cardNumber === 'ST8-011') {
+    return createSt8011PreviewState(options.normalAttack ? 'attack-wrong-color' : 'wrong-color')
+  }
+  if (cardNumber === 'ST8-010') {
+    return createSt8010PreviewState(options.normalAttack ? 'attack-negative' : 'no-item')
+  }
   if (DECK_ADDITION_CARD_NUMBERS.includes(cardNumber)) return createDeckAdditionDemoState(cardNumber, options.normalAttack ? 'attack-negative' : 'negative')
   if(/^BS12-(109(?:@[12])?|110(?:@1)?|111(?:@[123])?|112(?:@1)?)$/.test(cardNumber.trim()))return createBs12FinalPhysicalDemoState(cardNumber.trim() as Bs12FinalPrintedNumber,cardNumber.trim().startsWith('BS12-109')?'attack-wrong-energy':cardNumber.trim().startsWith('BS12-110')?'two-black':cardNumber.trim().startsWith('BS12-111')?'three-support':'special-no-skill')
   if(/^BS12-(106|107(?:@1)?|108(?:@1)?)$/.test(cardNumber.trim()))return createBs12TailPhysicalDemoState(cardNumber.trim() as Bs12TailPrintedNumber,cardNumber.trim().startsWith('BS12-108')?'hand-six':cardNumber.trim()==='BS12-106'?'no-energy':'wrong-energy')

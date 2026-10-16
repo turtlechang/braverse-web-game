@@ -5,6 +5,7 @@ import { hasCookieOnPlayEffects } from '../skills'
 import type { GameCard, GameState, PlayerId, PlayerState } from '../types'
 import { finishWithDefeat } from '../victory'
 import { executeCardEffect } from './execute'
+import { queueHandToTrashTriggers } from './hand-to-trash-trigger'
 
 export const resolveOpponentHandDiscard = (
   state: GameState,
@@ -126,38 +127,19 @@ export const resolveOpponentHandDiscard = (
     pendingOpponentHandDiscard: null,
   })
 
-  // BS9-106～108：這三張 Chess Piece Cookie 只有在「自己的 Shadow Milk」
-  // 效果把它們從手牌送進棄牌區時觸發。先把實際被選中的實體與其效果排入
-  // 延遲佇列，由 commands 在目前效果鏈可安全切換時建立標準
-  // pendingAbilityEffect，避免把對手代棄或非 Shadow Milk 的棄牌誤算進來。
-  const shadowMilkTriggers =
-    pending.sourcePlayerId === playerId &&
-    /shadow\s+milk\s+cookie/i.test(pending.sourceCardName)
-      ? selectedCards.flatMap((card) =>
-          (card.skill?.effects ?? [])
-            .filter((effect) => effect.kind === 'shadow-milk-discard-trigger')
-            .map((effect) => ({
-              playerId,
-              sourceInstanceId: card.instanceId,
-              sourceCardName: card.name,
-              effects: effect.effects,
-            })),
-        )
-      : []
-  const withShadowMilkTriggers = shadowMilkTriggers.length > 0
-    ? {
-        ...resolved,
-        pendingShadowMilkDiscardTriggers: [
-          ...(resolved.pendingShadowMilkDiscardTriggers ?? []),
-          ...shadowMilkTriggers,
-        ],
-      }
+  // Costs are not effects, and moving a selected card to the deck is not
+  // placing it into trash. Only an actual hand-to-trash effect fires this
+  // passive.
+  const withHandToTrashTriggers = pending.sourcePlayerId === playerId &&
+    pending.handDiscardOrigin === 'effect' &&
+    (pending.destination === undefined || pending.destination === 'trash')
+    ? queueHandToTrashTriggers(resolved, playerId, pending.sourceCardName, selectedCards)
     : resolved
 
-  if (!pending.drawEqualDiscarded || selectedCards.length === 0) return withShadowMilkTriggers
+  if (!pending.drawEqualDiscarded || selectedCards.length === 0) return withHandToTrashTriggers
 
   return executeCardEffect(
-    withShadowMilkTriggers,
+    withHandToTrashTriggers,
     {
       sourcePlayerId: pending.sourcePlayerId,
       sourceInstanceId: pending.sourceInstanceId,

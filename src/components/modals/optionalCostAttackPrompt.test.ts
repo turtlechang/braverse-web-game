@@ -456,6 +456,43 @@ describe('getOptionalCostAttackPrompt', () => {
     expect(prompt?.unmetConditionWarning).toBeNull()
   })
 
+  it.each([
+    { remainingHps: [] as number[], expectedTargets: 0 },
+    { remainingHps: [2], expectedTargets: 1 },
+    { remainingHps: [3, 2], expectedTargets: 2 },
+    { remainingHps: [3, 1], expectedTargets: 1 },
+  ])('requires selecting every legal sequential damage-all target: $remainingHps', ({ remainingHps, expectedTargets }) => {
+    const state = createBattleState()
+    state.players['player-one'].battleArea = remainingHps.map((hp, index) => ({
+      card: cookie(`sequential-opponent-${index}`),
+      hpCards: Array.from({ length: hp }, (_, hpIndex) => item(`sequential-opponent-${index}-hp-${hpIndex}`)),
+      rested: false,
+      battleEntryId: `sequential-opponent-${index}:battle:${index + 1}`,
+    }))
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Sea Fairy Cookie',
+      cost: { energy: {}, discardHand: 2 },
+      effects: [{
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+        minRemainingHp: 2,
+      }],
+      effectText: 'Discard 2 cards, then each opponent Cookie receives 1 damage.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')!
+
+    expect(prompt.targetCandidates).toHaveLength(expectedTargets)
+    expect(prompt.targetMin).toBe(expectedTargets)
+    expect(prompt.targetMax).toBe(expectedTargets)
+    expect(prompt.needsTarget).toBe(expectedTargets > 0)
+  })
+
   it('warns with the break-count-specific message when applicable', () => {
     const state = createBattleState()
     state.players['player-two'].breakArea = []

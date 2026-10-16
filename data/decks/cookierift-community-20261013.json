@@ -1,0 +1,29 @@
+{
+  "retrievedAt": "2026-10-13",
+  "method": "Cookierift live public deck detail DOM: read each deck title, author, updated date, legality, main/EXTRA totals, and each card's detail ID and displayed count. Alternate-art IDs such as BS1-002@1 are normalized to their canonical base number. No substitutions.",
+  "sourceHashMethod": "SHA-256 over UTF-8 values joined by LF in this order: sourceId, color, name, author, sourceUrl, sourceUpdatedAt, main, extra. Card IDs are canonical base numbers in displayed source order.",
+  "decks": [
+    {
+      "sourceId": 793,
+      "color": "red",
+      "name": "Fire Spirit x Holly Build",
+      "author": "Mojo_Jolo",
+      "sourceUrl": "https://cookierift.com/decks/community/793",
+      "sourceUpdatedAt": "2026-10-11",
+      "sourceHash": "sha256:f398781bf5ef190fe44caee88f616ef675d303a67b3ac5cf9d0b7aa2e8195cf0",
+      "main": "BS1-002:4 BS1-023:2 BS1-022:2 BS1-026:3 BS3-006:2 BS3-013:1 BS3-017:4 BS3-019:1 BS4-005:2 BS4-020:2 BS5-010:1 BS6-010:1 BS9-017:4 BS10-023:2 BS11-010:2 BS11-016:2 BS11-017:4 ST1-020:4 ST6-002:2 BS8-004:3 P-157:4 P-077:4 BS2-007:2 BS2-006:2",
+      "extra": "BS9-010:1 BS10-024:2"
+    },
+    {
+      "sourceId": 973,
+      "color": "green",
+      "name": "It’s Flour!!",
+      "author": "maatong",
+      "sourceUrl": "https://cookierift.com/decks/community/973",
+      "sourceUpdatedAt": "2026-10-11",
+      "sourceHash": "sha256:0ac1d502c4527b9dc03826f64745cb33cc7d1fd7dd723b2753bfba4cf7e3e765",
+      "main": "BS8-059:4 BS11-053:4 BS8-060:4 BS8-052:4 ST3-014:4 ST8-007:4 BS8-072:1 BS8-074:4 BS11-046:4 BS8-075:3 BS3-069:2 ST3-019:2 ST3-016:4 BS8-073:2 P-012:2 BS4-062:2 ST3-020:2 BS1-053:4 BS11-039:4",
+      "extra": "BS8-069:1"
+    }
+  ]
+}

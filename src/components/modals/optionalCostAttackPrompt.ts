@@ -260,7 +260,6 @@ export function getOptionalCostAttackPrompt(
     pending.cost.selfToTrash === true && (targetedEffect?.kind === 'trash-to-hand' || targetedEffect?.kind === 'trash-to-battle')
   ) || (Boolean(pending.cost.cookieToBreakArea) && targetedEffect?.kind === 'break-to-battle' &&
     targetedEffect.excludeBreakPaymentCardNumber === true)
-  const needsTarget = Boolean(battleTrashCost || (targetedEffect && !selectAfterSourcePayment))
   const targetSelectionState = getTargetSelectionState(
     game,
     viewerPlayerId,
@@ -281,11 +280,19 @@ export function getOptionalCostAttackPrompt(
         )
       : []
   ).map((card) => ({ card, instanceId: card.instanceId }))
+  const sequentialDamageAll =
+    targetedEffect?.kind === 'damage-all' && targetedEffect.sequential === true
   const selectionLimits = targetedEffect
     ? getEffectSelectionLimits(targetedEffect)
     : null
-  const targetMin = battleTrashCost?.count ?? selectionLimits?.min ?? 0
-  const targetMax = battleTrashCost?.count ?? selectionLimits?.max ?? 1
+  const allTargetCount = sequentialDamageAll ? targetCandidates.length : null
+  const targetMin = battleTrashCost?.count ?? allTargetCount ?? selectionLimits?.min ?? 0
+  const targetMax = battleTrashCost?.count ?? allTargetCount ?? selectionLimits?.max ?? 1
+  const needsTarget = Boolean(
+    battleTrashCost ||
+      (targetedEffect && !selectAfterSourcePayment &&
+        (!sequentialDamageAll || targetCandidates.length > 0)),
+  )
   const targetSelector =
     targetedEffect && 'target' in targetedEffect ? targetedEffect.target : undefined
   // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46917,
+      "locale": "en",
+      "cardNumber": "ST8-011",
+      "baseCardNumber": "ST8-011",
+      "variant": null,
+      "name": "Kiwi Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} License Issued!",
+        "text": "【Blocker】 <{G}> (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "<{G}{N}> Bike Blast {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/M64-fU95XFH3U0r-o6YN8g.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

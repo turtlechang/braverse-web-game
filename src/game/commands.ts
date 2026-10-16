@@ -15,6 +15,7 @@ import {
   resolveAttackEffect,
   resolveBattleAutomatically,
   resolveFaintEffect,
+  resolveFaintEffectMode,
   resolveFlip,
   resumeBattleAfterFlipDecision,
   resolveNextAfterDamageEffect,
@@ -635,6 +636,8 @@ export interface ResolveAbilityEffectCommand {
   targetIds: string[]
   /** 逐一對應 hp-to-trash 目標的 HP 移除數量。 */
   amountByTargetIndex?: number[]
+  /** Amount chosen for an up-to deck-to-trash effect. */
+  deckToTrashAmount?: number
 }
 
 /**
@@ -1165,35 +1168,57 @@ const continueBattleAfterPending = (
 }
 
 /**
- * 把 BS9-106～108 的「由 Shadow Milk 將手牌送入棄牌區」觸發，接回標準
- * pendingAbilityEffect 佇列。觸發不能直接同步執行：Chess Piece Strawberry
- * 會開啟 draw-up-to，而 Wizard／GingerBrave 會再開目標選擇；保留佇列才能
- * 讓本地、AI 與線上序列化共用同一條效果通道。
+ * 把由來源 Cookie 效果觸發的手牌棄置被動接回標準 pendingAbilityEffect
+ * 佇列。保留這條佇列，讓需要抽牌或選目標的觸發共用本地與 AI 的效果通道。
  */
-const beginNextShadowMilkDiscardTrigger = (
+const beginNextHandToTrashTrigger = (
   state: GameState,
   battleContinuation?: BattleContinuation,
 ): GameState => {
-  if (
-    state.pendingAbilityEffect ||
-    state.pendingDrawUpTo ||
-    state.pendingOpponentHandDiscard ||
-    state.pendingRevealTopDeck ||
-    state.pendingRefresh ||
-    state.pendingOnPlay
-  ) {
-    return state
+  const publicSourceIds = new Set(Object.values(state.players).flatMap(player => [
+    ...player.discardPile,
+    ...player.breakArea,
+    ...player.supportArea.map(entry => entry.card),
+    ...(player.stage ? [player.stage.card] : []),
+    ...player.battleArea.flatMap(entry => [
+      entry.card,
+      ...(entry.equippedCards ?? []),
+      ...(entry.awakenedUnderlay ?? []),
+      ...entry.hpCards.filter(card => entry.faceUpHpCardInstanceIds?.includes(card.instanceId)),
+    ]),
+  ]).map(card => card.instanceId))
+  const queue = (state.pendingHandToTrashTriggers ?? []).filter(trigger =>
+    publicSourceIds.has(trigger.sourceInstanceId),
+  )
+  const current = queue.length === (state.pendingHandToTrashTriggers ?? []).length
+    ? state
+    : { ...state, pendingHandToTrashTriggers: queue.length ? queue : undefined }
+  if (current.status !== 'playing') {
+    return current.pendingHandToTrashTriggers
+      ? { ...current, pendingHandToTrashTriggers: undefined }
+      : current
   }
-  const queue = state.pendingShadowMilkDiscardTriggers ?? []
+  if (
+    current.pendingAbilityEffect ||
+    current.pendingBattle?.effectDamageSequence ||
+    current.pendingBattle?.stage === 'flip' ||
+    current.pendingDrawUpTo ||
+    current.pendingOpponentHandDiscard ||
+    current.pendingRevealTopDeck ||
+    current.pendingRefresh ||
+    current.pendingOnPlay
+  ) {
+    return current
+  }
   const next = queue[0]
   if (!next) {
-    return state.pendingShadowMilkDiscardTriggers
-      ? { ...state, pendingShadowMilkDiscardTriggers: undefined }
-      : state
+    return current.pendingHandToTrashTriggers
+      ? { ...current, pendingHandToTrashTriggers: undefined }
+      : current
   }
   return {
-    ...state,
-    pendingShadowMilkDiscardTriggers: queue.length > 1 ? queue.slice(1) : undefined,
+    ...current,
+    pendingHandToTrashTriggers: queue.length > 1 ? queue.slice(1) : undefined,
     pendingAbilityEffect: {
       playerId: next.playerId,
       sourcePlayerId: next.playerId,
@@ -1203,6 +1228,61 @@ const beginNextShadowMilkDiscardTrigger = (
       effects: next.effects,
       effectIndex: 0,
       ...(battleContinuation ? { battleContinuation } : {}),
+    },
+  }
+}
+
+const beginNextDepartureSkillTrigger = (
+  state: GameState,
+  battleContinuation?: BattleContinuation,
+): GameState => {
+  const queue = state.pendingDepartureSkillTriggers ?? []
+  if (state.status !== 'playing') {
+    return state.pendingDepartureSkillTriggers
+      ? { ...state, pendingDepartureSkillTriggers: undefined }
+      : state
+  }
+  if (
+    state.pendingAbilityEffect ||
+    state.pendingBattle?.effectDamageSequence ||
+    state.pendingBattle?.stage === 'flip' ||
+    state.pendingDrawUpTo ||
+    state.pendingOpponentHandDiscard ||
+    state.pendingRevealTopDeck ||
+    state.pendingRefresh ||
+    state.pendingOnPlay ||
+    state.pendingStageTrigger ||
+    state.pendingOpponentRestSupport ||
+    state.pendingOptionalCostAttack ||
+    state.pendingExtraDeckAttack ||
+    state.pendingInspectDeck ||
+    state.pendingEffectOrder && !state.pendingEffectOrder.resolvedOrder ||
+    (state.pendingFaintEffects?.length ?? 0) > 0 ||
+    (state.pendingAfterDamageEffects?.length ?? 0) > 0
+  ) {
+    return state
+  }
+  const next = queue[0]
+  if (!next) {
+    return state.pendingDepartureSkillTriggers
+      ? { ...state, pendingDepartureSkillTriggers: undefined }
+      : state
+  }
+  return {
+    ...state,
+    pendingDepartureSkillTriggers: queue.length > 1 ? queue.slice(1) : undefined,
+    pendingAbilityEffect: {
+      playerId: next.playerId,
+      sourcePlayerId: next.playerId,
+      sourceInstanceId: next.sourceInstanceId,
+      sourceCardName: next.sourceCardName,
+      sourceKind: 'skill',
+      trigger: 'departure',
+      effects: next.effects,
+      effectIndex: 0,
+      ...(next.battleContinuation ?? battleContinuation
+        ? { battleContinuation: next.battleContinuation ?? battleContinuation }
+        : {}),
     },
   }
 }
@@ -1259,7 +1339,8 @@ export const applyGameCommand = (
   const commanded = isPendingDecisionCommand(command)
     ? applyPendingDecisionCommand(executionState, command, effectiveOptions)
     : applyPlayerActionCommand(executionState, command, effectiveOptions)
-  const settled = clearCompletedEffectOrder(commanded)
+  const withDepartureTrigger = beginNextDepartureSkillTrigger(commanded)
+  const settled = clearCompletedEffectOrder(withDepartureTrigger)
   const parents = settled.suspendedAbilityEffects ?? []
   const next = settled.status === 'playing' && parents.length > 0 &&
     !hasPendingCardResolution({ ...settled, suspendedAbilityEffects: undefined })
@@ -1365,7 +1446,7 @@ const applyPendingDecisionCommand = (
         handContinuation ?? (state.pendingBattle?.stage === 'attack-effect'
           ? ('attack-effect' as const)
           : undefined)
-      const startedTrigger = beginNextShadowMilkDiscardTrigger(
+      const startedTrigger = beginNextHandToTrashTrigger(
         resolved,
         triggerContinuation,
       )
@@ -1669,9 +1750,14 @@ const applyPendingDecisionCommand = (
         command.positionCostTargetIds ?? [],
         command.cookieToBreakAreaIds ?? [],
       )
+      const triggerContinuation = continuation ?? (state.pendingBattle?.stage === 'attack-effect'
+        ? 'attack-effect' as const
+        : undefined)
+      const startedTrigger = beginNextHandToTrashTrigger(resolved, triggerContinuation)
+      if (startedTrigger.pendingAbilityEffect && !resolved.pendingAbilityEffect) return startedTrigger
       return continuation && state.pendingOptionalCostAttack?.resolution === 'ability' &&
         !resolved.pendingAbilityEffect && !resolved.pendingOptionalCostAttack
-        ? continueBattleAfterPending(resolved, continuation) : resolved
+        ? continueBattleAfterPending(startedTrigger, continuation) : startedTrigger
     }
     case 'resolve-draw-up-to': {
       // BS9-030 的 detached FLIP 會把攻擊後效果暫停在 draw-up-to。
@@ -1679,9 +1765,13 @@ const applyPendingDecisionCommand = (
       // 一個攻擊後效果能呼叫 finishBattle，而不是留下越界的 effect index。
       const continuation = state.pendingDrawUpTo?.battleContinuation
       const resolved = resolveDrawUpTo(state, command.playerId, command.drawCount)
+      const startedTrigger = beginNextHandToTrashTrigger(resolved, continuation)
+      if (startedTrigger.pendingAbilityEffect && !resolved.pendingAbilityEffect) {
+        return startedTrigger
+      }
       return continuation
-        ? continueBattleAfterPending(resolved, continuation)
-        : resolved
+        ? continueBattleAfterPending(startedTrigger, continuation)
+        : startedTrigger
     }
     case 'resolve-stage-trigger': {
       const pending = state.pendingStageTrigger
@@ -1974,6 +2064,10 @@ const assertNoPendingDecision = (
   }
   const pending = getPendingDecision(state)
   if (!pending) return
+
+  if (pending.kind === 'faint-effect' && command.kind === 'resolve-choose-one' &&
+      pending.playerId === command.playerId &&
+      state.pendingFaintEffects?.[0]?.effect.kind === 'choose-one') return
 
   // 補位／略過補位不得搶在卡牌效果之前。正常流程不會同時產生
   // `pendingReplacement` 與效果決策；這個防線處理重播、舊狀態或線上同步延遲
@@ -2640,6 +2734,7 @@ const resolvePendingAbilityEffect = (
   targetIds: string[],
   amountByTargetIndex: number[] | undefined,
   options: ApplyGameCommandOptions,
+  deckToTrashAmount?: number,
 ): GameState => {
   const pending = state.pendingAbilityEffect
   if (!pending) {
@@ -2670,6 +2765,20 @@ const resolvePendingAbilityEffect = (
   const effect = pending.effects[pending.effectIndex]
   if (amountByTargetIndex !== undefined && effect?.kind !== 'hp-to-trash') {
     throw new GameRuleError('目前效果不接受逐目標 HP 數量。')
+  }
+  if (deckToTrashAmount !== undefined &&
+      (effect?.kind !== 'deck-to-trash' || !effect.selectableAmount)) {
+    throw new GameRuleError('目前效果不接受牌庫置入棄牌區張數選擇。')
+  }
+  const selectedDeckToTrashAmount =
+    effect?.kind === 'deck-to-trash' && effect.selectableAmount
+      ? deckToTrashAmount ?? effect.selectableAmount.max
+      : undefined
+  if (selectedDeckToTrashAmount !== undefined && effect?.kind === 'deck-to-trash' &&
+      (!Number.isInteger(selectedDeckToTrashAmount) ||
+        selectedDeckToTrashAmount < effect.selectableAmount!.min ||
+        selectedDeckToTrashAmount > effect.selectableAmount!.max)) {
+    throw new GameRuleError('選擇的牌庫置入棄牌區張數不合法。')
   }
   // 技能 Then 的可選效果沿用 optional-cost-attack 的付款／決策通道，
   // 但它不是攻擊後效果，不能交給 battle resolver。若前一步因 Refresh
@@ -2889,10 +2998,15 @@ const resolvePendingAbilityEffect = (
     }
   }
 
+  if (effect.kind === 'deck-to-trash' && selectedDeckToTrashAmount === 0) {
+    return continueAbilityQueue(state, pending, context, 1, continueBattle)
+  }
   const resolvedEffect =
     effect.kind === 'hp-to-trash' && amountByTargetIndex !== undefined
       ? { ...effect, amountByTargetIndex }
-      : effect
+      : effect.kind === 'deck-to-trash' && selectedDeckToTrashAmount !== undefined
+        ? { ...effect, amount: selectedDeckToTrashAmount, selectableAmount: undefined }
+        : effect
   const resolved = executeCardEffect(
     state,
     context,
@@ -3030,10 +3144,13 @@ const continueAbilityQueue = (
   const nextIndex = pending.effectIndex + advance
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
     const withoutPending = { ...resolved, pendingAbilityEffect: undefined }
-    const nextTrigger = beginNextShadowMilkDiscardTrigger(
+    const departureTrigger = beginNextDepartureSkillTrigger(
       withoutPending,
       pending.battleContinuation,
     )
+    const nextTrigger = departureTrigger.pendingAbilityEffect
+      ? departureTrigger
+      : beginNextHandToTrashTrigger(departureTrigger, pending.battleContinuation)
     if (nextTrigger.pendingAbilityEffect) return nextTrigger
     return continueBattle(nextTrigger)
   }
@@ -3331,9 +3448,14 @@ const applyPlayerActionCommand = (
         command.targetIds,
         command.amountByTargetIndex,
         options,
+        command.deckToTrashAmount,
       )
     }
     case 'resolve-choose-one': {
+      if (getPendingDecision(state)?.kind === 'faint-effect' &&
+          state.pendingFaintEffects?.[0]?.effect.kind === 'choose-one') {
+        return resolveFaintEffectMode(state, command.playerId, command.modeIndex)
+      }
       const pending = state.pendingAbilityEffect
       if (!pending) {
         const battle = state.pendingBattle
@@ -3416,9 +3538,10 @@ const applyPlayerActionCommand = (
         command.cookieInstanceId,
         refreshShuffle,
       )
-      return continuation === 'flip-damage'
+      const continued = continuation === 'flip-damage'
         ? continueBattleAfterPending(resolved, continuation)
         : resolved
+      return beginNextHandToTrashTrigger(continued, continuation)
     }
     case 'play-trap':
       return playTrap(state, command.playerId, {
@@ -3472,7 +3595,10 @@ const applyPlayerActionCommand = (
       ) {
         throw new GameRuleError('不是目前需要結算傷害的玩家。')
       }
-      return resolveNextDamage(state)
+      const continuation = state.pendingAbilityEffect?.battleContinuation ??
+        (battle.stage === 'attack-effect' ? 'attack-effect' as const : undefined)
+      const resolved = resolveNextDamage(state)
+      return beginNextHandToTrashTrigger(resolved, continuation)
     }
     case 'resolve-battle': {
       const battle = state.pendingBattle

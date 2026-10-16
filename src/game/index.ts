@@ -305,6 +305,8 @@ export {
   resolveAttackEffect,
   resolveBattleAutomatically,
   resolveFaintEffect,
+  resolveFaintEffectMode,
+  hasPendingFaintModeCost,
   resolveFlip,
   resolveNextAfterDamageEffect,
   resolveNextDamage,

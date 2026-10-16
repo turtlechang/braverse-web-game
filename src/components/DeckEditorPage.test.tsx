@@ -467,6 +467,48 @@ describe('DeckEditorPage', () => {
     await act(() => root.unmount())
   })
 
+  it.each(['ST6', 'ST7', 'ST8', 'ST9', 'ST10'])(
+    'shows %s cards through its series filter and lets them join a Standard deck',
+    async (series) => {
+      const container = document.createElement('div')
+      const root = createRoot(container)
+
+      await act(() => root.render(<DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />))
+
+      const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+      await act(() => filterToggle!.click())
+
+      const seriesSelect = Array.from(
+        container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+      ).find((select) => Array.from(select.options).some((option) => option.value === series))
+      expect(seriesSelect).toBeTruthy()
+
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value',
+      )!.set!
+      await act(() => {
+        nativeSetter.call(seriesSelect, series)
+        seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+
+      const cardNumbers = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+      ).map((button) => button.title)
+      expect(cardNumbers.length).toBeGreaterThan(0)
+      expect(cardNumbers.every((cardNumber) => cardNumber.startsWith(`${series}-`))).toBe(true)
+
+      const firstCard = container.querySelector<HTMLButtonElement>(
+        '.deck-editor-page-pool-card-button:not(:disabled)',
+      )
+      expect(firstCard).not.toBeNull()
+      await act(() => firstCard!.click())
+      expect(container.querySelector('.deck-editor-page-deck-card')?.textContent).toContain(`${series}-`)
+
+      await act(() => root.unmount())
+    },
+  )
+
   it('matches BS7 and BS8 by card-number text search in Standard', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)

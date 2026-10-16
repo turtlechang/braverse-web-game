@@ -1,5 +1,7 @@
 # 卡牌效果引擎
 
+2026-10-14 ST9-009與BS9-106～108共用來源明確的 `hand-to-trash-trigger`：只有本人Cookie因指定來源Cookie的效果，從本人手牌移入本人棄牌區時才排入被動；支付棄牌代價、由對手代棄或移往牌庫／其他區域不觸發。觸發來源須仍在公開區域，並等目前效果、傷害或Refresh續接可安全切換時依序結算。ST9-009因目前Sea Fairy路徑未提供已確認的效果棄牌，仍列needs-review，不把尖括號代價視為效果。完整回歸1,011檔／20,762項通過；逐卡狀態見[ST6～ST10盤點](st6-st10-card-inventory.md)。
+
 2026-10-12 ST7-011：YY 普通 2 的 Then 僅在來源剩餘 HP≤2，且己方戰鬥區同一張具名 Millennial Tree Cookie 的目前有效 LV 恰為 3 時，讓來源補 1 HP。具名見證條件新增選用 minLevel／maxLevel，名稱與等級必須由同張餅乾同時符合；舊有無等級條件行為維持。來源在 FLIP 中昏厥離場則不補；印刷 2 HP 並非補 HP 上限。來源專項與共用回歸、雙尺寸操作及精確重播已驗，卡池 promote 狀態另見逐卡盤點。
 
 2026-10-05 R008／R009 已依使用者答案確認：非昏厥離場的 Awaken 底卡與原 HP／裝備進棄牌區；072 Activate／073 Then 不再隔離底卡互動。主牌庫返回代價的候選與最終支付均排除 EXTRA 本體；回牌庫效果將其分流至 EXTRA Deck，085 的五張 Blocker 是條件，不是回牌庫代價。公開紀錄、目標提示與結算短訊同步呈現實際去向；舊隔離與先前完整實體驗收結論的更正見[裁定清單](bs12-rulings-2026-10-05.md)。
@@ -137,6 +139,7 @@ BS12-007 保留1R、必要己方同名裝備目標與裝備攻擊的當次戰鬥
 | 棄牌區→手牌 | `trash-to-hand` | 從來源玩家棄牌區選擇至多指定數量回手；可同時限制顏色、Cookie 與 runtime FLIP，所有篩選都由規則層與 UI 共用。可作為 Trap 的 `Then` 或 Stage Activate 的後續選擇，前段未呈現卡牌目標時不得以空目標陣列略過它（BS9-037、BS9-044、BS9-046、BS9-047）。 |
 | 對手手牌→棄牌區 | `opponent-discard-hand` | 對手必須選擇指定數量的手牌放入棄牌區；對手無手牌時效果直接完成 |
 | 整手牌→棄牌區 | `discard-hand-all` | 將來源玩家全部手牌放入棄牌區 |
+| 手牌→棄牌區被動觸發 | `hand-to-trash-trigger` | 記錄明確來源Cookie與被動效果；僅本人手牌因該來源Cookie的效果移入本人棄牌區時觸發，代價、對手代棄及其他目的區不觸發。來源卡離開公開區後，尚未開始的排隊觸發會清除；效果鏈、傷害或Refresh暫停時延後並依序續接（BS9-106～108；ST9-009仍待正向規則來源確認） |
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
@@ -588,3 +591,6 @@ Cookie Equip HP／替補裁定尚未確認，077保留付款前阻擋與strict n
 ## 2026-10-04 BS12-104 局部驗收
 
 104黑色Arena Item付款K1，先抽0～1，再獨立選0～1己方戰鬥區具有印刷Special Play的Cookie、本回合攻擊+1；抽零仍接Then，不加顏色／Arena／LV／REST限制。EffectTargetSelector.hasSpecialPlay使用skill.specialPlayCost存在性，UI不另建權威規則。公開抽牌紀錄只顯示張數及來源，不展示未印刷要求公開的手牌；online抽牌決策優先於下一段效果面板。專項119項、受影響19檔1,072項、Browser86／86、strict1／1、build／lint通過；031共用八案另列。一般8,316、cursor105、剩8基礎／17印刷，最新全套737檔12,384項屬103／104前，新全套留105批末。154 inventory／0 promoted，正式BS12／逐卡online未完成；裁定112及全部印刷後。詳見[本卡驗收](bs12-progress-2026-09-30.md#2026-10-04-bs12-104-局部驗收)。
+2026-10-13 ST8-012 [專案決議]：原文的「if an Item card was activated」沒有標示啟動者；依使用者選擇，沿用目前 `itemsActivatedThisTurn[sourcePlayerId]` 範圍，只計算該 Cookie 擁有者本回合啟動的 Item，這不是官方專屬裁定。條件在效果結算時檢查：未成立時跳過 1 點傷害，但仍可獨立選擇支付支援區 G 並執行 Then。啟動技能本身只 REST 來源，沒有額外啟動費用或 Once per Turn；Then 的 G 使用一般支援支付。
+
+2026-10-13 ST8-013：Item 固定支付 G。第一段獨立選擇0～1張對手支援卡橫置；Then 只有己方戰鬥區有 Wind Archer Cookie 時才提供第二段，選擇0～1張己方支援卡轉為活躍。缺少 Wind Archer 時略過第二段，不撤銷已完成的第一段。

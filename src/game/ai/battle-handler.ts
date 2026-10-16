@@ -34,6 +34,7 @@ import {
   getTrashToDeckCostCandidates,
 } from '../skills'
 import { createPlayerView } from '../player-view'
+import { getLegalTurnCommands } from '../legal-actions'
 import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
 import { chooseAiEffectMode } from './choose-one-mode'
@@ -51,6 +52,55 @@ import {
 import { chooseSharedEffectTargets } from './shared-selection'
 import { getPublicEffectDamageByTarget } from './public-effect-damage'
 
+type SupportEffectCandidate = ReturnType<typeof getSupportEffectCandidates>[number]
+
+const getSupportSelections = (
+  supports: SupportEffectCandidate[],
+  count: number,
+): SupportEffectCandidate[][] => {
+  const maximumCombinations = 4096
+  const combinations: number[][] = []
+  const selection: number[] = []
+  let exceededLimit = false
+  const visit = (start: number) => {
+    if (exceededLimit) return
+    if (selection.length === count) {
+      combinations.push([...selection])
+      exceededLimit = combinations.length > maximumCombinations
+      return
+    }
+    for (let index = start; index <= supports.length - (count - selection.length); index++) {
+      selection.push(index)
+      visit(index + 1)
+      selection.pop()
+      if (exceededLimit) return
+    }
+  }
+  visit(0)
+
+  if (exceededLimit) {
+    // Avoid combinatorial growth if a future card asks to rest many supports:
+    // compare the stable prefix plus every one-support replacement.
+    const candidates = new Map<string, number[]>()
+    const add = (indices: number[]) => {
+      const ordered = [...indices].sort((left, right) => left - right)
+      candidates.set(ordered.join(','), ordered)
+    }
+    const prefix = Array.from({ length: count }, (_, index) => index)
+    add(prefix)
+    for (let selectedIndex = 0; selectedIndex < count; selectedIndex++) {
+      for (let replacement = count; replacement < supports.length; replacement++) {
+        const candidate = [...prefix]
+        candidate[selectedIndex] = replacement
+        add(candidate)
+      }
+    }
+    return [...candidates.values()].map(indices => indices.map(index => supports[index]))
+  }
+
+  return combinations.map(indices => indices.map(index => supports[index]))
+}
+
 const chooseAttackEffectTargets = (
   state: GameState,
   playerId: PlayerId,
@@ -62,6 +112,62 @@ const chooseAttackEffectTargets = (
   const context: EffectContext = {
     sourcePlayerId: playerId,
     sourceInstanceId: battle.attackerInstanceId,
+  }
+
+  if (effect.kind === 'rest-support-and-damage') {
+    const supportOwnerId = effect.supportSide === 'opponent'
+      ? playerId === 'player-one' ? 'player-two' : 'player-one'
+      : playerId
+    const candidateIds = new Set(getEffectSelectionCandidates(state, context, effect).map(card => card.instanceId))
+    const supports = getSupportEffectCandidates(state, context, { side: effect.supportSide, activeOnly: effect.activeOnly })
+      .filter(support => candidateIds.has(support.card.instanceId))
+    const targets = getEffectTargetCandidatesForEffect(state, context, effect)
+    let best: {
+      lethal: number
+      breakLevel: number
+      damage: number
+      followUpAttackCount: number
+      count: number
+      supports: string[]
+      target: string
+    } | undefined
+    for (let count = 1; count <= Math.min(effect.supportAmount, supports.length); count++) {
+      for (const selectedSupports of getSupportSelections(supports, count)) {
+        const supportIds = selectedSupports.map(support => support.card.instanceId)
+        const selectedIds = new Set(supportIds)
+        // Forecast public damage and the attack opportunities left after the
+        // current battle. This matters when a fixed support-area prefix would
+        // spend an energy color needed by another ready Cookie.
+        const projectedState = { ...state, players: { ...state.players, [supportOwnerId]: {
+          ...state.players[supportOwnerId], supportArea: state.players[supportOwnerId].supportArea.map(support =>
+            selectedIds.has(support.card.instanceId) ? { ...support, rested: true } : support),
+        } } }
+        const followUpState = supportOwnerId === playerId
+          ? { ...projectedState, pendingBattle: undefined, phase: 'main' as const, activePlayerId: playerId }
+          : undefined
+        const followUpAttackCount = followUpState
+          ? getLegalTurnCommands(followUpState, playerId).filter(command => command.kind === 'attack').length
+          : 0
+        const forecast = getPublicEffectDamageByTarget(projectedState, playerId, context,
+          { kind: 'damage', amount: count, target: effect.target }, targets.map(target => target.card.instanceId))
+        for (const target of targets) {
+          const damage = forecast?.get(target.card.instanceId) ?? 0
+          if (damage <= 0) continue
+          const lethal = damage >= target.hpCards.length ? 1 : 0
+          const choice = { lethal, breakLevel: lethal ? getCookieEffectiveLevel(target) : 0,
+            damage: Math.min(damage, target.hpCards.length), followUpAttackCount, count,
+            supports: supportIds, target: target.card.instanceId }
+          // Prefer a knockout, then useful damage and remaining legal attacks;
+          // ties retain the smaller support payment instead of wasting energy.
+          if (!best || choice.lethal > best.lethal ||
+            (choice.lethal === best.lethal && (choice.breakLevel > best.breakLevel ||
+              (choice.breakLevel === best.breakLevel && (choice.damage > best.damage ||
+                (choice.damage === best.damage && (choice.followUpAttackCount > best.followUpAttackCount ||
+                  (choice.followUpAttackCount === best.followUpAttackCount && choice.count < best.count)))))))) best = choice
+        }
+      }
+    }
+    return best ? [...best.supports, best.target] : []
   }
 
   // Selecting a Cookie also commits to placing a legal hand card in the next
@@ -129,14 +235,7 @@ const chooseAttackEffectTargets = (
   }
 
   if (effect.kind === 'opponent-battle-to-trash') {
-    const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
-    const candidateIds = state.players[opponentId].battleArea
-      .filter((cookie) => {
-        if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
-        if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
-        if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
-        return true
-      })
+    const candidateIds = getEffectTargetCandidatesForEffect(state, context, effect)
       .sort((left, right) => left.hpCards.length - right.hpCards.length)
       .map((cookie) => cookie.card.instanceId)
     return universal?.enabled
@@ -231,6 +330,36 @@ const EFFECT_VALUE_MAP: Record<string, number> = {
  */
 const TRAP_SKIP_THRESHOLD = 50
 
+const hasOnlyUnmetPublicBattleColorCondition = (
+  state: GameState,
+  playerId: PlayerId,
+  trapCard: GameCard,
+): boolean => {
+  const trap = trapCard.trap
+  if (
+    !trap ||
+    trap.alternativeCosts?.length ||
+    trap.conditionalCost ||
+    trap.effects.length === 0
+  ) return false
+
+  // A trap with another cost may still create a useful zone change. Restrict
+  // this guard to energy-only traps whose complete root effect is publicly
+  // gated by a battlefield color witness.
+  const energyOnly = Object.entries(trap.cost).every(([key, value]) =>
+    key === 'energy' || (key === 'discardHand' && value === 0),
+  )
+  if (!energyOnly) return false
+
+  const context = { sourcePlayerId: playerId, sourceInstanceId: trapCard.instanceId }
+  const publicState = maskGameStateForViewer({ ...state, commandLog: undefined }, playerId)
+  return trap.effects.every(effect =>
+    effect.kind === 'modify-attack' &&
+    effect.condition?.kind === 'battle-area-has-color' &&
+    !isEffectConditionMet(publicState, context, effect),
+  )
+}
+
 export const evaluateTrapWorth = (
   state: GameState,
   playerId: PlayerId,
@@ -238,6 +367,7 @@ export const evaluateTrapWorth = (
   battle: NonNullable<GameState['pendingBattle']>,
 ): number => {
   if (!trapCard.trap) return 0
+  if (hasOnlyUnmetPublicBattleColorCondition(state, playerId, trapCard)) return 0
 
   const attacker = state.players[battle.attackerPlayerId].battleArea.find(
     (c) => c.card.instanceId === battle.attackerInstanceId,
@@ -693,8 +823,18 @@ export const handleAiPendingBattle = (
           )
         : revealed.flip.effects
       : []
+    const hpFlip = revealed?.flip
+    // A publicly blocked, pure HP benefit does not justify an ordinary paid discard.
+    // Preserve other effects and special costs that may still provide value.
+    const blockedPureHpDiscard = Boolean(state.preventHpGainThisTurn?.[playerId]) &&
+      hpFlip !== undefined && !battle.detachedFlip && hpFlip.effects.length === 0 &&
+      !hpFlip.attachedHpAlternateTarget && !hpFlip.handCostDestination &&
+      (hpFlip.cost.discardHand ?? 0) > 0 &&
+      Object.entries(hpFlip.cost).every(([key, value]) =>
+        value === undefined || key === 'energy' || key === 'discardHand') &&
+      Object.values(hpFlip.cost.energy ?? {}).every(value => (value ?? 0) === 0)
     const hasActivatableEffect = Boolean(revealed?.flip) &&
-      ((revealed?.flip?.attachedHpBonus ?? 0) > 0 ||
+      (((revealed?.flip?.attachedHpBonus ?? 0) > 0 && !blockedPureHpDiscard) ||
         expandedFlipEffects.some((effect) =>
           isEffectConditionMet(state, flipContext, effect),
         ))
@@ -875,12 +1015,19 @@ export const handleAiPendingBattle = (
       }, 'attack-response', attackResponse.card.instanceId, skill.effects[0])
     }
 
-    const trapCandidates = getTrapCandidates(state, playerId).filter(candidate=>{
+    const payableTrapCandidates = getTrapCandidates(state, playerId).filter(candidate=>{
       if(!candidate.trap)return false
       const option=getPlayableTrapCostOption(state,playerId,candidate.trap,candidate.instanceId)
       return option!==null&&selectSafeHandBreakPayment(state,playerId,option.cost,candidate.instanceId,
         state.players[playerId].hand.map(card=>card.instanceId))!==null
     })
+    // 公開見證明確不存在時，各等級都應保留可支付的陷阱；低等級的簡化
+    // 策略不能把「可發動」誤當成「效果會成立」。此守衛不讀取隱藏資訊，
+    // 並只排除所有根效果都會無條件 no-op 的純能量陷阱。
+    const trapCandidates = payableTrapCandidates.filter(candidate =>
+      candidate.trap !== undefined &&
+      !hasOnlyUnmetPublicBattleColorCondition(state, playerId, candidate),
+    )
 
     let trapCard: GameCard | undefined
     if (useR7 && trapCandidates.length > 0) {
@@ -918,7 +1065,7 @@ export const handleAiPendingBattle = (
       trapCard = trapCandidates[0]
     }
 
-    const r7Skipped = useR7 && trapCandidates.length > 0 && !trapCard
+    const r7Skipped = useR7 && payableTrapCandidates.length > 0 && !trapCard
 
     if (trapCard?.trap) {
       const playableCost = getPlayableTrapCostOption(

@@ -1610,6 +1610,10 @@ export function AttackResponseModal({
 
 export interface FaintEffectResponseModalProps {
   card: GameCard
+  costBeforeMode?: boolean
+  chooseOneModes?: Extract<CardEffect, { kind: 'choose-one' }>['modes']
+  chooseOneModePlayable?: readonly boolean[]
+  onChooseMode?: (modeIndex: number) => void
   unavailableReason?: string | null
   minTargets: number
   maxTargets: number
@@ -1652,6 +1656,10 @@ export interface FaintEffectResponseModalProps {
 
 export function FaintEffectResponseModal({
   card,
+  costBeforeMode = false,
+  chooseOneModes,
+  chooseOneModePlayable,
+  onChooseMode,
   unavailableReason = null,
   minTargets,
   maxTargets,
@@ -1687,7 +1695,7 @@ export function FaintEffectResponseModal({
   onConfirm,
 }: FaintEffectResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const hasTargetChoice = maxTargets > 0
+  const hasTargetChoice = !chooseOneModes && maxTargets > 0
   const selectedTargetIdSet = new Set(selectedTargetIds)
   const selectedPaymentIdSet = new Set(selectedPaymentIds)
   const selectedCostHandIdSet = new Set(selectedCostHandIds)
@@ -1703,14 +1711,16 @@ export function FaintEffectResponseModal({
     selectedCostSupportToHandIds.length === costSupportToHandAmount)
   const canConfirm =
     !unavailableReason && selectedTargetCount >= minTargets && paymentReady && faintCostReady
-  const targetHint = costDeckToTrashAmount > 0
+  const targetHint = costBeforeMode && costDeckToTrashAmount === 0
+    ? '先支付顯示的代價，再選擇效果項目。也可以不發動，略過整個觸發。'
+    : costDeckToTrashAmount > 0
     ? `將自己牌庫頂 ${costDeckToTrashAmount} 張放入棄牌區作為代價，支付後再選擇回收目標。也可不發動，略過整組效果。`
     : !hasTargetChoice
     ? '此步驟不需選擇目標。確認後會結算此步驟；若後續需要選擇，會接著顯示提示。'
     : minTargets === 0
         ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`
         : `必須選擇 ${minTargets} 張${candidateLabel}。`
-  const confirmLabel = costDeckToTrashAmount > 0 ? '支付代價' : !hasTargetChoice
+  const confirmLabel = costBeforeMode || costDeckToTrashAmount > 0 ? '支付代價' : !hasTargetChoice
     ? '確認結算'
     : selectedTargetCount === 0
       ? '不選擇目標'
@@ -1764,7 +1774,7 @@ export function FaintEffectResponseModal({
           縮小
         </button>
         <span>{costDeckToTrashAmount > 0 ? '昏厥效果代價（可選）' : '昏厥效果'}</span>
-        <h2>{card.name} {unavailableReason ? '無法發動昏厥效果' : optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
+        <h2>{card.name} {chooseOneModes ? '選擇一項昏厥效果' : unavailableReason ? '無法發動昏厥效果' : optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
         <div className="faint-effect-card-detail">
           <CardFace card={card} />
           <div>
@@ -1777,6 +1787,20 @@ export function FaintEffectResponseModal({
             </p>
           </div>
         </div>
+        {chooseOneModes ? (
+          <div className="modal-card-options" role="group" aria-label="選擇一項昏厥效果">
+            {chooseOneModes.map((mode, index) => (
+              <button
+                type="button"
+                key={`${card.instanceId}-${index}`}
+                disabled={!onChooseMode || chooseOneModePlayable?.[index] === false}
+                onClick={() => onChooseMode?.(index)}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        ) : <>
         {costDeckToTrashAmount === 0 && paymentCostTotal > 0 && energyCost && (
           <div className="faint-payment-section">
             <strong>支付昏厥效果費用</strong>
@@ -1964,6 +1988,7 @@ export function FaintEffectResponseModal({
             {confirmLabel}
           </button>
         </div>
+        </>}
       </section>
     </div>
   )

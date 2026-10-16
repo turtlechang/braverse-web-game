@@ -20,52 +20,85 @@ import official_paradise_of_passion_and_sloth_catacombs_of_silence_bs10_en_json_
 import official_promotion_p001_p032_remaining_en_json_15 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
 import official_promotion_p001_p032_en_json_16 from '../../data/cards/official-promotion-p001-p032.en.json'
 import official_sample_en_json_17 from '../../data/cards/official-sample.en.json'
-import official_st6_001_en_json_18 from '../../data/cards/official-st6-001.en.json'
-import official_st6_002_en_json_19 from '../../data/cards/official-st6-002.en.json'
-import official_st6_003_en_json_20 from '../../data/cards/official-st6-003.en.json'
-import official_st6_004_en_json_21 from '../../data/cards/official-st6-004.en.json'
-import official_st6_005_en_json_22 from '../../data/cards/official-st6-005.en.json'
-import official_st6_006_en_json_23 from '../../data/cards/official-st6-006.en.json'
-import official_st6_007_en_json_24 from '../../data/cards/official-st6-007.en.json'
-import official_st6_008_en_json_25 from '../../data/cards/official-st6-008.en.json'
-import official_st6_009_en_json_26 from '../../data/cards/official-st6-009.en.json'
-import official_st6_010_en_json_27 from '../../data/cards/official-st6-010.en.json'
-import official_st6_011_en_json_28 from '../../data/cards/official-st6-011.en.json'
-import official_st6_012_en_json_29 from '../../data/cards/official-st6-012.en.json'
-import official_st6_013_en_json_30 from '../../data/cards/official-st6-013.en.json'
-import official_st6_014_en_json_31 from '../../data/cards/official-st6-014.en.json'
-import official_st6_015_en_json_32 from '../../data/cards/official-st6-015.en.json'
-import official_st6_016_en_json_33 from '../../data/cards/official-st6-016.en.json'
-import official_st6_017_en_json_34 from '../../data/cards/official-st6-017.en.json'
-import official_st6_018_en_json_35 from '../../data/cards/official-st6-018.en.json'
-import official_st6_019_en_json_36 from '../../data/cards/official-st6-019.en.json'
-import official_st6_020_en_json_37 from '../../data/cards/official-st6-020.en.json'
-import official_st7_001_en_json_38 from '../../data/cards/official-st7-001.en.json'
-import official_st7_002_en_json_39 from '../../data/cards/official-st7-002.en.json'
-import official_st7_003_en_json_40 from '../../data/cards/official-st7-003.en.json'
-import official_st7_004_en_json_41 from '../../data/cards/official-st7-004.en.json'
-import official_st7_006_en_json_42 from '../../data/cards/official-st7-006.en.json'
-import official_st7_007_en_json_43 from '../../data/cards/official-st7-007.en.json'
-import official_st7_008_en_json_44 from '../../data/cards/official-st7-008.en.json'
-import official_st7_009_en_json_45 from '../../data/cards/official-st7-009.en.json'
-import official_st7_010_en_json_46 from '../../data/cards/official-st7-010.en.json'
-import official_st7_011_en_json_47 from '../../data/cards/official-st7-011.en.json'
-import official_st7_012_en_json_48 from '../../data/cards/official-st7-012.en.json'
-import official_st7_013_en_json_49 from '../../data/cards/official-st7-013.en.json'
-import official_st7_014_en_json_50 from '../../data/cards/official-st7-014.en.json'
-import official_st7_015_en_json_51 from '../../data/cards/official-st7-015.en.json'
-import official_st7_016_en_json_52 from '../../data/cards/official-st7-016.en.json'
-import official_st7_017_en_json_53 from '../../data/cards/official-st7-017.en.json'
-import official_st7_018_en_json_54 from '../../data/cards/official-st7-018.en.json'
-import official_st7_019_en_json_55 from '../../data/cards/official-st7-019.en.json'
-import official_st7_020_en_json_56 from '../../data/cards/official-st7-020.en.json'
-import official_st8_001_en_json_57 from '../../data/cards/official-st8-001.en.json'
-import official_st8_002_en_json_58 from '../../data/cards/official-st8-002.en.json'
-import official_st8_003_en_json_59 from '../../data/cards/official-st8-003.en.json'
-import official_starter_deck_blue_en_json_60 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_61 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_62 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_63 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_st10_001_003_en_json_18 from '../../data/cards/official-st10-001-003.en.json'
+import official_st10_005_en_json_19 from '../../data/cards/official-st10-005.en.json'
+import official_st10_006_en_json_20 from '../../data/cards/official-st10-006.en.json'
+import official_st10_009_en_json_21 from '../../data/cards/official-st10-009.en.json'
+import official_st10_010_en_json_22 from '../../data/cards/official-st10-010.en.json'
+import official_st10_011_en_json_23 from '../../data/cards/official-st10-011.en.json'
+import official_st10_012_en_json_24 from '../../data/cards/official-st10-012.en.json'
+import official_st10_014_016_en_json_25 from '../../data/cards/official-st10-014-016.en.json'
+import official_st10_017_018_020_en_json_26 from '../../data/cards/official-st10-017-018-020.en.json'
+import official_st10_en_json_27 from '../../data/cards/official-st10.en.json'
+import official_st6_001_en_json_28 from '../../data/cards/official-st6-001.en.json'
+import official_st6_002_en_json_29 from '../../data/cards/official-st6-002.en.json'
+import official_st6_003_en_json_30 from '../../data/cards/official-st6-003.en.json'
+import official_st6_004_en_json_31 from '../../data/cards/official-st6-004.en.json'
+import official_st6_005_en_json_32 from '../../data/cards/official-st6-005.en.json'
+import official_st6_006_en_json_33 from '../../data/cards/official-st6-006.en.json'
+import official_st6_007_en_json_34 from '../../data/cards/official-st6-007.en.json'
+import official_st6_008_en_json_35 from '../../data/cards/official-st6-008.en.json'
+import official_st6_009_en_json_36 from '../../data/cards/official-st6-009.en.json'
+import official_st6_010_en_json_37 from '../../data/cards/official-st6-010.en.json'
+import official_st6_011_en_json_38 from '../../data/cards/official-st6-011.en.json'
+import official_st6_012_en_json_39 from '../../data/cards/official-st6-012.en.json'
+import official_st6_013_en_json_40 from '../../data/cards/official-st6-013.en.json'
+import official_st6_014_en_json_41 from '../../data/cards/official-st6-014.en.json'
+import official_st6_015_en_json_42 from '../../data/cards/official-st6-015.en.json'
+import official_st6_016_en_json_43 from '../../data/cards/official-st6-016.en.json'
+import official_st6_017_en_json_44 from '../../data/cards/official-st6-017.en.json'
+import official_st6_018_en_json_45 from '../../data/cards/official-st6-018.en.json'
+import official_st6_019_en_json_46 from '../../data/cards/official-st6-019.en.json'
+import official_st6_020_en_json_47 from '../../data/cards/official-st6-020.en.json'
+import official_st7_001_en_json_48 from '../../data/cards/official-st7-001.en.json'
+import official_st7_002_en_json_49 from '../../data/cards/official-st7-002.en.json'
+import official_st7_003_en_json_50 from '../../data/cards/official-st7-003.en.json'
+import official_st7_004_en_json_51 from '../../data/cards/official-st7-004.en.json'
+import official_st7_006_en_json_52 from '../../data/cards/official-st7-006.en.json'
+import official_st7_007_en_json_53 from '../../data/cards/official-st7-007.en.json'
+import official_st7_008_en_json_54 from '../../data/cards/official-st7-008.en.json'
+import official_st7_009_en_json_55 from '../../data/cards/official-st7-009.en.json'
+import official_st7_010_en_json_56 from '../../data/cards/official-st7-010.en.json'
+import official_st7_011_en_json_57 from '../../data/cards/official-st7-011.en.json'
+import official_st7_012_en_json_58 from '../../data/cards/official-st7-012.en.json'
+import official_st7_013_en_json_59 from '../../data/cards/official-st7-013.en.json'
+import official_st7_014_en_json_60 from '../../data/cards/official-st7-014.en.json'
+import official_st7_015_en_json_61 from '../../data/cards/official-st7-015.en.json'
+import official_st7_016_en_json_62 from '../../data/cards/official-st7-016.en.json'
+import official_st7_017_en_json_63 from '../../data/cards/official-st7-017.en.json'
+import official_st7_018_en_json_64 from '../../data/cards/official-st7-018.en.json'
+import official_st7_019_en_json_65 from '../../data/cards/official-st7-019.en.json'
+import official_st7_020_en_json_66 from '../../data/cards/official-st7-020.en.json'
+import official_st8_001_en_json_67 from '../../data/cards/official-st8-001.en.json'
+import official_st8_002_en_json_68 from '../../data/cards/official-st8-002.en.json'
+import official_st8_003_en_json_69 from '../../data/cards/official-st8-003.en.json'
+import official_st8_004_en_json_70 from '../../data/cards/official-st8-004.en.json'
+import official_st8_005_en_json_71 from '../../data/cards/official-st8-005.en.json'
+import official_st8_006_en_json_72 from '../../data/cards/official-st8-006.en.json'
+import official_st8_007_en_json_73 from '../../data/cards/official-st8-007.en.json'
+import official_st8_008_en_json_74 from '../../data/cards/official-st8-008.en.json'
+import official_st8_009_en_json_75 from '../../data/cards/official-st8-009.en.json'
+import official_st8_010_en_json_76 from '../../data/cards/official-st8-010.en.json'
+import official_st8_011_en_json_77 from '../../data/cards/official-st8-011.en.json'
+import official_st8_012_en_json_78 from '../../data/cards/official-st8-012.en.json'
+import official_st8_013_en_json_79 from '../../data/cards/official-st8-013.en.json'
+import official_st8_014_017_en_json_80 from '../../data/cards/official-st8-014-017.en.json'
+import official_st8_019_020_en_json_81 from '../../data/cards/official-st8-019-020.en.json'
+import official_st9_001_003_en_json_82 from '../../data/cards/official-st9-001-003.en.json'
+import official_st9_004_006_en_json_83 from '../../data/cards/official-st9-004-006.en.json'
+import official_st9_007_008_en_json_84 from '../../data/cards/official-st9-007-008.en.json'
+import official_st9_010_011_en_json_85 from '../../data/cards/official-st9-010-011.en.json'
+import official_st9_012_en_json_86 from '../../data/cards/official-st9-012.en.json'
+import official_st9_013_en_json_87 from '../../data/cards/official-st9-013.en.json'
+import official_st9_014_en_json_88 from '../../data/cards/official-st9-014.en.json'
+import official_st9_015_en_json_89 from '../../data/cards/official-st9-015.en.json'
+import official_st9_017_019_en_json_90 from '../../data/cards/official-st9-017-019.en.json'
+import official_st9_020_en_json_91 from '../../data/cards/official-st9-020.en.json'
+import official_st9_en_json_92 from '../../data/cards/official-st9.en.json'
+import official_starter_deck_blue_en_json_93 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_94 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_95 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_96 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_a_game_of_truth_and_deceit_bs9_en_json_0,
@@ -86,50 +119,83 @@ export const officialCardDatasets = [
   official_promotion_p001_p032_remaining_en_json_15,
   official_promotion_p001_p032_en_json_16,
   official_sample_en_json_17,
-  official_st6_001_en_json_18,
-  official_st6_002_en_json_19,
-  official_st6_003_en_json_20,
-  official_st6_004_en_json_21,
-  official_st6_005_en_json_22,
-  official_st6_006_en_json_23,
-  official_st6_007_en_json_24,
-  official_st6_008_en_json_25,
-  official_st6_009_en_json_26,
-  official_st6_010_en_json_27,
-  official_st6_011_en_json_28,
-  official_st6_012_en_json_29,
-  official_st6_013_en_json_30,
-  official_st6_014_en_json_31,
-  official_st6_015_en_json_32,
-  official_st6_016_en_json_33,
-  official_st6_017_en_json_34,
-  official_st6_018_en_json_35,
-  official_st6_019_en_json_36,
-  official_st6_020_en_json_37,
-  official_st7_001_en_json_38,
-  official_st7_002_en_json_39,
-  official_st7_003_en_json_40,
-  official_st7_004_en_json_41,
-  official_st7_006_en_json_42,
-  official_st7_007_en_json_43,
-  official_st7_008_en_json_44,
-  official_st7_009_en_json_45,
-  official_st7_010_en_json_46,
-  official_st7_011_en_json_47,
-  official_st7_012_en_json_48,
-  official_st7_013_en_json_49,
-  official_st7_014_en_json_50,
-  official_st7_015_en_json_51,
-  official_st7_016_en_json_52,
-  official_st7_017_en_json_53,
-  official_st7_018_en_json_54,
-  official_st7_019_en_json_55,
-  official_st7_020_en_json_56,
-  official_st8_001_en_json_57,
-  official_st8_002_en_json_58,
-  official_st8_003_en_json_59,
-  official_starter_deck_blue_en_json_60,
-  official_starter_deck_green_en_json_61,
-  official_starter_deck_purple_en_json_62,
-  official_starter_deck_yellow_en_json_63,
+  official_st10_001_003_en_json_18,
+  official_st10_005_en_json_19,
+  official_st10_006_en_json_20,
+  official_st10_009_en_json_21,
+  official_st10_010_en_json_22,
+  official_st10_011_en_json_23,
+  official_st10_012_en_json_24,
+  official_st10_014_016_en_json_25,
+  official_st10_017_018_020_en_json_26,
+  official_st10_en_json_27,
+  official_st6_001_en_json_28,
+  official_st6_002_en_json_29,
+  official_st6_003_en_json_30,
+  official_st6_004_en_json_31,
+  official_st6_005_en_json_32,
+  official_st6_006_en_json_33,
+  official_st6_007_en_json_34,
+  official_st6_008_en_json_35,
+  official_st6_009_en_json_36,
+  official_st6_010_en_json_37,
+  official_st6_011_en_json_38,
+  official_st6_012_en_json_39,
+  official_st6_013_en_json_40,
+  official_st6_014_en_json_41,
+  official_st6_015_en_json_42,
+  official_st6_016_en_json_43,
+  official_st6_017_en_json_44,
+  official_st6_018_en_json_45,
+  official_st6_019_en_json_46,
+  official_st6_020_en_json_47,
+  official_st7_001_en_json_48,
+  official_st7_002_en_json_49,
+  official_st7_003_en_json_50,
+  official_st7_004_en_json_51,
+  official_st7_006_en_json_52,
+  official_st7_007_en_json_53,
+  official_st7_008_en_json_54,
+  official_st7_009_en_json_55,
+  official_st7_010_en_json_56,
+  official_st7_011_en_json_57,
+  official_st7_012_en_json_58,
+  official_st7_013_en_json_59,
+  official_st7_014_en_json_60,
+  official_st7_015_en_json_61,
+  official_st7_016_en_json_62,
+  official_st7_017_en_json_63,
+  official_st7_018_en_json_64,
+  official_st7_019_en_json_65,
+  official_st7_020_en_json_66,
+  official_st8_001_en_json_67,
+  official_st8_002_en_json_68,
+  official_st8_003_en_json_69,
+  official_st8_004_en_json_70,
+  official_st8_005_en_json_71,
+  official_st8_006_en_json_72,
+  official_st8_007_en_json_73,
+  official_st8_008_en_json_74,
+  official_st8_009_en_json_75,
+  official_st8_010_en_json_76,
+  official_st8_011_en_json_77,
+  official_st8_012_en_json_78,
+  official_st8_013_en_json_79,
+  official_st8_014_017_en_json_80,
+  official_st8_019_020_en_json_81,
+  official_st9_001_003_en_json_82,
+  official_st9_004_006_en_json_83,
+  official_st9_007_008_en_json_84,
+  official_st9_010_011_en_json_85,
+  official_st9_012_en_json_86,
+  official_st9_013_en_json_87,
+  official_st9_014_en_json_88,
+  official_st9_015_en_json_89,
+  official_st9_017_019_en_json_90,
+  official_st9_020_en_json_91,
+  official_st9_en_json_92,
+  official_starter_deck_blue_en_json_93,
+  official_starter_deck_green_en_json_94,
+  official_starter_deck_purple_en_json_95,
+  official_starter_deck_yellow_en_json_96,
 ] as const

@@ -1,4 +1,5 @@
 import {placeSt6020} from '../../game/st6-020-demo'
+import {createSt8008PreviewState} from '../../game/st8-008-demo'
 /// @vitest-environment jsdom
 
 import { act } from 'react'
@@ -13,6 +14,30 @@ import type {
 import { PendingDecisionModals } from './PendingDecisionModals'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
+it('retains original ST8-008 art and printed attack text after its real Kumiho faint', async () => {
+  let game = createSt8008PreviewState('source-faint')
+  const self = game.players['player-one'], foe = game.players['player-two']
+  const source = self.battleArea[0].card
+  game = applyGameCommand(game, {kind:'declare-attack',playerId:'player-one',attackerInstanceId:source.instanceId,
+    targetInstanceId:foe.battleArea[0].card.instanceId,supportPaymentIds:self.supportArea.slice(0,3).map(s=>s.card.instanceId)})
+  game = applyGameCommand(game, {kind:'skip-trap',playerId:'player-two'})
+  game = applyGameCommand(game, {kind:'resolve-next-damage',playerId:'player-two'})
+  game = applyGameCommand(game, {kind:'resolve-flip',playerId:'player-two',activate:true,
+    discardHandIds:[foe.hand[0].instanceId],targetIds:[source.instanceId]})
+  game = applyGameCommand(game, {kind:'resolve-battle',playerId:'player-one'})
+  expect(game.players['player-one'].breakArea).toContainEqual(source)
+  const view = createReplacementView('player-one')
+  view.match = {...view.match,game,pendingPlayer:null,pendingOptions:[],replacementTask:null,
+    selectedOpponentDiscardIds:[],setSelectedOpponentDiscardIds:vi.fn()}
+  const container = document.createElement('div'), root = createRoot(container)
+  try {
+    await act(()=>root.render(<PendingDecisionModals match={view.match} pending={view.pending} />))
+    expect(container.querySelector('.hand-discard-source-card img')?.getAttribute('src')).toBe(source.imageUrl)
+    expect(container.querySelector('.hand-discard-modal')?.textContent).toContain('Wind Archer Cookie')
+    expect(container.querySelector('.hand-discard-modal')?.textContent).not.toContain('When this Cookie faints')
+  } finally { await act(()=>root.unmount()) }
+})
 
 it.each(['BS12-109', 'BS12-109@1', 'BS12-109@2'] as const)('%s R006 requires one legal printed Special Play hand card and displays Then/face-up/top', async number => {
   let game = createBs12FinalPhysicalDemoState(number, 'then-positive')

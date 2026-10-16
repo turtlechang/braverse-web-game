@@ -2233,7 +2233,7 @@ export function usePendingEffect(params: {
     setPendingEffect(null)
   }
 
-  const confirmEffect = () => {
+  const confirmEffect = (deckToTrashAmount?: number) => {
     if (!pendingEffect || !currentEffect) return
     const pairedError = getPairedTargetSelectionError(game, pendingEffect.context, currentEffect, pendingEffect.selectedTargetIds)
     if (pairedError) { setMessage(pairedError); return }
@@ -2505,6 +2505,86 @@ export function usePendingEffect(params: {
         return
       }
 
+      // A conditional effect can disappear when the authoritative rules queue
+      // is built after payment. Keep the local wizard aligned before resolving
+      // anything: otherwise its stale expanded choose-one mode can submit an
+      // empty target list against the next independent Then effect.
+      const authoritativePending = activatedGame.pendingAbilityEffect
+      const authoritativeEffect = authoritativePending?.effects[authoritativePending.effectIndex]
+      const shouldSyncActivatedQueue =
+        !pendingEffect.skillActivated &&
+        (pendingEffect.sourceKind === 'item' || pendingEffect.sourceKind === 'stage') &&
+        authoritativePending?.sourceInstanceId === pendingEffect.context.sourceInstanceId &&
+        authoritativePending.playerId === pendingEffect.context.sourcePlayerId &&
+        authoritativeEffect !== undefined &&
+        JSON.stringify(authoritativeEffect) !== JSON.stringify(currentEffect)
+
+      if (shouldSyncActivatedQueue && authoritativePending) {
+        setGame(activatedGame)
+        setPendingEffect({
+          ...pendingEffect,
+          effects: authoritativePending.effects,
+          effectIndex: authoritativePending.effectIndex,
+          selectedTargetIds: [],
+          selectedTargetAmounts: [],
+          selectedPaymentIds: [],
+          selectedCostSupportToTrashIds: [],
+          selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
+          selectedTrashBattleCookieIds: [],
+          selectedBattleToHandIds: [],
+          selectedTrashToDeckBottomIds: [],
+          selectedTrashCookieToBreakAreaIds: [],
+          selectedHandToBreakAreaIds: [],
+          selectedTrashToDeckIds: [],
+          skillActivated: true,
+        })
+        setMessage(`${pendingEffect.sourceCard.name}已支付代價，請繼續處理效果。`)
+        return
+      }
+
+      // Playing an Item moves that Item into its owner's trash before its
+      // effects are checked. A trash-count condition can therefore become
+      // active only after the begin command (for example, 14 cards plus this
+      // Item meets a threshold of 15). Re-open the target step against the
+      // authoritative post-cost state instead of resolving the old empty
+      // pre-cost selection.
+      const itemConditionBecameActive =
+        !pendingEffect.skillActivated &&
+        pendingEffect.sourceKind === 'item' &&
+        'condition' in currentEffect &&
+        currentEffect.condition?.kind === 'trash-count-at-least' &&
+        !isEffectConditionMet(game, pendingEffect.context, currentEffect) &&
+        isEffectConditionMet(activatedGame, pendingEffect.context, currentEffect)
+      const itemHasPostCostTargetChoices =
+        itemConditionBecameActive &&
+        currentTargetSelector !== null &&
+        getEffectSelectionCandidates(activatedGame, pendingEffect.context, currentEffect).length > 0
+
+      if (itemHasPostCostTargetChoices && authoritativePending) {
+        setGame(activatedGame)
+        setPendingEffect({
+          ...pendingEffect,
+          effects: authoritativePending.effects,
+          effectIndex: authoritativePending.effectIndex,
+          selectedTargetIds: [],
+          selectedTargetAmounts: [],
+          selectedPaymentIds: [],
+          selectedCostSupportToTrashIds: [],
+          selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
+          selectedTrashBattleCookieIds: [],
+          selectedBattleToHandIds: [],
+          selectedTrashToDeckBottomIds: [],
+          selectedTrashCookieToBreakAreaIds: [],
+          selectedHandToBreakAreaIds: [],
+          selectedTrashToDeckIds: [],
+          skillActivated: true,
+        })
+        setMessage(`${pendingEffect.sourceCard.name}已支付代價；條件成立，請選擇效果目標。`)
+        return
+      }
+
       const deferredAfterHpCost =
         !pendingEffect.skillActivated &&
         pendingEffect.sourceKind === 'cookie' &&
@@ -2573,12 +2653,22 @@ export function usePendingEffect(params: {
                 currentEffect.selectableAmount!.max,
             )
           : undefined
+      const selectedDeckToTrashAmount =
+        pendingEffect.skillActivated &&
+        currentEffect.kind === 'deck-to-trash' &&
+        currentEffect.selectableAmount
+          ? deckToTrashAmount ?? currentEffect.selectableAmount.max
+          : undefined
       const nextGame = revealedWithPayment ? activatedGame : applyGameCommand(activatedGame, {
         kind: 'resolve-ability-effect',
         playerId: pendingEffect.context.sourcePlayerId,
         targetIds: pendingEffect.selectedTargetIds,
         ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
+        ...(selectedDeckToTrashAmount !== undefined ? { deckToTrashAmount: selectedDeckToTrashAmount } : {}),
       })
+      const resultEffect = selectedDeckToTrashAmount !== undefined && currentEffect.kind === 'deck-to-trash'
+        ? { ...currentEffect, amount: selectedDeckToTrashAmount }
+        : currentEffect
       const conditionMetAfterCost = isEffectConditionMet(
         activatedGame,
         pendingEffect.context,
@@ -2589,7 +2679,7 @@ export function usePendingEffect(params: {
           - (activatedGame.players[pendingEffect.context.sourcePlayerId].battleArea.find(cookie => cookie.card.instanceId === pendingEffect.context.sourceInstanceId)?.hpCards.length ?? 0))
         : undefined
       let result = conditionMetAfterCost
-        ? describeEffectResult(currentEffect, observedSourceHpGain !== undefined ? [pendingEffect.sourceCard.name] : targetNames, observedSourceHpGain,
+        ? describeEffectResult(resultEffect, observedSourceHpGain !== undefined ? [pendingEffect.sourceCard.name] : targetNames, observedSourceHpGain,
           currentEffect.kind === 'damage' ? pendingEffect.selectedTargetIds.map((id, index) => getEffectDamageAmount(
             activatedGame, pendingEffect.context, amountByTargetIndex?.[index] ?? currentEffect.amount, id,
           )) : undefined)

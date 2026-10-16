@@ -19,6 +19,7 @@ import {
 import {
   actionIdentityFromCommand,
   createLv3ContextForView,
+  legalActionIdentityKey,
   scoreLv3ActionCandidate,
   selectBestLv3Action,
   type ScoredLv3ActionCandidate,
@@ -557,6 +558,7 @@ const commandCandidate = (
   context: ReturnType<typeof createLv3ContextForView>,
   legalAttackCountBefore: number,
   strategy: AiTurnStrategy,
+  includeSupportCostFollowup = false,
 ): ScoredLv3ActionCandidate<AiDecision> | null => {
   if (!isAllowedAiDeploymentCommand(state, playerId, command)) return null
   if (
@@ -583,7 +585,7 @@ const commandCandidate = (
         action: commandActionTypes[command.kind],
         description: describeCommand(state, playerId, command),
     }
-    return scoreLv3ActionCandidate(context, beforeView, {
+    const scored = scoreLv3ActionCandidate(context, beforeView, {
       value: decision,
       identity: actionIdentityFromCommand(command),
       afterView,
@@ -606,9 +608,137 @@ const commandCandidate = (
         )
         : undefined,
     })
+    const supportCostFollowup = includeSupportCostFollowup
+      ? forecastSupportCostFollowup(
+        state,
+        nextState,
+        playerId,
+        command,
+        strategy.resolveSkill,
+      )
+      : null
+    return supportCostFollowup ? {
+      ...scored,
+      breakdown: {
+        ...scored.breakdown,
+        total: scored.breakdown.total + supportCostFollowup.amount,
+        contributions: [...scored.breakdown.contributions, supportCostFollowup],
+      },
+    } : scored
   } catch {
     return null
   }
+}
+
+/**
+ * A Lv.3 ability may have little immediate board value while making a real
+ * follow-up command legal (for example, lowering a Cookie's level so it can
+ * pay a Special Play cost). Value only commands newly exposed by the ability,
+ * using the same public-state scorer as ordinary root candidates.
+ */
+const addNewlyLegalFollowupValue = (
+  scored: ScoredLv3ActionCandidate<AiDecision>,
+  beforeState: GameState,
+  afterState: GameState,
+  playerId: PlayerId,
+  context: ReturnType<typeof createLv3ContextForView>,
+  strategy: AiTurnStrategy,
+): ScoredLv3ActionCandidate<AiDecision> => {
+  if (hasBlockingPending(afterState)) return scored
+
+  const beforeCommands = new Set(
+    getLegalTurnCommands(beforeState, playerId).map(legalActionIdentityKey),
+  )
+  const afterCommands = getLegalTurnCommands(afterState, playerId)
+  const afterView = createPlayerView(afterState, playerId)
+  const legalAttackCount = afterCommands.filter((command) => command.kind === 'attack').length
+  const currentBoardScore = evaluatePlayerView(afterView)
+  let bestFollowupValue = 0
+
+  for (const command of afterCommands) {
+    if (beforeCommands.has(legalActionIdentityKey(command))) continue
+    const candidate = commandCandidate(
+      afterState,
+      playerId,
+      command,
+      afterView,
+      context,
+      legalAttackCount,
+      strategy,
+    )
+    if (candidate) {
+      bestFollowupValue = Math.max(
+        bestFollowupValue,
+        candidate.breakdown.total - currentBoardScore,
+      )
+    }
+  }
+
+  if (bestFollowupValue <= 0) return scored
+  const followup = {
+    id: 'legal-action-followup' as const,
+    amount: bestFollowupValue,
+    detail: '此技能使下一步新增合法行動；依公開局面估計其中最高後續價值。',
+  }
+  return {
+    ...scored,
+    breakdown: {
+      ...scored.breakdown,
+      total: scored.breakdown.total + followup.amount,
+      contributions: [...scored.breakdown.contributions, followup],
+    },
+  }
+}
+
+/**
+ * A speculative post-attack skill must not erase the value of an available
+ * public knockout. Keep the forecast when it fits below the strongest lethal
+ * attack, and cap only the portion that would make a nonlethal attack win.
+ */
+const capSupportFollowupAgainstPublicLethal = (
+  candidates: readonly ScoredLv3ActionCandidate<AiDecision>[],
+): ScoredLv3ActionCandidate<AiDecision>[] => {
+  const bestLethalScore = candidates.reduce((best, candidate) =>
+    candidate.candidate.identity.kind === 'attack' &&
+      candidate.breakdown.calibrated.publicLethal
+      ? Math.max(best, candidate.breakdown.total)
+      : best,
+  Number.NEGATIVE_INFINITY)
+  if (!Number.isFinite(bestLethalScore)) return [...candidates]
+
+  return candidates.map((candidate) => {
+    if (candidate.candidate.identity.kind !== 'attack' ||
+        candidate.breakdown.calibrated.publicLethal) return candidate
+    const followup = candidate.breakdown.contributions.find(
+      (contribution) => contribution.id === 'support-cost-followup',
+    )
+    if (!followup) return candidate
+
+    const scoreWithoutFollowup = candidate.breakdown.total - followup.amount
+    const allowedFollowup = Math.max(
+      0,
+      bestLethalScore - scoreWithoutFollowup - 1,
+    )
+    if (allowedFollowup >= followup.amount) return candidate
+
+    const contributions = candidate.breakdown.contributions.flatMap((contribution) => {
+      if (contribution.id !== 'support-cost-followup') return [contribution]
+      if (allowedFollowup <= 0) return []
+      return [{
+        ...contribution,
+        amount: allowedFollowup,
+        detail: `${contribution.detail}；受公開致命攻擊的同局評分限制。`,
+      }]
+    })
+    return {
+      ...candidate,
+      breakdown: {
+        ...candidate.breakdown,
+        total: scoreWithoutFollowup + allowedFollowup,
+        contributions,
+      },
+    }
+  })
 }
 
 /**
@@ -658,6 +788,7 @@ export const handleAiEvaluatedTurnState = (
       context,
       legalAttackCountBefore,
       strategy,
+      true,
     )
     if (candidate) candidates.push(candidate)
   }
@@ -668,7 +799,7 @@ export const handleAiEvaluatedTurnState = (
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {
           const afterView = createPlayerView(decision.state, playerId)
-          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+          const scored = scoreLv3ActionCandidate(context, beforeView, {
             value: decision,
             identity: {
               kind: 'activate-skill',
@@ -681,7 +812,15 @@ export const handleAiEvaluatedTurnState = (
               decision.state,
               playerId,
             ).filter((candidate) => candidate.kind === 'attack').length,
-          }))
+          })
+          candidates.push(addNewlyLegalFollowupValue(
+            scored,
+            state,
+            decision.state,
+            playerId,
+            context,
+            strategy,
+          ))
         }
       } catch {
         // skip invalid skill resolution
@@ -692,7 +831,7 @@ export const handleAiEvaluatedTurnState = (
         const decision = strategy.resolveCardAbility(state, playerId, card)
         if (decision) {
           const afterView = createPlayerView(decision.state, playerId)
-          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+          const scored = scoreLv3ActionCandidate(context, beforeView, {
             value: decision,
             identity: {
               kind: `activate-${card.type}`,
@@ -705,7 +844,15 @@ export const handleAiEvaluatedTurnState = (
               decision.state,
               playerId,
             ).filter((candidate) => candidate.kind === 'attack').length,
-          }))
+          })
+          candidates.push(addNewlyLegalFollowupValue(
+            scored,
+            state,
+            decision.state,
+            playerId,
+            context,
+            strategy,
+          ))
         }
       } catch {
         // skip invalid card ability resolution
@@ -724,7 +871,7 @@ export const handleAiEvaluatedTurnState = (
       state.players[playerId].stage
     ) {
       const afterView = createPlayerView(stageDecision.state, playerId)
-      candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+      const scored = scoreLv3ActionCandidate(context, beforeView, {
         value: stageDecision,
         identity: {
           kind: 'activate-stage',
@@ -737,7 +884,15 @@ export const handleAiEvaluatedTurnState = (
           stageDecision.state,
           playerId,
         ).filter((candidate) => candidate.kind === 'attack').length,
-      }))
+      })
+      candidates.push(addNewlyLegalFollowupValue(
+        scored,
+        state,
+        stageDecision.state,
+        playerId,
+        context,
+        strategy,
+      ))
     }
   }
 
@@ -746,7 +901,7 @@ export const handleAiEvaluatedTurnState = (
     return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
   }
 
-  const best = selectBestLv3Action(candidates)
+  const best = selectBestLv3Action(capSupportFollowupAgainstPublicLethal(candidates))
   if (!best) {
     const fallback = handleAiTurnState(state, playerId, strategy)
     return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
@@ -1126,7 +1281,7 @@ export const handleAiTwoPlyTurnState = (
       ? (after, nextPlayerId, command, before) =>
           forecastOnPlayFollowup(after, nextPlayerId, command, strategy.resolveSkill, before)
       : undefined,
-    supportCostFollowup: decisionLevel === 5
+    supportCostFollowup: decisionLevel >= 4
       ? (before, after, nextPlayerId, command) =>
           forecastSupportCostFollowup(before, after, nextPlayerId, command, strategy.resolveSkill)
       : undefined,

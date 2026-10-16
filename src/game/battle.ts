@@ -24,6 +24,7 @@ import {
   requiresEffectCardSelection,
   selectEffectTargets,
   expandChooseOne,
+  isChooseOneModePlayable,
 } from './effects'
 import { resolveDamageOutcome } from './effects/execute'
 import { executeDeckToTrash } from './effects/deck-to-trash'
@@ -314,7 +315,7 @@ export const isCookieAttackRestricted = (
   )
 }
 
-const getAttackDiscardRequirement = (
+export const getAttackDiscardRequirement = (
   state: GameState,
   attackerPlayerId: PlayerId,
   attackerInstanceId: string,
@@ -2013,6 +2014,25 @@ export const playTrap = (
       }
     }
 
+    // `up to N` deck-to-trash effects need the same explicit follow-up choice
+    // as card-selection effects. Keep the already-resolved Trap effects and
+    // suspend the battle until the player chooses an amount.
+    if (effect.kind === 'deck-to-trash' && effect.selectableAmount) {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
     // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
     // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
     if (effect.kind === 'choose-one') {
@@ -3109,6 +3129,13 @@ export const resolveAttackEffect = (
     // resolve-opponent-hand-discard 命令接續 advanceAttackEffect，
     // 不能走 executeCardEffect（該路徑會直接把下一個效果也結算掉）。
     const player = state.players[playerId]
+    const sourceCard = [
+      ...player.battleArea.map(cookie => cookie.card),
+      ...player.breakArea,
+      ...player.discardPile,
+      ...player.hand,
+      ...player.supportArea.map(support => support.card),
+    ].find(card => card.instanceId === battle.attackerInstanceId)
     if (player.hand.length < effect.count) {
       return advanceAttackEffect(state, battle)
     }
@@ -3119,12 +3146,11 @@ export const resolveAttackEffect = (
         count: effect.count,
         ...(effect.atLeast ? { atLeast: true } : {}),
         destination: effect.destination,
+        handDiscardOrigin: 'effect',
         sourcePlayerId: playerId,
         sourceInstanceId: battle.attackerInstanceId,
-        sourceCardName: effectContext.sourceCardName ??
-          player.battleArea.find((cookie) => cookie.card.instanceId === battle.attackerInstanceId)?.card.name ??
-          'Unknown',
-        effectText: effect.kind,
+        sourceCardName: sourceCard?.name ?? findSourceCardName(state, playerId, battle.attackerInstanceId),
+        effectText: sourceCard?.type === 'cookie' ? sourceCard.attackText ?? effect.kind : effect.kind,
       },
     }
   }
@@ -5292,6 +5318,8 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
 
     if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
       const faint = nextState.pendingFaintEffects[0]
+      if (faint.effect.kind === 'choose-one' &&
+          isEffectConditionMet(nextState, faint.context, faint.effect)) break
       if ((faint.cost?.deckToTrash?.amount ?? 0) > 0) {
         nextState = resolveFaintEffect(nextState, [], [], { payDeckToTrash: true })
         continue
@@ -5653,6 +5681,49 @@ export const getFaintSourceCostUnavailableReason = (state: GameState): string | 
     : null
 }
 
+/** A faint trigger pays its existing costs before selecting an effect mode. */
+export const hasPendingFaintModeCost = (state: GameState): boolean => {
+  const faint = state.pendingFaintEffects?.[0]
+  return faint?.effect.kind === 'choose-one' && (
+    (faint.cost?.discardHand ?? 0) > 0 || (faint.cost?.supportToTrash ?? 0) > 0 ||
+    (faint.cost?.supportToHand ?? 0) > 0 || (faint.cost?.deckToTrash?.amount ?? 0) > 0 ||
+    Object.values(faint.sourceEnergy ?? {}).some(amount => (amount ?? 0) > 0)
+  )
+}
+
+export const resolveFaintEffectMode = (
+  state: GameState,
+  playerId: PlayerId,
+  modeIndex: number,
+): GameState => {
+  const faint = state.pendingFaintEffects?.[0]
+  if (state.pendingRefresh || state.pendingOnPlay || !faint ||
+      faint.sourcePlayerId !== playerId || faint.effect.kind !== 'choose-one') {
+    throw new GameRuleError('目前沒有此玩家需要選擇的昏厥效果。')
+  }
+  if (hasPendingFaintModeCost(state)) {
+    throw new GameRuleError('必須先支付昏厥效果代價，再選擇效果項目。')
+  }
+  const mode = faint.effect.modes[modeIndex]
+  if (!isEffectConditionMet(state, faint.context, faint.effect) || !mode ||
+      !isChooseOneModePlayable(state, faint.context, mode.effects)) {
+    throw new GameRuleError('目前無法執行所選的昏厥項目。')
+  }
+  const expanded = expandChooseOne([faint.effect], 0, modeIndex)
+  const remaining = state.pendingFaintEffects?.slice(1) ?? []
+  const effects = expanded.map((effect, index) => ({
+    ...faint,
+    effect,
+    cost: index === 0 ? faint.cost : undefined,
+    sourceEnergy: index === 0 ? faint.sourceEnergy : undefined,
+  }))
+  const queue = [...effects, ...remaining]
+  const nextState = { ...state, pendingFaintEffects: queue.length > 0 ? queue : undefined }
+  return expanded.length > 0
+    ? nextState
+    : continuePendingReplacements(skipUnmetPendingFaintEffects(nextState))
+}
+
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
@@ -5704,6 +5775,16 @@ export const resolveFaintEffect = (
   }
   if (costOptions.payDeckToTrash !== undefined) {
     throw new GameRuleError('目前沒有待支付的牌庫頂代價。')
+  }
+  if (faint.effect.kind === 'choose-one' &&
+      isEffectConditionMet(state, faint.context, faint.effect) && !hasPendingFaintModeCost(state)) {
+    throw new GameRuleError('必須先選擇昏厥效果的項目。')
+  }
+  if (faint.effect.kind === 'choose-one' && targetIds.length > 0) {
+    throw new GameRuleError('必須先支付昏厥代價，不能同時選擇效果目標。')
+  }
+  if (faint.effect.kind === 'choose-one' && paymentIds.length > 0 && !faint.sourceEnergy) {
+    throw new GameRuleError('此昏厥效果不需要能量費用。')
   }
   const isOptionalTriggerSkipped =
     faint.optional === true &&
@@ -5919,6 +6000,14 @@ export const resolveFaintEffect = (
         },
       },
     }
+  }
+
+  if (faint.effect.kind === 'choose-one') {
+    // Payment changes the real zones, but selecting/settling a mode is a later
+    // decision. Keep the original trigger and clear only its paid costs.
+    return { ...nextState, pendingFaintEffects: [{ ...faint,
+      cost: undefined, sourceEnergy: undefined,
+    }, ...remaining] }
   }
 
   const faintExecutionContext = {

@@ -1,3 +1,16 @@
+import {fixture as createSt8005State} from './st8-005-demo'
+import {createSt8006PreviewState} from './st8-006-demo'
+import {createSt8007PreviewState} from './st8-007-demo'
+import {createSt8008PreviewState} from './st8-008-demo'
+import {createSt8008AiPreviewState} from './st8-008-ai-demo'
+import {createSt8009PreviewState} from './st8-009-demo'
+import {createSt8009AiPreviewState} from './st8-009-ai-demo'
+import {createSt8011PreviewState,st8011Scenarios} from './st8-011-demo'
+import {createSt8011AiPreviewState} from './st8-011-ai-demo'
+import {createSt8010PreviewState,st8010Scenarios} from './st8-010-demo'
+import {createSt8010AiPreviewState} from './st8-010-ai-demo'
+import {createSt8007HpBlockedPreviewState} from './st8-007-hp-blocked-demo'
+import {fixture as createSt8004PreviewState} from './st8-004-demo'
 import {fixture as createSt8003PreviewState} from './st8-003-demo'
 import {fixture as createSt8002PreviewState} from './st8-002-demo'
 import {fixture as createSt8001PreviewState} from './st8-001-demo'
@@ -50,7 +63,7 @@ import type { OfficialCardRecord } from '../cards/types'
 import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from './types'
 
 export const DECK_ADDITION_CARD_NUMBERS = document.cards.map((card) => card.cardNumber)
-export type DeckAdditionScenario = 'no-cost' | 'break-loss' | 'false' | 'rested-witness' | 'defender-one' | 'hand-witness' | 'trash-witness' | 'break-witness' | 'support-witness' | 'opponent-witness' | 'other' | 'one-red' | 'main' | 'faint' | 'both-faint' | 'no-discard' | 'positive' | 'negative' | 'low' | 'attack' | 'attack-negative' | 'zero' | 'wrong-color' | 'wrong-phase' | 'used' | 'target-faints' | 'no-energy' | 'rested-source' | 'no-extra-energy' | 'attack-wrong-color' | 'last-no-hand' | 'green-arena' | 'non-arena' | 'one-card' | 'cost-cookie' | 'cost-item' | 'already-target' | 'no-battle' | 'second-attack' | 'reveal' | 'no-target' | 'rested-target'
+export type DeckAdditionScenario = (typeof st8011Scenarios)[number] | (typeof st8010Scenarios)[number] | 'ai-low' | 'ai-positive' | 'ai-negative' | 'hp-blocked' | 'ai-hp-blocked' | 'no-cost' | 'break-loss' | 'false' | 'rested-witness' | 'defender-one' | 'hand-witness' | 'trash-witness' | 'break-witness' | 'support-witness' | 'opponent-witness' | 'other' | 'one-red' | 'main' | 'faint' | 'both-faint' | 'no-discard' | 'positive' | 'negative' | 'low' | 'attack' | 'attack-negative' | 'zero' | 'wrong-color' | 'wrong-phase' | 'used' | 'target-faints' | 'no-energy' | 'rested-source' | 'no-extra-energy' | 'attack-wrong-color' | 'last-no-hand' | 'green-arena' | 'non-arena' | 'one-card' | 'cost-cookie' | 'cost-item' | 'already-target' | 'no-battle' | 'second-attack' | 'reveal' | 'no-target' | 'rested-target'
 
 /** Local acceptance only. Every zone contains original printed cards, at most four copies. */
 export const createDeckAdditionDemoState = (
@@ -74,6 +87,7 @@ export const createDeckAdditionDemoState = (
   if(number === 'ST7-007')return createSt7007PreviewState(scenario)
   if(number === 'ST7-011')return createSt7011PreviewState(scenario)
   if(number === 'ST7-012')return createSt7012PreviewState(scenario)
+  if(number === 'ST8-004')return createSt8004PreviewState(scenario)
   if(number === 'ST8-003')return createSt8003PreviewState(scenario)
   if(number === 'ST8-002')return createSt8002PreviewState(scenario)
   if(number === 'ST8-001')return createSt8001PreviewState(scenario)
@@ -85,6 +99,19 @@ export const createDeckAdditionDemoState = (
   if(number === 'ST7-015')return createSt7015PreviewState(scenario)
   if(number === 'ST7-014')return createSt7014PreviewState(scenario)
   if(number === 'ST7-010')return createSt7010PreviewState(scenario)
+  if(number === 'ST8-005')return createSt8005State(scenario)
+  if(number === 'ST8-006')return createSt8006PreviewState(scenario)
+  if(number === 'ST8-007' && scenario === 'hp-blocked')return createSt8007HpBlockedPreviewState()
+  if(number === 'ST8-007' && scenario === 'ai-hp-blocked')return createSt8007HpBlockedPreviewState(false,true)
+  if(number === 'ST8-007')return createSt8007PreviewState(scenario)
+  if(number === 'ST8-008' && (scenario === 'ai-positive' || scenario === 'ai-negative'))return createSt8008AiPreviewState(scenario === 'ai-positive' ? 'positive' : 'negative')
+  if(number === 'ST8-008')return createSt8008PreviewState(scenario)
+  if(number === 'ST8-011' && (scenario === 'ai-positive' || scenario === 'ai-negative'))return createSt8011AiPreviewState(scenario === 'ai-positive' ? 'positive' : 'negative')
+  if(number === 'ST8-011')return createSt8011PreviewState(scenario)
+  if(number === 'ST8-010' && (scenario === 'ai-positive' || scenario === 'ai-negative'))return createSt8010AiPreviewState(scenario === 'ai-positive' ? 'positive' : 'negative')
+  if(number === 'ST8-010')return createSt8010PreviewState(scenario)
+  if(number === 'ST8-009' && (scenario === 'ai-positive' || scenario === 'ai-low'))return createSt8009AiPreviewState(scenario === 'ai-positive' ? 'positive' : 'low')
+  if(number === 'ST8-009')return createSt8009PreviewState(scenario)
   if(number === 'ST7-008')return createSt7008PreviewState(scenario)
   if(number === 'ST7-013')return createSt7013PreviewState(scenario)
   if(number === 'ST7-009')return createSt7009PreviewState(scenario)

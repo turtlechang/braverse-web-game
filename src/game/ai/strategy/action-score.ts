@@ -38,6 +38,7 @@ export interface ActionScoreContribution {
     | 'resource-reservation'
     | 'support-cost-followup'
     | 'on-play-followup'
+    | 'legal-action-followup'
     | 'deployment-tempo'
     | 'opponent-response-minimax'
     | 'defensive-reserve'

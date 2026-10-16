@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.265Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 3,
+    "importedCount": 3,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST9 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47061,
+      "locale": "en",
+      "cardNumber": "ST9-001",
+      "baseCardNumber": "ST9-001",
+      "variant": null,
+      "name": "Gold Citrine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Shining Sea Jewel {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SGTDsHCACFb36IeqXYglcw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47062,
+      "locale": "en",
+      "cardNumber": "ST9-002",
+      "baseCardNumber": "ST9-002",
+      "variant": null,
+      "name": "Aquamarine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> Warm Greeting {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v2gDnd9w_gZV0KibyCCt2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47063,
+      "locale": "en",
+      "cardNumber": "ST9-003",
+      "baseCardNumber": "ST9-003",
+      "variant": null,
+      "name": "Blue Whale Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}> Loving Care {da} 3",
+      "flipText": "Return this Cookie to your hand.",
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/zCWsG18cFseGK5csTAsn9g.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

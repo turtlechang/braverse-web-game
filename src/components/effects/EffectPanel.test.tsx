@@ -376,6 +376,47 @@ const createPendingEffect = (
   ...overrides,
 })
 
+it.each([0, 1, 2, 3])('lets ST10-017 choose exactly %s top-deck cards for its Then', async amount => {
+  const effect: CardEffect = {
+    kind: 'deck-to-trash',
+    amount: 3,
+    side: 'self',
+    selectableAmount: { min: 0, max: 3 },
+  }
+  const pending = createPendingEffect({
+    sourceCard: { ...createCookieCard(1017), id: 'ST10-017', name: 'Inside the Clock Tower', type: 'trap' },
+    effects: [effect],
+    skill: {
+      trigger: 'activate', oncePerTurn: false, yourTurn: false, restSource: false,
+      cost: { energy: {} }, text: 'Place up to 3 cards from the top of your deck in your trash.', effects: [effect],
+    },
+    skillActivated: true,
+    sourceKind: 'item',
+    triggerLabel: '陷阱效果',
+  })
+  const onConfirm = vi.fn()
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(() => root.render(
+      <EffectPanel pendingEffect={pending} currentEffect={effect} effectHistory={[]}
+        onConfirm={onConfirm} onSkip={vi.fn()} />,
+    ))
+    const choices = [...container.querySelectorAll<HTMLButtonElement>(
+      '.effect-deck-to-trash-amount button',
+    )]
+    expect(choices.map(button => button.textContent?.trim())).toEqual(['0 張', '1 張', '2 張', '3 張'])
+    expect(choices[3]?.getAttribute('aria-pressed')).toBe('true')
+
+    await act(() => choices[amount]!.click())
+    expect(choices[amount]?.getAttribute('aria-pressed')).toBe('true')
+    await act(() => container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click())
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith(amount)
+  } finally {
+    await act(() => root.unmount())
+  }
+})
+
 it('describes a Stage-to-trash activation cost without claiming the source is rested', async () => {
   const effect: CardEffect = { kind: 'draw', amount: 1 }
   const pending = createPendingEffect({

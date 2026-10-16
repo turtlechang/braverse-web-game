@@ -4,6 +4,11 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { describeOpeningDeal } from '../game/presentation'
 import type { BattleReplayAiMetadata, CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import { createDeckAdditionDemoState } from '../game/bs12-deck-addition-demo'
+import { createSt10012FlipPreviewState } from '../game/st10-012-demo'
+import {
+  createSt1017To018TrapPreviewState,
+  createSt1020StagePreviewState,
+} from '../game/st10-017-018-020-demo'
 import { createAiTrapTargetPreview } from '../game/ai-trap-target-demo'
 import {
   applyGameCommand,
@@ -298,6 +303,13 @@ import {
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
+import { createSt10006ItemDepartureCostState } from '../game/st10-006-demo'
+import { createSt1014To016ItemPreviewState } from '../game/st10-014-016-demo'
+import {
+  createSt10009BothPlayersDepartureState,
+  createSt10009FaintState,
+  createSt10009ItemCostState,
+} from '../game/st10-009-demo'
 import { useMatchSetup } from './useMatchSetup'
 import { useMatchAnimations } from './useMatchAnimations'
 import { registerIssueBundleProvider } from './issueBundleSource'
@@ -403,6 +415,18 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs10-008-flip') {
       return createBs1008FlipPreviewDemoState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'st10-012-flip') {
+      return createSt10012FlipPreviewState(testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'st10-item') {
+      return createSt1014To016ItemPreviewState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'st10-trap') {
+      return createSt1017To018TrapPreviewState(testStateConfig.cardNumber, testStateConfig.scenario)
+    }
+    if (testStateConfig?.kind === 'st10-stage') {
+      return createSt1020StagePreviewState(testStateConfig.scenario)
     }
     if (testStateConfig?.kind === 'bs10-009-hp-cost') {
       return createBs1009HpCostPreviewDemoState(testStateConfig.scenario)
@@ -764,6 +788,18 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return createSupportToTrashSkillDemoState()
     }
+    if (testStateConfig?.kind === 'st10-006-cost') {
+      return createSt10006ItemDepartureCostState()
+    }
+    if (testStateConfig?.kind === 'st10-009-cost') {
+      return createSt10009ItemCostState()
+    }
+    if (testStateConfig?.kind === 'st10-009-faint') {
+      return createSt10009FaintState()
+    }
+    if (testStateConfig?.kind === 'st10-009-both-departure') {
+      return createSt10009BothPlayersDepartureState(testStateConfig.opponentDeck)
+    }
     if (testStateConfig?.kind === 'blue-activate-skill') {
       return createBlueActivateSkillDemoState(testStateConfig.payable)
     }
@@ -795,6 +831,7 @@ export function useMatchController(params: {
         faintSourceMoved: testStateConfig.faintSourceMoved,
         normalAttack: testStateConfig.normalAttack,
         bs8021Scenario: testStateConfig.bs8021Scenario,
+        st9012Scenario: testStateConfig.st9012Scenario,
       })
     }
     if (testStateConfig?.kind === 'ai-trap-target') {
@@ -1073,6 +1110,18 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'bs10-008-flip') {
       return `測試狀態：BS10-008 Cherry Cookie FLIP（${testStateConfig.scenario}）已由正式攻擊指令開啟，等待玩家處理。`
     }
+    if (testStateConfig?.kind === 'st10-012-flip') {
+      return `測試狀態：ST10-012 Taurus Cookie FLIP（${testStateConfig.scenario}）已由正式攻擊指令開啟，等待玩家處理。`
+    }
+    if (testStateConfig?.kind === 'st10-item') {
+      return `測試狀態：${testStateConfig.cardNumber} 原始紫色道具卡（${testStateConfig.scenario}），等待正式使用道具指令。`
+    }
+    if (testStateConfig?.kind === 'st10-trap') {
+      return `測試狀態：${testStateConfig.cardNumber} 原始紫色陷阱卡（${testStateConfig.scenario}），由真實攻擊回應流程驗收。`
+    }
+    if (testStateConfig?.kind === 'st10-stage') {
+      return `測試狀態：ST10-020 原始紫色場景卡（${testStateConfig.scenario}），等待放置與啟動指令。`
+    }
     if (testStateConfig?.kind === 'bs10-009-hp-cost') {
       return `測試狀態：BS10-009 Cranberry Cookie HP 代價（${testStateConfig.scenario}），等待正常技能／攻擊指令。`
     }
@@ -1192,6 +1241,20 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return '測試狀態：ST3-002 支援卡代價技能。'
+    }
+    if (testStateConfig?.kind === 'st10-006-cost') {
+      return '測試狀態：使用實體 ST10-013 Little Star 支付紫色能量，並將 Blueberry Pie Cookie 作為直接棄牌代價。'
+    }
+    if (testStateConfig?.kind === 'st10-009-cost') {
+      return '測試狀態：使用實體 ST10-013 Little Star 將 Space Doughnut 作為直接棄牌代價，選擇抽 0 或 1 張。'
+    }
+    if (testStateConfig?.kind === 'st10-009-faint') {
+      return '測試狀態：ST10-005 的實體普通攻擊使 Space Doughnut 昏厥進入休息區。'
+    }
+    if (testStateConfig?.kind === 'st10-009-both-departure') {
+      return testStateConfig.opponentDeck === 'last-card'
+        ? '測試狀態：雙方 Space Doughnut 進入棄牌區後，各自選擇抽牌；對手抽取最後一張牌後必須完成 Refresh 與補位。'
+        : '測試狀態：以實際效果將雙方的 Space Doughnut 放入棄牌區，依序由各自玩家選擇抽牌數。'
     }
     if (testStateConfig?.kind === 'blue-activate-skill') {
       return testStateConfig.payable
@@ -1420,12 +1483,40 @@ export function useMatchController(params: {
   // response; the localhost fixture switches the local control surface to
   // player-two so the revealed HP card can be activated and inspected.
   // BS12-042/043 live follow-ups likewise hand player-two the real attack;
-  // when the HP reveal becomes player-one's FLIP, acting-player ownership
-  // switches the local control surface back to the defender.
+  // when the HP reveal reaches the defender's FLIP decision, the local
+  // test-state control surface follows that defending player.
   const testCardBase =
     (testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative')
       ? testStateConfig.cardNumber.split('@')[0]
       : undefined
+  const localCardCheckState =
+    testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative'
+  const localCardCheckFlipDefenseTest =
+    localCardCheckState &&
+    ['ST9-004', 'ST9-010', 'ST9-011', 'ST10-001', 'ST10-003'].includes(testCardBase ?? '')
+  const localCardCheckBlockerTest = localCardCheckState && testCardBase === 'ST10-004'
+  const st10009DepartureChoiceForOwner =
+    testCardBase === 'ST10-009' &&
+    testStateConfig?.kind === 'card-negative' &&
+    (game.pendingDrawUpTo?.playerId === 'player-one' ||
+      game.pendingRefresh?.playerId === 'player-one' ||
+      getCurrentReplacementTask(game)?.playerId === 'player-one' ||
+      (game.pendingAbilityEffect?.trigger === 'departure' &&
+        game.pendingAbilityEffect.playerId === 'player-one'))
+  const st10009FaintDefenseForOwner =
+    testStateConfig?.kind === 'st10-009-faint' &&
+    game.pendingBattle?.defenderPlayerId === 'player-one'
+  const st10009SecondDepartureChoiceForOpponent =
+    testStateConfig?.kind === 'st10-009-both-departure' &&
+    (game.pendingDrawUpTo?.playerId === 'player-two' ||
+      game.pendingRefresh?.playerId === 'player-two' ||
+      getCurrentReplacementTask(game)?.playerId === 'player-two' ||
+      (game.pendingAbilityEffect?.trigger === 'departure' &&
+        game.pendingAbilityEffect.playerId === 'player-two'))
+  const localCardCheckNormalAttackTest =
+    localCardCheckBlockerTest &&
+    (testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative') &&
+    testStateConfig.normalAttack !== undefined
   const liveBs12FlipTestState =
     testStateConfig !== null &&
     (testStateConfig.kind === 'bs12-042' || testStateConfig.kind === 'bs12-043') &&
@@ -1433,17 +1524,31 @@ export function useMatchController(params: {
   const liveBs12FlipAttackerControlsState =
     liveBs12FlipTestState && getActingPlayerId(game) === 'player-two'
   const viewerPlayerId: PlayerId =
+    st10009DepartureChoiceForOwner || st10009FaintDefenseForOwner
+      ? 'player-one'
+      : (
     liveBs12FlipAttackerControlsState ||
+    st10009SecondDepartureChoiceForOpponent ||
     (testStateConfig?.kind === 'bs12-092' && game.pendingOpponentHandDiscard?.playerId === 'player-two') ||
     ((testStateConfig?.kind === 'bs12-093' || testStateConfig?.kind === 'bs12-094' || testStateConfig?.kind === 'bs12-097' || testStateConfig?.kind === 'bs12-101') && (game.pendingRefresh?.playerId === 'player-two' ||
       (game.pendingBattle?.stage === 'flip' && (game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId) === 'player-two') ||
       (game.pendingAbilityEffect?.sourceKind === 'flip' && game.pendingAbilityEffect.playerId === 'player-two'))) ||
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
+    (testCardBase === 'ST10-006' && testStateConfig?.kind === 'card-negative') ||
+    (testCardBase === 'ST10-009' && testStateConfig?.kind === 'card-negative' && !st10009DepartureChoiceForOwner) ||
+    testStateConfig?.kind === 'st10-009-faint' ||
     (testStateConfig?.kind === 'bs11-thirteenth-batch' &&
       testStateConfig.cardNumber === 'BS11-047' &&
       testStateConfig.scenario === 'replacement') ||
+    (localCardCheckFlipDefenseTest &&
+      ((game.pendingBattle?.stage === 'flip' &&
+        (game.pendingBattle.damagePlayerId ?? game.pendingBattle.defenderPlayerId) === 'player-two') ||
+        (game.pendingAbilityEffect?.sourceKind === 'flip' &&
+          game.pendingAbilityEffect.playerId === 'player-two') ||
+        game.pendingDrawUpTo?.playerId === 'player-two')) ||
     (testCardBase === 'BS9-035' && isPlayerControllingState(game, 'player-two')) ||
-    (testStateConfig?.kind === 'bs10-008-flip' && getActingPlayerId(game) === 'player-two') ||
+    ((testStateConfig?.kind === 'bs10-008-flip' || testStateConfig?.kind === 'st10-012-flip') &&
+      getActingPlayerId(game) === 'player-two') ||
     testStateConfig?.kind === 'bs9-041-attack' ||
     testStateConfig?.kind === 'bs9-018-kumiho' ||
     (testCardBase === 'BS9-082') ||
@@ -1451,6 +1556,7 @@ export function useMatchController(params: {
     (testCardBase === 'BS9-111' && testStateConfig?.kind === 'card-check')
     ? 'player-two'
       : 'player-one'
+      )
   const opponentId = opponentOfId(viewerPlayerId)
   const animations = useMatchAnimations(viewerPlayerId)
   const { observeTransition, enqueue, resetAnimations } = animations
@@ -2324,6 +2430,8 @@ export function useMatchController(params: {
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
+    localCardCheckFlipDefenseTest ||
+    localCardCheckBlockerTest ||
     (testStateConfig?.kind === 'bs12-005' && !['positive', 'enable'].includes(testStateConfig.scenario)) ||
     testStateConfig?.kind === 'bs12-006' ||
     (testStateConfig?.kind === 'bs12-007' && testStateConfig.scenario === 'opponent-turn') ||
@@ -2414,17 +2522,21 @@ export function useMatchController(params: {
     (testStateConfig?.kind === 'bs12-013' && !hasBlockingPending(game)) ||
     ((testStateConfig?.kind === 'bs12-014' || testStateConfig?.kind === 'bs12-015' || testStateConfig?.kind === 'bs12-016' || testStateConfig?.kind === 'bs12-017' || testStateConfig?.kind === 'bs12-018' || testStateConfig?.kind === 'bs12-019' || testStateConfig?.kind === 'bs12-020' || testStateConfig?.kind === 'bs12-021' || testStateConfig?.kind === 'bs12-022' || testStateConfig?.kind === 'bs12-023' || testStateConfig?.kind === 'bs12-024' || testStateConfig?.kind === 'bs12-025' || testStateConfig?.kind === 'bs12-026') && !hasBlockingPending(game)) ||
     testStateConfig?.kind === 'bs10-008-flip' ||
+    testStateConfig?.kind === 'st10-012-flip' ||
     (testStateConfig?.kind === 'bs11-flip' || testStateConfig?.kind === 'bs11-071-hp-no-flip') ||
     testStateConfig?.kind === 'bs11-twelfth-batch' ||
     (testStateConfig?.kind === 'bs11-thirteenth-batch' &&
       testStateConfig.cardNumber === 'BS11-047' &&
       testStateConfig.scenario === 'replacement') ||
+    testStateConfig?.kind === 'st10-009-both-departure' ||
     (testCardBase === 'BS9-041' && testStateConfig?.kind === 'card-negative' && !testStateConfig.normalAttack) ||
     testCardBase === 'BS9-035' ||
     testStateConfig?.kind === 'bs9-041-attack' ||
     testStateConfig?.kind === 'bs9-018-kumiho' ||
     (testStateConfig?.kind === 'bs9-candidate' &&
       ['BS9-031', 'BS9-032'].includes(testStateConfig.cardNumber.split('@')[0])) ||
+    testStateConfig?.kind === 'st10-009-faint' ||
+    (testStateConfig?.kind === 'card-negative' && testCardBase === 'ST10-009') ||
     ((testStateConfig?.kind === 'card-check' || testStateConfig?.kind === 'card-negative') &&
       (['BS9-077', 'BS9-081', 'BS9-082', 'BS9-096', 'BS9-100', 'BS9-111'].includes(testStateConfig.cardNumber.split('@')[0]) ||
         (testStateConfig.cardNumber.split('@')[0] === 'BS10-003' && testStateConfig.normalAttack === undefined)))
@@ -2481,6 +2593,12 @@ export function useMatchController(params: {
   useEffect(() => {
     const battle = game.pendingBattle
     const allowCandidateOpponentTrapSkip =
+      (localCardCheckFlipDefenseTest &&
+        battle?.stage === 'trap' &&
+        battle.defenderPlayerId === 'player-two') ||
+      (localCardCheckNormalAttackTest &&
+        battle?.stage === 'trap' &&
+        battle.defenderPlayerId === 'player-two') ||
       testStateConfig?.kind === 'bs11-twelfth-batch' &&
       (testStateConfig.cardNumber === 'BS11-043' ||
         testStateConfig.cardNumber === 'BS11-044')
@@ -2491,7 +2609,7 @@ export function useMatchController(params: {
     // Card-check test states normally auto-finish the attack after a trap is
     // played. A trap Then effect may create a real pending decision first
     // (for example BS5-087's draw up to 2), so wait until that decision is
-    // resolved. When the local attacker has a printed attack-after effect,
+    // resolved. When either attacker has a printed attack-after effect,
     // or an effect-damage sequence, advance one damage command at a time;
     // resolve-battle would auto-skip HP FLIPs/faint triggers or auto-pick a
     // later target, hiding the decisions this fixture is meant to verify.
@@ -2513,7 +2631,12 @@ export function useMatchController(params: {
           ) {
             return current
           }
-          const preserveHumanDamageDecisions =
+          const preserveDamageDecisions =
+            // Public card/deck previews must preserve every HP reveal, including
+            // another FLIP after a draw decision resumes the same attack.
+            testStateConfig.kind === 'deck-addition' ||
+            testStateConfig.kind === 'card-check' ||
+            testStateConfig.kind === 'card-negative' ||
             testStateConfig.kind === 'bs12-flip' ||
             testStateConfig.kind === 'bs12-105' ||
             testStateConfig.kind === 'bs12-final' ||
@@ -2543,15 +2666,13 @@ export function useMatchController(params: {
             testStateConfig.kind === 'bs12-038' ||
             (testStateConfig.kind === 'bs12-007' && testStateConfig.scenario !== 'blocked') || testStateConfig.kind === 'bs12-009' || testStateConfig.kind === 'bs12-010' || testStateConfig.kind === 'bs12-027' || testStateConfig.kind === 'bs12-029' || testStateConfig.kind === 'bs12-047' || testStateConfig.kind === 'bs12-049' || testStateConfig.kind === 'bs12-050' || testStateConfig.kind === 'bs12-051' ||
             testStateConfig.kind === 'bs10-008-flip' ||
+            testStateConfig.kind === 'st10-012-flip' ||
             testStateConfig.kind === 'bs11-flip' ||
             testStateConfig.kind === 'bs11-071-hp-no-flip' ||
-            ((testStateConfig.kind === 'card-check' || testStateConfig.kind === 'card-negative') &&
-              testStateConfig.cardNumber.split('@')[0] === 'BS9-035') ||
             Boolean(current.pendingBattle.effectDamageSequence) ||
-            (current.pendingBattle.attackerPlayerId === viewerPlayerId &&
-              current.pendingBattle.attackEffects.length > 0)
+            current.pendingBattle.attackEffects.length > 0
           return applyGameCommand(current, {
-            ...(preserveHumanDamageDecisions
+            ...(preserveDamageDecisions
               ? {
                   kind: 'resolve-next-damage' as const,
                   playerId:
@@ -2656,7 +2777,7 @@ export function useMatchController(params: {
         })
       })
     })
-  }, [game, testStateConfig, viewerPlayerId])
+  }, [game, localCardCheckFlipDefenseTest, localCardCheckNormalAttackTest, testCardBase, testStateConfig, viewerPlayerId])
 
   // resetMatchState: resets all match-owned state (used by App's resetGame)
   const resetMatchState = useCallback(

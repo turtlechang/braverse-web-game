@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 4,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46920,
+      "locale": "en",
+      "cardNumber": "ST8-014",
+      "baseCardNumber": "ST8-014",
+      "variant": null,
+      "name": "Cape of the Vanquisher",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "<{G}> If there are 5 cards or more in your support area, select up to 1 of your {G} Cookies with 3 or less HP remaining. That Cookie gains +1 HP."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hWGdd9VRB_EBUfvboCJEAw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46921,
+      "locale": "en",
+      "cardNumber": "ST8-015",
+      "baseCardNumber": "ST8-015",
+      "variant": null,
+      "name": "Essence of the Tempest",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "<{G}{G}> If [Wind Archer Cookie] is in your battle area or support area, place up to 1 card from the top of your deck into your support area as rested. Then, return up to 1 card from your support area to your hand."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GS3p2bZJ4mcK-CxlwhEeGg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46922,
+      "locale": "en",
+      "cardNumber": "ST8-016",
+      "baseCardNumber": "ST8-016",
+      "variant": null,
+      "name": "Wind's Grace Earrings",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "<{G}> If [Wind Archer Cookie] is in your battle area, and there are 5 cards or more in your support area, all of your opponent's Cookies receive 1 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ujacM2gLh3TPIHRrKwjx0w.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46923,
+      "locale": "en",
+      "cardNumber": "ST8-017",
+      "baseCardNumber": "ST8-017",
+      "variant": null,
+      "name": "Hindering Darkness",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "<{G}{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if the number of cards in both support areas match, draw up to 1 card from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/J1mdmMGqFu1Z8ZIGxFPw2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

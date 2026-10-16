@@ -674,6 +674,7 @@ const bracketClauses = (
   source: CardTextSource,
   text: string,
   clauses: CardClauseFragment[],
+  sourceCardNumber?: string,
 ): { payments: ContractPayment[]; costs: ContractCost[] } => {
   const payments: ContractPayment[] = []
   const costs: ContractCost[] = []
@@ -731,6 +732,12 @@ const bracketClauses = (
       addClause(clauses, source, match[0], 'effect', start, end, 'pattern')
       continue
     }
+    // This exact card's guard binds both groups and their shared damage count.
+    // Unknown cards must retain an unsupported cost until equally bound.
+    if (sourceCardNumber === 'ST8-005' && /^rest\s+up\s+to\s+2\s+cards?\s+in\s+your\s+support\s+area\.?$/i.test(inner)) {
+      addClause(clauses, source, match[0], 'effect', start, end, 'pattern')
+      continue
+    }
     const discard = inner.match(
       /discard\s+(?:(\d+)|an?)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:non-)?(?:cards?|cookies?|traps?|items?)/i,
     )
@@ -764,7 +771,7 @@ const bracketClauses = (
     const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+(?:(?:your|the)\s+)?deck/i.test(inner)
     const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
-    const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
+    const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:(?:Item\s+)?cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
     const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
     const hpToHand = /return\s+(\d+)\s+card\s+from\s+the\s+top\s+of\s+(?:your|this)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.exec(inner)
     const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
@@ -877,6 +884,9 @@ const bracketClauses = (
         kind,
         amount: positionCookie?.[1] ? Number(positionCookie[1]) : amountMatch?.[1] ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
+        ...(supportHand && /\bItem\s+cards?\b/i.test(inner) ? {
+          runtime: { supportToHand: Number(supportHand[1]), supportToHandType: 'item' as const },
+        } : {}),
       })
       if (selfAndSupportTrash) {
         costs.push({
@@ -1975,9 +1985,6 @@ const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
   // sequence.  Older cards do not carry a nested `thenEffects` property, but
   // the ordered array itself is the executable evidence and is consumed one
   // effect at a time by the battle resolver.
-  if (evidence.attackEffects !== undefined && evidence.attackEffects.length > 0) {
-    return true
-  }
   let found = false
   const visit = (value: unknown): void => {
     if (found || !value || typeof value !== 'object') return
@@ -1991,6 +1998,9 @@ const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
       return
     }
     for (const key of ['effects', 'modes']) visit(record[key])
+  }
+  if (evidence.attackEffects !== undefined && evidence.attackEffects.length > 0) {
+    return true
   }
   visit(evidence.effects)
   visit(evidence.skill?.effects)
@@ -2020,6 +2030,29 @@ const runtimeEffectsForSource = (
     return evidence.ability?.effects ?? evidence.effects
   }
   return evidence.ability?.effects ?? evidence.effects
+}
+
+const hasLegacyStructuralEvidence = (
+  evidence: RuntimeCardEvidence,
+  source: CardTextSource,
+): boolean => {
+  const sourceEffects = runtimeEffectsForSource(evidence, source)
+  const hasOrderedCompositeEffect = sourceEffects.some((effect) =>
+    effect.kind === 'discard-hand-then-draw-same' ||
+    (effect.kind === 'inspect-deck' &&
+      effect.restDestination === 'trash' &&
+      effect.lookCount > 0 &&
+      effect.pickCount >= 0),
+  )
+  return hasRuntimeThenEffects(evidence) ||
+    hasRuntimeConditionalStep(evidence) ||
+    // Non-cookie root effects mirror Item, Stage and Trap ability effects.
+    // Count the authoritative source array once so a mirrored primary effect
+    // cannot masquerade as a second Then operation. These two known composite
+    // effects encode their ordered substeps within one runtime effect instead.
+    (evidence.card?.type === 'cookie'
+      ? flattenRuntimeEffects(evidence).length >= 2
+      : sourceEffects.length >= 2 || hasOrderedCompositeEffect)
 }
 
 const hasConsistentMirroredEffectOrder = (
@@ -2072,10 +2105,6 @@ const coversResolutionOrder = (
   contract: CardBehaviorContract,
   evidence: RuntimeCardEvidence,
 ): boolean => {
-  const hasLegacyStructuralEvidence = (): boolean =>
-    hasRuntimeThenEffects(evidence) ||
-    hasRuntimeConditionalStep(evidence) ||
-    flattenRuntimeEffects(evidence).length >= 2
   const clausesById = new Map(contract.clauses.map((clause) => [clause.id, clause]))
   const thenSteps = contract.steps.filter((step) => step.role === 'then')
   if (thenSteps.length === 0) return true
@@ -2086,7 +2115,7 @@ const coversResolutionOrder = (
     if (!hasConsistentMirroredEffectOrder(evidence, thenClause.source)) return false
     const runtimeEffects = runtimeEffectsForSource(evidence, thenClause.source)
     const runtimeKinds = runtimeEffects.map((effect) => effect.kind)
-    if (runtimeKinds.length === 0) return hasLegacyStructuralEvidence()
+    if (runtimeKinds.length === 0) return hasLegacyStructuralEvidence(evidence, thenClause.source)
 
     const beforeStep = [...contract.steps]
       .slice(0, thenStep.order)
@@ -2110,7 +2139,7 @@ const coversResolutionOrder = (
     // Some historical contracts do not yet classify both sides into runtime
     // kinds.  Keep their existing structural gate until the parser can supply
     // two concrete anchors; do not manufacture effect indexes from prose.
-    return hasLegacyStructuralEvidence()
+    return hasLegacyStructuralEvidence(evidence, thenClause.source)
   })
 }
 
@@ -2127,6 +2156,9 @@ const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   }
   if (/\breturn\b[\s\S]*\bto (?:your|the) deck\b/.test(text)) {
     kinds.push('trash-to-deck', 'trash-to-deck-all', 'hand-to-deck-and-draw')
+  }
+  if (/\bplace\b[\s\S]*\bcards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash\b/.test(text)) {
+    kinds.push('deck-to-trash')
   }
   if (/\b(?:lv\.?|level)\b[\s\S]*\bbecomes?\b/.test(text)) {
     kinds.push('set-cookie-level')
@@ -2194,7 +2226,7 @@ const buildContract = (
         timingMarkers.add(marker)
         addClause(clauses, source, `{${marker}}`, 'timing', 0, text.length, 'exact')
       })
-    const bracket = bracketClauses(source, text, clauses)
+    const bracket = bracketClauses(source, text, clauses, record.baseCardNumber || record.cardNumber.split('@')[0])
     payments.push(...bracket.payments)
     costs.push(...bracket.costs)
     targets.push(...targetClauses(source, text, clauses, record.type))
@@ -2507,6 +2539,98 @@ const buildContract = (
   }
 
 
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-010') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const extra = (value: object, allowed: string[]) => Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    const choice = skill?.effects[0], modes = choice?.kind === 'choose-one' ? choice.modes : []
+    if (card?.type !== 'cookie' || card.name !== 'Cookiemals' || (card.cardColor ?? card.energyColor) !== 'green' ||
+        card.energyColor !== 'green' || card.level !== 1 || card.hp !== 2 || card.attack !== 1 || card.attackCost !== 1 ||
+        !exact(card.attackEnergyCost, { green: 1 }) || card.flip || (card.keywords ?? []).length || (card.attackEffects ?? []).length ||
+        !skill || skill.trigger !== 'passive' || skill.faint !== true || skill.oncePerTurn || skill.yourTurn || skill.restSource ||
+        skill.oncePerGame || skill.endPhase || skill.afterDamage || skill.faintOptional || skill.fromBreakArea || skill.onPlayFromBreakArea || skill.fromTrashArea || skill.fromSupportArea ||
+        extra(skill, ['trigger', 'faint', 'oncePerTurn', 'yourTurn', 'restSource', 'endPhase', 'afterDamage', 'oncePerGame', 'faintOptional',
+          'fromBreakArea', 'onPlayFromBreakArea', 'fromTrashArea', 'fromSupportArea', 'text', 'cost', 'effects']) ||
+        !exact(skill.cost, { energy: {}, discardHand: 0, supportToHand: 1, supportToHandType: 'item' }) ||
+        skill.effects.length !== 1 || JSON.stringify(card.effects) !== JSON.stringify(skill.effects) || choice?.kind !== 'choose-one' ||
+        extra(choice, ['kind', 'modes']) || modes.length !== 2 || modes.some((mode, index) =>
+          extra(mode, ['label', 'effects']) || mode.effects.length !== 1 || !exact(mode.effects[0], { kind: 'deck-to-support', amount: index === 0 ? 1 : 0, rested: true }))) {
+      blockers.push('ST8-010 requires original green LV1 HP2 G ordinary1, exact one arbitrary Support Item returned to hand, then optional deck-top0/1 to rested support on own faint only')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-009') {
+    const card = evidence.card, flip = card?.flip
+    const extraKeys = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exactDraw = (effect: CardEffect | undefined) => effect?.kind === 'draw-up-to' &&
+      effect.max === 1 && !extraKeys(effect, ['kind', 'max'])
+    if (card?.type !== 'cookie' || card.name !== 'Cucumber Cookie' ||
+        (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+        card.level !== 2 || card.hp !== 3 || card.attack !== 3 || card.attackCost !== 3 ||
+        !card.attackEnergyCost || card.attackEnergyCost.green !== 3 || extraKeys(card.attackEnergyCost, ['green']) ||
+        card.skill || (card.keywords ?? []).length || (card.attackEffects ?? []).length ||
+        card.effects?.length !== 1 || !exactDraw(card.effects[0]) ||
+        !flip || extraKeys(flip, ['text', 'cost', 'effects']) || flip.effects.length !== 1 || !exactDraw(flip.effects[0]) ||
+        !flip.cost.energy || Object.keys(flip.cost.energy).length !== 0 || flip.cost.discardHand !== 0 ||
+        extraKeys(flip.cost, ['energy', 'discardHand'])) {
+      blockers.push('ST8-009 requires original green LV2 HP3 GGG ordinary3, free FLIP exactly draw-up-to1 with no extra conditions, payments, filters, HP gain, skill or Then')
+    }
+  }
+
+if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-008') {
+  const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+  const extra = (value: object, allowed: string[]) => Object.entries(value).some(([key, item]) => item !== undefined && !allowed.includes(key))
+  const exact = (value: object | undefined, expected: object) => value !== undefined &&
+    !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, expectedValue]) =>
+      JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(expectedValue))
+  const choice = skill?.effects[0], modes = choice?.kind === 'choose-one' ? choice.modes : []
+  const attack = card?.type === 'cookie' ? card.attackEffects ?? [] : []
+  const wind = { kind: 'support-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' }
+  if (card?.type !== 'cookie' || card.name !== 'Sugar Swan Cookie' || (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+    card.level !== 2 || card.hp !== 4 || card.attack !== 3 || card.attackCost !== 3 || !exact(card.attackEnergyCost, { green: 3 }) ||
+    card.flip || (card.keywords ?? []).length || !skill || skill.trigger !== 'passive' || skill.faint !== true ||
+    skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.endPhase || skill.afterDamage || skill.oncePerGame ||
+    skill.fromBreakArea || skill.fromTrashArea || skill.fromSupportArea || skill.onPlayFromBreakArea ||
+    extra(skill, ['trigger', 'faint', 'oncePerTurn', 'yourTurn', 'restSource', 'endPhase', 'afterDamage', 'oncePerGame',
+      'fromBreakArea', 'fromTrashArea', 'fromSupportArea', 'onPlayFromBreakArea', 'text', 'cost', 'effects']) ||
+    !exact(skill.cost, { energy: {}, discardHand: 0 }) || skill.effects.length !== 1 ||
+    JSON.stringify(card.effects) !== JSON.stringify(skill.effects) || choice?.kind !== 'choose-one' ||
+    extra(choice, ['kind', 'condition', 'modes']) || !exact(choice.condition, { kind: 'support-count-less-than-opponent', difference: 0 }) ||
+    modes.length !== 2 || modes.some((mode, index) => typeof mode.label !== 'string' || extra(mode, ['label', 'effects']) ||
+      mode.effects.length !== 1 || !exact(mode.effects[0], { kind: 'deck-to-support', amount: index === 0 ? 1 : 0, rested: true })) ||
+    attack.length !== 2 || !exact(attack[0], { kind: 'draw', amount: 1, condition: wind }) ||
+    !exact(attack[1], { kind: 'discard-hand', count: 1, condition: wind })) {
+      blockers.push('ST8-008 requires green LV2 HP4 GGG3, free own-faint total ownSupport<=opponentSupport choose 0/1 rested deck-top support; Then own SUPPORT named Wind Archer Cookie regardless REST, mandatory draw1 then exact any hand discard1, no extra costs/filters/targets/effects')
+  }
+}
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-007') {
+    const card=evidence.card,flip=card?.flip
+    const extraKeys=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='cookie'||card.name!=='Blue Slushy Cookie'||(card.cardColor??card.energyColor)!=='green'||card.energyColor!=='green'||card.level!==1||card.hp!==1||card.attack!==2||card.attackCost!==2||
+       !card.attackEnergyCost||card.attackEnergyCost.green!==2||extraKeys(card.attackEnergyCost,['green'])||
+       card.skill||(card.keywords??[]).length||(card.effects??[]).length||(card.attackEffects??[]).length||
+       !flip||flip.attachedHpBonus!==1||flip.effects.length!==0||extraKeys(flip,['text','cost','effects','attachedHpBonus'])||
+       !flip.cost.energy||Object.keys(flip.cost.energy).length!==0||flip.cost.discardHand!==1||extraKeys(flip.cost,['energy','discardHand'])) {
+      blockers.push('ST8-007 requires original green LV1 HP1 GG ordinary 2 and FLIP exactly one arbitrary hand discard for original bearer +1 actual HP, without extra skills, filters or effects')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-006') {
+    const card=evidence.card,flip=card?.flip
+    const extraKeys=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
+    if(card?.type!=='cookie'||card.name!=='Basil Pesto Cookie'||(card.cardColor??card.energyColor)!=='green'||card.energyColor!=='green'||card.level!==3||card.hp!==4||card.attack!==4||card.attackCost!==4||
+       !card.attackEnergyCost||card.attackEnergyCost.green!==4||extraKeys(card.attackEnergyCost,['green'])||
+       card.skill||(card.keywords??[]).length||(card.effects??[]).length||(card.attackEffects??[]).length||
+       !flip||flip.attachedHpBonus!==1||flip.effects.length!==0||extraKeys(flip,['text','cost','effects','attachedHpBonus'])||
+       !flip.cost.energy||Object.keys(flip.cost.energy).length!==0||flip.cost.discardHand!==1||extraKeys(flip.cost,['energy','discardHand'])) {
+      blockers.push('ST8-006 requires original green LV3 HP4 GGGG ordinary 4 and FLIP exactly one arbitrary hand discard for original bearer +1 actual HP, without extra skills, filters or effects')
+    }
+  }
+
   if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST7-003') {
     const card=evidence.card,flip=card?.flip
     const extraKeys=(value:object,allowed:string[])=>Object.entries(value).some(([key,entry])=>entry!==undefined&&!allowed.includes(key))
@@ -2574,6 +2698,417 @@ const buildContract = (
       extras(skill,['text','trigger','oncePerTurn','yourTurn','restSource','oncePerGame','faint','endPhase','afterDamage','fromBreakArea','fromTrashArea','fromSupportArea','onPlayFromBreakArea','cost','effects'])||
       !skill.cost.energy||skill.cost.energy.yellow!==1||extras(skill.cost.energy,['yellow'])||(skill.cost.discardHand??0)!==0||extras(skill.cost,['energy','discardHand'])||!redirectOnly(skill.effects)) {
       blockers.push('ST7-012 requires original yellow LV1 HP3 YN ordinary1, exactly Y Blocker redirect to source, no REST/Once/extra costs or abilities')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-011') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const extra = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const redirectOnly = (effects: CardEffect[]) => effects.length === 1 && effects[0].kind === 'redirect-attack' &&
+      !extra(effects[0], ['kind', 'target']) && effects[0].target?.side === 'self' &&
+      effects[0].target.min === 1 && effects[0].target.max === 1 && effects[0].target.sourceOnly === true &&
+      !extra(effects[0].target, ['side', 'min', 'max', 'sourceOnly'])
+    if (card?.type !== 'cookie' || card.name !== 'Kiwi Cookie' || (card.cardColor ?? card.energyColor) !== 'green' ||
+        card.energyColor !== 'green' || card.level !== 1 || card.hp !== 3 || card.attack !== 1 || card.attackCost !== 2 ||
+        !card.attackEnergyCost || card.attackEnergyCost.green !== 1 || card.attackEnergyCost.neutral !== 1 ||
+        extra(card.attackEnergyCost, ['green', 'neutral']) || card.flip || (card.keywords ?? []).length ||
+        (card.attackEffects ?? []).length || !redirectOnly(card.effects ?? []) || !skill || skill.trigger !== 'block' ||
+        skill.oncePerTurn || skill.yourTurn || skill.restSource || skill.oncePerGame || skill.faint || skill.endPhase ||
+        skill.afterDamage || skill.fromBreakArea || skill.fromTrashArea || skill.fromSupportArea || skill.onPlayFromBreakArea ||
+        extra(skill, ['text', 'trigger', 'oncePerTurn', 'yourTurn', 'restSource', 'oncePerGame', 'faint', 'endPhase',
+          'afterDamage', 'fromBreakArea', 'fromTrashArea', 'fromSupportArea', 'onPlayFromBreakArea', 'cost', 'effects']) ||
+        !skill.cost.energy || skill.cost.energy.green !== 1 || extra(skill.cost.energy, ['green']) ||
+        (skill.cost.discardHand ?? 0) !== 0 || extra(skill.cost, ['energy', 'discardHand']) || !redirectOnly(skill.effects)) {
+      blockers.push('ST8-011 requires original green LV1 HP3 GN ordinary1, exactly G Blocker redirect to source, no REST/Once/extra costs or abilities')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-012') {
+    const card = evidence.card, skill = card?.type === 'cookie' ? card.skill : undefined
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined && Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    const damage = skill?.effects[0], damageTarget = damage?.kind === 'damage' ? damage.target : undefined
+    const itemCondition = damage?.kind === 'damage' ? damage.condition : undefined
+    const then = skill?.effects[1], cost = then?.kind === 'optional-cost-attack' ? then.cost : undefined
+    const gain = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const gainTarget = gain?.kind === 'gain-hp' ? gain.target : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Windcatcher' ||
+        (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+        card.level !== 1 || card.hp !== 2 || card.attack !== 2 || card.attackCost !== 2 ||
+        !exact(card.attackEnergyCost, { green: 2 }) || card.flip || (card.keywords ?? []).length ||
+        (card.attackEffects ?? []).length || !skill || skill.trigger !== 'activate' || skill.oncePerTurn ||
+        skill.yourTurn || skill.restSource !== true || skill.faint || skill.endPhase || skill.afterDamage ||
+        skill.oncePerGame || skill.fromBreakArea || skill.onPlayFromBreakArea || skill.fromTrashArea ||
+        skill.fromSupportArea || skill.effectConditionsAtResolution !== true ||
+        extra(skill, ['trigger', 'oncePerTurn', 'yourTurn', 'restSource', 'effectConditionsAtResolution', 'cost', 'text',
+          'effects', 'faint', 'endPhase', 'afterDamage', 'oncePerGame', 'fromBreakArea',
+          'onPlayFromBreakArea', 'fromTrashArea', 'fromSupportArea']) ||
+        !exact(skill.cost, { energy: {}, discardHand: 0 }) || skill.effects.length !== 2 ||
+        JSON.stringify(card.effects) !== JSON.stringify(skill.effects) ||
+        damage?.kind !== 'damage' || damage.amount !== 1 || extra(damage, ['kind', 'amount', 'target', 'condition']) ||
+        damageTarget?.side !== 'opponent' || damageTarget.min !== 0 || damageTarget.max !== 1 ||
+        extra(damageTarget, ['side', 'min', 'max']) || itemCondition?.kind !== 'item-activated-this-turn' ||
+        extra(itemCondition, ['kind']) || then?.kind !== 'optional-cost-attack' || then.resolution !== 'ability' ||
+        then.mandatory || then.payBeforeCondition || then.sourceEnergy ||
+        then.effectText !== 'Then, <can be used as {G}.> Select up to 1 of your [Wind Archer Cookie]. That Cookie gains +1 HP.' ||
+        extra(then, ['kind', 'resolution', 'cost', 'effectText', 'effects']) ||
+        !exact(cost, { energy: { green: 1 }, discardHand: 0 }) || then.effects.length !== 1 ||
+        gain?.kind !== 'gain-hp' || gain.amount !== 1 || extra(gain, ['kind', 'amount', 'target']) ||
+        gainTarget?.side !== 'self' || gainTarget.min !== 0 || gainTarget.max !== 1 ||
+        gainTarget.cardName !== 'Wind Archer Cookie' ||
+        extra(gainTarget, ['side', 'min', 'max', 'cardName'])) {
+      blockers.push('ST8-012 requires original green LV1 HP2 GG ordinary2; REST Activate with zero extra costs; conditional opponent damage1 only when own Item activated this turn; independent optional Then pays G from Support, then +1 HP to up to one same-name Wind Archer Cookie')
+    }
+  }
+
+  const cardNumber = record.baseCardNumber || record.cardNumber.split('@')[0]
+  if (cardNumber === 'ST9-007') {
+    const card = evidence.card
+    const skill = card?.skill
+    const draw = skill?.effects[0]
+    const condition = draw?.kind === 'draw-up-to' ? draw.condition : undefined
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    if (card?.type !== 'cookie' || card.id !== 'ST9-007' || card.name !== 'Peppermint Cookie' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.level !== 2 || card.hp !== 5 ||
+        card.attack !== 2 || !exact(card.attackEnergyCost, { blue: 3 }) ||
+        (card.attackEffects ?? []).length !== 0 || !skill || skill.trigger !== 'activate' ||
+        skill.oncePerTurn !== true || skill.yourTurn !== false || skill.restSource !== false ||
+        !exact(skill.cost, { energy: {}, discardHand: 0 }) || skill.effects.length !== 1 ||
+        draw?.kind !== 'draw-up-to' || draw.max !== 1 || condition?.kind !== 'hand-count-at-most' ||
+        condition.count !== 3 || skill.passiveEffects?.length || skill.onPlayEffects?.length) {
+      blockers.push('ST9-007 requires original blue Peppermint Cookie LV2/5 HP/B3; free Activate once per turn; draw up to one only at hand size three or less')
+    }
+  }
+
+  if (cardNumber === 'ST9-008') {
+    const card = evidence.card
+    const skill = card?.skill
+    const gain = skill?.effects[0]
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    if (card?.type !== 'cookie' || card.id !== 'ST9-008' || card.name !== 'Crimson Coral Cookie' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.level !== 3 || card.hp !== 5 ||
+        card.attack !== 3 || !exact(card.attackEnergyCost, { blue: 3 }) ||
+        !skill || skill.trigger !== 'on-play' || skill.oncePerTurn || skill.restSource ||
+        !exact(skill.cost, { energy: {}, discardHand: 0, battleCookieToHand: { count: 1, maxLevel: 2 } }) ||
+        skill.effects.length !== 1 || gain?.kind !== 'gain-hp' || gain.amount !== 1 ||
+        !exact(gain.target, { side: 'self', min: 1, max: 1, sourceOnly: true }) ||
+        skill.passiveEffects?.length || skill.onPlayEffects?.length) {
+      blockers.push('ST9-008 requires original blue Crimson Coral Cookie LV3/5 HP/B3; return one own LV2-or-lower battle Cookie as On Play cost, then this Cookie gains one HP')
+    }
+  }
+
+  if (cardNumber === 'ST9-009') {
+    const card = evidence.card
+    const skill = card?.skill
+    const trigger = skill?.passiveEffects?.[0]
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    if (card?.type !== 'cookie' || card.id !== 'ST9-009' || card.name !== 'Wave Drop' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.level !== 1 || card.hp !== 2 ||
+        card.attack !== 1 || !exact(card.attackEnergyCost, { blue: 1 }) ||
+        !skill || skill.trigger !== 'passive' || skill.oncePerTurn || skill.restSource ||
+        !exact(skill.cost, { energy: {}, discardHand: 0 }) || skill.effects.length !== 0 ||
+        skill.passiveEffects?.length !== 1 || trigger?.kind !== 'hand-to-trash-trigger' ||
+        trigger.sourceCardName !== 'Sea Fairy Cookie' ||
+        !exact(trigger.effects, [{ kind: 'draw-up-to', max: 1 }]) || skill.onPlayEffects?.length) {
+      blockers.push('ST9-009 requires original blue Wave Drop LV1/2 HP/B1; its passive draws up to one only when a Sea Fairy Cookie effect moves it from hand to trash')
+    }
+    blockers.push('ST9-009 remains needs-review until a real Sea Fairy Cookie effect moves a Cookie from hand to trash; the currently available Sea Fairy hand discards are printed as costs, and no ruling confirms that costs count as effects')
+  }
+
+  if (cardNumber === 'ST9-012') {
+    const card = evidence.card
+    const skill = card?.skill
+    const draw = skill?.effects[0]
+    const then = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const damage = then?.kind === 'optional-cost-attack' ? then.effects[0] : undefined
+    const condition = damage?.kind === 'damage' ? damage.condition : undefined
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (card?.type !== 'cookie' || card.id !== 'ST9-012' || card.name !== 'White Pearl Cookie' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.level !== 1 || card.hp !== 2 ||
+        card.attack !== 2 || !exact(card.attackEnergyCost, { blue: 2 }) || card.flip ||
+        (card.keywords ?? []).length !== 0 || !skill || skill.trigger !== 'on-play' || skill.oncePerTurn ||
+        skill.yourTurn || skill.restSource || skill.faint || skill.endPhase || skill.afterDamage ||
+        skill.oncePerGame || skill.fromBreakArea || skill.onPlayFromBreakArea || skill.fromTrashArea ||
+        skill.fromSupportArea || !exact(skill.cost, { energy: {}, discardHand: 0 }) || skill.effects.length !== 1 ||
+        JSON.stringify(card.effects) !== JSON.stringify(skill.effects) ||
+        draw?.kind !== 'draw-up-to' || draw.max !== 2 ||
+        !exact(draw.condition, { kind: 'hand-count-at-most', count: 4 }) ||
+        skill.passiveEffects?.length || skill.onPlayEffects?.length ||
+        (card.attackEffects ?? []).length !== 1 || then?.kind !== 'optional-cost-attack' ||
+        then.resolution !== 'ability' || then.mandatory || then.payBeforeCondition || then.sourceEnergy ||
+        then.effectText !== "Then, <can be used as {B}.> If [Sea Fairy Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage." ||
+        extra(then, ['kind', 'resolution', 'cost', 'effectText', 'effects']) ||
+        !exact(then.cost, { energy: { blue: 1 }, discardHand: 0 }) || then.effects.length !== 1 ||
+        damage?.kind !== 'damage' || damage.amount !== 1 || extra(damage, ['kind', 'amount', 'target', 'condition']) ||
+        !exact(damage.target, { side: 'opponent', min: 0, max: 1 }) ||
+        !exact(condition, { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Sea Fairy Cookie' })) {
+      blockers.push('ST9-012 requires original blue White Pearl Cookie LV1/2 BB ordinary2; On Play draw up to two only at hand size four or less; attack Then separately offers optional 1B Support payment before up to one damage, gated by a named Sea Fairy Cookie in its own battle area')
+    }
+  }
+
+  if (cardNumber === 'ST9-013') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const draw = item?.effects[0]
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (record.cardNumber !== 'ST9-013' || record.name !== 'Shimmering Moonlit Coral' ||
+        record.type !== 'item' || record.color !== 'BLUE' || record.energyType !== 'BLUE' ||
+        record.skill.text !== '<{B}> <Discard 1 {B} card from your hand.> Draw up to 2 cards from your deck.' ||
+        card?.type !== 'item' || card.id !== 'ST9-013' || card.name !== 'Shimmering Moonlit Coral' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.flip || card.trap ||
+        card.skill || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+        !exact(item.cost, { energy: { blue: 1 }, discardHand: 1, discardHandColor: 'blue' }) ||
+        extra(item, ['cost', 'text', 'effects']) || item.text !== record.skill.text || item.effects.length !== 1 ||
+        JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+        draw?.kind !== 'draw-up-to' || draw.max !== 2 || extra(draw, ['kind', 'max'])) {
+      blockers.push('ST9-013 requires original blue Shimmering Moonlit Coral; pay B and discard one blue hand card, then draw up to two')
+    }
+  }
+
+  if (cardNumber === 'ST9-014') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const gain = item?.effects[0]
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (record.cardNumber !== 'ST9-014' || record.name !== 'Glittering Pearl Shell' ||
+        record.type !== 'item' || record.color !== 'BLUE' || record.energyType !== 'BLUE' ||
+        record.skill.text !== '<{B}{B}> <Discard 3 cards.> Select up to 1 of your Cookies. That Cookie gains +2 HP.' ||
+        card?.type !== 'item' || card.id !== 'ST9-014' || card.name !== 'Glittering Pearl Shell' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.imageUrl !== record.imageUrl ||
+        card.skill || card.flip || card.trap || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+        !exact(item.cost, { energy: { blue: 2 }, discardHand: 3 }) ||
+        extra(item, ['cost', 'text', 'effects']) || item.text !== record.skill.text || item.effects.length !== 1 ||
+        JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+        gain?.kind !== 'gain-hp' || gain.amount !== 2 || extra(gain, ['kind', 'amount', 'target']) ||
+        !exact(gain.target, { side: 'self', min: 0, max: 1 })) {
+      blockers.push('ST9-014 requires original blue Glittering Pearl Shell, BB and three unrestricted hand cards as costs, then an optional zero-to-one own Cookie target that gains two HP')
+    }
+  }
+
+  if (cardNumber === 'ST9-015') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const [draw, heal] = item?.effects ?? []
+    const target = heal?.kind === 'gain-hp' ? heal.target : undefined
+    const exact = (actual: unknown, expected: unknown) => JSON.stringify(actual) === JSON.stringify(expected)
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    if (record.cardNumber !== 'ST9-015' || record.name !== 'Essence of the Ocean' ||
+        record.type !== 'item' || record.color !== 'BLUE' || record.energyType !== 'BLUE' ||
+        record.skill.text !== '<{B}> If there are 5 cards or less in your hand, draw up to 1 card from your deck. Then, select up to 1 of your [Sea Fairy Cookie] with 5 or less HP remaining. That Cookie gains +1 HP.' ||
+        card?.type !== 'item' || card.id !== 'ST9-015' || card.name !== 'Essence of the Ocean' ||
+        card.cardColor !== 'blue' || card.energyColor !== 'blue' || card.imageUrl !== record.imageUrl ||
+        card.skill || card.flip || card.trap || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+        !exact(item.cost, { energy: { blue: 1 }, discardHand: 0 }) ||
+        extra(item, ['cost', 'text', 'effects']) || item.text !== record.skill.text || item.effects.length !== 2 ||
+        JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+        draw?.kind !== 'draw-up-to' || draw.max !== 1 ||
+        !exact(draw.condition, { kind: 'hand-count-at-most', count: 5 }) ||
+        extra(draw, ['kind', 'max', 'condition']) ||
+        heal?.kind !== 'gain-hp' || heal.amount !== 1 || heal.condition !== undefined ||
+        extra(heal, ['kind', 'amount', 'target']) ||
+        !exact(target, { side: 'self', min: 0, max: 1, cardName: 'Sea Fairy Cookie', maxRemainingHp: 5 })) {
+      blockers.push('ST9-015 requires original blue Essence of the Ocean, B payment, hand<=5 draw0-1, then an independent optional +1 HP to an own Sea Fairy Cookie with at most 5 HP remaining')
+    }
+  }
+
+  if (cardNumber === 'ST8-014') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const heal = item?.effects[0]
+    const target = heal?.kind === 'gain-hp' ? heal.target : undefined
+    const condition = heal?.kind === 'gain-hp' ? heal.condition : undefined
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    if (card?.type !== 'item' || card.name !== 'Cape of the Vanquisher' ||
+      (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+      card.skill || card.flip || card.trap || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+      !exact(item.cost, { green: 1 }) || item.allowInactiveConditionalEffects !== true ||
+      extra(item, ['cost', 'text', 'effects', 'allowInactiveConditionalEffects']) || item.effects.length !== 1 ||
+      JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+      heal?.kind !== 'gain-hp' || heal.amount !== 1 || extra(heal, ['kind', 'amount', 'target', 'condition']) ||
+      target?.side !== 'self' || target.min !== 0 || target.max !== 1 || target.energyColor !== 'green' ||
+      target.maxRemainingHp !== 3 || extra(target, ['side', 'min', 'max', 'energyColor', 'maxRemainingHp']) ||
+      condition?.kind !== 'support-count-at-least' || condition.count !== 5 ||
+      extra(condition, ['kind', 'count'])) {
+      blockers.push('ST8-014 requires original green Cape of the Vanquisher, G1 payment, cost-first optional no-op below five supports, and +1 HP to zero or one own green Cookie with at most three remaining HP')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-015') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const [choice, then] = item?.effects ?? []
+    const witness = choice?.kind === 'choose-one' ? choice.condition : undefined
+    const alternatives = witness?.kind === 'any-of' ? witness.conditions : []
+    const modes = choice?.kind === 'choose-one' ? choice.modes : []
+    const modeOne = modes[0]?.effects[0]
+    const modeZero = modes[1]?.effects[0]
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined && Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    const battleWitness = alternatives.find(condition => condition.kind === 'battle-area-has-named-cookie')
+    const supportWitness = alternatives.find(condition => condition.kind === 'support-area-has-named-cookie')
+    if (card?.type !== 'item' || card.name !== 'Essence of the Tempest' ||
+        (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' || card.flip ||
+        (card.keywords ?? []).length !== 0 || !item ||
+        !exact(item.cost, { energy: { green: 2 }, discardHand: 0 }) ||
+        item.allowInactiveConditionalEffects !== true ||
+        extra(item, ['cost', 'text', 'effects', 'allowInactiveConditionalEffects']) ||
+        item.effects.length !== 2 || JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+        choice?.kind !== 'choose-one' || extra(choice, ['kind', 'condition', 'modes']) ||
+        witness?.kind !== 'any-of' || extra(witness, ['kind', 'conditions']) || alternatives.length !== 2 ||
+        battleWitness?.kind !== 'battle-area-has-named-cookie' || battleWitness.side !== 'self' ||
+        battleWitness.name !== 'Wind Archer Cookie' || extra(battleWitness, ['kind', 'side', 'name']) ||
+        supportWitness?.kind !== 'support-area-has-named-cookie' || supportWitness.side !== 'self' ||
+        supportWitness.name !== 'Wind Archer Cookie' || extra(supportWitness, ['kind', 'side', 'name']) ||
+        modes.length !== 2 || modes.some(mode => extra(mode, ['label', 'effects']) || mode.effects.length !== 1) ||
+        !exact(modeOne, { kind: 'deck-to-support', amount: 1, rested: true }) ||
+        !exact(modeZero, { kind: 'deck-to-support', amount: 0, rested: true }) ||
+        then?.kind !== 'support-to-hand' || then.amount !== 1 || then.optional !== true ||
+        extra(then, ['kind', 'amount', 'optional'])) {
+      blockers.push('ST8-015 requires original green Essence of the Tempest, GG payment, battle-or-support Wind Archer condition, optional rested top-card 0/1 choice, and an independent optional support-to-hand Then')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-016') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const damage = item?.effects[0]
+    const condition = damage?.kind === 'damage-all' ? damage.condition : undefined
+    const conditions = condition?.kind === 'all-of' ? condition.conditions : []
+    const wind = conditions.find(value => value.kind === 'battle-area-has-named-cookie')
+    const supportThreshold = conditions.find(value => value.kind === 'support-count-at-least')
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined && Object.entries(value)
+      .some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    if (card?.type !== 'item' || card.name !== "Wind's Grace Earrings" ||
+        (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+        card.skill || card.flip || card.trap || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+        !exact(item.cost, { energy: { green: 1 }, discardHand: 0 }) ||
+        item.allowInactiveConditionalEffects !== true ||
+        extra(item, ['cost', 'text', 'effects', 'allowInactiveConditionalEffects']) ||
+        item.effects.length !== 1 || JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+        damage?.kind !== 'damage-all' || damage.amount !== 1 || damage.side !== 'opponent' ||
+        extra(damage, ['kind', 'amount', 'side', 'condition']) ||
+        condition?.kind !== 'all-of' || extra(condition, ['kind', 'conditions']) || conditions.length !== 2 ||
+        wind?.kind !== 'battle-area-has-named-cookie' || wind.side !== 'self' || wind.name !== 'Wind Archer Cookie' ||
+        extra(wind, ['kind', 'side', 'name']) ||
+        supportThreshold?.kind !== 'support-count-at-least' || supportThreshold.count !== 5 ||
+        extra(supportThreshold, ['kind', 'count'])) {
+      blockers.push("ST8-016 requires original green Wind's Grace Earrings, cost-first G payment, all own Wind Archer in battle AND at least five unrestricted support-area cards, then exactly 1 effect damage to every opponent Cookie")
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-017') {
+    const card = evidence.card
+    const trap = card?.type === 'trap' ? card.trap : undefined
+    const [reduction, draw] = trap?.effects ?? []
+    const target = reduction?.kind === 'modify-attack' ? reduction.target : undefined
+    const condition = draw?.kind === 'draw-up-to' ? draw.condition : undefined
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    if (card?.type !== 'trap' || card.name !== 'Hindering Darkness' ||
+        (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+        card.item || card.skill || card.flip || card.stageAbility || (card.keywords ?? []).length !== 0 || !trap ||
+        !exact(trap.cost, { energy: { green: 2 }, discardHand: 0 }) ||
+        extra(trap, ['cost', 'text', 'effects']) || trap.condition !== undefined ||
+        trap.conditionalCost !== undefined || trap.alternativeCosts?.length || trap.effects.length !== 2 ||
+        JSON.stringify(card.effects) !== JSON.stringify(trap.effects) ||
+        reduction?.kind !== 'modify-attack' || reduction.amount !== -2 || reduction.duration !== 'this-turn' ||
+        extra(reduction, ['kind', 'amount', 'duration', 'target']) ||
+        target?.side !== 'opponent' || target.min !== 0 || target.max !== 1 ||
+        extra(target, ['side', 'min', 'max']) ||
+        draw?.kind !== 'draw-up-to' || draw.max !== 1 || extra(draw, ['kind', 'max', 'condition']) ||
+        condition?.kind !== 'support-count-equal' || extra(condition, ['kind'])) {
+      blockers.push('ST8-017 requires original green Hindering Darkness, GG, optional any-opponent-Cookie -2 attack damage for this turn, then optional draw up to one only when both support areas have equal card counts')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-013') {
+    const card = evidence.card
+    const item = card?.type === 'item' ? card.item : undefined
+    const rest = item?.effects[0]
+    const ready = item?.effects[1]
+    const windCondition = ready?.kind === 'set-active' ? ready.condition : undefined
+    const extra = (value: object | undefined, allowed: string[]) => value !== undefined &&
+      Object.entries(value).some(([key, entry]) => entry !== undefined && !allowed.includes(key))
+    const exact = (value: object | undefined, expected: object) => value !== undefined &&
+      !extra(value, Object.keys(expected)) && Object.entries(expected).every(([key, entry]) =>
+        JSON.stringify((value as Record<string, unknown>)[key]) === JSON.stringify(entry))
+    if (card?.type !== 'item' || card.name !== 'Windgrass' ||
+      (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+      card.skill || card.flip || card.trap || card.stageAbility || (card.keywords ?? []).length !== 0 || !item ||
+      !exact(item.cost, { energy: { green: 1 }, discardHand: 0 }) || item.effects.length !== 2 ||
+      JSON.stringify(card.effects) !== JSON.stringify(item.effects) ||
+      rest?.kind !== 'rest-support' || rest.side !== 'opponent' || rest.amount !== 1 || rest.optional !== true ||
+      rest.energyColor !== undefined || rest.activeOnly !== undefined || rest.condition !== undefined ||
+      extra(rest, ['kind', 'side', 'amount', 'optional']) ||
+      ready?.kind !== 'set-active' || ready.supportCount !== 1 || ready.selectable !== true || ready.optional !== true ||
+      ready.restedOnly !== false || ready.energyColor !== undefined ||
+      windCondition?.kind !== 'battle-area-has-named-cookie' || windCondition.side !== 'self' ||
+      windCondition.name !== 'Wind Archer Cookie' || extra(windCondition, ['kind', 'side', 'name']) ||
+      extra(ready, ['kind', 'supportCount', 'selectable', 'optional', 'restedOnly', 'condition'])) {
+      blockers.push('ST8-013 requires original green Windgrass, fixed G payment, optional opponent support REST 0–1 followed by conditional optional own support ready 0–1 only while Wind Archer Cookie is in the battle area')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-005') {
+    const card=evidence.card,skill=card?.type==='cookie'?card.skill:undefined
+    const extra=(value:object,allowed:string[])=>Object.entries(value).some(([key,item])=>item!==undefined&&!allowed.includes(key))
+    const draw=skill?.effects[0],condition=draw?.kind==='draw'?draw.condition:undefined
+    const attack=card?.type==='cookie'?card.attackEffects?.[0]:undefined
+    const parts=condition?.kind==='all-of'?condition.conditions:[]
+    const hand=parts[0],item=parts[1]
+    if(card?.type!=='cookie'||card.name!=='Wind Archer Cookie'||(card.cardColor??card.energyColor)!=='green'||card.energyColor!=='green'||card.level!==3||card.hp!==6||card.attack!==3||card.attackCost!==3||
+      !card.attackEnergyCost||card.attackEnergyCost.green!==3||extra(card.attackEnergyCost,['green'])||card.flip||(card.keywords??[]).length||card.effects?.length!==1||JSON.stringify(card.effects)!==JSON.stringify(skill?.effects)||
+      !skill||skill.trigger!=='activate'||!skill.oncePerTurn||skill.restSource||skill.yourTurn||skill.faint||skill.endPhase||skill.afterDamage||skill.oncePerGame||skill.fromBreakArea||skill.onPlayFromBreakArea||skill.fromTrashArea||skill.fromSupportArea||
+      extra(skill,['trigger','oncePerTurn','yourTurn','restSource','cost','text','effects','faint','endPhase','afterDamage','oncePerGame','fromBreakArea','onPlayFromBreakArea','fromTrashArea','fromSupportArea'])||
+      Object.values(skill.cost.energy??{}).some(value=>value!==0)||(skill.cost.discardHand??0)!==0||extra(skill.cost,['energy','discardHand'])||
+      skill.effects.length!==1||draw?.kind!=='draw'||draw.amount!==1||extra(draw,['kind','amount','condition'])||condition?.kind!=='all-of'||parts.length!==2||extra(condition,['kind','conditions'])||
+      hand?.kind!=='hand-count-at-most'||hand.count!==5||extra(hand,['kind','count'])||item?.kind!=='item-activated-this-turn'||extra(item,['kind'])||
+      card.attackEffects?.length!==1||attack?.kind!=='rest-support-and-damage'||attack.supportSide!=='self'||attack.supportAmount!==2||attack.activeOnly!==true||extra(attack,['kind','supportSide','supportAmount','activeOnly','target'])||
+      attack.target.side!=='opponent'||attack.target.min!==0||attack.target.max!==1||extra(attack.target,['side','min','max'])){
+      blockers.push('ST8-005 requires original green LV3 HP6 GGG ordinary3; free Activate Once draw1 only for hand<=5 and actual current-turn Item; Then optional zero-two active own unrestricted supports and zero-one unrestricted opponent Cookie, damage equal to actually rested supports, no added restrictions or costs')
+    }
+  }
+
+  if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-004') {
+    const card = evidence.card
+    const effect = card?.type === 'cookie' ? card.attackEffects?.[0] : undefined
+    const extra = (value: object, allowed: string[]) => Object.entries(value)
+      .some(([key, item]) => item !== undefined && !allowed.includes(key))
+    const condition = effect?.kind === 'set-active' ? effect.condition : undefined
+    if (card?.type !== 'cookie' || card.name !== 'Red Panna Cotta Cookie' ||
+      (card.cardColor ?? card.energyColor) !== 'green' || card.energyColor !== 'green' ||
+      card.level !== 3 || card.hp !== 5 || card.attack !== 3 || card.attackCost !== 3 ||
+      !card.attackEnergyCost || card.attackEnergyCost.green !== 3 || extra(card.attackEnergyCost, ['green']) ||
+      card.skill || card.flip || (card.keywords ?? []).length || (card.effects ?? []).length ||
+      card.attackEffects?.length !== 1 || effect?.kind !== 'set-active' || effect.supportCount !== 1 ||
+      effect.selectable !== true || effect.optional !== true || effect.restedOnly !== false ||
+      extra(effect, ['kind', 'supportCount', 'selectable', 'optional', 'restedOnly', 'condition']) ||
+      condition?.kind !== 'support-count-at-least' || condition.count !== 5 || extra(condition, ['kind', 'count'])) {
+      blockers.push('ST8-004 requires original green LV3 HP5 GGG ordinary3; Then own total support at least5, choose zero or one own Support of any color or type to set active, including already active cards, with no extra costs or abilities')
     }
   }
 
@@ -4441,9 +4976,9 @@ const buildContract = (
   const thenCount = clauses.filter((clause) => clause.role === 'then').length
   if (
     thenCount > 0 &&
-    !hasRuntimeThenEffects(evidence) &&
-    !hasRuntimeConditionalStep(evidence) &&
-    flattenRuntimeEffects(evidence).length < 2
+    clauses
+      .filter((clause) => clause.role === 'then')
+      .some((clause) => !hasLegacyStructuralEvidence(evidence, clause.source))
   ) {
     blockers.push('Then clause has no runtime thenEffects evidence')
   }
@@ -4550,6 +5085,56 @@ export const analyzeOfficialCardBehavior = (
           : undefined,
   }
   const contract = buildContract(normalized, evidence)
+  if ((normalized.baseCardNumber || normalized.cardNumber.split('@')[0]) === 'ST10-009') {
+    const cookie = card?.type === 'cookie' ? card : undefined
+    const skill = cookie?.skill
+    const draw = skill?.effects[0]
+    const printedSkill = 'When this Cookie is placed from your battle area into your trash, draw up to 1 card from your deck.'
+    const printedAttack = '<{P}{P}> Doughnut Beam {da} 1'
+    const hasExtraKeys = (value: object, allowed: string[]) =>
+      Object.entries(value).some(([key, item]) => item !== undefined && !allowed.includes(key))
+    const hasExtraSkillFields = skill !== undefined && hasExtraKeys(skill, [
+      'trigger', 'oncePerTurn', 'yourTurn', 'restSource', 'cost', 'text', 'effects',
+      'faint', 'endPhase', 'afterDamage', 'oncePerGame', 'fromBreakArea',
+      'onPlayFromBreakArea', 'fromTrashArea', 'fromSupportArea',
+    ])
+    const hasUnsupportedTriggerFlags = Boolean(skill && (
+      skill.faint || skill.endPhase || skill.afterDamage || skill.fromBreakArea ||
+      skill.onPlayFromBreakArea || skill.fromTrashArea || skill.fromSupportArea
+    ))
+    const skillCost = skill?.cost
+    const hasSkillCost = Boolean(
+      skillCost && (
+        (skillCost.discardHand ?? 0) !== 0 ||
+        Object.values(skillCost.energy ?? {}).some(amount => (amount ?? 0) !== 0) ||
+        hasExtraKeys(skillCost, ['energy', 'discardHand'])
+      ),
+    )
+    const exactDraw = (effect: CardEffect | undefined) =>
+      effect?.kind === 'draw-up-to' && effect.max === 1 &&
+      !hasExtraKeys(effect, ['kind', 'max'])
+    const originalSource = normalized.cardNumber.split('@')[0] === 'ST10-009' &&
+      normalized.name === 'Space Doughnut' && normalized.type === 'cookie' &&
+      normalized.energyType === 'PURPLE' && normalized.color === 'PURPLE' &&
+      normalized.level === 1 && normalized.hp === 1 &&
+      normalized.skill.name === '{sk} Mysterious Doughnut' && normalized.skill.text === printedSkill &&
+      normalized.attackText === printedAttack && normalized.flipText === null &&
+      normalized.keywords.length === 0
+    const exactBody = cookie?.id === 'ST10-009' && cookie.name === 'Space Doughnut' &&
+      cookie.cardColor === 'purple' && cookie.energyColor === 'purple' &&
+      cookie.level === 1 && cookie.hp === 1 && cookie.attack === 1 && cookie.attackCost === 2 &&
+      cookie.attackEnergyCost?.purple === 2 &&
+      !Object.entries(cookie.attackEnergyCost ?? {}).some(([color, amount]) => color !== 'purple' && (amount ?? 0) !== 0) &&
+      (cookie.keywords?.length ?? 0) === 0 && (cookie.attackEffects?.length ?? 0) === 0 &&
+      cookie.flip === undefined
+    if (!originalSource || !exactBody || !skill || !skillCost || skill.trigger !== 'departure' ||
+      skill.oncePerTurn || skill.oncePerGame || skill.yourTurn || skill.restSource ||
+      skill.text !== printedSkill || hasSkillCost || hasExtraSkillFields || hasUnsupportedTriggerFlags ||
+      skill.effects.length !== 1 || !exactDraw(draw) ||
+      JSON.stringify(cookie?.effects ?? []) !== JSON.stringify([{ kind: 'draw-up-to', max: 1 }])) {
+      contract.blockers.push('ST10-009 requires the original purple LV1 HP1 PP ordinary-one body and a free unrestricted departure draw-up-to-one skill')
+    }
+  }
   const runtime = {
     effectKinds: [] as string[],
     targetSelectors: [] as Partial<EffectTargetSelector>[],
@@ -4606,6 +5191,12 @@ export const analyzeOfficialCardBehavior = (
       return keys.has('battleCookieToHand') || kinds.has('battle-to-hand') || kinds.has('return-to-hand')
     }
     if (cost.kind === 'support-to-hand') {
+      if (cost.runtime?.supportToHandType === 'item') {
+        const costs = [evidence.skill?.cost, evidence.skill?.faintCost, evidence.flip?.cost,
+          evidence.ability?.cost, evidence.extraDeckPlayCost,
+          ...flattenRuntimeEffects(evidence).flatMap(effect => effect.kind === 'optional-cost-attack' ? [effect.cost] : [])]
+        return costs.some(actual => actual !== undefined && actual.supportToHand === cost.amount && actual.supportToHandType === 'item')
+      }
       return keys.has('supportToHand') || kinds.has('support-to-hand')
     }
     if (cost.kind === 'deck-to-trash') {

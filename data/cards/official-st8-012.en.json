@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46918,
+      "locale": "en",
+      "cardNumber": "ST8-012",
+      "baseCardNumber": "ST8-012",
+      "variant": null,
+      "name": "Windcatcher",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Green Gale",
+        "text": "【Activate】 <Rest this card.> During this turn, if an Item card was activated, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, <can be used as {G}.> Select up to 1 of your [Wind Archer Cookie]. That Cookie gains +1 HP."
+      },
+      "attackText": "<{G}{G}> Rising Winds {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Y46FLWRPFn4vDp37eklcvA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

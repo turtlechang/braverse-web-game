@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.265Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 9,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST9 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47067,
+      "locale": "en",
+      "cardNumber": "ST9-007",
+      "baseCardNumber": "ST9-007",
+      "variant": null,
+      "name": "Peppermint Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Conch Echo",
+        "text": "【Activate】 【Once Per Turn】 If there are 3 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{B}{B}> Song of the Starry Seas {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Q4hOAllEjprSIa6jh581YA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47068,
+      "locale": "en",
+      "cardNumber": "ST9-008",
+      "baseCardNumber": "ST9-008",
+      "variant": null,
+      "name": "Crimson Coral Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Coral Armor",
+        "text": "【On Play】 <Return 1 Cookie that is LV.2 or lower from your battle area to your hand.> This Cookie gains +1 HP."
+      },
+      "attackText": "<{B}{B}{B}> Crimson Spear {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TEpx0iFA1Aiip1OyRNcdAA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

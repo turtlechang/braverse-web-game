@@ -22,6 +22,7 @@ import {
   getFaintTriggeredCost,
   hasCookieOnPlayEffects,
   markSupportAreaDecreased,
+  resolveDepartureSkillTriggers,
 } from '../skills'
 import { getRefreshCandidates } from '../refresh'
 import {
@@ -343,40 +344,7 @@ const resolveNonFaintDepartureOutcome = (
     playerId,
     departedCount,
   )
-
-  // A departure trigger is distinct from faint: it fires only when the
-  // Cookie itself was moved from battle directly into its owner's trash.
-  // Keep the effect on the normal executeCardEffect path so deck exhaustion
-  // can open the existing Refresh continuation instead of losing the mill.
-  for (const cookie of departedCookieCards) {
-    const skill = cookie.skill
-    if (
-      !skill ||
-      skill.trigger !== 'departure' ||
-      (skill.yourTurn && nextState.activePlayerId !== playerId)
-    ) {
-      continue
-    }
-    const context: EffectContext = {
-      sourcePlayerId: playerId,
-      sourceInstanceId: cookie.instanceId,
-      sourceCardName: cookie.name,
-    }
-    for (const effect of skill.effects) {
-      if (!isEffectConditionMet(nextState, context, effect)) continue
-      nextState = executeCardEffect(nextState, context, effect, [])
-      if (
-        nextState.status !== 'playing' ||
-        nextState.pendingRefresh ||
-        nextState.pendingDrawUpTo ||
-        nextState.pendingOpponentHandDiscard ||
-        nextState.pendingRevealTopDeck
-      ) {
-        break
-      }
-    }
-    if (nextState.status !== 'playing' || nextState.pendingRefresh) break
-  }
+  nextState = resolveDepartureSkillTriggers(nextState, playerId, departedCookieCards)
 
   return resolveBreakLevelVictory(nextState)
 }
@@ -2548,6 +2516,7 @@ const executeCardEffectCore = (
           )?.card.name ?? 'Unknown',
         effectText: attackText ?? effect.kind,
         destination: effect.destination,
+        handDiscardOrigin: 'effect',
       },
     }
   }
@@ -2625,6 +2594,7 @@ const executeCardEffectCore = (
             (c) => c.card.instanceId === context.sourceInstanceId,
           )?.card.name ?? 'Unknown',
         effectText: effect.kind,
+        handDiscardOrigin: 'effect',
       },
     }
   }
@@ -2838,6 +2808,10 @@ const executeCardEffectCore = (
       if (effect.target.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.target.maxLevel) return false
       if (effect.target.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.target.minLevel) return false
       if (
+        effect.target.energyColor !== undefined &&
+        cookie.card.energyColor !== effect.target.energyColor
+      ) return false
+      if (
         effect.target.remainingHp !== undefined &&
         cookie.hpCards.length > effect.target.remainingHp
       ) return false
@@ -2882,8 +2856,15 @@ const executeCardEffectCore = (
       throw new GameRuleError('選擇的效果目標數量不合法。')
     }
 
+    if (effectiveTargetIds.length === 0) {
+      return { ...state }
+    }
+
     const selectedId = effectiveTargetIds[0]
-    const isStageTarget = selectedId === targetPlayer.stage?.card.instanceId
+    const isStageTarget =
+      selectedId !== undefined &&
+      targetPlayer.stage !== null &&
+      selectedId === targetPlayer.stage.card.instanceId
 
     if (isStageTarget) {
       if (!hasStageOption) throw new GameRuleError('對手沒有場景卡可移除。')
@@ -4133,11 +4114,12 @@ const executeCardEffectCore = (
     }
   }
 
-  if (effect.kind === 'shadow-milk-discard-trigger') {
+  if (effect.kind === 'shadow-milk-discard-trigger' || effect.kind === 'hand-to-trash-trigger') {
     if (effect.effects.length === 0) return state
     const triggerContext: EffectContext = {
       ...context,
-      sourceCardName: context.sourceCardName ?? 'Chess Piece Cookie',
+      sourceCardName: context.sourceCardName ??
+        (effect.kind === 'hand-to-trash-trigger' ? effect.sourceCardName : 'Chess Piece Cookie'),
     }
     const requiresSelection = effect.effects.some(requiresEffectCardSelection)
     if (requiresSelection) {

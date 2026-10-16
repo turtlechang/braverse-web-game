@@ -3,7 +3,11 @@ import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
 import { canPlayExtraDeckCookie, canSpecialPlayCookie } from './actions'
 import { getTrashBattleCookieCostCandidates } from './skills'
-import { getForcedAttackTargetId, isCookieAttackRestricted } from './battle'
+import {
+  getAttackDiscardRequirement,
+  getForcedAttackTargetId,
+  isCookieAttackRestricted,
+} from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
@@ -175,6 +179,12 @@ export const getLegalTurnCommands = (
           player.supportArea,
         )
         if (!paymentIds) continue
+        const discardRequirement = getAttackDiscardRequirement(
+          state,
+          playerId,
+          attacker.card.instanceId,
+        )
+        if (discardRequirement && player.hand.length < discardRequirement.count) continue
         for (const target of opponent.battleArea) {
           if (forcedTargetId && target.card.instanceId !== forcedTargetId) continue
           commands.push({

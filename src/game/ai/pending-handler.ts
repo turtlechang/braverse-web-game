@@ -5,6 +5,7 @@ import {
   getFaintEffectCardCandidates,
   getFaintEffectCandidates,
   getFaintSourceCostUnavailableReason,
+  hasPendingFaintModeCost,
 } from '../battle'
 import {
   applyGameCommand as executeGameCommand,
@@ -157,10 +158,14 @@ export const handleAiPendingDecision = (
       // 攻擊後效果屬於攻擊者，必須先由 battle handler 結算；被擊倒餅乾
       // 的延遲效果可能同時掛在防守者身上，不能用「等待效果持有者」的
       // idle 決策遮住這個更高優先級的戰鬥階段。
-      if (
+      const battleOwnsCurrentStep = (
         state.pendingBattle?.stage === 'attack-effect' &&
         state.pendingBattle.attackerPlayerId === playerId
-      ) return null
+      ) || (
+        state.pendingBattle?.stage === 'flip' &&
+        (state.pendingBattle.damagePlayerId ?? state.pendingBattle.defenderPlayerId) === playerId
+      )
+      if (battleOwnsCurrentStep) return null
       return {
         state,
         action: 'idle',
@@ -351,6 +356,20 @@ export const handleAiPendingDecision = (
         description: unavailable ?? `${state.players[playerId].name}支付牌庫頂 ${deckCost} 張昏厥代價，再選擇後續目標。`,
       }, 'effect-target', pendingDecision.sourceInstanceId)
     }
+    const modeFaint = state.pendingFaintEffects?.[0]
+    if (modeFaint?.effect.kind === 'choose-one' && !hasPendingFaintModeCost(state)) {
+      return withPendingReason({
+        state: applyGameCommand(state, {
+          kind: 'resolve-choose-one', playerId,
+          modeIndex: chooseAiEffectMode(state, modeFaint.context, modeFaint.effect,
+            universal.enabled
+              ? universal.preferredModeIndices(modeFaint.effect, modeFaint.sourceInstanceId)
+              : []),
+        }),
+        action: 'idle',
+        description: `${state.players[playerId].name}選擇昏厥效果的一個項目。`,
+      }, 'choose-one', modeFaint.sourceInstanceId, modeFaint.effect)
+    }
     const cardCandidates = getFaintEffectCardCandidates(state)
     const candidates = getFaintEffectCandidates(state)
     const ordered = [...candidates].sort(
@@ -406,7 +425,7 @@ export const handleAiPendingDecision = (
           (faintTriggeredCost.supportToHand ?? 0))
     const canPayFaintCost = selectedPaymentIds !== null
     const shouldPayFaintCost =
-      Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
+      Boolean(faintEnergyCost) && (cardCandidates.length > 0 || hasPendingFaintModeCost(state)) && canPayFaintCost
     const shouldPayTriggeredCost = Boolean(faintTriggeredCost) && canPayTriggeredCost
     const faintDiscardHandIds = universal.enabled
       ? universal.orderCostIds(
@@ -471,7 +490,9 @@ export const handleAiPendingDecision = (
       }),
       action: 'resolve-faint',
       description:
-        targetIds.length > 0
+        hasPendingFaintModeCost(state)
+          ? `${state.players[playerId].name}${shouldPayTriggeredCost ? '支付昏厥代價，再選擇效果項目。' : '不支付昏厥代價，略過效果。'}`
+          : targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0]?.card.name ?? orderedCards[0]?.name ?? '目標'}的昏厥效果。`
           : `${state.players[playerId].name}略過昏厥效果。`,
     }, 'effect-target', pendingDecision.sourceInstanceId, faintEffect)

@@ -1,0 +1,33 @@
+{
+  "name": "BS12 起始牌組｜PVP KR",
+  "entries": [
+    { "cardNumber": "BS8-009", "count": 1 },
+    { "cardNumber": "BS3-017", "count": 4 },
+    { "cardNumber": "ST6-002", "count": 4 },
+    { "cardNumber": "BS11-016", "count": 4 },
+    { "cardNumber": "BS6-010", "count": 1 },
+    { "cardNumber": "BS8-014", "count": 4 },
+    { "cardNumber": "BS8-012", "count": 3 },
+    { "cardNumber": "BS8-002", "count": 4 },
+    { "cardNumber": "BS4-004", "count": 1 },
+    { "cardNumber": "BS3-006", "count": 4 },
+    { "cardNumber": "BS1-002", "count": 2 },
+    { "cardNumber": "P-157", "count": 4 },
+    { "cardNumber": "P-151", "count": 4 },
+    { "cardNumber": "BS1-018", "count": 2 },
+    { "cardNumber": "ST1-004", "count": 4 },
+    { "cardNumber": "BS3-019", "count": 3 },
+    { "cardNumber": "BS2-006", "count": 3 },
+    { "cardNumber": "BS1-023", "count": 2 },
+    { "cardNumber": "BS2-007", "count": 1 },
+    { "cardNumber": "ST1-020", "count": 4 },
+    { "cardNumber": "ST6-020", "count": 1 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS11-091", "count": 1 },
+    { "cardNumber": "BS10-024", "count": 1 },
+    { "cardNumber": "BS8-005", "count": 1 },
+    { "cardNumber": "BS9-010", "count": 3 }
+  ],
+  "format": "standard"
+}

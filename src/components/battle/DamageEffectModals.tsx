@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { FaintEffectResponseModal } from '../modals/GameModals'
-import { getFaintSourceCostUnavailableReason } from '../../game'
+import { getFaintSourceCostUnavailableReason, hasPendingFaintModeCost, isChooseOneModePlayable } from '../../game'
 import type {
   BattleUiMatchLike,
   BattleUiPendingEffectLike,
@@ -25,6 +25,9 @@ const toggleFaintTargetId = (
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {
   const { dispatch, viewerPlayerId } = match
   const faintSourceCostError = getFaintSourceCostUnavailableReason(match.game)
+  const pendingFaint = match.game.pendingFaintEffects?.[0]
+  const faintModeCost = hasPendingFaintModeCost(match.game)
+  const faintChoice = !faintModeCost && pendingFaint?.effect.kind === 'choose-one' ? pendingFaint.effect : undefined
   const deckCost = match.faintCostDeckToTrashAmount ?? 0
   const breakTrigger = match.game.pendingAfterDamageEffects?.[0]?.triggerReason === 'break-by-arena-effect'
   const sourceEffectLabel = breakTrigger ? '休息區移入效果' : '受傷後效果'
@@ -45,6 +48,19 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
       {pending.faintActive && match.faintSourceCard && (
         <FaintEffectResponseModal
           card={match.faintSourceCard}
+          costBeforeMode={faintModeCost}
+          chooseOneModes={faintChoice?.modes}
+          chooseOneModePlayable={faintChoice && pendingFaint ? faintChoice.modes.map(mode =>
+            isChooseOneModePlayable(match.game, pendingFaint.context, mode.effects)) : undefined}
+          onChooseMode={faintChoice ? modeIndex => {
+            match.setSelectedFaintTargetIds([])
+            match.setSelectedFaintPaymentIds([])
+            match.setSelectedFaintCostHandIds([])
+            match.setSelectedFaintCostSupportIds([])
+            match.setSelectedFaintCostSupportToHandIds([])
+            dispatch({kind:'resolve-choose-one',playerId:viewerPlayerId,modeIndex},
+              `${match.faintSourceCard?.name ?? '昏厥效果'}：已選擇昏厥效果模式。`)
+          } : undefined}
           unavailableReason={faintSourceCostError}
           minTargets={match.faintMin}
           maxTargets={match.faintMax}

@@ -25,10 +25,10 @@ const oldDeck: CustomDeck = {
   createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z',
 }
 
-describe('BS12 六色預設牌組', () => {
+describe('BS12 AI 預設牌組', () => {
   beforeEach(() => localStorage.clear())
 
-  it('六色正式牌組皆為60張主牌，紅色Extra4張、黑色5張，其餘6張', () => {
+  it('BS12 預設牌組皆為60張主牌，Arena紅色Extra4張、黑色5張，其餘6張', () => {
     const decks = installBs12DeckPresets()
     expect(decks.map((deck) => deck.id)).toEqual(Object.keys(BS12_DECK_PRESETS).map((choice) => `preset-${choice}`))
     for (const [choice, recipe] of Object.entries(BS12_DECK_PRESETS)) {
@@ -60,8 +60,8 @@ describe('BS12 六色預設牌組', () => {
     saveCustomDecks([oldDeck])
     const persisted = loadCustomDecks()[0]
     const decks = installBs12DeckPresets()
-    expect(decks).toHaveLength(7)
-    expect(decks.at(-1)).toEqual(persisted)
+    expect(decks).toHaveLength(8)
+    expect(decks.find((deck) => deck.id === persisted.id)).toEqual(persisted)
     expect(installBs12DeckPresets()).toEqual(decks)
     saveCustomDecks([oldDeck, { ...decks[0], name: '我的調整' }])
     expect(loadCustomDecks()[0].name).toBe('我的調整')
@@ -81,6 +81,24 @@ describe('BS12 六色預設牌組', () => {
     expect(counts(createExtraDeckForChoice('bs12-black-arena', 'player-two'))).toEqual([
       ['BS11-091', 1], ['BS11-116', 1], ['BS12-111', 3],
     ])
+  })
+
+  it('PVP KR 圖片牌表逐張一致，60張主牌與6張Extra均來自正式卡池', () => {
+    const expectedKoreanMain = [
+      ['BS8-009', 1], ['BS3-017', 4], ['ST6-002', 4], ['BS11-016', 4], ['BS6-010', 1],
+      ['BS8-014', 4], ['BS8-012', 3], ['BS8-002', 4], ['BS4-004', 1], ['BS3-006', 4],
+      ['BS1-002', 2], ['P-157', 4], ['P-151', 4], ['BS1-018', 2], ['ST1-004', 4],
+      ['BS3-019', 3], ['BS2-006', 3], ['BS1-023', 2], ['BS2-007', 1], ['ST1-020', 4],
+      ['ST6-020', 1],
+    ]
+    const expectedKoreanExtra = [['BS11-091', 1], ['BS10-024', 1], ['BS8-005', 1], ['BS9-010', 3]]
+    const recipe = BS12_DECK_PRESETS['bs12-red-korean-starter']
+    expect(recipe.entries.map(({ cardNumber, count }) => [cardNumber, count])).toEqual(expectedKoreanMain)
+    expect(recipe.extraDeckEntries.map(({ cardNumber, count }) => [cardNumber, count])).toEqual(expectedKoreanExtra)
+    const deck = installBs12DeckPresets().find(({ id }) => id === 'preset-bs12-red-korean-starter')!
+    expect(validateCustomDeckDefinition(deck).errors).toEqual([])
+    expect(counts(createDeckForChoice('bs12-red-korean-starter', 'player-two'))).toEqual(expectedKoreanMain)
+    expect(counts(createExtraDeckForChoice('bs12-red-korean-starter', 'player-two'))).toEqual(expectedKoreanExtra)
   })
 
   it('已安裝五色的玩家只新增黑色，不復原已刪除或修改的牌組', () => {

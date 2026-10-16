@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.266Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST10 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47085,
+      "locale": "en",
+      "cardNumber": "ST10-005",
+      "baseCardNumber": "ST10-005",
+      "variant": null,
+      "name": "Dreamcatcher",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Starlight Gathering",
+        "text": "【On Play】 <Discard 1 card.> If [Moonlight Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{P}> Dream Gift {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-6XS4T05CS6KTQUOulbf_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

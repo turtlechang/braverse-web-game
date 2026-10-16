@@ -897,7 +897,7 @@ export function useOnlinePendingEffect(params: {
     })
   }
 
-  const confirmEffect = () => {
+  const confirmEffect = (deckToTrashAmount?: number) => {
     if (effectSelectionError) return
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
@@ -1048,12 +1048,17 @@ export function useOnlinePendingEffect(params: {
                 selectedTargetAmounts[index] ?? selectionEffect.selectableAmount!.max,
             )
           : undefined
+      const selectedDeckToTrashAmount =
+        displayedEffect?.kind === 'deck-to-trash' && displayedEffect.selectableAmount
+          ? deckToTrashAmount ?? displayedEffect.selectableAmount.max
+          : undefined
       dispatch(
         {
           kind: 'resolve-ability-effect',
           playerId: viewerPlayerId,
           targetIds: selectedTargetIds,
           ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
+          ...(selectedDeckToTrashAmount !== undefined ? { deckToTrashAmount: selectedDeckToTrashAmount } : {}),
         },
         '已決定效果目標。',
       )

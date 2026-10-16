@@ -1,0 +1,62 @@
+{
+  "retrievedAt": "2026-10-16",
+  "method": "Cookierift live public deck detail DOM: verified page title, author, update date, legality, and displayed main/EXTRA card buttons. Canonical card IDs were read from each button's image URL and counts from its displayed copy label. Alternate-art suffixes are normalized to base card number. No substitutions.",
+  "sourceHashMethod": "SHA-256 over UTF-8 values joined by LF in this order: sourceId, color, name, author, sourceUrl, sourceUpdatedAt, main, extra. Card IDs are canonical base numbers in displayed source order.",
+  "decks": [
+    {
+      "sourceId": 1239,
+      "color": "yellow",
+      "name": "Kawaii's Ol' Reliable Yellow",
+      "author": "KawaiiXO",
+      "sourceUrl": "https://cookierift.com/decks/community/1239",
+      "sourceUpdatedAt": "2026-10-14",
+      "sourceHash": "sha256:8a4ede8796899338307858649d2a43bf708f01928a363507512f144b401b3da0",
+      "main": "P-129:3 ST7-008:4 BS10-040:4 ST7-016:3 ST7-017:4 BS10-038:2 ST7-005:4 BS1-037:2 BS4-026:1 BS4-038:3 BS6-031:2 BS9-031:2 BS10-043:2 BS10-047:3 BS11-033:3 BS1-040:3 BS10-033:4 ST2-020:3 BS6-042:2 BS10-046:2 BS11-036:2 ST2-016:2",
+      "extra": "BS9-030:1 BS10-048:3 BS11-091:2"
+    },
+    {
+      "sourceId": 1273,
+      "color": "blue",
+      "name": "Untitled deck",
+      "author": "mitsuki02",
+      "sourceUrl": "https://cookierift.com/decks/community/1273",
+      "sourceUpdatedAt": "2026-10-16",
+      "sourceHash": "sha256:9493c321b09dbbe4776735cc358208828748ce0c54dcd9b9925f6be0c4e612e6",
+      "main": "BS7-078:3 BS7-072:2 BS12-060:4 BS12-058:4 BS12-067:2 BS7-085:2 ST4-020:2 BS9-093:2 BS12-066:1 ST4-016:2 ST9-016:2 BS7-084:2 BS11-065:2 BS12-068:2 BS12-070:2 BS12-072:3 BS12-073:1 P-117:2 P-178:2 P-105:1 BS7-076:3 BS7-070:3 BS7-075:3 BS7-067:3 BS12-057:2 BS2-029:1 ST9-017:2",
+      "extra": "BS10-098:1 BS12-074:1"
+    },
+    {
+      "sourceId": 1259,
+      "color": "red",
+      "name": "Flames of Immortality",
+      "author": "Crest_Strikard",
+      "sourceUrl": "https://cookierift.com/decks/community/1259",
+      "sourceUpdatedAt": "2026-10-14",
+      "sourceHash": "sha256:d81103b48f95738caf8d79c39412ef64d43d0d3313361db1e18d78bfdece3e8d",
+      "main": "ST6-002:4 ST6-004:4 ST6-005:4 ST6-006:4 ST6-007:4 ST6-008:4 ST6-013:4 ST6-010:4 ST6-012:4 ST6-015:4 ST6-017:4 ST6-018:4 ST6-019:4 ST6-020:4 ST6-014:2 ST6-001:2",
+      "extra": ""
+    },
+    {
+      "sourceId": 1207,
+      "color": "black",
+      "name": "Black BS12",
+      "author": "Nevir",
+      "sourceUrl": "https://cookierift.com/decks/community/1207",
+      "sourceUpdatedAt": "2026-10-13",
+      "sourceHash": "sha256:f30ac5c7af8bb30026e1cdd24b6e187e912ab25b90db07361a122b02bbb965df",
+      "main": "BS11-103:4 BS11-114:4 BS12-103:4 BS12-102:4 BS12-104:1 BS12-105:4 BS12-106:2 BS12-100:2 BS12-099:1 BS12-096:4 BS12-095:4 BS12-098:4 BS12-110:4 BS12-108:3 BS12-107:3 BS12-109:4 BS12-112:4 BS11-110:2 BS11-104:2",
+      "extra": "BS12-111:4"
+    },
+    {
+      "sourceId": 1251,
+      "color": "multi",
+      "name": "I love Cookiez!!!",
+      "author": "KawaiiXO",
+      "sourceUrl": "https://cookierift.com/decks/community/1251",
+      "sourceUpdatedAt": "2026-10-14",
+      "sourceHash": "sha256:30140940794b017e6a247f85e2b7d8d0e2109e80822a60add4ca4df9f4776269",
+      "main": "BS12-088:3 BS12-052:4 BS12-051:4 BS12-070:4 BS12-071:3 BS12-089:3 BS12-107:4 BS12-108:4 BS12-033:4 BS12-032:4 BS12-015:4 BS12-014:4 BS12-112:1 BS12-110:1 BS12-109:1 BS12-093:1 BS12-091:1 BS12-073:1 BS12-072:1 BS12-055:1 BS12-053:1 BS12-037:1 BS12-035:1 BS12-054:1 BS12-034:1 BS12-017:1 BS12-016:1",
+      "extra": "BS12-092:1 BS12-074:1 BS12-056:1 BS12-036:1 BS12-018:1 BS12-111:1"
+    }
+  ]
+}

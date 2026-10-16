@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46913,
+      "locale": "en",
+      "cardNumber": "ST8-007",
+      "baseCardNumber": "ST8-007",
+      "variant": null,
+      "name": "Blue Slushy Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C (홀로)",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Arrow Shot {da} 2",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/qeqdjOIyh_cfIacNTsc-9g.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

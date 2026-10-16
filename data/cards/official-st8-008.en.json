@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46914,
+      "locale": "en",
+      "cardNumber": "ST8-008",
+      "baseCardNumber": "ST8-008",
+      "variant": null,
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Creator of Life",
+        "text": "When this Cookie faints, if the number of cards in your support area is the same or less than your opponent's support area, place up to 1 card from the top of your deck in your support area as rested."
+      },
+      "attackText": "<{G}{G}{G}> Shining Light {da} 3 Then, if there is a [Wind Archer Cookie] in your support area, draw 1 card from your deck and discard 1 card.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/q77XO42d8Kpyspi8BOUjFQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

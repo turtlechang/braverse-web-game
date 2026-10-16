@@ -9,12 +9,56 @@ import {
   type GameState,
 } from '../game'
 import { createBs12CarpetDemoState, createBs12KumihoDemoState, createCardCheckDemoState } from '../game/demo'
+import { createSt1017To018TrapPreviewState } from '../game/st10-017-018-020-demo'
 import type { DispatchGameCommand } from './useBattleActions'
 import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useOnlinePendingEffect', () => {
+  it.each([0, 1, 2, 3] as const)('forwards ST10-017 deck-to-trash choice %s through the online command', async amount => {
+    let game = createSt1017To018TrapPreviewState('ST10-017', 'positive')
+    const trap = game.players['player-one'].hand[0]!
+    const attacker = game.players['player-two'].battleArea.find(cookie => cookie.card.id === 'BS1-072')!
+    game = applyGameCommand(game, {
+      kind: 'play-trap',
+      playerId: 'player-one',
+      trapInstanceId: trap.instanceId,
+      paymentIds: game.players['player-one'].supportArea.map(support => support.card.instanceId),
+      targetIds: [],
+    })
+    expect(game.pendingAbilityEffect).toMatchObject({
+      sourceInstanceId: trap.instanceId,
+      effectIndex: 1,
+      battleContinuation: 'after-trap',
+    })
+    expect(game.pendingBattle?.attackerInstanceId).toBe(attacker.card.instanceId)
+
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let current: ReturnType<typeof useOnlinePendingEffect> | undefined
+    function Harness() {
+      current = useOnlinePendingEffect({ game, viewerPlayerId: 'player-one', dispatch,
+        hasFaint: false, hasAfterDamage: false })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      expect(current!.currentEffect).toMatchObject({
+        kind: 'deck-to-trash',
+        selectableAmount: { min: 0, max: 3 },
+      })
+      await act(() => current!.confirmEffect(amount))
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith({
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: [],
+        deckToTrashAmount: amount,
+      }, '已決定效果目標。')
+    } finally {
+      await act(() => root.unmount())
+    }
+  })
   it.each(['BS12-053', 'BS12-053@1'] as const)('%s presents paid opponent-attack timing without a second cost', async number => {
     const game = applyGameCommand(createBs12KumihoDemoState('response', number), { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'bs12-053-source', discardHandIds: [], trashToDeckIds: [], supportToTrashIds: ['bs12-053-support-2'] })
     const dispatch = vi.fn<DispatchGameCommand>()

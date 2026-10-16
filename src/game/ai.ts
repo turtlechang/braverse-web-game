@@ -18,6 +18,7 @@ import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getSupportEffectCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
@@ -256,10 +257,8 @@ const chooseEffectTargets = (
     const targetPlayer = state.players[targetPlayerId]
     const stageOnly = effect.stageOnly ?? false
     if (effect.target.sourceOnly) {
-      const source = targetPlayer.battleArea.find(
-        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
-      )
-      return source ? [source.card.instanceId] : []
+      return getEffectTargetCandidatesForEffect(state, context, effect)
+        .map((cookie) => cookie.card.instanceId)
     }
     if (stageOnly) {
       if (targetPlayer.stage) {
@@ -267,17 +266,12 @@ const chooseEffectTargets = (
       }
       return []
     }
-    const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
-      if (effect.target.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.target.minLevel) return false
-      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
-      return true
-    })
+    const battleCandidates = getEffectTargetCandidatesForEffect(state, context, effect)
     if (battleCandidates.length > 0) {
       const ordered = [...battleCandidates].sort(
         (left, right) => left.hpCards.length - right.hpCards.length,
       )
-      return [ordered[0].card.instanceId]
+      return [ordered[0]!.card.instanceId]
     }
     if (effect.allowStage && targetPlayer.stage) {
       return [targetPlayer.stage.card.instanceId]
@@ -317,14 +311,7 @@ const chooseEffectTargets = (
   }
 
   if (effect.kind === 'opponent-battle-to-trash') {
-    const opponentId =
-      context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
-    const candidates = state.players[opponentId].battleArea.filter((cookie) => {
-      if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
-      if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
-      if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
-      return true
-    })
+    const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
     return candidates
       .sort((left, right) => right.hpCards.length - left.hpCards.length)
       .slice(0, 1)

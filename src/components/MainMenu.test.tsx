@@ -184,7 +184,7 @@ describe('MainMenu AI opponent options', () => {
     expect(selects[0].value).toBe('bs12-red-arena')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // BS12 六色優先，接著列出新授權的六色社群構築。
+    // BS12 預設優先，接著列出正式接受的社群構築。
     const optionValues = [...selects[0].options].map((option) => option.value)
     expect(optionValues).toEqual([
       'bs12-blue-arena',
@@ -193,10 +193,14 @@ describe('MainMenu AI opponent options', () => {
       'bs12-red-arena',
       'bs12-purple-arena',
       'bs12-black-arena',
-      'cookierift-921', 'cookierift-927', 'cookierift-67',
-      'cookierift-83', 'cookierift-568', 'cookierift-506', 'cookierift-1035',
+      'bs12-red-korean-starter',
+      'cookierift-921', 'cookierift-927', 'cookierift-801', 'cookierift-973', 'cookierift-67',
+      'cookierift-83', 'cookierift-793', 'cookierift-568', 'cookierift-506', 'cookierift-1035',
+      'cookierift-16', 'cookierift-731', 'cookierift-1164', 'cookierift-1239', 'cookierift-1151',
+      'cookierift-1259', 'cookierift-1207',
     ])
     expect(container.textContent).toContain('BS12 紅色｜Arena')
+    expect(container.textContent).toContain('BS12 紅色｜韓版起始牌組（PVP KR）')
     expect(container.textContent).not.toContain('BS6')
 
     await act(() => root.unmount())

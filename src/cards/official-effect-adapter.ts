@@ -289,6 +289,9 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const supportToTrashMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+(?:in|into)\s+the\s+trash\.?\s*(?:>|》)/i,
   )
+  const battleCookieToHandMatch = text.match(
+    /(?:<|《)\s*Return\s+(\d+)\s+Cookie(?:\s+that\s+is\s+LV\.(\d+)\s+or\s+lower)?\s+from\s+your\s+battle\s+area\s+to\s+your\s+hand\.?\s*(?:>|》)/i,
+  )
   const trashBattleMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
   )
@@ -323,6 +326,16 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
+    ...(battleCookieToHandMatch
+      ? {
+          battleCookieToHand: {
+            count: Number(battleCookieToHandMatch[1]),
+            ...(battleCookieToHandMatch[2]
+              ? { maxLevel: Number(battleCookieToHandMatch[2]) }
+              : {}),
+          },
+        }
+      : {}),
     ...(hpToTrashMatch
       ? {
           hpToTrash: {
@@ -413,24 +426,133 @@ const parseBreakToTrash = (stripped: string): ParsedBreakToTrash | null => {
     : null
 }
 
-export const convertOfficialCardEffects = (
-  card: OfficialCardRecord,
-): OfficialEffectConversion => {
-  const sourceText = getEffectText(card)
-  const cardKey = card.cardNumber.includes('@')
-    ? card.baseCardNumber || card.cardNumber.split('@')[0]
-    : card.cardNumber
-
-  if (!sourceText) {
-    return {
-      status: 'unsupported',
-      cardNumber: card.cardNumber,
-      sourceText,
-      reason: 'no-effect-text',
-    }
-  }
-
-  const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
+const exactStarterEffects: Partial<Record<string, CardEffect[] | ((card: OfficialCardRecord) => CardEffect[])>> = {
+    // ST10-014 Lunar Compendium: pay P and the printed purple LV1 battle Cookie
+    // cost before selecting an optional opposing Cookie for one effect damage.
+    'ST10-014': [{
+      kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }],
+    // ST10-015 removes up to one HP card from each selected opposing Cookie.
+    // “Up to” keeps the selection optional; Moonlight in either own public zone
+    // gates the effect after the printed PP payment has been paid.
+    'ST10-015': [{
+      kind: 'hp-to-trash', amount: 1,
+      target: { side: 'opponent', min: 0, max: 4 },
+      condition: { kind: 'any-of', conditions: [
+        { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Moonlight Cookie' },
+        { kind: 'trash-area-has-named-cookie', side: 'self', name: 'Moonlight Cookie' },
+      ] },
+    }],
+    // ST10-016 pays P even below the printed 15-card trash threshold; below
+    // that threshold its optional one-Cookie effect has no effect.
+    'ST10-016': [{
+      kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'trash-count-at-least', count: 15 },
+    }],
+    // ST10-005 Dreamcatcher: pay the printed discard-one On Play cost first;
+    // the optional opposing damage only resolves with Moonlight Cookie in battle.
+    'ST10-005': [{
+      kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+      condition: { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Moonlight Cookie' },
+    }],
+    // ST10-009 Space Doughnut draws up to one after direct battle-to-trash movement.
+    'ST10-009': [{ kind: 'draw-up-to', max: 1 }],
+    // ST9-009 Wave Drop has no standalone activated effect; its printed passive
+    // is attached to the converted skill below and listens for Sea Fairy.
+    'ST9-009': [],
+    // ST9-012 White Pearl Cookie: On Play draw up to two only at hand size four
+    // or less. The attack's optional blue payment is modeled separately below.
+    'ST9-012': [{ kind: 'draw-up-to', max: 2,
+      condition: { kind: 'hand-count-at-most', count: 4 } }],
+    // ST9-013 Shimmering Moonlit Coral draws up to two after its separate
+    // blue-energy and blue-hand-card costs are paid by the Item path below.
+    'ST9-013': [{ kind: 'draw-up-to', max: 2 }],
+    // ST9-015 Essence of the Ocean: hand size gates only its draw; the
+    // following Then independently heals an optional own Sea Fairy at <=5 HP.
+    'ST9-015': [
+      { kind: 'draw-up-to', max: 1,
+        condition: { kind: 'hand-count-at-most', count: 5 } },
+      { kind: 'gain-hp', amount: 1,
+        target: { side: 'self', min: 0, max: 1, cardName: 'Sea Fairy Cookie', maxRemainingHp: 5 } },
+    ],
+    // ST9-007 Peppermint Cookie: a free once-per-turn Activate draws only
+    // while its controller has three or fewer cards in hand.
+    'ST9-007': [{ kind: 'draw-up-to', max: 1,
+      condition: { kind: 'hand-count-at-most', count: 3 } }],
+    // ST9-008 Crimson Coral Cookie: return cost is paid before this Cookie
+    // gains its printed HP; its LV3 source cannot pay the LV2-or-lower cost.
+    'ST9-008': [{ kind: 'gain-hp', amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true } }],
+    // ST9-006 Sea Fairy Cookie can activate its free Once Per Turn draw only
+    // while its owner's hand has five or fewer cards.
+    'ST9-006': [{ kind: 'draw-up-to', max: 1,
+      condition: { kind: 'hand-count-at-most', count: 5 } }],
+    // ST8-016 Wind's Grace Earrings: one G is paid even when either printed
+    // witness is absent; support count includes every card in the area.
+    'ST8-016': [{
+      kind: 'damage-all', amount: 1, side: 'opponent',
+      condition: { kind: 'all-of', conditions: [
+        { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' },
+        { kind: 'support-count-at-least', count: 5 },
+      ] },
+    }],
+    // ST8-015 Essence of the Tempest: the Wind Archer witness gates the
+    // optional deck-to-support choice; the printed Then remains a separate,
+    // independently optional return from support to hand.
+    'ST8-015': [
+      { kind: 'choose-one',
+        condition: { kind: 'any-of', conditions: [
+          { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' },
+          { kind: 'support-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' },
+        ] },
+        modes: [
+          { label: '將牌庫頂1張卡以疲勞狀態放入支援區', effects: [{ kind: 'deck-to-support', amount: 1, rested: true }] },
+          { label: '不放置卡牌', effects: [{ kind: 'deck-to-support', amount: 0, rested: true }] },
+        ],
+      },
+      { kind: 'support-to-hand', amount: 1, optional: true },
+    ],
+    // ST8-014 Cape of the Vanquisher: both the support threshold and the
+    // printed green/remaining-HP target filters must survive conversion.
+    'ST8-014': [{ kind: 'gain-hp', amount: 1,
+      target: { side: 'self', min: 0, max: 1, energyColor: 'green', maxRemainingHp: 3 },
+      condition: { kind: 'support-count-at-least', count: 5 },
+    }],
+    // ST8-013 Windgrass resolves the optional opposing support REST first,
+    // then independently readies up to one own support while Wind Archer is
+    // present. The condition belongs to the second ordered effect.
+    'ST8-013': [
+      { kind: 'rest-support', side: 'opponent', amount: 1, optional: true },
+      { kind: 'set-active', supportCount: 1, selectable: true, optional: true, restedOnly: false,
+        condition: { kind: 'battle-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' } },
+    ],
+    // ST8-012 Windcatcher: only the opponent damage checks for an Item
+    // activated this turn; the optional G Then remains independently usable.
+    'ST8-012': [
+      { kind: 'damage', amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'item-activated-this-turn' } },
+      { kind: 'optional-cost-attack', resolution: 'ability',
+        cost: { energy: { green: 1 }, discardHand: 0 },
+        effectText: 'Then, <can be used as {G}.> Select up to 1 of your [Wind Archer Cookie]. That Cookie gains +1 HP.',
+        effects: [{ kind: 'gain-hp', amount: 1,
+          target: { side: 'self', min: 0, max: 1, cardName: 'Wind Archer Cookie' } }] },
+    ],
+    'ST8-010': [{ kind: 'choose-one', modes: [
+      { label: '將牌庫頂1張卡以疲勞狀態放入支援區', effects: [{ kind: 'deck-to-support', amount: 1, rested: true }] },
+      { label: '不放置卡牌', effects: [{ kind: 'deck-to-support', amount: 0, rested: true }] },
+    ] }],
+    'ST8-008': [{ kind: 'choose-one',
+      condition: { kind: 'support-count-less-than-opponent', difference: 0 },
+      modes: [
+        { label: '將牌庫頂1張卡以疲勞狀態放入支援區', effects: [{ kind: 'deck-to-support', amount: 1, rested: true }] },
+        { label: '不放置卡牌', effects: [{ kind: 'deck-to-support', amount: 0, rested: true }] },
+      ],
+    }],
+    'ST8-005': [{"kind":"draw","amount":1,"condition":{"kind":"all-of","conditions":[{"kind":"hand-count-at-most","count":5},{"kind":"item-activated-this-turn"}]}}],
     ...DECK_ADDITION_EFFECTS,
     'ST7-008': [{kind:'break-to-trash',max:1,energyColor:'yellow',exactLevel:1,condition:{kind:'any-of',conditions:[{kind:'battle-area-has-named-cookie',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3},{kind:'break-area-has-card',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3}]}}],
     'ST7-014': [{kind:'gain-hp',amount:1,target:{side:'self',min:0,max:1},condition:{kind:'any-of',conditions:[{kind:'battle-area-has-named-cookie',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3},{kind:'break-area-has-card',side:'self',name:'Millennial Tree Cookie',minLevel:3,maxLevel:3}]}}],
@@ -459,9 +581,9 @@ export const convertOfficialCardEffects = (
     'ST6-001': [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
     'BS12-110': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-at-least', count: 3, energyColor: 'black' } }],
     'BS12-112': [],
-    'BS12-106': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+    'BS12-106': (card) => ([{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
       { kind: 'optional-cost-attack', resolution: 'ability', cost: { energy: {}, discardHand: 1 }, effectText: card.skill.text ?? '',
-        effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }] }],
+        effects: [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }] }]),
     'BS12-108': [{ kind: 'draw-up-to', max: 1, condition: { kind: 'all-of', conditions: [
       { kind: 'hand-count-at-most', count: 5 },
       { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena', excludeSource: true },
@@ -469,16 +591,16 @@ export const convertOfficialCardEffects = (
     'BS12-105': [{ kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 },
       condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
     // Special Play is a deployment cost; the FLIP is a separate printed ability.
-    'BS12-100': card.type === 'cookie' ? [] : [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
-    'BS12-095': card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }],
-    'BS12-096': card.type === 'cookie' ? [] : [{ kind: 'draw-up-to', max: 2, condition: {
+    'BS12-100': (card) => (card.type === 'cookie' ? [] : [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }]),
+    'BS12-095': (card) => (card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, keyword: 'arena' } }]),
+    'BS12-096': (card) => (card.type === 'cookie' ? [] : [{ kind: 'draw-up-to', max: 2, condition: {
       kind: 'all-of', conditions: [{ kind: 'hand-count-at-most', count: 5 },
         { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' }],
-    } }],
+    } }]),
     'BS12-099': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, energyColor: 'black', keyword: 'arena' }],
-    'BS12-098': card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1,
+    'BS12-098': (card) => (card.type === 'cookie' ? [] : [{ kind: 'gain-hp', amount: 1,
       target: { side: 'self', min: 1, max: 1, sourceOnly: true, minLevel: 2 },
-      condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }],
+      condition: { kind: 'battle-area-has-color', side: 'self', color: 'black', keyword: 'arena' } }]),
     'BS12-055': [{ kind: 'choose-one', modes: [
       { label: '將牌庫頂 1 張卡以疲勞狀態放入支援區', effects: [{ kind: 'deck-to-support', amount: 1, rested: true }] },
       { label: '不放置卡牌', effects: [{ kind: 'deck-to-support', amount: 0, rested: true }] },
@@ -6544,11 +6666,10 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
-    // BS9-106～108：牌文要求「由 Shadow Milk 效果從手牌進棄牌」的來源
-    // provenance，交由 executeCardEffect 在 discard-hand 後啟動巢狀效果。
-    'BS9-106': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'draw-up-to', max: 2 }] }],
-    'BS9-107': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'purple' } }] }],
-    'BS9-108': [{ kind: 'shadow-milk-discard-trigger', effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] }],
+    // BS9-106～108 use the same provenance-aware hand-to-trash trigger as ST9-009.
+    'BS9-106': [{ kind: 'hand-to-trash-trigger', sourceCardName: 'Shadow Milk Cookie', effects: [{ kind: 'draw-up-to', max: 2 }] }],
+    'BS9-107': [{ kind: 'hand-to-trash-trigger', sourceCardName: 'Shadow Milk Cookie', effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, energyColor: 'purple' } }] }],
+    'BS9-108': [{ kind: 'hand-to-trash-trigger', sourceCardName: 'Shadow Milk Cookie', effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] }],
     // BS9-111 Everything Pie Cookie：對手 Refresh 必須把兩張 Cookie 放入 Break。
     'BS9-111': [{ kind: 'refresh-cookie-break-count', count: 2 }],
     // BS9-112 Pumpkin Pie Cookie：己方棄牌區至少 15 張時持續攻擊 +1。
@@ -6592,17 +6713,35 @@ export const convertOfficialCardEffects = (
     // 棄牌區；side: opponent 讓目標玩家與操作玩家分離。
     'BS9-064': [{ kind: 'support-to-trash', amount: 1, side: 'opponent' }],
   }
-  const exactEffects =
+export const convertOfficialCardEffects = (
+  card: OfficialCardRecord,
+): OfficialEffectConversion => {
+  const sourceText = getEffectText(card)
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
+
+  if (!sourceText) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'no-effect-text',
+    }
+  }
+
+  const exactEntry =
     exactStarterEffects[card.cardNumber] ??
     exactStarterEffects[cardKey] ??
     P_EXACT_EFFECTS[card.cardNumber] ??
     P_EXACT_EFFECTS[cardKey]
+  const exactEffects = typeof exactEntry === 'function' ? exactEntry(card) : exactEntry
   if (exactEffects) {
     return {
       status: 'supported',
       cardNumber: card.cardNumber,
       sourceText,
-      effects: exactEffects,
+      effects: structuredClone(exactEffects),
     }
   }
 
@@ -7175,6 +7314,16 @@ export const convertOfficialItemAbility = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'ST10-014': {
+      energy: { purple: 1 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1, energyColor: 'purple', level: 1 },
+    },
+    'ST9-013': { energy: { blue: 1 }, discardHand: 1, discardHandColor: 'blue' },
+    'ST9-015': { energy: { blue: 1 }, discardHand: 0 },
+    'ST8-016': { energy: { green: 1 }, discardHand: 0 },
+    'ST8-015': { energy: { green: 2 }, discardHand: 0 },
+    'ST8-013': { energy: { green: 1 }, discardHand: 0 },
     'ST7-013': { energy: { yellow: 2 }, discardHand: 0, trashCookieToBreakArea: { count: 1, energyColor: 'yellow' } },
     'ST6-016': {energy:{red:3},discardHand:1},
     'ST6-015': { energy: { red: 2 }, discardHand: 0, hpToTrash: { amount: 1 } },
@@ -7321,7 +7470,7 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.trashBattleCookie)
   return {
     cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
-    ...(cardKey === 'BS12-046' || cardKey === 'BS12-085' || cardKey === 'ST7-014' || cardKey === 'ST7-015' ? { allowInactiveConditionalEffects: true } : {}),
+    ...(cardKey === 'BS12-046' || cardKey === 'BS12-085' || cardKey === 'ST7-014' || cardKey === 'ST7-015' || cardKey === 'ST8-014' || cardKey === 'ST8-015' || cardKey === 'ST8-016' || cardKey === 'ST10-015' || cardKey === 'ST10-016' ? { allowInactiveConditionalEffects: true } : {}),
     text: abilityText,
     effects: conversion.effects,
     ...(exactEquippedAttackEffects[cardKey]
@@ -7371,6 +7520,31 @@ export const convertOfficialStageAbility = (
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
+    // ST10-020 Wizard Archives: its Activate rests this Stage, then lets its
+    // owner send up to one purple LV.1 Cookie from battle to trash.
+    'ST10-020': [{
+      kind: 'field-to-trash',
+      target: {
+        side: 'self',
+        min: 0,
+        max: 1,
+        energyColor: 'purple',
+        minLevel: 1,
+        maxLevel: 1,
+      },
+    }],
+    // ST9-020 Tearcrown: the owner may rest this Stage to draw up to one
+    // card, but only when the hand contains three cards or fewer.
+    'ST9-020': [{
+      kind: 'draw-up-to', max: 1,
+      condition: { kind: 'hand-count-at-most', count: 3 },
+    }],
+    // ST8-020 Dark Enchantress Laboratory: at its owner's turn end, move the
+    // Stage to trash before optionally readying up to two rested supports.
+    'ST8-020': [
+      { kind: 'stage-source-to-trash' },
+      { kind: 'set-active', supportCount: 2, selectable: true, optional: true },
+    ],
     'ST7-020': [{kind:'draw-up-to',max:1,condition:{kind:'cookie-gained-hp-this-turn'}}],
     'ST6-020': [{kind:'draw-up-to',max:1}],
     'BS12-102': [{ kind: 'trash-to-hand', max: 1, cookieOnly: true, keyword: 'arena', hasSpecialPlay: true }],
@@ -8038,6 +8212,9 @@ export const convertOfficialStageAbility = (
     }],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    'ST10-020': { energy: {}, discardHand: 0 },
+    'ST9-020': { energy: {}, discardHand: 0 },
+    'ST8-020': { energy: {}, discardHand: 0 },
     'ST7-020': {energy:{yellow:1},discardHand:0},
     'ST6-020': {energy:{},discardHand:0,hpToTrash:{amount:1}},
     'BS12-102': { energy: { black: 1 }, discardHand: 0 },
@@ -8188,7 +8365,7 @@ export const convertOfficialStageAbility = (
       ...(card.cardNumber === 'BS9-118' || card.baseCardNumber === 'BS9-118'
         ? { ownerIndependent: true, oncePerTurn: true }
         : {}),
-      ...(card.baseCardNumber === 'ST7-020' || card.baseCardNumber === 'BS11-083' || card.baseCardNumber === 'BS12-030' || card.baseCardNumber === 'BS12-084'
+      ...(card.baseCardNumber === 'ST7-020' || card.baseCardNumber === 'ST9-020' || card.baseCardNumber === 'BS11-083' || card.baseCardNumber === 'BS12-030' || card.baseCardNumber === 'BS12-084'
         ? { allowInactiveConditionalEffects: true }
         : {}),
       ...(activation?.markers.includes('t1') ? { oncePerTurn: true } : {}),
@@ -8240,6 +8417,28 @@ export const convertOfficialAttackEffects = (
   if (card.cardNumber === 'BS9-079@3') return undefined
   // R003: the user confirms revival from the owner's Break area.
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    // ST9-006 Sea Fairy Cookie: after its BBB/3 attack, the optional Then
+    // discards two hand cards before resolving one damage to every opponent
+    // Cookie in sequence.
+    'ST9-006': [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 2 },
+      effectText:
+        "<{B}{B}{B}> Blue Wave Surge {da} 3 Then, <discard 2 cards.> All of your opponent's Cookies receive 1 damage.",
+      effects: [{
+        kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+      }],
+    }],
+    'ST8-008': [
+      { kind: 'draw', amount: 1, condition: { kind: 'support-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' } },
+      { kind: 'discard-hand', count: 1, condition: { kind: 'support-area-has-named-cookie', side: 'self', name: 'Wind Archer Cookie' } },
+    ],
+    'ST8-005': [{"kind":"rest-support-and-damage","supportSide":"self","supportAmount":2,"activeOnly":true,"target":{"side":"opponent","min":0,"max":1}}],
+    'ST8-004': [{
+      kind: 'set-active', supportCount: 1, selectable: true, optional: true,
+      restedOnly: false, condition: { kind: 'support-count-at-least', count: 5 },
+    }],
     'ST7-010': [{kind:'optional-cost-attack',cost:{energy:{},discardHand:1,discardHandType:'cookie',discardHandHasFlip:true},effects:[{kind:'draw-up-to',max:2}],effectText:'Then, <discard 1 Cookie that has FLIP from your hand.> Draw up to 2 cards from your deck.'}],
     'ST7-008': [{kind:'damage',amount:1,target:{side:'opponent',min:1,max:1,attackTargetOnly:true},condition:{kind:'break-level-at-least',level:4}}],
     'ST7-011': [{ kind: 'gain-hp', amount: 1,
@@ -11063,6 +11262,25 @@ export const convertOfficialAttackEffects = (
       effectText: 'Then, <can be used as {B}.> Select up to 1 of your Cookies. That Cookie gains +1 HP.',
       effects: [{ kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1 } }],
     }],
+    // ST9-012 White Pearl Cookie: the printed Then is an optional 1B Support
+    // Area payment; the following opponent damage clause only applies when a
+    // Sea Fairy Cookie is in its controller's battle area.
+    'ST9-012': [{
+      kind: 'optional-cost-attack',
+      resolution: 'ability',
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      effectText: "Then, <can be used as {B}.> If [Sea Fairy Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      effects: [{
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Sea Fairy Cookie',
+        },
+      }],
+    }],
     // BS9-089 Pure Vanilla Cookie：先把己方 LV.1 Cookie 放牌庫底，再由來源
     // Cookie 補 1 HP；若無可選目標，整段 up-to 略過。
     'BS9-089': [
@@ -12150,6 +12368,147 @@ export const convertOfficialTrapAbility = (
       }
     >
   > = {
+    // ST10-017 Inside the Clock Tower: the optional opponent attack reduction
+    // resolves before the independent top-three deck-to-trash Then.
+    'ST10-017': {
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'deck-to-trash',
+          amount: 3,
+          side: 'self',
+          selectableAmount: { min: 0, max: 3 },
+        },
+      ],
+    },
+    // ST10-018 Reunion of Star and Moon: recover a purple LV.3 Cookie only
+    // after the optional opponent attack reduction resolves.
+    'ST10-018': {
+      cost: { energy: { purple: 3 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'trash-to-hand',
+          max: 1,
+          energyColor: 'purple',
+          cookieOnly: true,
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      ],
+    },
+    // ST9-017 Revelation of the Seas: the printed hand-size condition gates
+    // only the optional draw after the opponent-Cookie attack reduction.
+    'ST9-017': {
+      cost: { energy: { blue: 3 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'hand-count-at-most', count: 3 },
+        },
+      ],
+    },
+    // ST9-018 Tower of Frozen Waves: its discard is an optional Then payment;
+    // the additional reduction must remain bound to the first selected Cookie.
+    'ST9-018': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: {}, discardHand: 1 },
+          effectText: card.skill.text ?? '',
+          effects: [{
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          }],
+        },
+      ],
+    },
+    // ST9-019 Curse of the Seas: the discard payment gates an independent
+    // optional 1-damage target that must still have at least two HP remaining.
+    'ST9-019': {
+      cost: { energy: { blue: 1 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'optional-cost-attack',
+          resolution: 'ability',
+          cost: { energy: {}, discardHand: 2 },
+          effectText: card.skill.text ?? '',
+          effects: [{
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 },
+          }],
+        },
+      ],
+    },
+    // ST8-019 Bad Omen: the second attack reduction applies only to the Cookie
+    // selected for the first reduction, and only while Support counts match.
+    'ST8-019': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [{
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        thenEffects: [{
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, previousEffectTargetOnly: true },
+          condition: { kind: 'support-count-equal' },
+        }],
+      }],
+    },
+    // ST8-017 Hindering Darkness: the optional attack reduction resolves first;
+    // only the following optional draw checks whether both support areas match.
+    'ST8-017': {
+      cost: { energy: { green: 2 }, discardHand: 0 },
+      ignoreParsedCondition: true,
+      effects: [
+        { kind: 'modify-attack', amount: -2, duration: 'this-turn', target: { side: 'opponent', min: 0, max: 1 } },
+        { kind: 'draw-up-to', max: 1, condition: { kind: 'support-count-equal' } },
+      ],
+    },
     'ST7-018': {cost:{energy:{yellow:2},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'gain-hp',amount:1,target:{side:'self',min:0,max:2,allMatching:true}}]},
     'ST7-017': {cost:{energy:{yellow:1},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'break-level-at-least',level:4}}]}]},
     'ST6-017': {cost:{energy:{red:2},discardHand:0},ignoreParsedCondition:true,effects:[{kind:'modify-attack',amount:-2,duration:'this-turn',target:{side:'opponent',min:0,max:1},thenEffects:[{kind:'modify-attack',amount:-1,duration:'this-turn',target:{side:'opponent',min:0,max:1,previousEffectTargetOnly:true},condition:{kind:'battle-area-remaining-hp-count-at-least',side:'self',remainingHp:1,count:1}}]}]},
@@ -13622,6 +13981,8 @@ const exactCookieSkillSpecialPlayCosts: Partial<Record<string, AbilityCost>> = {
 }
 
 const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
+  'ST8-012': { energy: {}, discardHand: 0 },
+  'ST8-010': { energy: {}, discardHand: 0, supportToHand: 1, supportToHandType: 'item' },
   'ST6-001': { energy: { red: 1 }, discardHand: 0, hpToTrash: { amount: 1, sourceOnly: true } },
   'BS12-110': { energy: {}, discardHand: 0, selfToTrash: true },
   'BS12-112': { energy: {}, discardHand: 0 },
@@ -14198,6 +14559,11 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
 
 /** 卡面同時含靜態被動句與 Activate 技能時，分開保留靜態效果。 */
 const exactCookieSkillPassiveEffects: Partial<Record<string, CardEffect[]>> = {
+  'ST9-009': [{
+    kind: 'hand-to-trash-trigger',
+    sourceCardName: 'Sea Fairy Cookie',
+    effects: [{ kind: 'draw-up-to', max: 1 }],
+  }],
   // BS7-014 Capsaicin Cookie：指定卡名任一張在己方戰鬥區時自身 +1 攻擊。
   'BS7-014': [
     {
@@ -14376,6 +14742,10 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS7-046': 'on-play',
   // BS10-109 Licorice：Cookie 從戰鬥區直接進棄牌區時觸發。
   'BS10-109': 'departure',
+  // ST10-006 Blueberry Pie Cookie：本回合由戰鬥區直接進棄牌時觸發。
+  'ST10-006': 'departure',
+  // ST10-009 Space Doughnut：直接由戰鬥區進棄牌時抽牌，沒有限定回合。
+  'ST10-009': 'departure',
   'BS11-006': 'on-play',
   'BS11-007': 'activate',
   'BS11-008': 'activate',
@@ -14509,9 +14879,12 @@ export const convertOfficialCookieSkill = (
     // only its HP-gain effect is skipped. BS8-002 has the opposite ruling.
     // BS11-089 likewise always permits the On Play cost; its Refresh-gated
     // HP gain is checked after the automatic mill cost and any Refresh.
-    ...(cardKey === 'BS8-003' || cardKey === 'BS11-089' || cardKey === 'BS12-073' || cardKey === 'BS12-075'
+    ...(cardKey === 'BS8-003' || cardKey === 'BS11-089' || cardKey === 'BS12-073' || cardKey === 'BS12-075' || cardKey === 'ST10-005'
       ? { effectConditionsAtResolution: true }
       : {}),
+    // ST8-012's Item condition gates only its damage clause. The printed Then
+    // remains independently available when no qualifying own Item was used.
+    ...(cardKey === 'ST8-012' ? { effectConditionsAtResolution: true } : {}),
     ...(exactCookieSkillPassiveEffects[cardKey]
       ? { passiveEffects: exactCookieSkillPassiveEffects[cardKey] }
       : {}),

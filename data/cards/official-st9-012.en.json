@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.265Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST9 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47072,
+      "locale": "en",
+      "cardNumber": "ST9-012",
+      "baseCardNumber": "ST9-012",
+      "variant": null,
+      "name": "White Pearl Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk] Breath of the Seas",
+        "text": "【On Play】 If there are 4 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{B}> Gem Mermaid Strength {da} 2 Then, <can be used as {B}.> If [Sea Fairy Cookie] is in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sIVtglS9neromqDgFxfIcg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

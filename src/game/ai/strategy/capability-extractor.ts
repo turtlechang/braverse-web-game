@@ -299,6 +299,11 @@ const extractEffect = (
         tags: ['opponent-board'],
       })
       break
+    case 'set-cookie-level':
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'control', {
+        tags: ['battle'],
+      })
+      break
     case 'place-source-to-support':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'move', {
         sourceZone: 'battle',

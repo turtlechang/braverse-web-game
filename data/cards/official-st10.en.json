@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.266Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST10 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47084,
+      "locale": "en",
+      "cardNumber": "ST10-004",
+      "baseCardNumber": "ST10-004",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Magic Concentration",
+        "text": "【Blocker】 <{P}> (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "<{P}{N}> Chain Lightning {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4rR3D8G-0G_QUB_9zqwgtw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

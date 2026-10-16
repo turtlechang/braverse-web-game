@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.266Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 3,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST10 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47097,
+      "locale": "en",
+      "cardNumber": "ST10-017",
+      "baseCardNumber": "ST10-017",
+      "variant": null,
+      "name": "Inside the Clock Tower",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, place up to 3 cards from the top of your deck into your trash."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LBER6tVEnoa20CE5yTj-1w.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47098,
+      "locale": "en",
+      "cardNumber": "ST10-018",
+      "baseCardNumber": "ST10-018",
+      "variant": null,
+      "name": "Reunion of Star and Moon",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 {P} LV.3 Cookie from your trash to your hand."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jDkEVulHA2kyA6O-s7g7YQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47100,
+      "locale": "en",
+      "cardNumber": "ST10-020",
+      "baseCardNumber": "ST10-020",
+      "variant": null,
+      "name": "Wizard Archives",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}> Place in your stage area.\r\n\r\n【Activate】 <Rest this card.> Place up to 1 {P} LV.1 Cookie from your battle area into your trash."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YYb7MPlQXThn04WY5lP9tA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

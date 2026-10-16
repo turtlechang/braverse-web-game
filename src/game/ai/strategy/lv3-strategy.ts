@@ -63,6 +63,36 @@ export const actionIdentityFromCommand = (
   }
 }
 
+const PAYMENT_ID_FIELDS = new Set([
+  'paymentIds',
+  'supportPaymentIds',
+  'discardHandIds',
+  'costSupportToTrashIds',
+  'supportToTrashIds',
+  'supportToHandIds',
+  'hpToTrashTargetIds',
+  'trashBattleCookieIds',
+  'trashCookieToBreakAreaIds',
+  'handToBreakAreaIds',
+  'trashToDeckBottomIds',
+  'trashToDeckIds',
+  'specialPlayCookieInstanceId',
+  'specialPlayCookieInstanceIds',
+])
+
+/** Identifies an action independently of which legal payment objects are used. */
+export const legalActionIdentityKey = (command: PlayerActionCommand): string => {
+  const properties = Object.entries(command)
+    .filter(([key]) => !PAYMENT_ID_FIELDS.has(key))
+    .sort(([left], [right]) => left.localeCompare(right))
+  const semantic = Object.fromEntries(properties)
+  if (command.kind === 'deploy-cookie') {
+    semantic.specialPlayCostCount = command.specialPlayCookieInstanceIds?.length ??
+      (command.specialPlayCookieInstanceId ? 1 : 0)
+  }
+  return JSON.stringify(semantic)
+}
+
 export const scoreLv3ActionCandidate = <T>(
   context: Lv3StrategyContext,
   beforeView: PlayerView,

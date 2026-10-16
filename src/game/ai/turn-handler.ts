@@ -4,7 +4,10 @@ import {
 } from '../card-abilities'
 import { canPlayExtraDeckCookie } from '../actions'
 import { applyGameCommand } from '../commands'
-import { isCookieAttackRestricted } from '../battle'
+import {
+  getAttackDiscardRequirement,
+  isCookieAttackRestricted,
+} from '../battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { materializeExtraDeckCookie } from '../extra-deck'
 import { getRefreshCandidates } from '../refresh'
@@ -649,6 +652,12 @@ export const handleAiTurnState = (
             state.turnNumber
           )
             return false
+          const discardRequirement = getAttackDiscardRequirement(
+            state,
+            playerId,
+            attacker.card.instanceId,
+          )
+          if (discardRequirement && player.hand.length < discardRequirement.count) return false
           const paymentIds = selectEnergyPayment(
             getAttackEnergyCostForState(state, attacker.card.instanceId),
             player.supportArea,

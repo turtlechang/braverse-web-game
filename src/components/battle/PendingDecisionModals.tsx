@@ -275,6 +275,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               ...player.battleArea.map((entry) => entry.card),
               ...player.hand,
               ...player.discardPile,
+              ...player.breakArea,
               ...player.supportArea.map((entry) => entry.card),
               ...(player.stage ? [player.stage.card] : []),
             ])

@@ -31,6 +31,27 @@ describe('Lv.5 公開 Combo 前置判定', () => {
     }).state).toBe('met')
   })
 
+  it('只在雙方支援區張數完全相同時判為成立', () => {
+    const state = createBattleState()
+    const condition = { kind: 'support-count-equal' } as const
+
+    expect(assessPublicCondition(createPlayerView(state, 'player-one'), condition).state).toBe('unmet')
+    expect(assessPublicCondition(createPlayerView(state, 'player-two'), condition).state).toBe('unmet')
+
+    state.players['player-two'].supportArea.push({
+      card: item('p2-support-second'),
+      rested: true,
+    })
+    expect(assessPublicCondition(createPlayerView(state, 'player-one'), condition).state).toBe('met')
+    expect(assessPublicCondition(createPlayerView(state, 'player-two'), condition).state).toBe('met')
+
+    state.players['player-one'].supportArea.push({
+      card: item('p1-support-third'),
+      rested: false,
+    })
+    expect(assessPublicCondition(createPlayerView(state, 'player-one'), condition).state).toBe('unmet')
+  })
+
   it('複合條件只用公開資訊合併，且來源／歷程條件保守回傳 unknown', () => {
     const state = createBattleState()
     state.players['player-two'].hand = [item('hand-a'), item('hand-b'), item('hand-c')]

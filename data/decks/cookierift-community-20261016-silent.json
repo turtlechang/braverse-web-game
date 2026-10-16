@@ -1,0 +1,18 @@
+{
+  "retrievedAt": "2026-10-16",
+  "method": "Cookierift live public deck detail DOM: verified title, author, update date, legality, and displayed main/EXTRA cards. Opened each card detail to capture canonical card number and used the displayed copy count. Alternate-art suffixes are normalized to base card number. No substitutions.",
+  "sourceHashMethod": "SHA-256 over UTF-8 values joined by LF in this order: sourceId, color, name, author, sourceUrl, sourceUpdatedAt, main, extra. Card IDs are canonical base numbers in displayed source order.",
+  "decks": [
+    {
+      "sourceId": 1151,
+      "color": "purple",
+      "name": "Silent",
+      "author": "Yen",
+      "sourceUrl": "https://cookierift.com/decks/community/1151",
+      "sourceUpdatedAt": "2026-10-11",
+      "sourceHash": "sha256:6611ce972ad1a8fad51087025334b137c657cb5a0f947d379ec1ff1b300711b6",
+      "main": "ST10-007:2 BS11-076:2 ST10-006:4 BS11-089:3 BS2-058:2 ST10-013:4 ST10-014:4 ST10-018:2 BS2-080:2 BS10-113:3 BS2-077:4 ST10-002:2 BS2-056:3 BS10-115:4 BS4-102:4 BS3-107:4 ST5-020:4 BS6-103:1 BS9-096:1 BS10-122:1 BS11-085:2 BS10-119:2",
+      "extra": "BS10-123:3 BS9-102:3"
+    }
+  ]
+}

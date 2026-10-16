@@ -464,6 +464,24 @@
   color: #ffe66e;
 }
 
+.effect-panel .effect-deck-to-trash-amount {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.effect-panel .effect-deck-to-trash-amount small {
+  grid-column: 1 / -1;
+}
+
+.effect-panel .effect-deck-to-trash-amount button {
+  min-width: 0;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 6px;
+}
+
 .effect-panel .effect-candidates-effect-target button {
   min-height: 42px;
   border-color: rgba(255, 255, 255, 0.2);

@@ -412,6 +412,48 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.errors).toContain('resolution order evidence missing')
   })
 
+  it.each([
+    {
+      cardNumber: 'ST10-017',
+      energy: 2,
+      text: "<{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, place up to 3 cards from the top of your deck into your trash.",
+    },
+    {
+      cardNumber: 'ST10-018',
+      energy: 3,
+      text: "<{P}{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 {P} LV.3 Cookie from your trash to your hand.",
+    },
+  ])('does not count mirrored root and Trap effects as a Then for $cardNumber', ({ cardNumber, energy, text }) => {
+    const source = makeRecord({
+      cardNumber,
+      baseCardNumber: cardNumber,
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: { name: cardNumber, text },
+    })
+    const primaryEffect = {
+      kind: 'modify-attack' as const,
+      amount: -2,
+      duration: 'this-turn' as const,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+    }
+    const runtime = makeCard({
+      type: 'trap',
+      effects: [primaryEffect],
+      trap: {
+        text,
+        cost: { energy: { purple: energy }, discardHand: 0 },
+        effects: [primaryEffect],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.checks.resolutionOrderCovered).toBe(false)
+    expect(audit.contract.status).toBe('needs-review')
+    expect(audit.errors).toContain('resolution order evidence missing')
+  })
+
   it('does not use a card name to excuse an unsupported cost clause', () => {
     const source = makeRecord({
       cardNumber: 'BS6-101',

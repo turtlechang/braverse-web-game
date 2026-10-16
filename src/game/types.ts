@@ -51,7 +51,7 @@ export interface CardSkill {
   oncePerTurn: boolean
   yourTurn: boolean
   restSource: boolean
-  /** Official ruling permits paying even if an effect condition is false (BS8-003). */
+  /** False effect conditions do not block activation; each clause is still checked at resolution. */
   effectConditionsAtResolution?: boolean
   /** This current battle entry must have entered from this area during this turn; checked before paying costs. */
   activationOriginThisTurn?: NonNullable<CookieInBattle['enteredFrom']>
@@ -591,6 +591,13 @@ export interface TrashKeywordCountAtLeastCondition {
   count: number
 }
 
+/** A Cookie with the printed name is present in the public trash area. */
+export interface TrashAreaHasNamedCookieCondition {
+  kind: 'trash-area-has-named-cookie'
+  side: EffectTargetSide
+  name: string
+}
+
 /** 己方棄牌區印刷技能為 Blocker 的餅乾數；不計其他牌區或非餅乾。 */
 export interface TrashBlockerCookieCountAtLeastCondition {
   kind: 'trash-blocker-cookie-count-at-least'
@@ -647,6 +654,11 @@ export interface BreakAreaCardCountAtLeastCondition {
 export interface SupportCountLessThanOpponentCondition {
   kind: 'support-count-less-than-opponent'
   difference: number
+}
+
+/** Both players have the same number of Support Area cards, regardless of type or rested state. */
+export interface SupportCountEqualCondition {
+  kind: 'support-count-equal'
 }
 
 export interface OpponentHandCountAtLeastCondition {
@@ -882,6 +894,13 @@ export interface BattleAreaHasNamedCookieCondition {
   negate?: boolean
 }
 
+/** A named Cookie is present in the specified public support area, active or rested. */
+export interface SupportAreaHasNamedCookieCondition {
+  kind: 'support-area-has-named-cookie'
+  side: EffectTargetSide
+  name: string
+}
+
 /** The specified battle area contains a Cookie with an alternate Special Play cost. */
 export interface BattleAreaHasSpecialPlayCookieCondition {
   kind: 'battle-area-has-special-play-cookie'
@@ -974,8 +993,10 @@ export type EffectCondition =
   | BattleAreaHasColorCondition
   | BattleAreaHasKeywordCondition
   | BreakAreaHasCardCondition
+  | TrashAreaHasNamedCookieCondition
   | BreakAreaCardCountAtLeastCondition
   | SupportCountLessThanOpponentCondition
+  | SupportCountEqualCondition
   | OpponentHandCountAtLeastCondition
   | CookiesFaintedThisTurnAtLeastCondition
   | CookiesFaintedDuringOpponentPreviousTurnCondition
@@ -1010,6 +1031,7 @@ export type EffectCondition =
   | OpponentBattleAreaHasNoBlockerCondition
   | BreakLevelHigherThanOpponentCondition
   | BattleAreaHasNamedCookieCondition
+  | SupportAreaHasNamedCookieCondition
   | BattleAreaHasSpecialPlayCookieCondition
   | LastHpTrashCardNonCookieCondition
   | BattleAreaRemainingHpCountAtLeastCondition
@@ -1207,6 +1229,11 @@ export interface DeckToTrashEffect {
   kind: 'deck-to-trash'
   amount: number
   side: EffectTargetSide
+  /** The player may choose any amount in this range instead of the fixed `amount`. */
+  selectableAmount?: {
+    min: number
+    max: number
+  }
   condition?: EffectCondition
 }
 
@@ -2250,6 +2277,13 @@ export interface ShadowMilkDiscardTriggerEffect {
   effects: CardEffect[]
 }
 
+/** A passive trigger when a named Cookie effect moves this Cookie from hand to trash. */
+export interface HandToTrashTriggerEffect {
+  kind: 'hand-to-trash-trigger'
+  sourceCardName: string
+  effects: CardEffect[]
+}
+
 /** Passive refresh replacement: do not place a Cookie in break (BS9-096). */
 export interface PreventRefreshCookieBreakEffect {
   kind: 'prevent-refresh-cookie-break'
@@ -2432,6 +2466,7 @@ export type CardEffect =
   | OpponentRestsSupportEffect
   | OpponentBreakToTrashThenBattleToBreakEffect
   | ShadowMilkDiscardTriggerEffect
+  | HandToTrashTriggerEffect
   | PreventRefreshCookieBreakEffect
   | RefreshCookieBreakCountEffect
   | ActivateExtraDeckAttackEffect
@@ -3020,6 +3055,8 @@ export interface PendingOpponentHandDiscard {
   effectText: string
   /** 未指定時視為 `trash`，與此欄位加入前的行為一致。 */
   destination?: 'trash' | 'deck-top' | 'deck-bottom' | 'deck-top-or-bottom'
+  /** Only a resolving discard effect can trigger hand-to-trash passives; costs do not. */
+  handDiscardOrigin?: 'effect' | 'cost'
   /**
    * 這個棄牌決策是不是緊接在同一張卡的 draw-up-to-then-discard 之後
    * （BS3-070／BS3-088）。UI 用這個欄位判斷要不要顯示「步驟 2/2」的接續
@@ -3281,6 +3318,21 @@ export interface GameState {
     sourceCardName: string
     effects: CardEffect[]
   }>
+  /** Discarded hand Cookies whose passive trigger belongs to the source effect. */
+  pendingHandToTrashTriggers?: Array<{
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    effects: CardEffect[]
+  }>
+  /** Cookie skills triggered by direct battle-to-trash movement that still require target selection. */
+  pendingDepartureSkillTriggers?: Array<{
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    effects: CardEffect[]
+    battleContinuation?: BattleContinuation
+  }>
   isBirthday?: boolean
   pendingRefresh: {
     playerId: PlayerId
@@ -3501,7 +3553,7 @@ export interface GameState {
      * 不是外層技能／物品效果佇列。避免巢狀昏厥時誤覆寫或誤推進外層索引。
      */
     isFaintEffectContinuation?: boolean
-    trigger?: 'activate' | 'on-play' | 'passive' | 'attacker-faint'
+    trigger?: 'activate' | 'on-play' | 'passive' | 'attacker-faint' | 'departure'
     effects: CardEffect[]
     effectIndex: number
     /** IDs selected by the preceding effect for a nested `Then` target. */
