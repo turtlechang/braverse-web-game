@@ -557,7 +557,7 @@ describe('BS9-071～118 candidate-isolated conversion and rules', { timeout: 30_
     expect(state.players['player-one'].deck[0]?.instanceId).toBe(handCard.instanceId)
   })
 
-  it('fires BS9-106～108 only for an own Shadow Milk hand-cost discard', () => {
+  it('fires BS9-106～108 only for an own Shadow Milk effect discard', () => {
     for (const cardNumber of ['BS9-106', 'BS9-107', 'BS9-108']) {
       const witness = { ...cookieCandidate(cardNumber), instanceId: `bs9-${cardNumber}-witness` }
       let state = createCardCheckDemoState('BS9-102')
@@ -577,24 +577,22 @@ describe('BS9-071～118 candidate-isolated conversion and rules', { timeout: 30_
           },
         },
       }
-      state = applyGameCommand(state, {
-        kind: 'begin-activate-skill',
-        playerId: 'player-one',
-        sourceInstanceId: extra.instanceId,
-        trigger: 'activate',
-        paymentIds: [],
-        discardHandIds: [witness.instanceId],
-      })
-      state = applyGameCommand(state, {
-        kind: 'resolve-ability-effect',
-        playerId: 'player-one',
-        targetIds: [],
-      })
-      const opponentHandCard = state.players['player-two'].hand[0]!
+      state = {
+        ...state,
+        pendingOpponentHandDiscard: {
+          playerId: 'player-one',
+          count: 1,
+          handDiscardOrigin: 'effect',
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: extra.instanceId,
+          sourceCardName: 'Shadow Milk Cookie',
+          effectText: 'Shadow Milk effect discards one card from your hand',
+        },
+      }
       state = applyGameCommand(state, {
         kind: 'resolve-opponent-hand-discard',
-        playerId: 'player-two',
-        cardIds: [opponentHandCard.instanceId],
+        playerId: 'player-one',
+        cardIds: [witness.instanceId],
       })
       expect(state.pendingAbilityEffect?.sourceInstanceId, cardNumber).toBe(witness.instanceId)
 
@@ -678,6 +676,39 @@ describe('BS9-071～118 candidate-isolated conversion and rules', { timeout: 30_
     )
     expect(negative.pendingAbilityEffect).toBeUndefined()
     expect(negative.pendingShadowMilkDiscardTriggers).toBeUndefined()
+  })
+
+  it('does not fire BS9-106～108 from a Shadow Milk hand-discard cost', () => {
+    for (const cardNumber of ['BS9-106', 'BS9-107', 'BS9-108']) {
+      const witness = { ...cookieCandidate(cardNumber), instanceId: `bs9-${cardNumber}-cost-witness` }
+      let state = createCardCheckDemoState('BS9-102')
+      const extra = state.players['player-one'].extraDeck![0]!
+      state = applyGameCommand(state, {
+        kind: 'play-extra-deck-cookie',
+        playerId: 'player-one',
+        instanceId: extra.instanceId,
+      })
+      state = {
+        ...state,
+        players: {
+          ...state.players,
+          'player-one': { ...state.players['player-one'], hand: [witness] },
+        },
+      }
+      state = applyGameCommand(state, {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: extra.instanceId,
+        trigger: 'activate',
+        paymentIds: [],
+        discardHandIds: [witness.instanceId],
+      })
+      expect(state.players['player-one'].discardPile).toContainEqual(
+        expect.objectContaining({ instanceId: witness.instanceId }),
+      )
+      expect(state.pendingHandToTrashTriggers ?? []).toEqual([])
+      expect(state.pendingAbilityEffect?.sourceInstanceId).not.toBe(witness.instanceId)
+    }
   })
 
   it('resolves BS9-116 HP trash and BS9-117 previous-target Then branches', () => {

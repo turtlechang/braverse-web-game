@@ -2271,6 +2271,23 @@ const describeCommandCoreSteps = (
         steps.push({ text: '攻擊後效果結果：條件不成立，效果未執行' })
         return steps
       }
+      if (effect?.kind === 'rest-support-and-damage') {
+        const selected = new Set(command.targetIds ?? [])
+        const supportIds = Object.values(previous.players).flatMap(player =>
+          player.supportArea.filter(support => selected.has(support.card.instanceId))
+            .map(support => support.card.instanceId))
+        const damageIds = Object.values(previous.players).flatMap(player =>
+          player.battleArea.filter(cookie => selected.has(cookie.card.instanceId))
+            .map(cookie => cookie.card.instanceId))
+        steps.push(
+          describeCardListStep(previous, '攻擊後效果額外橫置支援', supportIds)
+            ?? { text: '攻擊後效果額外橫置支援：未選擇支援（0 張）' },
+          describeCardListStep(previous, '攻擊後效果傷害目標', damageIds)
+            ?? { text: '攻擊後效果傷害目標：未選擇餅乾（0 張）' },
+          describeAttackEffectResultStep(previous, next, command.playerId, effects),
+        )
+        return steps
+      }
       const targetStep = describeAttackEffectTargetStep(
         effect?.kind === 'damage' && effect.target.attackTargetOnly ? previous : state,
         effect,
@@ -2417,13 +2434,18 @@ const describeCommandCoreSteps = (
           text: `${isAbilityResolution ? '技能 Then 代價' : '攻擊後代價'}：已支付（無需額外選牌）`,
         })
       }
-      const targetStep = describeAttackEffectTargetStep(
-        pending.effects[0]?.kind === 'damage' && pending.effects[0].target.attackTargetOnly ? previous : state,
-        pending.effects[0],
-        pending.cost.trashBattleCookie ? [] : command.targetIds,
-        sourceCard,
-        isAbilityResolution ? '技能 Then ' : '攻擊後效果',
-      )
+      // Ability Then effects resolve through a separate pendingAbilityEffect
+      // command, which owns the actual target choice. Do not describe the cost
+      // command's empty targetIds as a no-op while that continuation is queued.
+      const targetStep = isAbilityResolution && next.pendingAbilityEffect
+        ? undefined
+        : describeAttackEffectTargetStep(
+            pending.effects[0]?.kind === 'damage' && pending.effects[0].target.attackTargetOnly ? previous : state,
+            pending.effects[0],
+            pending.cost.trashBattleCookie ? [] : command.targetIds,
+            sourceCard,
+            isAbilityResolution ? '技能 Then ' : '攻擊後效果',
+          )
       if (targetStep) steps.push(targetStep)
       if (pending.effects.length === 1 && pending.effects[0].kind === 'set-active' && pending.effects[0].selectable) {
         const selected = previous.players[command.playerId].supportArea.filter(s => command.targetIds?.includes(s.card.instanceId))

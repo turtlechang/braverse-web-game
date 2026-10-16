@@ -35,6 +35,7 @@ import {
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
   validateBattleCookieCostSelection,
+  resolveDepartureSkillTriggers,
 } from './skills'
 import { finishWithVictory, isSpecialVictoryConditionMet, resolveBreakLevelVictory } from './victory'
 import type {
@@ -433,13 +434,26 @@ const payAbilityCost = (
     }
   }
 
-  const faintCostCookies = cost.trashBattleCookie?.faint
-    ? validateBattleCookieCostSelection(updatedPlayer, cost, options.trashBattleCookieIds ?? [], options.sourceInstanceId)
+  const trashBattleCookieIds = options.trashBattleCookieIds ?? []
+  const selectedTrashBattleCookies = cost.trashBattleCookie
+    ? validateBattleCookieCostSelection(
+        updatedPlayer,
+        cost,
+        trashBattleCookieIds,
+        options.sourceInstanceId,
+      )
     : []
+  const faintCostCookies = cost.trashBattleCookie?.faint
+    ? selectedTrashBattleCookies
+    : []
+  const departureTrashBattleCookies =
+    cost.trashBattleCookie?.faint || cost.trashBattleCookie?.toBreakArea
+      ? []
+      : selectedTrashBattleCookies.map((cookie) => cookie.card)
   const trashBattleCookiePayment = payTrashBattleCookieCost(
     updatedPlayer,
     cost.trashBattleCookie?.faint ? { ...cost, trashBattleCookie: undefined } : cost,
-    cost.trashBattleCookie?.faint ? [] : options.trashBattleCookieIds ?? [],
+    cost.trashBattleCookie?.faint ? [] : trashBattleCookieIds,
     options.sourceInstanceId,
   )
   updatedPlayer = trashBattleCookiePayment.player
@@ -464,6 +478,11 @@ const payAbilityCost = (
         departedCount,
       )
   }
+  nextState = resolveDepartureSkillTriggers(
+    nextState,
+    playerId,
+    departureTrashBattleCookies,
+  )
   if (faintCostCookies.length > 0) {
     nextState = executeCardEffect(nextState, {
       sourcePlayerId: playerId,

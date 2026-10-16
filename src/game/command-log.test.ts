@@ -932,6 +932,69 @@ describe('describeCommandSteps', () => {
     )
   })
 
+  it('does not report a targetless Then as a no-op while its ability effect is queued', () => {
+    const base = createBattleState()
+    const effect: CardEffect = {
+      kind: 'damage', amount: 1,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+      pendingOptionalCostAttack: {
+        playerId: 'player-one',
+        sourceInstanceId: 'then-trap',
+        sourceCardName: 'Then trap',
+        resolution: 'ability',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [effect],
+        effectText: 'Then, discard 1 card to deal 1 damage.',
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'then-trap',
+        sourceCardName: 'Then trap',
+        sourceKind: 'trap',
+        trigger: 'activate',
+        effects: [effect],
+        effectIndex: 1,
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [item('discarded-card')],
+        },
+      },
+    }
+    const next: GameState = { ...previous, pendingOptionalCostAttack: null }
+    const command = {
+      kind: 'resolve-optional-cost-attack' as const,
+      playerId: 'player-one' as const,
+      action: 'pay' as const,
+      discardCardIds: ['discarded-card'],
+      targetIds: [],
+    }
+    const steps = describeCommandSteps(previous, next, command)?.map(step => step.text) ?? []
+
+    expect(steps).not.toContain('技能 Then 目標：未選擇目標（效果未生效）')
+    expect(steps).toContain('技能 Then 結果：等待後續傷害／FLIP 或巢狀效果結算')
+  })
+
   it('records that an attack-after effect is waiting for the optional-cost decision', () => {
     const base = createBattleState()
     const effect: CardEffect = {
