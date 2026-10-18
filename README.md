@@ -193,6 +193,8 @@ ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、
 
 ## 開發背景
 
+2026-10-18 PR #126 合併後部署驗收追修：驗收腳本從空牌組首頁經「我的牌組」新建與匯入，儲存後確認合法、60 張及選取狀態，再返回首頁進入 AI 對戰；沿用既有卡圖、WebSocket 與錯誤檢查。
+
 2026-10-18 PR #125 合併後追修：起始牌組草稿改用正式社群／BS12 配方名稱並保留 EXTRA，預設牌組 storage 寫入失敗時仍保留已載入的選單牌組。
 
 本批依實際 AI 綠色鏡像對局的 138 筆前置指令重現子傷害卡死，修正共用結算，並延續 ST6～ST10 逐卡實體驗收。
@@ -580,7 +582,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
-2026-10-18 PR #125 後續修正：45 項定向回歸、完整 Vitest 1,067 檔／21,302 項、typecheck、全域 lint 與 production build 通過；PR #126 的 Browser Smoke／PR Gate 已通過，CI 在目前 PR head 上仍執行中。
+2026-10-18 PR #126 已合併，PR 與主線 CI 通過。另確認主線 Production Deployment Browser Validation 因舊選單入口失敗；舊腳本在正式站重現相同逾時後，修補版 `npm run test:deployment:browser` 對 https://braverse-web-game.vercel.app/ 完整 PASS（55.43 秒、卡池 2,180 張、合法 60 張匯入／儲存、實際 WebSocket 與 AI 進場，三類錯誤皆為零），RAM 最高 54.8%。語法與 diff 檢查通過；本機單檔 lint 在 RAM 55.1% 被保護器停止，未取得完成結果，後續 PR CI 的 lint／全套測試／build 仍待確認。本次只變更部署驗收腳本與 README，未重跑產品完整對局。
 
 本批新增 ST8-001 正式卡池與父場景／子傷害續接修復；提交前完整回歸終值見頁首最新紀錄。
 
@@ -868,7 +870,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-- PR #126 維持草稿，待目前 head 的 CI 完成後由 reviewer 決定是否合併；不啟用自動合併。
+- 提交 PR #126 合併後的部署驗收腳本修補，等待後續 PR CI；合併後再確認主線 Production Deployment Browser Validation。Preview 非預設分支的驗收仍依既有信任政策跳過，不能當作實際 Browser 通過。
 
 - 從 ST8-002 繼續逐卡驗收；HP 支付 AI 原型須完成獨立對照評估後才決定是否採用。
 

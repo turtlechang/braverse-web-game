@@ -144,7 +144,15 @@ try {
 
   await page.evaluate(() => localStorage.removeItem('braverse-custom-decks'))
   await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.locator('[data-testid="open-deck-editor"]').click()
+  assert.equal(
+    await page.getByTestId('start-ai-battle').isDisabled(),
+    true,
+    'Empty library must not allow starting a battle',
+  )
+  await page.getByTestId('open-my-decks').click()
+  const myDecks = page.getByTestId('my-decks-page')
+  await myDecks.waitFor({ state: 'visible' })
+  await myDecks.getByTestId('my-decks-create').click()
   const editor = page.locator('[data-testid="deck-editor-page"]')
   await editor.waitFor({ state: 'visible' })
   const poolCount = await editor.locator('.deck-editor-page-pool-card-button').count()
@@ -186,7 +194,17 @@ try {
   )
   await saveButton.click()
   await editor.waitFor({ state: 'hidden' })
-  await page.locator('.main-menu-deck-card', { hasText: deckName }).waitFor({ state: 'visible' })
+  await myDecks.waitFor({ state: 'visible' })
+  const savedDeck = myDecks.getByRole('button', { name: `${deckName}，合法`, exact: true })
+  await savedDeck.waitFor({ state: 'visible' })
+  assert.equal(await savedDeck.getAttribute('aria-pressed'), 'true', 'Saved deck is not selected')
+  assert.match((await savedDeck.textContent()) ?? '', /60\s*\/\s*60/, 'Saved deck is not 60 cards')
+  await page.getByTestId('my-decks-back').click()
+  assert.equal(
+    await page.locator('.main-menu-md-deckname').getAttribute('title'),
+    deckName,
+    'Main menu did not retain the imported deck selection',
+  )
   report.checks.deckImport = { name: deckName, cards: 60, legal: true }
 
   const websocketMs = await page.evaluate(
@@ -213,7 +231,7 @@ try {
   )
   report.checks.websocket = { opened: true, milliseconds: websocketMs }
 
-  await page.locator('.main-menu-primary').click()
+  await page.getByTestId('start-ai-battle').click()
   await page.locator('.game-shell').waitFor({ state: 'visible', timeout: 30_000 })
   report.checks.battleEntry = { entered: true }
 
