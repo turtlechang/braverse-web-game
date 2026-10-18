@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { takeAiStep, simulateAiMatch } from './ai'
 import { handleAiPendingDecision } from './ai/pending-handler'
-import { getAttackResponseSkillCandidates, getBlockerCandidates, getTrapCandidates } from './battle'
+import { handleAiPendingBattle } from './ai/battle-handler'
+import { beginAttack, getAttackResponseSkillCandidates, getBlockerCandidates, getTrapCandidates } from './battle'
 import { applyGameCommand } from './commands'
 import { createCardCheckDemoState } from './demo'
 import { advancePhase } from './turn'
 import { deployCookie } from './actions'
 import { createBattleState } from './test-helpers/battle-helpers'
+import { createCard, getCardPoolEntry } from '.'
 import type {
   CardSkill,
   CookieCard,
@@ -442,14 +444,19 @@ describe('G5 direct Lv.3 strategy selection', () => {
         battleEntryId: 'direct-cost-source:battle:1',
       }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
     state.pendingOnPlay = {
       playerId: 'player-two',
       sourceInstanceId: source.instanceId,
       origin: 'hand',
     }
     state.players['player-one'].battleArea = [{
-      card: testCookieCard('direct-cost-opponent'),
-      hpCards: [testSupportCard('direct-cost-opponent-hp')],
+      card: testCookieCard('direct-cost-opponent', { hp: 2 }),
+      hpCards: [
+        testSupportCard('direct-cost-opponent-hp-1'),
+        testSupportCard('direct-cost-opponent-hp-2'),
+      ],
       rested: false,
       battleEntryId: 'direct-cost-opponent:battle:1',
     }]
@@ -511,6 +518,75 @@ describe('G5 direct Lv.3 strategy selection', () => {
     expect(decision.state.players['player-two'].discardPile.map(
       (card) => card.instanceId,
     )).toContain('stage-junk')
+  })
+
+  it('keeps a one-HP Cookie alive when an HP-paid stage skill has another legal payer', () => {
+    const stage: GameCard = {
+      id: 'stage-hp-cost',
+      instanceId: 'stage-hp-cost',
+      name: 'stage-hp-cost',
+      type: 'stage',
+      stageAbility: {
+        placementCost: {},
+        restSource: false,
+        cost: { energy: {}, hpToTrash: { amount: 1 } },
+        text: 'Trash one HP, then deal 2 damage.',
+        effects: [{
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        }],
+      },
+    }
+    const fragile = testCookieCard('stage-hp-fragile', { level: 1, hp: 1, attack: 1 })
+    const survivor = testCookieCard('stage-hp-survivor', { level: 3, hp: 4, attack: 3 })
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      deck: [],
+      battleArea: [
+        {
+          card: fragile,
+          hpCards: [testSupportCard('stage-hp-fragile-hp')],
+          rested: false,
+          battleEntryId: 'stage-hp-fragile:battle:1',
+        },
+        {
+          card: survivor,
+          hpCards: [
+            testSupportCard('stage-hp-survivor-hp-1'),
+            testSupportCard('stage-hp-survivor-hp-2'),
+            testSupportCard('stage-hp-survivor-hp-3'),
+            testSupportCard('stage-hp-survivor-hp-4'),
+          ],
+          rested: false,
+          battleEntryId: 'stage-hp-survivor:battle:1',
+        },
+      ],
+      stage: { card: stage, rested: false },
+    })
+    state.players['player-one'].battleArea = [{
+      card: testCookieCard('stage-hp-opponent', { level: 1, hp: 3, attack: 1 }),
+      hpCards: [
+        testSupportCard('stage-hp-opponent-hp-1'),
+        testSupportCard('stage-hp-opponent-hp-2'),
+        testSupportCard('stage-hp-opponent-hp-3'),
+      ],
+      rested: false,
+      battleEntryId: 'stage-hp-opponent:battle:1',
+    }]
+
+    const decision = takeAiStep(state, 'player-two', { level: 3, seed: 202711331 })
+
+    expect(decision.action).toBe('activate-stage')
+    expect(decision.state.commandLog?.at(-1)?.payload).toMatchObject({
+      hpToTrashTargetIds: ['stage-hp-survivor'],
+    })
+    expect(decision.state.players['player-two'].battleArea.map(
+      (cookie) => [cookie.card.instanceId, cookie.hpCards.length],
+    )).toEqual([['stage-hp-fragile', 1], ['stage-hp-survivor', 3]])
+    expect(state.players['player-two'].battleArea.map((cookie) => cookie.hpCards.length))
+      .toEqual([1, 4])
   })
 })
 
@@ -579,6 +655,278 @@ describe('G5 optional attack target safety', () => {
   })
 })
 
+describe('AI field movement target safety', () => {
+  it('skips a field-to-trash target blocked by the opponent instead of issuing an illegal command', () => {
+    const source = testCookieCard('movement-source', {
+      level: 3,
+      hp: 6,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Place up to one Purple Cookie of LV.2 or lower into trash.',
+        effects: [{
+          kind: 'field-to-trash',
+          target: { side: 'self', min: 0, max: 1, maxLevel: 2, energyColor: 'purple' },
+        }],
+      },
+    })
+    const target = {
+      ...testCookieCard('movement-target', { level: 1, hp: 3 }),
+      energyColor: 'purple' as const,
+    }
+    const movementBlocker = testCookieCard('movement-blocker', {
+      level: 2,
+      hp: 4,
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Your opponent cannot move Cookies from the battle area.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' }],
+      },
+    })
+    const state = buildTestState('player-one', {
+      id: 'player-one',
+      hand: [],
+      battleArea: [
+        { card: source, hpCards: [], rested: false, battleEntryId: 'movement-source:battle:1' },
+        {
+          card: target,
+          hpCards: [
+            testSupportCard('movement-target-hp-1'),
+            testSupportCard('movement-target-hp-2'),
+            testSupportCard('movement-target-hp-3'),
+          ],
+          rested: false,
+          battleEntryId: 'movement-target:battle:2',
+        },
+      ],
+    })
+    state.pendingOnPlay = {
+      playerId: 'player-one',
+      sourceInstanceId: source.instanceId,
+      origin: 'hand',
+    }
+    state.players['player-two'].battleArea = [{
+      card: movementBlocker,
+      hpCards: [
+        testSupportCard('movement-blocker-hp-1'),
+        testSupportCard('movement-blocker-hp-2'),
+        testSupportCard('movement-blocker-hp-3'),
+        testSupportCard('movement-blocker-hp-4'),
+      ],
+      rested: false,
+      battleEntryId: 'movement-blocker:battle:1',
+    }]
+    const before = structuredClone(state)
+
+    const decision = takeAiStep(state, 'player-one', { level: 5, seed: 202711430 })
+
+    expect(decision.action).not.toBe('error')
+    expect(decision.state).not.toBe(state)
+    expect(decision.state.pendingOnPlay).toBeNull()
+    expect(decision.state.players['player-one'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )).toContain(target.instanceId)
+    expect(state).toEqual(before)
+  })
+
+  it('does not fall back to a protected Cookie for a required opponent movement effect', () => {
+    const printed = (number: string, owner: PlayerId, copy: number): GameCard => {
+      const entry = getCardPoolEntry(number)
+      expect(entry, `missing formal card ${number}`).toBeDefined()
+      return createCard(entry!, owner, copy)
+    }
+    const inBattle = (
+      card: CookieCard,
+      hpCardNumbers: string[],
+      owner: PlayerId,
+      battleEntryId: string,
+    ) => ({
+      card,
+      hpCards: hpCardNumbers.map((number, index) => printed(number, owner, index + 1)),
+      rested: false,
+      battleEntryId,
+    })
+    const source = testCookieCard('required-opponent-movement-source', {
+      level: 3,
+      hp: 3,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Place one opponent Cookie of LV.2 or lower into trash.',
+        effects: [{ kind: 'opponent-battle-to-trash', maxLevel: 2 }],
+      },
+    })
+    const timekeeper = printed('BS6-010', 'player-one', 1) as CookieCard
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      deck: [],
+      battleArea: [{
+        card: source,
+        hpCards: [testSupportCard('required-opponent-movement-source-hp')],
+        rested: false,
+        battleEntryId: 'required-opponent-movement-source:battle:1',
+      }],
+    })
+    state.players['player-one'].battleArea = [
+      inBattle(
+        timekeeper,
+        ['BS6-011', 'BS6-012'],
+        'player-one',
+        'timekeeper:battle:1',
+      ),
+    ]
+    state.pendingOnPlay = {
+      playerId: 'player-two',
+      sourceInstanceId: source.instanceId,
+      origin: 'hand',
+    }
+    const before = structuredClone(state)
+
+    const decision = takeAiStep(state, 'player-two', { level: 5, seed: 202671351 })
+
+    expect(decision.action).not.toBe('error')
+    expect(decision.effectSelections?.flatMap((selection) => selection.targetIds))
+      .not.toContain(timekeeper.instanceId)
+    expect(decision.state.players['player-one'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )).toContain(timekeeper.instanceId)
+    expect(state).toEqual(before)
+  })
+
+  it('resolves BS2-062 on-play without selecting a Cookie protected by BS6-010', () => {
+    const printed = (number: string, owner: PlayerId, copy: number): GameCard => {
+      const entry = getCardPoolEntry(number)
+      expect(entry, `missing formal card ${number}`).toBeDefined()
+      return createCard(entry!, owner, copy)
+    }
+    const inBattle = (
+      card: CookieCard,
+      hpCardNumbers: string[],
+      owner: PlayerId,
+      battleEntryId: string,
+    ) => ({
+      card,
+      hpCards: hpCardNumbers.map((number, index) => printed(number, owner, index + 1)),
+      rested: false,
+      battleEntryId,
+    })
+    const starfruit = printed('BS2-062', 'player-two', 1) as CookieCard
+    const timekeeper = printed('BS6-010', 'player-one', 1) as CookieCard
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      deck: [],
+      supportArea: [{
+        card: printed('BS2-077', 'player-two', 1),
+        rested: false,
+      }],
+      battleArea: [
+        inBattle(
+          starfruit,
+          ['BS2-059', 'BS2-060', 'BS2-061'],
+          'player-two',
+          'starfruit:battle:1',
+        ),
+      ],
+    })
+    state.players['player-one'].battleArea = [
+      inBattle(
+        timekeeper,
+        ['BS6-011', 'BS6-012', 'BS6-013', 'BS6-014'],
+        'player-one',
+        'timekeeper:battle:1',
+      ),
+    ]
+    state.pendingOnPlay = {
+      playerId: 'player-two',
+      sourceInstanceId: starfruit.instanceId,
+      origin: 'hand',
+    }
+    const before = structuredClone(state)
+
+    const decision = takeAiStep(state, 'player-two', { level: 5, seed: 202671351 })
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.state.pendingOnPlay).toBeNull()
+    expect(decision.effectSelections?.flatMap((selection) => selection.targetIds) ?? [])
+      .not.toContain(starfruit.instanceId)
+    expect(decision.effectSelections?.flatMap((selection) => selection.targetIds) ?? [])
+      .not.toContain(timekeeper.instanceId)
+    expect(decision.state.players['player-two'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )).toEqual([starfruit.instanceId])
+    expect(decision.state.players['player-one'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )).toEqual([timekeeper.instanceId])
+    expect(state).toEqual(before)
+  })
+
+  it('uses protected-target rules for opponent movement effects after an attack', () => {
+    const base = createBattleState()
+    const timekeeperEntry = getCardPoolEntry('BS6-010')
+    expect(timekeeperEntry).toBeDefined()
+    const timekeeper = createCard(timekeeperEntry!, 'player-one', 1) as CookieCard
+    const hpCardNumbers = ['BS6-011', 'BS6-012', 'BS6-013', 'BS6-014']
+    const timekeeperHp = hpCardNumbers.map((number, index) => {
+      const entry = getCardPoolEntry(number)
+      expect(entry, `missing formal card ${number}`).toBeDefined()
+      return createCard(entry!, 'player-one', index + 1)
+    })
+    const withTimekeeper: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            card: timekeeper,
+            hpCards: timekeeperHp,
+            rested: false,
+            battleEntryId: 'timekeeper:battle:1',
+          }],
+        },
+      },
+    }
+    const declared = beginAttack(
+      withTimekeeper,
+      base.players['player-two'].battleArea[0]!.card.instanceId,
+      timekeeper.instanceId,
+      ['p2-support'],
+    )
+    const state: GameState = {
+      ...declared,
+      pendingBattle: {
+        ...declared.pendingBattle!,
+        stage: 'attack-effect',
+        attackEffects: [{ kind: 'opponent-battle-to-trash', maxLevel: 2, min: 0 }],
+        attackEffectIndex: 0,
+      },
+    }
+
+    const decision = handleAiPendingBattle(state, 'player-two', 5)
+
+    expect(decision?.action).toBe('resolve-attack-effect')
+    expect(decision?.state.commandLog?.at(-1)).toMatchObject({
+      commandKind: 'resolve-attack-effect',
+      payload: { targetIds: [] },
+    })
+    expect(decision?.state.players['player-one'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )).toContain(timekeeper.instanceId)
+  })
+})
+
 describe('resolveAiSkill discardHand', () => {
   it('discards first N hand cards deterministically for discardHand cost', () => {
     const handCard0: GameCard = {
@@ -614,14 +962,24 @@ describe('resolveAiSkill discardHand', () => {
       id: 'player-two',
       hand: [handCard0, handCard1, handCard2],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'skill-cookie:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('skill-cookie-hp')], rested: false, battleEntryId: 'skill-cookie:battle:1' },
       ],
       supportArea: [{ card: support, rested: false }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -671,14 +1029,24 @@ describe('resolveAiSkill discardHand', () => {
       id: 'player-two',
       hand: [handCard0, handCard1],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'werewolf:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('werewolf-hp')], rested: false, battleEntryId: 'werewolf:battle:1' },
       ],
       supportArea: [{ card: support, rested: false }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -808,17 +1176,27 @@ describe('resolveAiSkill discardHand with supportToTrash combined', () => {
       id: 'player-two',
       hand: [handCard0, handCard1],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'combo-cookie:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('combo-cookie-hp')], rested: false, battleEntryId: 'combo-cookie:battle:1' },
       ],
       supportArea: [
         { card: paymentSupport, rested: false },
         { card: trashSupport, rested: false },
       ],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -862,7 +1240,7 @@ describe('resolveAiSkill supportToHand cost', () => {
       battleArea: [
         {
           card: cookie,
-          hpCards: [],
+          hpCards: [testSupportCard('return-support-source-hp')],
           rested: false,
           battleEntryId: 'return-support-cookie:battle:1',
         },
@@ -872,11 +1250,16 @@ describe('resolveAiSkill supportToHand cost', () => {
         { card: returnedSupport, rested: false },
       ],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
     state.players['player-one'].battleArea = [
       {
-        card: testCookieCard('opponent-cookie'),
-        hpCards: [],
+        card: testCookieCard('opponent-cookie', { hp: 2 }),
+        hpCards: [
+          testSupportCard('opponent-cookie-hp-1'),
+          testSupportCard('opponent-cookie-hp-2'),
+        ],
         rested: false,
         battleEntryId: 'opponent-cookie:battle:1',
       },

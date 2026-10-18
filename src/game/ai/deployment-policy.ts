@@ -1,5 +1,6 @@
 import { getAttackEnergyCostForPlayer, selectEnergyPayment } from '../energy'
 import { canAttack } from '../turn'
+import { hasPublicReadyPhasePayoff } from './public-readying-payoff'
 import type { GameCard, GameState, PlayerId } from '../types'
 
 /**
@@ -42,6 +43,7 @@ export type Lv5DeploymentReason =
   | 'not-second-cookie'
   | 'confirmed-combo'
   | 'public-lethal'
+  | 'public-readying-payoff'
   | 'meaningful-on-play'
   | 'defensive-parity'
   | 'single-cookie-discipline'
@@ -111,6 +113,9 @@ export const assessLv5Deployment = (
   }
   if (canDeployCookieForLethal(state, playerId, card)) {
     return { penalty: 0, reason: 'public-lethal' }
+  }
+  if (hasPublicReadyPhasePayoff(state, playerId, card)) {
+    return { penalty: 0, reason: 'public-readying-payoff' }
   }
   if (hasMeaningfulOnPlay(card)) {
     return { penalty: -36, reason: 'meaningful-on-play' }

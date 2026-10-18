@@ -14,6 +14,15 @@ describe('online protocol validation', () => {
       expect(isClientMessage({ type: 'submit-command', command: { ...command, discardHandIds } })).toBe(false)
     }
   })
+  it('accepts the optional ST10-017 deck-mill amount and rejects malformed values', () => {
+    const command = { kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [] }
+    expect(isClientMessage({ type: 'submit-command', command })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, deckToTrashAmount: 0 } })).toBe(true)
+    expect(isClientMessage({ type: 'submit-command', command: { ...command, deckToTrashAmount: 3 } })).toBe(true)
+    for (const deckToTrashAmount of ['1', null, NaN, Infinity]) {
+      expect(isClientMessage({ type: 'submit-command', command: { ...command, deckToTrashAmount } })).toBe(false)
+    }
+  })
   it('accepts old attack responses and optional support trash cost, rejects malformed cost ids', () => {
     const command = { kind: 'play-attack-response', playerId: 'player-one', sourceInstanceId: 'response', discardHandIds: [], trashToDeckIds: [] }
     expect(isClientMessage({ type: 'submit-command', command })).toBe(true)

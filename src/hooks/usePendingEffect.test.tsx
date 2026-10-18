@@ -2338,62 +2338,97 @@ describe('usePendingEffect optional-cost-attack', () => {
  * 可裝載的候選，點下去才會在執行層被拒絕。
  */
 describe('usePendingEffect equip-source candidate filtering', () => {
-  const requiredCookie: CookieCard = {
-    id: 'BS3-017',
-    instanceId: 'hollyberry-1',
-    name: 'Hollyberry Cookie',
-    type: 'cookie',
-    level: 3,
-    hp: 5,
-    attack: 3,
-    attackCost: 2,
+  const originalCard = (cardNumber: string, instanceId: string): GameCard => {
+    const record = (officialBS3.cards as OfficialCardRecord[]).find(card => card.cardNumber === cardNumber)
+    if (!record) throw new Error(`Missing original ${cardNumber}`)
+    const conversion = convertOfficialCardToGameCard(record)
+    if (conversion.status !== 'converted') throw new Error(`Cannot convert original ${cardNumber}`)
+    return { ...conversion.gameCard, instanceId }
   }
 
-  const otherCookie: CookieCard = {
-    id: 'BS3-002',
-    instanceId: 'other-cookie-1',
-    name: 'Other Cookie',
-    type: 'cookie',
-    level: 1,
-    hp: 3,
-    attack: 1,
-    attackCost: 1,
+  const originalCookie = (cardNumber: string, instanceId: string): CookieCard => {
+    const card = originalCard(cardNumber, instanceId)
+    if (card.type !== 'cookie') throw new Error(`Expected original Cookie ${cardNumber}`)
+    return card
   }
 
-  const soulJamCard: GameCard = {
-    id: 'BS3-019',
-    instanceId: 'soul-jam-1',
-    name: 'Soul Jam: Light of Passion',
-    type: 'item',
-  }
+  // Preserve printed HP and original non-FLIP cards. Separate instance IDs are
+  // used for every physical copy; no source or effect is invented for the UI.
+  const battleEntry = (card: CookieCard, hpOffset = 0) => ({
+    card,
+    hpCards: Array.from({ length: card.hp }, (_, index) => {
+      const copy = hpOffset + index
+      const hp = originalCard(copy < 4 ? 'BS3-020' : 'BS3-018', `${card.instanceId}-hp-${copy}`)
+      expect(hp.flip).toBeUndefined()
+      return hp
+    }),
+    rested: false,
+    battleEntryId: `${card.instanceId}:battle:1`,
+  })
 
-  const equipAbility = {
-    cost: {},
-    text: '測試裝載',
-    effects: [
-      {
-        kind: 'equip-source' as const,
-        target: { side: 'self' as const, min: 0, max: 1 },
-        requiredCookieId: 'BS3-017',
-        attackBonus: 1,
-      },
-    ],
-  }
-
-  const renderWithBattleArea = async (
-    battleArea: GameState['players']['player-one']['battleArea'],
-  ) => {
-    const baseGame = createItemUsageDemoState(true)
-    const state: GameState = {
-      ...baseGame,
-      players: {
-        ...baseGame.players,
-        'player-one': {
-          ...baseGame.players['player-one'],
-          battleArea,
-        },
-      },
+  const afterDamageParent = (withRequiredCookie: boolean) => {
+    const source = originalCard('BS3-019', 'soul-jam-1')
+    if (!source.item) throw new Error('BS3-019 must have its original item ability')
+    expect(source.item.effects).toMatchObject([
+      { kind: 'damage', amount: 2 },
+      { kind: 'equip-source', requiredCookieId: 'BS3-017' },
+    ])
+    const required = originalCookie('BS3-017', 'hollyberry-1')
+    const other = originalCookie('BS3-002', 'other-cookie-1')
+    const target = originalCookie('BS3-017', 'opponent-hollyberry')
+    let state = createBattleState()
+    state.activePlayerId = 'player-one'
+    state.phase = 'main'
+    state.commandLog = []
+    for (const player of Object.values(state.players)) {
+      player.hand = []
+      player.deck = Array.from({ length: 3 }, (_, index) => originalCard('BS3-016', `${player.id}-deck-${index}`))
+      player.discardPile = []
+      player.breakArea = []
+      player.supportArea = []
+      player.battleArea = []
+      player.stage = null
     }
+    state.players['player-one'].hand = [source]
+    state.players['player-one'].battleArea = withRequiredCookie
+      ? [battleEntry(required), battleEntry(other, required.hp)]
+      : [battleEntry(other)]
+    state.players['player-two'].battleArea = [battleEntry(target)]
+    state.players['player-one'].supportArea = Array.from({ length: 3 }, (_, index) => ({
+      card: originalCard('BS3-001', `red-payment-${index}`), rested: false,
+    }))
+    const paymentIds = state.players['player-one'].supportArea.map(support => support.card.instanceId)
+    expect(canPlayItem(state, 'player-one', source.instanceId)).toBe(true)
+    state = applyGameCommand(state, {
+      kind: 'begin-play-item', playerId: 'player-one', instanceId: source.instanceId, paymentIds,
+    })
+    expect(state.players['player-one'].hand).not.toContainEqual(source)
+    expect(state.players['player-one'].discardPile).toContainEqual(source)
+    expect(state.players['player-one'].supportArea.every(support => support.rested)).toBe(true)
+    expect(state.pendingAbilityEffect?.effects).toEqual(source.item.effects)
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect', playerId: 'player-one', targetIds: [target.instanceId],
+    })
+    // Original non-FLIP HP resolve the two damage synchronously. Render the
+    // resulting authoritative Then, not a manufactured Equip-only snapshot.
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(target.hp - 2)
+    expect(state.players['player-one'].discardPile).toContainEqual(source)
+    expect(state.commandLog?.slice(0, 2).map(entry => entry.commandKind))
+      .toEqual(['begin-play-item', 'resolve-ability-effect'])
+    if (withRequiredCookie) {
+      expect(state.pendingAbilityEffect).toMatchObject({ sourceInstanceId: source.instanceId, effectIndex: 1 })
+      expect(state.pendingAbilityEffect?.effects[1]).toMatchObject({ kind: 'equip-source', requiredCookieId: 'BS3-017' })
+    } else {
+      // The authoritative chain skips impossible Equip; the hook must not
+      // reopen it and offer another Cookie as a substitute host.
+      expect(state.pendingAbilityEffect).toBeUndefined()
+    }
+    return state
+  }
+
+  const renderAfterDamageParent = async (withRequiredCookie: boolean) => {
+    const state = afterDamageParent(withRequiredCookie)
 
     let captured: ReturnType<typeof usePendingEffect> | null = null
     function TestHarness() {
@@ -2421,29 +2456,16 @@ describe('usePendingEffect equip-source candidate filtering', () => {
 
     const container = document.createElement('div')
     const root = createRoot(container)
+    vi.useFakeTimers()
     await act(() => root.render(<TestHarness />))
-    await act(() => {
-      captured!.beginCardAbility(soulJamCard, equipAbility, 'item', '使用物品')
-    })
+    await act(() => vi.runAllTimers())
+    vi.useRealTimers()
 
     return { captured: captured!, root }
   }
 
   it('only offers the required Cookie, even when other Cookies share the battle area', async () => {
-    const { captured, root } = await renderWithBattleArea([
-      {
-        card: requiredCookie,
-        hpCards: [],
-        rested: false,
-        battleEntryId: 'hollyberry-1:battle:1',
-      },
-      {
-        card: otherCookie,
-        hpCards: [],
-        rested: false,
-        battleEntryId: 'other-cookie-1:battle:2',
-      },
-    ])
+    const { captured, root } = await renderAfterDamageParent(true)
 
     expect(
       captured.effectTargetCandidates.map((cookie) => cookie.card.instanceId),
@@ -2453,14 +2475,7 @@ describe('usePendingEffect equip-source candidate filtering', () => {
   })
 
   it('offers no candidates when the required Cookie is absent, even though other Cookies are present', async () => {
-    const { captured, root } = await renderWithBattleArea([
-      {
-        card: otherCookie,
-        hpCards: [],
-        rested: false,
-        battleEntryId: 'other-cookie-1:battle:1',
-      },
-    ])
+    const { captured, root } = await renderAfterDamageParent(false)
 
     expect(captured.effectTargetCandidates).toEqual([])
 

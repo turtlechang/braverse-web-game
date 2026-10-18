@@ -10,7 +10,7 @@ import {
   takeAiStep,
   type GameState,
 } from '../game'
-import { createCardCheckDemoState } from '../game/demo'
+import { createCardCheckDemoState, createCardNegativeDemoState } from '../game/demo'
 import { useAiTurn } from './useAiTurn'
 import { useMatchController } from './useMatchController'
 
@@ -223,6 +223,42 @@ describe('useMatchController auto-skip-trap effect', () => {
     vi.useRealTimers()
   })
 
+  it('auto-passes the opponent response window for ST10-004 normal-attack test states', async () => {
+    vi.useFakeTimers()
+    let captured: ReturnType<typeof useMatchController> | null = null
+    function Harness() {
+      captured = useMatchController({
+        testStateConfig: { kind: 'card-check', cardNumber: 'ST10-004', normalAttack: 'payable' },
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<Harness />))
+      const initial = createCardCheckDemoState('ST10-004', { normalAttack: 'payable' })
+      const attacker = initial.players['player-one'].battleArea[0]
+      const target = initial.players['player-two'].battleArea[0]
+      const paymentIds = initial.players['player-one'].supportArea.map(support => support.card.instanceId)
+      await act(() => captured!.setGame(initial))
+      await act(() => captured!.setGame(current => applyGameCommand(current, {
+        kind: 'declare-attack',
+        playerId: 'player-one',
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: target.card.instanceId,
+        supportPaymentIds: paymentIds,
+      })))
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+
+      expect(captured!.game.pendingBattle).toBeNull()
+      expect(captured!.game.players['player-two'].battleArea[0].hpCards).toHaveLength(target.card.hp - 1)
+      expect(captured!.game.players['player-one'].supportArea.every(support => support.rested)).toBe(true)
+    } finally {
+      await act(() => root.unmount())
+      vi.useRealTimers()
+    }
+  })
+
   it('finishes BS3-010 versus BS4-024 through the same controller and AI timers used in a live match', async () => {
     vi.useFakeTimers()
     let captured: ReturnType<typeof useMatchController> | null = null
@@ -344,6 +380,56 @@ describe('useMatchController auto-skip-trap effect', () => {
       vi.useRealTimers()
     }
   })
+
+  it.each([
+    ['ST9-004', 'card-check'],
+    ['ST9-010', 'card-check'],
+    ['ST9-011', 'card-check'],
+    ['ST9-010', 'card-negative'],
+    ['ST9-011', 'card-negative'],
+  ] as const)(
+    'keeps %s defender FLIP under local control throughout the %s attack',
+    async (cardNumber, stateKind) => {
+    vi.useFakeTimers()
+    let captured: ReturnType<typeof useMatchController> | null = null
+    function TestHarness() {
+      captured = useMatchController({
+        testStateConfig: { kind: stateKind, cardNumber },
+      })
+      return null
+    }
+    const root = createRoot(document.createElement('div'))
+    try {
+      await act(() => root.render(<TestHarness />))
+      const initial = stateKind === 'card-check'
+        ? createCardCheckDemoState(cardNumber)
+        : createCardNegativeDemoState(cardNumber)
+      const source = initial.players['player-one'].battleArea[0]!
+      const target = initial.players['player-two'].battleArea[0]!
+      const attacked = applyGameCommand(initial, {
+        kind: 'declare-attack',
+        playerId: 'player-one',
+        attackerInstanceId: source.card.instanceId,
+        targetInstanceId: target.card.instanceId,
+        supportPaymentIds: initial.players['player-one'].supportArea.map(({ card }) => card.instanceId),
+      })
+      await act(() => captured!.setGame(attacked))
+      for (let step = 0; step < 20 && captured!.game.pendingBattle?.stage !== 'flip'; step += 1) {
+        await act(() => vi.advanceTimersByTime(50))
+      }
+      expect(captured!.viewerPlayerId).toBe('player-two')
+      expect(captured!.aiControlsCurrentState).toBe(false)
+      expect(captured!.game.pendingBattle?.stage).toBe('flip')
+      expect(captured!.game.pendingBattle?.revealedHpCard?.id).toBe(cardNumber)
+      await act(() => vi.advanceTimersByTime(500))
+      expect(captured!.game.pendingBattle?.stage).toBe('flip')
+      expect(captured!.game.commandLog?.some(entry => entry.commandKind === 'resolve-flip')).toBe(false)
+    } finally {
+      await act(() => root.unmount())
+      vi.useRealTimers()
+    }
+    },
+  )
 
   it('keeps BS9-035 healing FLIP pending after switching to the defender', async () => {
     vi.useFakeTimers()

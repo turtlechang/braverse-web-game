@@ -1,0 +1,33 @@
+{
+  "name": "BS12 綠色｜Arena",
+  "entries": [
+    { "cardNumber": "BS4-049", "count": 1 },
+    { "cardNumber": "BS7-046", "count": 4 },
+    { "cardNumber": "BS7-049", "count": 4 },
+    { "cardNumber": "BS7-056", "count": 4 },
+    { "cardNumber": "BS7-057", "count": 4 },
+    { "cardNumber": "BS7-059", "count": 4 },
+    { "cardNumber": "BS7-062", "count": 4 },
+    { "cardNumber": "BS7-063", "count": 4 },
+    { "cardNumber": "BS7-064", "count": 3 },
+    { "cardNumber": "BS7-065", "count": 4 },
+    { "cardNumber": "BS8-059", "count": 1 },
+    { "cardNumber": "P-104", "count": 4 },
+    { "cardNumber": "P-113", "count": 4 },
+    { "cardNumber": "P-114", "count": 2 },
+    { "cardNumber": "P-115", "count": 3 },
+    { "cardNumber": "ST3-016", "count": 3 },
+    { "cardNumber": "ST3-019", "count": 2 },
+    { "cardNumber": "ST3-020", "count": 1 },
+    { "cardNumber": "ST8-018", "count": 4 }
+  ],
+  "extraDeckEntries": [
+    { "cardNumber": "BS10-073", "count": 1 },
+    { "cardNumber": "BS11-091", "count": 1 },
+    { "cardNumber": "BS12-056", "count": 1 },
+    { "cardNumber": "BS12-111", "count": 1 },
+    { "cardNumber": "BS8-069", "count": 1 },
+    { "cardNumber": "BS9-055", "count": 1 }
+  ],
+  "format": "standard"
+}

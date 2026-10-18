@@ -1,11 +1,14 @@
+import {selectSafeOptionalDrawCount} from './optional-draw-refresh-safety'
+import {paysForZeroSafeDraw} from './optional-draw-cost-safety'
 import {
   getAfterDamageEffectCandidates,
   getFaintEffectCardCandidates,
   getFaintEffectCandidates,
   getFaintSourceCostUnavailableReason,
+  hasPendingFaintModeCost,
 } from '../battle'
 import {
-  applyGameCommand,
+  applyGameCommand as executeGameCommand,
   getPendingDecision,
   hasActiveEffectOrder,
 } from '../commands'
@@ -27,20 +30,24 @@ import {
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getExtraDeckTrashBattleCookieCostCandidates,
+  payHpToTrashCost,
 } from '../skills'
 import { chooseAiHpToTrashIds } from './hp-cost-selection'
 import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
 import { chooseAiEffectMode } from './choose-one-mode'
 import { createPlayerView } from '../player-view'
+import { maskGameStateForViewer } from '../masked-state'
 import {
   createKnowledgeStateFromPlayerView,
   synchronizeKnowledgeWithPlayerView,
   type KnowledgeState,
 } from './strategy/knowledge-state'
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
+import { getPublicEffectDamageByTarget } from './public-effect-damage'
 import { assessLv5OptionalCostDefense } from './strategy/defensive-reserve'
 import { chooseSharedEffectTargets } from './shared-selection'
 import { chooseAiStageCostIds } from './turn-handler'
+import { hasDamageSequenceFlipInterruption } from '../pending'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -69,14 +76,23 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
       state.pendingBattle.effectDamageSequence.remainingTargetInstanceIds.length === 0 &&
       state.pendingAbilityEffect?.isFaintEffectContinuation,
   )
+  // A FLIP revealed by nested effect damage must finish before the sequence
+  // advances or closes. The damage handler intentionally waits for this queue.
+  const canResolveSequenceInterruption = canResolveCompletedFaintContinuation ||
+    hasDamageSequenceFlipInterruption(state)
 
   return Boolean(
     state.pendingRefresh ||
+      // 逐點效果傷害結束後仍須由 battle handler 收尾，才可續接技能。
+      // 否則技能控制者與最後受傷者不同時，會用 idle 遮住收尾指令。
+      (state.pendingBattle?.stage === 'damage' &&
+        !canResolveSequenceInterruption) ||
       state.pendingOnPlay ||
       hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
       (state.pendingAfterDamageEffects &&
-        state.pendingAfterDamageEffects.length > 0) ||
+        state.pendingAfterDamageEffects.length > 0 &&
+        getPendingDecision(state)?.kind === 'after-damage-effect') ||
       state.pendingOpponentHandDiscard ||
       state.pendingOpponentRestSupport ||
       state.pendingInspectDeck ||
@@ -88,7 +104,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
       // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
       // 不能在中途搶先執行同一條 pendingAbilityEffect。
       (state.pendingBattle?.effectDamageSequence &&
-        !canResolveCompletedFaintContinuation) ||
+        !canResolveSequenceInterruption) ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       state.pendingAbilityEffect?.pendingReorderHp ||
@@ -100,6 +116,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean => {
 export interface AiPendingDecisionOptions {
   level?: AiLevel
   knowledgeState?: KnowledgeState
+  shuffleSeed?: number
 }
 
 export const handleAiPendingDecision = (
@@ -107,6 +124,8 @@ export const handleAiPendingDecision = (
   playerId: PlayerId,
   options: AiPendingDecisionOptions = {},
 ): AiDecision | null => {
+  const applyGameCommand: typeof executeGameCommand = (current, command, commandOptions) =>
+    executeGameCommand(current, command, { ...commandOptions, shuffleSeed: options.shuffleSeed })
   const pendingDecision = getPendingDecision(state)
   const view = createPlayerView(state, playerId)
   const knowledgeState = options.knowledgeState?.observerId === playerId
@@ -141,10 +160,14 @@ export const handleAiPendingDecision = (
       // 攻擊後效果屬於攻擊者，必須先由 battle handler 結算；被擊倒餅乾
       // 的延遲效果可能同時掛在防守者身上，不能用「等待效果持有者」的
       // idle 決策遮住這個更高優先級的戰鬥階段。
-      if (
+      const battleOwnsCurrentStep = (
         state.pendingBattle?.stage === 'attack-effect' &&
         state.pendingBattle.attackerPlayerId === playerId
-      ) return null
+      ) || (
+        state.pendingBattle?.stage === 'flip' &&
+        (state.pendingBattle.damagePlayerId ?? state.pendingBattle.defenderPlayerId) === playerId
+      )
+      if (battleOwnsCurrentStep) return null
       return {
         state,
         action: 'idle',
@@ -232,6 +255,7 @@ export const handleAiPendingDecision = (
               effect,
               candidates,
               getEffectSelectionLimits(effect)?.max ?? 0,
+              getPublicEffectDamageByTarget(state, playerId, context, effect, candidates),
             )
           : candidates.slice(0, getEffectSelectionLimits(effect)?.max ?? 0)
     return withPendingReason({
@@ -334,6 +358,20 @@ export const handleAiPendingDecision = (
         description: unavailable ?? `${state.players[playerId].name}支付牌庫頂 ${deckCost} 張昏厥代價，再選擇後續目標。`,
       }, 'effect-target', pendingDecision.sourceInstanceId)
     }
+    const modeFaint = state.pendingFaintEffects?.[0]
+    if (modeFaint?.effect.kind === 'choose-one' && !hasPendingFaintModeCost(state)) {
+      return withPendingReason({
+        state: applyGameCommand(state, {
+          kind: 'resolve-choose-one', playerId,
+          modeIndex: chooseAiEffectMode(state, modeFaint.context, modeFaint.effect,
+            universal.enabled
+              ? universal.preferredModeIndices(modeFaint.effect, modeFaint.sourceInstanceId)
+              : []),
+        }),
+        action: 'idle',
+        description: `${state.players[playerId].name}選擇昏厥效果的一個項目。`,
+      }, 'choose-one', modeFaint.sourceInstanceId, modeFaint.effect)
+    }
     const cardCandidates = getFaintEffectCardCandidates(state)
     const candidates = getFaintEffectCandidates(state)
     const ordered = [...candidates].sort(
@@ -389,7 +427,7 @@ export const handleAiPendingDecision = (
           (faintTriggeredCost.supportToHand ?? 0))
     const canPayFaintCost = selectedPaymentIds !== null
     const shouldPayFaintCost =
-      Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
+      Boolean(faintEnergyCost) && (cardCandidates.length > 0 || hasPendingFaintModeCost(state)) && canPayFaintCost
     const shouldPayTriggeredCost = Boolean(faintTriggeredCost) && canPayTriggeredCost
     const faintDiscardHandIds = universal.enabled
       ? universal.orderCostIds(
@@ -433,6 +471,7 @@ export const handleAiPendingDecision = (
           faintEffect,
           legalTargetIds,
           pendingDecision.max,
+          pendingFaint && getPublicEffectDamageByTarget(state, playerId, pendingFaint.context, faintEffect, legalTargetIds),
         )
       : fallbackTargetIds
     return withPendingReason({
@@ -453,7 +492,9 @@ export const handleAiPendingDecision = (
       }),
       action: 'resolve-faint',
       description:
-        targetIds.length > 0
+        hasPendingFaintModeCost(state)
+          ? `${state.players[playerId].name}${shouldPayTriggeredCost ? '支付昏厥代價，再選擇效果項目。' : '不支付昏厥代價，略過效果。'}`
+          : targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0]?.card.name ?? orderedCards[0]?.name ?? '目標'}的昏厥效果。`
           : `${state.players[playerId].name}略過昏厥效果。`,
     }, 'effect-target', pendingDecision.sourceInstanceId, faintEffect)
@@ -461,8 +502,7 @@ export const handleAiPendingDecision = (
 
   if (
     pendingDecision?.kind === 'after-damage-effect' &&
-    !state.pendingRefresh &&
-    !state.pendingOnPlay
+    !state.pendingRefresh
   ) {
     if (pendingDecision.playerId !== playerId) {
       return {
@@ -487,6 +527,8 @@ export const handleAiPendingDecision = (
           afterDamageEffect,
           legalTargetIds,
           pendingDecision.max,
+          state.pendingAfterDamageEffects?.[0] && getPublicEffectDamageByTarget(state, playerId,
+            state.pendingAfterDamageEffects[0].context, afterDamageEffect, legalTargetIds),
         )
       : fallbackTargetIds
     return withPendingReason({
@@ -801,16 +843,44 @@ export const handleAiPendingDecision = (
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
     const isAbilityResolution = pendingDecision.resolution === 'ability'
-    const extraBattleCost = state.pendingOptionalCostAttack?.extraDeckPlayInstanceId ? pendingDecision.cost.trashBattleCookie : undefined
+    const extraBattleCost = !isAbilityResolution || state.pendingOptionalCostAttack?.extraDeckPlayInstanceId ? pendingDecision.cost.trashBattleCookie : undefined
     const extraBattleCostIds = extraBattleCost
       ? getExtraDeckTrashBattleCookieCostCandidates(pendingDecision.cost, state.players[playerId].battleArea, pendingDecision.sourceInstanceId).slice(0, extraBattleCost.count).map(cookie => cookie.card.instanceId)
       : []
+    // Preview only a plain optional HP payment followed by public battle-area
+    // healing. The real command still pays against the original state. Mask
+    // first, and do not infer conditions from the unknown HP costRecord.
+    const previewsHpRecoveryCost = !isAbilityResolution && !extraBattleCost &&
+      !pendingDecision.mandatory && canPayHpToTrash &&
+      Boolean(pendingDecision.cost.hpToTrash) &&
+      Object.entries(pendingDecision.cost).every(([key, value]) =>
+        key === 'hpToTrash' || value === undefined || value === 0 || value === false ||
+        (key === 'energy' && typeof value === 'object' && value !== null &&
+          Object.values(value).every(amount => amount === 0 || amount === undefined)),
+      ) &&
+      pendingDecision.effects.length > 0 && pendingDecision.effects.every(effect =>
+        effect.kind === 'gain-hp' && Number.isInteger(effect.amount) && effect.amount > 0 &&
+        !effect.condition && !effect.perBreakCard && !effect.thenEffects?.length &&
+        effect.target?.side === 'self' && !effect.target.costSelected &&
+        !effect.target.previousEffectTargetOnly && !effect.target.sameLevelAsPreviousEffectTarget,
+      )
+    let targetSelectionState = !isAbilityResolution && !extraBattleCost && cookieBreakCount &&
+      cookieToBreakAreaIds.length === cookieBreakCount
+      ? { ...state, players: { ...state.players, [playerId]: payCookieToBreakCost(pendingDecision.cost, state.players[playerId], cookieToBreakAreaIds, pendingDecision.sourceInstanceId).player } }
+      : state
+    if (previewsHpRecoveryCost) {
+      const publicState = maskGameStateForViewer(state, playerId)
+      const paid = payHpToTrashCost(publicState.players[playerId], pendingDecision.cost,
+        hpToTrashIds, pendingDecision.sourceInstanceId)
+      targetSelectionState = { ...publicState, players: { ...publicState.players,
+        [playerId]: { ...paid.player, battleArea: paid.player.battleArea.map(cookie =>
+          ({ ...cookie, publicHp: cookie.hpCards.length })) },
+      } }
+    }
     const sharedSelection = extraBattleCost ? { targetIds: extraBattleCostIds, valid: extraBattleCostIds.length === extraBattleCost.count } : isAbilityResolution
       ? { targetIds: [], valid: true }
       : chooseSharedEffectTargets(
-          cookieBreakCount && cookieToBreakAreaIds.length === cookieBreakCount
-            ? { ...state, players: { ...state.players, [playerId]: payCookieToBreakCost(pendingDecision.cost, state.players[playerId], cookieToBreakAreaIds, pendingDecision.sourceInstanceId).player } }
-            : state,
+          targetSelectionState,
           context,
           pendingDecision.effects,
           universal,
@@ -831,7 +901,22 @@ export const handleAiPendingDecision = (
           targetIds,
         )
       : undefined
+    // Paying for an optional movement with no selected Cookie cannot move
+    // anything. Keep the resources for later actions instead.
+    const emptyOptionalMovement =
+      (options.level ?? 2) >= 3 &&
+      !isAbilityResolution &&
+      targetIds.length === 0 &&
+      pendingDecision.effects.length > 0 &&
+      pendingDecision.effects.every((effect) => effect.kind === 'battle-to-support')
+    const emptySafeDraw = (options.level ?? 2) >= 3 && !isAbilityResolution &&
+      canPay && canPayHpToTrash && canPayHpToHand && canPayTrashToDeck && hasTarget &&
+      paysForZeroSafeDraw(state,playerId,universal.enabled
+        ? universal.orderCostIds(discardHandCandidateIds,discardHandAmount)
+        : discardHandCandidateIds.slice(0,discardHandAmount),paymentIds??[])
+    const emptyOptionalHpRecovery = previewsHpRecoveryCost && targetIds.length === 0
     const canResolveOptionalEffect =
+      !emptySafeDraw && !emptyOptionalMovement && !emptyOptionalHpRecovery &&
       canPay &&
       canPayHpToTrash &&
       canPayHpToHand &&
@@ -911,8 +996,9 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇抽牌數量。`,
       }
     }
-    const player = state.players[playerId]
-    const drawCount = Math.min(pendingDecision.max, player.deck.length)
+    const drawCount = (options.level ?? 2) >= 3
+      ? selectSafeOptionalDrawCount(view,pendingDecision.max,state.pendingBattle?.revealedHpCard)
+      : Math.min(pendingDecision.max,view.self.deckCount)
     return withPendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-draw-up-to',

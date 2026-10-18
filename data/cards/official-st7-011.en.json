@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.256Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST7 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46895,
+      "locale": "en",
+      "cardNumber": "ST7-011",
+      "baseCardNumber": "ST7-011",
+      "variant": null,
+      "name": "Millennial Jade Deer",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> Sacred Aura {da} 2 Then, if this Cookie's remaining HP is 2 or less and a LV.3 [Millennial Tree Cookie] is in your battle area, this Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 254,
+        "title": "Tree of Life",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Dg74Hk0n6qPw1LRFs8Ghjg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

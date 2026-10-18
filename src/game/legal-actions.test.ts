@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { takeAiStep } from './ai'
+import { getCardPoolEntry } from './card-pool'
+import { createCard } from './starter-deck'
 import {
   applyGameCommand,
   createGame,
@@ -73,6 +76,46 @@ const advanceTo = (
     })
   }
   return current
+}
+
+const createRestedSherbetAttackGate = (handCount: number): GameState => {
+  let state = createPlayingGame()
+  while (
+    !(
+      state.activePlayerId === 'player-one' &&
+      state.phase === 'main' &&
+      state.turnNumber >= 3
+    )
+  ) {
+    state = applyGameCommand(state, {
+      kind: 'advance-phase',
+      playerId: state.activePlayerId,
+    })
+  }
+  const record = getCardPoolEntry('BS8-084')
+  if (!record) throw new Error('Official BS8-084 card is required')
+  const source = createCard(record, 'player-two', 90)
+  const payment = createCard(record, 'player-one', 91)
+  if (source.type !== 'cookie' || source.hp === undefined) throw new Error('Official Sherbet Cookie is required')
+
+  const defender = state.players['player-two']
+  const movedCards = [
+    ...defender.battleArea.flatMap((cookie) => [cookie.card, ...cookie.hpCards]),
+    ...defender.deck,
+  ]
+  const hpCards = movedCards.splice(0, source.hp)
+  defender.deck = movedCards
+  defender.battleArea = [{
+    card: source,
+    hpCards,
+    rested: true,
+    battleEntryId: `${source.instanceId}:entry`,
+  }]
+
+  const attacker = state.players['player-one']
+  attacker.supportArea = [{ card: payment, rested: false }]
+  attacker.hand = Array.from({ length: handCount }, (_, index) => createItem(`attack-discard-${index}`))
+  return state
 }
 
 describe('getLegalTurnCommands', () => {
@@ -177,6 +220,97 @@ describe('getLegalTurnCommands', () => {
       expect(() => applyGameCommand(state, command)).not.toThrow()
     }
   })
+
+  it('does not expose or choose an attack when a rested BS8-084 requires more hand cards than the attacker has', () => {
+    const noHand = createRestedSherbetAttackGate(0)
+    const attacks = getLegalTurnCommands(noHand, 'player-one')
+      .filter((command) => command.kind === 'attack')
+    expect(attacks).toEqual([])
+
+    const enoughHand = createRestedSherbetAttackGate(1)
+    const paidAttack = getLegalTurnCommands(enoughHand, 'player-one')
+      .find((command) => command.kind === 'attack')
+    expect(paidAttack?.kind).toBe('attack')
+    if (!paidAttack || paidAttack.kind !== 'attack') throw new Error('Legal attack should remain available')
+    expect(applyGameCommand(enoughHand, paidAttack).pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 1,
+      sourceInstanceId: enoughHand.players['player-two'].battleArea[0].card.instanceId,
+    })
+  })
+
+  it('adds a targeted hand-discard requirement to the rested BS8-084 passive requirement', () => {
+    const state = createRestedSherbetAttackGate(2)
+    const attacker = state.players['player-one'].battleArea[0]
+    if (!attacker) throw new Error('A real attacker is required')
+
+    const withTargetedRequirement: GameState = {
+      ...state,
+      cookieAttackDiscardRequirements: {
+        'player-one': [{
+          cookieInstanceId: attacker.card.instanceId,
+          count: 2,
+          expiresAfterTurn: state.turnNumber,
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'combined-discard-effect',
+          sourceCardName: '測試中的攻擊效果',
+          effectText: '攻擊後需棄置 2 張手牌',
+        }],
+      },
+    }
+
+    expect(
+      getLegalTurnCommands(withTargetedRequirement, 'player-one')
+        .filter((command) => command.kind === 'attack'),
+    ).toEqual([])
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      const decision = takeAiStep(withTargetedRequirement, 'player-one', {
+        level,
+        seed: 203492001,
+        searchNow: () => 0,
+      })
+      expect(decision.action).not.toBe('attack')
+      expect(decision.action).not.toBe('error')
+    }
+
+    const withEnoughCards: GameState = {
+      ...withTargetedRequirement,
+      players: {
+        ...withTargetedRequirement.players,
+        'player-one': {
+          ...withTargetedRequirement.players['player-one'],
+          hand: [
+            ...withTargetedRequirement.players['player-one'].hand,
+            createItem('combined-attack-discard-extra'),
+          ],
+        },
+      },
+    }
+    const paidAttack = getLegalTurnCommands(withEnoughCards, 'player-one')
+      .find((command) => command.kind === 'attack')
+    expect(paidAttack?.kind).toBe('attack')
+    if (!paidAttack || paidAttack.kind !== 'attack') throw new Error('Legal attack should remain available')
+    expect(applyGameCommand(withEnoughCards, paidAttack).pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 3,
+    })
+  })
+
+  it.each([1, 2, 3, 4, 5] as const)(
+    'AI Lv.%i does not declare a rested-cookie attack without the required hand discard',
+    (level) => {
+      const state = createRestedSherbetAttackGate(0)
+      const decision = takeAiStep(state, 'player-one', {
+        level,
+        seed: 203491900,
+        searchNow: () => 0,
+      })
+
+      expect(decision.action).not.toBe('attack')
+      expect(decision.action).not.toBe('error')
+      expect(decision.state.pendingBattle).toBeNull()
+    },
+  )
 
   it('空戰鬥區仍有餅乾可補位時不列出非法的略過指令', () => {
     const base = createPlayingGame()

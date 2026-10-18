@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.26Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST8 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46911,
+      "locale": "en",
+      "cardNumber": "ST8-005",
+      "baseCardNumber": "ST8-005",
+      "variant": null,
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Guardian Winds",
+        "text": "【Activate】 【Once Per Turn】 If there are 5 cards or less in your hand and if, during this turn, an Item card was activated, draw 1 card from your deck."
+      },
+      "attackText": "<{G}{G}{G}> Tracker's Arrow {da} 3 Then, <rest up to 2 cards in your support area.> Select up to 1 of your opponent's Cookies. That Cookie receives damage equal to the number of cards rested by this effect.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_B5YgwFHSoJ-goh9x3BfbA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

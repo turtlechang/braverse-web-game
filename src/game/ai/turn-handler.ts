@@ -1,16 +1,22 @@
 import {
   activateStage,
   canActivateStage,
+  getStageActivationSource,
 } from '../card-abilities'
 import { canPlayExtraDeckCookie } from '../actions'
 import { applyGameCommand } from '../commands'
-import { isCookieAttackRestricted } from '../battle'
+import {
+  getAttackDiscardRequirement,
+  isCookieAttackRestricted,
+} from '../battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { materializeExtraDeckCookie } from '../extra-deck'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { hasPendingCardResolution } from '../pending'
 import { advancePhase, canAttack } from '../turn'
+import { createPlayerView } from '../player-view'
+import { selectSafeOptionalDrawCount } from './optional-draw-refresh-safety'
 import {
   getActivatableSkillSources,
   getDiscardAllHandCostCandidates,
@@ -398,9 +404,7 @@ export const handleAiTurnState = (
   }
 
   if (state.phase === 'main') {
-    const stageCard = !canAttack(state)
-      ? player.hand.find((card) => card.type === 'stage' && card.stageAbility)
-      : undefined
+    const stageCard = player.hand.find((card) => card.type === 'stage' && card.stageAbility)
     if (stageCard?.stageAbility) {
       const paymentIds = selectEnergyPayment(
         stageCard.stageAbility.placementCost,
@@ -420,9 +424,9 @@ export const handleAiTurnState = (
       }
     }
 
-    if (!canAttack(state) && canActivateStage(state, playerId)) {
-      const stage = player.stage!
-      const ability = stage.card.stageAbility!
+    const stageSource = getStageActivationSource(state, playerId)
+    if (stageSource && canActivateStage(state, playerId)) {
+      const { stage, ability } = stageSource
       const costIds = strategy.chooseStageCostIds
         ? strategy.chooseStageCostIds(
             state,
@@ -475,7 +479,17 @@ export const handleAiTurnState = (
           stageShuffle,
           strategy.chooseEffectMode,
         )
-        if (!sim.aborted) {
+        // Attack permission does not constrain stages. Still preserve resources
+        // when a simple energy payment produces no effect or no safe draw.
+        // Other costs may themselves have useful zone/HP consequences.
+        const simpleCost = Object.entries(ability.cost).every(([key, value]) =>
+          value === undefined || key === 'energy' || (key === 'discardHand' && value === 0))
+        const hasNoEffect = simpleCost && sim.effectSelections.length === 0 && !ability.specialVictory
+        const onlyDraw = ability.effects.length === 1 && ability.effects[0].kind === 'draw-up-to'
+          ? ability.effects[0] : undefined
+        const hasNoSafeDraw = simpleCost && onlyDraw &&
+          selectSafeOptionalDrawCount(createPlayerView(activated, playerId), onlyDraw.max) === 0
+        if (!sim.aborted && !hasNoEffect && !hasNoSafeDraw) {
           return {
             state: applyGameCommand(
               state,
@@ -520,6 +534,7 @@ export const handleAiTurnState = (
         const deployable = chooseBestCookieToDeploy(
           player.hand.filter(
             (card) =>
+              !(card.type === 'cookie' && card.extraDeckOrigin) &&
               !shouldAvoidFlipDeployment(state, playerId, card) &&
               !(
                 strategy.conservativeDeployment &&
@@ -638,6 +653,12 @@ export const handleAiTurnState = (
             state.turnNumber
           )
             return false
+          const discardRequirement = getAttackDiscardRequirement(
+            state,
+            playerId,
+            attacker.card.instanceId,
+          )
+          if (discardRequirement && player.hand.length < discardRequirement.count) return false
           const paymentIds = selectEnergyPayment(
             getAttackEnergyCostForState(state, attacker.card.instanceId),
             player.supportArea,

@@ -5,6 +5,7 @@ import {
 } from '../../helpers'
 import { getEnergyCostTotal, selectEnergyPayment } from '../../energy'
 import { isEffectConditionMet } from '../../effects'
+import { getDiscardHandCostCandidates } from '../../skills'
 import type { PlayerActionCommand } from '../../commands'
 import { createPlayerView } from '../../player-view'
 import type { PlayerView } from '../../player-view'
@@ -68,18 +69,35 @@ const getOnPlayEnergyRequirement = (view: PlayerView): number => {
   return costs.length === 0 ? 0 : Math.max(...costs)
 }
 
-export const hasPayableTrap = (view: PlayerView): boolean =>
-  view.hand.some((card) => {
-    if (card.type !== 'trap' || !card.trap) return false
-    const costs = [card.trap.cost, ...(card.trap.alternativeCosts ?? [])]
-    return costs.some((cost) => canPayEnergy(cost, view))
+interface DefensePayment {
+  sourceInstanceId: string
+  cost: AbilityCost
+}
+
+const canPayDefense = (payment: DefensePayment, view: PlayerView): boolean =>
+  canPayEnergy(payment.cost, view) &&
+  getDiscardHandCostCandidates(payment.cost, view.hand, payment.sourceInstanceId).length >=
+    (payment.cost.discardHand ?? 0)
+
+const payableTrapCosts = (view: PlayerView): DefensePayment[] =>
+  view.hand.flatMap((card) => card.type === 'trap' && card.trap
+    ? [card.trap.cost, ...(card.trap.alternativeCosts ?? [])]
+      .map(cost => ({ sourceInstanceId: card.instanceId, cost }))
+      .filter(payment => canPayDefense(payment, view))
+    : [])
+
+const payableBlockerCosts = (view: PlayerView): DefensePayment[] =>
+  view.self.battleArea.flatMap((cookie) => {
+    const skill = cookie.card.skill
+    if (skill?.trigger !== 'block' || (skill.restSource && cookie.rested)) return []
+    const payment = { sourceInstanceId: cookie.card.instanceId, cost: skill.cost }
+    return canPayDefense(payment, view) ? [payment] : []
   })
 
+export const hasPayableTrap = (view: PlayerView): boolean => payableTrapCosts(view).length > 0
+
 export const hasReadyBlocker = (view: PlayerView): boolean =>
-  view.self.battleArea.some((cookie) =>
-    cookie.card.skill?.trigger === 'block' &&
-    canPayEnergy(cookie.card.skill.cost, view),
-  )
+  payableBlockerCosts(view).length > 0
 
 /**
  * 評估 Lv.5 是否應在攻擊時保留活躍支援：
@@ -99,8 +117,8 @@ export const assessLv5DefensiveReserve = (
 ): DefensiveReserveAssessment => {
   const activeSupportBefore = activeSupportCount(beforeView)
   const activeSupportAfter = activeSupportCount(afterView)
-  const trapInHand = hasPayableTrap(beforeView)
-  const blockerReady = hasReadyBlocker(beforeView)
+  const trapPayments = payableTrapCosts(beforeView)
+  const blockerPayments = payableBlockerCosts(beforeView)
   const onPlayEnergy = getOnPlayEnergyRequirement(beforeView)
   const opponentThreat = hasLv5OpponentAttackThreat(beforeView)
 
@@ -131,17 +149,31 @@ export const assessLv5DefensiveReserve = (
     }
   }
 
+  if (command.kind === 'place-support' && opponentThreat &&
+    blockerPayments.length > 0 && !hasReadyBlocker(afterView)) {
+    return {
+      reason: 'blocker-ready', reserveRequired: 0,
+      activeSupportBefore, activeSupportAfter, shortage: 1, adjustment: -36,
+      detail: '此支援放置消耗了 Blocker 唯一合格的手牌代價；支援能量不能代替指定手牌。',
+    }
+  }
+
   let reason: DefensiveReserveReason = 'none'
   let reserveRequired = 0
-  if (trapInHand && opponentThreat) {
+  let defensePayments: DefensePayment[] = []
+  if (trapPayments.length > 0 && opponentThreat) {
     reason = 'trap-in-hand'
-    reserveRequired = 1
-  } else if (blockerReady && opponentThreat) {
+    defensePayments = trapPayments
+  } else if (blockerPayments.length > 0 && opponentThreat) {
     reason = 'blocker-ready'
-    reserveRequired = 1
+    defensePayments = blockerPayments
   } else if (onPlayEnergy > 0) {
     reason = 'on-play-energy'
     reserveRequired = onPlayEnergy
+  }
+  if (defensePayments.length > 0) {
+    reserveRequired = Math.min(...defensePayments.map(payment =>
+      getEnergyCostTotal(payment.cost.energy ?? payment.cost)))
   }
 
   if (reserveRequired === 0) {
@@ -156,7 +188,11 @@ export const assessLv5DefensiveReserve = (
     }
   }
 
-  const shortage = Math.max(0, reserveRequired - activeSupportAfter)
+  // Enough supports of the wrong color cannot pay a defensive response.
+  // Check all previously payable alternatives, not a single greedy payment.
+  const defenseStillPayable = defensePayments.length === 0 ||
+    defensePayments.some(payment => canPayDefense(payment, afterView))
+  const shortage = Math.max(defenseStillPayable ? 0 : 1, reserveRequired - activeSupportAfter)
   if (command.kind === 'attack' && shortage > 0) {
     return {
       reason,
@@ -178,7 +214,7 @@ export const assessLv5DefensiveReserve = (
     command.kind === 'advance-phase' &&
     beforeState.phase === 'main' &&
     (reason === 'trap-in-hand' || reason === 'blocker-ready') &&
-    activeSupportBefore >= reserveRequired
+    activeSupportBefore >= reserveRequired && defenseStillPayable
   ) {
     return {
       reason,

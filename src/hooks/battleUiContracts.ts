@@ -248,6 +248,8 @@ export interface BattleUiMatchLike {
 }
 
 export interface BattleUiTrapEffectTargetStep {
+  /** Printed all-matching recipients require confirmation, not selection. */
+  fixed?: boolean
   /** Select every candidate; click order is damage resolution order. */
   ordered?: boolean
   effectIndex: number

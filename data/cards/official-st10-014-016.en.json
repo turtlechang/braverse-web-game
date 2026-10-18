@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.266Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 3,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST10 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 47094,
+      "locale": "en",
+      "cardNumber": "ST10-014",
+      "baseCardNumber": "ST10-014",
+      "variant": null,
+      "name": "Lunar Compendium",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}> <Place 1 {P} LV.1 Cookie from your battle area into your trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xzd7ePSLQRb4WsXNfuT5qA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47095,
+      "locale": "en",
+      "cardNumber": "ST10-015",
+      "baseCardNumber": "ST10-015",
+      "variant": null,
+      "name": "Essence of Moonlight",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}{P}> If [Moonlight Cookie] is in your battle area or your trash, place up to 1 card from the top of each of your opponent's Cookies' HP into the trash."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4XD-OWTphA4cj_vNAX7i8w.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47096,
+      "locale": "en",
+      "cardNumber": "ST10-016",
+      "baseCardNumber": "ST10-016",
+      "variant": null,
+      "name": "Delicate Glass Flower",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}> If there are 15 cards or more in your trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bF1CnfZkbD6wotghKre3iw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

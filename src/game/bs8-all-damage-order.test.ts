@@ -4,6 +4,7 @@ import { createCardCheckDemoState } from './demo'
 import { executeCardEffect, getEffectTargetCandidatesForEffect } from './effects'
 import { resolveNextDamage } from './battle'
 import { takeAiStep } from './ai'
+import { item } from './test-helpers/battle-helpers'
 import type { GameState } from './types'
 
 const setup = (number = 'BS8-024') => {
@@ -13,6 +14,39 @@ const setup = (number = 'BS8-024') => {
   if (effect?.kind !== 'damage-all') throw new Error('Expected all-Cookie damage')
   const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: card.instanceId }
   return { state, card, effect, context }
+}
+
+const withOpponentDamageAdvantage = (state: GameState): GameState => {
+  const ownBattleArea = state.players['player-one'].battleArea
+  const opponentBattleArea = state.players['player-two'].battleArea
+  const opponentSecond = opponentBattleArea[1]
+  if (!opponentSecond) throw new Error('Expected the second opponent Cookie')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        // The attack target and second Cookie are below the Trap's 2-HP
+        // threshold, so the effect avoids friendly fire on this side.
+        battleArea: ownBattleArea.map((cookie, index) => index === 0
+          ? { ...cookie, hpCards: [item('bs8-023-own-defender-hp')] }
+          : cookie),
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        // The Trap can now damage both opposing Cookies while harming neither
+        // friendly Cookie, giving the high-level scorer a real reason to play.
+        battleArea: opponentBattleArea.map((cookie, index) => index === 1
+          ? { ...cookie, hpCards: [
+              item('bs8-023-opponent-second-hp-1'),
+              item('bs8-023-opponent-second-hp-2'),
+            ] }
+          : cookie),
+      },
+    },
+  }
 }
 
 const drainDamage = (initial: GameState) => {
@@ -25,12 +59,23 @@ const drainDamage = (initial: GameState) => {
 }
 
 describe('BS8 all-Cookie damage across both players', () => {
-  it.each([1, 2, 3, 4, 5] as const)('AI level %i submits a complete legal trap order', level => {
-    const { state } = setup('BS8-023')
+  it.each([1, 2, 3, 4, 5] as const)('AI level %i submits a complete legal trap order when damage favors the opponent', level => {
+    const { state: fixture } = setup('BS8-023')
+    const state = withOpponentDamageAdvantage(fixture)
     const decision = takeAiStep(state, 'player-one', { level, seed: 1 })
     expect(decision.action).toBe('play-trap')
+    expect(decision.state.commandLog?.at(-1)?.payload.kind).toBe('play-trap')
     expect(decision.state.pendingBattle?.effectDamageSequence).toBeDefined()
-    expect(drainDamage(decision.state).pendingBattle?.remainingDamage).toBe(6)
+    const resolved = drainDamage(decision.state)
+    expect(resolved.pendingBattle?.remainingDamage).toBe(6)
+    expect(resolved.players['player-two'].battleArea.map(cookie => cookie.hpCards.length)).toEqual([4, 1])
+  })
+
+  it.each([3, 4, 5] as const)('high-level AI skips symmetric friendly fire at level %i', level => {
+    const { state } = setup('BS8-023')
+    const decision = takeAiStep(state, 'player-one', { level, seed: 1 })
+    expect(decision.state.commandLog?.at(-1)?.payload.kind).toBe('skip-trap')
+    expect(decision.state.pendingBattle?.effectDamageSequence).toBeUndefined()
   })
   it.each(['BS8-023', 'BS8-024'])('%s offers both players in one ordered selection', number => {
     const { state, effect, context } = setup(number)

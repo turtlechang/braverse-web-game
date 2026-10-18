@@ -24,6 +24,7 @@ import {
   requiresEffectCardSelection,
   selectEffectTargets,
   expandChooseOne,
+  isChooseOneModePlayable,
 } from './effects'
 import { resolveDamageOutcome } from './effects/execute'
 import { executeDeckToTrash } from './effects/deck-to-trash'
@@ -314,7 +315,7 @@ export const isCookieAttackRestricted = (
   )
 }
 
-const getAttackDiscardRequirement = (
+export const getAttackDiscardRequirement = (
   state: GameState,
   attackerPlayerId: PlayerId,
   attackerInstanceId: string,
@@ -1001,6 +1002,7 @@ const validateTrapTargets = (
       effect.kind === 'damage-by-break-count' ||
       effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-damage-received' ||
       effect.kind === 'modify-attack-cost' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
@@ -1493,6 +1495,7 @@ export const playTrap = (
   state: GameState,
   playerId: PlayerId,
   options: PlayTrapOptions,
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   const battle = requirePendingBattle(state)
   if (
@@ -1723,6 +1726,7 @@ export const playTrap = (
   if (handToBreakCards.length > 0) {
     // 手牌進休息區會推進自己的 break 等級，必須立刻結算勝負。
     nextState = resolveBreakLevelVictory(nextState)
+    if (nextState.status !== 'playing') return nextState
   }
 
   const context = {
@@ -1778,6 +1782,7 @@ export const playTrap = (
         context,
         effect,
         supportTargetIds,
+        shuffle,
       )
       continue
     }
@@ -1919,6 +1924,7 @@ export const playTrap = (
         context,
         effect,
         options.trashToDeckIds ?? [],
+        shuffle,
       )
       continue
     }
@@ -1930,7 +1936,7 @@ export const playTrap = (
     if (effect.kind === 'trash-to-battle') {
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
-        nextState = executeCardEffect(nextState, context, effect, [])
+        nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         continue
       }
       return {
@@ -1953,13 +1959,13 @@ export const playTrap = (
     // 會把對手戰鬥區 instanceId 當成自己的棄牌區餅乾而被規則層拒絕。
     if (effect.kind === 'trash-to-support' || effect.kind === 'trash-to-hand') {
       if (hasExplicitTargetIds || requestedTargetIds.length > 0) {
-        nextState = executeCardEffect(nextState, context, effect, requestedTargetIds)
+        nextState = executeCardEffect(nextState, context, effect, requestedTargetIds, shuffle)
         continue
       }
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
         if (effect.kind === 'trash-to-support' && effect.optional) {
-          nextState = executeCardEffect(nextState, context, effect, [])
+          nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         }
         continue
       }
@@ -1989,10 +1995,29 @@ export const playTrap = (
         // 沒有合法候選時，optional 效果等同選 0；mandatory 效果則依
         // 既有 pending queue 規則略過不可完成的步驟，讓陷阱仍能收尾。
         if (effect.optional) {
-          nextState = executeCardEffect(nextState, context, effect, [])
+          nextState = executeCardEffect(nextState, context, effect, [], shuffle)
         }
         continue
       }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
+    // `up to N` deck-to-trash effects need the same explicit follow-up choice
+    // as card-selection effects. Keep the already-resolved Trap effects and
+    // suspend the battle until the player chooses an amount.
+    if (effect.kind === 'deck-to-trash' && effect.selectableAmount) {
       return {
         ...nextState,
         pendingAbilityEffect: {
@@ -2056,6 +2081,7 @@ export const playTrap = (
         context,
         effect,
         requestedTargetIds,
+        shuffle,
       )
       continue
     }
@@ -2081,6 +2107,7 @@ export const playTrap = (
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : executeTargetIds,
+      shuffle,
     )
     if (nextState.pendingRevealTopDeck) break
   }
@@ -2751,6 +2778,13 @@ const finishDamageSequence = (state: GameState): GameState => {
     const sequenceInterruptState = {
       ...afterCurrentDamageState,
       pendingBattle: null,
+      // Suspended parents await this child sequence. They are not external
+      // interruptions; the command boundary restores them after it completes.
+      suspendedAbilityEffects: undefined,
+      // Departure skills are queued until the enclosing damage sequence and
+      // its ability parent finish; they cannot be started while this sequence
+      // is pending, so they must not keep the sequence paused here.
+      pendingDepartureSkillTriggers: undefined,
       // Break-entry standby effects wait for this entire damage sequence;
       // they must not make the sequence wait for its own completion.
       pendingAfterDamageEffects: afterCurrentDamageState.pendingAfterDamageEffects?.filter(
@@ -2978,6 +3012,18 @@ export const resolveAttackEffect = (
 
   if (getBattleAttackEffectPrevention(state, playerId)) return advanceAttackEffect(state, battle)
 
+  // A choose-one Then can become entirely impossible after an opponent's
+  // passive protection blocks every mode (for example BS6-010 vs BS9-077).
+  // There is no legal choice to present, so resolve it as a no-op.
+  if (
+    effect.kind === 'choose-one' &&
+    !effect.modes.some((mode) =>
+      isChooseOneModePlayable(state, effectContext, mode.effects),
+    )
+  ) {
+    return advanceAttackEffect(state, battle)
+  }
+
   // 攻擊後效果若已沒有合法目標（例如 BS1-037 對手場上沒有 LV.1
   // 餅乾），直接略過該效果，不建立任何玩家提示或付款決策。
   if (
@@ -3099,6 +3145,13 @@ export const resolveAttackEffect = (
     // resolve-opponent-hand-discard 命令接續 advanceAttackEffect，
     // 不能走 executeCardEffect（該路徑會直接把下一個效果也結算掉）。
     const player = state.players[playerId]
+    const sourceCard = [
+      ...player.battleArea.map(cookie => cookie.card),
+      ...player.breakArea,
+      ...player.discardPile,
+      ...player.hand,
+      ...player.supportArea.map(support => support.card),
+    ].find(card => card.instanceId === battle.attackerInstanceId)
     if (player.hand.length < effect.count) {
       return advanceAttackEffect(state, battle)
     }
@@ -3109,12 +3162,11 @@ export const resolveAttackEffect = (
         count: effect.count,
         ...(effect.atLeast ? { atLeast: true } : {}),
         destination: effect.destination,
+        handDiscardOrigin: 'effect',
         sourcePlayerId: playerId,
         sourceInstanceId: battle.attackerInstanceId,
-        sourceCardName: effectContext.sourceCardName ??
-          player.battleArea.find((cookie) => cookie.card.instanceId === battle.attackerInstanceId)?.card.name ??
-          'Unknown',
-        effectText: effect.kind,
+        sourceCardName: sourceCard?.name ?? findSourceCardName(state, playerId, battle.attackerInstanceId),
+        effectText: sourceCard?.type === 'cookie' ? sourceCard.attackText ?? effect.kind : effect.kind,
       },
     }
   }
@@ -3614,6 +3666,24 @@ const resolveOptionalAbilityEffect = (
       trashedCount: trashedSupportCards.length,
     })
   }
+  if (effect.effects.some((nested) => nested.kind === 'activate-discarded-flip')) {
+    if (discarded.length !== 1 || !discarded[0]?.flip) {
+      throw new GameRuleError('必須棄置 1 張具有 FLIP 的 Cookie。')
+    }
+    const battle = requirePendingBattle(nextState)
+    return {
+      ...nextState,
+      pendingAbilityEffect: undefined,
+      pendingBattle: {
+        ...battle,
+        stage: 'flip',
+        revealedHpCard: discarded[0],
+        detachedFlip: true,
+        damagePlayerId: playerId,
+        damageTargetInstanceId: undefined,
+      },
+    }
+  }
   return nextState
 }
 
@@ -3664,6 +3734,13 @@ export const resolveOptionalCostAttack = (
       return { ...clearedState, pendingBattle: { ...battle, attackEffectIndex: nextIndex, stage: 'attack-effect' } }
     }
     return finishBattle({ ...clearedState, pendingBattle: { ...battle, attackEffectIndex: nextIndex } })
+  }
+  if (pending.cost.trashBattleCookie) {
+    const paid = payTrashBattleCookieCost(state.players[playerId], pending.cost, targetIds, pending.sourceInstanceId)
+    state = recordCookieDepartures(clearDepartedCookieModifiers({
+      ...state, players: { ...state.players, [playerId]: paid.player },
+    }), playerId, paid.departedCount)
+    targetIds = []
   }
   const player = state.players[playerId]
   const cookieBreakPayment = payCookieToBreakCost(pending.cost, player, cookieToBreakAreaIds, pending.sourceInstanceId)
@@ -4212,6 +4289,10 @@ export const resolveOptionalCostAttack = (
         : []
     if (needsPlayerTarget) usedSubmittedTargets = true
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    if (nextState.pendingDrawUpTo?.sourceInstanceId === pending.sourceInstanceId &&
+      nextState.pendingDrawUpTo.sourcePlayerId === playerId) {
+      nextState = {...nextState, pendingDrawUpTo: {...nextState.pendingDrawUpTo, effectText: pending.effectText}}
+    }
     if (nextState.pendingRevealTopDeck?.deckPosition === 'bottom') {
       return { ...nextState, pendingRevealTopDeck: {
         ...nextState.pendingRevealTopDeck, battleContinuation: 'attack-effect',
@@ -4280,7 +4361,10 @@ export const resolveNextDamage = (state: GameState): GameState => {
     (!battle.effectDamageSequence && !attackerExists) ||
     !targetExists
   ) {
-    return battle.effectDamageSequence
+    // Then entered standby at Damage Step; a public departed source still resolves.
+    const owner = state.players[battle.attackerPlayerId]
+    const publicSource = [...owner.breakArea, ...owner.discardPile].some(card => card.instanceId === battle.attackerInstanceId)
+    return battle.effectDamageSequence || (!attackerExists && publicSource)
       ? finishDamageSequence(state)
       : finishBattle(state)
   }
@@ -4513,6 +4597,7 @@ export const resolveFlip = (
   let nextState = state
   let flipToSupportChoice: { rested: boolean } | null = null
   let flipToBreakChoice = false
+  let flipToHandChoice = false
   let pendingAttachedHpRefresh:
     | { targetInstanceId: string; amount: number }
     | undefined
@@ -4786,6 +4871,8 @@ export const resolveFlip = (
         }
       } else if (effect.kind === 'flip-to-support') {
         flipToSupportChoice = { rested: effect.rested ?? true }
+      } else if (effect.kind === 'flip-to-hand') {
+        flipToHandChoice = true
       } else if (effect.kind === 'flip-to-break') {
         flipToBreakChoice = true
       } else {
@@ -4862,7 +4949,9 @@ export const resolveFlip = (
                 { card: revealed, rested: flipToSupportChoice.rested },
               ],
             }
-          : flipToBreakChoice
+          : flipToHandChoice
+            ? { ...player, hand: [...player.hand, revealed] }
+            : flipToBreakChoice
             ? {
                 ...player,
                 breakArea: [...player.breakArea, revealed],
@@ -4876,6 +4965,17 @@ export const resolveFlip = (
   }
 
   nextState = recordArenaBreakEntries(state, nextState)
+  if (isDetachedFlip && flipToHandChoice) {
+    // A Then-discarded FLIP is already in discard; move exactly that instance.
+    const owner = nextState.players[playerId]
+    if (!owner.discardPile.some(card => card.instanceId === revealed.instanceId)) {
+      throw new GameRuleError('Missing detached FLIP source')
+    }
+    nextState = { ...nextState, players: { ...nextState.players, [playerId]: { ...owner,
+      discardPile: owner.discardPile.filter(card => card.instanceId !== revealed.instanceId),
+      hand: [...owner.hand, revealed],
+    } } }
+  }
   if (isDetachedFlip) {
     // 攻擊後棄置的 FLIP Cookie 在付款時已進入棄牌區；這個決策只執行
     // 其效果，不得再把同一張卡重複移動到支援／休息區，也不能走一般
@@ -5252,6 +5352,8 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
 
     if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
       const faint = nextState.pendingFaintEffects[0]
+      if (faint.effect.kind === 'choose-one' &&
+          isEffectConditionMet(nextState, faint.context, faint.effect)) break
       if ((faint.cost?.deckToTrash?.amount ?? 0) > 0) {
         nextState = resolveFaintEffect(nextState, [], [], { payDeckToTrash: true })
         continue
@@ -5313,6 +5415,8 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
               sourcePlayerId: battle.attackerPlayerId,
               sourceInstanceId: battle.attackerInstanceId,
             }, effect).map(cookie => cookie.card.instanceId)
+          : effect?.kind === 'damage' && effect.target?.attackTargetOnly
+          ? getEffectTargetCandidatesForEffect(nextState, {sourcePlayerId: battle.attackerPlayerId, sourceInstanceId: battle.attackerInstanceId}, effect).map(cookie => cookie.card.instanceId)
           : effect?.kind === 'break-to-trash'
           ? getBreakToTrashCandidates(
               nextState,
@@ -5611,6 +5715,49 @@ export const getFaintSourceCostUnavailableReason = (state: GameState): string | 
     : null
 }
 
+/** A faint trigger pays its existing costs before selecting an effect mode. */
+export const hasPendingFaintModeCost = (state: GameState): boolean => {
+  const faint = state.pendingFaintEffects?.[0]
+  return faint?.effect.kind === 'choose-one' && (
+    (faint.cost?.discardHand ?? 0) > 0 || (faint.cost?.supportToTrash ?? 0) > 0 ||
+    (faint.cost?.supportToHand ?? 0) > 0 || (faint.cost?.deckToTrash?.amount ?? 0) > 0 ||
+    Object.values(faint.sourceEnergy ?? {}).some(amount => (amount ?? 0) > 0)
+  )
+}
+
+export const resolveFaintEffectMode = (
+  state: GameState,
+  playerId: PlayerId,
+  modeIndex: number,
+): GameState => {
+  const faint = state.pendingFaintEffects?.[0]
+  if (state.pendingRefresh || state.pendingOnPlay || !faint ||
+      faint.sourcePlayerId !== playerId || faint.effect.kind !== 'choose-one') {
+    throw new GameRuleError('目前沒有此玩家需要選擇的昏厥效果。')
+  }
+  if (hasPendingFaintModeCost(state)) {
+    throw new GameRuleError('必須先支付昏厥效果代價，再選擇效果項目。')
+  }
+  const mode = faint.effect.modes[modeIndex]
+  if (!isEffectConditionMet(state, faint.context, faint.effect) || !mode ||
+      !isChooseOneModePlayable(state, faint.context, mode.effects)) {
+    throw new GameRuleError('目前無法執行所選的昏厥項目。')
+  }
+  const expanded = expandChooseOne([faint.effect], 0, modeIndex)
+  const remaining = state.pendingFaintEffects?.slice(1) ?? []
+  const effects = expanded.map((effect, index) => ({
+    ...faint,
+    effect,
+    cost: index === 0 ? faint.cost : undefined,
+    sourceEnergy: index === 0 ? faint.sourceEnergy : undefined,
+  }))
+  const queue = [...effects, ...remaining]
+  const nextState = { ...state, pendingFaintEffects: queue.length > 0 ? queue : undefined }
+  return expanded.length > 0
+    ? nextState
+    : continuePendingReplacements(skipUnmetPendingFaintEffects(nextState))
+}
+
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
@@ -5662,6 +5809,16 @@ export const resolveFaintEffect = (
   }
   if (costOptions.payDeckToTrash !== undefined) {
     throw new GameRuleError('目前沒有待支付的牌庫頂代價。')
+  }
+  if (faint.effect.kind === 'choose-one' &&
+      isEffectConditionMet(state, faint.context, faint.effect) && !hasPendingFaintModeCost(state)) {
+    throw new GameRuleError('必須先選擇昏厥效果的項目。')
+  }
+  if (faint.effect.kind === 'choose-one' && targetIds.length > 0) {
+    throw new GameRuleError('必須先支付昏厥代價，不能同時選擇效果目標。')
+  }
+  if (faint.effect.kind === 'choose-one' && paymentIds.length > 0 && !faint.sourceEnergy) {
+    throw new GameRuleError('此昏厥效果不需要能量費用。')
   }
   const isOptionalTriggerSkipped =
     faint.optional === true &&
@@ -5877,6 +6034,14 @@ export const resolveFaintEffect = (
         },
       },
     }
+  }
+
+  if (faint.effect.kind === 'choose-one') {
+    // Payment changes the real zones, but selecting/settling a mode is a later
+    // decision. Keep the original trigger and clear only its paid costs.
+    return { ...nextState, pendingFaintEffects: [{ ...faint,
+      cost: undefined, sourceEnergy: undefined,
+    }, ...remaining] }
   }
 
   const faintExecutionContext = {

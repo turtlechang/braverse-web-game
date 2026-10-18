@@ -25,6 +25,7 @@ export interface Lv3ActionCandidate<T> {
   legalAttackCountAfter: number
   /** 已合法 attack command 的公開宣告傷害，供 action score 正確識別斬殺。 */
   publicAttackDamage?: number
+  conditionalAttackAftereffectValue?: number
   tacticalPlanOptions?: TacticalPlanDerivationOptions
 }
 
@@ -56,8 +57,41 @@ export const actionIdentityFromCommand = (
       ? command.supportPaymentIds
       : 'paymentIds' in command
         ? command.paymentIds
-        : undefined,
+        : command.kind === 'deploy-cookie'
+          ? command.specialPlayCookieInstanceIds ??
+            (command.specialPlayCookieInstanceId ? [command.specialPlayCookieInstanceId] : undefined)
+          : undefined,
   }
+}
+
+const PAYMENT_ID_FIELDS = new Set([
+  'paymentIds',
+  'supportPaymentIds',
+  'discardHandIds',
+  'costSupportToTrashIds',
+  'supportToTrashIds',
+  'supportToHandIds',
+  'hpToTrashTargetIds',
+  'trashBattleCookieIds',
+  'trashCookieToBreakAreaIds',
+  'handToBreakAreaIds',
+  'trashToDeckBottomIds',
+  'trashToDeckIds',
+  'specialPlayCookieInstanceId',
+  'specialPlayCookieInstanceIds',
+])
+
+/** Identifies an action independently of which legal payment objects are used. */
+export const legalActionIdentityKey = (command: PlayerActionCommand): string => {
+  const properties = Object.entries(command)
+    .filter(([key]) => !PAYMENT_ID_FIELDS.has(key))
+    .sort(([left], [right]) => left.localeCompare(right))
+  const semantic = Object.fromEntries(properties)
+  if (command.kind === 'deploy-cookie') {
+    semantic.specialPlayCostCount = command.specialPlayCookieInstanceIds?.length ??
+      (command.specialPlayCookieInstanceId ? 1 : 0)
+  }
+  return JSON.stringify(semantic)
 }
 
 export const scoreLv3ActionCandidate = <T>(
@@ -92,6 +126,7 @@ export const scoreLv3ActionCandidate = <T>(
     legalAttackCountBefore: candidate.legalAttackCountBefore,
     legalAttackCountAfter: candidate.legalAttackCountAfter,
     publicAttackDamage: candidate.publicAttackDamage,
+    conditionalAttackAftereffectValue: candidate.conditionalAttackAftereffectValue,
   })
   return { candidate, breakdown }
 }

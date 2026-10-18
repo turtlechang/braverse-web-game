@@ -70,6 +70,8 @@ export function describePresentation(previous: GameState, next: GameState, comma
   const before = locate(previous)
   const after = locate(next)
   const battle = next.pendingBattle ?? previous.pendingBattle
+  const supportRestIsEffect = previous.pendingBattle?.stage === 'attack-effect' &&
+    previous.pendingBattle.attackEffects?.[0]?.kind === 'rest-support-and-damage'
   if (!previous.pendingBattle && next.pendingBattle) {
     push({ kind: 'attack', source: before.get(next.pendingBattle.attackerInstanceId)?.anchor, target: before.get(next.pendingBattle.targetInstanceId)?.anchor, label: '攻擊宣告', duration: 350 })
   }
@@ -82,7 +84,7 @@ export function describePresentation(previous: GameState, next: GameState, comma
     const old = before.get(id)
     if (!old) continue
     if (entry.rested !== undefined && old.rested !== undefined && entry.rested !== old.rested) {
-      push({ kind: entry.rested ? 'rest' : 'ready', source: entry.anchor, target: battle ? after.get(battle.attackerInstanceId)?.anchor : undefined, label: entry.rested ? (entry.anchor.zone === 'support' ? '支援已橫置' : '已橫置') : '設為活躍', duration: 220 })
+      push({ kind: entry.rested ? 'rest' : 'ready', source: entry.anchor, target: battle && !(supportRestIsEffect && entry.anchor.zone === 'support') ? after.get(battle.attackerInstanceId)?.anchor : undefined, label: entry.rested ? (entry.anchor.zone === 'support' ? '支援已橫置' : '已橫置') : '設為活躍', duration: 220 })
     }
   }
   if (['activate-skill', 'begin-activate-skill', 'play-trap', 'play-item', 'begin-play-item', 'activate-stage', 'begin-activate-stage'].includes(commandKind)) {
@@ -152,6 +154,8 @@ export function recordPresentationStep(previous: GameState, next: GameState): Ga
 export function mergePresentationSteps(previous: GameState, next: GameState, kind: string, prefix: string, sourceCard?: GameCard): PresentationEvent[] {
   const steps = next.presentationSteps ?? []
   const net = describePresentation(previous, next, kind)
+  const supportRestIsEffect = kind === 'resolve-attack-effect' &&
+    previous.pendingBattle?.attackEffects?.[0]?.kind === 'rest-support-and-damage'
   const duplicate = (event: PresentationEvent) => steps.some(step =>
     (step.kind === event.kind || (event.kind === 'move' && step.kind === 'faint')) && (step.card?.instanceId ?? step.target?.instanceId ?? step.label) === (event.card?.instanceId ?? event.target?.instanceId ?? event.label))
   if (sourceCard) {
@@ -162,11 +166,15 @@ export function mergePresentationSteps(previous: GameState, next: GameState, kin
       event.source = source?.anchor
       event.target = steps.find(step => step.target && step.target.instanceId !== sourceCard.instanceId)?.target
     }
-    for (const event of net) if (event.kind === 'rest' && event.source?.zone === 'support') event.target = source?.anchor ?? event.target
+    for (const event of net) if (!supportRestIsEffect && event.kind === 'rest' && event.source?.zone === 'support') event.target = source?.anchor ?? event.target
   }
   const leading = net.filter(event => ['rest', 'ready', 'attack', 'activate', 'trap'].includes(event.kind) && !duplicate(event))
   const trailing = net.filter(event => !leading.includes(event) && !duplicate(event))
-  return [...leading, ...steps, ...trailing].map((event, index) => ({...event, id:`${prefix}:${index}`}))
+  return [...leading, ...steps, ...trailing].map((event, index) => ({
+    ...event,
+    ...(supportRestIsEffect && event.kind === 'rest' && event.source?.zone === 'support' ? { target: undefined } : {}),
+    id:`${prefix}:${index}`,
+  }))
 }
 
 /** Only actual knockout sites may issue this receipt. Zone changes cannot infer it. */

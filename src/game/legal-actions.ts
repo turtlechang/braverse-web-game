@@ -1,8 +1,13 @@
 import { getPendingDecision } from './commands'
 import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
-import { canPlayExtraDeckCookie } from './actions'
-import { getForcedAttackTargetId, isCookieAttackRestricted } from './battle'
+import { canPlayExtraDeckCookie, canSpecialPlayCookie } from './actions'
+import { getTrashBattleCookieCostCandidates } from './skills'
+import {
+  getAttackDiscardRequirement,
+  getForcedAttackTargetId,
+  isCookieAttackRestricted,
+} from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
@@ -17,7 +22,7 @@ import type { GameState, PlayerId } from './types'
 /**
  * 枚舉指定玩家目前可執行且保證合法的動作指令。
  *
- * 涵蓋：Refresh、補位／略過、略過 OnPlay、支援放置、餅乾登場、
+ * 涵蓋：Refresh、補位／略過、略過 OnPlay、支援放置、一般／Special Play 餅乾登場、
  * 場景放置、攻擊（含自動計算的能量支付）與階段推進。
  * 不涵蓋：待處理決策（走 PendingDecisionCommand）、戰鬥回應
  * （陷阱／FLIP 等，由 battle handler 處理），以及需要目標選擇的
@@ -112,6 +117,27 @@ export const getLegalTurnCommands = (
       }
     }
 
+    // Special Play pays its battle-area cost before checking capacity. Enumerate
+    // every legal payment, including when the battle area already has two Cookies.
+    for (const card of player.hand) {
+      if (card.type !== 'cookie' || !canSpecialPlayCookie(state, playerId, card.instanceId)) continue
+      const cost = card.skill?.specialPlayCost
+      const count = cost?.trashBattleCookie?.count
+      if (!cost || !count) continue
+      const candidates = getTrashBattleCookieCostCandidates(cost, player.battleArea, card.instanceId)
+      const choosePayment = (start: number, selected: string[]) => {
+        if (selected.length === count) {
+          commands.push({ kind: 'deploy-cookie', playerId, instanceId: card.instanceId,
+            specialPlayCookieInstanceIds: selected })
+          return
+        }
+        for (let i = start; i < candidates.length; i++) {
+          choosePayment(i + 1, [...selected, candidates[i].card.instanceId])
+        }
+      }
+      choosePayment(0, [])
+    }
+
     for (const card of player.hand) {
       if (
         card.type === 'stage' &&
@@ -153,6 +179,12 @@ export const getLegalTurnCommands = (
           player.supportArea,
         )
         if (!paymentIds) continue
+        const discardRequirement = getAttackDiscardRequirement(
+          state,
+          playerId,
+          attacker.card.instanceId,
+        )
+        if (discardRequirement && player.hand.length < discardRequirement.count) continue
         for (const target of opponent.battleArea) {
           if (forcedTargetId && target.card.instanceId !== forcedTargetId) continue
           commands.push({

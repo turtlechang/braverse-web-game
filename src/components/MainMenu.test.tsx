@@ -173,7 +173,7 @@ describe('MainMenu AI opponent options', () => {
 
   it('renders deck and level selectors with current values', async () => {
     const { container, root } = await renderMenu([validDeck], {}, {
-      aiDeckChoice: 'bs7-red-arena',
+      aiDeckChoice: 'bs12-red-arena',
       aiLevel: 1,
     })
 
@@ -181,24 +181,32 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     expect(selects).toHaveLength(2)
-    expect(selects[0].value).toBe('bs7-red-arena')
+    expect(selects[0].value).toBe('bs12-red-arena')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
-    // 主選單保留 BS9 五色牌組與既有 BS7 Arena 牌組。
+    // BS12 預設優先，接著列出正式接受的社群構築。
     const optionValues = [...selects[0].options].map((option) => option.value)
     expect(optionValues).toEqual([
-      'bs9-red-truth',
-      'bs9-yellow-prophecy',
-      'bs9-green-support',
-      'bs9-blue-deceit',
-      'bs9-purple-mill',
-      'bs7-red-arena',
-      'bs7-yellow-arena',
-      'bs7-green-arena',
-      'bs7-blue-arena',
-      'bs7-purple-arena',
+      'bs12-blue-arena',
+      'bs12-green-arena',
+      'bs12-yellow-arena',
+      'bs12-red-arena',
+      'bs12-purple-arena',
+      'bs12-black-arena',
+      'bs12-red-korean-starter',
+      'cookierift-921', 'cookierift-927', 'cookierift-801', 'cookierift-973', 'cookierift-67',
+      'cookierift-83', 'cookierift-793', 'cookierift-568', 'cookierift-506', 'cookierift-1035',
+      'cookierift-16', 'cookierift-731', 'cookierift-1164', 'cookierift-1239', 'cookierift-1151',
+      'cookierift-1259', 'cookierift-1207', 'cookierift-1268', 'cookierift-897', 'cookierift-283', 'cookierift-1140', 'cookierift-1248', 'cookierift-1127', 'cookierift-1001', 'cookierift-1174', 'cookierift-1290', 'cookierift-1291', 'cookierift-1295',
     ])
-    expect(container.textContent).toContain('BS7 紅｜Arena')
+    expect(container.textContent).toContain('BS12 紅色｜Arena')
+    expect(container.textContent).toContain('BS12 紅色｜韓版起始牌組（PVP KR）')
+    expect(container.textContent).toContain('社群 藍紫｜Shadow Milk Homebrew')
+    expect(container.textContent).toContain('社群 黑色｜Pierre Poliviere')
+    expect(container.textContent).toContain('社群 黃色｜Immortal Cheese (Ver 1)')
+    expect(container.textContent).toContain('社群 紅色｜Basic red')
+    expect(container.textContent).toContain('社群 綠藍｜Trial Deck')
+    expect(container.textContent).toContain('社群 綠藍｜Sea-green Deck! :D')
     expect(container.textContent).not.toContain('BS6')
 
     await act(() => root.unmount())
@@ -216,7 +224,7 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     await act(() => {
-      selects[0].value = 'bs7-purple-arena'
+      selects[0].value = 'bs12-purple-arena'
       selects[0].dispatchEvent(new Event('change', { bubbles: true }))
     })
     await act(() => {
@@ -224,7 +232,7 @@ describe('MainMenu AI opponent options', () => {
       selects[1].dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    expect(onSelectAiDeck).toHaveBeenCalledWith('bs7-purple-arena')
+    expect(onSelectAiDeck).toHaveBeenCalledWith('bs12-purple-arena')
     expect(onSelectAiLevel).toHaveBeenCalledWith(3)
 
     await act(() => root.unmount())

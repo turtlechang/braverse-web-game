@@ -37,6 +37,23 @@ const opponentTarget = { side: 'opponent' as const, min: 1, max: 1 }
 const selfTarget = { side: 'self' as const, min: 1, max: 1 }
 
 describe('extractCardCapabilities', () => {
+  it('將正式 BS11-092 的 set-cookie-level 視為結構化控制能力', () => {
+    const entry = getAllCardPoolEntries().find(card => card.poolId === 'BS11-092')
+    if (!entry) throw new Error('Official BS11-092 card required')
+
+    const model = extractCardCapabilities(createCard(entry, 'player-one', 1))
+
+    expect(model.unsupportedEffectKinds).not.toContain('set-cookie-level')
+    expect(model.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'control',
+        effectKind: 'set-cookie-level',
+        target: { side: 'self', min: 1, max: 1 },
+        certainty: 'confirmed',
+      }),
+    ]))
+  })
+
   it('將全體效果傷害光環辨識為通用策略能力', () => {
     const model = extractCardCapabilities(cookie('fixture-effect-damage-aura', [
       {

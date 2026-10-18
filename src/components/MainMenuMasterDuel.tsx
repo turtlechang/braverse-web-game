@@ -18,6 +18,7 @@ import type { AiLevel } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import type { AiDeckChoice } from './MainMenu'
+import { AI_DECK_OPTIONS } from './gameUiLabels'
 import { PlayerGuideButton } from './help/PlayerGuide'
 
 interface MainMenuMasterDuelProps {
@@ -257,17 +258,9 @@ export function MainMenuMasterDuel({
                   onSelectAiDeck(event.target.value as AiDeckChoice)
                 }
               >
-                <option value="random">隨機</option>
-                <option value="bs9-red-truth">BS9 紅｜Truth Aggro</option>
-                <option value="bs9-yellow-prophecy">BS9 黃｜Prophecy Control</option>
-                <option value="bs9-green-support">BS9 綠｜Support Engine</option>
-                <option value="bs9-blue-deceit">BS9 藍｜Deceit Tempo</option>
-                <option value="bs9-purple-mill">BS9 紫｜Mill Control</option>
-                <option value="bs7-red-arena">BS7 紅｜Arena</option>
-                <option value="bs7-yellow-arena">BS7 黃｜Arena</option>
-                <option value="bs7-green-arena">BS7 綠｜Arena</option>
-                <option value="bs7-blue-arena">BS7 藍｜Arena</option>
-                <option value="bs7-purple-arena">BS7 紫｜Arena</option>
+                {AI_DECK_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </label>
             <label>

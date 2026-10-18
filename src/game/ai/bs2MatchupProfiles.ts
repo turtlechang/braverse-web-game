@@ -1,5 +1,13 @@
 import { getCookieEffectiveLevel } from '../helpers'
-import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from '../types'
+import type {
+  CookieCard,
+  CookieInBattle,
+  EnergyColor,
+  ExtraDeckCard,
+  GameCard,
+  GameState,
+  PlayerId,
+} from '../types'
 import {
   estimateAttackThreatValue,
   estimateSkillEffectValue,
@@ -272,7 +280,7 @@ export const LOW_VALUE_COOKIES = [
 // ============================================================================
 
 export interface MatchupProfile {
-  color: 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+  color: EnergyColor | 'unknown'
   replacementScores: Record<string, ReplacementScore>
   attackThreatValues: Record<string, AttackThreatScore>
   /** card.id（官方卡號），不是卡名——同名跨彈重印卡才不會互相誤套。 */
@@ -284,7 +292,37 @@ export interface MatchupProfile {
 // 對局配置實例
 // ============================================================================
 
-export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
+const createGenericMatchupProfile = (
+  color: EnergyColor | 'unknown',
+): MatchupProfile => ({
+  color,
+  replacementScores: {},
+  attackThreatValues: {},
+  lowValueCookies: [],
+  breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
+})
+
+const createEmptyColorCounts = (): Record<EnergyColor, number> => ({
+  red: 0,
+  yellow: 0,
+  green: 0,
+  blue: 0,
+  purple: 0,
+  black: 0,
+  pure: 0,
+})
+
+const getUniqueDominantColor = (
+  counts: Record<EnergyColor, number>,
+): EnergyColor | undefined => {
+  const maxCount = Math.max(...Object.values(counts))
+  if (maxCount === 0) return undefined
+  const leaders = (Object.keys(counts) as EnergyColor[])
+    .filter((color) => counts[color] === maxCount)
+  return leaders.length === 1 ? leaders[0] : undefined
+}
+
+export const MATCHUP_PROFILES: Record<EnergyColor | 'unknown', MatchupProfile> = {
   red: {
     color: 'red',
     replacementScores: RED_REPLACEMENT_SCORES,
@@ -346,6 +384,11 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
+  // Black and PURE decks use the rules-based generic estimates until they have
+  // evidence-backed color-specific matchup data; never borrow the red tables.
+  black: createGenericMatchupProfile('black'),
+  pure: createGenericMatchupProfile('pure'),
+  unknown: createGenericMatchupProfile('unknown'),
 }
 
 // ============================================================================
@@ -353,40 +396,48 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
 // ============================================================================
 
 /**
- * 根據玩家手牌／破損區／棄牌區的能量顏色分布推斷牌組顏色。
+ * 根據玩家完整主牌組持有區域與 EXTRA 牌組的 Cookie 顏色推斷牌組顏色。
  *
  * 舊版靠 card.id 前綴／卡名子字串猜色（只認得 ST2-5、BS2 特定號碼區間），
- * 完全沒處理 BS1／BS3 前綴；純 BS3 或純 BS1 牌組會導致每種顏色都算 0，
- * 迴圈 tie-break 又預設落回 'red'，等於整套配置表選錯——不是覆蓋率不足，
- * 是會誤判。card.energyColor 是引擎本來就有、每張卡都會填、且不受彈數
- * 影響的欄位，改用它以後任何現在或未來的牌組都能正確分類。
+ * 完整掃描可避免卡牌從牌庫移到手牌、HP 或支援區後改變牌組判定；以 Cookie
+ * 顏色優先，避免異色支援卡主導。黑色／PURE 有各自的通用設定；無法唯一辨色
+ * 時回傳 unknown，避免把黑色、純色或混色牌組錯套紅色卡表。
  */
-const detectDeckColor = (state: GameState, playerId: PlayerId): 'red' | 'yellow' | 'green' | 'blue' | 'purple' => {
+const detectDeckColor = (state: GameState, playerId: PlayerId): EnergyColor | 'unknown' => {
   const player = state.players[playerId]
-  const cards = [
+  const cards: Array<{
+    type?: GameCard['type'] | ExtraDeckCard['type']
+    energyColor?: EnergyColor | 'wild'
+  }> = [
+    ...player.deck,
     ...player.hand,
+    ...player.battleArea.flatMap(({ card, hpCards, equippedCards, awakenedUnderlay }) => [
+      card,
+      ...hpCards,
+      ...(equippedCards ?? []),
+      ...(awakenedUnderlay ?? []),
+    ]),
+    ...player.supportArea.map(({ card }) => card),
     ...player.breakArea,
     ...player.discardPile.map((c) => ('card' in c ? (c as { card: GameCard }).card : c)),
+    ...(player.stage ? [player.stage.card] : []),
+    ...(player.extraDeck ?? []),
   ]
 
-  const colorCounts: Record<string, number> = { red: 0, yellow: 0, green: 0, blue: 0, purple: 0 }
+  const colorCounts = createEmptyColorCounts()
+  const cookieColorCounts = createEmptyColorCounts()
 
   for (const card of cards) {
     const color = card.energyColor
-    if (color === 'red' || color === 'yellow' || color === 'green' || color === 'blue' || color === 'purple') {
+    if (color && color !== 'wild') {
       colorCounts[color]++
+      if (card.type === 'cookie') cookieColorCounts[color]++
     }
   }
 
-  let maxColor: 'red' | 'yellow' | 'green' | 'blue' | 'purple' = 'red'
-  let maxCount = 0
-  for (const [color, count] of Object.entries(colorCounts)) {
-    if (count > maxCount) {
-      maxCount = count
-      maxColor = color as typeof maxColor
-    }
-  }
-  return maxColor
+  const cookieCount = Object.values(cookieColorCounts).reduce((sum, count) => sum + count, 0)
+  if (cookieCount > 0) return getUniqueDominantColor(cookieColorCounts) ?? 'unknown'
+  return getUniqueDominantColor(colorCounts) ?? 'unknown'
 }
 
 /**

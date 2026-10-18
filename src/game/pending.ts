@@ -1,5 +1,22 @@
 import type { GameState } from './types'
 
+/** A revealed FLIP interrupts its current damage point before the next target. */
+export const hasDamageSequenceFlipInterruption = (state: GameState): boolean => {
+  const battle = state.pendingBattle
+  const sequence = battle?.effectDamageSequence
+  const pending = state.pendingAbilityEffect
+  // Match resumeBattleAfterFlipDecision: an outer FLIP can itself own this
+  // sequence. Re-running that owner would repeat its damage effect.
+  const ownsSequence = sequence?.continuation === 'ability-effect' &&
+    pending?.sourceInstanceId ===
+      (sequence.continuationSourceInstanceId ?? battle?.attackerInstanceId)
+  return Boolean(
+    battle?.stage === 'damage' && sequence?.afterCurrentDamageResolved &&
+      pending?.sourceKind === 'flip' &&
+      pending.battleContinuation === 'flip-damage' && !ownsSequence,
+  )
+}
+
 export const hasBlockingPending = (state: GameState): boolean =>
   Boolean(
     state.pendingReplacement ||
@@ -17,6 +34,7 @@ export const hasBlockingPending = (state: GameState): boolean =>
       state.pendingExtraDeckAttack ||
       state.pendingDrawUpTo ||
       state.pendingStageTrigger ||
+      (state.pendingDepartureSkillTriggers && state.pendingDepartureSkillTriggers.length > 0) ||
       state.pendingOpponentRestSupport,
       // 注意：pendingEndOfTurnEffects（Then, when your turn ends 的延遲佇列）
       // 不視為阻塞——它是 end 階段的 processEndPhaseEffects 每次重入時都會

@@ -261,6 +261,11 @@ const extractEffect = (
         tags: ['opponent-hand'],
       })
       break
+    case 'prevent-cookie-active-next-phase':
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'rest', {
+        tags: ['active-rest'],
+      })
+      break
     case 'rest-cookie':
     case 'rest-support':
     case 'opponent-rests-support':
@@ -290,6 +295,11 @@ const extractEffect = (
     case 'prevent-effect-damage':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'control', {
         tags: ['opponent-board'],
+      })
+      break
+    case 'set-cookie-level':
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'control', {
+        tags: ['battle'],
       })
       break
     case 'place-source-to-support':
@@ -423,6 +433,7 @@ const extractEffect = (
       })
       break
     case 'hp-to-hand':
+    case 'flip-to-hand':
       addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'move', {
         sourceZone: 'hp',
         destinationZone: 'hand',

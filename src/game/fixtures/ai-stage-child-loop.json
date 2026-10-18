@@ -1,0 +1,909 @@
+{
+  "seed": 202680841,
+  "recipe": {
+    "id": "cookierift-927",
+    "name": "Brave League S3 Finals SG Runner-Up - Green Arena",
+    "color": "green",
+    "format": "standard",
+    "entries": [
+      {
+        "cardNumber": "BS7-064",
+        "count": 3
+      },
+      {
+        "cardNumber": "ST8-018",
+        "count": 4
+      },
+      {
+        "cardNumber": "ST3-020",
+        "count": 1
+      },
+      {
+        "cardNumber": "ST3-019",
+        "count": 2
+      },
+      {
+        "cardNumber": "ST3-016",
+        "count": 3
+      },
+      {
+        "cardNumber": "P-104",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS12-042",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-059",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-065",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-063",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-046",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-044",
+        "count": 2
+      },
+      {
+        "cardNumber": "BS12-054",
+        "count": 1
+      },
+      {
+        "cardNumber": "BS8-059",
+        "count": 1
+      },
+      {
+        "cardNumber": "BS7-062",
+        "count": 4
+      },
+      {
+        "cardNumber": "BS7-057",
+        "count": 2
+      },
+      {
+        "cardNumber": "BS7-058",
+        "count": 1
+      },
+      {
+        "cardNumber": "P-114",
+        "count": 1
+      },
+      {
+        "cardNumber": "BS7-056",
+        "count": 3
+      },
+      {
+        "cardNumber": "BS7-049",
+        "count": 4
+      },
+      {
+        "cardNumber": "P-115",
+        "count": 4
+      }
+    ],
+    "extraDeckEntries": [
+      {
+        "cardNumber": "BS12-056",
+        "count": 2
+      },
+      {
+        "cardNumber": "BS11-091",
+        "count": 1
+      },
+      {
+        "cardNumber": "BS8-069",
+        "count": 1
+      }
+    ],
+    "createdAt": "2026-10-10",
+    "updatedAt": "2026-10-10"
+  },
+  "commands": [
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-062-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-046-1"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS7-046-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS7-046-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-P-104-2"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-one",
+      "sourceInstanceId": "player-one-P-104-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS7-049-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS12-054-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "play-stage",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-065-2",
+      "paymentIds": [
+        "player-two-BS7-062-1"
+      ]
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS7-049-4"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-P-104-2",
+      "targetInstanceId": "player-two-P-115-2",
+      "supportPaymentIds": [
+        "player-one-BS7-046-3",
+        "player-one-BS7-049-3",
+        "player-one-BS7-049-4"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-two",
+      "trapInstanceId": "player-two-BS7-064-2",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-two-BS12-054-1"
+      ],
+      "targetIds": [
+        "player-one-P-104-2"
+      ],
+      "effectTargets": [
+        [
+          "player-one-P-104-2"
+        ],
+        [
+          "player-two-BS12-054-1"
+        ],
+        []
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [
+        "player-two-BS12-054-1"
+      ],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-one-BS7-046-3"
+      ]
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-two-P-115-2"
+      ]
+    },
+    {
+      "kind": "skip-replacement",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS12-042-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-059-1"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS7-059-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS7-046-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-P-104-2",
+      "targetInstanceId": "player-two-BS7-046-1",
+      "supportPaymentIds": [
+        "player-one-BS7-049-3",
+        "player-one-BS7-049-4",
+        "player-one-BS7-046-3"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-two",
+      "trapInstanceId": "player-two-ST8-018-1",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-two-BS12-042-1"
+      ],
+      "targetIds": [
+        "player-one-BS7-059-3"
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-one-BS7-046-3"
+      ]
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-two-BS7-046-1"
+      ]
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-two",
+      "activate": true,
+      "discardHandIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 2
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-P-104-1"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-P-104-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS12-042-4"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS7-059-1",
+      "targetInstanceId": "player-one-BS7-059-3",
+      "supportPaymentIds": [
+        "player-two-BS7-062-1",
+        "player-two-BS12-042-1",
+        "player-two-BS12-042-4"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-optional-cost-attack",
+      "playerId": "player-two",
+      "action": "pay",
+      "discardCardIds": [],
+      "targetIds": [
+        "player-two-P-104-1"
+      ],
+      "paymentIds": [],
+      "supportToHandIds": [],
+      "supportToTrashIds": [
+        "player-two-BS12-042-1"
+      ],
+      "hpToTrashIds": [],
+      "positionCostTargetIds": [],
+      "cookieToBreakAreaIds": [],
+      "trashToDeckIds": [],
+      "hpToHandIds": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-044-1"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS7-044-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS12-054-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-P-104-2",
+      "targetInstanceId": "player-two-BS7-044-1",
+      "supportPaymentIds": [
+        "player-one-BS7-049-3",
+        "player-one-BS7-049-4",
+        "player-one-BS12-054-1"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-two",
+      "trapInstanceId": "player-two-ST3-019-2",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-two-P-104-1"
+      ],
+      "targetIds": [
+        "player-one-P-104-2"
+      ],
+      "effectTargets": [
+        [
+          "player-one-P-104-2"
+        ],
+        [
+          "player-two-BS12-042-4"
+        ]
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [
+        "player-two-BS12-042-4"
+      ],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-one-BS12-054-1"
+      ]
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-two-BS7-044-1"
+      ]
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-059-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS7-044-1",
+      "targetInstanceId": "player-one-BS7-059-3",
+      "supportPaymentIds": [
+        "player-two-BS7-062-1",
+        "player-two-P-104-1",
+        "player-two-BS7-059-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-one",
+      "activate": false,
+      "discardHandIds": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS7-058-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS12-054-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-BS7-058-1",
+      "targetInstanceId": "player-two-BS7-044-1",
+      "supportPaymentIds": [
+        "player-one-BS7-049-3",
+        "player-one-BS7-049-4",
+        "player-one-BS12-054-1"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-two",
+      "activate": false,
+      "discardHandIds": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-062-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS7-063-4"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS7-059-1",
+      "targetInstanceId": "player-one-BS7-058-1",
+      "supportPaymentIds": [
+        "player-two-BS7-062-1",
+        "player-two-P-104-1",
+        "player-two-BS7-059-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-optional-cost-attack",
+      "playerId": "player-two",
+      "action": "pay",
+      "discardCardIds": [],
+      "targetIds": [
+        "player-two-BS7-062-3"
+      ],
+      "paymentIds": [],
+      "supportToHandIds": [],
+      "supportToTrashIds": [
+        "player-two-BS7-063-4"
+      ],
+      "hpToTrashIds": [],
+      "positionCostTargetIds": [],
+      "cookieToBreakAreaIds": [],
+      "trashToDeckIds": [],
+      "hpToHandIds": []
+    },
+    {
+      "kind": "skip-replacement",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "activate-stage",
+      "playerId": "player-two",
+      "paymentIds": [],
+      "supportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS7-059-2"
+        ]
+      ],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "activate-skill",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS7-059-2",
+      "trigger": "on-play",
+      "paymentIds": [],
+      "costSupportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "battleToHandIds": [],
+      "trashToDeckBottomIds": [],
+      "trashToDeckIds": [],
+      "effectTargets": [
+        [
+          "player-one-BS7-058-1"
+        ]
+      ],
+      "trashCookieToBreakAreaIds": [],
+      "handToBreakAreaIds": [],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    }
+  ],
+  "failingCommand": {
+    "kind": "resolve-next-damage",
+    "playerId": "player-one"
+  }
+}

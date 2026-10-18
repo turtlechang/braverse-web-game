@@ -48,7 +48,10 @@ import {
 import { resolveBreakLevelVictory } from './victory'
 import { getAwakenedFaintTrashCards } from './extra-deck'
 import type { Shuffle } from './types'
-import { executeCardEffect, resolveDamageOutcome } from './effects/execute'
+import {
+  executeCardEffect,
+  resolveDamageOutcome,
+} from './effects/execute'
 import { executeDeckToTrash } from './effects/deck-to-trash'
 
 export const getSkillUseKey = (
@@ -72,6 +75,134 @@ export const getCookieSkillCost = (
   trigger === 'on-play'
     ? skill.onPlayCost ?? (skill.onPlayEffects ? { energy: {}, discardHand: 0 } : skill.cost)
     : skill.cost
+
+/** Resolve direct battle-to-trash departure skills after their movement event. */
+export const resolveDepartureSkillTriggers = (
+  state: GameState,
+  playerId: PlayerId,
+  departedCookieCards: CookieCard[],
+): GameState => {
+  let nextState = state
+  const makeTrigger = (
+    cookie: CookieCard,
+    ownerId: PlayerId,
+    effects: CardEffect[],
+  ) => ({
+    playerId: ownerId,
+    sourceInstanceId: cookie.instanceId,
+    sourceCardName: cookie.name,
+    effects,
+    ...(nextState.pendingAbilityEffect?.battleContinuation
+      ? { battleContinuation: nextState.pendingAbilityEffect.battleContinuation }
+      : {}),
+  })
+  const queueTriggers = (
+    currentState: GameState,
+    triggers: NonNullable<GameState['pendingDepartureSkillTriggers']>,
+  ): GameState => triggers.length > 0
+    ? {
+        ...currentState,
+        pendingDepartureSkillTriggers: [
+          ...(currentState.pendingDepartureSkillTriggers ?? []),
+          ...triggers,
+        ],
+      }
+    : currentState
+  const collectTriggers = (cookies: CookieCard[]) => cookies.flatMap(cookie => {
+    const skill = cookie.skill
+    if (
+      !skill ||
+      skill.trigger !== 'departure' ||
+      (skill.yourTurn && state.activePlayerId !== playerId)
+    ) return []
+    return [makeTrigger(cookie, playerId, skill.effects)]
+  })
+  const hasPendingResolution = Boolean(
+    state.pendingDepartureSkillTriggers?.length ||
+    state.pendingDrawUpTo ||
+    state.pendingOpponentHandDiscard ||
+    state.pendingRevealTopDeck ||
+    state.pendingRefresh
+  )
+  if (hasPendingResolution) {
+    return queueTriggers(state, collectTriggers(departedCookieCards))
+  }
+  const laterTriggers = (startAt: number) => departedCookieCards
+    .slice(startAt)
+    .flatMap(cookie => {
+      const skill = cookie.skill
+      if (
+        !skill ||
+        skill.trigger !== 'departure' ||
+        (skill.yourTurn && nextState.activePlayerId !== playerId)
+      ) return []
+      return [makeTrigger(cookie, playerId, skill.effects)]
+    })
+
+  for (const [cookieIndex, cookie] of departedCookieCards.entries()) {
+    const skill = cookie.skill
+    if (
+      !skill ||
+      skill.trigger !== 'departure' ||
+      (skill.yourTurn && nextState.activePlayerId !== playerId)
+    ) {
+      continue
+    }
+    const context = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: cookie.instanceId,
+      sourceCardName: cookie.name,
+    }
+    const needsTargetChoice = skill.effects.some(effect =>
+      'target' in effect &&
+      effect.target !== undefined &&
+      isEffectConditionMet(nextState, context, effect) &&
+      getEffectTargetCandidates(nextState, context, effect.target).length > 0,
+    )
+    if (needsTargetChoice) {
+      return queueTriggers(nextState, [
+        makeTrigger(cookie, playerId, skill.effects),
+        ...laterTriggers(cookieIndex + 1),
+      ])
+    }
+    for (const [effectIndex, effect] of skill.effects.entries()) {
+      if (!isEffectConditionMet(nextState, context, effect)) continue
+      const beforeEffect = nextState
+      nextState = executeCardEffect(nextState, context, effect, [])
+      const createdPendingDecision = (
+        (nextState.pendingDrawUpTo && nextState.pendingDrawUpTo !== beforeEffect.pendingDrawUpTo) ||
+        (nextState.pendingRefresh && nextState.pendingRefresh !== beforeEffect.pendingRefresh) ||
+        (nextState.pendingOpponentHandDiscard && nextState.pendingOpponentHandDiscard !== beforeEffect.pendingOpponentHandDiscard) ||
+        (nextState.pendingRevealTopDeck && nextState.pendingRevealTopDeck !== beforeEffect.pendingRevealTopDeck)
+      )
+      if (createdPendingDecision) {
+        return queueTriggers(nextState, [
+          ...(effectIndex + 1 < skill.effects.length
+            ? [makeTrigger(cookie, playerId, skill.effects.slice(effectIndex + 1))]
+            : []),
+          ...laterTriggers(cookieIndex + 1),
+        ])
+      }
+      if (
+        nextState.status !== 'playing' ||
+        nextState.pendingRefresh ||
+        nextState.pendingDrawUpTo ||
+        nextState.pendingOpponentHandDiscard ||
+        nextState.pendingRevealTopDeck
+      ) {
+        break
+      }
+    }
+    if (
+      nextState.status !== 'playing' ||
+      nextState.pendingRefresh ||
+      nextState.pendingDrawUpTo ||
+      nextState.pendingOpponentHandDiscard ||
+      nextState.pendingRevealTopDeck
+    ) break
+  }
+  return nextState
+}
 
 /** True only when a support card satisfies every return-to-hand cost restriction. */
 export const isSupportToHandCostCandidate = (
@@ -2157,6 +2288,17 @@ export const activateCookieSkill = (
     hpToTrashTargetIds,
     sourceInstanceId,
   )
+  const departureTrashBattleCookies =
+    cost.trashBattleCookie &&
+    !cost.trashBattleCookie.faint &&
+    !cost.trashBattleCookie.toBreakArea
+      ? validateBattleCookieCostSelection(
+          hpToTrashPayment.player,
+          cost,
+          trashBattleCookieIds,
+          sourceInstanceId,
+        ).map(cookie => cookie.card)
+      : []
   const faintCostCookies = cost.trashBattleCookie?.faint
     ? validateBattleCookieCostSelection(
         hpToTrashPayment.player,
@@ -2449,32 +2591,6 @@ export const activateCookieSkill = (
       [sourceInstanceId],
     )
   }
-  // BS9-106～108 are provenance-sensitive: only a Chess Piece Cookie that
-  // this player's own Shadow Milk effect moved from hand to trash may trigger.
-  // Cost payment happens before the normal ability queue is opened, so retain
-  // the concrete discarded instances here and let commands start the trigger
-  // queue after Shadow Milk's printed effect has finished resolving.
-  const shadowMilkDiscardTriggers = /shadow\s+milk\s+cookie/i.test(source.card.name)
-    ? discardedCards.flatMap((card) =>
-        [...(card.skill?.effects ?? []), ...(card.skill?.passiveEffects ?? [])]
-          .filter((effect) => effect.kind === 'shadow-milk-discard-trigger')
-          .map((effect) => ({
-            playerId,
-            sourceInstanceId: card.instanceId,
-            sourceCardName: card.name,
-            effects: effect.effects,
-          })),
-      )
-    : []
-  if (shadowMilkDiscardTriggers.length > 0) {
-    paidState = {
-      ...paidState,
-      pendingShadowMilkDiscardTriggers: [
-        ...(paidState.pendingShadowMilkDiscardTriggers ?? []),
-        ...shadowMilkDiscardTriggers,
-      ],
-    }
-  }
   // 支援區代價也是本回合「支援卡進入棄牌區」的正式事件。除了累計
   // BS9-050 這類條件外，還要讓既有的支援區減少觸發技能沿用同一入口。
   if (trashedCards.length > 0) {
@@ -2515,6 +2631,11 @@ export const activateCookieSkill = (
       { kind: 'deck-to-trash', amount: deckToTrashCost.amount, side: 'self' },
     )
   }
+  paidState = resolveDepartureSkillTriggers(
+    paidState,
+    playerId,
+    departureTrashBattleCookies,
+  )
   return resolveBreakLevelVictory(collectBreakEntryCostEffects(state, paidState, {
     sourcePlayerId: playerId, sourceInstanceId,
   }, cost, { trashBattleCookieIds, trashCookieToBreakAreaIds, handToBreakAreaIds }))

@@ -38,6 +38,8 @@ import bs9YellowProphecyDeck from '../../data/decks/bs9-yellow-prophecy.json'
 import bs9GreenSupportDeck from '../../data/decks/bs9-green-support.json'
 import bs9BlueDeceitDeck from '../../data/decks/bs9-blue-deceit.json'
 import bs9PurpleMillDeck from '../../data/decks/bs9-purple-mill.json'
+import { BS12_DECK_PRESETS, type Bs12AiPresetDeckChoice } from './bs12-deck-recipes'
+import { COMMUNITY_DECK_PRESETS, type CommunityDeckChoice } from './community-deck-recipes'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -155,6 +157,8 @@ export type AiPresetDeckChoice =
   | Bs6CompetitiveAiPresetDeckChoice
   | Bs7ArenaAiPresetDeckChoice
   | Bs9AiPresetDeckChoice
+  | Bs12AiPresetDeckChoice
+  | CommunityDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -709,6 +713,41 @@ export const BS9_EXTRA_DECK_RECIPES: Record<
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
+  'cookierift-921': COMMUNITY_DECK_PRESETS['cookierift-921'].entries,
+  'cookierift-927': COMMUNITY_DECK_PRESETS['cookierift-927'].entries,
+  'cookierift-67': COMMUNITY_DECK_PRESETS['cookierift-67'].entries,
+  'cookierift-83': COMMUNITY_DECK_PRESETS['cookierift-83'].entries,
+  'cookierift-568': COMMUNITY_DECK_PRESETS['cookierift-568'].entries,
+  'cookierift-506': COMMUNITY_DECK_PRESETS['cookierift-506'].entries,
+  'cookierift-1035': COMMUNITY_DECK_PRESETS['cookierift-1035'].entries,
+  'cookierift-793': COMMUNITY_DECK_PRESETS['cookierift-793'].entries,
+  'cookierift-973': COMMUNITY_DECK_PRESETS['cookierift-973'].entries,
+  'cookierift-16': COMMUNITY_DECK_PRESETS['cookierift-16'].entries,
+  'cookierift-731': COMMUNITY_DECK_PRESETS['cookierift-731'].entries,
+  'cookierift-801': COMMUNITY_DECK_PRESETS['cookierift-801'].entries,
+  'cookierift-1164': COMMUNITY_DECK_PRESETS['cookierift-1164'].entries,
+  'cookierift-1239': COMMUNITY_DECK_PRESETS['cookierift-1239'].entries,
+  'cookierift-1151': COMMUNITY_DECK_PRESETS['cookierift-1151'].entries,
+  'cookierift-1259': COMMUNITY_DECK_PRESETS['cookierift-1259'].entries,
+  'cookierift-1207': COMMUNITY_DECK_PRESETS['cookierift-1207'].entries,
+  'cookierift-1268': COMMUNITY_DECK_PRESETS['cookierift-1268'].entries,
+  'cookierift-897': COMMUNITY_DECK_PRESETS['cookierift-897'].entries,
+  'cookierift-283': COMMUNITY_DECK_PRESETS['cookierift-283'].entries,
+  'cookierift-1140': COMMUNITY_DECK_PRESETS['cookierift-1140'].entries,
+  'cookierift-1248': COMMUNITY_DECK_PRESETS['cookierift-1248'].entries,
+  'cookierift-1127': COMMUNITY_DECK_PRESETS['cookierift-1127'].entries,
+  'cookierift-1001': COMMUNITY_DECK_PRESETS['cookierift-1001'].entries,
+  'cookierift-1174': COMMUNITY_DECK_PRESETS['cookierift-1174'].entries,
+  'cookierift-1290': COMMUNITY_DECK_PRESETS['cookierift-1290'].entries,
+  'cookierift-1291': COMMUNITY_DECK_PRESETS['cookierift-1291'].entries,
+  'cookierift-1295': COMMUNITY_DECK_PRESETS['cookierift-1295'].entries,
+  'bs12-blue-arena': BS12_DECK_PRESETS['bs12-blue-arena'].entries,
+  'bs12-green-arena': BS12_DECK_PRESETS['bs12-green-arena'].entries,
+  'bs12-yellow-arena': BS12_DECK_PRESETS['bs12-yellow-arena'].entries,
+  'bs12-red-arena': BS12_DECK_PRESETS['bs12-red-arena'].entries,
+  'bs12-purple-arena': BS12_DECK_PRESETS['bs12-purple-arena'].entries,
+  'bs12-black-arena': BS12_DECK_PRESETS['bs12-black-arena'].entries,
+  'bs12-red-korean-starter': BS12_DECK_PRESETS['bs12-red-korean-starter'].entries,
   red: OFFICIAL_RED_STARTER_DECK,
   yellow: OFFICIAL_YELLOW_STARTER_DECK,
   green: OFFICIAL_GREEN_STARTER_DECK,
@@ -1136,6 +1175,48 @@ export const DECK_CREATORS: Record<
   BuiltInDeckChoice,
   (playerId: PlayerId) => GameCard[]
 > = {
+  'cookierift-921': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-921'].entries, []),
+  'cookierift-927': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-927'].entries, []),
+  'cookierift-67': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-67'].entries, []),
+  'cookierift-83': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-83'].entries, []),
+  'cookierift-568': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-568'].entries, []),
+  'cookierift-506': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-506'].entries, []),
+  'cookierift-1035': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1035'].entries, []),
+  'cookierift-793': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-793'].entries, []),
+  'cookierift-973': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-973'].entries, []),
+  'cookierift-16': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-16'].entries, []),
+  'cookierift-731': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-731'].entries, []),
+  'cookierift-801': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-801'].entries, []),
+  'cookierift-1164': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1164'].entries, []),
+  'cookierift-1239': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1239'].entries, []),
+  'cookierift-1151': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1151'].entries, []),
+  'cookierift-1259': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1259'].entries, []),
+  'cookierift-1207': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1207'].entries, []),
+  'cookierift-1268': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1268'].entries, []),
+  'cookierift-897': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-897'].entries, []),
+  'cookierift-283': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-283'].entries, []),
+  'cookierift-1140': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1140'].entries, []),
+  'cookierift-1248': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1248'].entries, []),
+  'cookierift-1127': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1127'].entries, []),
+  'cookierift-1001': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1001'].entries, []),
+  'cookierift-1174': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1174'].entries, []),
+  'cookierift-1290': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1290'].entries, []),
+  'cookierift-1291': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1291'].entries, []),
+  'cookierift-1295': playerId => createOfficialStarterDeckFromRecipe(playerId, COMMUNITY_DECK_PRESETS['cookierift-1295'].entries, []),
+  'bs12-blue-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-blue-arena'].entries, []),
+  'bs12-green-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-green-arena'].entries, []),
+  'bs12-yellow-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-yellow-arena'].entries, []),
+  'bs12-red-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-red-arena'].entries, []),
+  'bs12-purple-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-purple-arena'].entries, []),
+  'bs12-black-arena': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-black-arena'].entries, []),
+  'bs12-red-korean-starter': (playerId) =>
+    createOfficialStarterDeckFromRecipe(playerId, BS12_DECK_PRESETS['bs12-red-korean-starter'].entries, []),
   red: createOfficialRedStarterDeck,
   yellow: createOfficialYellowStarterDeck,
   green: createOfficialGreenStarterDeck,
@@ -1191,16 +1272,19 @@ export const DECK_CREATORS: Record<
 
 /**
  * Built-in 牌組的平行 EXTRA Deck 建立器。舊版 Starter／BS2–BS7 沒有正式
- * EXTRA 配置，因此回傳空陣列；BS9 五色則回傳其同色正式 EXTRA Deck。
+ * EXTRA 配置，因此回傳空陣列；BS9 與 BS12 則回傳各自的正式 EXTRA Deck。
  */
 export const EXTRA_DECK_CREATORS: Record<
   BuiltInDeckChoice,
   (playerId: PlayerId) => ExtraDeckCard[]
 > = Object.fromEntries(
   (Object.keys(DECK_CREATORS) as BuiltInDeckChoice[]).map((choice) => {
-    const recipe = (BS9_EXTRA_DECK_RECIPES as Partial<
-      Record<BuiltInDeckChoice, StarterDeckEntry[]>
-    >)[choice]
+    const bs12Recipe = (BS12_DECK_PRESETS as Partial<Record<BuiltInDeckChoice,
+      { extraDeckEntries: StarterDeckEntry[] }>>)[choice]
+    const communityRecipe = (COMMUNITY_DECK_PRESETS as Partial<Record<BuiltInDeckChoice,
+      { extraDeckEntries: StarterDeckEntry[] }>>)[choice]
+    const recipe = communityRecipe?.extraDeckEntries ?? bs12Recipe?.extraDeckEntries ??
+      (BS9_EXTRA_DECK_RECIPES as Partial<Record<BuiltInDeckChoice, StarterDeckEntry[]>>)[choice]
     return [
       choice,
       (playerId: PlayerId) => createOfficialExtraDeckFromRecipe(playerId, recipe ?? []),

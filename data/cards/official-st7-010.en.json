@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-10T09:09:58.256Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 20,
+    "importedCount": 1,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "ST7 unpromoted printings"
+    },
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 46894,
+      "locale": "en",
+      "cardNumber": "ST7-010",
+      "baseCardNumber": "ST7-010",
+      "variant": null,
+      "name": "Millennial Tree Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Millennial Breath",
+        "text": "【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies with 4 or less HP remaining. That Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{Y}{Y}> Cleansing Flash {da} 3 Then, <discard 1 Cookie that has FLIP from your hand.> Draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 254,
+        "title": "Tree of Life",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uESoQUsXe_pP2hpWmgziKA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

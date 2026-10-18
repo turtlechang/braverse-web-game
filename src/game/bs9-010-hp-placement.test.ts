@@ -6,6 +6,7 @@ import { getEffectSelectionCandidates } from './effects'
 import { maskGameStateForViewer } from './masked-state'
 import { createPlayerView } from './player-view'
 import { executeCardEffect } from './effects'
+import { takeAiStep } from './ai'
 import type { GameState } from './types'
 
 const sourceId = 'bs9-010-demo-extra'
@@ -94,6 +95,30 @@ describe('BS9-010 printed face-up bottom HP placement', () => {
     expect(source(result).hpCards).toEqual(source(state).hpCards)
     expect(result.players['player-two'].hand).toEqual(state.players['player-two'].hand)
     expect(result.pendingAbilityEffect).toBeUndefined()
+  })
+
+  it('does not offer an opponent hand card as HP when the source-only Cookie has left the battle area', () => {
+    const pending = beginOnPlay()
+    const sourceCard = source(pending).card
+    const owner = pending.players['player-one']
+    const state: GameState = {
+      ...pending,
+      players: {
+        ...pending.players,
+        'player-one': {
+          ...owner,
+          battleArea: owner.battleArea.filter((cookie) => cookie.card.instanceId !== sourceId),
+          discardPile: [...owner.discardPile, sourceCard],
+        },
+      },
+    }
+    const opponentHand = [...state.players['player-two'].hand]
+
+    expect(handChoices(state)).toEqual([])
+    const decision = takeAiStep(state, 'player-one', { level: 5, searchNow: () => 0 })
+    expect(decision.action).not.toBe('error')
+    expect(decision.state.pendingAbilityEffect).toBeUndefined()
+    expect(decision.state.players['player-two'].hand).toEqual(opponentHand)
   })
 
   it.each([

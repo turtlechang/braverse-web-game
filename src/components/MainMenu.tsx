@@ -9,21 +9,9 @@ import {
   validateBs8CandidateStagingDeck,
 } from '../game/bs8-candidate-staging'
 import { getDeckFormatLabel } from '../game/deck-rules'
+import { AI_DECK_OPTIONS } from './gameUiLabels'
 
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
-
-const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
-  { value: 'bs9-red-truth', label: 'BS9 紅｜Truth Aggro' },
-  { value: 'bs9-yellow-prophecy', label: 'BS9 黃｜Prophecy Control' },
-  { value: 'bs9-green-support', label: 'BS9 綠｜Support Engine' },
-  { value: 'bs9-blue-deceit', label: 'BS9 藍｜Deceit Tempo' },
-  { value: 'bs9-purple-mill', label: 'BS9 紫｜Mill Control' },
-  { value: 'bs7-red-arena', label: 'BS7 紅｜Arena' },
-  { value: 'bs7-yellow-arena', label: 'BS7 黃｜Arena' },
-  { value: 'bs7-green-arena', label: 'BS7 綠｜Arena' },
-  { value: 'bs7-blue-arena', label: 'BS7 藍｜Arena' },
-  { value: 'bs7-purple-arena', label: 'BS7 紫｜Arena' },
-]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
   { value: 1, label: 'Lv.1 隨機出招', hint: '從合法動作中隨機挑選，不主動使用技能。' },

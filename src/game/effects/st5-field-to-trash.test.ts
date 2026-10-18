@@ -261,6 +261,35 @@ describe('field-to-trash', () => {
     expect(state.players['player-two'].battleArea).toHaveLength(1)
   })
 
+  it.each([false, true])(
+    'allows an optional field-to-trash effect to resolve without a target (allowStage: %s)',
+    (allowStage) => {
+      const lv1 = createBattleCookie('opp-lv1-optional', 1, 3, 'purple')
+      const state = createTestGameState([], [lv1])
+      const effect: CardEffect = {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        allowStage,
+      }
+
+      expect(() => executeCardEffect(state, context, effect, [])).not.toThrow()
+      expect(executeCardEffect(state, context, effect, [])).toEqual(state)
+    },
+  )
+
+  it('rejects an empty selection when field-to-trash requires a target', () => {
+    const lv1 = createBattleCookie('opp-lv1-required', 1, 3, 'purple')
+    const state = createTestGameState([], [lv1])
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+
+    expect(() => executeCardEffect(state, context, effect, [])).toThrow(
+      '選擇的效果目標數量不合法。',
+    )
+  })
+
   it('HP cards move to discard pile with the cookie', () => {
     const lv1 = createBattleCookie('opp-lv1', 1, 3, 'purple')
     let state = createTestGameState([], [lv1])

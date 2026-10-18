@@ -119,7 +119,11 @@ export const loadCustomDecks = (): CustomDeck[] => {
   try {
     const raw = localStorage.getItem(getCustomDeckStorageKey())
     if (!raw) return []
-    return parseCustomDeckStorage(raw)
+    return parseCustomDeckStorage(raw).sort((left, right) => {
+      const hasBs12 = (deck: CustomDeck) => [...deck.entries, ...(deck.extraDeckEntries ?? [])]
+        .some((entry) => entry.cardNumber.startsWith('BS12-'))
+      return Number(hasBs12(right)) - Number(hasBs12(left))
+    })
   } catch {
     return []
   }

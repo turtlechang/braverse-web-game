@@ -1,4 +1,6 @@
 import { getPendingDecision } from './commands'
+import { isChooseOneModePlayable } from './effects/choose-one'
+import { hasPendingFaintModeCost } from './battle'
 import { getCookieToBreakCostCandidates } from './cookie-break-cost'
 import type { PendingDecision } from './commands'
 import {
@@ -216,6 +218,7 @@ const compileCostSteps = (
   const player = state.players[playerId]
   const steps: DecisionDescriptorStep[] = []
   const blockers: string[] = []
+
   const viewerOwnsPrivateZones = viewerPlayerId === undefined || viewerPlayerId === playerId
 
   const energy = cost.energy ?? Object.fromEntries(
@@ -554,6 +557,26 @@ export const compilePendingDecisionDescriptor = (
     return { ...descriptor, status: 'ready', blockers: [] }
   }
 
+  const modeFaint = decision.kind === 'faint-effect' ? state.pendingFaintEffects?.[0] : undefined
+  if (modeFaint && hasPendingFaintModeCost(state)) {
+    const cost = { ...modeFaint.cost, energy: modeFaint.sourceEnergy ?? {} }
+    const compiled = compileCostSteps(state, modeFaint.sourcePlayerId, modeFaint.context, cost, viewerPlayerId)
+    descriptor.steps = compiled.steps.map(step => ({ ...step, commandKinds: ['resolve-faint-effect'] }))
+    descriptor.actionKinds = ['resolve-faint-effect']
+    return { ...descriptor, status: compiled.blockers.length ? 'needs-review' : 'ready', blockers: compiled.blockers }
+  }
+  if (modeFaint?.effect.kind === 'choose-one') {
+    descriptor.steps = [{ id: 'faint-mode', kind: 'resolve', required: true,
+      min: 1, max: 1,
+      candidateIds: modeFaint.effect.modes.flatMap((mode, index) =>
+        isChooseOneModePlayable(state, modeFaint.context, mode.effects) ? [String(index)] : []),
+      candidateSource: 'provided', commandKinds: ['resolve-choose-one'],
+      label: '選擇昏厥效果的一個項目',
+    }]
+    descriptor.actionKinds = ['resolve-choose-one']
+    return { ...descriptor, status: 'ready', blockers: [] }
+  }
+
   const blockers: string[] = []
 
   if (decision.kind === 'optional-cost-attack') {
@@ -585,11 +608,11 @@ export const compilePendingDecisionDescriptor = (
         candidateIds: getTrashToDeckBottomCostCandidates(decision.cost, state.players[decision.playerId].discardPile).map(card => card.instanceId),
         candidateSource: 'public-trash', commandKinds: ['resolve-optional-cost-attack'], label: '選擇棄牌區卡依選取順序放到牌庫底作為代價' })
     }
-    if (state.pendingOptionalCostAttack?.extraDeckPlayInstanceId && decision.cost.trashBattleCookie) {
+    if ((decision.resolution !== 'ability' || state.pendingOptionalCostAttack?.extraDeckPlayInstanceId) && decision.cost.trashBattleCookie) {
       const cost = decision.cost.trashBattleCookie
       descriptor.steps.push({ id: 'battle-trash-cost', kind: 'cost', required: true, min: cost.count, max: cost.count,
         candidateIds: getExtraDeckTrashBattleCookieCostCandidates(decision.cost, state.players[decision.playerId].battleArea, decision.sourceInstanceId).map(cookie => cookie.card.instanceId),
-        candidateSource: 'public-battle', commandKinds: ['resolve-optional-cost-attack'], label: 'EXTRA 登場代價：戰鬥區餅乾與 HP／裝備放入棄牌區' })
+        candidateSource: 'public-battle', commandKinds: ['resolve-optional-cost-attack'], label: '戰鬥區餅乾與 HP／裝備放入棄牌區作為代價' })
     }
     if (nested) {
       const nestedCandidates = getEffectCandidates({

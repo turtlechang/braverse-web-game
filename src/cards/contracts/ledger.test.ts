@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import bs4Cards from '../../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import type { GameCard } from '../../game'
+import { convertOfficialCardToGameCard } from '../official-card-adapter'
 import type { OfficialCardRecord } from '../types'
 import { analyzeOfficialCardBehavior } from './ledger'
 
@@ -409,6 +411,61 @@ describe('card behavior contract shadow ledger', () => {
     const runtime = makeCard({ effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }] })
     const audit = analyzeOfficialCardBehavior(source, runtime)
     expect(audit.checks.resolutionOrderCovered).toBe(false)
+    expect(audit.errors).toContain('resolution order evidence missing')
+  })
+
+  it('accepts BS4-062 rest-support-and-damage as an ordered composite Then', () => {
+    const source = bs4Cards.cards.find((card) => card.cardNumber === 'BS4-062') as OfficialCardRecord
+    if (!source) throw new Error('Expected the official BS4-062 record')
+    const converted = convertOfficialCardToGameCard(source)
+    if (converted.status !== 'converted') throw new Error('Expected BS4-062 to convert')
+
+    const audit = analyzeOfficialCardBehavior(source, converted.gameCard)
+
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.errors).not.toContain('resolution order evidence missing')
+  })
+
+  it.each([
+    {
+      cardNumber: 'ST10-017',
+      energy: 2,
+      text: "<{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, place up to 3 cards from the top of your deck into your trash.",
+    },
+    {
+      cardNumber: 'ST10-018',
+      energy: 3,
+      text: "<{P}{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 {P} LV.3 Cookie from your trash to your hand.",
+    },
+  ])('does not count mirrored root and Trap effects as a Then for $cardNumber', ({ cardNumber, energy, text }) => {
+    const source = makeRecord({
+      cardNumber,
+      baseCardNumber: cardNumber,
+      type: 'trap',
+      officialType: 'TRAP',
+      skill: { name: cardNumber, text },
+    })
+    const primaryEffect = {
+      kind: 'modify-attack' as const,
+      amount: -2,
+      duration: 'this-turn' as const,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+    }
+    const runtime = makeCard({
+      type: 'trap',
+      effects: [primaryEffect],
+      trap: {
+        text,
+        cost: { energy: { purple: energy }, discardHand: 0 },
+        effects: [primaryEffect],
+      },
+    })
+
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+
+    expect(audit.checks.resolutionOrderCovered).toBe(false)
+    expect(audit.contract.status).toBe('needs-review')
     expect(audit.errors).toContain('resolution order evidence missing')
   })
 

@@ -1,0 +1,3924 @@
+{
+  "cardDefinitions": {
+    "BS12-057#0": {
+      "id": "BS12-057",
+      "name": "Marbleberry Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CDAHCgWzKhwNV6EulzM6JA.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【On Play】 <Discard 1 {B} 【Arena】 card from your hand.> Place up to 1 LV.2 or lower Cookie from your opponent's battle area on the bottom of your opponent's deck.",
+      "effects": [
+        {
+          "kind": "field-to-deck-bottom",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1,
+            "maxLevel": 2
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 2,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 2,
+        "neutral": 1
+      },
+      "attackText": "<{B}{B}{N}> Point Choreography {da} 2",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 1,
+          "discardHandColor": "blue",
+          "discardHandKeyword": "arena"
+        },
+        "text": "【On Play】 <Discard 1 {B} 【Arena】 card from your hand.> Place up to 1 LV.2 or lower Cookie from your opponent's battle area on the bottom of your opponent's deck.",
+        "effects": [
+          {
+            "kind": "field-to-deck-bottom",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1,
+              "maxLevel": 2
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-067#1": {
+      "id": "BS7-067",
+      "name": "Dark Choco Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UKOH6weis7MXhZbgxC9vMA.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 【Once Per Turn】 <{B}> If there are 5 cards or less in your hand, set this Cookie as active.",
+      "effects": [
+        {
+          "kind": "set-cookie-active",
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "sourceOnly": true
+          },
+          "condition": {
+            "kind": "hand-count-at-most",
+            "count": 5
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 3,
+      "hp": 6,
+      "attack": 1,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> Dark Swordsmanship {da} 1 \r\nThen, <discard 1 【Arena】 card from your hand.> Select up to 1 of your opponent's LV.2 or higher Cookies. That Cookie receives 2 damage.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "discardHand": 1,
+            "discardHandKeyword": "arena"
+          },
+          "effects": [
+            {
+              "kind": "damage",
+              "amount": 2,
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1,
+                "minLevel": 2
+              }
+            }
+          ],
+          "effectText": "Discard 1 Arena card to deal 2 damage to up to 1 opponent LV.2 or higher Cookie."
+        }
+      ],
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {
+            "blue": 1
+          },
+          "discardHand": 0
+        },
+        "text": "【Activate】 【Once Per Turn】 <{B}> If there are 5 cards or less in your hand, set this Cookie as active.",
+        "effects": [
+          {
+            "kind": "set-cookie-active",
+            "target": {
+              "side": "self",
+              "min": 1,
+              "max": 1,
+              "sourceOnly": true
+            },
+            "condition": {
+              "kind": "hand-count-at-most",
+              "count": 5
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-078#2": {
+      "id": "BS7-078",
+      "name": "Frostrock Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yezR5d3aDvTacZ_htJg0sA.webp",
+      "energyColor": "blue",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "If there is a {B} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "effects": [
+        {
+          "kind": "gain-hp",
+          "amount": 1,
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "sourceOnly": true,
+            "minLevel": 2
+          },
+          "condition": {
+            "kind": "battle-area-has-color",
+            "side": "self",
+            "color": "blue",
+            "keyword": "arena"
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 1,
+      "attack": 1,
+      "attackCost": 1,
+      "attackEnergyCost": {
+        "blue": 1
+      },
+      "attackText": "<{B}> The Sound of Winter {da} 1",
+      "flip": {
+        "text": "If there is a {B} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "gain-hp",
+            "amount": 1,
+            "target": {
+              "side": "self",
+              "min": 1,
+              "max": 1,
+              "sourceOnly": true,
+              "minLevel": 2
+            },
+            "condition": {
+              "kind": "battle-area-has-color",
+              "side": "self",
+              "color": "blue",
+              "keyword": "arena"
+            }
+          }
+        ]
+      }
+    },
+    "BS12-066#3": {
+      "id": "BS12-066",
+      "name": "Perfect Ending Pose",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PbwDhvQgH1K0aHBbd20V0A.webp",
+      "energyColor": "blue",
+      "officialType": "trap",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{B}> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage.",
+      "effects": [
+        {
+          "kind": "reveal-bottom-deck",
+          "requireCard": true,
+          "match": {
+            "type": "cookie",
+            "level": 2,
+            "keyword": "arena"
+          },
+          "addMatchedToHand": true,
+          "effects": [
+            {
+              "kind": "modify-attack",
+              "amount": -2,
+              "duration": "this-turn",
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1
+              }
+            }
+          ]
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "<{B}> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage.",
+        "cost": {
+          "energy": {
+            "blue": 1
+          },
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "reveal-bottom-deck",
+            "requireCard": true,
+            "match": {
+              "type": "cookie",
+              "level": 2,
+              "keyword": "arena"
+            },
+            "addMatchedToHand": true,
+            "effects": [
+              {
+                "kind": "modify-attack",
+                "amount": -2,
+                "duration": "this-turn",
+                "target": {
+                  "side": "opponent",
+                  "min": 0,
+                  "max": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "BS6-085#4": {
+      "id": "BS6-085",
+      "name": "Destruction of a Pastless Future",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sAV1Zs7ABl5S4pcd6gd2Gg.webp",
+      "energyColor": "blue",
+      "officialType": "trap",
+      "effectText": "<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -2,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "kind": "draw-up-to",
+          "max": 2,
+          "condition": {
+            "kind": "hand-count-at-most",
+            "count": 4
+          }
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck.",
+        "cost": {
+          "energy": {
+            "blue": 1
+          },
+          "discardHand": 2
+        },
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -2,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "kind": "draw-up-to",
+            "max": 2,
+            "condition": {
+              "kind": "hand-count-at-most",
+              "count": 4
+            }
+          }
+        ]
+      }
+    },
+    "BS12-063#5": {
+      "id": "BS12-063",
+      "name": "CAKE POPs",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lEO8CQpjWN2b68YGeobgoQ.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "If there is a [Popping Candy Cookie] in your battle area, any time this Cookie would receive 2 or more damage, the damage is reduced to 1.",
+      "effects": [
+        {
+          "kind": "modify-damage-received",
+          "amount": 0,
+          "duration": "persistent",
+          "damageType": "all",
+          "minimumDamage": 2,
+          "setDamageTo": 1,
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "sourceOnly": true
+          },
+          "condition": {
+            "kind": "battle-area-has-named-cookie",
+            "side": "self",
+            "name": "Popping Candy Cookie"
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 3,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> #Practice #DanceSpoiler {da} 3",
+      "skill": {
+        "trigger": "passive",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "If there is a [Popping Candy Cookie] in your battle area, any time this Cookie would receive 2 or more damage, the damage is reduced to 1.",
+        "effects": [
+          {
+            "kind": "modify-damage-received",
+            "amount": 0,
+            "duration": "persistent",
+            "damageType": "all",
+            "minimumDamage": 2,
+            "setDamageTo": 1,
+            "target": {
+              "side": "self",
+              "min": 1,
+              "max": 1,
+              "sourceOnly": true
+            },
+            "condition": {
+              "kind": "battle-area-has-named-cookie",
+              "side": "self",
+              "name": "Popping Candy Cookie"
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-079#6": {
+      "id": "BS7-079",
+      "name": "Cream Soda Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JHHgo3kCtERRMun31jwHOw.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Once Per Turn】 When your opponent's Cookie attacks, <discard 1 card.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -1,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 2,
+        "neutral": 1
+      },
+      "attackText": "<{B}{B}{N}> Sparkling Swordsmanship {da} 3",
+      "skill": {
+        "trigger": "opponent-attack",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 1
+        },
+        "text": "【Once Per Turn】 When your opponent's Cookie attacks, <discard 1 card.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage.",
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -1,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS12-065#7": {
+      "id": "BS12-065",
+      "name": "Misdelivered Fan Letter",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UQIbRgMbKywf6tcWMwo9Og.webp",
+      "energyColor": "blue",
+      "officialType": "trap",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -1,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "kind": "optional-cost-attack",
+          "resolution": "ability",
+          "cost": {
+            "energy": {},
+            "discardHand": 1,
+            "discardHandType": "cookie",
+            "discardHandLevel": 2,
+            "discardHandKeyword": "arena",
+            "handCostDestination": "deck-bottom"
+          },
+          "effectText": "Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.",
+          "effects": [
+            {
+              "kind": "draw-up-to",
+              "max": 1
+            }
+          ]
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "<{B}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "cost": {
+          "energy": {
+            "blue": 1
+          },
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -1,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "kind": "optional-cost-attack",
+            "resolution": "ability",
+            "cost": {
+              "energy": {},
+              "discardHand": 1,
+              "discardHandType": "cookie",
+              "discardHandLevel": 2,
+              "discardHandKeyword": "arena",
+              "handCostDestination": "deck-bottom"
+            },
+            "effectText": "Then, <reveal 1 LV.2 【Arena】 Cookie from your hand and place it on the bottom of your deck.> Draw up to 1 card from your deck.",
+            "effects": [
+              {
+                "kind": "draw-up-to",
+                "max": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "BS12-058#8": {
+      "id": "BS12-058",
+      "name": "Peppermint Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YWOZpSkubKPuMduhbpKvyQ.webp",
+      "energyColor": "blue",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<Reveal 1 【Arena】 card from your hand and place it on the bottom of your deck.> Draw up to 2 cards from your deck.",
+      "effects": [
+        {
+          "kind": "draw-up-to",
+          "max": 2
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 1,
+      "attack": 1,
+      "attackCost": 1,
+      "attackEnergyCost": {
+        "blue": 1
+      },
+      "attackText": "<{B}> Signed Merch Getup {da} 1",
+      "flip": {
+        "text": "<Reveal 1 【Arena】 card from your hand and place it on the bottom of your deck.> Draw up to 2 cards from your deck.",
+        "cost": {
+          "energy": {},
+          "discardHand": 1,
+          "discardHandKeyword": "arena"
+        },
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 2
+          }
+        ],
+        "handCostDestination": "deck-bottom"
+      }
+    },
+    "BS7-070#9": {
+      "id": "BS7-070",
+      "name": "Raspberry Mousse Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Bvp3FXxZ37KYTg7yc_QVyg.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 2,
+        "neutral": 1
+      },
+      "attackText": "<{B}{B}{N}> Family's Pride {da} 3 \r\nThen, <place 1 {B} 【Arena】 Cookie that is LV.2 or lower except [Raspberry Mousse Cookie] from your battle area on the bottom of your deck.> Draw up to 1 card from your deck.",
+      "attackEffects": [
+        {
+          "kind": "field-to-deck-bottom",
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "maxLevel": 2,
+            "energyColor": "blue",
+            "keyword": "arena",
+            "excludeSource": true
+          }
+        },
+        {
+          "kind": "draw-up-to",
+          "max": 1
+        }
+      ]
+    },
+    "BS10-098#10": {
+      "id": "BS10-098",
+      "name": "Jagae Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xLa7P5r7O25mR7JXpLy8CQ.webp",
+      "cardColor": "blue",
+      "energyColor": "blue",
+      "effectText": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 1
+        },
+        "text": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": 1,
+            "duration": "this-turn",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ]
+      },
+      "level": 3,
+      "hp": 6,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 3
+      },
+      "attackText": "<{B}{B}{B}> Iridescent Storm {da} 3\r\nThen, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "damage",
+          "amount": 1,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "extraDeckPlayCost": {
+        "energy": {},
+        "discardHand": 2,
+        "discardHandColor": "blue"
+      },
+      "playRequirement": {
+        "kind": "hand-count-at-least",
+        "count": 7
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS12-074#11": {
+      "id": "BS12-074",
+      "name": "Popping Candy Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7gVOm1mP-zwQgPXFb0wn4Q.webp",
+      "cardColor": "blue",
+      "energyColor": "blue",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 2,
+            "condition": {
+              "kind": "player-started-second"
+            }
+          }
+        ]
+      },
+      "level": 3,
+      "hp": 5,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 3
+      },
+      "attackText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {}
+          },
+          "effectText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+          "effects": [
+            {
+              "kind": "reveal-bottom-deck",
+              "requireCard": true,
+              "match": {
+                "type": "cookie",
+                "level": 2,
+                "keyword": "arena"
+              },
+              "addMatchedToHand": true,
+              "effects": [
+                {
+                  "kind": "field-to-deck-bottom",
+                  "hpOnly": true,
+                  "target": {
+                    "side": "opponent",
+                    "min": 0,
+                    "max": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "playRequirement": {
+        "kind": "arena-cookie-placed-from-battle-to-deck-bottom-this-turn",
+        "side": "self"
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS8-090#12": {
+      "id": "BS8-090",
+      "name": "Will of Nature",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_7Rja0C14fCO2yL2YK0JSw.webp",
+      "cardColor": "blue",
+      "energyColor": "blue",
+      "effectText": "【EXTRA】Can be played if there are 2 cards or less in your hand.\r\n\r\n【On Play】 Return up to 1 {B} Cookie that is LV.2 or lower from your battle area to your hand.",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】Can be played if there are 2 cards or less in your hand.\r\n\r\n【On Play】 Return up to 1 {B} Cookie that is LV.2 or lower from your battle area to your hand.",
+        "effects": [
+          {
+            "kind": "return-to-hand",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1,
+              "energyColor": "blue",
+              "maxLevel": 2
+            }
+          }
+        ]
+      },
+      "level": 3,
+      "hp": 5,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "blue": 3
+      },
+      "attackText": "<{B}{B}{B}> Echoes of Nature {da} 3\r\n\r\nThen, draw up to 2 cards from your deck.",
+      "attackEffects": [
+        {
+          "kind": "draw-up-to",
+          "max": 2
+        }
+      ],
+      "playRequirement": {
+        "kind": "hand-count-at-most",
+        "count": 2
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS12-070#13": {
+      "id": "BS12-070",
+      "name": "Stardust Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/72cuFfsiIhjGpF5g1ISRYw.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> Shining Star {da} 2\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and all of your opponent's Cookies receive 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {}
+          },
+          "effectText": "<{B}{B}> Shining Star {da} 2\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and all of your opponent's Cookies receive 1 damage.",
+          "effects": [
+            {
+              "kind": "reveal-bottom-deck",
+              "requireCard": true,
+              "match": {
+                "type": "cookie",
+                "level": 2,
+                "keyword": "arena"
+              },
+              "addMatchedToHand": true,
+              "effects": [
+                {
+                  "kind": "damage-all",
+                  "amount": 1,
+                  "side": "opponent",
+                  "sequential": true,
+                  "target": {
+                    "side": "opponent",
+                    "min": 1,
+                    "max": 2
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "BS12-073#14": {
+      "id": "BS12-073",
+      "name": "DJ Miya",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xfOWxLcUUMOn_SIZEM2CPA.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【On Play】 <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie other than [DJ Miya], add it to your hand. Then, if there are 6 cards or more in your opponent's hand, your opponent places 1 card from their hand into their trash.",
+      "effects": [
+        {
+          "kind": "reveal-bottom-deck",
+          "requireCard": true,
+          "match": {
+            "type": "cookie",
+            "level": 2,
+            "keyword": "arena",
+            "excludeCardName": "DJ Miya"
+          },
+          "addMatchedToHand": true
+        },
+        {
+          "kind": "opponent-discard-hand",
+          "count": 1,
+          "condition": {
+            "kind": "opponent-hand-count-at-least",
+            "count": 6
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> Emergency Stream End! {da} 2\r\nThen, <discard 1 card.> Place this Cookie on the bottom of your deck.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "discardHand": 1
+          },
+          "effectText": "<{B}{B}> Emergency Stream End! {da} 2\r\nThen, <discard 1 card.> Place this Cookie on the bottom of your deck.",
+          "effects": [
+            {
+              "kind": "field-to-deck-bottom",
+              "target": {
+                "side": "self",
+                "min": 1,
+                "max": 1,
+                "sourceOnly": true
+              }
+            }
+          ]
+        }
+      ],
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {}
+        },
+        "text": "【On Play】 <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie other than [DJ Miya], add it to your hand. Then, if there are 6 cards or more in your opponent's hand, your opponent places 1 card from their hand into their trash.",
+        "effects": [
+          {
+            "kind": "reveal-bottom-deck",
+            "requireCard": true,
+            "match": {
+              "type": "cookie",
+              "level": 2,
+              "keyword": "arena",
+              "excludeCardName": "DJ Miya"
+            },
+            "addMatchedToHand": true
+          },
+          {
+            "kind": "opponent-discard-hand",
+            "count": 1,
+            "condition": {
+              "kind": "opponent-hand-count-at-least",
+              "count": 6
+            }
+          }
+        ],
+        "effectConditionsAtResolution": true,
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "ST9-016#15": {
+      "id": "ST9-016",
+      "name": "Bubble Wave Shell",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WBec5x49udeaKbRz8wbISw.webp",
+      "energyColor": "blue",
+      "officialType": "item",
+      "effectText": "<{B}{B}> <Discard 3 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 3 damage.",
+      "effects": [
+        {
+          "kind": "damage",
+          "amount": 3,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "type": "item",
+      "item": {
+        "cost": {
+          "energy": {
+            "blue": 2
+          },
+          "discardHand": 3
+        },
+        "text": "<{B}{B}> <Discard 3 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 3 damage.",
+        "effects": [
+          {
+            "kind": "damage",
+            "amount": 3,
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    "BS7-072#16": {
+      "id": "BS7-072",
+      "name": "Ice Mint Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GpgAmXDI4lFv75tfDzBKGA.webp",
+      "energyColor": "blue",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "If there are 5 cards or less in your hand and there is a {B} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "effects": [
+        {
+          "kind": "draw-up-to",
+          "max": 2,
+          "condition": {
+            "kind": "all-of",
+            "conditions": [
+              {
+                "kind": "hand-count-at-most",
+                "count": 5
+              },
+              {
+                "kind": "battle-area-has-color",
+                "side": "self",
+                "color": "blue",
+                "keyword": "arena"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> Perfect Technique {da} 2",
+      "flip": {
+        "text": "If there are 5 cards or less in your hand and there is a {B} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 2,
+            "condition": {
+              "kind": "all-of",
+              "conditions": [
+                {
+                  "kind": "hand-count-at-most",
+                  "count": 5
+                },
+                {
+                  "kind": "battle-area-has-color",
+                  "side": "self",
+                  "color": "blue",
+                  "keyword": "arena"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "BS12-074#17": {
+      "id": "BS12-074",
+      "name": "Popping Candy Cookie",
+      "type": "cookie",
+      "level": 3,
+      "hp": 5,
+      "attack": 3,
+      "attackCost": 3,
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7gVOm1mP-zwQgPXFb0wn4Q.webp",
+      "cardColor": "blue",
+      "energyColor": "blue",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 2,
+            "condition": {
+              "kind": "player-started-second"
+            }
+          }
+        ]
+      },
+      "attackEnergyCost": {
+        "blue": 3
+      },
+      "attackText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {}
+          },
+          "effectText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+          "effects": [
+            {
+              "kind": "reveal-bottom-deck",
+              "requireCard": true,
+              "match": {
+                "type": "cookie",
+                "level": 2,
+                "keyword": "arena"
+              },
+              "addMatchedToHand": true,
+              "effects": [
+                {
+                  "kind": "field-to-deck-bottom",
+                  "hpOnly": true,
+                  "target": {
+                    "side": "opponent",
+                    "min": 0,
+                    "max": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "extraDeckOrigin": "extra",
+      "extraDeckCard": {
+        "id": "BS12-074",
+        "instanceId": "formal-extra:player-one:BS12-074:1",
+        "name": "Popping Candy Cookie",
+        "type": "extra",
+        "officialType": "extra",
+        "imageUrl": "https://cookierunbraverse.com/data/en_storage/7gVOm1mP-zwQgPXFb0wn4Q.webp",
+        "cardColor": "blue",
+        "energyColor": "blue",
+        "keywords": [
+          "arena"
+        ],
+        "effectText": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+        "skill": {
+          "trigger": "on-play",
+          "oncePerTurn": false,
+          "yourTurn": false,
+          "restSource": false,
+          "cost": {
+            "energy": {},
+            "discardHand": 0
+          },
+          "text": "【EXTRA】 Can be played if, during this turn, an 【Arena】 Cookie was placed from your battle area on the bottom of your deck.\r\n【On Play】 If you started the game going second, draw up to 2 cards from your deck.",
+          "effects": [
+            {
+              "kind": "draw-up-to",
+              "max": 2,
+              "condition": {
+                "kind": "player-started-second"
+              }
+            }
+          ]
+        },
+        "level": 3,
+        "hp": 5,
+        "attack": 3,
+        "attackCost": 3,
+        "attackEnergyCost": {
+          "blue": 3
+        },
+        "attackText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+        "attackEffects": [
+          {
+            "kind": "optional-cost-attack",
+            "cost": {
+              "energy": {}
+            },
+            "effectText": "<{B}{B}{B}> Fan Service {da} 3\r\nThen, <reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand and select up to 1 of your opponent's Cookies. Place 1 card from the top of that Cookie's HP on the bottom of your opponent's deck.",
+            "effects": [
+              {
+                "kind": "reveal-bottom-deck",
+                "requireCard": true,
+                "match": {
+                  "type": "cookie",
+                  "level": 2,
+                  "keyword": "arena"
+                },
+                "addMatchedToHand": true,
+                "effects": [
+                  {
+                    "kind": "field-to-deck-bottom",
+                    "hpOnly": true,
+                    "target": {
+                      "side": "opponent",
+                      "min": 0,
+                      "max": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "playRequirement": {
+          "kind": "arena-cookie-placed-from-battle-to-deck-bottom-this-turn",
+          "side": "self"
+        },
+        "extraDeckPlayMode": "enter-battle"
+      }
+    },
+    "BS10-098#18": {
+      "id": "BS10-098",
+      "name": "Jagae Cookie",
+      "type": "cookie",
+      "level": 3,
+      "hp": 6,
+      "attack": 3,
+      "attackCost": 3,
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xLa7P5r7O25mR7JXpLy8CQ.webp",
+      "cardColor": "blue",
+      "energyColor": "blue",
+      "effectText": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 1
+        },
+        "text": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": 1,
+            "duration": "this-turn",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ]
+      },
+      "attackEnergyCost": {
+        "blue": 3
+      },
+      "attackText": "<{B}{B}{B}> Iridescent Storm {da} 3\r\nThen, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "damage",
+          "amount": 1,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "extraDeckOrigin": "extra",
+      "extraDeckCard": {
+        "id": "BS10-098",
+        "instanceId": "formal-extra:player-one:BS10-098:1",
+        "name": "Jagae Cookie",
+        "type": "extra",
+        "officialType": "extra",
+        "imageUrl": "https://cookierunbraverse.com/data/en_storage/xLa7P5r7O25mR7JXpLy8CQ.webp",
+        "cardColor": "blue",
+        "energyColor": "blue",
+        "effectText": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+        "skill": {
+          "trigger": "activate",
+          "oncePerTurn": true,
+          "yourTurn": false,
+          "restSource": false,
+          "cost": {
+            "energy": {},
+            "discardHand": 1
+          },
+          "text": "【EXTRA】 If there are 7 cards or more in your hand, <discard 2 {B} cards.> Play this Cookie.\r\n\r\n【Activate】 【Once Per Turn】 <Discard 1 card.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+          "effects": [
+            {
+              "kind": "modify-attack",
+              "amount": 1,
+              "duration": "this-turn",
+              "target": {
+                "side": "self",
+                "min": 0,
+                "max": 1
+              }
+            }
+          ]
+        },
+        "level": 3,
+        "hp": 6,
+        "attack": 3,
+        "attackCost": 3,
+        "attackEnergyCost": {
+          "blue": 3
+        },
+        "attackText": "<{B}{B}{B}> Iridescent Storm {da} 3\r\nThen, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "attackEffects": [
+          {
+            "kind": "damage",
+            "amount": 1,
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ],
+        "extraDeckPlayCost": {
+          "energy": {},
+          "discardHand": 2,
+          "discardHandColor": "blue"
+        },
+        "playRequirement": {
+          "kind": "hand-count-at-least",
+          "count": 7
+        },
+        "extraDeckPlayMode": "enter-battle"
+      }
+    },
+    "BS12-060#19": {
+      "id": "BS12-060",
+      "name": "Sorbet Shark Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lmlbEAHLGtBTLdMgG32FvA.webp",
+      "energyColor": "blue",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<Discard 1 card.> Select up to 1 【Arena】 Cookie in your battle area. That Cookie gains +1 HP.",
+      "effects": [
+        {
+          "kind": "gain-hp",
+          "amount": 1,
+          "target": {
+            "side": "self",
+            "min": 0,
+            "max": 1,
+            "keyword": "arena"
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> 0o0o0O! oOOo0! {da} 2",
+      "flip": {
+        "text": "<Discard 1 card.> Select up to 1 【Arena】 Cookie in your battle area. That Cookie gains +1 HP.",
+        "cost": {
+          "energy": {},
+          "discardHand": 1
+        },
+        "effects": [
+          {
+            "kind": "gain-hp",
+            "amount": 1,
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1,
+              "keyword": "arena"
+            }
+          }
+        ]
+      }
+    },
+    "BS12-069#20": {
+      "id": "BS12-069",
+      "name": "Pop Pop Photocard",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/w6zLQ6rva-y0pRclBPe3Lw.webp",
+      "energyColor": "blue",
+      "officialType": "item",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{B}{B}> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "effects": [
+        {
+          "kind": "reveal-bottom-deck",
+          "requireCard": true,
+          "match": {
+            "type": "cookie",
+            "level": 2,
+            "keyword": "arena"
+          },
+          "addMatchedToHand": true,
+          "effects": [
+            {
+              "kind": "damage",
+              "amount": 1,
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1
+              }
+            }
+          ]
+        }
+      ],
+      "type": "item",
+      "item": {
+        "cost": {
+          "blue": 2
+        },
+        "text": "<{B}{B}> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "effects": [
+          {
+            "kind": "reveal-bottom-deck",
+            "requireCard": true,
+            "match": {
+              "type": "cookie",
+              "level": 2,
+              "keyword": "arena"
+            },
+            "addMatchedToHand": true,
+            "effects": [
+              {
+                "kind": "damage",
+                "amount": 1,
+                "target": {
+                  "side": "opponent",
+                  "min": 0,
+                  "max": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "BS7-076#21": {
+      "id": "BS7-076",
+      "name": "Cherry Cola Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6QLGgKfwURwYecjK9vjd4w.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 If there is another {B} 【Arena】 Cookie in your battle area, <place this Cookie on the bottom of your deck.> Draw up to 1 card from your deck.",
+      "effects": [
+        {
+          "kind": "draw-up-to",
+          "max": 1,
+          "condition": {
+            "kind": "battle-area-has-color",
+            "side": "self",
+            "color": "blue",
+            "keyword": "arena",
+            "excludeSource": true
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 3,
+      "attack": 1,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 1,
+        "neutral": 1
+      },
+      "attackText": "<{B}{N}> I must become stronger! {da} 1",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0,
+          "selfToDeckBottom": true
+        },
+        "text": "【Activate】 If there is another {B} 【Arena】 Cookie in your battle area, <place this Cookie on the bottom of your deck.> Draw up to 1 card from your deck.",
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 1,
+            "condition": {
+              "kind": "battle-area-has-color",
+              "side": "self",
+              "color": "blue",
+              "keyword": "arena",
+              "excludeSource": true
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS12-072#22": {
+      "id": "BS12-072",
+      "name": "Cream Soda Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/RQYFaY2SdSRISO1nGLBQ_g.webp",
+      "energyColor": "blue",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 【Once Per Turn】 <{B}> Place up to 1 other LV.2 or lower 【Arena】 Cookie from your battle area on the bottom of your deck.",
+      "effects": [
+        {
+          "kind": "field-to-deck-bottom",
+          "target": {
+            "side": "self",
+            "min": 0,
+            "max": 1,
+            "maxLevel": 2,
+            "keyword": "arena",
+            "excludeSource": true
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 3,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "blue": 2
+      },
+      "attackText": "<{B}{B}> Sparkling Soda Voice {da} 2\r\nThen, <discard 1 card.> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and deals 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "discardHand": 1
+          },
+          "effectText": "<{B}{B}> Sparkling Soda Voice {da} 2\r\nThen, <discard 1 card.> <Reveal 1 card from the bottom of your deck.> If that card is a LV.2 【Arena】 Cookie, add it to your hand, and deals 1 damage.",
+          "effects": [
+            {
+              "kind": "reveal-bottom-deck",
+              "requireCard": true,
+              "match": {
+                "type": "cookie",
+                "level": 2,
+                "keyword": "arena"
+              },
+              "addMatchedToHand": true,
+              "effects": [
+                {
+                  "kind": "damage",
+                  "amount": 1,
+                  "target": {
+                    "side": "opponent",
+                    "min": 1,
+                    "max": 1,
+                    "attackTargetOnly": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {
+            "blue": 1
+          }
+        },
+        "text": "【Activate】 【Once Per Turn】 <{B}> Place up to 1 other LV.2 or lower 【Arena】 Cookie from your battle area on the bottom of your deck.",
+        "effects": [
+          {
+            "kind": "field-to-deck-bottom",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1,
+              "maxLevel": 2,
+              "keyword": "arena",
+              "excludeSource": true
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "P-115#23": {
+      "id": "P-115",
+      "name": "Truffle Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GnY4cmEKyl38J-VfPVlf9w.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 If there are 3 {G} cards or more in your support area, <place this Cookie in your trash.> Draw 1 card from your deck and play up to 1 【Arena】 Cookie from your support area.",
+      "effects": [
+        {
+          "kind": "draw",
+          "amount": 1,
+          "condition": {
+            "kind": "support-color-count-at-least",
+            "color": "green",
+            "count": 3
+          }
+        },
+        {
+          "kind": "support-to-battle",
+          "amount": 1,
+          "keyword": "arena",
+          "condition": {
+            "kind": "support-color-count-at-least",
+            "color": "green",
+            "count": 3
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 3,
+      "attack": 1,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "green": 1,
+        "neutral": 1
+      },
+      "attackText": "<{G}{N}><Collecting<{da} 1",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "selfToTrash": true
+        },
+        "text": "【Activate】 If there are 3 {G} cards or more in your support area, <place this Cookie in your trash.> Draw 1 card from your deck and play up to 1 【Arena】 Cookie from your support area.",
+        "effects": [
+          {
+            "kind": "draw",
+            "amount": 1,
+            "condition": {
+              "kind": "support-color-count-at-least",
+              "color": "green",
+              "count": 3
+            }
+          },
+          {
+            "kind": "support-to-battle",
+            "amount": 1,
+            "keyword": "arena",
+            "condition": {
+              "kind": "support-color-count-at-least",
+              "color": "green",
+              "count": 3
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-062#24": {
+      "id": "BS7-062",
+      "name": "Plantain Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UkfiuUEh5ZA1r0eiwKDw0A.webp",
+      "energyColor": "green",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "If there are 5 cards or less in your hand and there is a {G} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+      "effects": [
+        {
+          "kind": "draw-up-to",
+          "max": 2,
+          "condition": {
+            "kind": "all-of",
+            "conditions": [
+              {
+                "kind": "hand-count-at-most",
+                "count": 5
+              },
+              {
+                "kind": "battle-area-has-color",
+                "side": "self",
+                "color": "green",
+                "keyword": "arena"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 1,
+      "attack": 1,
+      "attackCost": 1,
+      "attackEnergyCost": {
+        "green": 1
+      },
+      "attackText": "<{G}> Hearty Meal {da} 1",
+      "flip": {
+        "text": "If there are 5 cards or less in your hand and there is a {G} 【Arena】 Cookie in your battle area, draw up to 2 cards from your deck.",
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "draw-up-to",
+            "max": 2,
+            "condition": {
+              "kind": "all-of",
+              "conditions": [
+                {
+                  "kind": "hand-count-at-most",
+                  "count": 5
+                },
+                {
+                  "kind": "battle-area-has-color",
+                  "side": "self",
+                  "color": "green",
+                  "keyword": "arena"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ST3-020#25": {
+      "id": "ST3-020",
+      "name": "Divine Light Crystal",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/tUnkCjbDo_t5GeFu9nKxoA.webp",
+      "energyColor": "green",
+      "officialType": "trap",
+      "effectText": "《{G}{G}》 Select up to 1 of your Cookies. That Cookie's HP cannot reach 0 during this battle.",
+      "effects": [
+        {
+          "kind": "prevent-knockout",
+          "target": {
+            "side": "self",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "《{G}{G}》 Select up to 1 of your Cookies. That Cookie's HP cannot reach 0 during this battle.",
+        "cost": {
+          "energy": {
+            "green": 2
+          },
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "prevent-knockout",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ]
+      }
+    },
+    "BS7-049#26": {
+      "id": "BS7-049",
+      "name": "Strawberry Crepe Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_LNXOxI5E-z9X4QnyTHjeA.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 【Once Per Turn】 <{G}> <Place 1 【Arena】 card from your support area into the trash.> If there are 6 cards or less in your hand, draw 1 card from your deck and place 1 card from the top of your deck in your support area as rested.",
+      "effects": [
+        {
+          "kind": "draw",
+          "amount": 1,
+          "condition": {
+            "kind": "hand-count-at-most",
+            "count": 6
+          }
+        },
+        {
+          "kind": "deck-to-support",
+          "amount": 1,
+          "rested": true,
+          "condition": {
+            "kind": "hand-count-at-most",
+            "count": 6
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 5,
+      "attack": 2,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 2,
+        "neutral": 1
+      },
+      "attackText": "<{G}{G}{N}> Ha ha! Elementary! {da} 2",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {
+            "green": 1
+          },
+          "discardHand": 0,
+          "supportToTrash": 1,
+          "supportToTrashKeyword": "arena"
+        },
+        "text": "【Activate】 【Once Per Turn】 <{G}> <Place 1 【Arena】 card from your support area into the trash.> If there are 6 cards or less in your hand, draw 1 card from your deck and place 1 card from the top of your deck in your support area as rested.",
+        "effects": [
+          {
+            "kind": "draw",
+            "amount": 1,
+            "condition": {
+              "kind": "hand-count-at-most",
+              "count": 6
+            }
+          },
+          {
+            "kind": "deck-to-support",
+            "amount": 1,
+            "rested": true,
+            "condition": {
+              "kind": "hand-count-at-most",
+              "count": 6
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-064#27": {
+      "id": "BS7-064",
+      "name": "Cookie Windmill",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BBZYmoZgPJ-XzDa5pGpO3Q.webp",
+      "energyColor": "green",
+      "officialType": "trap",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <place 1 card from your support area into the trash.> Place up to 1 Cookie from your trash into your support area as rested.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -1,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "kind": "support-to-trash",
+          "amount": 1
+        },
+        {
+          "kind": "trash-to-support",
+          "amount": 1,
+          "rested": true,
+          "optional": true
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, <place 1 card from your support area into the trash.> Place up to 1 Cookie from your trash into your support area as rested.",
+        "cost": {
+          "energy": {
+            "green": 1
+          },
+          "supportToTrash": 1
+        },
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -1,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "kind": "support-to-trash",
+            "amount": 1
+          },
+          {
+            "kind": "trash-to-support",
+            "amount": 1,
+            "rested": true,
+            "optional": true
+          }
+        ]
+      }
+    },
+    "BS7-057#28": {
+      "id": "BS7-057",
+      "name": "Pudding à la Mode Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Y1PKwQuqEeXxZgIugygZCA.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【Activate】 <{G}{G}> <Select 1 LV.2 or higher 【Arena】 Cookie from your support area.> Place this card in your support area as rested. Then, play that Cookie.",
+      "effects": [
+        {
+          "kind": "place-source-to-support",
+          "rested": true
+        },
+        {
+          "kind": "support-to-battle",
+          "amount": 1,
+          "optional": false,
+          "minLevel": 2,
+          "keyword": "arena"
+        }
+      ],
+      "type": "cookie",
+      "level": 1,
+      "hp": 3,
+      "attack": 1,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "green": 1,
+        "neutral": 1
+      },
+      "attackText": "<{G}{N}> Zap! Boom! {da} 1",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {
+            "green": 2
+          },
+          "discardHand": 0
+        },
+        "text": "【Activate】 <{G}{G}> <Select 1 LV.2 or higher 【Arena】 Cookie from your support area.> Place this card in your support area as rested. Then, play that Cookie.",
+        "effects": [
+          {
+            "kind": "place-source-to-support",
+            "rested": true
+          },
+          {
+            "kind": "support-to-battle",
+            "amount": 1,
+            "optional": false,
+            "minLevel": 2,
+            "keyword": "arena"
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-065#29": {
+      "id": "BS7-065",
+      "name": "Cookie Games Stadium",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SQXhHizvpv9cAUYBpi0K0A.webp",
+      "energyColor": "green",
+      "officialType": "stage",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{G}> Place in your stage area.\r\n \r\n【Activate】 <Rest this card.> Play up to 1 【Arena】 Cookie from your support area. If you do, draw up to 1 card from your deck.",
+      "effects": [
+        {
+          "kind": "support-to-battle",
+          "amount": 1,
+          "keyword": "arena",
+          "thenEffects": [
+            {
+              "kind": "draw-up-to",
+              "max": 1
+            }
+          ]
+        }
+      ],
+      "type": "stage",
+      "stageAbility": {
+        "placementCost": {
+          "green": 1
+        },
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "<{G}> Place in your stage area.\r\n \r\n【Activate】 <Rest this card.> Play up to 1 【Arena】 Cookie from your support area. If you do, draw up to 1 card from your deck.",
+        "effects": [
+          {
+            "kind": "support-to-battle",
+            "amount": 1,
+            "keyword": "arena",
+            "thenEffects": [
+              {
+                "kind": "draw-up-to",
+                "max": 1
+              }
+            ]
+          }
+        ],
+        "restSource": true
+      }
+    },
+    "BS4-049#30": {
+      "id": "BS4-049",
+      "name": "Wind Archer Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/I6CL4EaxOq6FvsAc7wUhtw.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "effectText": "{ap} Select up to 1 of your opponent's Cookies from their battle area. Place that Cookie in your opponent's support area as rested.",
+      "effects": [
+        {
+          "kind": "battle-to-support",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          },
+          "rested": true
+        }
+      ],
+      "type": "cookie",
+      "level": 3,
+      "hp": 5,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}> Cleansing Arrow {da} 3\r\nThen, <can be used as {G}.> If your opponent's support area contains 7 cards or more, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {
+              "green": 1
+            }
+          },
+          "effects": [
+            {
+              "kind": "damage",
+              "amount": 2,
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1
+              },
+              "condition": {
+                "kind": "opponent-support-count-at-least",
+                "count": 7
+              }
+            }
+          ],
+          "effectText": "If your opponent's support area contains 7 cards or more, use this Cookie as {G} to deal 2 damage to 1 of your opponent's Cookies."
+        }
+      ],
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "{ap} Select up to 1 of your opponent's Cookies from their battle area. Place that Cookie in your opponent's support area as rested.",
+        "effects": [
+          {
+            "kind": "battle-to-support",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            },
+            "rested": true
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "P-113#31": {
+      "id": "P-113",
+      "name": "Green Tea Mousse Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KrFp3Wo33YJx_j2bFkstBg.webp",
+      "energyColor": "green",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "effects": [],
+      "type": "cookie",
+      "level": 2,
+      "hp": 3,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}><Mousse Shield<{da} 3",
+      "flip": {
+        "text": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+        "cost": {
+          "discardHand": 1
+        },
+        "effects": [],
+        "attachedHpBonus": 1
+      }
+    },
+    "BS7-046#32": {
+      "id": "BS7-046",
+      "name": "Green Tea Mousse Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bhUKt7Kstm7pJsyjhOfTwQ.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "When this Cookie is played from the support area, <discard 1 card.> Place up to 1 card from the top of your deck into your support area as active.",
+      "effects": [
+        {
+          "kind": "deck-to-support",
+          "amount": 1,
+          "rested": false
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 2,
+        "neutral": 1
+      },
+      "attackText": "<{G}{G}{N}> I'll handle this {da} 3 \r\nThen, play up to 1 【Arena】 Cookie from your support area.",
+      "attackEffects": [
+        {
+          "kind": "support-to-battle",
+          "amount": 1,
+          "keyword": "arena"
+        }
+      ],
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 1
+        },
+        "text": "When this Cookie is played from the support area, <discard 1 card.> Place up to 1 card from the top of your deck into your support area as active.",
+        "effects": [
+          {
+            "kind": "deck-to-support",
+            "amount": 1,
+            "rested": false
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": true
+      }
+    },
+    "ST3-019#33": {
+      "id": "ST3-019",
+      "name": "Supreme Whipped Cream",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1wbK9IQd3H_k8YVCpLHYWg.webp",
+      "energyColor": "green",
+      "officialType": "trap",
+      "effectText": "《{G}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage. Then, place 1 card from your support area into the trash.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -3,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "kind": "support-to-trash",
+          "amount": 1
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "《{G}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage. Then, place 1 card from your support area into the trash.",
+        "cost": {
+          "energy": {
+            "green": 1
+          },
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -3,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "kind": "support-to-trash",
+            "amount": 1
+          }
+        ]
+      }
+    },
+    "BS7-059#34": {
+      "id": "BS7-059",
+      "name": "Choco Drizzle Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XZczqyw50atH2sIMWrYw_w.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "When this Cookie is played from the support area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "effects": [
+        {
+          "kind": "damage",
+          "amount": 2,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 3,
+      "hp": 6,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}> Thick Choco Syrup {da} 3 \r\nThen, <place 1 card from your support area into the trash.> Select up to 1 {G} LV.2 or lower Cookie in your battle area. Place that Cookie in your support area as active.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "supportToTrash": 1
+          },
+          "effects": [
+            {
+              "kind": "battle-to-support",
+              "target": {
+                "side": "self",
+                "min": 0,
+                "max": 1,
+                "energyColor": "green",
+                "maxLevel": 2
+              },
+              "rested": false
+            }
+          ],
+          "effectText": "Place 1 card from your support area into the trash to place up to 1 {G} LV.2 or lower Cookie from your battle area into your support area as active."
+        }
+      ],
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "When this Cookie is played from the support area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+        "effects": [
+          {
+            "kind": "damage",
+            "amount": 2,
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": true
+      }
+    },
+    "ST3-016#35": {
+      "id": "ST3-016",
+      "name": "Ancient Healer's Gaze",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v7WQhZEnJJ0OejoTsvlveA.webp",
+      "energyColor": "green",
+      "officialType": "item",
+      "effectText": "《{G}{G}{G}》 Select 1 Cookie from your battle area that is LV.2 or lower and place it in your support area as active.",
+      "effects": [
+        {
+          "kind": "battle-to-support",
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "maxLevel": 2
+          }
+        }
+      ],
+      "type": "item",
+      "item": {
+        "cost": {
+          "green": 3
+        },
+        "text": "《{G}{G}{G}》 Select 1 Cookie from your battle area that is LV.2 or lower and place it in your support area as active.",
+        "effects": [
+          {
+            "kind": "battle-to-support",
+            "target": {
+              "side": "self",
+              "min": 1,
+              "max": 1,
+              "maxLevel": 2
+            }
+          }
+        ]
+      }
+    },
+    "ST8-018#36": {
+      "id": "ST8-018",
+      "name": "Piercing Arrow of Purity",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fq0aXlGWLv0vuCR-sofyAQ.webp",
+      "energyColor": "green",
+      "officialType": "trap",
+      "effectText": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 5 cards or more in your support area, that Cookie deals an additional -1 attack damage.",
+      "effects": [
+        {
+          "kind": "modify-attack",
+          "amount": -1,
+          "duration": "this-turn",
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          },
+          "thenEffects": [
+            {
+              "kind": "modify-attack",
+              "amount": -1,
+              "duration": "this-turn",
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1,
+                "previousEffectTargetOnly": true
+              },
+              "condition": {
+                "kind": "support-count-at-least",
+                "count": 5
+              }
+            }
+          ]
+        }
+      ],
+      "type": "trap",
+      "trap": {
+        "text": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 5 cards or more in your support area, that Cookie deals an additional -1 attack damage.",
+        "cost": {
+          "energy": {
+            "green": 1
+          },
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "modify-attack",
+            "amount": -1,
+            "duration": "this-turn",
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            },
+            "thenEffects": [
+              {
+                "kind": "modify-attack",
+                "amount": -1,
+                "duration": "this-turn",
+                "target": {
+                  "side": "opponent",
+                  "min": 0,
+                  "max": 1,
+                  "previousEffectTargetOnly": true
+                },
+                "condition": {
+                  "kind": "support-count-at-least",
+                  "count": 5
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "P-104#37": {
+      "id": "P-104",
+      "name": "Buttercup Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4J5geOivFB3dd1HgSH4I9w.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "effectText": "When this Cookie is played from the support area, place up to 1 LV.2 or lower Cookie other than [Buttercup Cookie] from your battle area in your support area as rested.",
+      "effects": [
+        {
+          "kind": "battle-to-support",
+          "target": {
+            "side": "self",
+            "min": 0,
+            "max": 1,
+            "maxLevel": 2,
+            "excludeSource": true
+          },
+          "rested": true
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}> Hot Strike! {da} 3\r\nThen, <return 1 card from your support area to your hand.> Deals 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "support-to-hand",
+          "amount": 1
+        },
+        {
+          "kind": "damage",
+          "amount": 1,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "When this Cookie is played from the support area, place up to 1 LV.2 or lower Cookie other than [Buttercup Cookie] from your battle area in your support area as rested.",
+        "effects": [
+          {
+            "kind": "battle-to-support",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1,
+              "maxLevel": 2,
+              "excludeSource": true
+            },
+            "rested": true
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": true
+      }
+    },
+    "P-114#38": {
+      "id": "P-114",
+      "name": "Shine Muscat Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5d-S3wy_TF9fnCRDObOsXA.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "When this Cookie is played from your support area, place up to 1 card from the top of your deck into your support area as rested and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "effects": [
+        {
+          "kind": "deck-to-support",
+          "amount": 1,
+          "rested": true
+        },
+        {
+          "kind": "damage",
+          "amount": 1,
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 1
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 4,
+      "attack": 2,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}><Sparkling Acting<{da} 2",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "When this Cookie is played from your support area, place up to 1 card from the top of your deck into your support area as rested and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        "effects": [
+          {
+            "kind": "deck-to-support",
+            "amount": 1,
+            "rested": true
+          },
+          {
+            "kind": "damage",
+            "amount": 1,
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 1
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": true
+      }
+    },
+    "BS10-073#39": {
+      "id": "BS10-073",
+      "name": "White Lily Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yVJ4j7b5ZO0A1uhHSYmQzw.webp",
+      "cardColor": "green",
+      "energyColor": "green",
+      "keywords": [
+        "ancient"
+      ],
+      "effectText": "EXTRA If there are 8 cards or more in your SUPPORT area, you can Awaken your [White Lily Cookie].",
+      "level": 3,
+      "hp": 1,
+      "attack": 4,
+      "attackCost": 4,
+      "attackEnergyCost": {
+        "green": 4
+      },
+      "attackText": "<{G}{G}{G}{G}> Dawn Lily Protection {da} 4\r\nThen, <return 1 Cookie from your support area to your hand.> Place up to 1 card from the top of your deck in your support area as rested.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "supportToHand": 1,
+            "supportToHandType": "cookie"
+          },
+          "effects": [
+            {
+              "kind": "deck-to-support",
+              "amount": 1,
+              "rested": true
+            }
+          ],
+          "effectText": "Then, <return 1 Cookie from your support area to your hand.> Place up to 1 card from the top of your deck in your support area as rested."
+        }
+      ],
+      "playRequirement": {
+        "kind": "support-count-at-least",
+        "count": 8
+      },
+      "awakenRequirement": {
+        "targetName": "White Lily Cookie"
+      },
+      "awakenHpBonus": 1,
+      "extraDeckPlayMode": "awaken"
+    },
+    "BS11-091#40": {
+      "id": "BS11-091",
+      "name": "Avatar of Destiny",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LrfIStqqhorBkleNkGyhXw.webp",
+      "cardColor": "pure",
+      "energyColor": "pure",
+      "effectText": "【EXTRA】 If both players' break areas are LV.6 or higher and there are 3 cards or less in both players' hands, this Cookie can be played.",
+      "level": 3,
+      "hp": 5,
+      "attack": 5,
+      "attackCost": 4,
+      "attackEnergyCost": {
+        "neutral": 4
+      },
+      "attackText": "<{N}{N}{N}{N}> Destiny: Punishment {da} 5",
+      "playRequirement": {
+        "kind": "all-of",
+        "conditions": [
+          {
+            "kind": "break-level-at-least",
+            "level": 6
+          },
+          {
+            "kind": "opponent-break-level-at-least",
+            "level": 6
+          },
+          {
+            "kind": "hand-count-at-most",
+            "count": 3
+          },
+          {
+            "kind": "opponent-hand-count-at-most",
+            "count": 3
+          }
+        ]
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS12-056#41": {
+      "id": "BS12-056",
+      "name": "Apple Faerie Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kjh5VkOSlxMM1aktNqd-Yw.webp",
+      "cardColor": "green",
+      "energyColor": "green",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【EXTRA】 Can be played if there is a [Candy Apple Cookie] that has 【Arena】 in your battle area, or if there are 7 {G} cards or more in your support area.",
+      "level": 2,
+      "hp": 3,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "neutral": 2
+      },
+      "attackText": "<{N}{N}> Faerie Song {da} 2\r\nThen, if you started the game going second, <discard 1 card.> Select up to 1 card in your support area. Set that card as active.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "discardHand": 1
+          },
+          "effectText": "<{N}{N}> Faerie Song {da} 2\r\nThen, if you started the game going second, <discard 1 card.> Select up to 1 card in your support area. Set that card as active.",
+          "effects": [
+            {
+              "kind": "set-active",
+              "supportCount": 1,
+              "selectable": true,
+              "optional": true,
+              "restedOnly": false,
+              "condition": {
+                "kind": "player-started-second"
+              }
+            }
+          ]
+        }
+      ],
+      "playRequirement": {
+        "kind": "any-of",
+        "conditions": [
+          {
+            "kind": "battle-area-has-named-cookie",
+            "side": "self",
+            "name": "Candy Apple Cookie",
+            "keyword": "arena"
+          },
+          {
+            "kind": "support-color-count-at-least",
+            "color": "green",
+            "count": 7
+          }
+        ]
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS12-111#42": {
+      "id": "BS12-111",
+      "name": "Poison Mushroom Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ahz-lZ83yTm8AR3wERD9Lg.webp",
+      "cardColor": "black",
+      "energyColor": "black",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "【EXTRA】 Can be played if there are 4 cards or more in your opponent's support area and there is a Cookie that has Special Play in your battle area.\r\nOther {K} 【Arena】 Cookies in your battle area gain +1 attack damage.",
+      "skill": {
+        "trigger": "passive",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】 Can be played if there are 4 cards or more in your opponent's support area and there is a Cookie that has Special Play in your battle area.\r\nOther {K} 【Arena】 Cookies in your battle area gain +1 attack damage.",
+        "effects": [],
+        "passiveEffects": [
+          {
+            "kind": "modify-attack",
+            "amount": 1,
+            "duration": "persistent",
+            "target": {
+              "side": "self",
+              "min": 0,
+              "max": 1,
+              "allMatching": true,
+              "excludeSource": true,
+              "energyColor": "black",
+              "keyword": "arena"
+            }
+          }
+        ]
+      },
+      "level": 3,
+      "hp": 5,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "black": 2
+      },
+      "attackText": "<{K}{K}> Eat This Please {da} 2\r\nThen, if you started the game going second, this Cookie gains +1 HP.",
+      "attackEffects": [
+        {
+          "kind": "gain-hp",
+          "amount": 1,
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "sourceOnly": true
+          },
+          "condition": {
+            "kind": "player-started-second"
+          }
+        }
+      ],
+      "playRequirement": {
+        "kind": "all-of",
+        "conditions": [
+          {
+            "kind": "opponent-support-count-at-least",
+            "count": 4
+          },
+          {
+            "kind": "battle-area-has-special-play-cookie",
+            "side": "self"
+          }
+        ]
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS8-069#43": {
+      "id": "BS8-069",
+      "name": "Peak of Apathy",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BtrZCmw-FPaYddeBt8fuLg.webp",
+      "cardColor": "green",
+      "energyColor": "green",
+      "effectText": "【EXTRA】Can be played if your support area has 2 or more cards less than your opponent's support area.\r\n\r\n【On Play】 Place up to 1 {G} card from your trash into your support area as active.",
+      "skill": {
+        "trigger": "on-play",
+        "oncePerTurn": false,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】Can be played if your support area has 2 or more cards less than your opponent's support area.\r\n\r\n【On Play】 Place up to 1 {G} card from your trash into your support area as active.",
+        "effects": [
+          {
+            "kind": "trash-to-support",
+            "amount": 1,
+            "cookieOnly": false,
+            "rested": false,
+            "optional": true,
+            "energyColor": "green"
+          }
+        ]
+      },
+      "level": 2,
+      "hp": 4,
+      "attack": 3,
+      "attackCost": 3,
+      "attackEnergyCost": {
+        "green": 3
+      },
+      "attackText": "<{G}{G}{G}> Open Palm Rock {da} 3",
+      "playRequirement": {
+        "kind": "support-count-less-than-opponent",
+        "difference": 2
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS9-055#44": {
+      "id": "BS9-055",
+      "name": "Shadow Milk Cookie",
+      "type": "extra",
+      "officialType": "extra",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/F3fKPZonWDUAfd1BXoVYHA.webp",
+      "cardColor": "green",
+      "energyColor": "green",
+      "keywords": [
+        "beast"
+      ],
+      "effectText": "【EXTRA】 Can be played if there are 3 cards or more in your opponent's support area and if, during this turn, 2 cards or more were placed from your support area into your trash.\r\n\r\n【Activate】 【Once Per Turn】 If there are 5 cards or less in your support area, place 1 card from the top of your deck into your support area as rested.",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "text": "【EXTRA】 Can be played if there are 3 cards or more in your opponent's support area and if, during this turn, 2 cards or more were placed from your support area into your trash.\r\n\r\n【Activate】 【Once Per Turn】 If there are 5 cards or less in your support area, place 1 card from the top of your deck into your support area as rested.",
+        "effects": [
+          {
+            "kind": "deck-to-support",
+            "amount": 1,
+            "rested": true,
+            "condition": {
+              "kind": "support-count-at-most",
+              "count": 5
+            }
+          }
+        ]
+      },
+      "level": 3,
+      "hp": 5,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "green": 2
+      },
+      "attackText": "<{G}{G}> Destiny's Climax {da} 2\r\nThen, <return 1 card from your support area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "attackEffects": [
+        {
+          "kind": "optional-cost-attack",
+          "cost": {
+            "energy": {},
+            "supportToHand": 1
+          },
+          "effects": [
+            {
+              "kind": "damage",
+              "amount": 1,
+              "target": {
+                "side": "opponent",
+                "min": 0,
+                "max": 1
+              }
+            }
+          ],
+          "effectText": "Then, <return 1 card from your support area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+        }
+      ],
+      "playRequirement": {
+        "kind": "all-of",
+        "conditions": [
+          {
+            "kind": "opponent-support-count-at-least",
+            "count": 3
+          },
+          {
+            "kind": "support-cards-trashed-this-turn-at-least",
+            "count": 2
+          }
+        ]
+      },
+      "extraDeckPlayMode": "enter-battle"
+    },
+    "BS7-063#45": {
+      "id": "BS7-063",
+      "name": "Grand Cookie Games Trophy",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/00yPdHfRsvV8ONrDnNaDrQ.webp",
+      "energyColor": "green",
+      "officialType": "item",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "<{G}{G}> View 3 cards from the top of your deck and place up to 1 【Arena】 card from those in your support area as rested. Then, place the remaining cards in the trash.",
+      "effects": [
+        {
+          "kind": "inspect-deck",
+          "lookCount": 3,
+          "pickCount": 1,
+          "restDestination": "trash",
+          "pickDestination": "support",
+          "filterKeyword": "arena",
+          "optionalPick": true
+        }
+      ],
+      "type": "item",
+      "item": {
+        "cost": {
+          "green": 2
+        },
+        "text": "<{G}{G}> View 3 cards from the top of your deck and place up to 1 【Arena】 card from those in your support area as rested. Then, place the remaining cards in the trash.",
+        "effects": [
+          {
+            "kind": "inspect-deck",
+            "lookCount": 3,
+            "pickCount": 1,
+            "restDestination": "trash",
+            "pickDestination": "support",
+            "filterKeyword": "arena",
+            "optionalPick": true
+          }
+        ]
+      }
+    },
+    "BS8-059#46": {
+      "id": "BS8-059",
+      "name": "Mystic Flour Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mwak-E5ekaJWuADBfiq1qg.webp",
+      "energyColor": "green",
+      "officialType": "cookie",
+      "keywords": [
+        "beast"
+      ],
+      "effectText": "【Activate】 【Once Per Turn】 <{G}> <Return 2 {G} cards from your support area to your hand.> If another [Mystic Flour Cookie] is not in your battle area, place up to 2 cards from the top of each of your opponent's Cookies' HP into the trash.",
+      "effects": [
+        {
+          "kind": "hp-to-trash",
+          "amount": 2,
+          "selectableAmount": {
+            "min": 1,
+            "max": 2
+          },
+          "target": {
+            "side": "opponent",
+            "min": 0,
+            "max": 2
+          },
+          "condition": {
+            "kind": "battle-area-has-named-cookie",
+            "side": "self",
+            "name": "Mystic Flour Cookie",
+            "excludeSource": true,
+            "negate": true
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 3,
+      "hp": 6,
+      "attack": 1,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "green": 2
+      },
+      "attackText": "<{G}{G}> Whispers of Apathy {da} 1",
+      "skill": {
+        "trigger": "activate",
+        "oncePerTurn": true,
+        "yourTurn": false,
+        "restSource": false,
+        "cost": {
+          "energy": {
+            "green": 1
+          },
+          "discardHand": 0,
+          "supportToHand": 2,
+          "supportToHandColor": "green"
+        },
+        "text": "【Activate】 【Once Per Turn】 <{G}> <Return 2 {G} cards from your support area to your hand.> If another [Mystic Flour Cookie] is not in your battle area, place up to 2 cards from the top of each of your opponent's Cookies' HP into the trash.",
+        "effects": [
+          {
+            "kind": "hp-to-trash",
+            "amount": 2,
+            "selectableAmount": {
+              "min": 1,
+              "max": 2
+            },
+            "target": {
+              "side": "opponent",
+              "min": 0,
+              "max": 2
+            },
+            "condition": {
+              "kind": "battle-area-has-named-cookie",
+              "side": "self",
+              "name": "Mystic Flour Cookie",
+              "excludeSource": true,
+              "negate": true
+            }
+          }
+        ],
+        "faint": false,
+        "endPhase": false,
+        "afterDamage": false,
+        "oncePerGame": false,
+        "fromBreakArea": false,
+        "onPlayFromBreakArea": false,
+        "fromTrashArea": false,
+        "fromSupportArea": false
+      }
+    },
+    "BS7-056#47": {
+      "id": "BS7-056",
+      "name": "Sting Durian Cookie",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Q5T6NThuRs8rLobPYNiDzA.webp",
+      "energyColor": "green",
+      "officialType": "flip",
+      "keywords": [
+        "arena"
+      ],
+      "effectText": "If there is a {G} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+      "effects": [
+        {
+          "kind": "gain-hp",
+          "amount": 1,
+          "target": {
+            "side": "self",
+            "min": 1,
+            "max": 1,
+            "sourceOnly": true,
+            "minLevel": 2
+          },
+          "condition": {
+            "kind": "battle-area-has-color",
+            "side": "self",
+            "color": "green",
+            "keyword": "arena"
+          }
+        }
+      ],
+      "type": "cookie",
+      "level": 2,
+      "hp": 2,
+      "attack": 2,
+      "attackCost": 2,
+      "attackEnergyCost": {
+        "green": 2
+      },
+      "attackText": "<{G}{G}> Durian Stink {da} 2",
+      "flip": {
+        "text": "If there is a {G} 【Arena】 Cookie in your battle area, the LV.2 or higher Cookie with this card attached for HP gains +1 HP.",
+        "cost": {
+          "energy": {},
+          "discardHand": 0
+        },
+        "effects": [
+          {
+            "kind": "gain-hp",
+            "amount": 1,
+            "target": {
+              "side": "self",
+              "min": 1,
+              "max": 1,
+              "sourceOnly": true,
+              "minLevel": 2
+            },
+            "condition": {
+              "kind": "battle-area-has-color",
+              "side": "self",
+              "color": "green",
+              "keyword": "arena"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "state": {
+    "players": {
+      "player-one": {
+        "id": "player-one",
+        "name": "玩家",
+        "deck": [
+          {
+            "cardRef": "BS12-057#0",
+            "instanceId": "player-one-BS12-057-2"
+          },
+          {
+            "cardRef": "BS7-067#1",
+            "instanceId": "player-one-BS7-067-2"
+          },
+          {
+            "cardRef": "BS7-078#2",
+            "instanceId": "player-one-BS7-078-2"
+          },
+          {
+            "cardRef": "BS12-066#3",
+            "instanceId": "player-one-BS12-066-2"
+          },
+          {
+            "cardRef": "BS6-085#4",
+            "instanceId": "player-one-BS6-085-4"
+          },
+          {
+            "cardRef": "BS7-067#1",
+            "instanceId": "player-one-BS7-067-3"
+          },
+          {
+            "cardRef": "BS6-085#4",
+            "instanceId": "player-one-BS6-085-2"
+          },
+          {
+            "cardRef": "BS12-063#5",
+            "instanceId": "player-one-BS12-063-4"
+          },
+          {
+            "cardRef": "BS7-079#6",
+            "instanceId": "player-one-BS7-079-1"
+          },
+          {
+            "cardRef": "BS12-065#7",
+            "instanceId": "player-one-BS12-065-1"
+          },
+          {
+            "cardRef": "BS12-058#8",
+            "instanceId": "player-one-BS12-058-2"
+          },
+          {
+            "cardRef": "BS12-057#0",
+            "instanceId": "player-one-BS12-057-1"
+          },
+          {
+            "cardRef": "BS7-070#9",
+            "instanceId": "player-one-BS7-070-2"
+          },
+          {
+            "cardRef": "BS12-058#8",
+            "instanceId": "player-one-BS12-058-1"
+          },
+          {
+            "cardRef": "BS7-079#6",
+            "instanceId": "player-one-BS7-079-2"
+          }
+        ],
+        "extraDeck": [
+          {
+            "cardRef": "BS10-098#10",
+            "instanceId": "formal-extra:player-one:BS10-098:2"
+          },
+          {
+            "cardRef": "BS12-074#11",
+            "instanceId": "formal-extra:player-one:BS12-074:2"
+          },
+          {
+            "cardRef": "BS8-090#12",
+            "instanceId": "formal-extra:player-one:BS8-090:1"
+          },
+          {
+            "cardRef": "BS8-090#12",
+            "instanceId": "formal-extra:player-one:BS8-090:2"
+          }
+        ],
+        "hand": [
+          {
+            "cardRef": "BS12-065#7",
+            "instanceId": "player-one-BS12-065-4"
+          },
+          {
+            "cardRef": "BS12-066#3",
+            "instanceId": "player-one-BS12-066-1"
+          },
+          {
+            "cardRef": "BS12-070#13",
+            "instanceId": "player-one-BS12-070-2"
+          },
+          {
+            "cardRef": "BS12-073#14",
+            "instanceId": "player-one-BS12-073-1"
+          },
+          {
+            "cardRef": "ST9-016#15",
+            "instanceId": "player-one-ST9-016-2"
+          },
+          {
+            "cardRef": "BS7-072#16",
+            "instanceId": "player-one-BS7-072-1"
+          },
+          {
+            "cardRef": "BS12-057#0",
+            "instanceId": "player-one-BS12-057-3"
+          },
+          {
+            "cardRef": "BS7-070#9",
+            "instanceId": "player-one-BS7-070-4"
+          }
+        ],
+        "battleArea": [
+          {
+            "card": {
+              "cardRef": "BS12-074#17",
+              "instanceId": "formal-extra:player-one:BS12-074:1"
+            },
+            "hpCards": [
+              {
+                "cardRef": "BS6-085#4",
+                "instanceId": "player-one-BS6-085-3"
+              },
+              {
+                "cardRef": "BS7-067#1",
+                "instanceId": "player-one-BS7-067-4"
+              },
+              {
+                "cardRef": "BS7-067#1",
+                "instanceId": "player-one-BS7-067-1"
+              },
+              {
+                "cardRef": "BS7-078#2",
+                "instanceId": "player-one-BS7-078-4"
+              }
+            ],
+            "rested": true,
+            "battleEntryId": "formal-extra:player-one:BS12-074:1:battle:8",
+            "enteredFrom": "extra-deck",
+            "enteredTurn": 8
+          },
+          {
+            "card": {
+              "cardRef": "BS10-098#18",
+              "instanceId": "formal-extra:player-one:BS10-098:1"
+            },
+            "hpCards": [
+              {
+                "cardRef": "BS12-060#19",
+                "instanceId": "player-one-BS12-060-4"
+              },
+              {
+                "cardRef": "BS12-065#7",
+                "instanceId": "player-one-BS12-065-2"
+              },
+              {
+                "cardRef": "BS12-069#20",
+                "instanceId": "player-one-BS12-069-2"
+              },
+              {
+                "cardRef": "BS12-066#3",
+                "instanceId": "player-one-BS12-066-3"
+              },
+              {
+                "cardRef": "BS7-078#2",
+                "instanceId": "player-one-BS7-078-1"
+              },
+              {
+                "cardRef": "BS12-073#14",
+                "instanceId": "player-one-BS12-073-2"
+              }
+            ],
+            "rested": false,
+            "battleEntryId": "formal-extra:player-one:BS10-098:1:battle:9",
+            "enteredFrom": "extra-deck",
+            "enteredTurn": 10
+          }
+        ],
+        "supportArea": [
+          {
+            "card": {
+              "cardRef": "BS12-058#8",
+              "instanceId": "player-one-BS12-058-4"
+            },
+            "rested": true
+          },
+          {
+            "card": {
+              "cardRef": "BS7-076#21",
+              "instanceId": "player-one-BS7-076-1"
+            },
+            "rested": true
+          },
+          {
+            "card": {
+              "cardRef": "BS7-078#2",
+              "instanceId": "player-one-BS7-078-3"
+            },
+            "rested": true
+          },
+          {
+            "card": {
+              "cardRef": "BS12-072#22",
+              "instanceId": "player-one-BS12-072-4"
+            },
+            "rested": true
+          },
+          {
+            "card": {
+              "cardRef": "BS12-058#8",
+              "instanceId": "player-one-BS12-058-3"
+            },
+            "rested": true
+          }
+        ],
+        "breakArea": [
+          {
+            "cardRef": "BS7-070#9",
+            "instanceId": "player-one-BS7-070-3"
+          },
+          {
+            "cardRef": "BS12-072#22",
+            "instanceId": "player-one-BS12-072-3"
+          }
+        ],
+        "discardPile": [
+          {
+            "cardRef": "BS12-070#13",
+            "instanceId": "player-one-BS12-070-1"
+          },
+          {
+            "cardRef": "BS12-066#3",
+            "instanceId": "player-one-BS12-066-4"
+          },
+          {
+            "cardRef": "BS12-072#22",
+            "instanceId": "player-one-BS12-072-2"
+          },
+          {
+            "cardRef": "BS12-072#22",
+            "instanceId": "player-one-BS12-072-1"
+          },
+          {
+            "cardRef": "BS12-060#19",
+            "instanceId": "player-one-BS12-060-3"
+          },
+          {
+            "cardRef": "BS7-072#16",
+            "instanceId": "player-one-BS7-072-3"
+          },
+          {
+            "cardRef": "BS12-063#5",
+            "instanceId": "player-one-BS12-063-2"
+          },
+          {
+            "cardRef": "BS6-085#4",
+            "instanceId": "player-one-BS6-085-1"
+          },
+          {
+            "cardRef": "BS7-076#21",
+            "instanceId": "player-one-BS7-076-2"
+          },
+          {
+            "cardRef": "BS7-072#16",
+            "instanceId": "player-one-BS7-072-2"
+          },
+          {
+            "cardRef": "ST9-016#15",
+            "instanceId": "player-one-ST9-016-1"
+          },
+          {
+            "cardRef": "BS7-070#9",
+            "instanceId": "player-one-BS7-070-1"
+          },
+          {
+            "cardRef": "BS12-063#5",
+            "instanceId": "player-one-BS12-063-1"
+          },
+          {
+            "cardRef": "BS12-063#5",
+            "instanceId": "player-one-BS12-063-3"
+          },
+          {
+            "cardRef": "BS12-057#0",
+            "instanceId": "player-one-BS12-057-4"
+          },
+          {
+            "cardRef": "BS7-072#16",
+            "instanceId": "player-one-BS7-072-4"
+          },
+          {
+            "cardRef": "BS12-060#19",
+            "instanceId": "player-one-BS12-060-1"
+          },
+          {
+            "cardRef": "BS12-060#19",
+            "instanceId": "player-one-BS12-060-2"
+          },
+          {
+            "cardRef": "BS12-065#7",
+            "instanceId": "player-one-BS12-065-3"
+          },
+          {
+            "cardRef": "BS12-069#20",
+            "instanceId": "player-one-BS12-069-1"
+          }
+        ],
+        "stage": null,
+        "hasMulliganed": false,
+        "startingCookieSelected": true,
+        "freeMulliganDecided": true,
+        "forcedMulliganCount": 0
+      },
+      "player-two": {
+        "id": "player-two",
+        "name": "AI 對手",
+        "deck": [
+          {
+            "cardRef": "P-115#23",
+            "instanceId": "player-two-P-115-2"
+          },
+          {
+            "cardRef": "BS7-062#24",
+            "instanceId": "player-two-BS7-062-4"
+          },
+          {
+            "cardRef": "ST3-020#25",
+            "instanceId": "player-two-ST3-020-1"
+          },
+          {
+            "cardRef": "BS7-049#26",
+            "instanceId": "player-two-BS7-049-2"
+          },
+          {
+            "cardRef": "BS7-064#27",
+            "instanceId": "player-two-BS7-064-1"
+          },
+          {
+            "cardRef": "BS7-062#24",
+            "instanceId": "player-two-BS7-062-3"
+          },
+          {
+            "cardRef": "P-115#23",
+            "instanceId": "player-two-P-115-1"
+          },
+          {
+            "cardRef": "BS7-057#28",
+            "instanceId": "player-two-BS7-057-4"
+          },
+          {
+            "cardRef": "BS7-062#24",
+            "instanceId": "player-two-BS7-062-1"
+          },
+          {
+            "cardRef": "BS7-065#29",
+            "instanceId": "player-two-BS7-065-2"
+          },
+          {
+            "cardRef": "BS4-049#30",
+            "instanceId": "player-two-BS4-049-1"
+          },
+          {
+            "cardRef": "P-113#31",
+            "instanceId": "player-two-P-113-1"
+          },
+          {
+            "cardRef": "BS7-064#27",
+            "instanceId": "player-two-BS7-064-3"
+          },
+          {
+            "cardRef": "P-113#31",
+            "instanceId": "player-two-P-113-2"
+          },
+          {
+            "cardRef": "BS7-046#32",
+            "instanceId": "player-two-BS7-046-1"
+          },
+          {
+            "cardRef": "BS7-049#26",
+            "instanceId": "player-two-BS7-049-1"
+          },
+          {
+            "cardRef": "ST3-019#33",
+            "instanceId": "player-two-ST3-019-2"
+          },
+          {
+            "cardRef": "BS7-059#34",
+            "instanceId": "player-two-BS7-059-1"
+          },
+          {
+            "cardRef": "BS7-057#28",
+            "instanceId": "player-two-BS7-057-1"
+          },
+          {
+            "cardRef": "ST3-016#35",
+            "instanceId": "player-two-ST3-016-2"
+          },
+          {
+            "cardRef": "ST8-018#36",
+            "instanceId": "player-two-ST8-018-2"
+          },
+          {
+            "cardRef": "P-104#37",
+            "instanceId": "player-two-P-104-4"
+          },
+          {
+            "cardRef": "BS7-065#29",
+            "instanceId": "player-two-BS7-065-3"
+          },
+          {
+            "cardRef": "BS7-065#29",
+            "instanceId": "player-two-BS7-065-1"
+          },
+          {
+            "cardRef": "P-104#37",
+            "instanceId": "player-two-P-104-1"
+          },
+          {
+            "cardRef": "P-114#38",
+            "instanceId": "player-two-P-114-2"
+          },
+          {
+            "cardRef": "BS7-049#26",
+            "instanceId": "player-two-BS7-049-4"
+          }
+        ],
+        "extraDeck": [
+          {
+            "cardRef": "BS10-073#39",
+            "instanceId": "BS10-073:formal-extra:player-two:BS10-073:1"
+          },
+          {
+            "cardRef": "BS11-091#40",
+            "instanceId": "BS11-091:formal-extra:player-two:BS11-091:1"
+          },
+          {
+            "cardRef": "BS12-056#41",
+            "instanceId": "BS12-056:formal-extra:player-two:BS12-056:1"
+          },
+          {
+            "cardRef": "BS12-111#42",
+            "instanceId": "BS12-111:formal-extra:player-two:BS12-111:1"
+          },
+          {
+            "cardRef": "BS8-069#43",
+            "instanceId": "BS8-069:formal-extra:player-two:BS8-069:1"
+          },
+          {
+            "cardRef": "BS9-055#44",
+            "instanceId": "BS9-055:formal-extra:player-two:BS9-055:1"
+          }
+        ],
+        "hand": [
+          {
+            "cardRef": "P-114#38",
+            "instanceId": "player-two-P-114-1"
+          },
+          {
+            "cardRef": "BS7-057#28",
+            "instanceId": "player-two-BS7-057-2"
+          },
+          {
+            "cardRef": "BS7-062#24",
+            "instanceId": "player-two-BS7-062-2"
+          },
+          {
+            "cardRef": "BS7-059#34",
+            "instanceId": "player-two-BS7-059-2"
+          },
+          {
+            "cardRef": "BS7-063#45",
+            "instanceId": "player-two-BS7-063-2"
+          },
+          {
+            "cardRef": "BS7-063#45",
+            "instanceId": "player-two-BS7-063-1"
+          }
+        ],
+        "battleArea": [
+          {
+            "card": {
+              "cardRef": "BS7-046#32",
+              "instanceId": "player-two-BS7-046-2"
+            },
+            "hpCards": [
+              {
+                "cardRef": "BS7-059#34",
+                "instanceId": "player-two-BS7-059-3"
+              }
+            ],
+            "rested": false,
+            "battleEntryId": "player-two-BS7-046-2:battle:3",
+            "enteredFrom": "hand",
+            "enteredTurn": 1
+          },
+          {
+            "card": {
+              "cardRef": "BS8-059#46",
+              "instanceId": "player-two-BS8-059-1"
+            },
+            "hpCards": [
+              {
+                "cardRef": "P-104#37",
+                "instanceId": "player-two-P-104-3"
+              },
+              {
+                "cardRef": "BS7-057#28",
+                "instanceId": "player-two-BS7-057-3"
+              },
+              {
+                "cardRef": "BS7-056#47",
+                "instanceId": "player-two-BS7-056-2"
+              },
+              {
+                "cardRef": "ST3-016#35",
+                "instanceId": "player-two-ST3-016-3"
+              },
+              {
+                "cardRef": "BS7-065#29",
+                "instanceId": "player-two-BS7-065-4"
+              },
+              {
+                "cardRef": "ST8-018#36",
+                "instanceId": "player-two-ST8-018-4"
+              }
+            ],
+            "rested": false,
+            "battleEntryId": "player-two-BS8-059-1:battle:10",
+            "enteredFrom": "hand",
+            "enteredTurn": 10
+          }
+        ],
+        "supportArea": [
+          {
+            "card": {
+              "cardRef": "BS7-056#47",
+              "instanceId": "player-two-BS7-056-4"
+            },
+            "rested": false
+          },
+          {
+            "card": {
+              "cardRef": "BS7-056#47",
+              "instanceId": "player-two-BS7-056-3"
+            },
+            "rested": false
+          },
+          {
+            "card": {
+              "cardRef": "BS7-049#26",
+              "instanceId": "player-two-BS7-049-3"
+            },
+            "rested": false
+          }
+        ],
+        "breakArea": [
+          {
+            "cardRef": "P-104#37",
+            "instanceId": "player-two-P-104-2"
+          }
+        ],
+        "discardPile": [
+          {
+            "cardRef": "P-113#31",
+            "instanceId": "player-two-P-113-4"
+          },
+          {
+            "cardRef": "BS7-059#34",
+            "instanceId": "player-two-BS7-059-4"
+          },
+          {
+            "cardRef": "BS7-064#27",
+            "instanceId": "player-two-BS7-064-2"
+          },
+          {
+            "cardRef": "BS7-063#45",
+            "instanceId": "player-two-BS7-063-4"
+          },
+          {
+            "cardRef": "BS7-046#32",
+            "instanceId": "player-two-BS7-046-4"
+          },
+          {
+            "cardRef": "P-115#23",
+            "instanceId": "player-two-P-115-3"
+          },
+          {
+            "cardRef": "BS7-063#45",
+            "instanceId": "player-two-BS7-063-3"
+          },
+          {
+            "cardRef": "P-113#31",
+            "instanceId": "player-two-P-113-3"
+          },
+          {
+            "cardRef": "ST3-019#33",
+            "instanceId": "player-two-ST3-019-1"
+          },
+          {
+            "cardRef": "BS7-046#32",
+            "instanceId": "player-two-BS7-046-3"
+          },
+          {
+            "cardRef": "ST8-018#36",
+            "instanceId": "player-two-ST8-018-1"
+          },
+          {
+            "cardRef": "ST8-018#36",
+            "instanceId": "player-two-ST8-018-3"
+          },
+          {
+            "cardRef": "ST3-016#35",
+            "instanceId": "player-two-ST3-016-1"
+          },
+          {
+            "cardRef": "BS7-056#47",
+            "instanceId": "player-two-BS7-056-1"
+          }
+        ],
+        "stage": null,
+        "hasMulliganed": false,
+        "startingCookieSelected": true,
+        "freeMulliganDecided": true,
+        "forcedMulliganCount": 0
+      }
+    },
+    "firstPlayerId": "player-two",
+    "activePlayerId": "player-two",
+    "turnNumber": 11,
+    "phase": "main",
+    "status": "playing",
+    "result": null,
+    "supportPlacedThisTurn": true,
+    "extraDeckPlayUsedThisTurn": false,
+    "skillUsesThisTurn": [],
+    "nextBattleEntrySequence": 11,
+    "attackModifiers": [],
+    "attackCostModifiers": [],
+    "damageReceivedModifiers": [],
+    "flipDisabledUntilTurn": {},
+    "attackDisabledUntilTurn": {},
+    "pendingReplacement": null,
+    "departedCookieCounts": {
+      "player-one": 0,
+      "player-two": 0
+    },
+    "pendingOnPlay": null,
+    "pendingRefresh": null,
+    "pendingBattle": null,
+    "cookiesFaintedThisTurn": {
+      "player-two": 0,
+      "player-one": 0
+    },
+    "cookiesFaintedThisTurnDetails": {},
+    "supportCardsTrashedThisTurn": {},
+    "arenaCookiesPlacedInBreakThisTurn": {},
+    "itemsActivatedThisTurn": {},
+    "cookiesHpReducedThisTurn": {},
+    "cookiesSetActiveByEffectThisTurn": {},
+    "arenaCookieDealtEffectDamageThisTurn": {},
+    "cookiesPlayedFromTrashThisTurn": {},
+    "cookiesPlayedFromSupportThisTurn": {},
+    "cookiesPlayedFromBreakThisTurn": {},
+    "cookieLevelsPlayedFromBreakThisTurn": {},
+    "cookiesPlayedViaSpecialPlayThisTurn": {},
+    "cookiesPlacedFromBattleToDeckThisTurn": {},
+    "arenaCookiesPlacedFromBattleToDeckBottomThisTurn": {},
+    "cookiesFaintedDuringOpponentPreviousTurn": {
+      "player-two": [
+        {
+          "energyColor": "green",
+          "level": 2
+        }
+      ]
+    },
+    "blockDisabledUntilTurn": {},
+    "onPlayDisabledUntilTurn": {},
+    "onPlayDisabledMinLevelUntilTurn": {},
+    "onPlayReplacementUntilTurn": {},
+    "cookieActivateDiscardRequirements": {},
+    "cookieAttackDiscardRequirements": {},
+    "supportAreaDecreasedThisTurn": {},
+    "cookiesGainedHpThisTurn": {},
+    "preventHpGainThisTurn": {},
+    "costRecord": {},
+    "pendingRevealTopDeck": null,
+    "pendingDrawUpTo": null,
+    "pendingOptionalCostAttack": null
+  }
+}

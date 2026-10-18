@@ -240,7 +240,7 @@ export function getOptionalCostAttackPrompt(
   const isAbilityResolution = pending.resolution === 'ability'
   // EXTRA battle payment uses the existing targetIds selection channel; these
   // are cost Cookies, and the entry resolver validates them before deployment.
-  const battleTrashCost = pending.extraDeckPlayInstanceId ? pending.cost.trashBattleCookie : undefined
+  const battleTrashCost = !isAbilityResolution || pending.extraDeckPlayInstanceId ? pending.cost.trashBattleCookie : undefined
 
   // Printed source-only movement uses the attacking Cookie automatically.
   // Keep these recipients out of the player choice, while exposing any
@@ -260,7 +260,6 @@ export function getOptionalCostAttackPrompt(
     pending.cost.selfToTrash === true && (targetedEffect?.kind === 'trash-to-hand' || targetedEffect?.kind === 'trash-to-battle')
   ) || (Boolean(pending.cost.cookieToBreakArea) && targetedEffect?.kind === 'break-to-battle' &&
     targetedEffect.excludeBreakPaymentCardNumber === true)
-  const needsTarget = Boolean(battleTrashCost || (targetedEffect && !selectAfterSourcePayment))
   const targetSelectionState = getTargetSelectionState(
     game,
     viewerPlayerId,
@@ -281,11 +280,19 @@ export function getOptionalCostAttackPrompt(
         )
       : []
   ).map((card) => ({ card, instanceId: card.instanceId }))
+  const sequentialDamageAll =
+    targetedEffect?.kind === 'damage-all' && targetedEffect.sequential === true
   const selectionLimits = targetedEffect
     ? getEffectSelectionLimits(targetedEffect)
     : null
-  const targetMin = battleTrashCost?.count ?? selectionLimits?.min ?? 0
-  const targetMax = battleTrashCost?.count ?? selectionLimits?.max ?? 1
+  const allTargetCount = sequentialDamageAll ? targetCandidates.length : null
+  const targetMin = battleTrashCost?.count ?? allTargetCount ?? selectionLimits?.min ?? 0
+  const targetMax = battleTrashCost?.count ?? allTargetCount ?? selectionLimits?.max ?? 1
+  const needsTarget = Boolean(
+    battleTrashCost ||
+      (targetedEffect && !selectAfterSourcePayment &&
+        (!sequentialDamageAll || targetCandidates.length > 0)),
+  )
   const targetSelector =
     targetedEffect && 'target' in targetedEffect ? targetedEffect.target : undefined
   // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，
@@ -316,7 +323,7 @@ export function getOptionalCostAttackPrompt(
           : '對手餅乾'
 
   const targetInstruction =
-    battleTrashCost ? `EXTRA 登場代價：選擇 ${targetMax} 張己方${energyColorLabel[battleTrashCost.energyColor ?? ''] ?? ''}${battleTrashCost.maxLevel === undefined ? '' : ` LV.${battleTrashCost.maxLevel} 以下`}戰鬥區餅乾，與 HP／裝備放入棄牌區`
+    battleTrashCost ? `${pending.extraDeckPlayInstanceId ? 'EXTRA 登場' : '攻擊後'}代價：選擇 ${targetMax} 張己方${energyColorLabel[battleTrashCost.energyColor ?? ''] ?? ''}${battleTrashCost.level === undefined ? '' : ` LV.${battleTrashCost.level}`}${battleTrashCost.maxLevel === undefined ? '' : ` LV.${battleTrashCost.maxLevel} 以下`}戰鬥區餅乾，與 HP／裝備放入棄牌區`
     : targetedEffect?.kind === 'hand-to-support'
       ? `從自己的手牌選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張${
           energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'

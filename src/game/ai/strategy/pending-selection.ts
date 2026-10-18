@@ -1,4 +1,5 @@
 import type { PlayerView } from '../../player-view'
+import { nextActivePressureTargetValue } from '../next-active-pressure'
 import type {
   CardEffect,
   ChooseOneEffect,
@@ -250,6 +251,7 @@ export interface PendingSelectionStrategy {
     effect: CardEffect,
     candidateIds: readonly string[],
     max: number,
+    damageByTarget?: ReadonlyMap<string, number>,
   ) => string[]
   /**
    * 只接受本次 pending 已合法揭露給 AI 的卡面（例如自己的 inspect-deck
@@ -302,6 +304,15 @@ export const createPendingSelectionStrategy = (
     cardRetentionValue(cardsByInstanceId.get(instanceId), context, view)
   const revealedRetention = (card: GameCard): number =>
     cardRetentionValue(card, context, view)
+  // Reapplying active can unlock an Activate or attack Then even when the
+  // recipient is already active. Read structured capabilities, never card IDs.
+  const reactivationPayoffIds = new Set(view.self.battleArea
+    .filter(cookie => !cookie.setActiveByEffectThisTurn &&
+      extractCardCapabilities(cookie.card).capabilities.some(capability =>
+        capability.kind === 'conditional-payoff' &&
+        (capability.timing === 'activate' || capability.timing === 'attack') &&
+        capability.conditionKinds.includes('source-set-active-by-effect-this-turn')))
+    .map(cookie => cookie.card.instanceId))
   const stableByRetention = (
     candidateIds: readonly string[],
     direction: 1 | -1,
@@ -310,14 +321,36 @@ export const createPendingSelectionStrategy = (
     return delta || left.localeCompare(right)
   })
 
-  const targetScore = (effect: CardEffect, instanceId: string): number => {
+  const targetScore = (effect: CardEffect, instanceId: string, damageByTarget?: ReadonlyMap<string, number>): number => {
     const cookie = publicBattleCookie(view, instanceId)
     const opponentCookie = isOpponentBattleCookie(view, instanceId)
     const effectTargetSide = 'target' in effect ? effect.target?.side : undefined
 
+    // Value both the extra action and a newly enabled public reactivation payoff.
+    // A buff followed by readying the same recipient also retains its buff value.
+    const readiesRecipient = effect.kind === 'set-cookie-active' ||
+      (effect.kind === 'modify-attack' && effect.amount > 0 &&
+        effect.thenEffects?.some(child => child.kind === 'set-cookie-active' &&
+          child.target.previousEffectTargetOnly) === true)
+    if (readiesRecipient && cookie && !opponentCookie && effectTargetSide === 'self') {
+      return (cookie.rested ? 10_000 : 0) +
+        (reactivationPayoffIds.has(instanceId) ? 1_000 : 0) + retention(instanceId)
+    }
+
     if ((effect.kind === 'damage' || effect.kind === 'damage-all') && cookie && opponentCookie) {
-      const lethal = cookie.hpCount <= effect.amount
-      return (lethal ? 10_000 : 0) - cookie.hpCount * 20 + retention(instanceId)
+      const damage = damageByTarget?.get(instanceId) ?? effect.amount
+      const lethal = damage > 0 && cookie.hpCount <= damage
+      return (lethal ? 10_000 : 0) + (damage > 0 ? 1_000 : -10_000) - cookie.hpCount * 20 + retention(instanceId)
+    }
+    if (effect.kind === 'prevent-cookie-active-next-phase' && cookie) {
+      const targetSide = opponentCookie ? view.opponent : view.self
+      const pressure = nextActivePressureTargetValue(
+        targetSide,
+        instanceId,
+        effect.discardHandToSetActive,
+        targetSide.id === view.viewerId ? 6 : 3,
+      )
+      return pressure.value * 1_000 + pressure.threat * 10 + retention(instanceId)
     }
     if (
       (effect.kind === 'gain-hp' ||
@@ -374,10 +407,30 @@ export const createPendingSelectionStrategy = (
       }
       return retention(left) - retention(right) || left.localeCompare(right)
     }),
-    selectEffectTargetIds: (effect, candidateIds, max) => {
-      const ordered = [...candidateIds]
+    selectEffectTargetIds: (effect, candidateIds, max, damageByTarget) => {
+      const usefulIds = effect.kind === 'set-cookie-active' &&
+        effect.target.side === 'self' && effect.target.min === 0
+        ? candidateIds.filter(id => publicBattleCookie(view, id)?.rested ||
+          reactivationPayoffIds.has(id))
+        : effect.kind === 'prevent-cookie-active-next-phase' && effect.target.min === 0
+          ? candidateIds.filter((id) => {
+              const cookie = publicBattleCookie(view, id)
+              if (!cookie) return false
+              const targetSide = isOpponentBattleCookie(view, id) ? view.opponent : view.self
+              const pressure = nextActivePressureTargetValue(
+                targetSide,
+                id,
+                effect.discardHandToSetActive,
+                targetSide.id === view.viewerId ? 6 : 3,
+              )
+              // This score covers ordinary attacks only; a zero score must not
+              // discard a legal opponent target whose value comes from an activated skill.
+              return pressure.value > 0 || effect.target.side === 'opponent'
+            })
+          : candidateIds
+      const ordered = [...usefulIds]
         .sort((left, right) =>
-          targetScore(effect, right) - targetScore(effect, left) ||
+          targetScore(effect, right, damageByTarget) - targetScore(effect, left, damageByTarget) ||
           left.localeCompare(right),
         )
       const perPlayer = 'target' in effect ? effect.target?.countPerPlayer : undefined
@@ -418,9 +471,15 @@ export const createPendingSelectionStrategy = (
       .map((item) => item.id),
     chooseReplacementId: (candidateIds) =>
       stableByRetention(candidateIds, -1)[0],
-    chooseRefreshId: (candidateIds) =>
-      // Refresh 的選擇會進入 break area，故犧牲保留價值最低的合法餅乾。
-      stableByRetention(candidateIds, 1)[0],
+    chooseRefreshId: (candidateIds) => {
+      const breakLevel = view.self.breakArea.reduce((sum, card) => sum + card.level, 0)
+      const survivingIds = candidateIds.filter((id) => {
+        const card = cardsByInstanceId.get(id)
+        return card?.type === 'cookie' && breakLevel + card.level < 10
+      })
+      // 優先犧牲仍可存活的低保留價值餅乾；全數必敗時仍完成合法 Refresh。
+      return stableByRetention(survivingIds.length ? survivingIds : candidateIds, 1)[0]
+    },
     telemetry: (kind, sourceInstanceId, effect) => {
       const source = sourceCardFor(cardsByInstanceId, sourceInstanceId)
       const plan = planFor(sourceInstanceId)

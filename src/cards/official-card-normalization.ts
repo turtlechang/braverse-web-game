@@ -220,5 +220,10 @@ export const normalizeKnownOfficialCardRecord = (
     }
   }
 
+  // P-175/176 append an unrelated bilingual transcript to the English attack field.
+  // Keep the raw feed intact; consume only the printed English attack at this boundary.
+  if (['P-175', 'P-176'].includes(sourceCard.baseCardNumber) && sourceCard.attackText?.includes('Card Name :')) {
+    sourceCard = { ...sourceCard, attackText: sourceCard.attackText.split('Card Name :')[0].trim() }
+  }
   return sourceCard
 }

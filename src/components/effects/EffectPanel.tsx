@@ -29,7 +29,7 @@ export interface EffectPanelProps {
   pendingEffect: PendingEffect | null
   currentEffect: CardEffect | null
   effectHistory: string[]
-  onConfirm: () => void
+  onConfirm: (deckToTrashAmount?: number) => void
   onSkip: () => void
   onCancel?: () => void
   candidateCards?: GameCard[]
@@ -334,6 +334,24 @@ function EffectPanelContent({
       ? splitAttackText(pendingEffect.skill.text)
       : null
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
+  const selectableDeckToTrash =
+    pendingEffect?.skillActivated &&
+    currentEffect?.kind === 'deck-to-trash' &&
+    currentEffect.selectableAmount
+      ? currentEffect
+      : null
+  const deckToTrashChoiceSignature = selectableDeckToTrash && pendingEffect
+    ? `${pendingEffect.sourceCard.instanceId}:${pendingEffect.effectIndex}`
+    : 'none'
+  const [deckToTrashChoice, setDeckToTrashChoice] = useState<{
+    signature: string
+    amount: number
+  } | null>(null)
+  const selectedDeckToTrashAmount = selectableDeckToTrash
+    ? deckToTrashChoice?.signature === deckToTrashChoiceSignature
+      ? deckToTrashChoice.amount
+      : selectableDeckToTrash.selectableAmount!.max
+    : undefined
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const supportCostTypeLabel =
@@ -358,6 +376,8 @@ function EffectPanelContent({
   const selectionLimits =
     fixedTargets
       ? { min: candidateCards.length, max: candidateCards.length }
+      : selectableDeckToTrash
+      ? selectableDeckToTrash.selectableAmount!
       : currentEffect?.kind === 'damage-all' && currentEffect.sequential
       ? { min: candidateCards.length, max: candidateCards.length }
       : currentEffect?.kind === 'break-to-trash' ||
@@ -373,7 +393,7 @@ function EffectPanelContent({
       : currentEffect?.kind === 'equipped-to-hp'
         ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'opponent-battle-to-trash'
-        ? { min: 1, max: 1 }
+        ? { min: currentEffect.min ?? 1, max: 1 }
       : currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
         ? { min: pendingEffect?.compoundEffectStep === 'follow-up' ? 0 : 1, max: 1 }
       : currentEffect?.kind === 'opponent-trash-to-break'
@@ -777,7 +797,7 @@ function EffectPanelContent({
       goToPhase(phaseIds[activePhaseIndex + 1])
       return
     }
-    onConfirm()
+    onConfirm(selectedDeckToTrashAmount)
   }
 
   if (optionalCostAttack) {
@@ -1085,7 +1105,7 @@ function EffectPanelContent({
                 {trashCookieToBreakAreaCost > 0 && (
                   <>
                     <small>
-                      棄牌區 → 休息區（技能代價）：已選 {(pendingEffect.selectedTrashCookieToBreakAreaIds ?? []).length}／{trashCookieToBreakAreaCost} 張餅乾
+                      棄牌區 → 休息區（{pendingEffect.sourceKind === 'item' ? '道具' : '技能'}代價）：已選 {(pendingEffect.selectedTrashCookieToBreakAreaIds ?? []).length}／{trashCookieToBreakAreaCost} 張餅乾
                     </small>
                     <CandidateButtons
                       cards={trashCookieToBreakAreaCandidates}
@@ -1233,7 +1253,25 @@ function EffectPanelContent({
                       : describeEffect(currentEffect)}
                   </span>
                 </div>
-                {hpAmountSelection ? (
+                {selectableDeckToTrash ? (
+                  <div className="effect-deck-to-trash-amount" role="group" aria-label="選擇置入棄牌區的牌庫頂張數">
+                    <small>選擇置入棄牌區的張數（{selectableDeckToTrash.selectableAmount!.min}～{selectableDeckToTrash.selectableAmount!.max} 張）</small>
+                    {Array.from(
+                      { length: selectableDeckToTrash.selectableAmount!.max - selectableDeckToTrash.selectableAmount!.min + 1 },
+                      (_, index) => selectableDeckToTrash.selectableAmount!.min + index,
+                    ).map(amount => (
+                      <button
+                        key={amount}
+                        type="button"
+                        className={selectedDeckToTrashAmount === amount ? 'is-selected' : ''}
+                        aria-pressed={selectedDeckToTrashAmount === amount}
+                        onClick={() => setDeckToTrashChoice({ signature: deckToTrashChoiceSignature, amount })}
+                      >
+                        {amount} 張
+                      </button>
+                    ))}
+                  </div>
+                ) : hpAmountSelection ? (
                   <HpAmountCandidateButtons
                     cards={candidateCards}
                     selectedIds={new Set(pendingEffect.selectedTargetIds)}
@@ -1257,6 +1295,7 @@ function EffectPanelContent({
                         : new Set(pendingEffect.selectedTargetIds)
                     }
                     selectedOrderIds={
+                      currentEffect.kind === 'split-damage' ||
                       (currentEffect.kind === 'damage-all' && currentEffect.sequential) ||
                       (currentEffect.kind === 'hp-to-trash' && currentEffect.amountByTargetIndex)
                         ? pendingEffect.selectedTargetIds

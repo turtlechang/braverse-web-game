@@ -30,7 +30,7 @@
 
 .effect-panel-dock {
   position: fixed;
-  bottom: 18px;
+  bottom: 64px;
   right: 18px;
   z-index: 40;
   display: flex;
@@ -462,6 +462,24 @@
   border-color: #ffe66e;
   background: rgba(255, 230, 110, 0.16);
   color: #ffe66e;
+}
+
+.effect-panel .effect-deck-to-trash-amount {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.effect-panel .effect-deck-to-trash-amount small {
+  grid-column: 1 / -1;
+}
+
+.effect-panel .effect-deck-to-trash-amount button {
+  min-width: 0;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 6px;
 }
 
 .effect-panel .effect-candidates-effect-target button {

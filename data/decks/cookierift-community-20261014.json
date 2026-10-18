@@ -1,0 +1,51 @@
+{
+  "retrievedAt": "2026-10-14",
+  "method": "Cookierift live public deck detail DOM: verified deck title, author, update date, legality, and displayed main/EXTRA cards. Opened each card detail to capture its canonical card number and used the displayed copy count. Alternate-art suffixes such as @1/@2 are normalized to the base card number; promo IDs such as P-161 are retained. No substitutions.",
+  "sourceHashMethod": "SHA-256 over UTF-8 values joined by LF in this order: sourceId, color, name, author, sourceUrl, sourceUpdatedAt, main, extra. Card IDs are canonical base numbers in displayed source order.",
+  "decks": [
+    {
+      "sourceId": 16,
+      "color": "black",
+      "name": "Taipei Arena [BS12 Black]",
+      "author": "HalfaHP",
+      "sourceUrl": "https://cookierift.com/decks/community/16",
+      "sourceUpdatedAt": "2026-10-05",
+      "sourceHash": "sha256:2073c1aef973215908a2aaa23cacccf03d7bcc0334c570a606f902a7c5a8ea66",
+      "main": "BS11-115:3 BS12-112:4 BS11-113:4 BS12-109:3 BS12-107:3 BS12-096:4 BS12-098:4 BS12-099:4 BS11-095:2 BS11-096:4 BS12-105:3 BS11-106:4 BS11-110:4 BS11-108:3 BS11-107:2 BS12-100:2 BS12-108:3 BS11-103:4",
+      "extra": "BS11-116:1 BS12-111:3 BS11-091:1"
+    },
+    {
+      "sourceId": 51,
+      "color": "purple",
+      "name": "Forky",
+      "author": "Jojo503",
+      "sourceUrl": "https://cookierift.com/decks/community/51",
+      "sourceUpdatedAt": "2026-10-09",
+      "sourceHash": "sha256:663afa02060ca8cac5722d4bac73ee2f0570e9933b3760fbed3ed5def2823c06",
+      "main": "BS10-122:2 ST10-007:4 BS11-076:2 BS10-120:3 BS11-089:3 ST10-013:2 ST10-008:2 BS4-098:1 BS2-062:4 BS9-101:1 ST10-006:2 BS10-121:3 BS11-087:3 BS4-107:2 ST10-002:3 BS2-077:2 ST5-020:4 BS10-113:3 BS2-080:2 BS10-117:2 BS8-119:2 BS5-100:2 P-161:2 BS2-057:1 P-155:2 BS9-101:1",
+      "extra": "BS8-104:2 BS9-102:2 BS10-123:1 BS11-091:1"
+    },
+    {
+      "sourceId": 67,
+      "color": "yellow",
+      "name": "[BS12] Kane's Yellow Arena Recipe",
+      "author": "Kane",
+      "sourceUrl": "https://cookierift.com/decks/community/67",
+      "sourceUpdatedAt": "2026-10-13",
+      "sourceHash": "sha256:8bb7dfe9cc223fe2a929a75a27f2b596ab84fccd600bb544bd967ddc52ad9d8f",
+      "main": "P-110:4 BS7-038:4 BS12-033:4 BS12-034:4 BS12-020:2 BS12-022:4 BS7-030:4 P-176:4 BS6-042:4 BS12-032:4 BS12-027:2 P-152:4 BS7-042:4 BS6-041:2 P-111:4 BS4-038:1 BS12-035:2 BS12-037:3",
+      "extra": "BS12-036:3 BS9-030:1 BS10-048:1 BS11-091:1"
+    },
+    {
+      "sourceId": 731,
+      "color": "red",
+      "name": "Rarena",
+      "author": "cheeyang",
+      "sourceUrl": "https://cookierift.com/decks/community/731",
+      "sourceUpdatedAt": "2026-10-12",
+      "sourceHash": "sha256:2c8d9fd01f3856c6cebcdac5fa5402d310dcb281bec6c5bbbc08b07704b6844d",
+      "main": "BS12-016:4 BS12-013:4 BS12-011:4 BS12-010:4 BS12-009:4 BS12-008:4 BS12-014:4 BS7-011:4 BS12-002:4 BS7-002:4 BS12-015:4 ST1-020:4 P-108:4 BS12-007:4 P-103:4",
+      "extra": "BS12-018:3 BS9-010:3"
+    }
+  ]
+}

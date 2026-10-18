@@ -1,3 +1,5 @@
+import {preservesPublicWinningAttack} from './ai/break-recovery-payoff'
+import { chooseAiHandToBreakCostIds } from './ai/hand-break-cost-selection'
 import { getBattleCookiePositionCostCandidates } from './battle-position-cost'
 import { getItemActivateDiscardRequirement, playItem } from './card-abilities'
 import { getForcedAttackTargetId } from './battle'
@@ -16,6 +18,7 @@ import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getSupportEffectCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
@@ -29,6 +32,7 @@ import {
 } from './effects'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getRefreshCandidates } from './refresh'
+import { getLegalTurnCommands } from './legal-actions'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
@@ -44,7 +48,6 @@ import {
   isSupportToHandCostCandidate,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
-  getHandToBreakAreaCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
@@ -71,6 +74,7 @@ import type {
 } from './ai/types'
 import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
+import { getPublicEffectDamageByTarget } from './ai/public-effect-damage'
 import { dispatchAiStep } from './ai/dispatcher'
 import { createPlayerView } from './player-view'
 import {
@@ -254,10 +258,8 @@ const chooseEffectTargets = (
     const targetPlayer = state.players[targetPlayerId]
     const stageOnly = effect.stageOnly ?? false
     if (effect.target.sourceOnly) {
-      const source = targetPlayer.battleArea.find(
-        (cookie) => cookie.card.instanceId === context.sourceInstanceId,
-      )
-      return source ? [source.card.instanceId] : []
+      return getEffectTargetCandidatesForEffect(state, context, effect)
+        .map((cookie) => cookie.card.instanceId)
     }
     if (stageOnly) {
       if (targetPlayer.stage) {
@@ -265,17 +267,12 @@ const chooseEffectTargets = (
       }
       return []
     }
-    const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
-      if (effect.target.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.target.minLevel) return false
-      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
-      return true
-    })
+    const battleCandidates = getEffectTargetCandidatesForEffect(state, context, effect)
     if (battleCandidates.length > 0) {
       const ordered = [...battleCandidates].sort(
         (left, right) => left.hpCards.length - right.hpCards.length,
       )
-      return [ordered[0].card.instanceId]
+      return [ordered[0]!.card.instanceId]
     }
     if (effect.allowStage && targetPlayer.stage) {
       return [targetPlayer.stage.card.instanceId]
@@ -315,14 +312,7 @@ const chooseEffectTargets = (
   }
 
   if (effect.kind === 'opponent-battle-to-trash') {
-    const opponentId =
-      context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
-    const candidates = state.players[opponentId].battleArea.filter((cookie) => {
-      if (effect.maxLevel !== undefined && getCookieEffectiveLevel(cookie) > effect.maxLevel) return false
-      if (effect.minLevel !== undefined && getCookieEffectiveLevel(cookie) < effect.minLevel) return false
-      if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
-      return true
-    })
+    const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
     return candidates
       .sort((left, right) => right.hpCards.length - left.hpCards.length)
       .slice(0, 1)
@@ -360,6 +350,8 @@ const chooseEffectTargets = (
   if (effect.kind === 'break-to-trash') {
     const candidates = getBreakToTrashCandidates(state, context, effect)
     const count = Math.min(effect.max, candidates.length)
+    const selected = candidates.slice(0, count).map(card => card.instanceId)
+    if ((aiTurnStrategy.currentLevel ?? 2) >= 3 && preservesPublicWinningAttack(state, context, effect, selected)) return []
     return candidates
       .slice(0, count)
       .map((card) => card.instanceId)
@@ -698,10 +690,19 @@ const chooseAbilityCostIds = (
     return null
   }
 
-  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(cost, player.hand, sourceInstanceId)
-    .filter(card => !discardHandIds.includes(card.instanceId))
-    .slice(0, cost.handToBreakArea?.count ?? 0).map(card => card.instanceId)
-  if (handToBreakAreaIds.length < (cost.handToBreakArea?.count ?? 0)) return null
+  const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(cost, player.discardPile)
+    .filter(card => !trashToDeckBottomIds.includes(card.instanceId) && !trashToDeckIds.includes(card.instanceId))
+    .sort((left, right) => (left.type === 'cookie' ? left.level : 0) - (right.type === 'cookie' ? right.level : 0))
+    .slice(0, cost.trashCookieToBreakArea?.count ?? 0).map(card => card.instanceId)
+  if (trashCookieToBreakAreaIds.length !== (cost.trashCookieToBreakArea?.count ?? 0)) return null
+  const paidBreakLevel = player.breakArea.reduce((sum, card) => sum + card.level, 0) +
+    trashCookieToBreakAreaIds.reduce((sum, id) => {
+      const card = player.discardPile.find(entry => entry.instanceId === id)
+      return sum + (card?.type === 'cookie' ? card.level : 0)
+    }, 0)
+  if (trashCookieToBreakAreaIds.length > 0 && paidBreakLevel >= 10) return null
+  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, cost, sourceInstanceId, discardHandIds, trashCookieToBreakAreaIds)
+  if (!handToBreakAreaIds) return null
 
   return {
     paymentIds,
@@ -712,6 +713,7 @@ const chooseAbilityCostIds = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    trashCookieToBreakAreaIds,
     handToBreakAreaIds,
   }
 }
@@ -736,6 +738,37 @@ const hasEnoughHandAfterAbilityCost = (
       !costDiscardIds.includes(card.instanceId),
   ).length
   return remainingHandCount >= requiredDiscardCount
+}
+
+const hasUsableOptionalCostAttackPath = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+  effects: CardEffect[],
+  universal: ReturnType<typeof createUniversalPendingStrategy>,
+): boolean => {
+  if (!effects.every((effect) =>
+    effect.kind === 'optional-cost-attack' && effect.resolution === 'ability',
+  )) return true
+
+  return effects.some((effect) => {
+    if (effect.kind !== 'optional-cost-attack') return false
+    const thenCostIds = chooseAbilityCostIds(
+      state,
+      playerId,
+      effect.cost,
+      sourceInstanceId,
+      effect.effects,
+      universal ?? undefined,
+    )
+    if (!thenCostIds) return false
+    return effect.effects.every((thenEffect) =>
+      thenEffect.kind !== 'equip-source' ||
+      state.players[playerId].battleArea.some(
+        (cookie) => cookie.card.id === thenEffect.requiredCookieId,
+      ),
+    )
+  })
 }
 
 const resolveAiCardAbility = (
@@ -777,16 +810,71 @@ const resolveAiCardAbility = (
   )
   if (!costIds) return null
 
-  if (getItemActivateDiscardRequirement(state, playerId)) {
+  const itemDiscardRequirement = getItemActivateDiscardRequirement(state, playerId)
+  if (itemDiscardRequirement) {
+    const revealTargetIds = revealCost?.kind === 'reveal-hand' && revealCost.asCost
+      ? findRevealHandSelection(state, {
+        sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
+      }, revealCost) ?? []
+      : []
+    const excludedTaxIds = new Set([
+      card.instanceId,
+      ...costIds.discardHandIds,
+      ...costIds.handToBreakAreaIds,
+      ...revealTargetIds,
+    ])
+    const taxCandidates = state.players[playerId].hand
+      .filter(candidate => !excludedTaxIds.has(candidate.instanceId))
+      .map(candidate => candidate.instanceId)
+    const taxDiscardIds = universal?.enabled
+      ? universal.orderCostIds(taxCandidates, itemDiscardRequirement.count)
+      : taxCandidates.slice(0, itemDiscardRequirement.count)
+    if (taxDiscardIds.length !== itemDiscardRequirement.count) return null
+
+    let preview: GameState
+    try {
+      preview = playItem(
+        state,
+        playerId,
+        card.instanceId,
+        costIds.paymentIds,
+        costIds.supportToTrashIds,
+        costIds.supportToHandIds,
+        costIds.discardHandIds,
+        costIds.hpToTrashTargetIds,
+        costIds.trashBattleCookieIds,
+        costIds.handToBreakAreaIds,
+        taxDiscardIds,
+        costIds.trashCookieToBreakAreaIds,
+      )
+    } catch {
+      return null
+    }
+    if (preview.status !== 'playing') return null
+    const previewEffects = ability.effects.filter(effect =>
+      isEffectConditionMet(preview, {
+        sourcePlayerId: playerId,
+        sourceInstanceId: card.instanceId,
+      }, effect),
+    )
+    if (
+      previewEffects.length === 0 ||
+      !hasUsableOptionalCostAttackPath(
+        preview,
+        playerId,
+        card.instanceId,
+        previewEffects,
+        universal,
+      )
+    ) return null
+
     // Keep the additional opponent-imposed cost as its own authoritative
     // decision; the ordinary Item cost is paid only when that choice resolves.
     const pending = applyGameCommand(state, {
       kind: 'begin-play-item', playerId, instanceId: card.instanceId,
       ...costIds,
-      ...(revealCost?.kind === 'reveal-hand' && revealCost.asCost ? {
-        targetIds: findRevealHandSelection(state, {
-          sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
-        }, revealCost) ?? [],
+      ...(revealTargetIds.length > 0 ? {
+        targetIds: revealTargetIds,
       } : {}),
     }, { shuffleSeed })
     return {
@@ -810,13 +898,22 @@ const resolveAiCardAbility = (
     costIds.hpToTrashTargetIds,
     costIds.trashBattleCookieIds,
     costIds.handToBreakAreaIds,
+    [],
+    costIds.trashCookieToBreakAreaIds,
   )
+  if (played.status !== 'playing') return null
   // Conditions such as BS6-084's hand limit are checked after the item and
   // its cost cards leave the hand, matching the real command path.
   const effects = ability.effects.filter((effect) =>
     isEffectConditionMet(played, context, effect),
   )
   if (effects.length === 0) return null
+  if (!hasUsableOptionalCostAttackPath(played, playerId, card.instanceId, effects, universal)) {
+    // Do not spend an Item whose only remaining effect is an unaffordable or
+    // targetless optional Then. For example, BS10-119 with no Refresh and no
+    // Silent Salt in battle must stay in hand when its post-play P is unavailable.
+    return null
+  }
   if (
     !hasEnoughHandAfterAbilityCost(
       state,
@@ -875,6 +972,7 @@ const resolveAiCardAbility = (
         hpToTrashTargetIds: costIds.hpToTrashTargetIds,
         trashBattleCookieIds: costIds.trashBattleCookieIds,
         handToBreakAreaIds: costIds.handToBreakAreaIds,
+        trashCookieToBreakAreaIds: costIds.trashCookieToBreakAreaIds,
         effectTargets: sim.effectTargets,
         chooseOneModes: sim.chooseOneModes,
       },
@@ -1196,9 +1294,8 @@ const resolveAiSkill = (
   const trashCookieToBreakAreaIds = getTrashCookieToBreakAreaCostCandidates(skill.cost, player.discardPile)
     .slice(0, skill.cost.trashCookieToBreakArea?.count ?? 0).map((card) => card.instanceId)
   if (trashCookieToBreakAreaIds.length < (skill.cost.trashCookieToBreakArea?.count ?? 0)) return null
-  const handToBreakAreaIds = getHandToBreakAreaCostCandidates(skill.cost, player.hand, source.card.instanceId)
-    .slice(0, skill.cost.handToBreakArea?.count ?? 0).map((card) => card.instanceId)
-  if (handToBreakAreaIds.length < (skill.cost.handToBreakArea?.count ?? 0)) return null
+  const handToBreakAreaIds = chooseAiHandToBreakCostIds(state, playerId, skill.cost, source.card.instanceId, discardHandIds, trashCookieToBreakAreaIds)
+  if (!handToBreakAreaIds) return null
 
   const trashToDeckBottomCandidateIds = skill.cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
@@ -1317,6 +1414,75 @@ const resolveAiSkill = (
     universalChooseEffectMode,
   )
   if (sim.aborted) return null
+
+  const onlySupportDeployment = skill.effects.length === 1 &&
+    skill.effects[0].kind === 'support-to-battle' &&
+    !skill.effects[0].thenEffects?.length
+  const hasNoActivationCost = [
+    paymentIds,
+    costSupportToTrashIds,
+    costSupportToHandIds,
+    discardHandIds,
+    activationRestrictionDiscardIds,
+    hpToTrashTargetIds,
+    trashBattleCookieIds,
+    positionCostTargetIds,
+    battleToHandIds,
+    trashCookieToBreakAreaIds,
+    handToBreakAreaIds,
+    trashToDeckBottomIds,
+    trashToDeckIds,
+  ].every((ids) => ids.length === 0) &&
+    Object.entries(skill.cost).every(([field, value]) =>
+      field === 'energy' || value === undefined || value === 0 || value === false,
+    )
+  const emptySupportDeployment = sim.effectSelections.length === 1 &&
+    sim.effectSelections[0].effect.kind === 'support-to-battle' &&
+    sim.effectSelections[0].targetIds.length === 0
+  // BS7-055 may legally choose zero Cookies. Preserve its Once for a later
+  // support entry instead of offering a free activation with no effect.
+  // Check the complete printed effect list and cost, since independent Then
+  // effects or moving cards as a cost can still make a zero-target play useful.
+  if (
+    trigger === 'activate' && skill.oncePerTurn && !skill.restSource &&
+    onlySupportDeployment && hasNoActivationCost && emptySupportDeployment
+  ) return null
+
+  const simulatedEffects = sim.effectSelections.map((selection) => selection.effect)
+  const onlyTemporarySourceAttackBonuses = simulatedEffects.length > 0 &&
+    simulatedEffects.every((effect) =>
+      effect.kind === 'modify-attack' &&
+      effect.amount > 0 &&
+      effect.duration === 'this-turn' &&
+      effect.target.side === 'self' &&
+      effect.target.sourceOnly === true &&
+      !effect.thenEffects?.length &&
+      !effect.thenDrawUpToIfTargetRemainingHp,
+    )
+  const activatedSource = activated.players[playerId].battleArea.find(
+    (cookie) => cookie.card.instanceId === source.card.instanceId,
+  )
+  if (onlyTemporarySourceAttackBonuses) {
+    // A source-only attack bonus expires this turn; require a legal attack by
+    // that same Cookie after paying the skill cost before spending a hand card.
+    const attackCheckState = trigger === 'on-play' &&
+      activated.pendingOnPlay?.playerId === playerId &&
+      activated.pendingOnPlay.sourceInstanceId === source.card.instanceId
+      ? { ...activated, pendingOnPlay: null }
+      : activated
+    const sourceBonusIsSelected = sim.effectSelections.some((selection) =>
+      selection.targetIds.includes(source.card.instanceId),
+    )
+    const canUseSourceBonusThisTurn =
+      activatedSource !== undefined &&
+      sourceBonusIsSelected &&
+      getLegalTurnCommands(attackCheckState, playerId).some(
+        (command) =>
+          command.kind === 'attack' &&
+          command.attackerInstanceId === source.card.instanceId,
+      )
+    if (!canUseSourceBonusThisTurn) return null
+  }
 
   return {
     state: applyGameCommand(
@@ -1472,7 +1638,9 @@ const universalChooseEffectTargets = (
   const candidateIds = getEffectSelectionCandidates(state, context, effect)
     .map((card) => card.instanceId)
   const max = Math.min(limits.max, candidateIds.length)
-  const selected = universal.selectEffectTargetIds(effect, candidateIds, max)
+  const selected = universal.selectEffectTargetIds(effect, candidateIds, max,
+    getPublicEffectDamageByTarget(state, context.sourcePlayerId, context, effect, candidateIds))
+  if (effect.kind === 'break-to-trash' && (aiTurnStrategy.currentLevel ?? 2) >= 3 && preservesPublicWinningAttack(state, context, effect, selected)) return []
   return selected.length >= limits.min
     ? selected
     : legacyChooseEffectTargets(state, context, effect)
@@ -1790,7 +1958,7 @@ export const takeAiStep = (
         (current, currentPlayerId) => handleAiPendingDecision(
           current,
           currentPlayerId,
-          { level, knowledgeState: aiTurnStrategy.knowledgeState },
+          { level, knowledgeState: aiTurnStrategy.knowledgeState, shuffleSeed },
         ),
         (s, p) => handleAiPendingBattle(
           s,

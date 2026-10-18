@@ -81,6 +81,7 @@ const SUPPORT_EFFECT_KINDS = new Set<CardEffect['kind']>([
   'battle-to-support',
   'battle-to-deck-top',
   'flip-to-support',
+  'flip-to-hand',
   'hand-to-battle',
 ])
 

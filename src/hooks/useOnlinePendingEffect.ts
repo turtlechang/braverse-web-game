@@ -110,7 +110,7 @@ const getTargetSelector = (
   if (effect.kind === 'opponent-battle-to-trash') {
     return {
       side: 'opponent',
-      min: 1,
+      min: effect.min ?? 1,
       max: 1,
       ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
       ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
@@ -283,6 +283,8 @@ export function useOnlinePendingEffect(params: {
   const draftEffect = draftEffects[0] ?? null
   // 移牌代價會改變後續效果候選；先讓伺服器付款，再從權威狀態選目標。
   const draftRequiresPaymentBeforeTargets = Boolean(
+    (abilityCostDraft?.sourceKind === 'item' && abilityCostDraft.ability.cost.hpToTrash &&
+      draftEffect?.kind === 'modify-attack') ||
     (abilityCostDraft?.sourceKind === 'item' && draftEffect?.kind === 'trash-to-battle' &&
       getItemActivateDiscardRequirement(game, viewerPlayerId)) ||
     (abilityCostDraft?.ability.cost.supportToTrash && draftEffect?.kind === 'trash-to-support') ||
@@ -741,11 +743,21 @@ export function useOnlinePendingEffect(params: {
       sourcePlayerId: viewerPlayerId,
       sourceInstanceId: attackBattle.attackerInstanceId,
     }
-    const hasApplicableEffect = !attackEffectPrevention && (
-      currentEffect.kind === 'optional-cost-attack'
+    const hasPlayableChooseOneMode =
+      currentEffect.kind !== 'choose-one' ||
+      currentEffect.modes.some((mode) =>
+        isChooseOneModePlayable(game, attackContext, mode.effects),
+      )
+    const hasApplicableEffect =
+      !attackEffectPrevention &&
+      hasPlayableChooseOneMode &&
+      (currentEffect.kind === 'optional-cost-attack'
         ? hasApplicableOptionalAttackEffect(
-            game, attackContext, currentEffect.effects,
-            currentEffect.cost, currentEffect.payBeforeCondition,
+            game,
+            attackContext,
+            currentEffect.effects,
+            currentEffect.cost,
+            currentEffect.payBeforeCondition,
           )
         : isEffectConditionMet(game, attackContext, currentEffect) &&
           hasRequiredTargetsForEffect(game, attackContext, currentEffect))
@@ -895,7 +907,7 @@ export function useOnlinePendingEffect(params: {
     })
   }
 
-  const confirmEffect = () => {
+  const confirmEffect = (deckToTrashAmount?: number) => {
     if (effectSelectionError) return
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
@@ -1000,6 +1012,7 @@ export function useOnlinePendingEffect(params: {
           {
             kind: 'begin-play-item',
             ...sharedCost,
+            ...(cost.trashCookieToBreakArea ? { trashCookieToBreakAreaIds: abilityCostDraft.selectedTrashCookieToBreakAreaIds } : {}),
             ...(cost.handToBreakArea ? { handToBreakAreaIds: abilityCostDraft.selectedHandToBreakAreaIds } : {}),
             instanceId: abilityCostDraft.card.instanceId,
             supportToTrashIds: abilityCostDraft.selectedCostSupportToTrashIds,
@@ -1045,12 +1058,17 @@ export function useOnlinePendingEffect(params: {
                 selectedTargetAmounts[index] ?? selectionEffect.selectableAmount!.max,
             )
           : undefined
+      const selectedDeckToTrashAmount =
+        displayedEffect?.kind === 'deck-to-trash' && displayedEffect.selectableAmount
+          ? deckToTrashAmount ?? displayedEffect.selectableAmount.max
+          : undefined
       dispatch(
         {
           kind: 'resolve-ability-effect',
           playerId: viewerPlayerId,
           targetIds: selectedTargetIds,
           ...(amountByTargetIndex ? { amountByTargetIndex } : {}),
+          ...(selectedDeckToTrashAmount !== undefined ? { deckToTrashAmount: selectedDeckToTrashAmount } : {}),
         },
         '已決定效果目標。',
       )
@@ -1082,14 +1100,14 @@ export function useOnlinePendingEffect(params: {
       if (effect.kind === 'opponent-battle-to-trash') {
         return getEffectTargetCandidates(game, effectContext, {
           side: 'opponent',
-          min: 1,
+          min: effect.min ?? 1,
           max: 1,
           ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
           ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
           ...(effect.remainingHp !== undefined
             ? { remainingHp: effect.remainingHp }
             : {}),
-        }).length > 0
+        }).length >= (effect.min ?? 1)
       }
       if (effect.kind === 'field-to-deck-bottom') {
         return hasRequiredTargetsForEffect(game, effectContext, effect)

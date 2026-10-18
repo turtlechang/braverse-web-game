@@ -1,5 +1,6 @@
 import { getPendingDecision } from './commands'
 import { getCurrentReplacementTask } from './replacement'
+import { hasDamageSequenceFlipInterruption } from './pending'
 import type { GameState, PlayerId } from './types'
 
 export const isPlayerControllingState = (
@@ -17,6 +18,10 @@ export const getActingPlayerId = (state: GameState): PlayerId => {
 
   if (state.pendingRefresh) return state.pendingRefresh.playerId
   if (state.pendingOnPlay) return state.pendingOnPlay.playerId
+
+  if (hasDamageSequenceFlipInterruption(state) && state.pendingAbilityEffect) {
+    return state.pendingAbilityEffect.playerId
+  }
 
   if (state.pendingBattle) {
     const battle = state.pendingBattle

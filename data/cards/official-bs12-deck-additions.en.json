@@ -1,0 +1,383 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-10-08T15:31:15.073Z",
+    "totalAvailable": 2274,
+    "matchedAvailable": 9,
+    "importedCount": 9,
+    "imagesDownloaded": false,
+    "filter": {
+      "categoryTitle": "BS12 deck additions"
+    }
+  },
+  "cards": [
+    {
+      "sourceId": 46924,
+      "locale": "en",
+      "cardNumber": "ST8-018",
+      "baseCardNumber": "ST8-018",
+      "variant": null,
+      "name": "Piercing Arrow of Purity",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "<{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 5 cards or more in your support area, that Cookie deals an additional -1 attack damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 253,
+        "title": "Guardian Winds",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fq0aXlGWLv0vuCR-sofyAQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:58.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47076,
+      "locale": "en",
+      "cardNumber": "ST9-016",
+      "baseCardNumber": "ST9-016",
+      "variant": null,
+      "name": "Bubble Wave Shell",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}{B}> <Discard 3 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 3 damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 252,
+        "title": "Seas of Fate",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WBec5x49udeaKbRz8wbISw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:56.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47082,
+      "locale": "en",
+      "cardNumber": "ST10-002",
+      "baseCardNumber": "ST10-002",
+      "variant": null,
+      "name": "Moonlight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Glorious Light",
+        "text": "【On Play】 Play up to 1 {P} Cookie that is LV.2 or lower from your trash."
+      },
+      "attackText": "<{P}{P}{P}> Moonlight Arrow {da} 3 Then, <Place 1 {P} Cookie that is LV.2 or lower from your battle area into your trash.> Draw up to 2 cards from your deck and discard 1 card.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/waRguh516q_r2ZJXMyTlXA.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47087,
+      "locale": "en",
+      "cardNumber": "ST10-007",
+      "baseCardNumber": "ST10-007",
+      "variant": null,
+      "name": "Sugar Glass Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> Memory Organizing {da} 2",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OGBWLrv-Q3GLno2KEwqUFw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47088,
+      "locale": "en",
+      "cardNumber": "ST10-008",
+      "baseCardNumber": "ST10-008",
+      "variant": null,
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Nebular Barrage",
+        "text": "【On Play】 If there are 15 cards or more in your trash, all of your opponent's Cookies receive 1 damage."
+      },
+      "attackText": "<{P}{P}{P}> Lost Meteor {da} 3 Then, <place 1 {P} LV.1 Cookie from your battle area into your trash.> Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Gdr05-5PqBzhtzVFaJvvVg.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47093,
+      "locale": "en",
+      "cardNumber": "ST10-013",
+      "baseCardNumber": "ST10-013",
+      "variant": null,
+      "name": "Little Star",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}> <Place 1 {P} LV.1 Cookie from your battle area into your trash.> Place up to 1 Cookie that is LV.2 or lower from your opponent's battle area into their trash."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Jp5kVnkoROg5Y9JPfK-pCQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 47099,
+      "locale": "en",
+      "cardNumber": "ST10-019",
+      "baseCardNumber": "ST10-019",
+      "variant": null,
+      "name": "Sleeping Moon",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "<{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 20 cards or more in your trash, that Cookie deals an additional -1 attack damage."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 251,
+        "title": "Glorious Moonlight",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VDjPA0AiYFCteTJQm_smBw.webp",
+      "officialUpdatedAt": "2026-03-13T08:53:57.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 55909,
+      "locale": "en",
+      "cardNumber": "P-175",
+      "baseCardNumber": "P-175",
+      "variant": null,
+      "name": "Caramel Choux Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Heart's Resonance",
+        "text": "【Activate】 【Once Per Turn】 During this turn, if this Cookie has been set as active by an effect, draw 1 card from your deck and select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}{R}> The perfect team {da} 3\r\nThen, if there is another rested 【Arena】 Cookie in your battle area, deals 1 damage.\r\n\r\nCard Name : 聖多諾黑餅乾\r\n\r\n{sk} 心靈迴響\r\n【On Play】 如果自己的休息區有4個或更多的 【Arena】 餅乾，則從自己的休息區將最多1個LV.1的餅乾放置到自己的棄牌區。\r\n<{R}{R}{R}> The perfect team {da} 3\r\n然後，如果自己的戰鬥區有另一個疲勞狀態的 【Arena】 餅乾，則對它造成1點傷害。",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 99,
+        "title": "Shiny Path promotion Pack",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YDapZ0yI7nxSwM6u0Usy9g.webp",
+      "officialUpdatedAt": "2026-09-08T05:16:35.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 55910,
+      "locale": "en",
+      "cardNumber": "P-176",
+      "baseCardNumber": "P-176",
+      "variant": null,
+      "name": "Sugarfly Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Voice of the Soul",
+        "text": "【On Play】 If there are 4 【Arena】 Cookies or more in your break area, place up to 1 LV.1 Cookie from your break area into your trash."
+      },
+      "attackText": "<{Y}{Y}{Y}> Let's glow {da} 3\r\nThen, if your break area is LV.4 or higher, this Cookie gains +1 HP.\r\n\r\nCard Name : 糖蝶餅乾\r\n\r\n{sk} 靈魂之聲\r\n【On Play】 如果自己的休息區有4個或更多的 【Arena】 餅乾，則從自己的休息區將最多1個LV.1的餅乾放置到自己的棄牌區。\r\n<{Y}{Y}{Y}> Let's glow {da} 3\r\n然後，如果自己的休息區LV總和達到4或以上，則這個餅乾的HP+1點。",
+      "flipText": null,
+      "keywords": [
+        "Arena"
+      ],
+      "product": {
+        "id": 99,
+        "title": "Shiny Path promotion Pack",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DMT9Eg5zNWP3obvTe_Tmyg.webp",
+      "officialUpdatedAt": "2026-09-08T05:16:35.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

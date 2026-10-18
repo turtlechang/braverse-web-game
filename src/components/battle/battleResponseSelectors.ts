@@ -41,7 +41,8 @@ export const shouldShowAttackResponseChooser = (args: {
  * an invented empty array as an explicit choice to skip.
  */
 export const buildTrapEffectTargetSubmission = (
-  targetSteps: readonly Pick<BattleUiTrapEffectTargetStep, 'effectIndex'>[],
+  targetSteps: readonly (Pick<BattleUiTrapEffectTargetStep, 'effectIndex'> &
+    Partial<Pick<BattleUiTrapEffectTargetStep, 'fixed' | 'selectedTargetIds'>>)[],
   selectedTargets: readonly string[][],
 ): string[][] | undefined => {
   const lastRenderedEffectIndex = Math.max(
@@ -51,6 +52,9 @@ export const buildTrapEffectTargetSubmission = (
   if (lastRenderedEffectIndex < 0) return undefined
   return Array.from(
     { length: lastRenderedEffectIndex + 1 },
-    (_, effectIndex) => selectedTargets[effectIndex] ?? [],
+    (_, effectIndex) => {
+      const step=targetSteps.find(step=>step.effectIndex===effectIndex)
+      return step?.fixed ? step.selectedTargetIds ?? [] : selectedTargets[effectIndex] ?? []
+    },
   )
 }

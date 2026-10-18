@@ -1,0 +1,29 @@
+{
+  "retrievedAt": "2026-10-15",
+  "method": "Cookierift live public deck detail DOM: verified title, author, update date, legality, and displayed main/EXTRA cards. Opened each card detail to capture canonical card number and used the displayed copy count. Alternate-art suffixes are normalized to base card number. No substitutions.",
+  "sourceHashMethod": "SHA-256 over UTF-8 values joined by LF in this order: sourceId, color, name, author, sourceUrl, sourceUpdatedAt, main, extra. Card IDs are canonical base numbers in displayed source order.",
+  "decks": [
+    {
+      "sourceId": 801,
+      "color": "green",
+      "name": "Garena",
+      "author": "Chaeryo",
+      "sourceUrl": "https://cookierift.com/decks/community/801",
+      "sourceUpdatedAt": "2026-10-12",
+      "sourceHash": "sha256:2edbf97e37e3e9dbe95ec6a5cbb7e51cc69bb9eb021f317d197a7bbc39f35bff",
+      "main": "BS7-046:4 BS7-049:4 BS7-057:3 P-115:3 BS7-059:4 BS8-059:1 P-104:4 P-114:1 ST3-016:3 ST8-018:4 ST3-020:1 ST3-019:2 BS7-064:3 BS7-065:4 BS7-056:4 BS7-062:4 P-113:4 BS7-063:2 BS11-040:2 BS1-056:3",
+      "extra": "BS8-069:1 BS9-055:1 BS10-073:1 BS12-056:1 BS12-111:1 BS11-091:1"
+    },
+    {
+      "sourceId": 1164,
+      "color": "blue",
+      "name": "sky blue",
+      "author": "monopaper",
+      "sourceUrl": "https://cookierift.com/decks/community/1164",
+      "sourceUpdatedAt": "2026-10-11",
+      "sourceHash": "sha256:9cd003e4e4a52d5d9b4ab6f0109107018ccc0d3abbafc7e09c2b06a05335cec8",
+      "main": "BS9-079:3 BS11-071:4 BS8-084:4 BS10-093:4 BS10-095:3 BS10-096:3 BS8-076:4 BS3-085:4 BS4-067:4 BS10-077:4 BS1-067:2 BS11-065:2 ST4-016:3 BS9-093:4 BS6-085:4 ST4-020:1 BS9-092:1 BS8-093:2 BS6-086:4",
+      "extra": "BS9-010:2 BS9-030:1 BS9-055:1 BS8-090:2"
+    }
+  ]
+}

@@ -498,6 +498,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'handToBreakAreaIds',
+      'trashCookieToBreakAreaIds',
     ],
     optionalStringMatrices: ['effectTargets'],
   },
@@ -512,6 +513,7 @@ const commandShapes = {
       'targetIds',
       'trashBattleCookieIds',
       'handToBreakAreaIds',
+      'trashCookieToBreakAreaIds',
     ],
   },
   'play-stage': {
@@ -547,6 +549,7 @@ const commandShapes = {
   'resolve-ability-effect': {
     requiredStringArrays: ['targetIds'],
     optionalNumberArrays: ['amountByTargetIndex'],
+    optionalNumbers: ['deckToTrashAmount'],
   },
   'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
   'resolve-reorder-hp': { requiredStringArrays: ['orderedCardIds'] },

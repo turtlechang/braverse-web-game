@@ -51,6 +51,9 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'deck-to-support') {
     return `從牌庫頂放 ${effect.amount} 張到支援區${effect.rested ? '（疲勞）' : ''}。`
   }
+  if (effect.kind === 'deck-to-trash' && effect.selectableAmount) {
+    return `選擇將牌庫頂 ${effect.selectableAmount.min}～${effect.selectableAmount.max} 張放入${effect.side === 'self' ? '我方' : '對手'}棄牌區。`
+  }
   if (effect.kind === 'modify-attack-cost') {
     const duration = effect.duration === 'this-turn'
       ? '本回合'
@@ -297,6 +300,7 @@ export const describeEffect = (effect: CardEffect) => {
     return '將餅乾設為活躍。'
   }
   if (effect.kind === 'deck-to-trash') {
+    if (effect.amount === 0) return '未選擇牌庫頂卡片，未放入棄牌區。'
     const owner = effect.side === 'self' ? '我方' : '對手'
     return `強制：將${owner}牌庫頂 ${effect.amount} 張牌放入棄牌區。`
   }
@@ -332,6 +336,7 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
   if (effect.kind === 'flip-to-break') return '將這張 FLIP 卡放入休息區。'
+  if (effect.kind === 'flip-to-hand') return '將這張揭示的 FLIP 卡加入自己的手牌。'
   if (effect.kind === 'trash-to-break') return effect.sourceToTrashFirst
     ? '來源餅乾先移至棄牌區，再將選定餅乾放入休息區。'
     : '棄牌區卡已放入休息區。'

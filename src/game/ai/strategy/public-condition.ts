@@ -146,9 +146,13 @@ export const assessPublicCondition = (
         ? met('己方指定關鍵字支援數已達門檻。')
         : unmet('己方指定關鍵字支援數尚未達門檻。')
     case 'support-count-less-than-opponent':
-      return view.self.supportArea.length + condition.difference < view.opponent.supportArea.length
+      return view.self.supportArea.length + condition.difference <= view.opponent.supportArea.length
         ? met('己方支援區落後對手的差距已達門檻。')
         : unmet('己方支援區落後對手的差距尚未達門檻。')
+    case 'support-count-equal':
+      return view.self.supportArea.length === view.opponent.supportArea.length
+        ? met('雙方支援區張數相同。')
+        : unmet('雙方支援區張數不同。')
     case 'trash-count-at-least':
       return view.self.discardPile.length >= condition.count
         ? met('己方棄牌區張數已達門檻。')
@@ -238,10 +242,17 @@ export const assessPublicCondition = (
       const side = sideFor(view, condition.side)
       return side.battleArea.some((cookie) =>
         includesKeyword(cookie.card, condition.keyword) &&
+        (!condition.restedOnly || cookie.rested) &&
         (condition.maxRemainingHp === undefined || cookie.hpCount <= condition.maxRemainingHp),
       )
         ? met('指定戰鬥區存在符合關鍵字條件的餅乾。')
         : unmet('指定戰鬥區沒有符合關鍵字條件的餅乾。')
+    }
+    case 'support-area-has-named-cookie': {
+      const side = sideFor(view, condition.side)
+      return side.supportArea.some((support) => support.card.type === 'cookie' && support.card.name === condition.name)
+        ? met('指定支援區存在指定名稱餅乾。')
+        : unmet('指定支援區沒有指定名稱餅乾。')
     }
     case 'battle-area-has-named-cookie': {
       if (condition.excludeSource) return unknown('條件需要辨識來源實體。')
