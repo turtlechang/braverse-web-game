@@ -17,17 +17,15 @@ import {
 } from '../../game/custom-deck'
 import { parseTestStateConfig } from '../../game/demo'
 import { installBs12DeckPresets } from '../../game/bs12-deck-presets'
-import { BS12_DECK_PRESETS } from '../../game/bs12-deck-recipes'
 import {
   isBs8CandidateStagingDeck,
   validateBs8CandidateStagingDeck,
   type AiLevel,
 } from '../../game'
 import {
-  OFFICIAL_DECK_RECIPES,
   type BuiltInDeckChoice,
-  type StarterDeckChoice,
 } from '../../game/starter-deck'
+import { getStarterDeckDraftRecipe } from './starter-deck-draft'
 import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
 import type { useAiTurn } from '../../hooks/useAiTurn'
@@ -63,14 +61,6 @@ const testStateConfig = parseTestStateConfig(
 )
 
 type DeckEditorReturnView = 'main-menu' | 'my-decks'
-
-const starterDeckLabels: Record<StarterDeckChoice, string> = {
-  red: '紅色',
-  yellow: '黃色',
-  green: '綠色',
-  blue: '藍色',
-  purple: '紫色',
-}
 
 export interface MenuScreenProps {
   aiLevel: AiLevel
@@ -170,17 +160,16 @@ export function MenuScreen({
   }
 
   const openStarterDeck = (choice: BuiltInDeckChoice) => {
-    const preset = BS12_DECK_PRESETS[choice as keyof typeof BS12_DECK_PRESETS]
+    const recipe = getStarterDeckDraftRecipe(choice)
     const now = new Date().toISOString()
     const starterDeck: CustomDeck = {
       id: createCustomDeckId(),
-      name: preset?.name ?? `${starterDeckLabels[choice as StarterDeckChoice]} Starter`,
-      entries: OFFICIAL_DECK_RECIPES[choice].map(({ cardNumber, count }) => ({
-        cardNumber,
-        count,
-      })),
+      name: recipe.name,
+      entries: recipe.entries,
       format: 'standard',
-      ...(preset ? {extraDeckEntries:preset.extraDeckEntries.map(entry=>({...entry}))} : {}),
+      ...(recipe.extraDeckEntries
+        ? { extraDeckEntries: recipe.extraDeckEntries }
+        : {}),
       createdAt: now,
       updatedAt: now,
     }

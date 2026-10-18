@@ -29,21 +29,27 @@ export const installBs12DeckPresets = (): CustomDeck[] => {
     }
   }
 
-  for (const [choice, recipe] of Object.entries(BS12_DECK_PRESETS)) {
-    const installationKey = `braverse-${choice.replace('-arena', '')}-preset-installed`
-    if (localStorage.getItem(installationKey) === '1') continue
-    const now = new Date().toISOString()
-    if (!decks.some((deck) => deck.id === `preset-${choice}`)) decks.push({
-      id: `preset-${choice}`,
-      name: recipe.name,
-      entries: recipe.entries.map((entry) => ({ ...entry })),
-      extraDeckEntries: recipe.extraDeckEntries.map((entry) => ({ ...entry })),
-      format: 'standard',
-      createdAt: now,
-      updatedAt: now,
-    })
-    saveCustomDecks(decks)
-    localStorage.setItem(installationKey, '1')
+  const installedDecks = [...decks]
+  try {
+    for (const [choice, recipe] of Object.entries(BS12_DECK_PRESETS)) {
+      const installationKey = `braverse-${choice.replace('-arena', '')}-preset-installed`
+      if (localStorage.getItem(installationKey) === '1') continue
+      const now = new Date().toISOString()
+      if (!installedDecks.some((deck) => deck.id === `preset-${choice}`)) installedDecks.push({
+        id: `preset-${choice}`,
+        name: recipe.name,
+        entries: recipe.entries.map((entry) => ({ ...entry })),
+        extraDeckEntries: recipe.extraDeckEntries.map((entry) => ({ ...entry })),
+        format: 'standard',
+        createdAt: now,
+        updatedAt: now,
+      })
+      saveCustomDecks(installedDecks)
+      localStorage.setItem(installationKey, '1')
+    }
+  } catch {
+    // Preset installation is optional; keep the already loaded library usable when storage is full.
+    return decks
   }
   return loadCustomDecks()
 }
