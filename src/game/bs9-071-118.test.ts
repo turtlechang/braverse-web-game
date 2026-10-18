@@ -11,7 +11,9 @@ import {
   createCardNegativeDemoState,
 } from './demo'
 import { applyGameCommand } from './commands'
+import { takeAiStep } from './ai'
 import { canActivateCookieSkill, getCookieSkillUnavailableReason } from './skills'
+import { isChooseOneModePlayable } from './effects/choose-one'
 import { getEffectiveAttack } from './effects'
 import { refreshDeck } from './refresh'
 import type { ExtraDeckCard, GameCard, GameState } from './types'
@@ -883,6 +885,57 @@ describe('BS9-071～118 candidate-isolated conversion and rules', { timeout: 30_
       playerId: 'player-one',
       targetIds: [],
     })).toThrow()
+
+    const protectedAttack = createCardCheckDemoState('BS9-077', { normalAttack: 'payable' })
+    const timekeeperState = createCardCheckDemoState('BS6-010')
+    const timekeeper = timekeeperState.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-010',
+    )
+    if (!timekeeper) throw new Error('BS6-010 fixture must provide Timekeeper Cookie')
+    const protectedState: GameState = {
+      ...protectedAttack,
+      players: {
+        ...protectedAttack.players,
+        'player-two': {
+          ...protectedAttack.players['player-two'],
+          battleArea: [
+            ...protectedAttack.players['player-two'].battleArea,
+            {
+              ...timekeeper,
+              card: { ...timekeeper.card, instanceId: 'player-two-BS6-010-protector' },
+              hpCards: timekeeper.hpCards.map((card, index) => ({
+                ...card,
+                instanceId: `player-two-BS6-010-protector-hp-${index + 1}`,
+              })),
+            },
+          ],
+        },
+      },
+    }
+    const protectedSource = sourceInBattle(protectedState, 'BS9-077')
+    const chooseOne = protectedState.pendingBattle?.attackEffects[0]
+    if (chooseOne?.kind !== 'choose-one') throw new Error('BS9-077 should have a choose-one attack effect')
+    const protectedContext = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: protectedSource.card.instanceId,
+    }
+    expect(chooseOne.modes.map((mode) =>
+      isChooseOneModePlayable(protectedState, protectedContext, mode.effects),
+    )).toEqual([false, false])
+
+    const defensiveChooseOneFallback = applyGameCommand(protectedState, {
+      kind: 'resolve-choose-one',
+      playerId: 'player-one',
+      modeIndex: 0,
+    })
+    expect(defensiveChooseOneFallback.pendingBattle).toBeNull()
+    expect(defensiveChooseOneFallback.players['player-one'].battleArea).toContainEqual(protectedSource)
+
+    const protectedDecision = takeAiStep(protectedState, 'player-one')
+    expect(protectedDecision.error).toBeUndefined()
+    expect(protectedDecision.action).toBe('resolve-attack-effect')
+    expect(protectedDecision.state.pendingBattle).toBeNull()
+    expect(protectedDecision.state.players['player-one'].battleArea).toContainEqual(protectedSource)
 
     let topSkill = createCardCheckDemoState('BS9-081')
     const topSource = sourceInBattle(topSkill, 'BS9-081')

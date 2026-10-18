@@ -1722,6 +1722,15 @@ const applyPendingDecisionCommand = (
         throw new GameRuleError('選擇的 EXTRA 卡已不存在或沒有可發動的攻擊效果。')
       }
 
+      // EXTRA attack effects resolve through pendingAbilityEffect, so their
+      // optional Then costs must use the ability payment queue rather than the
+      // regular pendingBattle attack-effect queue.
+      const abilityAttackEffects = attackEffects.map((effect) =>
+        effect.kind === 'optional-cost-attack'
+          ? { ...effect, resolution: 'ability' as const }
+          : effect,
+      )
+
       return {
         ...state,
         pendingExtraDeckAttack: null,
@@ -1731,7 +1740,7 @@ const applyPendingDecisionCommand = (
           sourceInstanceId: selected.instanceId,
           sourceCardName: selected.name,
           sourceKind: 'skill',
-          effects: attackEffects,
+          effects: abilityAttackEffects,
           effectIndex: 0,
           ...(pending.battleContinuation
             ? { battleContinuation: pending.battleContinuation }
@@ -1755,8 +1764,10 @@ const applyPendingDecisionCommand = (
         : undefined)
       const startedTrigger = beginNextHandToTrashTrigger(resolved, triggerContinuation)
       if (startedTrigger.pendingAbilityEffect && !resolved.pendingAbilityEffect) return startedTrigger
+      const detachedFlipPending = resolved.pendingBattle?.stage === 'flip' &&
+        resolved.pendingBattle.detachedFlip === true
       return continuation && state.pendingOptionalCostAttack?.resolution === 'ability' &&
-        !resolved.pendingAbilityEffect && !resolved.pendingOptionalCostAttack
+        !detachedFlipPending && !resolved.pendingAbilityEffect && !resolved.pendingOptionalCostAttack
         ? continueBattleAfterPending(startedTrigger, continuation) : startedTrigger
     }
     case 'resolve-draw-up-to': {
@@ -3465,6 +3476,17 @@ const applyPlayerActionCommand = (
             throw new GameRuleError('不是目前需要選擇項目的玩家。')
           }
           const effect = battle.attackEffects[battle.attackEffectIndex]
+          if (
+            effect?.kind === 'choose-one' &&
+            !effect.modes.some((mode) =>
+              isChooseOneModePlayable(state, {
+                sourcePlayerId: battle.attackerPlayerId,
+                sourceInstanceId: battle.attackerInstanceId,
+              }, mode.effects),
+            )
+          ) {
+            return resolveAttackEffect(state, command.playerId, [], options.shuffle)
+          }
           const mode = effect.kind === 'choose-one'
             ? effect.modes[command.modeIndex]
             : undefined

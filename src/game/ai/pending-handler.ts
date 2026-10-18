@@ -30,11 +30,13 @@ import {
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getExtraDeckTrashBattleCookieCostCandidates,
+  payHpToTrashCost,
 } from '../skills'
 import { chooseAiHpToTrashIds } from './hp-cost-selection'
 import { getBattleCookiePositionCostCandidates } from '../battle-position-cost'
 import { chooseAiEffectMode } from './choose-one-mode'
 import { createPlayerView } from '../player-view'
+import { maskGameStateForViewer } from '../masked-state'
 import {
   createKnowledgeStateFromPlayerView,
   synchronizeKnowledgeWithPlayerView,
@@ -845,12 +847,40 @@ export const handleAiPendingDecision = (
     const extraBattleCostIds = extraBattleCost
       ? getExtraDeckTrashBattleCookieCostCandidates(pendingDecision.cost, state.players[playerId].battleArea, pendingDecision.sourceInstanceId).slice(0, extraBattleCost.count).map(cookie => cookie.card.instanceId)
       : []
+    // Preview only a plain optional HP payment followed by public battle-area
+    // healing. The real command still pays against the original state. Mask
+    // first, and do not infer conditions from the unknown HP costRecord.
+    const previewsHpRecoveryCost = !isAbilityResolution && !extraBattleCost &&
+      !pendingDecision.mandatory && canPayHpToTrash &&
+      Boolean(pendingDecision.cost.hpToTrash) &&
+      Object.entries(pendingDecision.cost).every(([key, value]) =>
+        key === 'hpToTrash' || value === undefined || value === 0 || value === false ||
+        (key === 'energy' && typeof value === 'object' && value !== null &&
+          Object.values(value).every(amount => amount === 0 || amount === undefined)),
+      ) &&
+      pendingDecision.effects.length > 0 && pendingDecision.effects.every(effect =>
+        effect.kind === 'gain-hp' && Number.isInteger(effect.amount) && effect.amount > 0 &&
+        !effect.condition && !effect.perBreakCard && !effect.thenEffects?.length &&
+        effect.target?.side === 'self' && !effect.target.costSelected &&
+        !effect.target.previousEffectTargetOnly && !effect.target.sameLevelAsPreviousEffectTarget,
+      )
+    let targetSelectionState = !isAbilityResolution && !extraBattleCost && cookieBreakCount &&
+      cookieToBreakAreaIds.length === cookieBreakCount
+      ? { ...state, players: { ...state.players, [playerId]: payCookieToBreakCost(pendingDecision.cost, state.players[playerId], cookieToBreakAreaIds, pendingDecision.sourceInstanceId).player } }
+      : state
+    if (previewsHpRecoveryCost) {
+      const publicState = maskGameStateForViewer(state, playerId)
+      const paid = payHpToTrashCost(publicState.players[playerId], pendingDecision.cost,
+        hpToTrashIds, pendingDecision.sourceInstanceId)
+      targetSelectionState = { ...publicState, players: { ...publicState.players,
+        [playerId]: { ...paid.player, battleArea: paid.player.battleArea.map(cookie =>
+          ({ ...cookie, publicHp: cookie.hpCards.length })) },
+      } }
+    }
     const sharedSelection = extraBattleCost ? { targetIds: extraBattleCostIds, valid: extraBattleCostIds.length === extraBattleCost.count } : isAbilityResolution
       ? { targetIds: [], valid: true }
       : chooseSharedEffectTargets(
-          cookieBreakCount && cookieToBreakAreaIds.length === cookieBreakCount
-            ? { ...state, players: { ...state.players, [playerId]: payCookieToBreakCost(pendingDecision.cost, state.players[playerId], cookieToBreakAreaIds, pendingDecision.sourceInstanceId).player } }
-            : state,
+          targetSelectionState,
           context,
           pendingDecision.effects,
           universal,
@@ -884,8 +914,9 @@ export const handleAiPendingDecision = (
       paysForZeroSafeDraw(state,playerId,universal.enabled
         ? universal.orderCostIds(discardHandCandidateIds,discardHandAmount)
         : discardHandCandidateIds.slice(0,discardHandAmount),paymentIds??[])
+    const emptyOptionalHpRecovery = previewsHpRecoveryCost && targetIds.length === 0
     const canResolveOptionalEffect =
-      !emptySafeDraw && !emptyOptionalMovement &&
+      !emptySafeDraw && !emptyOptionalMovement && !emptyOptionalHpRecovery &&
       canPay &&
       canPayHpToTrash &&
       canPayHpToHand &&

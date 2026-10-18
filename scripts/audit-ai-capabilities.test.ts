@@ -67,7 +67,6 @@ describe('AI capability promotion audit', () => {
       'BS12-015',
       'BS12-082',
       'BS8-042',
-      'BS8-076',
       'BS8-084',
       'BS9-043',
       'BS9-079',

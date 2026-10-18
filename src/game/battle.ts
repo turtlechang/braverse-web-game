@@ -2781,6 +2781,10 @@ const finishDamageSequence = (state: GameState): GameState => {
       // Suspended parents await this child sequence. They are not external
       // interruptions; the command boundary restores them after it completes.
       suspendedAbilityEffects: undefined,
+      // Departure skills are queued until the enclosing damage sequence and
+      // its ability parent finish; they cannot be started while this sequence
+      // is pending, so they must not keep the sequence paused here.
+      pendingDepartureSkillTriggers: undefined,
       // Break-entry standby effects wait for this entire damage sequence;
       // they must not make the sequence wait for its own completion.
       pendingAfterDamageEffects: afterCurrentDamageState.pendingAfterDamageEffects?.filter(
@@ -3007,6 +3011,18 @@ export const resolveAttackEffect = (
   const effectContext = getAttackEffectContext(playerId, battle)
 
   if (getBattleAttackEffectPrevention(state, playerId)) return advanceAttackEffect(state, battle)
+
+  // A choose-one Then can become entirely impossible after an opponent's
+  // passive protection blocks every mode (for example BS6-010 vs BS9-077).
+  // There is no legal choice to present, so resolve it as a no-op.
+  if (
+    effect.kind === 'choose-one' &&
+    !effect.modes.some((mode) =>
+      isChooseOneModePlayable(state, effectContext, mode.effects),
+    )
+  ) {
+    return advanceAttackEffect(state, battle)
+  }
 
   // 攻擊後效果若已沒有合法目標（例如 BS1-037 對手場上沒有 LV.1
   // 餅乾），直接略過該效果，不建立任何玩家提示或付款決策。
@@ -3649,6 +3665,24 @@ const resolveOptionalAbilityEffect = (
       triggerSkill: true,
       trashedCount: trashedSupportCards.length,
     })
+  }
+  if (effect.effects.some((nested) => nested.kind === 'activate-discarded-flip')) {
+    if (discarded.length !== 1 || !discarded[0]?.flip) {
+      throw new GameRuleError('必須棄置 1 張具有 FLIP 的 Cookie。')
+    }
+    const battle = requirePendingBattle(nextState)
+    return {
+      ...nextState,
+      pendingAbilityEffect: undefined,
+      pendingBattle: {
+        ...battle,
+        stage: 'flip',
+        revealedHpCard: discarded[0],
+        detachedFlip: true,
+        damagePlayerId: playerId,
+        damageTargetInstanceId: undefined,
+      },
+    }
   }
   return nextState
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import bs4Cards from '../../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import type { GameCard } from '../../game'
+import { convertOfficialCardToGameCard } from '../official-card-adapter'
 import type { OfficialCardRecord } from '../types'
 import { analyzeOfficialCardBehavior } from './ledger'
 
@@ -410,6 +412,19 @@ describe('card behavior contract shadow ledger', () => {
     const audit = analyzeOfficialCardBehavior(source, runtime)
     expect(audit.checks.resolutionOrderCovered).toBe(false)
     expect(audit.errors).toContain('resolution order evidence missing')
+  })
+
+  it('accepts BS4-062 rest-support-and-damage as an ordered composite Then', () => {
+    const source = bs4Cards.cards.find((card) => card.cardNumber === 'BS4-062') as OfficialCardRecord
+    if (!source) throw new Error('Expected the official BS4-062 record')
+    const converted = convertOfficialCardToGameCard(source)
+    if (converted.status !== 'converted') throw new Error('Expected BS4-062 to convert')
+
+    const audit = analyzeOfficialCardBehavior(source, converted.gameCard)
+
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.errors).not.toContain('resolution order evidence missing')
   })
 
   it.each([

@@ -743,11 +743,21 @@ export function useOnlinePendingEffect(params: {
       sourcePlayerId: viewerPlayerId,
       sourceInstanceId: attackBattle.attackerInstanceId,
     }
-    const hasApplicableEffect = !attackEffectPrevention && (
-      currentEffect.kind === 'optional-cost-attack'
+    const hasPlayableChooseOneMode =
+      currentEffect.kind !== 'choose-one' ||
+      currentEffect.modes.some((mode) =>
+        isChooseOneModePlayable(game, attackContext, mode.effects),
+      )
+    const hasApplicableEffect =
+      !attackEffectPrevention &&
+      hasPlayableChooseOneMode &&
+      (currentEffect.kind === 'optional-cost-attack'
         ? hasApplicableOptionalAttackEffect(
-            game, attackContext, currentEffect.effects,
-            currentEffect.cost, currentEffect.payBeforeCondition,
+            game,
+            attackContext,
+            currentEffect.effects,
+            currentEffect.cost,
+            currentEffect.payBeforeCondition,
           )
         : isEffectConditionMet(game, attackContext, currentEffect) &&
           hasRequiredTargetsForEffect(game, attackContext, currentEffect))

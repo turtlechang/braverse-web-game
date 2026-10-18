@@ -571,8 +571,17 @@ export const getEffectTargetCandidatesForEffect = (
   }
 
   if (effect.kind === 'equip-source') {
+    const player = state.players[context.sourcePlayerId]
+    const hasSource = effect.sourceZone === 'battle'
+      ? player.battleArea.some(cookie => cookie.card.instanceId === context.sourceInstanceId)
+      : player.discardPile.some(card => card.instanceId === context.sourceInstanceId)
+    // An interrupted Then may resume after Refresh moved the source out of
+    // trash. Offer only targets that the Equip executor can still accept.
+    if (!hasSource) return []
     return getEffectTargetCandidates(state, context, effect.target).filter(
       (cookie) =>
+        cookie.card.instanceId !== context.sourceInstanceId &&
+        player.battleArea.some(own => own.card.instanceId === cookie.card.instanceId) &&
         (effect.requiredCookieId === undefined ||
           cookie.card.id === effect.requiredCookieId) &&
         (effect.requiredKeyword === undefined ||

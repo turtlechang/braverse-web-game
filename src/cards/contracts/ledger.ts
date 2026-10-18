@@ -2039,6 +2039,7 @@ const hasLegacyStructuralEvidence = (
   const sourceEffects = runtimeEffectsForSource(evidence, source)
   const hasOrderedCompositeEffect = sourceEffects.some((effect) =>
     effect.kind === 'discard-hand-then-draw-same' ||
+    effect.kind === 'rest-support-and-damage' ||
     (effect.kind === 'inspect-deck' &&
       effect.restDestination === 'trash' &&
       effect.lookCount > 0 &&
@@ -2048,8 +2049,8 @@ const hasLegacyStructuralEvidence = (
     hasRuntimeConditionalStep(evidence) ||
     // Non-cookie root effects mirror Item, Stage and Trap ability effects.
     // Count the authoritative source array once so a mirrored primary effect
-    // cannot masquerade as a second Then operation. These two known composite
-    // effects encode their ordered substeps within one runtime effect instead.
+    // cannot masquerade as a second Then operation. Known composite effects
+    // encode their ordered substeps within one runtime effect instead.
     (evidence.card?.type === 'cookie'
       ? flattenRuntimeEffects(evidence).length >= 2
       : sourceEffects.length >= 2 || hasOrderedCompositeEffect)

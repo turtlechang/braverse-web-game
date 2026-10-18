@@ -1,0 +1,3220 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "sourceBundle": "output/ai-cookierift/candidate-engine-20261017T200339750Z-5720-1f93096c.mjs",
+    "sourceSha256": "e828a55a02ea6e3e562b04f1e0e13e893f93335bebdb961315a0479ae04140eb",
+    "seed": 206129620,
+    "originalAiStep": 172,
+    "firstPlayerId": "player-one",
+    "searchClock": "constant-zero",
+    "persistedStrategyMemory": true,
+    "replayShuffle": "shuffleSeed (new seeded shuffle per command)",
+    "commandCount": 175
+  },
+  "recipes": {
+    "left": {
+      "id": "cookierift-1295",
+      "name": "Basic red",
+      "entries": [
+        {
+          "cardNumber": "BS1-012",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS1-022",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS2-003",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS3-006",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS3-009",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-010",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-013",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS3-017",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-008",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS6-010",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS10-023",
+          "count": 1
+        },
+        {
+          "cardNumber": "ST6-002",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST6-004",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-019",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS2-006",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS2-007",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS3-022",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST1-020",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST6-005",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST1-013",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST1-004",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS10-003",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-006",
+          "count": 2
+        }
+      ],
+      "extraDeckEntries": [
+        {
+          "cardNumber": "BS10-024",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS9-010",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS8-005",
+          "count": 2
+        }
+      ],
+      "color": "red",
+      "format": "standard",
+      "createdAt": "2026-10-17",
+      "updatedAt": "2026-10-17"
+    },
+    "right": {
+      "id": "cookierift-1239",
+      "name": "Kawaii's Ol' Reliable Yellow",
+      "entries": [
+        {
+          "cardNumber": "P-129",
+          "count": 3
+        },
+        {
+          "cardNumber": "ST7-008",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS10-040",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST7-016",
+          "count": 3
+        },
+        {
+          "cardNumber": "ST7-017",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS10-038",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST7-005",
+          "count": 4
+        },
+        {
+          "cardNumber": "BS1-037",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS4-026",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS4-038",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-031",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS9-031",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS10-043",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS10-047",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS11-033",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS1-040",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS10-033",
+          "count": 4
+        },
+        {
+          "cardNumber": "ST2-020",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS6-042",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS10-046",
+          "count": 2
+        },
+        {
+          "cardNumber": "BS11-036",
+          "count": 2
+        },
+        {
+          "cardNumber": "ST2-016",
+          "count": 2
+        }
+      ],
+      "extraDeckEntries": [
+        {
+          "cardNumber": "BS9-030",
+          "count": 1
+        },
+        {
+          "cardNumber": "BS10-048",
+          "count": 3
+        },
+        {
+          "cardNumber": "BS11-091",
+          "count": 2
+        }
+      ],
+      "color": "yellow",
+      "format": "standard",
+      "createdAt": "2026-10-17",
+      "updatedAt": "2026-10-17"
+    }
+  },
+  "frame": {
+    "status": "playing",
+    "turn": 13,
+    "phase": "main",
+    "owner": "player-one",
+    "players": {
+      "player-one": {
+        "hand": [
+          "player-one-ST6-005-1",
+          "player-one-BS3-006-3",
+          "player-one-ST6-002-4",
+          "player-one-ST1-004-2"
+        ],
+        "deck": [
+          "player-one-ST1-013-1",
+          "player-one-BS4-006-1",
+          "player-one-BS2-007-1",
+          "player-one-BS2-006-2",
+          "player-one-ST1-004-1",
+          "player-one-BS3-010-1",
+          "player-one-ST1-004-3",
+          "player-one-ST6-005-3",
+          "player-one-BS3-019-1",
+          "player-one-ST1-020-2",
+          "player-one-BS1-022-1",
+          "player-one-BS3-017-1",
+          "player-one-ST6-004-1",
+          "player-one-BS4-006-2",
+          "player-one-BS1-022-2",
+          "player-one-BS3-006-4",
+          "player-one-ST6-002-2"
+        ],
+        "support": [
+          [
+            "player-one-BS1-022-3",
+            true
+          ],
+          [
+            "player-one-BS10-023-1",
+            true
+          ],
+          [
+            "player-one-BS2-007-2",
+            true
+          ],
+          [
+            "player-one-BS3-006-1",
+            true
+          ],
+          [
+            "player-one-BS1-012-1",
+            false
+          ]
+        ],
+        "battle": [
+          {
+            "id": "BS3-017",
+            "instanceId": "player-one-BS3-017-3",
+            "hp": [
+              "player-one-BS3-022-2",
+              "player-one-BS10-003-1",
+              "player-one-BS3-013-1",
+              "player-one-ST6-002-1",
+              "player-one-BS3-006-2"
+            ],
+            "rested": false
+          },
+          {
+            "id": "ST6-004",
+            "instanceId": "player-one-ST6-004-2",
+            "hp": [
+              "player-one-BS6-010-1",
+              "player-one-BS2-006-3",
+              "player-one-BS3-009-2",
+              "player-one-BS2-006-1"
+            ],
+            "rested": true
+          }
+        ],
+        "discard": [
+          "player-one-BS3-009-1",
+          "player-one-ST6-002-3",
+          "player-one-ST1-020-1",
+          "player-one-ST6-005-2",
+          "player-one-ST1-013-3",
+          "player-one-ST1-020-4",
+          "player-one-ST1-020-3",
+          "player-one-ST1-013-2",
+          "player-one-BS6-008-1",
+          "player-one-BS3-019-2",
+          "player-one-ST1-004-4",
+          "player-one-BS3-019-3",
+          "player-one-BS1-012-2",
+          "player-one-BS3-022-1",
+          "player-one-BS3-017-2",
+          "player-one-BS2-003-1",
+          "player-one-BS1-022-4",
+          "player-one-BS6-010-2"
+        ],
+        "break": [
+          "player-one-BS10-003-2",
+          "player-one-ST1-013-4",
+          "player-one-ST6-005-4",
+          "player-one-BS3-010-2",
+          "player-one-BS6-010-3"
+        ],
+        "extra": [
+          "formal-extra:player-one:BS10-024:1",
+          "formal-extra:player-one:BS10-024:2",
+          "formal-extra:player-one:BS10-024:3",
+          "formal-extra:player-one:BS9-010:1",
+          "formal-extra:player-one:BS8-005:1",
+          "formal-extra:player-one:BS8-005:2"
+        ]
+      },
+      "player-two": {
+        "hand": [
+          "player-two-ST7-005-1",
+          "player-two-ST7-005-4",
+          "player-two-ST7-008-3",
+          "player-two-BS1-037-1",
+          "player-two-BS10-038-2"
+        ],
+        "deck": [
+          "player-two-BS11-033-3",
+          "player-two-BS11-036-2",
+          "player-two-ST7-008-2",
+          "player-two-BS6-042-2",
+          "player-two-ST7-005-3",
+          "player-two-ST7-017-2",
+          "player-two-ST7-008-1",
+          "player-two-ST2-016-2"
+        ],
+        "support": [
+          [
+            "player-two-BS10-046-2",
+            true
+          ],
+          [
+            "player-two-BS10-046-1",
+            true
+          ],
+          [
+            "player-two-BS9-031-2",
+            true
+          ],
+          [
+            "player-two-BS1-037-2",
+            false
+          ],
+          [
+            "player-two-BS10-047-2",
+            false
+          ],
+          [
+            "player-two-ST7-016-3",
+            false
+          ]
+        ],
+        "battle": [
+          {
+            "id": "ST7-008",
+            "instanceId": "player-two-ST7-008-4",
+            "hp": [
+              "player-two-BS10-040-1",
+              "player-two-BS10-043-1",
+              "player-two-BS6-031-2"
+            ],
+            "rested": true
+          },
+          {
+            "id": "BS4-026",
+            "instanceId": "player-two-BS4-026-1",
+            "hp": [
+              "player-two-ST7-017-3",
+              "player-two-BS10-038-1",
+              "player-two-BS6-031-1",
+              "player-two-BS10-033-1",
+              "player-two-ST7-016-1"
+            ],
+            "rested": false
+          }
+        ],
+        "discard": [
+          "player-two-BS10-047-3",
+          "player-two-BS10-040-3",
+          "player-two-ST7-017-1",
+          "player-two-P-129-2",
+          "player-two-BS10-040-2",
+          "player-two-P-129-3",
+          "player-two-BS11-033-1",
+          "player-two-BS11-033-2",
+          "player-two-BS11-036-1",
+          "player-two-BS1-040-1",
+          "player-two-BS4-038-2",
+          "player-two-BS1-040-2",
+          "player-two-BS10-033-2",
+          "player-two-BS6-042-1",
+          "player-two-ST2-020-2",
+          "player-two-BS4-038-1",
+          "player-two-BS10-033-4",
+          "player-two-BS10-047-1",
+          "player-two-ST2-020-3",
+          "player-two-ST2-020-1",
+          "player-two-ST7-016-2",
+          "player-two-ST2-016-1",
+          "player-two-ST7-005-2",
+          "player-two-BS9-031-1",
+          "player-two-BS10-033-3",
+          "player-two-ST7-017-4",
+          "player-two-BS10-043-2"
+        ],
+        "break": [
+          "player-two-BS1-040-3",
+          "player-two-P-129-1",
+          "player-two-BS4-038-3"
+        ],
+        "extra": [
+          "formal-extra:player-two:BS9-030:1",
+          "formal-extra:player-two:BS10-048:1",
+          "formal-extra:player-two:BS10-048:2",
+          "formal-extra:player-two:BS10-048:3",
+          "formal-extra:player-two:BS11-091:1",
+          "formal-extra:player-two:BS11-091:2"
+        ]
+      }
+    },
+    "legalCommands": [
+      {
+        "kind": "advance-phase",
+        "playerId": "player-one"
+      }
+    ]
+  },
+  "memories": {
+    "player-one": {
+      "observerId": "player-one",
+      "knowledgeState": {
+        "observerId": "player-one",
+        "deckSequenceVersion": {
+          "player-one": 0,
+          "player-two": 0
+        },
+        "facts": [
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-017",
+            "instanceId": "player-one-BS3-017-3",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-004",
+            "instanceId": "player-one-ST6-004-2",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS10-003",
+            "instanceId": "player-one-BS10-003-2",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-010",
+            "instanceId": "player-one-BS3-010-2",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-010",
+            "instanceId": "player-one-BS6-010-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-4",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-005",
+            "instanceId": "player-one-ST6-005-4",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-012",
+            "instanceId": "player-one-BS1-012-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-022",
+            "instanceId": "player-one-BS1-022-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS2-003",
+            "instanceId": "player-one-BS2-003-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-009",
+            "instanceId": "player-one-BS3-009-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-017",
+            "instanceId": "player-one-BS3-017-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-019",
+            "instanceId": "player-one-BS3-019-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-019",
+            "instanceId": "player-one-BS3-019-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-022",
+            "instanceId": "player-one-BS3-022-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-008",
+            "instanceId": "player-one-BS6-008-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-010",
+            "instanceId": "player-one-BS6-010-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-004",
+            "instanceId": "player-one-ST1-004-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-002",
+            "instanceId": "player-one-ST6-002-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-005",
+            "instanceId": "player-one-ST6-005-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-012",
+            "instanceId": "player-one-BS1-012-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-022",
+            "instanceId": "player-one-BS1-022-3",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS10-023",
+            "instanceId": "player-one-BS10-023-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS2-007",
+            "instanceId": "player-one-BS2-007-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-006",
+            "instanceId": "player-one-BS3-006-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-008",
+            "instanceId": "player-two-ST7-008-4",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-1",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-043",
+            "instanceId": "player-two-BS10-043-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-033",
+            "instanceId": "player-two-BS11-033-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-033",
+            "instanceId": "player-two-BS11-033-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-036",
+            "instanceId": "player-two-BS11-036-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS6-042",
+            "instanceId": "player-two-BS6-042-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS9-031",
+            "instanceId": "player-two-BS9-031-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-016",
+            "instanceId": "player-two-ST2-016-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-005",
+            "instanceId": "player-two-ST7-005-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-016",
+            "instanceId": "player-two-ST7-016-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-017",
+            "instanceId": "player-two-ST7-017-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-017",
+            "instanceId": "player-two-ST7-017-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-4",
+            "position": "public-zone",
+            "publicZone": "stage",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-037",
+            "instanceId": "player-two-BS1-037-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-046",
+            "instanceId": "player-two-BS10-046-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-046",
+            "instanceId": "player-two-BS10-046-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS9-031",
+            "instanceId": "player-two-BS9-031-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-016",
+            "instanceId": "player-two-ST7-016-3",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-one"
+            }
+          }
+        ]
+      },
+      "decisionCount": 81,
+      "intentStreak": 1,
+      "comboTelemetry": {
+        "started": 0,
+        "completed": 0,
+        "abandoned": 0
+      },
+      "lastChosenCommandKind": "resolve-optional-cost-attack",
+      "activeIntent": "setup"
+    },
+    "player-two": {
+      "observerId": "player-two",
+      "knowledgeState": {
+        "observerId": "player-two",
+        "deckSequenceVersion": {
+          "player-one": 0,
+          "player-two": 0
+        },
+        "facts": [
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-017",
+            "instanceId": "player-one-BS3-017-3",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-004",
+            "instanceId": "player-one-ST6-004-2",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS10-003",
+            "instanceId": "player-one-BS10-003-2",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-010",
+            "instanceId": "player-one-BS3-010-2",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-010",
+            "instanceId": "player-one-BS6-010-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-4",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-005",
+            "instanceId": "player-one-ST6-005-4",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-012",
+            "instanceId": "player-one-BS1-012-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-022",
+            "instanceId": "player-one-BS1-022-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS2-003",
+            "instanceId": "player-one-BS2-003-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-009",
+            "instanceId": "player-one-BS3-009-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-017",
+            "instanceId": "player-one-BS3-017-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-019",
+            "instanceId": "player-one-BS3-019-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-019",
+            "instanceId": "player-one-BS3-019-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-022",
+            "instanceId": "player-one-BS3-022-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-008",
+            "instanceId": "player-one-BS6-008-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS6-010",
+            "instanceId": "player-one-BS6-010-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-004",
+            "instanceId": "player-one-ST1-004-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-013",
+            "instanceId": "player-one-ST1-013-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST1-020",
+            "instanceId": "player-one-ST1-020-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-002",
+            "instanceId": "player-one-ST6-002-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "ST6-005",
+            "instanceId": "player-one-ST6-005-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-012",
+            "instanceId": "player-one-BS1-012-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS1-022",
+            "instanceId": "player-one-BS1-022-3",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS10-023",
+            "instanceId": "player-one-BS10-023-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS2-007",
+            "instanceId": "player-one-BS2-007-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-one",
+            "cardId": "BS3-006",
+            "instanceId": "player-one-BS3-006-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-026",
+            "instanceId": "player-two-BS4-026-1",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-008",
+            "instanceId": "player-two-ST7-008-4",
+            "position": "public-zone",
+            "publicZone": "battle",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-3",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-1",
+            "position": "public-zone",
+            "publicZone": "break",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-040",
+            "instanceId": "player-two-BS1-040-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-033",
+            "instanceId": "player-two-BS10-033-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-043",
+            "instanceId": "player-two-BS10-043-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-033",
+            "instanceId": "player-two-BS11-033-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-033",
+            "instanceId": "player-two-BS11-033-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS11-036",
+            "instanceId": "player-two-BS11-036-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS4-038",
+            "instanceId": "player-two-BS4-038-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS6-042",
+            "instanceId": "player-two-BS6-042-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS9-031",
+            "instanceId": "player-two-BS9-031-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "P-129",
+            "instanceId": "player-two-P-129-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-016",
+            "instanceId": "player-two-ST2-016-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST2-020",
+            "instanceId": "player-two-ST2-020-3",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-005",
+            "instanceId": "player-two-ST7-005-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-016",
+            "instanceId": "player-two-ST7-016-2",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-017",
+            "instanceId": "player-two-ST7-017-1",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-017",
+            "instanceId": "player-two-ST7-017-4",
+            "position": "public-zone",
+            "publicZone": "discard",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-discard",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-040",
+            "instanceId": "player-two-BS10-040-4",
+            "position": "public-zone",
+            "publicZone": "stage",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS1-037",
+            "instanceId": "player-two-BS1-037-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-046",
+            "instanceId": "player-two-BS10-046-1",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-046",
+            "instanceId": "player-two-BS10-046-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS10-047",
+            "instanceId": "player-two-BS10-047-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "BS9-031",
+            "instanceId": "player-two-BS9-031-2",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          },
+          {
+            "playerId": "player-two",
+            "cardId": "ST7-016",
+            "instanceId": "player-two-ST7-016-3",
+            "position": "public-zone",
+            "publicZone": "support",
+            "certainty": "publicly-revealed",
+            "source": {
+              "event": "public-play",
+              "observer": "player-two"
+            }
+          }
+        ]
+      },
+      "decisionCount": 91,
+      "intentStreak": 1,
+      "comboTelemetry": {
+        "started": 0,
+        "completed": 0,
+        "abandoned": 0
+      },
+      "lastChosenCommandKind": "replace-cookie",
+      "activeIntent": "tempo"
+    }
+  },
+  "commands": [
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS1-022-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS3-010-2"
+    },
+    {
+      "kind": "activate-skill",
+      "playerId": "player-one",
+      "sourceInstanceId": "player-one-BS3-010-2",
+      "trigger": "on-play",
+      "paymentIds": [],
+      "costSupportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "battleToHandIds": [],
+      "trashToDeckBottomIds": [],
+      "trashToDeckIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS10-033-4"
+        ]
+      ],
+      "trashCookieToBreakAreaIds": [],
+      "handToBreakAreaIds": [],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS1-040-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS10-046-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS11-033-2"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS11-033-2",
+      "targetInstanceId": "player-one-BS10-003-2",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 1
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-ST1-013-4"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS10-023-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-ST1-013-4",
+      "targetInstanceId": "player-two-BS1-040-3",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS10-046-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS11-033-2",
+      "targetInstanceId": "player-one-ST1-013-4",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 1
+    },
+    {
+      "kind": "skip-replacement",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "deploy-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-ST6-005-4"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-ST6-005-4",
+      "targetInstanceId": "player-two-BS1-040-3",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3",
+        "player-one-BS10-023-1"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-two",
+      "trapInstanceId": "player-two-ST7-017-1",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-two-BS10-046-1"
+      ],
+      "targetIds": [
+        "player-one-ST6-005-4"
+      ],
+      "effectTargets": [
+        [
+          "player-one-ST6-005-4"
+        ]
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS9-031-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS11-033-2",
+      "targetInstanceId": "player-one-ST6-005-4",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-one",
+      "activate": true,
+      "discardHandIds": [
+        "player-one-ST1-020-1"
+      ]
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 1
+    },
+    {
+      "kind": "play-stage",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS10-040-2",
+      "paymentIds": [
+        "player-two-BS10-046-1"
+      ]
+    },
+    {
+      "kind": "play-stage",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS10-040-4",
+      "paymentIds": [
+        "player-two-BS9-031-2"
+      ]
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS2-007-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-ST6-005-4",
+      "targetInstanceId": "player-two-BS1-040-3",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3",
+        "player-one-BS10-023-1"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS4-038-3"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS4-038-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS1-037-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "activate-stage",
+      "playerId": "player-two",
+      "paymentIds": [],
+      "supportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS4-038-3"
+        ],
+        [
+          "player-two-BS11-033-2"
+        ]
+      ],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-BS11-033-2",
+      "targetInstanceId": "player-one-ST6-005-4",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-one",
+      "activate": true,
+      "discardHandIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-one",
+      "drawCount": 1
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 1
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-P-129-1"
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS3-017-3"
+    },
+    {
+      "kind": "activate-skill",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-P-129-1",
+      "trigger": "activate",
+      "paymentIds": [],
+      "costSupportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "battleToHandIds": [],
+      "trashToDeckBottomIds": [],
+      "trashToDeckIds": [],
+      "effectTargets": [
+        []
+      ],
+      "trashCookieToBreakAreaIds": [],
+      "handToBreakAreaIds": [],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-P-129-1",
+      "targetInstanceId": "player-one-BS3-010-2",
+      "supportPaymentIds": [
+        "player-two-BS10-046-1",
+        "player-two-BS9-031-2",
+        "player-two-BS1-037-2"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-one",
+      "trapInstanceId": "player-one-ST1-020-4",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-one-BS2-007-2"
+      ],
+      "targetIds": [
+        "player-two-BS4-038-3"
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-one",
+      "activate": true,
+      "discardHandIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-one",
+      "drawCount": 1
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": [
+        "player-two-P-129-1"
+      ]
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": [
+        "player-one-BS3-010-2"
+      ]
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-one",
+      "activate": true,
+      "discardHandIds": [
+        "player-one-BS3-019-2"
+      ]
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS3-006-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-BS3-017-3",
+      "targetInstanceId": "player-two-P-129-1",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3",
+        "player-one-BS10-023-1",
+        "player-one-BS2-007-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": [
+        "player-one-BS3-010-2"
+      ]
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-ST7-008-4"
+    },
+    {
+      "kind": "activate-skill",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-ST7-008-4",
+      "trigger": "on-play",
+      "paymentIds": [],
+      "costSupportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "battleToHandIds": [],
+      "trashToDeckBottomIds": [],
+      "trashToDeckIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS10-033-4"
+        ]
+      ],
+      "trashCookieToBreakAreaIds": [],
+      "handToBreakAreaIds": [],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS10-047-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "activate-stage",
+      "playerId": "player-two",
+      "paymentIds": [],
+      "supportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS4-038-3"
+        ],
+        [
+          "player-two-BS4-038-3"
+        ]
+      ],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-ST7-008-4",
+      "targetInstanceId": "player-one-BS3-010-2",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2",
+        "player-two-BS10-046-1",
+        "player-two-BS9-031-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS6-010-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-one",
+      "instanceId": "player-one-BS1-012-1"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-BS6-010-3",
+      "targetInstanceId": "player-two-BS4-038-3",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3",
+        "player-one-BS10-023-1",
+        "player-one-BS2-007-2"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-two",
+      "trapInstanceId": "player-two-ST2-020-3",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-two-BS10-047-2",
+        "player-two-BS1-037-2"
+      ],
+      "targetIds": [
+        "player-one-BS3-017-3"
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-two",
+      "activate": true,
+      "discardHandIds": [
+        "player-two-ST2-016-1"
+      ]
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "place-support",
+      "playerId": "player-two",
+      "instanceId": "player-two-ST7-016-3"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "activate-stage",
+      "playerId": "player-two",
+      "paymentIds": [],
+      "supportToTrashIds": [],
+      "supportToHandIds": [],
+      "discardHandIds": [],
+      "hpToTrashTargetIds": [],
+      "trashBattleCookieIds": [],
+      "effectTargets": [
+        [
+          "player-two-BS4-038-3"
+        ],
+        [
+          "player-two-BS4-038-3"
+        ]
+      ],
+      "chooseOneModes": []
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-two",
+      "attackerInstanceId": "player-two-ST7-008-4",
+      "targetInstanceId": "player-one-BS6-010-3",
+      "supportPaymentIds": [
+        "player-two-BS10-046-2",
+        "player-two-BS10-046-1",
+        "player-two-BS9-031-2"
+      ]
+    },
+    {
+      "kind": "play-trap",
+      "playerId": "player-one",
+      "trapInstanceId": "player-one-BS3-022-1",
+      "costOptionIndex": 0,
+      "paymentIds": [
+        "player-one-BS3-006-1"
+      ],
+      "targetIds": [
+        "player-two-BS4-038-3"
+      ],
+      "selfTargetIds": [],
+      "supportTrashIds": [],
+      "supportToHandIds": [],
+      "handToSupportIds": [],
+      "discardHandIds": [],
+      "handToBreakIds": [],
+      "positionCostTargetIds": [],
+      "trashBattleCookieIds": [],
+      "trashCookieToBreakAreaIds": [],
+      "trashToDeckIds": []
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-flip",
+      "playerId": "player-two",
+      "activate": true,
+      "discardHandIds": []
+    },
+    {
+      "kind": "resolve-draw-up-to",
+      "playerId": "player-two",
+      "drawCount": 1
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-two",
+      "targetIds": [
+        "player-one-BS6-010-3"
+      ]
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-one",
+      "instanceId": "player-one-ST6-004-2"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "advance-phase",
+      "playerId": "player-one"
+    },
+    {
+      "kind": "declare-attack",
+      "playerId": "player-one",
+      "attackerInstanceId": "player-one-ST6-004-2",
+      "targetInstanceId": "player-two-BS4-038-3",
+      "supportPaymentIds": [
+        "player-one-BS1-022-3",
+        "player-one-BS10-023-1",
+        "player-one-BS2-007-2"
+      ]
+    },
+    {
+      "kind": "skip-trap",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-next-damage",
+      "playerId": "player-two"
+    },
+    {
+      "kind": "resolve-attack-effect",
+      "playerId": "player-one",
+      "targetIds": []
+    },
+    {
+      "kind": "resolve-optional-cost-attack",
+      "playerId": "player-one",
+      "action": "pay",
+      "discardCardIds": [],
+      "targetIds": [
+        "player-two-ST7-008-4"
+      ],
+      "paymentIds": [
+        "player-one-BS3-006-1"
+      ],
+      "supportToHandIds": [],
+      "supportToTrashIds": [],
+      "hpToTrashIds": [],
+      "positionCostTargetIds": [],
+      "cookieToBreakAreaIds": [],
+      "trashToDeckIds": [],
+      "hpToHandIds": []
+    },
+    {
+      "kind": "replace-cookie",
+      "playerId": "player-two",
+      "instanceId": "player-two-BS4-026-1"
+    },
+    {
+      "kind": "skip-on-play",
+      "playerId": "player-two",
+      "sourceInstanceId": "player-two-BS4-026-1"
+    }
+  ]
+}

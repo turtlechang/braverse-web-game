@@ -26,6 +26,8 @@ export interface CookieInBattleView {
   rested: boolean
   /** Public unconditional mark, consumed at the controller's next Active Phase. */
   nextActivePhasePrevented?: true
+  /** BS8-076: public discard count the controller may pay to keep this Cookie active. */
+  nextActivePhaseDiscardToActivate?: number
   activePhasePreventedBySkill?: true
   battleEntryId?: string
   /** Public event for this battle entry, independent of its current rested state. */
@@ -85,7 +87,10 @@ const toSideView = (
     handCount: player.hand.length,
     deckCount: player.deck.length,
     extraDeckCount: player.extraDeck?.length ?? 0,
-    battleArea: player.battleArea.map((cookie) => ({
+    battleArea: player.battleArea.map((cookie) => {
+      const conditionalPrevention = state.conditionalCookieActivePreventions?.[playerId]
+        ?.find((entry) => entry.cookieInstanceId === cookie.card.instanceId)
+      return ({
       // BS11-092 changes the effective LV for the current turn.  The public
       // projection must expose that rules value without mutating the printed
       // card stored in the authoritative state.
@@ -99,6 +104,9 @@ const toSideView = (
       ...(state.preventCookieActiveNextPhase?.[playerId]?.includes(cookie.card.instanceId)
         ? { nextActivePhasePrevented: true as const }
         : {}),
+      ...(conditionalPrevention
+        ? { nextActivePhaseDiscardToActivate: conditionalPrevention.discardHandToSetActive }
+        : {}),
       ...(isCookieActivePhasePrevented(state,playerId,cookie.card.instanceId)
         ? { activePhasePreventedBySkill: true as const }
         : {}),
@@ -106,7 +114,8 @@ const toSideView = (
       ...(state.cookiesSetActiveByEffectThisTurn?.[cookie.battleEntryId ?? cookie.card.instanceId]
         ? { setActiveByEffectThisTurn: true }
         : {}),
-    })),
+      })
+    }),
     supportArea: player.supportArea,
     breakArea: player.breakArea,
     discardPile: player.discardPile,

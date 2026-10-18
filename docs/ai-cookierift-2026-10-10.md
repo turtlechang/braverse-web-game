@@ -1,5 +1,426 @@
 # Cookierift 構築與 AI 決策改善
 
+## 2026-10-18 HP支付後的補HP目標修正（91c42ea，驗收完成）
+
+本輪已閉合既定驗收：目前35副AI牌組為28副Cookierift社群構築加7副BS12參照，涵蓋紅8、黃5、綠4、藍5、紫4、黑5、混色4。新來源的完整Vitest、build、產品來源ESLint、標準AI Browser、四個雙尺寸HP機制案例與5,040場matched回歸均通過；歷史970的六色雙尺寸12個完整UI鍵仍保留來源及driver差異標籤，不改稱91已重跑12場。這些結果支持固定AI對照及有限ST1腳本條件下的競爭表現，不能推論真人／專家強度或每副牌均改善。
+
+970矩陣的兩筆錯誤已用原凍結970／b81各自精確重現：seed211203400、Cookierift #1239黃對#1295紅、P2先攻，27個成功action後，唯一1HP的Pavlova被同時選為HP代價與補HP目標。真實付款使來源離開戰鬥區，原目標因而非法。救援／補位與額外目標限制兩個替代假設已由同一步觀察排除；原RED與完整失敗fixture保留。
+
+`pending-handler.ts`現僅針對可選、純HP代價、正整數self gain-hp且無額外條件的攻擊後效果，先遮蔽隱藏資訊，再呼叫既有`payHpToTrashCost`投影公開付款結果，從付款後的存活餅乾選目標；沒有候選則略過。正式命令仍對原始狀態付款，不合併未知HP卡的costRecord，也不改卡文或權威付款規則。其他代價／效果維持原路徑；GPT-6.1 Sol唯讀審查未確認P1／P2。
+
+永久回歸`optional-hp-cost-heal-target.test.ts`的24案全部通過（`vitest-hp-cost-target-green-20261018-r1.json`，exit0，9.34秒，RAM39.6～42.1%）：雙座位與Lv.1～5的唯一1HP來源略過、來源有2HP時可自補、犧牲另一張1HP餅乾後治療存活者、同PlayerView隱藏牌置換，以及原始失敗seed的正式命令與不可變性。由於此前RAM超標，永久檔未在修補前執行RED；真正失敗基線來自兩份原凍結政策的精確重播，不宣稱觀察到24案RED。準備式原卡機制測試不當作Browser或完整對局驗收。
+
+新凍結候選`candidate-engine-hp-cost-target-20261018-r1.mjs` SHA `91c42ea9ec6b49ff71f74800898a9e300dbc7f03c420e07625ab826bb2967a22`。對照`baseline-policy-current-rules-measured-b81-common-hp-cost-target-20261018-r1.mjs` SHA `0b83382cadbab17928fe4233d9f667e1c2eee933a031e9ee2300d8c8a318ae8e`，明列`COMMON-LEGALITY-ADAPTATION`。兩邊使用完全相同的新pending-handler compiled模組；逆替該模組可逐byte還原整個970與b81，skills／masked-state依賴與binding也相同，347 inputs／50 policy／297非policy雜湊仍為`ecb78e7a…e91d07`。準備helper已由Sol靜態審查、根代理全文核對後實跑exit0。這不是原b81 bytes，不繼承舊矩陣／UI／全套驗收，新比較差值也不能歸因於兩邊共有的HP修正。
+
+資源恢復後，最終v2護欄tiny self-test在host確認自有child、grandchild與taskkill helper全數退出（`memory-guard-self-test-20261018-v2-r2.log`，exit0，41.8%）；保留parent至tree-stop成功、有限重試與失敗收尾，不再把直接child kill稱為整樹停止。啟動低於48%、52%提前停止，使用者60%上限不變。隨後三檔隔離r2的Lv.4全部8項已通過，其中20 seed對Lv.3耗時2.42秒；該次512MB worker在DeckEditorPage發生heap OOM，整批exit1、RAM41.5～44.9%，不列整批PASS。僅該檔改用1GB heap、原timeout與斷言重跑，24項全通過（`vitest-deck-editor-isolation-20261018-r1.json`，exit0，20.02秒，39.8～44.0%）。此隔離結果不取代新版完整門檻；其後完整PASS見下。
+
+首個HP build因新測試fixture將optional `pendingAbilityEffect`寫成null而exit2，47.3%峰值；改為型別要求的undefined，未改斷言。修後共用pending／HP支付／可選效果／隱藏牌回歸8檔90項全通過（含上述24案，非相加；`vitest-hp-cost-target-regression-20261018-r1.json`，exit0，15.14秒，40.3～42.8%）。新正式build `build-hp-cost-target-20261018-r2.log` exit0、40.7～46.8%，產物`game-demo-_1mlCz8d.js`。中間一次啟動回歸被自動審核拒絕，因其仍將先前3GB build視為可能活動；沒有繞過或並行啟動。分開取得build exit2，再於host查兩自有PID均不存在及RAM40.29%後，才循序啟動上述回歸與build。
+
+兩筆精確GREEN重播已完成：`replay-hp-cost-target-green-20261018-r1.json`為`GREEN-TWO-EXACT-ORIGINAL-ROWS-FINISHED`，exit0、RAM40.8～41.5%。每row先與原bundle逐步核對27個完整decision／state與actor memory，再比對原RED完整fixture；第28步新AI與權威skip的完整狀態相同，保留Pavlova 1HP，兩row都在226個action結束、P2勝。兩種政策座位各一局，因此不能稱兩場候選勝利，也不作勝率證據。
+
+舊970的12個UI完成鍵可沿用為未受影響的操作／完成紀錄：實際六色Arena主牌／EXTRA加人方Tactical ST1共138種cardNumber、97個runtime JSON來源均符合舊非policy雜湊；其完整封閉牌表不含任何hpToTrash攻擊Then的六卡（ST6-002、BS10-022、BS10-047、BS5-010、BS5-098、BS6-003）。轉接表只有BS10-047符合新純self gain-hp分支；裝備追加、EXTRA自有卡池、ability／mandatory wrapper旁路也不會進入新guard。這是完整牌表與執行入口可達性核對，不是由對局log沒Pavlova推論。仍保留970來源標籤與原r1／r2 FAIL、兩場停止、有限ST1及r3能力擴充限制，不改稱91c42ea已重跑12場。Pavlova的新分支另以既有正常測試對局表單準備原卡局面補Browser，不改產品入口或凍結來源。
+
+新產品來源ESLint已通過（`lint-hp-cost-target-20261018-r1.log`，exit0，41.2～44.3%，沿用排除output／test-results／.tmp／附件產物範圍）；新build標準AI Browser六旗標全PASS（`ai-browser-hp-cost-target-20261018-r1/ai-browser-validation.json`及wrapper，exit0，41.5～45.2%）。wrapper以自有strict port核對index／所有JS、CSS的HTTP預檢bytes；這不是Browser實載response紀錄，也不涵蓋Pavlova。根代理已目視該單張截圖，畫面仍為開局動畫過渡，不以它主張穩定終局／雙尺寸RWD驗收。
+
+91c42ea新版完整Vitest已全數通過：1,066檔／21,288項、exit0、1,263.82秒，RAM41.5～47.1%（`vitest-hp-cost-target-full-20261018-r1.json/.log`）。包含先前逾時的DeckEditorPage 24項、Lv.4 8項、simulation 508項，以及新增HP永久回歸24項，均沒有修改原timeout或舊斷言。結束後host確認兩自有PID均退出、RAM40.63%，347個凍結來源雜湊仍一致；這份新來源的全套PASS不改寫970舊FAIL。
+
+Pavlova專用Browser r1在Chromium啟動前退出：driver誤讀ST1-016的`item.cost.energy`，實際凍結runtime為`item.cost={red:2}`。該次0案例、exit1、RAM40.5～41.1%、自有port已釋放，wrapper FAIL證據保留。r2只修正該欄位與產物名稱／driver雜湊，完整bytes逆替可還原r1其餘全部內容；Sol另唯讀閉合。四個預定案例與嚴格驗收不變，沒有改產品來源。既有正常測試對局表單的原生覆盤可能誤標`source=production`，本輪保留原始下載bytes，外層強制`test-state/preparedScenario`，禁止當自然發牌、完整對局或production訓練資料。
+
+Pavlova專用r2四案已全PASS（`hp-cost-target-browser-20261018-r2-1792296399145-c3ca44df-0f69-4599-ae71-fcc1d2a32c0d/report.json`，wrapper exit0、RAM40.2～44.7%、自有port已釋放）。桌機1920×1080與平板1164×777各驗兩案：負向由人方GingerBright真NN／1將印刷2HP的Pavlova降至1HP，再由實際Lv.5 AI支付YY普通2後略過HP代價，保留末張HP；正向由印刷2HP直接發動實際YY／2，再付原最後一張HP並以原牌庫頂補回，完整核對`[H0,H1]→[H0,D0]`、棄牌追加H1及牌庫slice(1)。每案雙方60張、60個唯一ID、15種各四張、牌庫40，均為原始印刷／轉接卡；兩張真RR道具置頂僅隔離兩張抽牌後的其他行動，沒有抑制抽牌或替AI選動作。Item本可一般放支援，四案AI實際略過可選放置，不能稱Item不合法；即使放1張R也仍不足RR。
+
+四案各14個實載product response雜湊與本機一致，含新game chunk，pageErrors全空；負向各14個、正向各11個正式命令均以凍結91引擎獨立完整重播，最終全狀態相同，native `replay.exact=true`。正向實付HP ID `player-two-BS1-020-1201`進棄牌、`player-two-BS1-019-102`由原牌庫頂補入、保留`player-two-BS1-020-1200`；負向保留原HP。Sol另唯讀核對native原件／雜湊與實際agent Lv.5，根代理已目視四張結果、雙尺寸初始HP與真付款共八張圖，未見妨礙該局部操作的溢出。這是四個準備式機制案例、0個完整勝負對局，仍有原生`source=production`誤標的外層隔離，不作online或真人強度證據。
+
+新矩陣與獨立auditor已全PASS：`matched-comparison-hp-cost-target-20261018-r1-seed211000000.json`為5,040／5,040、零錯誤／未完成／動作上限，exit0、兩worker、RAM39.7～43.6%；候選2,540勝、對照2,500勝（50.40%）。630組配對、每組兩seed與四次政策座位／先手交換，1,260初始預檢及5,040逐局parity均已核對。2,520組政策座位鏡像為候選有利34、對照有利14、中立2,472。每副牌在每種政策下各144場，逐色結果如下：
+
+| 色組 | 每政策場數 | 候選勝 | 對照勝 | 勝場差 |
+|---|---:|---:|---:|---:|
+| 紅 | 1,152 | 671 | 666 | +5 |
+| 黃 | 720 | 386 | 374 | +12 |
+| 綠 | 576 | 167 | 163 | +4 |
+| 藍 | 720 | 331 | 324 | +7 |
+| 紫 | 576 | 285 | 280 | +5 |
+| 黑 | 720 | 517 | 515 | +2 |
+| 混色 | 576 | 183 | 178 | +5 |
+| 合計 | 5,040 | 2,540 | 2,500 | +40 |
+
+35副中20副候選勝場較多、12副相同、3副較少：#1164藍55／56、#897混色33／34、#1291黃56／57，三者均各少一勝。交換政策也改變對手，不能將逐副或逐色差值單獨歸因該牌組自身決策，也不把這些相依對局稱為統計顯著或真人勝率。
+
+`hp-cost-target-comparison-audit-20261018-r1.json`另以256MB heap單獨實跑exit0、RAM40.4～40.7%，逐筆重算5040唯一排程、勝場、七個色組、35副與鏡像，核對14份牌表快照、347個目前來源、297個非政策來源、校準／matrix bytes及整份逆替還原；報告SHA `350644d9b938529115305b8ae95338e802bad2568065bbe6304f2ebb3bf15cf3`，audit SHA `701fee8cefab378ac8475eda847563b466a496d2ebc02c4eee6436dd576b1a45`。auditor未另做source rebuild，來源雜湊／校準相同及compiled逆替證據分開列示，不稱獨立source-to-bundle重建證明。執行期間沒有更動產品來源，新增永久回歸檔SHA仍為`47cfd3af…76c69`，因此沿用先前新來源全套／build／lint／Browser證據；收尾僅同步文件。
+
+seed211000000 cohort已用於診斷共用卡死問題，這是修復後matched回歸比較，不能稱未看過的獨立holdout。兩政策共有HP合法性修補，新差值反映其餘攻擊Then順序／Refresh政策，不用來歸因共有修補的勝率效果。舊970矩陣與舊全套FAIL、Browser harness停止及先前99.3% RAM事故原件均保留。修後所有heavy命令循序執行，沒有提高原測試timeout；本次最終通過的驗證觀測最高RAM47.1%，52%提前停止與使用者60%上限維持。這是提交前完整工作樹的驗收紀錄；AI拆分提交的證據範圍見下。
+
+### AI拆分提交的隔離快照檢查
+
+使用者明確要求COMMIT後，本次只暫存61個AI／Cookierift與必要共用引擎／UI修補檔案。`battle.ts`只納入離場佇列、無可用choose-one與EXTRA detached FLIP三組修補（34新增行）；契約ledger只納入BS4複合Then修補。獨立ST9-006／009裁定、AGENTS歷史、候選資料及所有執行產物均保留，未納入本次提交。
+
+上文91c42ea的完整Vitest與5,040場結果來自含ST9未提交裁定的完整工作樹，不能直接稱為本次拆分提交樹的逐byte驗收。以UTF-8文字並將CRLF正規化為LF比較347個bundle來源，50個AI政策來源無差異；只有`official-effect-adapter.ts`、`battle.ts`、`demo.ts`、`st9-007-009-demo.ts`四個非政策來源因排除獨立ST9工作而不同。此比較不冒充raw-byte相等或新的勝率實測。
+
+從暫存樹`23c095a8e5b9bb2d0b7ccc35a14bd5ee8c0c6c17`匯出隔離快照（文件收尾前版本），使用既有node_modules、原timeout與斷言、單worker及52% RAM停止護欄循序執行：build exit0、RAM41.0～47.0%；AI／牌組／共用引擎／hook／契約及原ST9邊界回歸103檔／1,609項全部PASS，exit0、308.01秒、RAM40.8～44.0%；產品來源ESLint保留max-warnings=0與既有產物排除，exit0、RAM41.3～46.5%。證據位於`output/ai-cookierift/commit-ai-20261018-r1/`的`build.log`、`regression.json/.log`、`lint.log`及`source-scope-comparison.json`。
+
+隔離快照未另跑全套Vitest、5,040場矩陣或Browser；這些既有結果仍限於上文原工作樹來源。此後只同步README與本文，提交前再以暫存樹差異確認產品程式及測試與隔離快照相同。
+
+## 2026-10-18 攻擊 Then 順序與 Refresh 生存優先（970歷史FAIL與UI完成紀錄）
+
+本輪只改三個AI政策模組。Refresh在規則層合法候選中，先保留公開Break加卡面LV仍低於10的選項，再沿用原本的保留價值排序；全部必敗仍完成合法選擇。攻擊分配只新增單段、固定正傷害、原攻擊對象的Then，條件限定無條件或公開戰鬥區關鍵字；先付能量、REST及計入普通傷害，再透過共用條件／目標／效果傷害函式計算。同步投影的publicHp，尊重效果免疫與交戰等級封鎖，原目標普通KO後不改選其他目標；其他Then、FLIP、陷阱及昏厥回應不模擬。
+
+Lv.3～5都接入此分配。內部路線先保留條件式Break上限機會；普通分配扣分仍最多240，錯失上限路線最多600，以免被Lv.4／5原有350以上的單次KO加分蓋過。它仍是相對評分，不把未知回應的路線標記為實際終局勝利。深度3、內部非memo節點256，Lv.4／5另受既有deadline；截斷即捨棄整份預測。GPT-6.1 Sol對這三處唯讀審查未發現可確認P1／P2，但不代替效能或實戰驗收。
+
+原始60張牌表的三等級攻擊順序及雙座位Refresh反例，從3＋6項RED轉為PASS；獨立probe使用同一校準bundle亦通過，沒有把準備局面稱為UI敗局重播。修正的BS3-019 hook測試以原卡RRR付款→2傷害→Equip完整父流程取代舊不在區域的Equip-only來源；維持只列指定宿主與缺宿主為空兩項斷言。相關18檔／253項通過（`vitest-order-refresh-regression-20261018-r1.json`、exit0、47.94秒、記憶體42.0～51.6%），另31項分配測試已通過（非加總）。新機制測試的防效果傷害duration欄位曾導致兩次TypeScript build失敗，已按既有型別補為`until-source-next-turn`；`build-order-refresh-20261018-r3.log`最後正式build exit0、記憶體42.3～53.4%，產物`game-demo-mxpVjQ5o.js`。產品來源lint沿用排除生成產物的命令通過（43.6～51.7%）；最後duration型別補正的該檔再跑ESLint exit0。完整Vitest已啟動，兩次build失敗log保留。
+
+新校準來源 `candidate-engine-order-refresh-20261018-r1.mjs` SHA `97045424560f892a2009ca0ac5537a8d6d052aec3ea3808376fc364b6bcd8571`，347個inputs。對照版為上一批實測b81候選的完整bytes拷貝（`baseline-policy-current-rules-measured-b81-before-order-refresh-20261018-r1.mjs`及manifest），297個非政策來源仍為`ecb78e7a…e91d07`。manifest明列單一凍結compiled policy，不冒充目前政策source可重建歷史bundle；Sol另核對與現有benchmark相容。seed `211000000`、35副／5,040場、四worker矩陣最後FAIL：5,038場完成、2場decision-error、0動作上限，exit1、記憶體42.4～53.4%；matrix bundle與校準bytes相同。兩筆皆為Cookierift #1239黃／#1295紅、seed211203400、P2先攻，兩種政策座位交換均成功27個action後`Invalid battle action.`。原凍結bundle精確重播也各在T4、P1黃方、Pavlova攻擊效果之後的可選攻擊代價失敗；診斷進行中，不把未完成矩陣勝場／比例作正式驗收。原比較auditor按`status=PASS`強制門檻exit1，log保留，不稱來源核對PASS；舊2,544勝不併入新結果。
+
+標準AI Browser六旗標已全數PASS（`ai-browser-order-refresh-20261018-r1/ai-browser-validation.json`、exit0、記憶體46.3～50.0%），不把六旗標當作六場完整對局。
+
+正式UI原先固定六色各桌機1920×1080／平板1164×777一場，共12場，見`order-refresh-ui-plan-20261018-r1.json`。r1 driver僅放寬六色白名單、加入預定尺寸及改runTag，逆替換驗證其餘玩家政策／互動／建置核對bytes與前版完全相同；SHA `1a370c6c96684d88b43e8578312908918a3226207e44a9c82b81713838822831`。原批在第4場停止，不能宣稱12場cohort PASS：前三場紅色桌機玩家T13勝、紅色平板AI T15勝、黑色桌機AI T15勝，皆accepted、pageErrors為空、實載build核對PASS，根代理已目視三張終局圖。三筆證據分別為`test-results/post-order-refresh-r1-active-tactical-st1-vs-lv5-bs12-red-arena-20261018-1792286143686-19904/`、`...-1792286286935-6696/`及`...bs12-black-arena-20261018-1792286422652-23476/`。
+
+第4場黑色平板T6出現真正的「對手棄置的卡牌」公開確認（Draining Magic Circle），driver沒有該分支而SAFE_STOP、無勝負、pageErrors為空；`...bs12-black-arena-20261018-1792286590887-14124/`完整保留，根代理已目視停止畫面。r1 wrapper exit1、記憶體46.5～52.7%，原`order-refresh-ui-audit-20261018-r1.json`也明確FAIL（只有4個起跑目錄），不把未完成對局計為AI勝或敗。產品未改，source仍970／同一dist。依實際`InformationModals`／`GameModals`加入兩種嚴格標題及按鈕的AI公開資訊ack，其他未知面板仍停止；ack不改選牌／支付／目標策略，callback會繼續已決定的AI動作，不冒稱只關畫面。
+
+補測計畫`order-refresh-ui-plan-20261018-r2.json`固定9場，r2 driver SHA `b6d7ba5258dff8d37a3db81121763e9c666ba35b255fc6462bbe44dc62ba4dcd`，只增加公開資訊ack、相應穩定重查selector及runTag，inverse可還原r1其他全部bytes。實際只完成黑色平板AI T13勝、綠色桌機玩家T16勝、綠色平板玩家T17勝；根代理已讀報告及目視終局圖。第4場藍色桌機T12在DJ Miya牌庫底展示「條件未匹配／Cherry Cola Cookie／等待對手確認…」及後方人方強制棄1手牌時停止，沒有勝負或pageError，根代理已目視停止畫面。四份報告全數保留；r2 wrapper exit1、記憶體46.3～52.4%，`order-refresh-ui-continuation-audit-20261018-r2.json` FAIL（4個目錄不等於預定9），不能使用原13次起跑假定。
+
+來源確認這是`RevealTopDeckModal`，不是AI公開卡牌ack；只有牌庫擁有者可確認，disabled「等待對手確認…」不能由人方代點。r3透過原有「縮小卡牌展示」控制收起精確的對手牌庫底展示，並新增人方exact強制棄牌能力：僅接受「必須選擇N張手牌棄置」，從可見己方ST1手牌沿原`handValue`由低至高選齊，再確認modal消失、動畫結束及手牌恰少N張。這是明列於policy／plan的玩家策略能力擴充，不稱中性ack，也不宣稱三版玩家政策全部相同；其餘bytes inverse還原r2。Sol唯讀審查未發現需先修正的可確認問題，實際分支涵蓋仍按新run計數。
+
+`order-refresh-ui-plan-20261018-r3.json`固定剩6個新context：前次未完成的藍色桌機及5個未起跑鍵，前6個完成鍵不重跑、不選seed，兩個停止attempt保留無勝負。r3 driver SHA `9394000df0561b81d848653469fa6e9f201822b199327a100114db353a24cfce`，同970產品／同dist已起跑；若剩6場皆完成，只能報14次起跑、12個完整鍵、2場harness停止，原r1與r2 cohort均保持FAIL。有限ST1腳本不等於真人／專家強度。
+
+970來源UI續測已結束，r3 wrapper exit0、記憶體44.0～55.0%；根代理已目視12張終局圖、兩張停止圖，以及牌庫展示／兩次強制棄牌／公開棄牌截圖。`order-refresh-ui-continuation-audit-20261018-r3.json` PASS（exit0，該次唯讀核對記憶體55.6%），核對14次起跑、12個完成鍵、兩個保留停止、三版driver差異與產品實載雜湊。完成鍵實際AI 8勝／玩家4勝：紅1／1、黑2／0、綠0／2、藍1／1、黃2／0、紫2／0。此為有限ST1腳本的觀測，且含已揭露的r3強制棄牌能力擴充，不能稱同版driver的均質勝率、每副牌都強或真人／專家強度。實際涵蓋牌庫展示縮小1次、強制棄牌2次共4張、公開棄牌確認1次；AI單卡公開確認0次，明列未涵蓋。兩個原cohort仍FAIL，停止局不計勝敗。
+
+完整Vitest最後為1,065檔／21,264項，1,062檔及21,261項通過、3檔各1項超過原5000ms，exit1、2,482.82秒、記憶體44.3～55.1%。三項分別為DeckEditorPage正式EXTRA流程、Lv.4對Lv.3二十seed、AI simulation二十seed；沒有失敗斷言，但不能據此稱環境問題已排除或全套PASS。新增Pavlova永久回歸檔不在該次收集清單。
+
+三檔隔離重跑`vitest-order-refresh-timeout-isolation-20261018-r1`發生資源事故：56.1%觸發護欄時，Windows以`The user name or password is incorrect.`拒絕taskkill，記憶體監測峰值升至99.3%，超出使用者60%限制；進程最後自行exit1，這次不列有效驗證。其JSON為537／540通過、Lv.4三項失敗，不能用前兩檔通過取代全套門檻。當時停止新增heavy工作；提升權限唯讀查核未找到本輪Vitest／guard殘留Node程序，整機記憶體仍高於60%，未終止其他工作。後續資源恢復、護欄修正與新HP候選驗證見上節；這份970完整矩陣仍保持FAIL，沒有新的970全套exit0。
+
+## 2026-10-18 Equip 來源跨 Refresh 的候選修正（上一批來源）
+
+兩筆 `209161600` 失敗已用原凍結 `b3bbf7c8…`／`e828a55a…` 政策精確重現：P1 在 T24 使用 BS8-072，inspection 要展示兩張但牌庫只剩一張，因此先 Refresh；來源道具已由棄牌區洗回牌庫，後續 Equip 卻仍提供己方 Mystic Flour 目標。兩政策座位交換均在 220 個 action 後報同樣錯誤。來源身分只從出牌當下的己方手牌與公開區域追蹤，沒有搜尋隱藏牌庫／HP 或對手手牌；`replay-973-equip-error-20261018-r2.json` 保存原始來源邊界與 stack。這是來源消失，不是 self-target 或玩家歸屬錯配。
+
+共用 `getEffectTargetCandidatesForEffect` 現在依既有 executor 檢查來源玩家的指定 battle／trash 區域，排除來源自身與其他玩家的宿主；來源失去時回傳空候選，沿用既有可選 Equip 略過流程。未放寬直接執行時的拒絕條件，也未改卡文／裝備生命週期。新增原始 #973 卡牌 inventory 的縮小回歸先取得精準 red：8 項皆失敗，Lv.1～5 均回傳 `error`；修補後連同既有 BS8-021、BS8 optional counts、BS12 R007 與 BS3 Then 為 5 檔／93 項通過，exit 0、記憶體 42.0～44.7%。報告：`vitest-equip-source-red-20261018-r2.json`、`vitest-equip-source-green-20261018-r1.json`。正常 BS8-072 inspection→Equip 父流程由同批既有 `bs8-optional-counts.test.ts` 正例覆蓋。
+
+新正式 build 通過（`build-equip-source-20261018-r2.log`、exit 0、記憶體 42.0～48.0%，`game-demo-B8ueS_7x.js`）；首個 build wrapper 使用錯誤的 npm CLI 路徑，屬環境命令失敗，已保留 r1 log 並改用目前 `npm.cmd` 所在目錄。排除生成產物的產品來源 lint 通過（保留 `--max-warnings=0`，排除 `output/**`、`test-results/**`、`.tmp*/**`、`.codex-remote-attachments/**`；exit 0、記憶體 46.3～51.4%）。標準 AI Browser 六個開局／HP／暫停旗標全部通過（`ai-browser-equip-source-20261018-r2/ai-browser-validation.json`，exit 0、記憶體 43.8～51.3%）；首跑的沙箱 loopback `EACCES` 環境失敗另存 r1 log，之後以沙箱外本機驗證完成。六旗標不當作六場完整對局。
+
+`replay-973-equip-fixed-20261018-r1.json` 已證實兩筆原種子皆完整結束、各 264 steps，兩場 winner 都是 P2；前 220 steps 的 payload 與各自凍結版本完全相同，第一個差異正是原錯誤位置，修補後以空目標合法續接。Refresh 前來源在 trash 且有兩個合法 host，Refresh 後 trash=false、合法 host 清單為空。兩筆只作診斷，不併入勝場；guard 記憶體 43.1～44.3%、exit 0。
+
+新參考版 `baseline-policy-current-rules-measured-before-healer-equip-source-20261018-r1.mjs`（SHA `e5b90ce2ec750020bda2ed6be300b5a9e1f5bc9bde14443ffa432c6ba5cab75c`）將唯一 Equip shared 分支從新候選直接複製，反替換後完整 bytes 還原 `e828…`，政策其餘 bytes 不變；這是 compiled measured policy 的規則適配，不冒充從歷史 source 重建或繼承原 PASS。297 個非政策來源只變更 `effects/targeting.ts`，新 aggregate `ecb78e7a6b393178dd466a72943b216e68e337d0e8bc2b8a6064865011e91d07`；參考版與候選的整個 compiled targeting 函式 bytes 相同。正式矩陣新候選與 calibration 完整 bytes 同為 `b81cfd414b27f25d53ff8af5cda2c8a86f02dff8a944c8763f192b0ee6c78a7c`。
+
+seed `210000000` 的四 worker 矩陣已完整結束：5,040／5,040、零引擎錯誤／未完成／動作上限，exit 0、全機記憶體 43.0～51.6%。候選 2,544 勝、參考 2,496 勝（50.48%）；2,520 組政策座位鏡像為候選有利62、參考有利38、中立2,420。35副牌各由兩政策控制144場；630組、兩seed、四交換、14來源快照、1,260初始預檢與5,040狀態parity均由 `equip-source-comparison-audit-20261018-r2.json` 核對 PASS，包含 calibration完整bytes一致與當時source重建一致。這是固定AI對照，並非真人勝率、統計顯著性或單獨Healer修補的因果效果。兩 worker 起跑至96場後中止的r1保留、零場併入；正式產物為 `matched-comparison-equip-source-20261018-r2-seed210000000.json`。
+
+同來源完整Vitest已結束，`vitest-equip-source-full-20261018-r1.json` 為exit 1：1,063檔中1檔失敗、21,220項中1項失敗，耗時1,936.65秒、記憶體41.7～51.7%。唯一失敗是 `usePendingEffect.test.tsx` 的舊Equip fixture：來源道具不在任何區域，且將真卡damage→Equip改成Equip-only；正式本機／線上流程於Equip前已付款，故不移除shared來源檢查。測試已改為原始BS3-019完整付款與傷害父流程，指定宿主正反例與同檔45項於下一來源的針對性回歸通過；不反改舊FAIL報告。後建的攻擊順序／Refresh測試不在這份全套收集範圍，不能宣稱已通過。
+
+本來源三色正式 UI 均已完成，每色一次、無重試或挑選開局；新 driver 與前一版僅 runTag 不同（SHA `e897f59c5f206faa14f1893860365ce322f3eaed9143b7ed29689d3818425ea4`）。人方設定原始 60 張 ST1 牌組後，透過正常選單、開局、付款、攻擊、FLIP、抽牌與補位控制完成，未注入 GameState、test-state 或搜尋時鐘。結果如下：
+
+| AI 牌組／尺寸 | 勝方／回合 | 人方支援／登場／攻擊／補位 | 人方 FLIP／手牌代價／抽牌 | 證據目錄（test-results/） |
+|---|---|---|---|---|
+| 紅色／1920×1080 | 玩家／16 | 8／1／12／6 | 7／5／2 | `post-equip-source-r1-active-tactical-st1-vs-lv5-bs12-red-arena-20261018-1792283838799-13488/` |
+| 黑色／1164×777 | AI／12 | 6／1／9／3 | 4／2／2 | `post-equip-source-r1-active-tactical-st1-vs-lv5-bs12-black-arena-20261018-1792284022320-16844/` |
+| 綠色／1164×777 | 玩家／16 | 8／1／12／4 | 6／5／1 | `post-equip-source-r1-active-tactical-st1-vs-lv5-bs12-green-arena-20261018-1792284148347-7768/` |
+
+合計 22 次支援、3 次登場、33 次攻擊、13 次補位、17 次 FLIP、12 次手牌代價與5次抽牌。三場皆 finished／activeHumanMatchAccepted=true、pageErrors=[]；主代理目視終局圖，獨立 `post-equip-ui-audit-20261018-r1.json` 重核原卡牌表、driver、23 個產品檔案與每場12個實際 GET body hash，全部一致。這份 UI 完成核對為 PASS，不代表 AI 三場皆勝；本批實際為 AI 一勝兩敗，不足以單獨宣稱競爭力終點。兩筆敗局保留，未宣稱從紅色公開紀錄已證實漏必勝，也未把綠色終局誤認為Refresh選錯：當時Break9已無任何LV≥1的存活選項。
+
+後續以獨立原始60張牌表重現兩類決策錯誤，並非上述UI敗局重播。第一類為P-175在另一張Arena已REST時才追加1，先Red Osmanthus再Caramel可在無FLIP的正式父流程造成6傷害、達Break10，反向僅5；原Lv.3～5三項均RED。第二類為Break8時有LV1可停在9，原Lv.3～5雙座位卻選LV2立即敗北，六項RED；只以公開Break與卡面LV優先生存後，原排序／全數必敗等16項已PASS（`vitest-refresh-survival-green-20261018-r1.json`、exit0、41.9～43.9%）。攻擊Then預測及Lv.3～5接線仍在針對性驗證；新策略尚未完成新來源全套、矩陣與正式UI，不沿用本節b81結果冒充驗收。
+
+UI wrapper exit 0、全機記憶體 45.4～51.7%，audit exit 0、46.8%；完整 Vitest 與四 worker 矩陣併行，因此不是效能量測。對局沿用真實預設 180ms 搜尋時鐘。index hash 僅核對本機 dist bytes，沒有宣稱對局當時 index HTTP body attestation；JS／CSS 則有當時 GET body。三場為有限 ST1 戰術腳本挑戰，不是真人／專家勝率；舊來源 UI 成績不與此批合併。Browser 與17847自有 preview 已關閉。
+
+## 2026-10-18 Healer 支援重返與 Once 保留（修補前來源）
+
+本節修補前配對矩陣 `matched-comparison-20261017T230106394Z-21704-470e87fb.json` 為 FAIL：5,038／5,040 場結束、2 場 decision-error、零動作上限，exit 1、記憶體 40.1～46.5%。兩筆皆為 Cookierift #973 自身對局、seed `209161600`、P2 先攻，在兩種政策座位交換下各成功 220 個 action 後出現 `Invalid Equip source or self target.`。候選 bundle `b3bbf7c84e9d8436933e2e5aa41abd8adffab482cfa79608bf09836d6238ee20` 與實測舊候選參考版 `e828a55a…` 保留不改；P1 來源跨 Refresh 消失的定位與修補後重播見上節。未完成矩陣的 2,553／2,485 勝與 50.67% 不作正式驗收勝率，也不併入先前矩陣；下文單元／build／UI 僅為此修補前來源的分層證據。
+
+以 60 張原始綠色卡牌、每卡四張建立準備式反例，並先用兩次真實普通攻擊使 Shining Glitter 與 Green Tea Mousse REST：舊決策先空用 Shining Glitter 的免費 Activate Once，修正選零後仍提前結束回合，錯過 Healer → 合法略過補位 → 支援重返 → 合法略過 On Play → 同張餅乾再攻擊的路線。這是依影片啟發建立的獨立規則回歸，沒有稱為影片指令重播或完整自然對局。
+
+本批 AI 只排除免費、非 REST、無 Then 的單一支援登場能力且實際選零的候選；玩家合法選零仍保留。新增有限公開推演，從動作前的遮罩狀態重播實際道具命令，逐步經正式指令處理己方略過與 Stadium 的可選抽零，再確認同一 instanceId 以新 battleEntry 活躍登場、且普通攻擊可實際支付。未知 HP 被棄置後仍以背面推演，不讀新揭露牌面；父道具與再登場成本納入場面變化，攻擊付款沿用原評分、潛力折扣至 75% 並封頂 250。只取最高一條路線並扣除已計入的正向連動估值，不結算隱藏 FLIP／陷阱，也不把它當成保證勝利。
+
+這項資訊限制指新增的 reentry 推演；沒有把整套既有 root 評分宣稱為棄牌張數限定。額外唯讀查核確認目前 PlayerView 的攻擊費用不依新棄牌重算、BS12-014／015 的活躍封鎖只依公開戰鬥區見證，Healer 的 battle／support capability 也不連接只有 trash tag 的條件。既有 strict tactical condition helper 能讀公開棄牌屬性；混合條件及其他卡的全核心資訊邊界不屬這次完整驗收。
+
+最終定向 8 檔／56 項通過，exit 0、記憶體 40.4～42.7%，報告為 `output/ai-cookierift/vitest-healer-reentry-focused-20261018-r3.json`。其中 Healer／Once 的兩檔 20 項包含 Lv.3～5 的第一步選擇，以及 Lv.5 使用 Shining Glitter／Stadium、由 AI 逐步執行至 Break 10 勝利的兩條完整續接；另有 Once 已用、付款後能量不足、優先現有致勝攻擊、準備式已 REST 場景及最後餅乾反例，以及原始隱藏 HP／牌庫換牌後完全相同的命令與評分。兩路線均核對每位玩家完整 60 張實體 inventory、唯一 instanceId 與每卡四張；準備式反例仍與自然對局證據分開。兩個獨立唯讀 review 未發現本批 P1／P2，不能替代動態驗證。
+
+相關 ST6-004 回歸不再依賴現行 AI 的第 172 步：從 `e828a55a…` 實際策略提取 175 筆正式指令，以目前規則重播至原來第 13 回合、P1 主要階段的相同局面，保留「來源已 REST、技能仍可合法付費、全部攻擊機會已用完，故不棄手牌增傷」與後續對局完成期待。正向案例也改用兩副真實 60 張牌組，原 Pitaya Dragon 為 LV.2／4HP／RRR 普通 3，棄一手牌後真正提升至 4 且仍有合法攻擊。fixture／提取器保留來源 SHA、seed、牌表與舊 frame；測試執行不依賴 output bundle。先前固定步數偏移及新準備式案例錯放先攻第一回合的失敗紀錄保留，未修改產品规则來配合測試。
+
+最終 `npm.cmd run build` 等同的受 guard 包覆 npm CLI 建置通過 TypeScript 全範圍與 Vite 2,207 modules，exit 0、記憶體 40.3～46.2%；產品 bundle 為 `game-demo-Bpx5GkLT.js`。`npm.cmd run lint -- --ignore-pattern 'output/**' --ignore-pattern 'test-results/**' --ignore-pattern '.tmp*/**' --ignore-pattern '.codex-remote-attachments/**'` 等同的 npm CLI 檢查通過，exit 0、記憶體最高 44.8%，只排除生成產物目錄，沒有修改 lint 規則或設定；不把它稱為包含所有產物的原始全域 lint。型別檢查第一次在 1,536MB Node heap 耗盡，exit 134、記憶體最高 45.6%；第二次指出四處既有 Windmill 測試原始 payload 的型別錯誤，沿用 `commandFromLogEntry` 與 `kind` 縮窄修正，原 assertions 保留。最終以 3,072MB heap、相同檢查範圍與 56% 系統停止門檻完成，沒有排除測試或修改 TypeScript 設定。
+
+完整 Vitest 1,062 檔／21,212 項全數通過，零失敗／略過，1,420.73 秒、exit 0，記憶體 40.0～44.6%；報告為 `output/ai-cookierift/vitest-healer-reentry-full-20261018-r1.json`，實際命令為受 guard 包覆的 npm CLI `test -- --maxWorkers=1 --reporter=dot --reporter=json --outputFile=output/ai-cookierift/vitest-healer-reentry-full-20261018-r1.json`。標準 AI Browser 六個開局／HP／暫停旗標全部通過，exit 0、記憶體 40.0～44.6%，產物為 `output/ai-cookierift/ai-browser-healer-20261018-r1/`；旗標不當作六場完整比賽。修補後三色正式 UI 對局如下；新配對矩陣的 Equip 失敗正在定位，詳見本節開頭。新對照使用先前成功矩陣的實際候選 bundle `e828a55a…`，另存的 `baseline-policy-current-rules-measured-candidate-before-healer-20261018-r1.mjs` 與它 bytes 完全相同。manifest 的 297 個規則／資料來源逐檔雜湊一致（`e353892b…`），政策身分明確為 compiled measured candidate，未重建或冒充 HEAD 策略；舊 49 個政策來源的 aggregate 只作歷史 provenance。此比較包含 `e828…` 之後的其他 AI 修補，不單獨歸因於 Healer。先前對照賽及 UI 結果保留為舊來源證據，尚不宣稱本批已提高整體勝率。
+
+### 修補後三色正式 UI 對抗
+
+沿用原始 ST1 60 張牌表及已核對的可見戰術操作，以新的隔離 Chrome context 各執行一次，沒有注入 GameState、test-state 或搜尋時鐘。人方依印刷 HP／攻擊／費用選開局與登場、保留較好的餅乾、按公開 HP 選擊倒目標，並實付手牌代價使用補 HP FLIP、選擇抽牌；仍略過道具／陷阱及其他未支援的能力，是有限腳本對手。三場依序執行，沒有重試或篩選 seed。
+
+| AI 牌組 | 尺寸 | 終局 | 玩家攻擊 | FLIP | 棄手補 HP／抽牌 | 記憶體 |
+|---|---|---|---:|---:|---:|---|
+| BS12 紅色 Arena | 1920×1080 | 第 13 回合 AI 勝利 | 8 | 3 | 2／1 | 41.2～45.8% |
+| BS12 黑色 Arena | 1164×777 | 第 14 回合 AI 勝利 | 10 | 9 | 7／2 | 41.2～45.5% |
+| BS12 綠色 Arena | 1164×777 | 第 12 回合 AI 勝利 | 8 | 3 | 1／2 | 41.9～46.6% |
+
+人方合計 19 次支援、5 次一般登場、26 次攻擊、9 次補位、15 次 FLIP，包含 10 次實付棄手補 HP、5 次抽 1 張。三場 finished／active acceptance 皆為 true，exit 0、頁面錯誤 0、無 SAFE_STOP；主代理逐張核對終局截圖，並重新查核報告。每場捕捉的 12 個 JS／CSS GET body 均與本機同一 23 檔 dist 資源雜湊匹配；實載 `game-demo-Bpx5GkLT.js` SHA-256 為 `6ebbae4aaae958a06e48cbdb83026b79bd64cf18f94f4542da5f5f70b35fd23f`。index hash 只證明本機檔案，沒有捕捉對局當時的 index HTTP body。Driver SHA-256 為 `177a097d1a2cd30ea86c831c67539d752d830f1bce2c86eeccb3a2e0f6253b67`，三場 source／build／操作數核驗報告為 `output/ai-cookierift/post-healer-ui-audit-20261018-r1.json`，原始截圖、公開紀錄與影片保存在 `test-results/post-healer-r1-active-tactical-st1-vs-lv5-*-20261018-*/`。
+
+這三場使用預設真實 180ms 搜尋時鐘，背景有同一 seed-base 209000000、單 worker 矩陣執行，因此不作標準效能測量。記憶體持續以 500ms 抽樣、56% 停止門檻保護 60% 上限，最高 46.6%；本機 preview 已關閉。AI 三勝支持對這個腳本的實際對抗能力，不代表真人／專家勝率、各色全部構築都強，也不能把新綠色勝局與舊敗局的差異歸因於單一修補，兩次自然開局不同。
+
+## 2026-10-18 影片策略拆解與 Lv.3 登場續接
+
+兩支使用者提供的影片（[Green／Blue Arena](https://www.youtube.com/watch?v=V3yLYFafzLg)、[Shadow Blue／Arena Green](https://www.youtube.com/watch?v=29V-Ilj_HUk)）以視覺分析工具觀看；沒有可用字幕，觀察不等同逐步權威指令重播。第一支的啟發是先建立登場、回收與支援資源，再接攻擊；第二支則提示保留防守能量、確認連動條件與低手牌時節制展開。現有 Lv.5 的 defensive reserve、公開回應搜尋與手牌消耗評分已部分涵蓋後三點，尚不能據此宣稱影片完整打法已驗收。
+
+本輪修補 Lv.3 的主要階段登場評分：一般登場與 EXTRA 登場現在沿用既有 `legal-action-followup`，取新增合法後續指令的最高價值一次。它會確認後續攻擊實際可支付，不因目標／付款變體較多而累加。續接估值限制在同一玩家、同一回合的主要階段，遇到待決效果、新公開卡片、牌庫檢視或洗牌等未知結果時停止預測。未新增另一套攻擊機會加分，也未把此 Lv.3 修補當成 Lv.5 勝率改善。
+
+以實體 BS12-056 Apple Faerie、BS12-017 Candy Apple 與原始 NN 支援建立回歸：登場後有能量時會接真正 `declare-attack`；少一份能量不產生攻擊收益；增加對手目標不重複加值。另驗證隱藏牌庫／HP 順序不影響決策，以及 BS9-070 Puppet Theater 揭示不同未知牌面時不預先利用結果。定向 4 檔／23 項通過，最終來源 production build 與 `eslint src scripts vite.config.ts --max-warnings=0` 通過。完整 Vitest 1,059 檔／21,187 項全數通過，零失敗／略過，報告時間 1,422.22 秒、exit 0，記憶體 37.7～44.0%；報告為 `output/ai-cookierift/vitest-ai-video-full-20261018-r1.json`。
+
+標準 `test:ai:browser` exit 0，六個開局／HP／暫停等摘要旗標全為 true，產物保存在 `output/ai-cookierift/ai-browser-video-20261018-r2/`；這些旗標不是六場完整比賽。另以 `test:animations:browser` 跑一場 1164×777、reduced 動畫、BS11 人方牌表的正式 UI 對局，經可見控制在第 14 回合出現「AI 對手勝利」與 BS12 藍色 Arena 牌組資訊，頁面錯誤與阻擋圖片請求皆為 0，exit 0。結果截圖與錄影在 `test-results/animation-1164x777-reduced-*`，兩次 Browser 記憶體最高分別為 40.3%／40.2%。人方操作偏向略過，這場只驗證完整 UI 流程，不能當成真人強度證據。
+
+本輪全域 `npm.cmd run lint` 掃描既有大量產物後中止，不能列為全域 lint 通過；沒有刪除產物或修改 lint 設定。所有重負載工作依序執行，以 500ms 抽樣的 56% 記憶體停止門檻保留使用者 60% 上限緩衝。未提交／推送。
+
+### 35 副牌組 Lv.5 完整對照賽
+
+執行 `node scripts/benchmark-cookierift.mjs --workers 2 --seed-base 206400000 --baseline output/ai-cookierift/baseline-policy-current-rules-goal-20261018-video-aware-baseline-r1.mjs`，由 768MB heap 的記憶體 guard 包覆。35 副牌組涵蓋六色 BS12 Arena、韓版 BS12 starter 與 28 副社群構築；630 組配對、兩個 seed、雙政策座位及雙先手排列，共 5,040／5,040 場正常結束，零錯誤／未完成／動作上限，exit 0，記憶體 37.0～40.0%。1,260 組初始預檢與 5,040 場 initial-state parity 全通過，每副牌在候選與基準政策下各出賽 144 場。牌表使用 403 個不同卡號，包含 BS1～BS12 與 33 個 P 卡號；這是構築涵蓋範圍，並非全部印刷卡的逐卡驗收。
+
+候選政策 2,587 勝、基準政策 2,453 勝，候選占 51.33%。固定「牌組配對＋seed＋先手」再交換政策座位的 2,520 組鏡像中，167 組候選較有利、2,253 組中立、100 組基準較有利；鏡像鍵無缺漏、重複或額外列。這些是配對矩陣的描述性結果，沒有把 5,040 場當作獨立隨機樣本，也沒有據此宣稱統計顯著或真人勝率。各色的分母為該色牌組由同一政策控制時的場次：
+
+| 色組 | 每種政策場次 | 候選勝場 | 基準勝場 | 勝場差 |
+|---|---:|---:|---:|---:|
+| 藍 | 720 | 346 | 328 | +18 |
+| 綠 | 576 | 188 | 170 | +18 |
+| 黃 | 720 | 384 | 367 | +17 |
+| 紅 | 1,152 | 687 | 642 | +45 |
+| 紫 | 576 | 289 | 278 | +11 |
+| 黑 | 720 | 510 | 486 | +24 |
+| 混色 | 576 | 183 | 182 | +1 |
+
+#1140（候選 25／144、基準 28／144）、#1248（99／144、102／144）及 #1268（54／144、55／144）在候選控制時的勝場較少。政策交換同時改變對手，這些差值不能單獨歸因於該牌組自身決策。綠色與混色的候選原始勝率仍只有 32.64%／31.77%，因此總差值不能證明每副牌都有競爭力；本矩陣為 Lv.5，也不能把結果歸因到本輪 Lv.3 登場續接修補。
+
+比較基準是從 HEAD `45ad207fd98252075f87a5068d6ff71324075bc5` 的來源重建 AI policy，搭配同一現行規則與卡片資料；尚未證明與舊封存 bundle 行為等價，不能混用兩者的強度結果。候選 bundle SHA-256 為 `e828a55a02ea6e3e562b04f1e0e13e893f93335bebdb961315a0479ae04140eb`，基準為 `85049dea7b8aca002f5370c872a2ce4779a9832a4f3a10b92051f8e08e4f8a8b`。候選來源 346 路徑中有 49 個 policy、297 個非 policy；非 policy 路徑及內容雜湊 `e353892b58acb164d93f700ade3cccd1e08afd7b60242c668ff1a790ef3ab733` 與基準一致。完成後重新核對現行來源、兩個 bundle 及 14 份牌表快照均一致，未以後續來源替代已測版本。
+
+完整報告：`output/ai-cookierift/matched-comparison-20261017T172823846Z-6164-2e953969.json`；來源核驗：`output/ai-cookierift/source-audit-video-20261018-r1.json`。先前 5,038／5,040 的未完成 run 保留為失敗證據，不併入本次結果。此階段已取得完整 AI 對照賽與正式 UI 終局證據；對真人的競爭力及弱勢牌組的具體失誤仍待實戰確認。
+
+同來源的第二組 cohort 使用 `--seed-base 207000000`，與本組數字 seed 範圍不重疊，牌組、政策、規則與排列方式相同，候選 bundle SHA-256 仍為上述值。報告 `output/ai-cookierift/matched-comparison-20261017T182917702Z-18604-a3945cfc.json` 為 FAIL：5,038／5,040 場完成，#1268／#283 與 #283／#1248 各有一場 decision-error，零動作上限，exit 1；記憶體 38.1～41.0%。不把未完成的 50.91% 候選勝率併入正式勝場或宣稱改善重現。
+
+兩個失敗 seed `207242601`／`207262801` 均用原始凍結兩個 bundle 完整重播到第 136／168 個成功 action 後的錯誤，error actor 都是 baseline。公開場景快照及診斷 stack 確認同一根因：baseline 用 `canActivateStage` 判斷可啟動，卻取己方場景的費用；權威 resolver 此時選擇對手可共用的 BS9-118 Endless Game of Chess，要求棄 1 張手牌。兩例的己方 Guardian Tree／Tearcrown 都已 REST、無手牌費用，對手 Chess 未 REST、要求棄 1。現行 AI 已沿用同一 `getStageActivationSource` 取得來源與代價，在各失敗局面以 fresh memory 呼叫候選單步，皆產生帶 1 張 `discardHandIds` 的合法 `activate-stage`。這項候選 probe 只確認兩局面的單步付款，未以候選策略取代失敗基準方後跑完續局，不新增勝場，也不改寫原 FAIL。兩份正確快照為 `output/ai-cookierift/replay-holdout-discard-error-207242601-20261018-r4-stage-source.json` 與 `output/ai-cookierift/replay-holdout-discard-error-207262801-20261018-r4-stage-source.json`；早期 r3 錯用 `stageArea` 的 null 快照不作來源證據。診斷 stack bundle 只改錯誤訊息輸出，未用於正式 benchmark。
+
+### 修正場景來源後的參考政策比較
+
+另存付款來源修正版參考 bundle `output/ai-cookierift/baseline-policy-current-rules-goal-20261018-shared-stage-adapted-r1.mjs`，SHA-256 `38e58d1e16631378137176aaf347a6acdb094967aa4a8741d025ed51c68170c9`；它只把上述單一 root Activate 區塊由取己方場景改為解構 `getStageActivationSource`，反向替換可逐位元還原原 bundle，297 個非 policy 輸入未變。Manifest 明確記錄新 policyRef、原基準 hash、原來源 hash 與 post-bundle adaptation script input，不能當成原未修改 HEAD policy 或舊封存版。兩個已知錯誤 seed 先依原凍結政策重播，再保留對局 memory、只替換基準 actor 的後續政策；均實棄 1 張手牌並完整結束，228／266 actions，exit 0，記憶體 39.7～40.1%。這是診斷續局，不算勝場。報告為 `output/ai-cookierift/shared-stage-reference-diagnostic-20261018-r1.json`。
+
+新 seed base `208000000` 的完整 35 副／630 組／5,040 場比較已 PASS：5,040／5,040 正常結束，零錯誤、未完成及動作上限，exit 0，記憶體 39.5～43.1%。候選 2,586 勝、修正來源參考版 2,454 勝，候選占 51.31%。候選 bundle 仍為同一 `e828a55a…`，未據已知失敗 seed 調整策略；新 numeric seed 範圍與前兩批不重疊。1,260 組初始預檢、5,040 筆 initial-state parity 及唯一結果鍵全通過，每副牌在兩政策下各出賽 144 場。2,520 組政策座位鏡像為候選較有利 144、參考較有利 78、中立 2,298，沒有缺漏、重複或額外列。
+
+| 色組 | 每種政策場次 | 候選勝場 | 修正來源參考勝場 | 勝場差 |
+|---|---:|---:|---:|---:|
+| 藍 | 720 | 330 | 301 | +29 |
+| 綠 | 576 | 178 | 164 | +14 |
+| 黃 | 720 | 406 | 384 | +22 |
+| 紅 | 1,152 | 695 | 657 | +38 |
+| 紫 | 576 | 267 | 265 | +2 |
+| 黑 | 720 | 527 | 515 | +12 |
+| 混色 | 576 | 183 | 168 | +15 |
+
+14 份牌表快照、牌組完整內容雜湊、候選 346 路徑／49 policy／297 非 policy 的來源 manifest 均與第一批一致，完成後也重新核對實際 bundle、當前非 policy 來源及 adaptation script 的內容。報告為 `output/ai-cookierift/matched-comparison-20261017T200339750Z-5720-1f93096c.json`，獨立核對為 `output/ai-cookierift/adapted-comparison-audit-20261018-r1.json`（exit 0／PASS）。
+
+六色與混色均有較多候選勝場，紫色只多 2 勝；綠色與混色原始候選勝率為 30.90%／31.77%，仍不能證明每副牌都有競爭力。八副牌在候選控制時勝場較少，其中 #1151 為 61／144 對參考 65／144；政策交換也改變對手，這些差值不能單獨當成各牌組自身決策回歸。這批同時換 seed 與參考政策，不能用 51.33% 與 51.31% 的差值推定來源適配的因果效果，也不與原參考／失敗矩陣／已知種子診斷續局合併勝率。結果是固定 AI 對局的描述性競爭力證據，未作顯著性檢定或量測真人勝率。
+
+選中的場景與 `ability` 也會傳入後續目標 context 及效果模擬，因此該適配是 root 場景來源的一致性修正，連帶使用正確來源的費用與效果列表；不是只改費用數值。策略權重、搜尋限制及其餘 bundle 程式碼維持原參考版本。
+
+上述 benchmark 均注入 `searchNow: () => 0`，仍受 Lv.5 的 360 nodes、6 層與 beam 6 限制，但不驗證真實時間截止與超時行為。正式 UI 沒有注入時鐘，搜尋器使用 `Date.now` 與預設 180ms 時間預算；完整積極 UI 對局才能補驗實際瀏覽器條件，不能直接把 headless 矩陣結果視為該層驗收。
+
+### 主動操作的正式 UI 對局
+
+`node output/ai-cookierift/memory-guard-goal-20261018.mjs 768 output/ai-cookierift/active-human-vs-lv5-browser-20261018-r1.mjs` 在已完成 build 的本機 preview `127.0.0.1:4291`、既有 Chrome、1920×1080 執行。隔離 browser context 僅設定一般 60 張 ST1 自訂牌表及快速動畫；AI 等級／紅色 Arena 牌組、猜拳、開局、支援、登場、支付、目標、FLIP 略過與補位均由可見控制操作。未注入 GameState／test-state／搜尋時鐘，未讀 React 私有 state、對手手牌或隱藏牌面。
+
+最終 run `test-results/active-human-vs-lv5-20261018-1792266731514-20764/report.json` 為 finished／accepted、exit 0：人方 6 次支援、1 次一般登場、9 次攻擊宣告、5 次補位，Lv.5 BS12 紅色 Arena AI 於第 13 回合勝利；原因為人方休息區等級達到 10，頁面錯誤 0。`final-or-stop.png` 與 `video/page@33b0afd3dcb4b67244d72c2d385fa158.webm` 保存結果與完整操作；driver SHA-256 為 `f26c0dc9710657c1a0f632047876dc39ea92f69f0fbb9ebfa45fae4387ff83dd`，記憶體 40.9～44.6%。先前三次 run 因 AI label locator、支援 wrapper 可見性計數及未辨識 FLIP modal 停止，均保留為 driver 失敗證據；實際支援放置成功，不列為產品缺陷。
+
+此 driver 優先把可見重複手牌放支援、一般餅乾登場及合法攻擊，使用首個合法攻擊者／目標，略過可選回應；結果只驗收主動人方操作與真實瀏覽器時鐘的完整流程，不是專家打法、真人勝率或多人同步證據。這輪只修正 output driver 及文件，產品來源未變更，前述全套 Vitest／build／產品 ESLint 證據仍適用。
+
+### 戰術 ST1 的三色正式 UI 對抗（Windmill 修補前）
+
+另以獨立 driver 加入開局／登場耐久與費用評分、低價值手牌放支援、依公開 HP／有效攻擊選擇攻擊者及目標，以及 ST1 補 HP／抽牌 FLIP。己方查表限於這副 60 張牌表的正式 ST1 印刷，不以同名 BS12 卡覆寫；對手基礎 LV 不依同名猜測，只使用實際顯示的修改 LV badge。這仍是有限腳本，尚未操作 ST1 的道具、陷阱及所有可選技能，不能當專家或真人勝率。
+
+三場都從一般選單選 Lv.5 與指定牌組、自然開局，未注入 GameState／test-state／搜尋時鐘；使用既有 Chrome、快速動畫及 56% 記憶體 guard。完整流程三場 finished／accepted，頁面錯誤皆 0，AI 勝負另列：
+
+| AI 牌組 | 畫面 | 終局 | 人方攻擊 | 人方 FLIP | 其中棄牌補 HP／抽牌 | 記憶體 |
+|---|---|---|---:|---:|---|---|
+| BS12 紅色 Arena | 1920×1080 | 第 15 回合 AI 勝利 | 13 | 7 | 6／1 | 40.0～44.4% |
+| BS12 黑色 Arena | 1164×777 | 第 17 回合 AI 勝利 | 9 | 8 | 6／2 | 39.7～43.6% |
+| BS12 綠色 Arena | 1164×777 | 第 14 回合玩家勝利 | 11 | 3 | 2／1 | 39.5～43.5% |
+
+人方合計 22 次支援、3 次一般登場、33 次攻擊宣告、12 次補位、18 次 FLIP；14 次實付棄牌補 HP、4 次選擇抽 1 張。黑色及綠色 r3 driver 等抽牌演出完成後才核對手牌恰好增加 1，三次可見觀測均為 6→7。兩場也經正常「查看對戰紀錄／全部展開」保存完整公開文字，沒有取 React 私有狀態或 engine payload；公開文字不保證每筆指令都含完整普通攻擊付款資訊。
+
+原始報告為 `test-results/active-tactical-st1-vs-lv5-bs12-red-arena-20261018-1792271089857-9620/report.json`、`test-results/active-tactical-st1-vs-lv5-bs12-black-arena-20261018-1792271495102-18632/report.json`、`test-results/active-tactical-st1-vs-lv5-bs12-green-arena-20261018-1792271707838-15796/report.json`。各目錄保存終局截圖、付款截圖及完整錄影；黑／綠另有公開紀錄截圖。獨立 audit `output/ai-cookierift/tactical-ui-audit-20261018-r1.json` 為 PASS，核對原始報告／driver／ST1 資料雜湊、60 張牌表與每卡至多四張、操作數與連續 sequence、影片及終局圖存在；這個 PASS 是紀錄與流程驗收，並非三種 AI 都通過強度門檻。紅色 r1 SHA-256 `0b2999c9408828ab64c66ecde3d867fbb1264e3bdeabbabadb9965f699138661`，黑／綠 r3 為 `8b4f942d6120cfc627a8ebaa5ad18520d71a2a9dd9bd56c395d36890137a4e05`。
+
+兩次失敗 driver run 保留：紅色 `1792270972688-4252` 的 ST1／BS12 同名查表覆寫與彈窗讀取競態，黑色 `1792271284194-22932` 在抽牌動畫未完成就計數（5≠6）。後者停止圖仍顯示「牌庫→手牌」演出；r3 等待演出後維持原本 +1 assertion，沒有放寬期待。兩次均不併入完成場次，也不列為產品規則缺陷。
+
+綠色敗局第 2 回合則有具體 AI 決策問題：Leek 宣告 N 普通 1、唯一人方支援已 REST，AI 支付 BS7-064 Cookie Windmill 的 G 並把唯一 Grand Cookie Games Trophy 支援送棄牌，減攻卻選到本回合無法支付 RR 普通攻擊的 Mint Choco，回收段選零；這回合沒有得到紀錄可見的減傷或回收收益。後續已修正公開攻擊壓力評估：本回合無法實付普通攻擊的餅乾不再取得未來減攻收益；正在結算的攻擊仍按已宣告攻擊處理。五項原始實體卡回歸覆蓋只有已 REST 支援、另有兩份可付 RR 的支援、雙方隱藏牌換牌及獨立回收收益，並已包含於頁首本輪 56 項定向與 21,212 項完整測試；修補後 UI 結果另列，不改寫此敗局。第 13 回合的 Choco Drizzle（BS7-059）與 Buttercup（P-104）各 GGG 普通 3，可提出對同一 LV.3 Espresso 的公開致勝候選，但缺少完整活躍支援與隱藏 FLIP／陷阱回應資訊，不能直接宣稱 AI 漏掉必勝。本批屬相同 `e828a55a…` 來源在 Windmill 修補前的證據。
+
+敗局診斷沒有直接以輸贏推定缺陷。#973 對藍色 Arena、seed `206401601` 的 23 步短敗局已完整重現：唯一餅乾昏厥後，手牌沒有餅乾，唯一合法補位指令為 `skip-replacement`。前一回合有合法攻擊卻選擇保留陷阱能量；BS8-073／074 的基本 G 費用確實可支付，但各減攻 1，不能僅憑保留與後續未發動就判定存在可救援方案。此步仍是待分析的防守估值，不是已確認漏補位 bug。
+
+#1140 對紅色 Arena、seed `206432701` 的政策鏡像分別以 174 步落敗、209 步獲勝，兩邊指令與公開局面到 index 75 一致，首先分歧的是紅方在 index 76 的陷阱選擇，並非 #1140 先改變行動。另對 #1140 index 120 的支援顏色做單點合法分支：control 放 BS8-083 藍色支援，alternative 放 ST3-011 綠色支援；兩支在該步同步清除己方策略記憶以隔離重播方式差異。control 仍為 174 步落敗，綠色分支 170 步落敗，沒有增加攻擊次數或取得勝場，因此沒有根據此樣本調高混色支援權重。這是局部反事實實驗，不併入正式矩陣。重播與分支產物為 `output/ai-cookierift/replay-1140-red206432701-*-20261018-r1.json`、`output/ai-cookierift/counterfactual-1140-support-20261018-r1-{control,green}.json`；記憶體最高 39.1%，exit 0。未因這些診斷修改產品來源。
+
+## 2026-10-17 ST6-004 攻擊後浪費增傷代價
+
+以 Cookierift #1295 對 #1239、seed `206129620`、候選先手 player-one 重播，發現第 13 回合 Pitaya（ST6-004）已攻擊並 REST，Then 又用掉最後可用紅色支援；接著 AI 仍棄 1 張手牌發動「本回合自身攻擊傷害 +1」，當時沒有可用攻擊，隨即結束主要階段。官方匯入卡文 `data/cards/official-st6-004.en.json` 確認增傷僅到本回合結束。這是明確的付費 no-op 決策缺陷；強制提前增傷的分支遇到對手陷阱後仍落敗，不當作勝負改善證據。
+
+`resolveAiSkill` 會在模擬中實際執行的效果全是來源自身、本回合有效的正向攻擊增益時，於支付技能代價後檢查增益是否選中來源、來源是否仍在戰鬥區，以及本回合是否還有該來源可執行的合法攻擊；任一條件不成立便排除該技能候選。這項檢查不以來源是否 REST 為條件。混合效果、其他目標、持續增益，以及含 Then／額外抽牌跟進的增益不在此 guard 範圍。新增 #1295／#1239 固定 seed 回歸，完整重播至終局，確認原決策點改為推進階段、手牌不變且對局正常結束。首輪過寬 guard 曾使 5 項既有測試失敗；縮窄至上述來源增益與付款後合法攻擊檢查後，同批 59 項測試通過。
+
+驗證：4 個 AI 測試檔 59／59 通過、受影響檔 ESLint 通過、production build 通過（2,205 模組；既有 `game-demo` 大型 chunk 警告）、AI Browser 一般 UI smoke 6／6 通過。Browser smoke 沒有直接操作 ST6-004 場景；未跑完整 Vitest／全域 lint。GPT-6.1 Sol 唯讀複核未發現可證明的修補缺陷，未執行測試。這只證明一個固定 seed 的手牌保留決策改善，不代表勝率提升；未提交／推送。
+
+## 2026-10-17 可選攻擊 Then 估值與不可用模式略過
+
+重播 Cookierift #1295 對 #1001、seed `206129683` 時，BS9-077「Black Raisin Cookie」攻擊後的兩個牌庫移動模式都被對手 BS6-010「Timekeeper Cookie」禁止。原 AI 在沒有可用模式時選擇預設第一項，命令層拒絕後使對局中斷。現在 AI 與規則結算都會在所有模式不可用時略過該選擇並推進攻擊效果；本地與線上待決效果也會自動略過，不改變合法模式的選擇流程。以兩張正式卡及真實攻擊流程建立的回歸確認不再拋錯、戰鬥完成且來源仍留在戰鬥區。
+
+另加入公開資訊限定的 optional attack Then 根估值：目前只預測單一對原防守者造成的公開傷害，投影普通傷害及已知自身 HP 代價，未讀取隱藏手牌／HP 或猜測 FLIP、陷阱回應。將此估值只從策略中停用，與啟用版本使用相同 source hash `5d981265434ee475df220fabe5b2ac1770a05833eeccb6fdb596e749b80a0cfc`；每副對手使用 12 個固定 replicate（0–11），含 27 副對手、三副紅色候選／參考構築及雙座位／先手鏡像，共 3,888 組配對、每個版本 3,888 場，全部完成且零失敗。此批 seed 公式為 `206129500 + opponentIndex * 10 + replicate`，因步幅小於 replicate 數，跨對手重用了部分數字，整體有 272 個 distinct seed values。候選牌組勝場：#1295 為 914 對 897、#793 為 835 對 830、#1259 為 718 對 699；195 組結果改變，其中候選牌組在啟用版勝出的有 118 組、停用版勝出的有 77 組，整體淨差 41 勝。這是固定矩陣下、兩個政策版本各自同時控制雙方的 deterministic AI-vs-AI 篩選；不代表真人勝率或普遍 AI 強度提升。
+
+為排除 seed 數值跨對手重用，再用相同 27 副對手、三副構築及鏡像方式做獨立 cohort，seed 公式改為 `206200000 + opponentIndex * 12 + replicate`，共 324 個唯一 seed 值。兩版本仍使用相同 source hash；各完成 3,888 場、零失敗，3,888 組配對鍵全部唯一。候選牌組勝場：#1295 為 936 對 917、#793 為 827 對 824、#1259 為 706 對 668；196 組結果改變，啟用版候選牌組勝出 128 組、停用版 68 組，淨差 60 勝。這仍是另一組固定矩陣的 AI-vs-AI 篩選；未進行顯著性檢定，不代表真人勝率或普遍策略提升。報告：`output/ai-cookierift/community-1295-mirror-diagnostic-aftereffect-mode-skip-unique-seed-12rep-run2-20261017.json`、`output/ai-cookierift/community-1295-mirror-baseline-noaftereffect-mode-skip-unique-seed-12rep-run2-20261017.json`。
+
+反向案例抽查中，#1295 對 #1174 的 48 場配對為啟用版 31 勝、停用版 34 勝，4 場由停用版勝出、1 場由啟用版勝出。啟用版在 seed `206200230` 第 4 回合選擇 Fire Spirit 的二能量攻擊，後續支付 1 HP 造成 Then 傷害並擊倒 3 HP 的 Caramel Choux；seed `206200231` 的第 4 回合也選擇攻擊而非發動 1 能量技能，攻擊估值增加 49，同時仍扣除公開回應 47 與防守保留 24。這些翻盤標出攻擊後續效果會促成高代價出手的局面，但單局結果不足以證明該交換不合理；目前不據此調低全域權重，保留為後續對戰診斷樣本。
+
+2026-10-17 另以新加入的 Cookierift #897 綠藍牌組做政策交叉賽：啟用 aftereffect 的 AI 與同來源停用版輪流控制雙方，對另外 25 副社群牌組及 7 副官方 BS12 牌組，以 12 個 seed、雙候選座位與雙先手排列共跑 3,072 場，1,536 組鏡像配對全部完成且零失敗，bundle 輸入雜湊同為 `a2e17858e7c84fa51797041cb8ca693090d2bfffbc7ee694afc839dea41491d8`。啟用版政策 1,534 勝、停用版 1,538 勝；#897 在啟用／停用政策下分別 359／1,536 與 361／1,536 勝。四場淨差只來自韓版紅色 starter 的 12-replicate 小樣本，故另對該對手跑 48 個新 seed、384 場交叉賽，啟用版反以 194 勝對停用版 190 勝，#897 分別 22／192 對 20／192 勝。方向反轉且差距都小，沒有證據支持通用調參或勝率改善宣稱；保留 aftereffect 評分，後續應用更多獨立對局找可重現的決策問題。報告：`output/ai-cookierift/community-897-roster-policy-crossplay-20261017.json`、`output/ai-cookierift/community-897-korean-red-policy-crossplay-48rep-20261017.json`；四組非平手鏡像的決策重播：`output/ai-cookierift/trace-897-policy-crossplay-adverse-seeds-continuations-20261017.json`。
+
+驗證：no-playable-mode 修正的定向回歸 4 檔／98 項、AI suite 87 檔／1,298 項、production build、受影響檔 scoped ESLint 與 AI Browser 6／6 通過；後續 only-test 變更的 optional-Then 測試為 1 檔／13 項通過。完整 `npm.cmd run lint` 仍被既存未追蹤 `.tmp-vitest-ai-seeded-shuffle-debug-20261016/replay.ts` 的 8 個 `no-explicit-any` 錯誤阻擋，該使用者暫存檔未修改。GPT-6.1 Sol 雙軸唯讀複核未找到可證實的 P1／P2 產品問題；Spec 軸發現的 ST6-004 說明差異已同步修正，Standards 軸另列低優先度具名付款參數群組建議。未提交／推送。
+
+## 2026-10-17 Cookierift #1295 紅色「Basic red」
+
+從 [Cookierift 社群牌組 #1295](https://cookierift.com/decks/community/1295) 擷取 atomic 的「Basic red」（2026-10-17 更新，頁面標示合法，主牌 60 張、EXTRA 6 張）。卡號取自頁面實際顯示的卡圖 URL、張數取自同一張卡片按鈕；保留 26 種正式卡號與原張數，沒有替換。所有主牌與 EXTRA 卡都能在正式卡池找到，印刷顏色全為紅色，沒有禁限卡或超過四張的卡號。來源快照位於 `data/decks/cookierift-community-20261017.json`，牌表 hash 為 `sha256:35ba4acb3785f900682609b56251243ffb4794575e578b2d82413cff20996da8`。
+
+牌組已接入 AI 選單、正式牌組建立、Browser 選單驗證與 benchmark roster。與最接近的已收錄牌組 #793 共用 24／66 張副本，唯一卡號 Jaccard 為 13／39（0.333），有足夠卡牌差異可增加紅色構築變化。使用同一個新編譯的目前 AI bundle，對 27 副已收錄社群／官方對手、雙座位與雙先手指派做固定 seed 鏡像篩選：#1295 勝 70／108，最近兩副參考 #793 勝 67／108、#1259 勝 64／108；324／324 場完成，沒有執行錯誤。這是小型 deterministic AI-vs-AI 篩選，不能代表真人勝率或整體 AI 強度。
+
+定向 Vitest 2 檔／68 項、受影響檔 ESLint、benchmark／Browser 腳本語法檢查與 `git diff --check` 通過；production build 轉譯 2,205 個模組並成功，僅出現既有 `game-demo` 大型 chunk 警告。正式選單 Browser 在桌機 1366×768 與平板 1164×777 共 62／62 通過，包含 #1290／#1295 的開局與問題包逐張核對；#1295 兩種尺寸均載入原始 60 張主牌及 6 張 EXTRA，頁面錯誤為 0。
+
+`benchmark-cookierift.mjs --plan-only` 驗證目前 31 副牌組、496 組配對、3,968 場的 roster 計畫。由於目前基準 manifest 引用缺少的 `data/candidates/st6-st10/official-st9.en.json`，本次僅以現行 diagnostic bundle 路徑執行不建置／不對戰的 plan-only roster 檢查，沒有執行完整 matched benchmark 或基準 policy 比較。未提交／推送。
+
+GPT-6.1 Sol 唯讀複核未發現可證明的 P1／P2 整合缺陷；複核沒有重跑測試、build 或 Browser，也沒有重新查驗線上來源。另追蹤 #1295 對 #506 的落敗 seed `206129560`：第 9 回合 AI 保留支援並結束主要階段時，規則層仍列出攻擊及部署；同局面強制攻擊或部署的分支仍落敗，攻擊分支還觸發對手 BS11-110 減攻陷阱。這不足以證明原決策錯誤，暫不據此調整 AI。診斷重播：`output/ai-cookierift/trace-community-1295-debug-vs-506-seed206129560-p1-p1.json` 及兩個 `branch-1295-*` 檔。
+
+## 2026-10-17 Cookierift #1140 綠藍「Sea-green Deck! :D」
+
+從 [Cookierift 社群牌組 #1140](https://cookierift.com/decks/community/1140) 擷取 Lady_Pastel15 的「Sea-green Deck! :D」（頁面標示合法，2026-10-11 更新、尚無評分，主牌 60 張、EXTRA 6 張）。逐一開啟 41 個卡片詳情按鈕確認卡號，依頁面張數合併重複列，保留 31 種正式卡號，未替換；來源 hash 為 `sha256:0321bc5c67b9eca65e9552484d338b0a124164e8e3f6df34f73cea87facd2f27`。牌組已登錄到 AI 選單、正式牌組建立器、benchmark roster 與 Browser 選單矩陣。它與最接近的既有構築 #283 只共用 6／46 個唯一卡號（Jaccard 13.0%），提供低重疊的綠藍構築變化；頁面沒有競技評分，因此不據此宣稱強度或勝率提升。
+
+驗證在 Windows PowerShell 完成：`npm.cmd test -- --run src/game/community-deck-recipes.test.ts src/components/MainMenu.test.tsx --maxWorkers=1`（TEMP／TMP 指向 `.tmp-vitest-cookierift-1140-green2-20261017`）exit 0，2 檔／80 項通過，涵蓋來源 hash、合法 60+6 張牌表、正式卡池解析、選單選項與原卡號張數；`npx.cmd eslint --max-warnings=0` 加上受影響的 7 個 TS／TSX／MJS 檔案 exit 0；`npm.cmd run build` exit 0、轉譯 2,206 模組，僅有既有 `game-demo` 大型 chunk 警告；兩支腳本 `node --check` 與 `git diff --check HEAD -- <受影響路徑>` exit 0。`node scripts/cookierift-menu-browser.mjs` 以本機 Vite preview `127.0.0.1:4240` 執行，沿用先前已確認必須升權的 loopback Browser 驗證流程，exit 0；桌機 1366×768 與平板 1164×777 共 70／70 個牌組選項通過，無錯誤，#1140 兩尺寸均載入來源相同的 60 張主牌及 6 張 EXTRA，結果在 `output/ai-cookierift/community-browser-20261017-current-menu-897-283-1140/results.json`。`node scripts/benchmark-cookierift.mjs --baseline output/ai-cookierift/baseline-engine.mjs --plan-only` exit 0，列出 35 副牌組、630 組 matchup、預估 5,040 場；`writesFiles:false`，未建立 bundle 或執行對戰，故沒有 #1140 勝率證據。未跑完整 Vitest／完整 AI 對戰，未提交／推送。
+
+## 2026-10-17 Cookierift #1291 黃色「Immortal Cheese (Ver 1)」
+
+從 [Cookierift 社群牌組 #1291](https://cookierift.com/decks/community/1291) 擷取 homocidalspider 的「Immortal Cheese (Ver 1)」（2026-10-17 更新，頁面標示合法，黃色，主牌 60 張、EXTRA 2 張）。逐張開啟頁面卡片詳情核對卡號，張數來自同張卡按鈕；頁面將 Pistachio Cookie 分列 3 張與 1 張不同圖版本，依相同印刷基礎卡號合併為 `BS9-041:4`。牌表保留 25 個主牌卡號及 2 個 EXTRA 卡號，沒有替換。正式卡池建牌與標準格式驗證通過。來源快照與 hash 位於 `data/decks/cookierift-community-20261017.json`，牌表 hash 為 `sha256:b60cb81279942a495e155bc0b194316e46fa93a4c8b316d03db5debcda995f81`。
+
+這份牌表與最接近的已收錄黃色參考 #1035 共用 4／43 個唯一卡號，與 #1239 共用 4／48，能補入明顯不同的黃色構築。不過同一目前 AI 對 28 副共同社群／BS12 對手、輪替兩個座位與兩種先手指派的固定種子篩選中，#1291 勝 37／112；#1035 勝 80／112、#1239 勝 63／112。336／336 場都正常結束、沒有引擎錯誤。這只支持牌組篩選，不代表真人勝率；結果顯示 #1291 目前是較弱的 AI 配置，不能當作 AI 勝率提升證據。
+
+對 BS12 紅色的代表性落敗重播（seed `206129350`）共 193 個 AI 動作。檢查候選 AI 的主要階段，所有沒有行動而推進階段的節點僅有 `advance-phase` 合法指令；這條重播未找出可證明的漏攻擊或漏部署決策。尚未證明低勝場來自決策缺陷，後續 AI 強化仍需從更能重現的錯誤選擇下手。
+
+候選接入 AI 選單、牌組建立、Browser roster 與 matched benchmark roster。定向 Vitest 2 檔／71 項、受影響檔 ESLint、production build 通過；Browser 桌機 1366×768 與平板 1164×777 共 64／64 通過，#1291 兩種尺寸均實際載入原始 60 張主牌與 2 張 EXTRA，頁面錯誤為 0。新的 `--plan-only` roster 檢查為 32 副牌組、528 組配對、4,224 場，未寫入報告檔。完整 matched benchmark 仍受缺少的 `data/candidates/st6-st10/official-st9.en.json` baseline manifest 輸入阻擋；未提交／推送。
+
+## 2026-10-17 ST10-018 陷阱救援漏判
+
+在固定敗局 seed `206042101`（Cookierift #1151「Silent」對 BS12 紫色 Arena，候選 AI 為 player-two）中，ST10-018「Reunion of Star and Moon」可支付 PPP，將攻擊傷害降低 2，之後回收最多一張紫色 LV.3 Cookie。當己方棄牌區沒有符合回收條件的 Cookie 時，原 AI 將整條陷阱序列視為不可救援，錯過仍可合法執行的前段減傷。修正後只要最終 `trash-to-hand` 的選擇下限為 0，就保留前段效果的救援投影，並將回收交給一般選牌流程；必選的尾段目標仍不會被略過。
+
+新增以正式 ST10-018、合法 PPP 支援及無紫色 LV.3 棄牌目標的 AI 回歸，確認 AI 仍支付減傷、選擇攻擊者、以空選擇完成可選回收，並在實際傷害結算後保住 2 HP Cookie。精確同種子前後重播中，舊策略在 3 點傷害對 2 HP 目標時略過 ST10-018，修正後實際減傷至 1 並翻轉該場勝負；其他前置選擇與初始牌局 parity 一致。
+
+再以 Cookierift #1151 對六色 BS12 Arena 起始牌組做 120 組配對 AI-vs-AI 診斷：每色 10 個 seed、雙先手指派，逐場初始狀態 parity 通過，所有對局結束。117 場勝負相同、3 場由候選 AI 翻勝、0 場反向翻盤；候選 AI 勝場由 50／120 變為 53／120。翻勝分布為紫色對局 2 場、黑色對局 1 場。這是單一社群牌組對六副官方牌組的局部策略比較，不是人工對戰勝率或整體 AI 強度證明。診斷程式與兩個策略 bundle 位於 `output/ai-cookierift/paired-st10-018-rescue-color-matrix.mjs`、`output/ai-cookierift/candidate-lv5-st5-020-current-20261017.mjs`、`output/ai-cookierift/candidate-match-after-st10-018-20261017.mjs`。
+
+定向 Vitest 21／21、兩個受影響檔 Scoped ESLint、production build 通過；完整 Vitest 1,054 檔／21,129 項全部通過。AI Browser smoke 6／6 通過一般 UI 流程，沒有直接操作 ST10-018 場景。GPT-6.1 Sol 配置的唯讀複查未指出 P1／P2 缺陷，複查工具無法獨立回報執行模型 ID。追蹤中的 1,788 個程式檔 ESLint 皆 0 errors／warnings；原始全域 `npm.cmd run lint` 因未追蹤 `.tmp-vitest-ai-seeded-shuffle-debug-20261016/replay.ts` 的 8 個 `no-explicit-any` 錯誤退出 1，沒有修改該使用者暫存檔。未提交／推送；其他顏色牌組及對真人勝率仍需持續驗證。
+
+## 2026-10-17 BS12-082 道具額外棄牌下的 Then 預檢
+
+GPT-6.1-configured 唯讀複查指出，對手場上有 BS12-082「DJ Cookie」時，AI 會先開啟額外棄牌流程並提前返回，略過一般道具路徑已具備的可選 Then 付款檢查。以正式 BS10-119「Soul Jam: Light of Silence」、BS12-082、合法額外手牌與支援付款重現：己方本局未 Refresh、沒有 BS10-122「Silent Salt Cookie」，且支付道具基本費用後無法支付 Then；原 AI 仍宣告道具並要求棄牌，預期失敗案例證實會建立 `pendingOpponentHandDiscard`。
+
+修正後會先依 AI 的額外棄牌選擇，使用權威 `playItem` 模擬 DJ 稅費與道具基本費用，再依實際付款後狀態檢查條件效果及可選 Then。若沒有啟動效果，或僅有不可付款／沒有合法目標的 optional-cost Then，就保留道具、不開始棄牌流程；無額外稅費的原路徑也重用同一個 Then 可行性判斷。新增正式卡牌回歸確認 BS10-119 留在手牌、支援未橫置、沒有開始 BS12-082 棄牌待決且輸入狀態未變。
+
+定向 Vitest 2 檔／15 項、受影響檔 Scoped ESLint、production build 通過；完整 Vitest 1,055 檔／21,132 項全部通過（1,402.15 秒，exit 0）。AI Browser smoke 6／6 通過一般 UI 檢查，沒有直接操作 BS12-082 稅費場景。GPT-6.1-configured 唯讀複查未發現 P1／P2／P3；複查介面無法獨立確認 runtime model ID。此次是局部錯誤決策修正與固定官方卡測試，沒有新的對戰勝率證據；未提交／推送。
+
+## 2026-10-17 Cookierift #1001 純藍牌組「Pure Shadow」
+
+依 [Cookierift 社群牌組 #1001](https://cookierift.com/decks/community/1001) 的最新可見牌表加入純藍「Pure Shadow」（milk_man，2026-10-16 更新，60 張主牌、6 張 EXTRA，頁面顯示 19 次匯入、尚無評分）。來源快照保留於 `data/decks/cookierift-community-20261016.json`，牌表來源 hash 為 `sha256:8685b4c2aaf20b5545c6842a4333447be12a275891118d78b02359189d20da33`。24 種卡號皆可在正式卡池找到，張數未超過同卡四張上限，包含 P-092；牌表沒有替換卡。
+
+已將牌組接入正式社群牌組選單、牌組建立與 benchmark roster。它與目前最相似的已收錄牌組 #1164 有 15/32 個共同卡號（Jaccard 0.469）；現有牌組彼此最高重疊為 #927／#801 的 20/30（0.667），因此這份最新純藍構築增加了相對不同的選擇。這是牌表差異比較，不代表其競技強度。
+
+驗證結果：定向 Vitest 3 檔／62 項、五個受影響 TypeScript 檔 Scoped ESLint、production build（2,204 modules；僅既有大型 `game-demo` chunk 警告）通過；桌機 1366×768 與平板 1164×777 的選單 Browser 共 56/56 通過，28 個選項均可開啟且無頁面錯誤。最終完整 Vitest 1,054 檔／21,127 項全部通過（1,388.37 秒，exit 0），包含本次牌組接線與 fixture 修正。GPT-6.1 Sol 唯讀複查未發現可採取行動的缺陷；複查沒有執行測試，線上來源則由本批的瀏覽器查驗。`--plan-only` 將 #1001 列入 28 副牌組、406 組配對、3,248 場的計畫，但沒有執行對局；因此本批沒有新的 AI 勝場或勝率證據。計畫與 Browser 報告分別位於 `output/ai-cookierift/cookierift-1001-plan-20261017.json` 及 `output/ai-cookierift/community-browser-20261017-pure-shadow-menu-1001-retry/results.json`；完整測試日誌及退出碼記錄在 `output/ai-cookierift/full-vitest-cookierift-1001-20261017.log` 與 `output/ai-cookierift/full-vitest-cookierift-1001-20261017-exit.txt`。既有 matched cohort 基準仍標示 `PROTOTYPE-EQUIVALENCE-NOT-YET-VERIFIED`，不據此主張對真人勝率或普遍 AI 強度提升。
+
+## 2026-10-17 Cookierift #1174 紅色「Red Arena」
+
+依 Cookierift 社群牌組 [#1174](https://cookierift.com/decks/community/1174) 收錄 Clannad_is_Life 的紅色「Red Arena」（頁面更新 2026-10-12，60 張主牌、6 張 EXTRA）。來源快照為 `data/decks/cookierift-community-20261017.json`，來源欄位 hash `sha256:a79295f6c7a2ca1a5b465e85c03f8bab91ee1a5a7593f1dd487b274fbbbe2690`，檔案 SHA-256 `28986a7abdd33eba6969dbc1fe5eae2f3c1e380022a07e47ea1cbc0117220f32`。21 個卡號可由正式卡池建立，沒有替換卡；與最相近的紅色 #83 共有 14／28 種卡號，另含 7 種不同卡號。
+
+牌組接入正式社群 recipe、牌組與 EXTRA 建立、AI 對手選單及 Cookierift benchmark roster。定向 Vitest 2 檔／62 項、受影響 JS／TS Scoped ESLint、`npm.cmd run build`（2,205 modules）通過，僅有既存大型 `game-demo` chunk 警告。桌機 1366×768 與平板 1164×777 的 Browser 驗收 58／58 通過；兩種尺寸均實際選擇 #1174、完成開局，並逐卡確認問題包與建立出的 60 張主牌／6 張 EXTRA 和來源張數完全一致。結果：`output/ai-cookierift/community-browser-20261017-red-arena-1174/results.json`。
+
+同一個新建 current-policy bundle 的鏡像診斷中，#1174 與 #83 各自對 26 個相同社群／官方對手進行 104 場；每個對手使用一個固定 seed，交換雙方席位與先後攻。兩者均完成全部 104 場且無執行錯誤；#1174 勝 55 場、#83 勝 64 場。GPT-6.1-configured 唯讀複查建議將 #1174 排低優先度，但也指出 9 勝差距不足以判定其普遍較弱，且牌表不是近似複製。基於本任務增加配對多樣性的目的，仍將此合法且有明顯牌表差異的紅色選項納入；單一 seed／對手的四種座位交換不視為獨立隨機樣本，結果不代表人類勝率或競技強度，需更多 seeds 才能評估相對表現。最終 bundle SHA-256 `f2ee470c008fab929fbf1d634f4200f1ba057bc80acb20ced98a623ce885904e`，報告：`output/ai-cookierift/community-1174-mirror-diagnostic-20261017-r4.json`。複查介面未提供可獨立確認的 runtime model ID。
+
+## 2026-10-17 27 副牌組 matched cohort（BS9 修正前）
+
+以 27 副牌組、378 組配對、兩個 seed 及四種座位／先手交換執行 Lv.5 matched AI-vs-AI，共 3,024 場；756 項預檢與 3,024 項逐局 parity 全通過，失敗、未完成及動作上限皆為 0。候選策略 1,554 勝、凍結基準 1,470 勝（51.39%）。各色候選／基準勝場為藍 230/214（448 場）、綠 138/115（448）、黃 251/242（448）、紅 358/356（672）、紫 213/217（448）、黑 323/307（448）、多色 41/19（112）。
+
+報告：`output/ai-cookierift/matched-comparison-lv5-next-active-pressure-seed-206000000-20261017.json`。這是 next-active-pressure 政策修正的描述性固定矩陣，產生時間早於下方 BS9 EXTRA 可選 Then 修正，不能作為該卡牌修正的證據。凍結基準 manifest 標示 `PROTOTYPE-EQUIVALENCE-NOT-YET-VERIFIED`；結果未作顯著性檢定，不代表真人勝率或普遍策略提升。
+
+## 2026-10-17 ST5-020 直接棄置成本的陷阱救援
+
+在固定敗局 seed `206002100` 中，候選 AI 面對 Wind Archer 的 2 點致命攻擊時略過 ST5-020「Forbidden Grimoire」。它可支付 P1 並將實體 ST10-006「Blueberry Pie」從戰鬥區棄置，讓 BS2-058 Wind Archer 留下 2 HP。問題在於陷阱目標評估未投影 `trashBattleCookie` 付款，因此把可行救援視為不可用。這是固定 AI-vs-AI 重播中的決策缺陷，不是勝率提升證據。
+
+修正後，評估器會先以實際可支付的戰鬥區餅乾 ID 投影直接棄牌成本，並同步處理離場修飾與離場紀錄，再計算陷阱效果；同一組合法 ID 也會用於最後的陷阱指令。昏厥區及放到 Break 區的餅乾成本仍採保守略過。新增官方卡資料回歸驗證 AI 實際支付 ST5-020、棄置 ST10-006、降低傷害並保住 BS2-058；牌組維持 60 張且 instance ID 唯一，未建立虛構卡。
+
+另以報告所附的舊候選 bundle（早於 BS9 修正）與目前 bundle 對固定敗局 seed `206002100` 做逐決策比較，初始狀態 parity 通過；第 7 回合第 68 步的實際公開狀態中，舊策略跳過陷阱，目前策略則支付 P1、棄掉 ST10-006 並對攻擊者減傷。可重現 trace 存於 `output/ai-cookierift/st5-020-loss-206002100-policy-trace-20261017.json`。兩個 bundle 除此陷阱修正外也有其他版本差異，因此該 trace 用來確認目前在原始狀態採取付款／減傷，不單獨作修正歸因；它在第一個策略分歧處停止，也不代表整局勝負翻轉。
+
+聚焦 Vitest 2 檔／23 項、受影響檔 Scoped ESLint、`npm.cmd run build`（2,204 modules；僅既有大型 `game-demo` chunk 警告）及 `npm.cmd run test:ai:browser` 6/6 smoke 檢查通過。Browser smoke 覆蓋一般 AI UI，沒有直接操作 ST5-020 場景。GPT-6.1 Sol 唯讀複查未發現可採取行動的缺陷。完整 Vitest 1,054 檔／21,124 項全數通過（1,403.77 秒，exit 0）。本批不以固定 seed 推估真人勝率或普遍策略提升。
+
+## 2026-10-17 BS9 EXTRA 攻擊可選 Then 與 detached FLIP
+
+修正 AI 選擇 EXTRA 攻擊效果後略過可選 Then 費用的流程。現在會將該類費用交給既有能力付款佇列；若費用包含 BS9-030 的 `activate-discarded-flip`，付款後會建立真正的 detached FLIP 戰鬥決策，完成 FLIP 後才接續原攻擊流程。
+
+以 BS9-079 的真實父效果與原始卡資料重現：BS9-055 可選效果現在會由 AI 支付支援區卡片回手，選擇並對 1 HP 對手造成 1 點傷害；BS9-030 可選效果以印刷 BS9-026 FLIP 支付後，會開啟實際抽牌 FLIP、完成解析並把 FLIP 卡留在棄牌區。測試清除了無關且超過合法張數的對手棄牌區 fixture，使用原始卡資料，未建立虛構卡。
+
+定向 Vitest 6 檔／91 項通過，包含 BS9 效果與能力稽核回歸；受影響檔 ESLint、build（2,204 modules；只有既有大型 `game-demo` chunk 警告）通過。`npm.cmd run test:ai:browser` 6 項 UI smoke 檢查全通過：開局設定、HP 顯示、手牌檢視、AI 狀態標示及暫停資訊顯示／恢復。這是一般 AI Browser smoke，沒有直接操作 BS9-030／055 情境。
+
+本批完整 Vitest 執行 1,054 檔／21,123 項，1,053 檔／21,122 項通過；唯一失敗是全卡池能力稽核仍將已支援的 BS8-076 列為 unsupported。依該卡印刷文字及 BS8-076 專項能力測試，已從稽核預期清單移除 BS8-076；修正後包含全卡池稽核的六檔／91 項定向測試全過，未重跑整套 Vitest。全域 ESLint 執行約六分鐘無輸出後取消，結果不列為通過；本次受影響檔的 Scoped ESLint 通過。
+
+## 2026-10-17 效果傷害目標公開減傷重驗
+
+重跑先前記錄在本報告舊段落的 AI 單元反例 `output/ai-cookierift/effect-damage-action-probe.ts`。目前 `takeAiStep(level: 5)` 對公開可知的 2 點效果傷害，略過有 -2 效果減傷的 1HP 保護目標，改選可受2點傷害的 2HP 餅乾；它與權威 `applyGameCommand` 的合法替代指令得到相同狀態：受保護目標仍有1HP，脆弱目標昏厥並開啟補位。探針命令 `node_modules/.bin/tsx.cmd output/ai-cookierift/effect-damage-action-probe.ts` exit0；目標評估沿用共用 `getPublicEffectDamageByTarget` 預測。這驗證先前記錄的代表性入口目前已修正，不代表所有效果傷害卡／目標模式皆已覆蓋，也不證明整體或對人類勝率提升；未為這次重驗修改產品程式。
+
+## 2026-10-17 BS8-076 條件式下回合啟動壓力
+
+改善 BS8-076 Icicle Yeti 的攻擊 Then 評估：公開狀態若顯示目標持有人手牌足以支付棄牌數，AI 會比較「維持休息」與「棄牌後重新啟動」兩種回應，費用只依公開手牌張數估值，不推測隱藏手牌身分；共享支援能量只計算一次。目標挑選保留有合法 REST 傷害技能的對手餅乾，即使普通攻擊壓力為零。另修正壓力基線不再把已啟動、僅受「下回合不啟動」技能標記的餅乾誤算為受限制。
+
+回歸涵蓋 BS12-015 已啟動餅乾與 BS3-101 Moon Rabbit 的共享付款情境、持有人手牌足夠／不足、多個條件目標共用手牌預算、BS8-004 以 REST 技能造成致命傷害，以及實際 BS8-076 攻擊 Then 由 `takeAiStep(level: 5)` 支付並選擇普通攻擊壓力最高的對手目標。聚焦 Vitest 2 檔／35 項通過，Scoped ESLint、`npm.cmd run build`、`git diff --check` 通過；GPT-6.1 Sol 唯讀審查沒有可採取的修正意見。
+
+後續審查發現其中一個 5 HP fixture 使用五張 BS8-078，超過同卡四張限制；改以一張正式 BS8-080 保持 5 HP。修正後該測試檔 17/17 項及 Scoped ESLint 通過；這項測試資料修正也包含在上方記錄的最終完整 Vitest 中。
+
+正式能力稽核重跑結果為 2,124 筆印刷、1,641 張唯一卡、4,232 項能力、138,477 個候選 Combo、0 筆轉換失敗；整體仍為 conservative，BS8-076 已不在 unsupported 清單，其他 19 張未支援卡仍待分別處理。報告：`output/ai-cookierift/ai-capability-audit-after-bs8-076-20261017.json`。既有 matched harness 的凍結基準早於目前政策／規則版本，因此本次未以它估算勝率，也不主張整體或對人類勝率提升。
+
+## 2026-10-16 末場陷阱保命決策修正
+
+在固定失敗 seed `204512100`（S3 綠色防守牌組對 Cookierift #1151）中，己方只剩 1 HP 的 Plantain Cookie，對手 Prophet Cookie 的 1 點攻擊傷害會直接結束對局。手牌中的實體 ST3-019「Supreme Whipped Cream」可支付綠色能量並棄置一張支援，將該次傷害降為 0；舊決策卻因陷阱保留分數與代價扣分而選擇跳過，隨即敗北。原始重播紀錄：`output/ai-cookierift/trace-candidate-loss-204512100-green-vs-1151.json`。
+
+修正後，AI 先依實際付款橫置支援、將陷阱移入棄牌區，再用正式效果執行器投影各效果及符合條件的 Then，並為每個效果建立可執行的獨立目標。預測器以該目標實際承受的傷害與效果後 HP 判斷是否救下最後一隻餅乾；僅當手牌沒有補位候選且這個具體支付／目標方案能避免昏厥時，保命門檻才高於跳過。棄手牌費用也以同一組合法 instance ID 投影付款與後續手牌／棄牌區，再將這組 ID 原樣交給實際陷阱指令；最後的 draw-up-to 留給一般效果解析流程。其他未能投影的非能量費用或效果仍採保守處理，不把未付款的方案當成可行。
+
+新增回歸涵蓋原始 seed、ST3-019 保命、ST6-017 的巢狀 Then 減攻、BS4-042 分別鎖定攻擊者與自身的複合目標、BS1-051 在禁止補 HP／公開傷害減免下不誤判保命，以及 BS12-087 陷阱本身進入棄牌後才達成 Arena 門檻、BS10-116 的 Then 移除 Beast 攻擊者。GPT-6.1 Sol 唯讀複查確認 BS12-087 與 BS10-116 反例已關閉，未發現其他可重現產品缺陷。
+
+另外，藍色鏡像 seed `204500000` 第 90 步重現 BS6-085「Destruction of a Pastless Future」漏判：BS7-067 Dark Choco Cookie 剩 2 HP，正承受 2 點傷害，手牌共 4 張且可支付藍色能量。修正前 AI 跳過陷阱；修正後支付能量、棄兩張合法手牌，將攻擊降低 2 並救下 BS7-067。實際 AI bundle 重播記錄到付款、ATK -2 與兩張牌進棄牌區。
+
+定向驗證 3 檔／34 項通過。`npm.cmd run build` 通過（2,204 modules；僅既有大型 `game-demo` chunk 警告）；全域 ESLint（排除生成 `.tmp-vitest-*` 與 `output`）通過；AI Browser smoke 的開局、HP 顯示、手牌檢視與暫停／恢復 6 項全通過。完整 `npm.cmd test -- --maxWorkers=1` 通過 1,054 檔／21,110 項（1,352.35 秒，exit 0）。
+
+以 26 副牌組、351 組配對、兩個 seed 與四種座位／先手交換執行 Lv.5 matched AI-vs-AI。相對於修正前 policy，候選 2,871 勝、基準 2,745 勝／5,616 場（候選 51.12%）；1,404 項初始 parity 檢查與 5,616 項逐局 parity 全通過，失敗、未完成及動作上限皆為 0。再與先前凍結的 `candidate-lv5-community-1248` policy 比較，相同兩個 seed cohort 共 2,848 勝對 2,768 勝／5,616 場（候選 50.71%），所有 parity 通過，失敗、未完成及動作上限皆為 0。固定基準的各色候選勝場／基準勝場為藍 418/400（864 場）、綠 263/243（864）、黃 462/451（864）、紅 721/690（1,296）、紫 310/328（648）、黑 601/587（864）、多色 73/69（216）。這些是固定牌組與 seeds 的描述性結果，未作顯著性檢定，也不代表真人勝率或普遍策略提升。
+
+對照修正前 policy 的報告：`output/ai-cookierift/matched-comparison-lv5-blue-discard-hand-projection-seed-204500000-20261016.json`、`output/ai-cookierift/matched-comparison-lv5-blue-discard-hand-projection-seed-204600000-20261016.json`；對照凍結基準的報告：`output/ai-cookierift/matched-comparison-lv5-blue-discard-hand-projection-vs-baseline-seed-204500000-20261016.json`、`output/ai-cookierift/matched-comparison-lv5-blue-discard-hand-projection-vs-baseline-seed-204600000-20261016.json`。AI Browser 是 UI smoke；本次陷阱決策與付款由固定 seed 模擬及 matched AI-vs-AI 報告驗證。
+
+## 2026-10-16 Cookierift #1127 紫色 Arena 牌組與 Lv.5 matched holdout
+
+從 [Cookierift 社群牌組 #1127](https://cookierift.com/decks/community/1127) 擷取 Lyxn 的 Purple Arena（頁面更新於 2026-10-15，合法，60 張主牌、4 張 EXTRA、21 種卡號）；來源 hash `sha256:39403fb1450d8587df51c83aef9c5cd6ec6e1d75d23cf77c4266f525ec755d84` 已寫入並重算一致。逐卡 strict 稽核 28 筆印刷分支皆 verified，沒有 needs-review 或 blocked。與已收錄牌組比較，最高唯一卡號 Jaccard 相似度為 #568 的 9/33（27.27%）。牌組已接入 community recipes、選單、starter deck 建構及 benchmark；27 個選單項目於桌機1366×768／平板1164×777共54／54 Browser PASS，聚焦 Vitest 2檔／56項、build 與全域 lint 通過。
+
+以 27 副牌組、378 組配對、兩個 seed cohort、每組四種座位／先手交換執行 Lv.5 matched AI-vs-AI。第一組候選 1,542 勝、基準 1,482 勝／3,024 場；第二組候選 1,532 勝、基準 1,492 勝／3,024 場，合併為 3,074 對 2,974／6,048（候選50.83%）。兩組各756項初始預檢、3,024項逐局 parity 全通過，無失敗、未完成或動作上限。指定 #1127 時，候選策略在兩組分別為48／112及51／112勝；基準為47／112及53／112勝，合併99／224對100／224。各色合併勝場候選／基準為藍402／357（896場）、綠283／271（896）、黃514／501（896）、紅749／732（1,344）、紫420／413（896）、黑631／627（896）、多色75／73（224）。這是固定 AI-vs-AI 牌組與 seed 矩陣的描述性結果，未作顯著性檢定，不代表真人勝率或普遍策略提升。
+
+兩組報告：`output/ai-cookierift/matched-comparison-purple-1127-seed-204700000-20261016.json`、`output/ai-cookierift/matched-comparison-purple-1127-seed-204800000-20261016.json`；Browser 選單結果：`output/ai-cookierift/community-browser-20261016-current-menu-1127/results.json`。
+
+## 2026-10-16 Cookierift #1248 藍色牌組與 Lv.5 matched holdout
+
+從 [Cookierift 社群牌組 #1248](https://cookierift.com/decks/community/1248) 擷取 DonutGaming 的「Sea Build」（頁面更新於 2026-10-16，合法，60 張主牌、6 張 EXTRA）；逐張依頁面卡圖與張數匯入，未替換卡牌。來源快照在 `data/decks/cookierift-community-20261016.json`，來源欄位 hash 為 `sha256:260e8bcafe02d4814c7fc458d42712dd6e214c18fc7161a864c1fcf54d67818d`。21 個不同卡號的全部 32 筆印刷通過 strict contract audit，0 needs-review、0 blocked。與既有 18 副社群牌組相比，最高唯一卡號 Jaccard 相似度為 #1164 的 7/37（18.92%），其次 #921 為 3/40（7.50%）、#1268 為 1/41（2.44%）；其餘皆無重疊。
+
+將 #1248 加入 AI 選單、牌組建立流程與 Lv.5 benchmark。26 個選項在桌機 1366×768 與平板 1164×777 共 52/52 Browser PASS，沒有頁面錯誤；兩種尺寸都完成 #1248 開局，問題包及牌庫確認為來源的 60 張主牌與 6 張 EXTRA。定向 Vitest 4 檔／91 項、production build（2,204 modules）、全域 lint、兩支 Browser 驗證腳本 `node --check` 通過。
+
+以 26 副牌組、351 組配對（含每副牌組的鏡像賽）、兩個 seeds、每組四種座位／先手交換執行 Lv.5 matched AI-vs-AI，共 2,808 場；702 項初始預檢、2,808 項逐局 parity 全通過，全部完成且失敗、未完成及動作上限皆為 0。候選 1,416 勝、基準 1,392 勝（50.43%）。排除 #1248 的 8 場鏡像賽後，候選策略使用 #1248 為 77/100 勝，凍結基準策略為 75/100 勝。候選與基準共用規則／資料 hash `fb417f449d44cf5ea86e56461bc265d4830268b4509dabd2ad306cadb0179156`；基準 policy ref 為 `1051a94b0b88ed6686d9c8e496f7fff14f50ed0f`，manifest 仍標記 `PROTOTYPE-EQUIVALENCE-NOT-YET-VERIFIED`。這是兩個固定 seeds 的 AI-vs-AI 描述性結果，未作顯著性檢定，不代表真人勝率或普遍策略提升。
+
+完整 benchmark：`output/ai-cookierift/matched-comparison-lv5-community-1248-shared-corrections-seed-204500000-20261016.json`；Browser 結果：`output/ai-cookierift/community-browser-20261016-current-menu-1248/results.json`。
+
+本批牌組整合後執行 `npm.cmd test -- --maxWorkers=1`（TEMP/TMP 指向 `.tmp-vitest-cookierift-1248-full-final-20261016`）：完整 Vitest 1,054/1,054 檔、21,097/21,097 項通過，耗時 1,523.80 秒，exit 0。
+
+## 2026-10-16 Cookierift #1268 綠藍牌組與近重複隔離
+
+從 [Cookierift 社群牌組 #1268](https://cookierift.com/decks/community/1268) 擷取合法的「Wa green」牌表（作者 55Hz，頁面更新於 2026-10-15，60 張主牌、4 張 EXTRA），依公開牌面卡號與張數匯入，未替換卡牌。來源快照位於 `data/decks/cookierift-community-20261016.json`，牌組來源 hash 為 `sha256:004f291c3bf8c108e24132ad47bf57c58ef4a1038828b54ed987fa7c8e09611e`，包含21種卡號。逐卡嚴格契約稽核涵蓋21個卡號的全部印刷版本，均為 verified，沒有 needs-review 或 blocked。
+
+與既有社群牌組比較唯一卡號集合，#1268 的最高 Jaccard 相似度是 #801 的 8/39（20.51%），其次是 #927 的 7/38（18.42%）；因此將它加入正式 AI 牌組、建立流程與 Lv.5 benchmark。新擷取的紅藍牌 #1272 則有21種卡號，與已收錄紅牌 #83 共用20種，Jaccard 為20/22（90.91%），保留在來源快照但不列入正式選單或 benchmark，並以測試固定此近重複隔離理由。
+
+正式選單25副牌組在桌機1366×768與平板1164×777共50/50 Browser PASS。兩尺寸都完成 #1268 開局，確認選取摘要正確、主牌60張、EXTRA 4張且牌號／張數與來源相符；沒有頁面錯誤。定向 Vitest 4檔／96項、production build（2,204 modules）、受影響檔 ESLint、兩支驗證腳本 `node --check` 及 `git diff --check` 通過。
+
+Lv.5 matched AI-vs-AI 矩陣包含25副牌組、325組配對、兩個 seeds 與四種座位／先手交換，共2,600場；650項初始預檢與2,600項逐局 parity 全通過，2,600場完成，失敗、未完成及動作上限皆為0。候選1,319勝、基準1,281勝（50.73%）；#1268 候選端39/104勝、基準端30/104勝。基準政策固定於 `1051a94b0b88ed6686d9c8e496f7fff14c50ed0f`，共同使用已驗證的合法性、defender-FLIP 與 HP 支付目標安全修補；兩側規則／資料 hash 均為 `c22b0dfc20f74861f1755bcfccc122046f6a4016cd5ad23a4535f1801bdafce0`。基準 manifest 仍標記 `PROTOTYPE-EQUIVALENCE-NOT-YET-VERIFIED`；這是兩個固定 seeds 的 AI-vs-AI 方向性結果，沒有顯著性檢定，不能推論真人勝率或普遍策略提升。
+
+完整矩陣報告：`output/ai-cookierift/matched-comparison-lv5-community-1268-shared-corrections-seed-204300000-20261016.json`；基準 manifest：`output/ai-cookierift/baseline-policy-current-rules-nestedflip-hp-cost-target-correction-community-1268-20261016-manifest.json`；Browser 結果：`output/ai-cookierift/community-browser-20261016-current-menu-1268/results.json`。
+
+#1268 加入正式選單、#1272 近重複隔離與選單期望修正後，完整 Vitest 為 1,054 檔／21,094 項全數通過（1,447.63 秒，exit 0）。
+
+再以不重疊 seed base `204400000` 跑相同的 Lv.5 matched 矩陣：25 副牌組、325 組配對、兩個 seeds、四種座位／先手交換，共 2,600 場；650 項初始預檢及 2,600 項逐局 parity 全通過，失敗、未完成及動作上限皆為 0。候選 1,314 勝、基準 1,286 勝（50.54%）。候選側各色結果為藍124/312、綠124/416、黃238/416、紅340/624、紫149/312、黑293/416、多色46/104；候選與基準規則／資料 hash 同為 `c22b0dfc20f74861f1755bcfccc122046f6a4016cd5ad23a4535f1801bdafce0`。與前一個 seed cohort 合併是候選 2,633 勝、基準 2,567 勝／5,200 場（50.63%）。這仍只是兩個固定 AI-vs-AI 矩陣的描述性結果，未作顯著性檢定，也不能推論真人勝率或普遍策略提升。
+
+第二份報告：`output/ai-cookierift/matched-comparison-lv5-community-1268-shared-corrections-seed-204400000-20261016.json`；基準 bundle SHA-256 `f693e43c4c56b9ea22c80755e81fad2b4225063de3cbdd7657e95d1f3e6a8aa4`，候選 bundle SHA-256 `c841bd96c391e99143a134194560d4127286ddad1ca6a6cf22d501c31804ea3b`，同一基準 manifest 仍標記 `PROTOTYPE-EQUIVALENCE-NOT-YET-VERIFIED`。
+
 ## 2026-10-16 Cookierift #1251 六色牌組評估
 
 從 [Cookierift 社群牌組 #1251](https://cookierift.com/decks/community/1251) 擷取合法的「I love Cookiez!!!」牌表（KawaiiXO，2026-10-14 更新，60 張主牌、6 張 EXTRA）；頁面當時顯示 0 次匯入、尚無評分。依卡片圖片 URL 讀取33個不同卡號、依張數標籤讀取數量，來源 hash 為 `sha256:30140940794b017e6a247f85e2b7d8d0e2109e80822a60add4ca4df9f4776269`，來源快照保留在 `data/decks/cookierift-community-20261016.json`。33張均可由正式 BS12 資料轉接，行為契約為33/33 verified。

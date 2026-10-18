@@ -197,10 +197,16 @@ describe('MainMenu AI opponent options', () => {
       'cookierift-921', 'cookierift-927', 'cookierift-801', 'cookierift-973', 'cookierift-67',
       'cookierift-83', 'cookierift-793', 'cookierift-568', 'cookierift-506', 'cookierift-1035',
       'cookierift-16', 'cookierift-731', 'cookierift-1164', 'cookierift-1239', 'cookierift-1151',
-      'cookierift-1259', 'cookierift-1207',
+      'cookierift-1259', 'cookierift-1207', 'cookierift-1268', 'cookierift-897', 'cookierift-283', 'cookierift-1140', 'cookierift-1248', 'cookierift-1127', 'cookierift-1001', 'cookierift-1174', 'cookierift-1290', 'cookierift-1291', 'cookierift-1295',
     ])
     expect(container.textContent).toContain('BS12 紅色｜Arena')
     expect(container.textContent).toContain('BS12 紅色｜韓版起始牌組（PVP KR）')
+    expect(container.textContent).toContain('社群 藍紫｜Shadow Milk Homebrew')
+    expect(container.textContent).toContain('社群 黑色｜Pierre Poliviere')
+    expect(container.textContent).toContain('社群 黃色｜Immortal Cheese (Ver 1)')
+    expect(container.textContent).toContain('社群 紅色｜Basic red')
+    expect(container.textContent).toContain('社群 綠藍｜Trial Deck')
+    expect(container.textContent).toContain('社群 綠藍｜Sea-green Deck! :D')
     expect(container.textContent).not.toContain('BS6')
 
     await act(() => root.unmount())

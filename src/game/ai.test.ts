@@ -444,14 +444,19 @@ describe('G5 direct Lv.3 strategy selection', () => {
         battleEntryId: 'direct-cost-source:battle:1',
       }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
     state.pendingOnPlay = {
       playerId: 'player-two',
       sourceInstanceId: source.instanceId,
       origin: 'hand',
     }
     state.players['player-one'].battleArea = [{
-      card: testCookieCard('direct-cost-opponent'),
-      hpCards: [testSupportCard('direct-cost-opponent-hp')],
+      card: testCookieCard('direct-cost-opponent', { hp: 2 }),
+      hpCards: [
+        testSupportCard('direct-cost-opponent-hp-1'),
+        testSupportCard('direct-cost-opponent-hp-2'),
+      ],
       rested: false,
       battleEntryId: 'direct-cost-opponent:battle:1',
     }]
@@ -957,14 +962,24 @@ describe('resolveAiSkill discardHand', () => {
       id: 'player-two',
       hand: [handCard0, handCard1, handCard2],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'skill-cookie:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('skill-cookie-hp')], rested: false, battleEntryId: 'skill-cookie:battle:1' },
       ],
       supportArea: [{ card: support, rested: false }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -1014,14 +1029,24 @@ describe('resolveAiSkill discardHand', () => {
       id: 'player-two',
       hand: [handCard0, handCard1],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'werewolf:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('werewolf-hp')], rested: false, battleEntryId: 'werewolf:battle:1' },
       ],
       supportArea: [{ card: support, rested: false }],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -1151,17 +1176,27 @@ describe('resolveAiSkill discardHand with supportToTrash combined', () => {
       id: 'player-two',
       hand: [handCard0, handCard1],
       battleArea: [
-        { card: cookie, hpCards: [], rested: false, battleEntryId: 'combo-cookie:battle:1' },
+        { card: cookie, hpCards: [testSupportCard('combo-cookie-hp')], rested: false, battleEntryId: 'combo-cookie:battle:1' },
       ],
       supportArea: [
         { card: paymentSupport, rested: false },
         { card: trashSupport, rested: false },
       ],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
-    const opponentCookie = testCookieCard('opp-cookie')
+    const opponentCookie = testCookieCard('opp-cookie', { hp: 2 })
     state.players['player-one'].battleArea = [
-      { card: opponentCookie, hpCards: [], rested: false, battleEntryId: 'opp-cookie:battle:1' },
+      {
+        card: opponentCookie,
+        hpCards: [
+          testSupportCard('opp-cookie-hp-1'),
+          testSupportCard('opp-cookie-hp-2'),
+        ],
+        rested: false,
+        battleEntryId: 'opp-cookie:battle:1',
+      },
     ]
 
     const result = takeAiStep(state, 'player-two')
@@ -1205,7 +1240,7 @@ describe('resolveAiSkill supportToHand cost', () => {
       battleArea: [
         {
           card: cookie,
-          hpCards: [],
+          hpCards: [testSupportCard('return-support-source-hp')],
           rested: false,
           battleEntryId: 'return-support-cookie:battle:1',
         },
@@ -1215,11 +1250,16 @@ describe('resolveAiSkill supportToHand cost', () => {
         { card: returnedSupport, rested: false },
       ],
     })
+    state.firstPlayerId = 'player-one'
+    state.turnNumber = 2
 
     state.players['player-one'].battleArea = [
       {
-        card: testCookieCard('opponent-cookie'),
-        hpCards: [],
+        card: testCookieCard('opponent-cookie', { hp: 2 }),
+        hpCards: [
+          testSupportCard('opponent-cookie-hp-1'),
+          testSupportCard('opponent-cookie-hp-2'),
+        ],
         rested: false,
         battleEntryId: 'opponent-cookie:battle:1',
       },

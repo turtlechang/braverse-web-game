@@ -262,11 +262,9 @@ const extractEffect = (
       })
       break
     case 'prevent-cookie-active-next-phase':
-      addEvidence(result, card, cardIndex, effectSource, effect, effectPath,
-        effect.discardHandToSetActive === undefined ? 'rest' : 'unsupported', {
-          tags: ['active-rest'],
-          supported: effect.discardHandToSetActive === undefined,
-        })
+      addEvidence(result, card, cardIndex, effectSource, effect, effectPath, 'rest', {
+        tags: ['active-rest'],
+      })
       break
     case 'rest-cookie':
     case 'rest-support':

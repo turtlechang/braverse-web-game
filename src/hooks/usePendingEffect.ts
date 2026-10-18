@@ -1528,11 +1528,21 @@ export function usePendingEffect(params: {
       sourceInstanceId: battle.attackerInstanceId,
     }
     const attackEffectPrevention = getBattleAttackEffectPrevention(game, viewerPlayerId)
-    const hasApplicableEffect = !attackEffectPrevention && (
-      currentAttackEffect.kind === 'optional-cost-attack'
+    const hasPlayableChooseOneMode =
+      currentAttackEffect.kind !== 'choose-one' ||
+      currentAttackEffect.modes.some((mode) =>
+        isChooseOneModePlayable(game, attackContext, mode.effects),
+      )
+    const hasApplicableEffect =
+      !attackEffectPrevention &&
+      hasPlayableChooseOneMode &&
+      (currentAttackEffect.kind === 'optional-cost-attack'
         ? hasApplicableOptionalAttackEffect(
-            game, attackContext, currentAttackEffect.effects,
-            currentAttackEffect.cost, currentAttackEffect.payBeforeCondition,
+            game,
+            attackContext,
+            currentAttackEffect.effects,
+            currentAttackEffect.cost,
+            currentAttackEffect.payBeforeCondition,
           )
         : isEffectConditionMet(game, attackContext, currentAttackEffect) &&
           hasRequiredEffectTargets(game, attackContext, currentAttackEffect) &&

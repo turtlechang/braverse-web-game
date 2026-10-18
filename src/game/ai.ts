@@ -32,6 +32,7 @@ import {
 } from './effects'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getRefreshCandidates } from './refresh'
+import { getLegalTurnCommands } from './legal-actions'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
@@ -739,6 +740,37 @@ const hasEnoughHandAfterAbilityCost = (
   return remainingHandCount >= requiredDiscardCount
 }
 
+const hasUsableOptionalCostAttackPath = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+  effects: CardEffect[],
+  universal: ReturnType<typeof createUniversalPendingStrategy>,
+): boolean => {
+  if (!effects.every((effect) =>
+    effect.kind === 'optional-cost-attack' && effect.resolution === 'ability',
+  )) return true
+
+  return effects.some((effect) => {
+    if (effect.kind !== 'optional-cost-attack') return false
+    const thenCostIds = chooseAbilityCostIds(
+      state,
+      playerId,
+      effect.cost,
+      sourceInstanceId,
+      effect.effects,
+      universal ?? undefined,
+    )
+    if (!thenCostIds) return false
+    return effect.effects.every((thenEffect) =>
+      thenEffect.kind !== 'equip-source' ||
+      state.players[playerId].battleArea.some(
+        (cookie) => cookie.card.id === thenEffect.requiredCookieId,
+      ),
+    )
+  })
+}
+
 const resolveAiCardAbility = (
   state: GameState,
   playerId: PlayerId,
@@ -778,16 +810,71 @@ const resolveAiCardAbility = (
   )
   if (!costIds) return null
 
-  if (getItemActivateDiscardRequirement(state, playerId)) {
+  const itemDiscardRequirement = getItemActivateDiscardRequirement(state, playerId)
+  if (itemDiscardRequirement) {
+    const revealTargetIds = revealCost?.kind === 'reveal-hand' && revealCost.asCost
+      ? findRevealHandSelection(state, {
+        sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
+      }, revealCost) ?? []
+      : []
+    const excludedTaxIds = new Set([
+      card.instanceId,
+      ...costIds.discardHandIds,
+      ...costIds.handToBreakAreaIds,
+      ...revealTargetIds,
+    ])
+    const taxCandidates = state.players[playerId].hand
+      .filter(candidate => !excludedTaxIds.has(candidate.instanceId))
+      .map(candidate => candidate.instanceId)
+    const taxDiscardIds = universal?.enabled
+      ? universal.orderCostIds(taxCandidates, itemDiscardRequirement.count)
+      : taxCandidates.slice(0, itemDiscardRequirement.count)
+    if (taxDiscardIds.length !== itemDiscardRequirement.count) return null
+
+    let preview: GameState
+    try {
+      preview = playItem(
+        state,
+        playerId,
+        card.instanceId,
+        costIds.paymentIds,
+        costIds.supportToTrashIds,
+        costIds.supportToHandIds,
+        costIds.discardHandIds,
+        costIds.hpToTrashTargetIds,
+        costIds.trashBattleCookieIds,
+        costIds.handToBreakAreaIds,
+        taxDiscardIds,
+        costIds.trashCookieToBreakAreaIds,
+      )
+    } catch {
+      return null
+    }
+    if (preview.status !== 'playing') return null
+    const previewEffects = ability.effects.filter(effect =>
+      isEffectConditionMet(preview, {
+        sourcePlayerId: playerId,
+        sourceInstanceId: card.instanceId,
+      }, effect),
+    )
+    if (
+      previewEffects.length === 0 ||
+      !hasUsableOptionalCostAttackPath(
+        preview,
+        playerId,
+        card.instanceId,
+        previewEffects,
+        universal,
+      )
+    ) return null
+
     // Keep the additional opponent-imposed cost as its own authoritative
     // decision; the ordinary Item cost is paid only when that choice resolves.
     const pending = applyGameCommand(state, {
       kind: 'begin-play-item', playerId, instanceId: card.instanceId,
       ...costIds,
-      ...(revealCost?.kind === 'reveal-hand' && revealCost.asCost ? {
-        targetIds: findRevealHandSelection(state, {
-          sourcePlayerId: playerId, sourceInstanceId: card.instanceId,
-        }, revealCost) ?? [],
+      ...(revealTargetIds.length > 0 ? {
+        targetIds: revealTargetIds,
       } : {}),
     }, { shuffleSeed })
     return {
@@ -821,6 +908,12 @@ const resolveAiCardAbility = (
     isEffectConditionMet(played, context, effect),
   )
   if (effects.length === 0) return null
+  if (!hasUsableOptionalCostAttackPath(played, playerId, card.instanceId, effects, universal)) {
+    // Do not spend an Item whose only remaining effect is an unaffordable or
+    // targetless optional Then. For example, BS10-119 with no Refresh and no
+    // Silent Salt in battle must stay in hand when its post-play P is unavailable.
+    return null
+  }
   if (
     !hasEnoughHandAfterAbilityCost(
       state,
@@ -1321,6 +1414,75 @@ const resolveAiSkill = (
     universalChooseEffectMode,
   )
   if (sim.aborted) return null
+
+  const onlySupportDeployment = skill.effects.length === 1 &&
+    skill.effects[0].kind === 'support-to-battle' &&
+    !skill.effects[0].thenEffects?.length
+  const hasNoActivationCost = [
+    paymentIds,
+    costSupportToTrashIds,
+    costSupportToHandIds,
+    discardHandIds,
+    activationRestrictionDiscardIds,
+    hpToTrashTargetIds,
+    trashBattleCookieIds,
+    positionCostTargetIds,
+    battleToHandIds,
+    trashCookieToBreakAreaIds,
+    handToBreakAreaIds,
+    trashToDeckBottomIds,
+    trashToDeckIds,
+  ].every((ids) => ids.length === 0) &&
+    Object.entries(skill.cost).every(([field, value]) =>
+      field === 'energy' || value === undefined || value === 0 || value === false,
+    )
+  const emptySupportDeployment = sim.effectSelections.length === 1 &&
+    sim.effectSelections[0].effect.kind === 'support-to-battle' &&
+    sim.effectSelections[0].targetIds.length === 0
+  // BS7-055 may legally choose zero Cookies. Preserve its Once for a later
+  // support entry instead of offering a free activation with no effect.
+  // Check the complete printed effect list and cost, since independent Then
+  // effects or moving cards as a cost can still make a zero-target play useful.
+  if (
+    trigger === 'activate' && skill.oncePerTurn && !skill.restSource &&
+    onlySupportDeployment && hasNoActivationCost && emptySupportDeployment
+  ) return null
+
+  const simulatedEffects = sim.effectSelections.map((selection) => selection.effect)
+  const onlyTemporarySourceAttackBonuses = simulatedEffects.length > 0 &&
+    simulatedEffects.every((effect) =>
+      effect.kind === 'modify-attack' &&
+      effect.amount > 0 &&
+      effect.duration === 'this-turn' &&
+      effect.target.side === 'self' &&
+      effect.target.sourceOnly === true &&
+      !effect.thenEffects?.length &&
+      !effect.thenDrawUpToIfTargetRemainingHp,
+    )
+  const activatedSource = activated.players[playerId].battleArea.find(
+    (cookie) => cookie.card.instanceId === source.card.instanceId,
+  )
+  if (onlyTemporarySourceAttackBonuses) {
+    // A source-only attack bonus expires this turn; require a legal attack by
+    // that same Cookie after paying the skill cost before spending a hand card.
+    const attackCheckState = trigger === 'on-play' &&
+      activated.pendingOnPlay?.playerId === playerId &&
+      activated.pendingOnPlay.sourceInstanceId === source.card.instanceId
+      ? { ...activated, pendingOnPlay: null }
+      : activated
+    const sourceBonusIsSelected = sim.effectSelections.some((selection) =>
+      selection.targetIds.includes(source.card.instanceId),
+    )
+    const canUseSourceBonusThisTurn =
+      activatedSource !== undefined &&
+      sourceBonusIsSelected &&
+      getLegalTurnCommands(attackCheckState, playerId).some(
+        (command) =>
+          command.kind === 'attack' &&
+          command.attackerInstanceId === source.card.instanceId,
+      )
+    if (!canUseSourceBonusThisTurn) return null
+  }
 
   return {
     state: applyGameCommand(

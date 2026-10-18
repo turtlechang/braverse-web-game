@@ -38,9 +38,20 @@ const trapCard: GameCard = {
   },
 }
 
+const withTrapInHand = (state: GameState): GameState => ({
+  ...state,
+  players: {
+    ...state.players,
+    'player-one': {
+      ...state.players['player-one'],
+      hand: [...state.players['player-one'].hand, trapCard],
+    },
+  },
+})
+
 const withDefender = (card: CookieCard): GameState => {
   const base = createBattleState()
-  const state: GameState = {
+  const state = withTrapInHand({
     ...base,
     players: {
       ...base.players,
@@ -51,7 +62,7 @@ const withDefender = (card: CookieCard): GameState => {
         ],
       },
     },
-  }
+  })
   return declareAttack(state)
 }
 
@@ -60,7 +71,7 @@ describe('evaluateTrapWorth：致命判定要用場上實際攻擊力', () => {
   const buffedAttackerState = (): GameState => {
     const base = createBattleState()
     const attacker = base.players['player-two'].battleArea[0]
-    const state: GameState = {
+    const state = withTrapInHand({
       ...base,
       players: {
         ...base.players,
@@ -79,7 +90,7 @@ describe('evaluateTrapWorth：致命判定要用場上實際攻擊力', () => {
           expiresAfterTurn: null,
         },
       ],
-    }
+    })
     return declareAttack(state)
   }
 
@@ -95,7 +106,7 @@ describe('evaluateTrapWorth：致命判定要用場上實際攻擊力', () => {
     // 同一局面但沒有加成：卡面 2 攻打不死 3 HP，不該拿到防止擊倒加分。
     const base = createBattleState()
     const attacker = base.players['player-two'].battleArea[0]
-    const unbuffedState = declareAttack({
+    const unbuffedState = declareAttack(withTrapInHand({
       ...base,
       players: {
         ...base.players,
@@ -104,7 +115,7 @@ describe('evaluateTrapWorth：致命判定要用場上實際攻擊力', () => {
           battleArea: [{ ...attacker, card: { ...attacker.card, attack: 2 } }],
         },
       },
-    })
+    }))
     const unbuffed = evaluateTrapWorth(
       unbuffedState,
       'player-one',

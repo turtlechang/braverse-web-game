@@ -5,10 +5,12 @@ import { copyFile, mkdir, readFile, stat, unlink, writeFile } from 'node:fs/prom
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads'
+import { availableParallelism } from 'node:os'
 import { build } from 'esbuild'
 
 const outputDirectory = path.resolve('output/ai-cookierift')
 const communitySnapshotPaths = [
+  'data/decks/cookierift-community-20261017.json',
   'data/decks/cookierift-community-20261016-silent.json',
   'data/decks/cookierift-community-20261016.json',
   'data/decks/cookierift-community-20261015.json',
@@ -16,9 +18,10 @@ const communitySnapshotPaths = [
   'data/decks/cookierift-community-20261013.json',
   'data/decks/cookierift-community-20261010.json',
 ]
-const acceptedCommunityIds = [921, 927, 801, 67, 83, 568, 506, 1035, 793, 973, 16, 731, 1164, 1239, 1151, 1259, 1207]
+const acceptedCommunityIds = [921, 927, 801, 67, 83, 568, 506, 1035, 793, 973, 16, 731, 1164, 1239, 1151, 1259, 1207, 1268, 897, 283, 1140, 1248, 1127, 1001, 1174, 1290, 1291, 1295]
 const bs12Colors = ['blue', 'green', 'yellow', 'red', 'purple', 'black']
 const hash = value => createHash('sha256').update(value).digest('hex')
+const isPolicyInputPath = value => /^src\/game\/ai(?:\/|-|\.ts$)/.test(value)
 const auditCandidateInputs = async (metafile, baselineManifest) => {
   if (!baselineManifest) return null
   const normalizePath = value => value.replaceAll('\\', '/')
@@ -28,22 +31,27 @@ const auditCandidateInputs = async (metafile, baselineManifest) => {
   const candidatePaths = Object.keys(metafile.inputs)
     .map(normalizePath)
     .sort()
-  assert.deepStrictEqual(candidatePaths, baselineInputs.map(input => input.path),
-    'Candidate source path set differs from the baseline manifest')
+  const baselineRuleAndDataInputs = baselineInputs.filter(input => !input.policy)
+  const candidateRuleAndDataPaths = candidatePaths.filter(inputPath => !isPolicyInputPath(inputPath))
+  assert.deepStrictEqual(candidateRuleAndDataPaths, baselineRuleAndDataInputs.map(input => input.path),
+    'Candidate current-rule/data source path set differs from the baseline manifest')
 
-  const candidateInputs = await Promise.all(baselineInputs.map(async input => ({
+  const candidateRuleAndDataInputs = await Promise.all(baselineRuleAndDataInputs.map(async input => ({
     path: input.path,
-    policy: input.policy,
+    policy: false,
     sha256: hash(await readFile(path.resolve(input.path))),
   })))
-  const candidateRuleAndDataInputs = candidateInputs.filter(input => !input.policy)
-  assert.deepStrictEqual(candidateRuleAndDataInputs, baselineInputs.filter(input => !input.policy),
+  assert.deepStrictEqual(candidateRuleAndDataInputs, baselineRuleAndDataInputs,
     'Candidate current-rule/data inputs differ from the baseline')
   assert.equal(hash(JSON.stringify(candidateRuleAndDataInputs)), baselineManifest.currentRuleAndDataInputsSha256,
     'Candidate current-rule/data input manifest hash differs from the baseline')
-  const candidatePolicyInputs = candidateInputs.filter(input => input.policy)
+  const candidatePolicyInputs = await Promise.all(candidatePaths.filter(isPolicyInputPath).map(async inputPath => ({
+    path: inputPath,
+    policy: true,
+    sha256: hash(await readFile(path.resolve(inputPath))),
+  })))
   return {
-    inputCount: candidateInputs.length,
+    inputCount: candidatePaths.length,
     policyInputCount: candidatePolicyInputs.length,
     currentRuleAndDataInputCount: candidateRuleAndDataInputs.length,
     inputPathsSha256: hash(JSON.stringify(candidatePaths)),
@@ -59,11 +67,13 @@ Options:
   --report <path>      JSON report output (defaults to a unique filename)
   --seed-base <number> Matched benchmark seed base
   --level <1-5>        AI level to evaluate (default: 5)
+  --workers <number>   Parallel match workers (default: up to 2, capped by available CPUs)
   --plan-only          Validate recipes/paths and print the matched-game plan without building or playing
   --help               Show this help
 
 Environment aliases: BRAVERSE_BENCHMARK_BASELINE_PATH, BRAVERSE_BENCHMARK_CANDIDATE_PATH,
-BRAVERSE_BENCHMARK_REPORT_PATH, BRAVERSE_BENCHMARK_SEED_BASE, and BRAVERSE_BENCHMARK_LEVEL. The legacy
+BRAVERSE_BENCHMARK_REPORT_PATH, BRAVERSE_BENCHMARK_SEED_BASE, BRAVERSE_BENCHMARK_LEVEL,
+and BRAVERSE_BENCHMARK_WORKERS. The legacy
 BRAVERSE_BENCHMARK_REPORT accepts a report filename under output/ai-cookierift.
 Existing baseline, candidate, and report paths are never overwritten.`
 
@@ -154,6 +164,11 @@ if (!isMainThread) {
     if (!Number.isSafeInteger(level) || level < 1 || level > 5) {
       throw new Error('AI level must be an integer from 1 through 5')
     }
+    const availableWorkers = availableParallelism()
+    const workerCount = Number(args.workers ?? process.env.BRAVERSE_BENCHMARK_WORKERS ?? Math.min(2, availableWorkers))
+    if (!Number.isSafeInteger(workerCount) || workerCount < 1 || workerCount > availableWorkers) {
+      throw new Error(`Worker count must be an integer from 1 through ${availableWorkers}`)
+    }
 
     const runId = `${new Date().toISOString().replace(/[-:.]/g, '')}-${process.pid}-${randomUUID().slice(0, 8)}`
     const baselinePath = resolveConfiguredPath(
@@ -210,6 +225,7 @@ if (!isMainThread) {
         paths: { baselinePath, candidatePath, reportPath },
         seedBase,
         level,
+        workerCount,
         recipeCount: recipes.length,
         matchupCount: matchups,
         seedsPerMatchup,
@@ -284,10 +300,8 @@ if (!isMainThread) {
       assert.equal(jobs.length, expectedTotal)
 
       const rows = new Array(jobs.length)
-      const workers = [
-        new Worker(new URL(import.meta.url), { workerData: { baselinePath, candidatePath, level } }),
-        new Worker(new URL(import.meta.url), { workerData: { baselinePath, candidatePath, level } }),
-      ]
+      const workers = Array.from({ length: workerCount }, () =>
+        new Worker(new URL(import.meta.url), { workerData: { baselinePath, candidatePath, level } }))
       let next = 0
       let completed = 0
       try {
@@ -320,7 +334,7 @@ if (!isMainThread) {
       const wins = valid.filter(row => row.candidateWon).length
       const report = {
         status: valid.length === jobs.length && rows.every(row => row.initialStateParity) ? 'PASS' : 'FAIL',
-        method: `Matched AI-vs-AI comparison: baseline and candidate bundles receive the same recipes, seeds, player-seat and first-player assignments; all recipe pairings are preflighted for identical initial states before play, then each match independently verifies parity. When a current-rules baseline manifest is present, candidate source paths must match it exactly and candidate rule/data hashes must match the baseline. Matches use Lv.${level} policies, persistent per-player strategy memory, a deterministic search clock, and a 500-action cap. This measures AI-vs-AI results, not human win rate.`,
+        method: `Matched AI-vs-AI comparison: baseline and candidate bundles receive the same recipes, seeds, player-seat and first-player assignments; all recipe pairings are preflighted for identical initial states before play, then each match independently verifies parity. When a current-rules baseline manifest is present, non-policy source path sets and individual source hashes must match the baseline; policy modules may differ. Matches use Lv.${level} policies, persistent per-player strategy memory, a deterministic search clock, and a 500-action cap. This measures AI-vs-AI results, not human win rate.`,
         matchedDesign: {
           sameSeedForAllFourExchanges: true,
           policySeats: ['player-one', 'player-two'],
@@ -353,6 +367,7 @@ if (!isMainThread) {
         exchangesPerSeed,
         total: rows.length,
         completed: valid.length,
+        workerCount,
         candidateWins: wins,
         baselineWins: valid.length - wins,
         candidateWinRate: valid.length ? wins / valid.length : null,
@@ -511,6 +526,7 @@ function parseArguments(argv) {
     ['--report', 'report'],
     ['--seed-base', 'seedBase'],
     ['--level', 'level'],
+    ['--workers', 'workers'],
   ])
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index]

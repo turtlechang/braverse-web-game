@@ -26,6 +26,28 @@
       "extra": "BS10-098:1 BS12-074:1"
     },
     {
+      "sourceId": 1272,
+      "color": "multi",
+      "name": "Red Arena",
+      "author": "mei",
+      "sourceUrl": "https://cookierift.com/decks/community/1272",
+      "sourceUpdatedAt": "2026-10-15",
+      "sourceHash": "sha256:df5c9c0801e2d761c1b2c2671c1021be809489130bc606e0d066f41a9305b0c8",
+      "main": "P-163:4 BS7-011:4 BS12-016:4 BS12-015:4 BS12-002:2 BS7-002:4 P-103:2 BS12-008:4 BS12-004:4 BS7-019:4 BS7-013:4 P-108:4 BS12-013:4 BS8-022:2 BS1-023:4 ST1-020:4 BS2-034:2",
+      "extra": "BS11-091:1 BS8-005:1 BS12-018:3 BS9-010:1"
+    },
+    {
+      "sourceId": 1268,
+      "color": "multi",
+      "name": "Wa green",
+      "author": "55Hz",
+      "sourceUrl": "https://cookierift.com/decks/community/1268",
+      "sourceUpdatedAt": "2026-10-15",
+      "sourceHash": "sha256:004f291c3bf8c108e24132ad47bf57c58ef4a1038828b54ed987fa7c8e09611e",
+      "main": "BS1-075:4 BS2-015:4 BS8-059:1 ST8-005:3 P-012:4 ST8-007:4 P-113:4 BS10-053:4 ST3-022:4 BS4-062:3 ST8-018:3 BS9-069:2 BS4-049:2 BS8-056:4 P-115:4 BS10-095:4 BS10-093:4 BS7-064:2",
+      "extra": "BS12-056:2 BS8-069:1 BS11-091:1"
+    },
+    {
       "sourceId": 1259,
       "color": "red",
       "name": "Flames of Immortality",
@@ -57,6 +79,39 @@
       "sourceHash": "sha256:30140940794b017e6a247f85e2b7d8d0e2109e80822a60add4ca4df9f4776269",
       "main": "BS12-088:3 BS12-052:4 BS12-051:4 BS12-070:4 BS12-071:3 BS12-089:3 BS12-107:4 BS12-108:4 BS12-033:4 BS12-032:4 BS12-015:4 BS12-014:4 BS12-112:1 BS12-110:1 BS12-109:1 BS12-093:1 BS12-091:1 BS12-073:1 BS12-072:1 BS12-055:1 BS12-053:1 BS12-037:1 BS12-035:1 BS12-054:1 BS12-034:1 BS12-017:1 BS12-016:1",
       "extra": "BS12-092:1 BS12-074:1 BS12-056:1 BS12-036:1 BS12-018:1 BS12-111:1"
+    },
+    {
+      "sourceId": 1248,
+      "color": "blue",
+      "name": "Sea Build",
+      "author": "DonutGaming",
+      "sourceUrl": "https://cookierift.com/decks/community/1248",
+      "sourceUpdatedAt": "2026-10-16",
+      "sourceHash": "sha256:260e8bcafe02d4814c7fc458d42712dd6e214c18fc7161a864c1fcf54d67818d",
+      "main": "BS4-075:3 ST9-010:4 ST4-006:4 P-160:4 ST9-020:4 BS6-085:3 ST4-021:4 ST9-017:3 BS4-086:3 ST4-016:3 ST9-006:3 BS8-076:4 BS10-096:3 BS10-093:3 P-154:4 BS8-084:2 ST9-016:2 BS8-087:3 BS8-083:1",
+      "extra": "BS10-098:3 BS8-090:3"
+    },
+    {
+      "sourceId": 1127,
+      "color": "purple",
+      "name": "Purple Arena",
+      "author": "Lyxn",
+      "sourceUrl": "https://cookierift.com/decks/community/1127",
+      "sourceUpdatedAt": "2026-10-15",
+      "sourceHash": "sha256:39403fb1450d8587df51c83aef9c5cd6ec6e1d75d23cf77c4266f525ec755d84",
+      "main": "BS12-078:2 BS12-080:4 BS12-085:4 BS12-086:3 BS12-087:2 BS12-088:3 BS12-089:4 BS12-090:4 BS12-091:4 BS12-093:2 BS2-079:1 BS7-096:4 P-121:3 P-155:4 ST10-002:3 ST10-008:2 ST10-013:4 ST10-019:4 ST5-020:3",
+      "extra": "BS12-092:2 BS9-102:2"
+    },
+    {
+      "sourceId": 1001,
+      "color": "blue",
+      "name": "Pure Shadow",
+      "author": "milk_man",
+      "sourceUrl": "https://cookierift.com/decks/community/1001",
+      "sourceUpdatedAt": "2026-10-16",
+      "sourceHash": "sha256:8685b4c2aaf20b5545c6842a4333447be12a275891118d78b02359189d20da33",
+      "main": "BS9-079:1 BS8-084:4 BS8-076:4 BS3-085:4 BS10-077:4 ST4-009:4 ST4-016:4 BS9-093:3 BS6-085:3 BS6-086:3 BS3-088:3 BS11-065:3 ST4-020:3 BS10-096:3 ST9-017:2 P-092:4 BS9-080:3 BS9-077:4 ST9-016:1",
+      "extra": "BS8-090:1 BS9-088:2 BS11-091:1 BS9-055:1 BS9-010:1"
     }
   ]
 }

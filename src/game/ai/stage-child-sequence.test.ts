@@ -23,6 +23,20 @@ describe('suspended stage parent does not block its child damage completion',()=
   expect(next.suspendedAbilityEffects??[]).toEqual([])
   expect(next.players).toEqual(before.players);expect(state).toEqual(before)
  })
+ it('finishes child damage and then starts a queued departure skill',()=>{
+  const control=structuredClone(state)
+  const parent=control.pendingAbilityEffect
+  if(!parent)throw Error('Child ability continuation required')
+  control.pendingDepartureSkillTriggers=[{
+   playerId:'player-one',sourceInstanceId:'departed-cookie',sourceCardName:'Departure Skill Cookie',effects:parent.effects,
+  }]
+  const decision=takeAiStep(control,getActingPlayerId(control),{level:3,seed:202680841,searchNow:()=>0})
+  expect(decision.action).toBe('resolve-damage')
+  expect(decision.state.pendingBattle??null).toBeNull()
+  expect(decision.state.pendingAbilityEffect).toMatchObject({trigger:'departure',sourceCardName:'Departure Skill Cookie'})
+  expect(decision.state.pendingDepartureSkillTriggers).toBeUndefined()
+  expect(decision.state.suspendedAbilityEffects?.map(effect=>effect.sourceCardName)).toContain('Cookie Games Stadium')
+ })
  it.each([3,4,5] as const)('Lv%s resumes the suspended stage rather than endlessly resolving damage',level=>{
   const before=structuredClone(state),d=takeAiStep(state,getActingPlayerId(state),{level,seed:202680841,searchNow:()=>0})
   expect(d.action).not.toBe('error');expect(d.state.pendingBattle??null).toBeNull()

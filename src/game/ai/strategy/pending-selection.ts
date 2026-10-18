@@ -1,4 +1,5 @@
 import type { PlayerView } from '../../player-view'
+import { nextActivePressureTargetValue } from '../next-active-pressure'
 import type {
   CardEffect,
   ChooseOneEffect,
@@ -341,6 +342,16 @@ export const createPendingSelectionStrategy = (
       const lethal = damage > 0 && cookie.hpCount <= damage
       return (lethal ? 10_000 : 0) + (damage > 0 ? 1_000 : -10_000) - cookie.hpCount * 20 + retention(instanceId)
     }
+    if (effect.kind === 'prevent-cookie-active-next-phase' && cookie) {
+      const targetSide = opponentCookie ? view.opponent : view.self
+      const pressure = nextActivePressureTargetValue(
+        targetSide,
+        instanceId,
+        effect.discardHandToSetActive,
+        targetSide.id === view.viewerId ? 6 : 3,
+      )
+      return pressure.value * 1_000 + pressure.threat * 10 + retention(instanceId)
+    }
     if (
       (effect.kind === 'gain-hp' ||
         effect.kind === 'hand-to-hp' ||
@@ -401,7 +412,22 @@ export const createPendingSelectionStrategy = (
         effect.target.side === 'self' && effect.target.min === 0
         ? candidateIds.filter(id => publicBattleCookie(view, id)?.rested ||
           reactivationPayoffIds.has(id))
-        : candidateIds
+        : effect.kind === 'prevent-cookie-active-next-phase' && effect.target.min === 0
+          ? candidateIds.filter((id) => {
+              const cookie = publicBattleCookie(view, id)
+              if (!cookie) return false
+              const targetSide = isOpponentBattleCookie(view, id) ? view.opponent : view.self
+              const pressure = nextActivePressureTargetValue(
+                targetSide,
+                id,
+                effect.discardHandToSetActive,
+                targetSide.id === view.viewerId ? 6 : 3,
+              )
+              // This score covers ordinary attacks only; a zero score must not
+              // discard a legal opponent target whose value comes from an activated skill.
+              return pressure.value > 0 || effect.target.side === 'opponent'
+            })
+          : candidateIds
       const ordered = [...usefulIds]
         .sort((left, right) =>
           targetScore(effect, right, damageByTarget) - targetScore(effect, left, damageByTarget) ||
@@ -445,9 +471,15 @@ export const createPendingSelectionStrategy = (
       .map((item) => item.id),
     chooseReplacementId: (candidateIds) =>
       stableByRetention(candidateIds, -1)[0],
-    chooseRefreshId: (candidateIds) =>
-      // Refresh 的選擇會進入 break area，故犧牲保留價值最低的合法餅乾。
-      stableByRetention(candidateIds, 1)[0],
+    chooseRefreshId: (candidateIds) => {
+      const breakLevel = view.self.breakArea.reduce((sum, card) => sum + card.level, 0)
+      const survivingIds = candidateIds.filter((id) => {
+        const card = cardsByInstanceId.get(id)
+        return card?.type === 'cookie' && breakLevel + card.level < 10
+      })
+      // 優先犧牲仍可存活的低保留價值餅乾；全數必敗時仍完成合法 Refresh。
+      return stableByRetention(survivingIds.length ? survivingIds : candidateIds, 1)[0]
+    },
     telemetry: (kind, sourceInstanceId, effect) => {
       const source = sourceCardFor(cardsByInstanceId, sourceInstanceId)
       const plan = planFor(sourceInstanceId)

@@ -20,7 +20,7 @@ export interface PublicStateEvaluationBreakdown {
   deck: number
   /** 我方場景／Stage 公開存在價值。 */
   stage: number
-  /** Known ordinary attack pressure lost to an unconditional next-Active lock. */
+  /** Ordinary attack pressure lost or hand cards spent for a next-Active restriction. */
   nextActivePressure: number
   total: number
 }
@@ -81,7 +81,8 @@ export const evaluatePlayerViewBreakdown = (
     sumBreakLevel(opponent.breakArea) * 20
   const deck = self.deckCount
   const stage = self.stage ? 8 : 0
-  const nextActivePressure = nextActivePressureLost(opponent)-nextActivePressureLost(self)
+  const nextActivePressure =
+    nextActivePressureLost(opponent, 3) - nextActivePressureLost(self, 6)
   const total =
     board + attack + hp + hand + resources + breakPressure + deck + stage + nextActivePressure
 

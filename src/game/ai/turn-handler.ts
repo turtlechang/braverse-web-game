@@ -1,6 +1,7 @@
 import {
   activateStage,
   canActivateStage,
+  getStageActivationSource,
 } from '../card-abilities'
 import { canPlayExtraDeckCookie } from '../actions'
 import { applyGameCommand } from '../commands'
@@ -423,9 +424,9 @@ export const handleAiTurnState = (
       }
     }
 
-    if (canActivateStage(state, playerId)) {
-      const stage = player.stage!
-      const ability = stage.card.stageAbility!
+    const stageSource = getStageActivationSource(state, playerId)
+    if (stageSource && canActivateStage(state, playerId)) {
+      const { stage, ability } = stageSource
       const costIds = strategy.chooseStageCostIds
         ? strategy.chooseStageCostIds(
             state,

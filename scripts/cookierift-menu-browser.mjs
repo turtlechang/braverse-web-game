@@ -3,14 +3,14 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 
-const output='output/ai-cookierift/community-browser-20261016-final-current-menu',port=4212
+const output='output/ai-cookierift/community-browser-20261017-current-menu-897-283-1140',port=4240
 await mkdir(output,{recursive:true})
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port',String(port)],{stdio:'ignore'})
-const accepted=['cookierift-921','cookierift-927','cookierift-801','cookierift-973','cookierift-67','cookierift-83','cookierift-793','cookierift-568','cookierift-506','cookierift-1035','cookierift-16','cookierift-731','cookierift-1164','cookierift-1239','cookierift-1151','cookierift-1259','cookierift-1207']
+const accepted=['cookierift-921','cookierift-927','cookierift-801','cookierift-973','cookierift-67','cookierift-83','cookierift-793','cookierift-568','cookierift-506','cookierift-1035','cookierift-16','cookierift-731','cookierift-1164','cookierift-1239','cookierift-1151','cookierift-1259','cookierift-1207','cookierift-1268','cookierift-897','cookierift-283','cookierift-1140','cookierift-1248','cookierift-1127','cookierift-1001','cookierift-1174','cookierift-1290','cookierift-1291','cookierift-1295']
 const bs12Choices=['blue','green','yellow','red','purple','black'].map(color=>`bs12-${color}-arena`).concat('bs12-red-korean-starter')
 const choices=[...bs12Choices,...accepted]
 const expected=choices
-const communitySnapshots=await Promise.all(['20261016-silent','20261016','20261015','20261014','20261013','20261010'].map(async date=>JSON.parse(await readFile(`data/decks/cookierift-community-${date}.json`,'utf8'))))
+const communitySnapshots=await Promise.all(['20261017','20261016-silent','20261016','20261015','20261014','20261013','20261010'].map(async date=>JSON.parse(await readFile(`data/decks/cookierift-community-${date}.json`,'utf8'))))
 const communitySources=communitySnapshots.flatMap(snapshot=>snapshot.decks)
 const expectedRecipe=async choice=>{
   if(choice.startsWith('bs12-')){

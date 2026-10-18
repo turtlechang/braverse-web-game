@@ -33,12 +33,14 @@ export interface ActionScoreContribution {
     | 'post-action-board'
     | 'public-attack'
     | 'attack-allocation'
+    | 'conditional-attack-aftereffect'
     | 'tactical-payoff'
     | 'tactical-setup'
     | 'resource-reservation'
     | 'support-cost-followup'
     | 'on-play-followup'
     | 'legal-action-followup'
+    | 'support-reentry-followup'
     | 'deployment-tempo'
     | 'opponent-response-minimax'
     | 'defensive-reserve'
@@ -80,6 +82,8 @@ export interface ScoreActionInput {
    * 攻防修正與目標相關條件。未提供時維持以卡面基礎攻擊力估算。
    */
   publicAttackDamage?: number
+  /** 以普通傷害／公開 Then 代價後投影計算的條件式攻擊後效果值。 */
+  conditionalAttackAftereffectValue?: number
 }
 
 const activeSupportCount = (view: PlayerView): number =>
@@ -162,6 +166,14 @@ export const scoreAction = (input: ScoreActionInput): ActionScoreBreakdown => {
       detail: publicLethal
         ? '公開 HP 與攻擊力顯示本次攻擊可擊倒目標。'
         : '公開攻擊力可對目標造成的預期傷害。',
+    })
+  }
+
+  if ((input.conditionalAttackAftereffectValue ?? 0) > 0) {
+    contributions.push({
+      id: 'conditional-attack-aftereffect',
+      amount: input.conditionalAttackAftereffectValue!,
+      detail: '公開可支付的攻擊後 Then 估值，已扣除 HP 代價並保留可選略過分支。',
     })
   }
 

@@ -1,5 +1,8 @@
 import { applyGameCommand, type AttackCommand, type PlayerActionCommand } from '../commands'
+import { getStageActivationSource } from '../card-abilities'
 import { createPublicAttackAllocationForecast } from './attack-allocation'
+import { forecastPublicAttackAftereffectValue } from './optional-attack-aftereffect'
+import { forecastPublicSupportReentry } from './support-reentry-followup'
 import { getAttackDamageAgainst } from '../effects'
 import { getCookieEffectiveLevel } from '../helpers'
 import { getLegalTurnCommands } from '../legal-actions'
@@ -57,6 +60,7 @@ import {
   type OpponentEndgameForecast,
 } from './strategy/endgame-forecast'
 import {
+  capabilitiesForVisibleCard,
   deriveTacticalPlan,
   findVisibleSelfCard,
   type ActionablePayoffSource,
@@ -607,6 +611,9 @@ const commandCandidate = (
           command.targetInstanceId,
         )
         : undefined,
+      conditionalAttackAftereffectValue: command.kind === 'attack'
+        ? forecastPublicAttackAftereffectValue(state, nextState, command)
+        : undefined,
     })
     const supportCostFollowup = includeSupportCostFollowup
       ? forecastSupportCostFollowup(
@@ -630,10 +637,25 @@ const commandCandidate = (
   }
 }
 
+const visibleCardInstanceIds = (view: PlayerView): Set<string> => new Set([
+  ...view.hand,
+  ...(view.extraDeck ?? []),
+  ...[view.self, view.opponent].flatMap(side => [
+    ...side.battleArea.flatMap(cookie => [
+      cookie.card,
+      ...(cookie.faceUpHpCards ?? []).map(hp => hp.card),
+    ]),
+    ...side.supportArea.map(support => support.card),
+    ...side.breakArea,
+    ...side.discardPile,
+    ...(side.stage ? [side.stage.card] : []),
+  ]),
+].map(card => card.instanceId))
+
 /**
- * A Lv.3 ability may have little immediate board value while making a real
+ * A Lv.3 setup may have little immediate board value while making a real
  * follow-up command legal (for example, lowering a Cookie's level so it can
- * pay a Special Play cost). Value only commands newly exposed by the ability,
+ * pay a Special Play cost). Value only commands newly exposed by the setup,
  * using the same public-state scorer as ordinary root candidates.
  */
 const addNewlyLegalFollowupValue = (
@@ -644,13 +666,45 @@ const addNewlyLegalFollowupValue = (
   context: ReturnType<typeof createLv3ContextForView>,
   strategy: AiTurnStrategy,
 ): ScoredLv3ActionCandidate<AiDecision> => {
-  if (hasBlockingPending(afterState)) return scored
+  const reentry = scorePublicSupportReentry(scored.breakdown, beforeState, afterState, playerId, strategy)
+  if (reentry) return {
+    ...scored,
+    breakdown: {
+      ...scored.breakdown,
+      total: scored.breakdown.total + reentry.amount,
+      contributions: [...scored.breakdown.contributions, reentry],
+    },
+  }
+  if (
+    beforeState.status !== 'playing' || afterState.status !== 'playing' ||
+    beforeState.phase !== 'main' || afterState.phase !== 'main' ||
+    beforeState.activePlayerId !== playerId || afterState.activePlayerId !== playerId ||
+    beforeState.turnNumber !== afterState.turnNumber ||
+    hasBlockingPending(afterState) || afterState.pendingEffectOrder
+  ) return scored
+
+  const beforeView = createPlayerView(beforeState, playerId)
+  const afterView = createPlayerView(afterState, playerId)
+  const knownIds = visibleCardInstanceIds(beforeView)
+  if ([...visibleCardInstanceIds(afterView)].some(id => !knownIds.has(id))) return scored
+
+  // A reveal may return a card to its hidden zone, and a shuffle may happen to
+  // reveal a previously known card. Neither outcome is known before acting.
+  const source = findVisibleSelfCard(beforeView, scored.candidate.identity.sourceInstanceId)
+  const capabilities = capabilitiesForVisibleCard(context, source?.id)
+  if (capabilities.some(capability =>
+    capability.kind === 'inspect-deck' ||
+    capability.effectKind === 'hand-to-deck-and-draw' ||
+    capability.effectKind === 'trash-to-deck-all' ||
+    capability.effectKind === 'opponent-random-discard' ||
+    (capability.effectKind === 'trash-to-deck' && capability.destinationZone !== 'deck-bottom') ||
+    Boolean(capability.cost?.trashToDeck),
+  )) return scored
 
   const beforeCommands = new Set(
     getLegalTurnCommands(beforeState, playerId).map(legalActionIdentityKey),
   )
   const afterCommands = getLegalTurnCommands(afterState, playerId)
-  const afterView = createPlayerView(afterState, playerId)
   const legalAttackCount = afterCommands.filter((command) => command.kind === 'attack').length
   const currentBoardScore = evaluatePlayerView(afterView)
   let bestFollowupValue = 0
@@ -688,6 +742,38 @@ const addNewlyLegalFollowupValue = (
       contributions: [...scored.breakdown.contributions, followup],
     },
   }
+}
+
+const scorePublicSupportReentry = (
+  breakdown: ActionScoreBreakdown,
+  before: GameState,
+  after: GameState,
+  owner: PlayerId,
+  strategy: AiTurnStrategy,
+): ActionScoreBreakdown['contributions'][number] | null => {
+  let value = 0
+  for (const forecast of forecastPublicSupportReentry(before, after, owner, strategy)) {
+    const boardRestoration = evaluatePlayerView(createPlayerView(forecast.reentryState, owner)) -
+      evaluatePlayerView(createPlayerView(forecast.parentState, owner))
+    for (const attack of forecast.attacks) {
+      // Existing attack value includes its actual energy payment. Discount and
+      // cap the attack portion because hidden FLIPs/responses remain unresolved.
+      const attackValue = Math.min(250, Math.floor(0.75 * (
+        attackBonus(forecast.reentryState, owner, attack) +
+        lethalDetectionBonus(forecast.reentryState, owner, attack)
+      )))
+      value = Math.max(value, boardRestoration + attackValue)
+    }
+  }
+  const overlap = breakdown.contributions.reduce((sum, contribution) =>
+    contribution.id === 'tactical-setup' || contribution.id === 'tactical-payoff' ||
+    contribution.id === 'legal-action-followup' || contribution.id === 'support-cost-followup'
+      ? sum + Math.max(0, contribution.amount) : sum, 0)
+  const amount = Math.max(0, value - overlap)
+  return amount > 0 ? {
+    id: 'support-reentry-followup', amount,
+    detail: '公開條件式續接：支付移入支援及再登場的代價後，同張餅乾有合法普通攻擊；未結算隱藏 FLIP。',
+  } : null
 }
 
 /**
@@ -778,6 +864,7 @@ export const handleAiEvaluatedTurnState = (
     (candidate) => candidate.kind === 'attack',
   ).length
   const candidates: ScoredLv3ActionCandidate<AiDecision>[] = []
+  const attackAllocation = createPublicAttackAllocationForecast()
 
   for (const command of getLegalTurnCommands(state, playerId)) {
     const candidate = commandCandidate(
@@ -790,7 +877,26 @@ export const handleAiEvaluatedTurnState = (
       strategy,
       true,
     )
-    if (candidate) candidates.push(candidate)
+    if (candidate) {
+      const allocation = attackAllocation(state, playerId, command)
+      const allocated = allocation ? { ...candidate, breakdown: {
+        ...candidate.breakdown,
+        total: candidate.breakdown.total + allocation.amount,
+        contributions: [...candidate.breakdown.contributions, allocation],
+      } } : candidate
+      const opensMainPhaseFollowup = state.phase === 'main' &&
+        (command.kind === 'deploy-cookie' || command.kind === 'play-extra-deck-cookie')
+      candidates.push(opensMainPhaseFollowup
+        ? addNewlyLegalFollowupValue(
+            allocated,
+            state,
+            candidate.candidate.value.state,
+            playerId,
+            context,
+            strategy,
+          )
+        : allocated)
+    }
   }
 
   if (state.phase === 'main') {
@@ -863,19 +969,17 @@ export const handleAiEvaluatedTurnState = (
     // it may contain target／choose-one effects.  Evaluate the already legal
     // turn-handler decision as an additional root candidate so Lv.3 does not
     // treat `advance-phase` as the only option when a stage ability is ready.
-    const stageDecision = state.players[playerId].stage
+    const stageSource = getStageActivationSource(state, playerId)
+    const stageDecision = stageSource
       ? handleAiTurnState(state, playerId, strategy)
       : null
-    if (
-      stageDecision?.action === 'activate-stage' &&
-      state.players[playerId].stage
-    ) {
+    if (stageDecision?.action === 'activate-stage' && stageSource) {
       const afterView = createPlayerView(stageDecision.state, playerId)
       const scored = scoreLv3ActionCandidate(context, beforeView, {
         value: stageDecision,
         identity: {
           kind: 'activate-stage',
-          sourceInstanceId: state.players[playerId].stage.card.instanceId,
+          sourceInstanceId: stageSource.stage.card.instanceId,
         },
         afterView,
         postActionBoardScore: evaluatePlayerView(afterView),
@@ -1227,11 +1331,9 @@ export const handleAiTwoPlyTurnState = (
     ...(strategy.searchNow ? { now: strategy.searchNow } : {}),
   }
   const deadlineMs = (searchOptions.now ?? Date.now)() + searchOptions.timeBudgetMs
-  const attackAllocation = decisionLevel === 5
-    ? createPublicAttackAllocationForecast({
+  const attackAllocation = createPublicAttackAllocationForecast({
         shouldStop: () => (searchOptions.now ?? Date.now)() >= deadlineMs,
       })
-    : undefined
   const searchHooks: Lv4SearchHooks = {
     attackAllocation,
     getLegalCommands: (nextState: GameState, nextPlayerId: PlayerId) =>
@@ -1266,6 +1368,10 @@ export const handleAiTwoPlyTurnState = (
           command.attackerInstanceId,
           command.targetInstanceId,
         )
+        : undefined,
+    conditionalAttackAftereffectValue: (beforeState, declaredState, command) =>
+      command.kind === 'attack'
+        ? forecastPublicAttackAftereffectValue(beforeState, declaredState, command)
         : undefined,
     persistentIntentBonus: decisionLevel === 5
       ? (plan, _identity, depth) =>
@@ -1428,7 +1534,11 @@ export const handleAiTwoPlyTurnState = (
           identity,
         )
       : undefined
+    const reentry = !canContinue
+      ? scorePublicSupportReentry(scored.breakdown, state, decision.state, playerId, strategy)
+      : null
     const extraContributions: ActionScoreBreakdown['contributions'][number][] = [
+      ...(reentry ? [reentry] : []),
       ...(endgameSurvivalAdjustment === 0
         ? []
         : [{
@@ -1544,16 +1654,17 @@ export const handleAiTwoPlyTurnState = (
         // skip invalid card ability resolution
       }
     }
-    const stageDecision = state.players[playerId].stage
+    const stageSource = getStageActivationSource(state, playerId)
+    const stageDecision = stageSource
       ? handleAiTurnState(state, playerId, strategy)
       : null
     if (
       stageDecision?.action === 'activate-stage' &&
-      state.players[playerId].stage &&
+      stageSource &&
       !addAbilityCandidate(
         stageDecision,
         'activate-stage',
-        state.players[playerId].stage.card.instanceId,
+        stageSource.stage.card.instanceId,
       )
     ) {
       return fallbackToBaseline()

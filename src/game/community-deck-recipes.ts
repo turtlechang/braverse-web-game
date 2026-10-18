@@ -4,12 +4,15 @@ import currentSnapshot from '../../data/decks/cookierift-community-20261014.json
 import latestSnapshot from '../../data/decks/cookierift-community-20261015.json'
 import newestSnapshot from '../../data/decks/cookierift-community-20261016.json'
 import silentSnapshot from '../../data/decks/cookierift-community-20261016-silent.json'
+import liveSnapshot from '../../data/decks/cookierift-community-20261017.json'
 import type { StarterDeckEntry } from './starter-deck'
 
 export type CommunityDeckChoice = 'cookierift-921' | 'cookierift-927' | 'cookierift-67' |
   'cookierift-83' | 'cookierift-568' | 'cookierift-506' | 'cookierift-1035' |
   'cookierift-793' | 'cookierift-973' | 'cookierift-16' | 'cookierift-731' | 'cookierift-801' |
-  'cookierift-1164' | 'cookierift-1239' | 'cookierift-1151' | 'cookierift-1259' | 'cookierift-1207'
+  'cookierift-1164' | 'cookierift-1239' | 'cookierift-1151' | 'cookierift-1259' | 'cookierift-1207' |
+  'cookierift-1268' | 'cookierift-897' | 'cookierift-283' | 'cookierift-1140' | 'cookierift-1248' | 'cookierift-1127' | 'cookierift-1001' | 'cookierift-1174' |
+  'cookierift-1290' | 'cookierift-1291' | 'cookierift-1295'
 
 const parseEntries = (text:string):StarterDeckEntry[] => text.trim() ? text.trim().split(/\s+/).map(part=>{
   const match=/^([A-Z0-9]+-\d{3}):(\d+)$/.exec(part)
@@ -19,8 +22,8 @@ const parseEntries = (text:string):StarterDeckEntry[] => text.trim() ? text.trim
 
 // Explicit acceptance list. Other collected recipes remain quarantined without substitutions.
 // Newer snapshots come first so duplicate source IDs use the latest captured recipe.
-const sources = [...silentSnapshot.decks, ...newestSnapshot.decks, ...latestSnapshot.decks, ...currentSnapshot.decks, ...previousSnapshot.decks, ...inventory.decks]
-const accepted = [921,927,67,83,568,506,1035,793,973,16,731,801,1164,1239,1151,1259,1207] as const
+const sources = [...liveSnapshot.decks, ...silentSnapshot.decks, ...newestSnapshot.decks, ...latestSnapshot.decks, ...currentSnapshot.decks, ...previousSnapshot.decks, ...inventory.decks]
+const accepted = [921,927,67,83,568,506,1035,793,973,16,731,801,1164,1239,1151,1259,1207,1268,897,283,1140,1248,1127,1001,1174,1290,1291,1295] as const
 export const COMMUNITY_DECK_PRESETS = Object.fromEntries(accepted.map(sourceId=>{
   const source=sources.find(deck=>deck.sourceId===sourceId)
   if(!source)throw new Error(`Missing Cookierift source ${sourceId}`)

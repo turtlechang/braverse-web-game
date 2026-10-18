@@ -82,6 +82,12 @@ export interface Lv4SearchHooks {
     state: GameState,
     command: PlayerActionCommand,
   ) => number | undefined
+  /** Bounded public estimate of one optional attack Then after normal damage. */
+  conditionalAttackAftereffectValue?: (
+    beforeState: GameState,
+    declaredState: GameState,
+    command: PlayerActionCommand,
+  ) => number | undefined
   /** Conditional public normal-damage allocation; never settles response effects. */
   attackAllocation?: (
     state: GameState,
@@ -253,8 +259,10 @@ export const selectLv4StrategicContribution = (
     contribution.id === 'defensive-reserve' ||
     contribution.id === 'endgame-survival' ||
     contribution.id === 'support-cost-followup' ||
+    contribution.id === 'support-reentry-followup' ||
     contribution.id === 'on-play-followup' ||
     contribution.id === 'attack-allocation' ||
+    contribution.id === 'conditional-attack-aftereffect' ||
     contribution.id === 'strategy-profile' ||
     contribution.id === 'tournament-experience' ||
     contribution.id === 'intent-continuity' ||
@@ -521,6 +529,8 @@ export const searchLv4Commands = (
             legalAttackCountAfter: afterCommands
               .filter((candidate) => candidate.kind === 'attack').length,
             publicAttackDamage: hooks.getPublicAttackDamage?.(node.state, command),
+            conditionalAttackAftereffectValue:
+              hooks.conditionalAttackAftereffectValue?.(node.state, afterState, command),
             tacticalPlanOptions,
           })
           const sourceId = sourceCardId(node.view, identity.sourceInstanceId)
