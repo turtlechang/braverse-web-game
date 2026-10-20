@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import candidateDocument from '../../data/cards/official-st9.en.json'
+import st9004To006Document from '../../data/cards/official-st9-004-006.en.json'
 import formalDocument from '../../data/cards/official-st9-007-008.en.json'
 import type { CookieCard } from '../game/types'
 import { convertOfficialCardToGameCard } from './official-card-adapter'
@@ -8,6 +9,7 @@ import { analyzeOfficialCardBehavior } from './contracts/ledger'
 
 const rawCards = [
   ...(candidateDocument.cards as OfficialCardRecord[]),
+  ...(st9004To006Document.cards as OfficialCardRecord[]),
   ...(formalDocument.cards as OfficialCardRecord[]),
 ]
 
@@ -84,10 +86,8 @@ describe('ST9-007–009 original printings', () => {
         effects: [{ kind: 'draw-up-to', max: 1 }] }],
     })
     const audit = analyzeOfficialCardBehavior(source, card)
-    expect(audit.contract.status).toBe('needs-review')
-    expect(audit.contract.blockers).toContain(
-      'ST9-009 remains needs-review until a real Sea Fairy Cookie effect moves a Cookie from hand to trash; the currently available Sea Fairy hand discards are printed as costs, and no ruling confirms that costs count as effects',
-    )
+    expect(audit.contract.status).toBe('verified')
+    expect(audit.contract.blockers).toEqual([])
     expect(analyzeOfficialCardBehavior(source, {
       ...card,
       skill: { ...card.skill!, passiveEffects: [{ kind: 'hand-to-trash-trigger',
@@ -95,5 +95,11 @@ describe('ST9-007–009 original printings', () => {
     }).contract.blockers).toContain(
       'ST9-009 requires original blue Wave Drop LV1/2 HP/B1; its passive draws up to one only when a Sea Fairy Cookie effect moves it from hand to trash',
     )
+    const seaFairy = converted('ST9-006').card
+    expect(seaFairy.attackEffects?.[0]).toMatchObject({
+      kind: 'optional-cost-attack',
+      cost: { discardHand: 2 },
+      discardedHandCardsTriggerPassives: true,
+    })
   })
 })

@@ -18,6 +18,7 @@ describe('ST9-007–009 original physical-card fixture', () => {
     ['ST9-008', 'positive'],
     ['ST9-008', 'no-eligible-return'],
     ['ST9-009', 'sea-fairy-trigger'],
+    ['ST9-009', 'sea-fairy-keeps-wave-drop'],
     ['ST9-009', 'other-source-trigger'],
   ] as const)('uses two original 60-card decks for %s / %s', (cardNumber, scenario) => {
     const state = createSt9007To009PreviewState(cardNumber, scenario)
@@ -155,7 +156,7 @@ describe('ST9-007–009 physical demo routes', () => {
     expect(st9_009.players[owner].battleArea[0]?.card.name).toBe('Sea Fairy Cookie')
     expect(st9_009.players[owner].hand[0]?.id).toBe('ST9-009')
     const st9_009Negative = createCardNegativeDemoState('ST9-009')
-    expect(st9_009Negative.players[owner].battleArea[0]?.card.id).toBe('ST8-008')
+    expect(st9_009Negative.players[owner].battleArea[0]?.card.id).toBe('ST9-006')
     expect(st9_009Negative.players[owner].hand[0]?.id).toBe('ST9-009')
   })
 })

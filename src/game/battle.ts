@@ -27,6 +27,7 @@ import {
   isChooseOneModePlayable,
 } from './effects'
 import { resolveDamageOutcome } from './effects/execute'
+import { queueHandToTrashTriggers } from './effects/hand-to-trash-trigger'
 import { executeDeckToTrash } from './effects/deck-to-trash'
 import {
   getAttackEnergyCostForState,
@@ -3059,6 +3060,7 @@ export const resolveAttackEffect = (
       effectText: effect.effectText,
       sourceEnergy: effect.sourceEnergy,
       mandatory: effect.mandatory,
+      discardedHandCardsTriggerPassives: effect.discardedHandCardsTriggerPassives,
       payBeforeCondition: effect.payBeforeCondition,
       },
     }
@@ -4121,6 +4123,14 @@ export const resolveOptionalCostAttack = (
           ),
       }, pending.cost, positionCostTargetIds, pending.sourceInstanceId),
     },
+  }
+  if (pending.discardedHandCardsTriggerPassives && discardedCards.length > 0) {
+    nextState = queueHandToTrashTriggers(
+      nextState,
+      playerId,
+      pending.sourceCardName,
+      discardedCards,
+    )
   }
   if (firstSelectableEffect && !selectAfterSourcePayment) {
     const uniqueTargetIds = [...new Set(targetIds)]

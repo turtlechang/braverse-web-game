@@ -8423,6 +8423,9 @@ export const convertOfficialAttackEffects = (
     'ST9-006': [{
       kind: 'optional-cost-attack',
       cost: { energy: {}, discardHand: 2 },
+      // Official ruling provided by the user: this Then cost counts as part of
+      // Sea Fairy Cookie's effect for ST9-009's hand-to-trash passive.
+      discardedHandCardsTriggerPassives: true,
       effectText:
         "<{B}{B}{B}> Blue Wave Surge {da} 3 Then, <discard 2 cards.> All of your opponent's Cookies receive 1 damage.",
       effects: [{

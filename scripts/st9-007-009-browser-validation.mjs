@@ -6,13 +6,15 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const cardNumbers = ['ST9-007', 'ST9-008', 'ST9-009']
+const cardNumbers = ['ST9-006', 'ST9-007', 'ST9-008', 'ST9-009']
 const candidateDocument = JSON.parse(readFileSync(resolve(root, 'data/cards/official-st9.en.json'), 'utf8'))
+const st9004To006Document = JSON.parse(readFileSync(resolve(root, 'data/cards/official-st9-004-006.en.json'), 'utf8'))
 const formalPath = resolve(root, 'data/cards/official-st9-007-008.en.json')
 const formalDocument = existsSync(formalPath) ? JSON.parse(readFileSync(formalPath, 'utf8')) : undefined
 const cards = new Map(cardNumbers.map(cardNumber => [
   cardNumber,
   formalDocument?.cards.find(record => record.cardNumber === cardNumber) ??
+    st9004To006Document.cards.find(record => record.cardNumber === cardNumber) ??
     candidateDocument.cards.find(record => record.cardNumber === cardNumber),
 ]))
 for (const cardNumber of cardNumbers) {
@@ -37,7 +39,8 @@ if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4195)
 const baseUrl = process.env.BRAVERSE_BASE_URL ?? `http://127.0.0.1:${port}`
-const output = resolve(root, 'output/st6-st10/st9-007-009-browser')
+const output = resolve(root, process.env.ST9_BROWSER_OUTPUT_DIR ?? 'output/st6-st10/st9-007-009-browser')
+assert.equal(existsSync(output), false, 'Use a fresh ST9 Browser output directory')
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const distIndex = resolve(root, 'dist/index.html')
 const browserExecutable = process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ?? [
@@ -66,12 +69,15 @@ if (!process.env.BRAVERSE_BASE_URL) {
 mkdirSync(output, { recursive: true })
 const server = process.env.BRAVERSE_BASE_URL ? undefined : spawn(
   process.execPath,
-  [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(port)],
-  { cwd: root, stdio: 'ignore' },
+  [viteEntry, 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
+  { cwd: root, stdio: 'ignore', windowsHide: true },
 )
 const wait = ms => new Promise(resolvePromise => setTimeout(resolvePromise, ms))
 const waitForPreview = async () => {
   for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (server?.exitCode !== null && server?.exitCode !== undefined) {
+      throw new Error(`Owned ST9 preview exited before acceptance: ${server.exitCode}`)
+    }
     try {
       if ((await fetch(baseUrl)).ok) return
     } catch {
@@ -91,7 +97,6 @@ const trace = page => page.evaluate(() => (window.__braverseContractTrace ?? [])
   commandKind: entry.commandKind,
   summary: entry.summary,
   steps: entry.steps,
-  payload: entry.payload,
 })))
 const waitForCommand = (page, kind, count = 1) => page.waitForFunction(
   ({ expected, minimum }) => (window.__braverseContractTrace ?? [])
@@ -184,6 +189,8 @@ const scenarios = [
   { cardNumber: 'ST9-007', id: 'activate-high-hand', route: 'card-negative:ST9-007', flow: 'high-hand' },
   { cardNumber: 'ST9-008', id: 'on-play-return-and-gain-hp', route: 'card:ST9-008', flow: 'on-play' },
   { cardNumber: 'ST9-008', id: 'on-play-no-eligible-return', route: 'card-negative:ST9-008', flow: 'on-play-negative' },
+  { cardNumber: 'ST9-009', id: 'sea-fairy-then-discards-wave-drop', route: 'card:ST9-009', flow: 'sea-fairy-then', sourceCards: ['ST9-006'], contractCards: 'ST9-006,ST9-009', discardWaveDrop: true },
+  { cardNumber: 'ST9-009', id: 'sea-fairy-then-keeps-wave-drop', route: 'card-negative:ST9-009', flow: 'sea-fairy-then', sourceCards: ['ST9-006'], contractCards: 'ST9-006,ST9-009', discardWaveDrop: false },
 ]
 const viewports = [{ width: 1366, height: 768 }, { width: 1164, height: 777 }]
 const requestedScenario = process.env.ST9_BROWSER_SCENARIO
@@ -269,6 +276,108 @@ const noEligibleReturn008 = async (page, evidence) => {
   assert.equal(evidence.after.own.hand.some(card => card.name === 'Sea Fairy Cookie'), false)
 }
 
+const seaFairyThen = async (page, evidence, discardWaveDrop) => {
+  const seaFairy = cards.get('ST9-006')
+  const waveDropCard = cards.get('ST9-009')
+  const source = sourceCard(page, seaFairy.name)
+  await clickReady(source.locator('.card-face.is-attackable'), 'Sea Fairy printed BBB attack')
+  await selectAttackPayments(page, evidence, 3)
+  await waitForCommand(page, 'declare-attack')
+  await waitForCommand(page, 'resolve-attack-effect')
+
+  const optional = page.locator('.optional-cost-attack-inline:visible').first()
+  await optional.waitFor({ state: 'visible' })
+  evidence.thenPanel = await optional.innerText()
+  assert.match(evidence.thenPanel, /discard 2 cards|棄置 2 張|棄牌 2 張|棄 2 張/)
+  await clickReady(optional.getByRole('button', { name: '支付', exact: true }), 'pay the printed discard-two Then')
+  const discard = optional.locator('.optional-cost-col').filter({ hasText: /手牌|棄牌/ })
+    .locator('.modal-card-options button:not(.is-selected)')
+  assert.equal(await discard.count(), evidence.before.own.hand.length)
+  const waveDropOption = discard.filter({ hasText: waveDropCard.name })
+  assert.equal(await waveDropOption.count(), 1, 'Wave Drop must be a legal hand-cost candidate')
+  evidence.discardedNames = []
+  const otherDiscard = discard.filter({ hasNotText: waveDropCard.name })
+  if (discardWaveDrop) {
+    evidence.discardedNames.push(await waveDropOption.innerText())
+    await clickReady(waveDropOption, 'discard the original Wave Drop for Sea Fairy Then')
+    evidence.discardedNames.push(await otherDiscard.first().innerText())
+    await clickReady(otherDiscard.first(), 'select the second printed Then discard')
+  } else {
+    assert.equal(await waveDropOption.count(), 1, 'Wave Drop must remain an available card while two other cards are paid')
+    assert.equal(await otherDiscard.count(), evidence.before.own.hand.length - 1)
+    for (let index = 0; index < 2; index += 1) {
+      evidence.discardedNames.push(await otherDiscard.first().innerText())
+      await clickReady(otherDiscard.first(), `select non-Wave-Drop card ${index + 1}`)
+    }
+  }
+
+  await clickReady(optional.getByRole('button', { name: '下一步', exact: true }).last(),
+    'continue to Sea Fairy all-opponent damage')
+  const targets = optional.locator('.optional-cost-col .modal-card-options button')
+  assert.equal(await targets.count(), evidence.before.opponent.battle.length)
+  const confirm = optional.getByRole('button', { name: '確認', exact: true }).last()
+  for (let index = 0; index < await targets.count(); index += 1) {
+    await clickReady(targets.nth(index), `select opponent Cookie ${index + 1} for printed Then damage`)
+  }
+  await settleAnimation(page)
+  evidence.paymentScreenshot = resolve(output, `${evidence.scenario}-${evidence.viewport.width}-payment.png`)
+  await page.screenshot({ path: evidence.paymentScreenshot, fullPage: true })
+  await clickReady(confirm, 'confirm Sea Fairy discard-two Then')
+  await waitForCommand(page, 'resolve-optional-cost-attack')
+
+  if (discardWaveDrop) {
+    const panel = page.locator('.effect-panel[role="alertdialog"]:visible').last()
+    await panel.waitFor({ state: 'visible' })
+    evidence.waveDropPanel = await panel.innerText()
+    assert.match(evidence.waveDropPanel, /Wave Drop|抽|draw/i)
+    await clickReady(panel.locator('.effect-panel-primary-action:visible').last(), 'resolve Wave Drop passive')
+    await waitForCommand(page, 'resolve-ability-effect')
+    await chooseDraw(page, 1, evidence)
+    evidence.after = await waitForState(page,
+      current => current.own.hand.length === evidence.before.own.hand.length - 1 &&
+        current.own.deck === evidence.before.own.deck - 1 &&
+        !current.own.hand.some(card => card.name === waveDropCard.name) &&
+        current.own.battle.filter(cookie => cookie.rested).length === 1 &&
+        current.opponent.battle.map(cookie => cookie.hp).join(',') === '1,2' &&
+        current.opponent.trash === evidence.before.opponent.trash + 5 &&
+        current.own.trash === evidence.before.own.trash + 2,
+      'ST9-009 did not trigger and draw after Sea Fairy paid its Then cost')
+  } else {
+    evidence.after = await waitForState(page,
+      current => current.own.hand.length === evidence.before.own.hand.length - 2 &&
+        current.own.hand.some(card => card.name === waveDropCard.name) &&
+        current.opponent.battle.map(cookie => cookie.hp).join(',') === '1,2' &&
+        current.opponent.trash === evidence.before.opponent.trash + 5 &&
+        current.own.trash === evidence.before.own.trash + 2,
+      'Wave Drop should remain in hand when Sea Fairy discards other cards')
+    assert.equal(await page.locator('.draw-up-to-modal:visible').count(), 0)
+  }
+  await settleAnimation(page)
+  evidence.after = await readState(page)
+  evidence.trace = await trace(page)
+  assert.ok(evidence.trace.some(entry => entry.commandKind === 'declare-attack'))
+  assert.ok(evidence.trace.some(entry => entry.commandKind === 'resolve-optional-cost-attack'))
+  // Public contract traces omit private command payloads. Check the actual UI
+  // payment choices and public zone changes here; rule tests check instance IDs.
+  assert.equal(evidence.before.own.hand.filter(card => card.name === waveDropCard.name).length, 1)
+  assert.equal(evidence.discardedNames.length, 2)
+  assert.equal(evidence.discardedNames.filter(name => name.includes(waveDropCard.name)).length,
+    discardWaveDrop ? 1 : 0)
+  if (discardWaveDrop) {
+    assert.ok(evidence.trace.some(entry => entry.commandKind === 'resolve-ability-effect'))
+    assert.ok(evidence.trace.some(entry => entry.commandKind === 'resolve-draw-up-to'))
+    assert.equal(evidence.after.own.hand.length, evidence.before.own.hand.length - 1)
+    assert.equal(evidence.after.own.deck, evidence.before.own.deck - 1)
+    assert.equal(evidence.after.own.hand.some(card => card.name === waveDropCard.name), false)
+  } else {
+    assert.equal(evidence.trace.some(entry => entry.commandKind === 'resolve-ability-effect'), false)
+    assert.equal(evidence.after.own.hand.some(card => card.name === waveDropCard.name), true)
+  }
+  assert.equal(evidence.after.own.support.filter(item => item.rested).length, 3)
+  assert.ok(evidence.trace.find(entry => entry.commandKind === 'resolve-optional-cost-attack')
+    ?.steps.join(' ').includes('Sea Fairy Cookie'))
+}
+
 const scenariosResult = []
 let browser
 try {
@@ -289,10 +398,13 @@ try {
       originalArt: null,
     }
     try {
-      await page.route(card.imageUrl, route => route.fulfill({
-        status: 200, contentType: 'image/webp',
-        body: readFileSync(resolve(root, `output/st6-st10/images/${scenario.cardNumber}.webp`)),
-      }))
+      for (const artCardNumber of new Set([scenario.cardNumber, ...(scenario.sourceCards ?? [])])) {
+        const artCard = cards.get(artCardNumber)
+        await page.route(artCard.imageUrl, route => route.fulfill({
+          status: 200, contentType: 'image/webp',
+          body: readFileSync(resolve(root, `output/st6-st10/images/${artCardNumber}.webp`)),
+        }))
+      }
       const url = new URL('/', baseUrl)
       url.searchParams.set('test-state', scenario.route)
       url.searchParams.set('contract-card', scenario.contractCards ?? scenario.cardNumber)
@@ -311,13 +423,30 @@ try {
       const dimensions = artDimensions.get(scenario.cardNumber)
       assert.deepEqual([evidence.originalArt?.naturalWidth, evidence.originalArt?.naturalHeight],
         [dimensions.width, dimensions.height], 'the original printed card art must render at its native dimensions')
+      evidence.sourceArt = []
+      for (const sourceCardNumber of scenario.sourceCards ?? []) {
+        const sourceCardRecord = cards.get(sourceCardNumber)
+        await page.waitForFunction(imageUrl => [...document.images].some(image =>
+          image.src === imageUrl && image.complete && image.naturalWidth > 0), sourceCardRecord.imageUrl)
+        const originalSourceArt = await page.evaluate(imageUrl => {
+          const image = [...document.images].find(candidate => candidate.src === imageUrl)
+          return image ? { src: image.src, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight } : null
+        }, sourceCardRecord.imageUrl)
+        const sourceDimensions = artDimensions.get(sourceCardNumber)
+        assert.deepEqual([originalSourceArt?.naturalWidth, originalSourceArt?.naturalHeight],
+          [sourceDimensions.width, sourceDimensions.height], `${sourceCardNumber} original art must render at native dimensions`)
+        evidence.sourceArt.push({ cardNumber: sourceCardNumber, ...originalSourceArt })
+      }
 
       if (scenario.flow === 'activate') await activate007(page, evidence, scenario.drawCount)
       else if (scenario.flow === 'high-hand') await highHand007(page, evidence)
       else if (scenario.flow === 'on-play') await deploy008(page, evidence)
       else if (scenario.flow === 'on-play-negative') await noEligibleReturn008(page, evidence)
+      else if (scenario.flow === 'sea-fairy-then') await seaFairyThen(page, evidence, scenario.discardWaveDrop)
       assert.deepEqual(console.errors, [])
       evidence.trace ??= await trace(page)
+      evidence.screenshot = resolve(output, `${scenario.id}-${viewport.width}-PASS.png`)
+      await page.screenshot({ path: evidence.screenshot, fullPage: true })
       evidence.status = 'PASS'
     } catch (error) {
       evidence.error = String(error.stack ?? error)
@@ -337,7 +466,7 @@ try {
 
 const report = {
   generatedAt: new Date().toISOString(),
-  scope: 'ST9-007 and ST9-008 original-card local test-state Browser acceptance through actual payment/target UI, ability timing, return costs, and settlement. ST9-009 is excluded pending a legal positive Sea Fairy hand-to-trash effect path. This is not online or full-match acceptance.',
+  scope: 'ST9-007 through ST9-009 original-card local test-state Browser acceptance through actual payment/target UI, ability timing, printed Then costs, ST9-009 hand-to-trash passive resolution, and settlement. This is not online or full-match acceptance.',
   viewports: activeViewports,
   scenarios: scenariosResult,
 }

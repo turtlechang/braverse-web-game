@@ -2011,6 +2011,8 @@ export interface OptionalCostAttackEffect {
    * 目標驗證，但規則與 UI 都必須拒絕 skip。
    */
   mandatory?: boolean
+  /** Official ruling: this Then discard cost also triggers matching hand-to-trash passives. */
+  discardedHandCardsTriggerPassives?: boolean
   /** The printed condition belongs after the optional cost, so the player may pay even when it will not resolve. */
   payBeforeCondition?: boolean
 }
@@ -3494,6 +3496,7 @@ export interface GameState {
     resolution?: 'attack' | 'ability'
     sourceEnergy?: EnergyCost
     mandatory?: boolean
+    discardedHandCardsTriggerPassives?: boolean
     payBeforeCondition?: boolean
     /** EXTRA 登場前代價結算後要接續實體化的卡片 instance。 */
     extraDeckPlayInstanceId?: string

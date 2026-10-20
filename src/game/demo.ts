@@ -11704,7 +11704,7 @@ export const createCardNegativeDemoState = (
   }
   if (cardNumber === 'ST9-007') return createSt9007To009PreviewState(cardNumber, 'high-hand')
   if (cardNumber === 'ST9-008') return createSt9007To009PreviewState(cardNumber, 'no-eligible-return')
-  if (cardNumber === 'ST9-009') return createSt9007To009PreviewState(cardNumber, 'other-source-trigger')
+  if (cardNumber === 'ST9-009') return createSt9007To009PreviewState(cardNumber, 'sea-fairy-keeps-wave-drop')
   if (cardNumber === 'ST9-004') return createSt9004To006PreviewState(cardNumber, 'insufficient-energy')
   if (cardNumber === 'ST9-005') return createSt9004To006PreviewState(cardNumber, 'no-blue-payment')
   if (cardNumber === 'ST9-006') {

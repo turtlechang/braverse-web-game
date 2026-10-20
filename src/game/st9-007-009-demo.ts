@@ -13,6 +13,7 @@ export type St9007To009Scenario =
   | 'high-hand'
   | 'no-eligible-return'
   | 'sea-fairy-trigger'
+  | 'sea-fairy-keeps-wave-drop'
   | 'other-source-trigger'
 
 const candidateCards = new Map(
