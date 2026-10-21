@@ -29,6 +29,7 @@ describe('ST9-006 original Sea Fairy Cookie printing', () => {
     expect(card.attackEffects).toEqual([{
       kind: 'optional-cost-attack',
       cost: { energy: {}, discardHand: 2 },
+      discardedHandCardsTriggerPassives: true,
       effectText: raw.attackText,
       effects: [{
         kind: 'damage-all', amount: 1, side: 'opponent', sequential: true,

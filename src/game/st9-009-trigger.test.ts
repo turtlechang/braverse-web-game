@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyGameCommand } from './commands'
+import { getCardPoolEntry } from './card-pool'
 import { createSt9007To009PreviewState, rawSt9007To009 } from './st9-007-009-demo'
 import { createCard } from './starter-deck'
 import type { GameState, PlayerId } from './types'
@@ -47,7 +48,7 @@ const withTwoWaveDrops = (state: GameState): GameState => {
 }
 
 describe('ST9-009 Wave Drop hand-to-trash trigger', () => {
-  it('does not treat ST9-006 bracketed discard cost as a Sea Fairy effect', () => {
+  it('triggers Wave Drop from ST9-006 bracketed Then discard cost under the official ruling', () => {
     let state = createSt9007To009PreviewState('ST9-009', 'sea-fairy-trigger')
     const attacker = state.players[owner].battleArea[0]
     expect(attacker?.card.id).toBe('ST9-006')
@@ -59,6 +60,7 @@ describe('ST9-009 Wave Drop hand-to-trash trigger', () => {
     state = settleBaseAttack(state, opponent)
     state = applyGameCommand(state, { kind: 'resolve-attack-effect', playerId: owner, targetIds: [] })
     expect(state.pendingOptionalCostAttack?.cost.discardHand).toBe(2)
+    const handSizeBeforeCost = state.players[owner].hand.length
     const discardIds = [waveDrop.instanceId, state.players[owner].hand[1]!.instanceId]
     state = applyGameCommand(state, {
       kind: 'resolve-optional-cost-attack',
@@ -69,7 +71,96 @@ describe('ST9-009 Wave Drop hand-to-trash trigger', () => {
     })
 
     expect(state.players[owner].discardPile.map(card => card.instanceId)).toContain(waveDrop.instanceId)
+    expect(state.pendingHandToTrashTriggers).toMatchObject([
+      { playerId: owner, sourceInstanceId: waveDrop.instanceId, sourceCardName: 'Wave Drop' },
+    ])
+
+    for (let guard = 0; guard < 8 && state.pendingBattle?.effectDamageSequence; guard += 1) {
+      if (state.pendingBattle.stage === 'damage') {
+        state = applyGameCommand(state, { kind: 'resolve-next-damage', playerId: opponent })
+      } else if (state.pendingBattle.stage === 'flip') {
+        state = applyGameCommand(state, {
+          kind: 'resolve-flip', playerId: opponent, activate: false, discardHandIds: [],
+        })
+      } else {
+        break
+      }
+    }
+    expect(state.pendingAbilityEffect?.sourceInstanceId).toBe(waveDrop.instanceId)
+    state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: owner, targetIds: [] })
+    expect(state.pendingDrawUpTo?.max).toBe(1)
+    state = applyGameCommand(state, { kind: 'resolve-draw-up-to', playerId: owner, drawCount: 1 })
+    expect(state.players[owner].hand).toHaveLength(handSizeBeforeCost - 1)
+    expect(state.players[owner].discardPile.map(card => card.instanceId)).toContain(waveDrop.instanceId)
+  })
+
+  it('does not trigger from the ordinary discard cost of BS2-029 Sea Fairy Cookie', () => {
+    let state = createSt9007To009PreviewState('ST9-009', 'sea-fairy-trigger')
+    const raw = getCardPoolEntry('BS2-029')
+    if (!raw) throw new Error('Original BS2-029 Sea Fairy Cookie is required')
+    const seaFairy = createCard(raw, owner, 1)
+    if (seaFairy.type !== 'cookie') throw new Error('Original Sea Fairy Cookie required')
+    const player = state.players[owner]
+    const previous = player.battleArea[0]!
+    const waveDrop = player.hand.find(card => card.id === 'ST9-009')!
+    expect(seaFairy.name).toBe('Sea Fairy Cookie')
+    expect(seaFairy.skill?.cost?.discardHand).toBe(1)
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        [owner]: {
+          ...player,
+          deck: [...previous.hpCards.slice(seaFairy.hp), ...player.deck],
+          battleArea: [{
+            ...previous,
+            card: seaFairy,
+            hpCards: previous.hpCards.slice(0, seaFairy.hp),
+            battleEntryId: `${seaFairy.instanceId}:entry`,
+          }, ...player.battleArea.slice(1)],
+        },
+      },
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'begin-activate-skill', playerId: owner,
+      sourceInstanceId: seaFairy.instanceId, trigger: 'activate',
+      paymentIds: [], discardHandIds: [waveDrop.instanceId],
+    })
+    expect(state.players[owner].discardPile.map(card => card.instanceId)).toContain(waveDrop.instanceId)
     expect(state.pendingHandToTrashTriggers ?? []).toEqual([])
+    expect(state.pendingAbilityEffect?.sourceInstanceId).not.toBe(waveDrop.instanceId)
+    if (state.pendingAbilityEffect) {
+      state = applyGameCommand(state, { kind: 'resolve-ability-effect', playerId: owner, targetIds: [] })
+    }
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.pendingHandToTrashTriggers ?? []).toEqual([])
+  })
+
+  it('does not trigger when the Sea Fairy Then discards other cards and leaves Wave Drop in hand', () => {
+    let state = createSt9007To009PreviewState('ST9-009', 'sea-fairy-keeps-wave-drop')
+    const attacker = state.players[owner].battleArea[0]
+    expect(attacker?.card.id).toBe('ST9-006')
+    const waveDrop = state.players[owner].hand.find(card => card.id === 'ST9-009')!
+
+    state = attackWith(state, owner)
+    state = applyGameCommand(state, { kind: 'skip-trap', playerId: opponent })
+    state = settleBaseAttack(state, opponent)
+    state = applyGameCommand(state, { kind: 'resolve-attack-effect', playerId: owner, targetIds: [] })
+    const otherHandCards = state.players[owner].hand.filter(card => card.instanceId !== waveDrop.instanceId)
+    expect(otherHandCards.length).toBeGreaterThanOrEqual(2)
+    state = applyGameCommand(state, {
+      kind: 'resolve-optional-cost-attack',
+      playerId: owner,
+      action: 'pay',
+      discardCardIds: otherHandCards.slice(0, 2).map(card => card.instanceId),
+      targetIds: state.players[opponent].battleArea.map(cookie => cookie.card.instanceId),
+    })
+
+    expect(state.players[owner].hand.some(card => card.instanceId === waveDrop.instanceId)).toBe(true)
+    expect(state.players[owner].discardPile.some(card => card.instanceId === waveDrop.instanceId)).toBe(false)
+    expect(state.pendingHandToTrashTriggers ?? []).toEqual([])
+    expect(state.pendingAbilityEffect?.sourceInstanceId).not.toBe(waveDrop.instanceId)
   })
 
   it('does not trigger when a Sea Fairy effect moves Wave Drop to the deck top', () => {

@@ -2817,7 +2817,6 @@ if ((record.baseCardNumber || record.cardNumber.split('@')[0]) === 'ST8-008') {
         !exact(trigger.effects, [{ kind: 'draw-up-to', max: 1 }]) || skill.onPlayEffects?.length) {
       blockers.push('ST9-009 requires original blue Wave Drop LV1/2 HP/B1; its passive draws up to one only when a Sea Fairy Cookie effect moves it from hand to trash')
     }
-    blockers.push('ST9-009 remains needs-review until a real Sea Fairy Cookie effect moves a Cookie from hand to trash; the currently available Sea Fairy hand discards are printed as costs, and no ruling confirms that costs count as effects')
   }
 
   if (cardNumber === 'ST9-012') {
