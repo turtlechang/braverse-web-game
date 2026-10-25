@@ -1758,6 +1758,7 @@ const applyPendingDecisionCommand = (
         command.hpToHandIds ?? [], command.supportToTrashIds ?? [],
         command.positionCostTargetIds ?? [],
         command.cookieToBreakAreaIds ?? [],
+        options.shuffle,
       )
       const triggerContinuation = continuation ?? (state.pendingBattle?.stage === 'attack-effect'
         ? 'attack-effect' as const
@@ -3597,7 +3598,7 @@ const applyPlayerActionCommand = (
         discardHandIds: command.discardHandIds,
         trashToDeckIds: command.trashToDeckIds,
         supportToTrashIds: command.supportToTrashIds,
-      })
+      }, options.shuffle)
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {
         activate: command.activate,

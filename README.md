@@ -193,6 +193,8 @@ ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、
 
 ## 開發背景
 
+戰鬥代價洗牌沿用指令注入的 shuffle，涵蓋 optional attack cost 與攻擊回應的棄牌回牌庫代價，使相同種子及完整指令可重建相同狀態；既有未傳入 shuffle 的直接呼叫保留預設行為。
+
 2026-10-21 ST9 裁定修補：保留 ST9-006 Then 棄牌成本觸發 ST9-009 的專屬例外及 AGENTS 的 BS12 歷史驗收紀錄，移到獨立分支。追加同名 BS2-029 一般成本不觸發的回歸，並加強 ST9 Browser 精確傷害、付款選擇及截圖檢查。
 
 2026-10-18 PR #126 合併後部署驗收追修：驗收腳本從空牌組首頁經「我的牌組」新建與匯入，儲存後確認合法、60 張及選取狀態，再返回首頁進入 AI 對戰；沿用既有卡圖、WebSocket 與錯誤檢查。
@@ -584,6 +586,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+2026-10-26：修補 optional attack cost 與攻擊回應漏接 shuffle 的兩條路徑。以實際 Mangosteen（BS5-094）及 Rambutan（BS5-092）父狀態驗證種子、指定洗牌、輸入不可變與 AI 呼叫；乾淨 HEAD 加上此修補的獨立副本通過 TypeScript 與三檔／16 項回歸。
+
 2026-10-21 ST9 裁定修補重驗：在隔離驗證 worktree 重現原本未排入 Wave Drop 觸發的失敗基線；修補後定向回歸5檔／36項、全域lint、build、`validate:cards`（97檔／2,180卡號／2,124轉換）、registry check，以及ST9-006／009正式strict各1 verified／0 needs-review／0 blocked均通過。Registry首次檢查只因Windows checkout的201處CRLF失敗，確認正規化後內容完全一致，僅在驗證worktree改為LF後重驗通過。正式卡池本機test-state Browser桌機1366×768／平板1164×777共14／14 PASS，涵蓋ST9-006實際攻擊付款、Wave Drop觸發抽1與留在手牌不觸發；公開命令紀錄、精確區域變化與截圖已核對。完整Vitest以`npm test -- --maxWorkers=1`通過1,067檔／21,305項（1,255.26秒、exit0）；`server:typecheck`與`check:bundle`亦通過，隔離worktree沒有追蹤的候選JSON需驗證。本輪未驗證逐卡online或完整對局。原工作區未追蹤檔案不納入提交，下方日期較早的結果屬歷史證據。
 
 2026-10-18 PR #126 已合併，PR 與主線 CI 通過。另確認主線 Production Deployment Browser Validation 因舊選單入口失敗；舊腳本在正式站重現相同逾時後，修補版 `npm run test:deployment:browser` 對 https://braverse-web-game.vercel.app/ 完整 PASS（55.43 秒、卡池 2,180 張、合法 60 張匯入／儲存、實際 WebSocket 與 AI 進場，三類錯誤皆為零），RAM 最高 54.8%。語法與 diff 檢查通過；本機單檔 lint 在 RAM 55.1% 被保護器停止，未取得完成結果，後續 PR CI 的 lint／全套測試／build 仍待確認。本次只變更部署驗收腳本與 README，未重跑產品完整對局。
@@ -873,6 +877,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+後續新增戰鬥洗牌成本時，沿命令與規則 API 傳遞同一個 shuffle 上下文，並保留真實狀態的種子重播及自訂洗牌回歸。
 
 - ST9 裁定修補本機必要驗證已通過；提交後確認 PR head 的 CI，再由審查決定是否合併。PR #127 已合併；test-state、正式完整對局與逐卡 online 的驗收界線維持。
 

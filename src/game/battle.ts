@@ -1261,6 +1261,7 @@ export const playAttackResponseSkill = (
   state: GameState,
   playerId: PlayerId,
   options: PlayAttackResponseSkillOptions,
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   const battle = requirePendingBattle(state)
   if (hasPendingCardResolution({ ...state, pendingBattle: null })) {
@@ -1351,7 +1352,7 @@ export const playAttackResponseSkill = (
       ...trashedSupportCards,
     ],
     deck: trashToDeckCost
-      ? defaultShuffle([...player.deck, ...trashToDeckCards])
+      ? shuffle([...player.deck, ...trashToDeckCards])
       : player.deck,
   }
 
@@ -3703,6 +3704,7 @@ export const resolveOptionalCostAttack = (
   supportToTrashIds: string[] = [],
   positionCostTargetIds: string[] = [],
   cookieToBreakAreaIds: string[] = [],
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -4199,7 +4201,7 @@ export const resolveOptionalCostAttack = (
     nextState = executeCardEffect(nextState, context, {
       kind: 'trash-to-deck', min: trashToDeckBottomCost.count, max: trashToDeckBottomCost.count,
       cookieOnly: trashToDeckBottomCost.cookieOnly, nonCookieOnly: trashToDeckBottomCost.nonCookieOnly, destination: 'bottom',
-    }, uniqueTrashToDeckIds)
+    }, uniqueTrashToDeckIds, shuffle)
   } else if (trashToDeckCost) {
     nextState = executeCardEffect(
       nextState,
@@ -4215,6 +4217,7 @@ export const resolveOptionalCostAttack = (
         nonCookieOnly: trashToDeckCost.nonCookieOnly,
       },
       uniqueTrashToDeckIds,
+      shuffle,
     )
   }
 
@@ -4298,7 +4301,7 @@ export const resolveOptionalCostAttack = (
         ? targetIds
         : []
     if (needsPlayerTarget) usedSubmittedTargets = true
-    nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    nextState = executeCardEffect(nextState, context, effect, effectTargetIds, shuffle)
     if (nextState.pendingDrawUpTo?.sourceInstanceId === pending.sourceInstanceId &&
       nextState.pendingDrawUpTo.sourcePlayerId === playerId) {
       nextState = {...nextState, pendingDrawUpTo: {...nextState.pendingDrawUpTo, effectText: pending.effectText}}
