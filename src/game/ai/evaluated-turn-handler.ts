@@ -1,9 +1,10 @@
-import { applyGameCommand, type AttackCommand, type PlayerActionCommand } from '../commands'
+import { applyGameCommand, hasActiveEffectOrder, type AttackCommand, type PlayerActionCommand } from '../commands'
 import { getStageActivationSource } from '../card-abilities'
 import { createPublicAttackAllocationForecast } from './attack-allocation'
 import { forecastPublicAttackAftereffectValue } from './optional-attack-aftereffect'
 import { forecastPublicSupportReentry } from './support-reentry-followup'
-import { getAttackDamageAgainst } from '../effects'
+import { getAttackDamageAgainst, isOpponentDamagePrevented } from '../effects'
+import { previewMandatoryExtraState } from './mandatory-extra-preview'
 import { getCookieEffectiveLevel } from '../helpers'
 import { getLegalTurnCommands } from '../legal-actions'
 import { canActivateCookieSkill, getActivatableSkillSources } from '../skills'
@@ -30,6 +31,7 @@ import {
 import {
   createKnowledgeStateFromPlayerView,
   synchronizeKnowledgeWithPlayerView,
+  type KnowledgeState,
 } from './strategy/knowledge-state'
 import {
   DEFAULT_LV4_SEARCH_OPTIONS,
@@ -1215,6 +1217,56 @@ export const responseRiskPenalty = (
   return penalty
 }
 
+const hasKnownBlueComposition = (state: GameState, playerId: PlayerId): boolean => {
+  const own = state.players[playerId]
+  const known = [...own.hand, ...own.battleArea.map(cookie => cookie.card),
+    ...own.supportArea.map(support => support.card), ...own.breakArea,
+    ...own.discardPile, ...(own.stage ? [own.stage.card] : [])]
+  const colors = known.flatMap(card => {
+    const color = card.cardColor ?? card.energyColor
+    return color === undefined ? [] : [color]
+  })
+  return colors.length >= 3 && colors.filter(color => color === 'blue').length / colors.length >= 0.6
+}
+
+const previewBlueExtraAttackState = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+  knowledgeState?: KnowledgeState,
+): GameState | null => {
+  if (command.kind !== 'play-extra-deck-cookie' ||
+      state.pendingOptionalCostAttack?.extraDeckPlayInstanceId !== command.instanceId) return null
+  const paid = previewMandatoryExtraState(state, playerId, knowledgeState, { requireAttackPayment: true })
+  return paid && !hasBlockingPending(paid) && !hasActiveEffectOrder(paid) &&
+    getLegalTurnCommands(paid, playerId).some(candidate =>
+      candidate.kind === 'attack' && candidate.attackerInstanceId === command.instanceId) ? paid : null
+}
+
+export const forecastPaidExtraAttack = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+  knowledgeState?: KnowledgeState,
+  before?: GameState,
+): ActionScoreBreakdown['contributions'][number] | null => {
+  if (command.kind !== 'play-extra-deck-cookie') return null
+  const paid = previewBlueExtraAttackState(state, playerId, command, knowledgeState)
+  if (!paid) return null
+  const bestAttack = (candidateState: GameState, attackerId?: string) =>
+    getLegalTurnCommands(candidateState, playerId).reduce((best, attack) => {
+      if (attack.kind !== 'attack' || (attackerId && attack.attackerInstanceId !== attackerId) ||
+          isOpponentDamagePrevented(candidateState, attack.targetInstanceId, playerId)) return best
+      return Math.max(best, attackBonus(candidateState, playerId, attack) + lethalDetectionBonus(candidateState, playerId, attack))
+    }, 0)
+  const prior = before ? bestAttack(maskGameStateForViewer(before, playerId)) : 0
+  const amount = Math.min(120, Math.max(0, bestAttack(paid, command.instanceId) - prior))
+  return amount > 0 ? {
+    id: 'on-play-followup', amount,
+    detail: '強制 EXTRA 付款後首次普通攻擊相對現有可支付攻擊的增量；未執行攻擊、陷阱、FLIP 或 Then。',
+  } : null
+}
+
 const isLv4SearchTerminal = (
   state: GameState,
   playerId: PlayerId,
@@ -1342,6 +1394,13 @@ export const handleAiTwoPlyTurnState = (
       ),
     applyCommand: applyChosenTurnCommand,
     createPlayerView,
+    previewMandatoryExtraView: decisionLevel === 5 && state.phase === 'main'
+      ? (before, after, nextPlayerId, command) => {
+          if (command.kind !== 'play-extra-deck-cookie' || !hasKnownBlueComposition(before, nextPlayerId)) return null
+          const paid = previewBlueExtraAttackState(after, nextPlayerId, command, knowledgeState)
+          return paid ? createPlayerView(paid, nextPlayerId) : null
+        }
+      : undefined,
     scorePublicView: (view: PlayerView) =>
       evaluatePlayerView(view) + lv4RiskBonus(view, playerId),
     legacyStepBonus: (
@@ -1384,8 +1443,13 @@ export const handleAiTwoPlyTurnState = (
       : undefined,
     strictComboActionability: decisionLevel === 5,
     onPlayFollowup: decisionLevel === 5
-      ? (after, nextPlayerId, command, before) =>
-          forecastOnPlayFollowup(after, nextPlayerId, command, strategy.resolveSkill, before)
+      ? (after, nextPlayerId, command, before) => {
+          if (state.phase === 'main' && before && command.kind === 'play-extra-deck-cookie' &&
+              hasKnownBlueComposition(before, nextPlayerId)) {
+            return forecastPaidExtraAttack(after, nextPlayerId, command, knowledgeState, before)
+          }
+          return forecastOnPlayFollowup(after, nextPlayerId, command, strategy.resolveSkill, before)
+        }
       : undefined,
     supportCostFollowup: decisionLevel >= 4
       ? (before, after, nextPlayerId, command) =>

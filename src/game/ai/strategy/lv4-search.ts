@@ -65,6 +65,12 @@ export interface Lv4SearchHooks {
     command: PlayerActionCommand,
   ) => GameState
   createPlayerView: (state: GameState, playerId: PlayerId) => PlayerView
+  previewMandatoryExtraView?: (
+    before: GameState,
+    after: GameState,
+    playerId: PlayerId,
+    command: PlayerActionCommand,
+  ) => PlayerView | null
   /** 僅以 PlayerView 給出公開盤面值。 */
   scorePublicView: (view: PlayerView) => number
   /** 保留 R8～R11／既有風險修正；不得讀取隱藏卡面。 */
@@ -478,8 +484,9 @@ export const searchLv4Commands = (
 
         try {
           const afterState = hooks.applyCommand(node.state, command)
-          const afterView = hooks.createPlayerView(afterState, playerId)
-          const afterIsSafeToExpand = canSafelyExpand(node.view, afterView)
+          const preview = hooks.previewMandatoryExtraView?.(node.state, afterState, playerId, command)
+          const afterView = preview ?? hooks.createPlayerView(afterState, playerId)
+          const afterIsSafeToExpand = !preview && canSafelyExpand(node.view, afterView)
           // 抽到原先未知的己方手牌後，不在搜尋中列舉下一步；這同時避免把
           // 尚未得知的卡誤標成已可兌現的 payoff。
           const afterCommands = afterIsSafeToExpand

@@ -193,7 +193,15 @@ ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、
 
 ## 開發背景
 
+GitHub Actions 將 `ubuntu-latest` 切至 Ubuntu 26.04 後，Playwright 1.60.0 在 Browser Smoke 的 Chromium 安裝步驟失敗，瀏覽器測試未啟動。
+
+藍色競技場實戰覆盤發現，Lv.5 搜尋會在強制棄手牌的 EXTRA 仍待付款時評估盤面，因而看不到實際登場後可支付的攻擊。
+
+2026-11-05：以使用者匯出的第四場正式離線紀錄覆盤競技場綠（TeaCatChi）對社群藍色 Sea Build，分開記錄實戰、有限替代分支與介面待查事項，詳見[第四場覆盤](docs/teacatchi-sea-build-replay-review-2026-11-05.md)。
+
 2026-10-30：藍紫 AI r14～r17 的開發、獨立對照與技術驗證分開記錄；未通過勝率或各色護欄的候選保留於工作目錄。文件提交不代表候選程式採用或正式部署，詳見[藍紫 AI 報告](docs/ai-blue-purple-vs-black-2026-10-29.md)。
+
+戰鬥代價洗牌沿用指令注入的 shuffle，涵蓋 optional attack cost 與攻擊回應的棄牌回牌庫代價，使相同種子及完整指令可重建相同狀態；既有未傳入 shuffle 的直接呼叫保留預設行為。
 
 2026-10-21 ST9 裁定修補：保留 ST9-006 Then 棄牌成本觸發 ST9-009 的專屬例外及 AGENTS 的 BS12 歷史驗收紀錄，移到獨立分支。追加同名 BS2-029 一般成本不觸發的回歸，並加強 ST9 Browser 精確傷害、付款選擇及截圖檢查。
 
@@ -586,7 +594,15 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+Browser Smoke 的 Playwright 工作固定使用 Ubuntu 24.04；仍會跑離線 AI、牌組編輯與好友房同步的原有煙霧測試，PR Gate 維持原有通過條件。
+
+Lv.5 以遮蔽後的玩家視角和正式規則指令預測藍色 EXTRA 付款。若遇到可能 Refresh、仍有待處理效果或無法合法宣告的攻擊，便跳過預測。測試使用正式離線對局衍生的遮蔽局面。 隔離版本完整 Vitest 1,070 檔／21,321 項、lint、build 與 AI Browser 煙霧檢查 6／6 均通過。
+
+2026-11-05：第四場 251 筆指令完整重播與匯出終局一致，T17 我方勝利、Break 6：10；Mystic 四次移除共 15 張 HP 卡。T17 不解凍仍獲勝的省牌分支已驗證，Broken Seal 第二段選擇介面尚待重現。這是含既有未提交修改的本機對局證據，本次只提交[覆盤文件](docs/teacatchi-sea-build-replay-review-2026-11-05.md)。
+
 2026-10-30 工作區候選驗證紀錄：紫色噴牌續作涵蓋正式 BS1～BS12／P 的 375 筆印刷、272 個去重卡號，修正己方／對手棄牌資源混用、終盤干擾與 EXTRA 順序，以及對手待棄牌中斷搜尋的估值；另依原圖修復 P-135 錯加 2HP 技能費用，雙尺寸本機 UI 已驗發動／取消／Once 阻擋。新版 115 項定向、333 項模型／技能護欄、lint／build／AI Browser smoke 通過；最新版完整 Vitest 1,140 檔／22,195 項通過，Node 原生測試仍有既有 bundle gzip 預算失敗。全新必要對照 148 組／444 場完整重播：BS9 噴牌三版本均 29／120，P 測試構築 5→6→6／28，未建立 AI 增勝；舊黑色反向護欄仍轉敗。候選未通過，其他新矩陣未開封，本次僅提交驗證文件；未採用的程式碼與產物保留於工作目錄。詳見[藍紫 AI 報告](docs/ai-blue-purple-vs-black-2026-10-29.md)。
+
+2026-10-26：修補 optional attack cost 與攻擊回應漏接 shuffle 的兩條路徑。以實際 Mangosteen（BS5-094）及 Rambutan（BS5-092）父狀態驗證種子、指定洗牌、輸入不可變與 AI 呼叫；乾淨 HEAD 加上此修補的獨立副本通過 TypeScript 與三檔／16 項回歸。
 
 2026-10-21 ST9 裁定修補重驗：在隔離驗證 worktree 重現原本未排入 Wave Drop 觸發的失敗基線；修補後定向回歸5檔／36項、全域lint、build、`validate:cards`（97檔／2,180卡號／2,124轉換）、registry check，以及ST9-006／009正式strict各1 verified／0 needs-review／0 blocked均通過。Registry首次檢查只因Windows checkout的201處CRLF失敗，確認正規化後內容完全一致，僅在驗證worktree改為LF後重驗通過。正式卡池本機test-state Browser桌機1366×768／平板1164×777共14／14 PASS，涵蓋ST9-006實際攻擊付款、Wave Drop觸發抽1與留在手牌不觸發；公開命令紀錄、精確區域變化與截圖已核對。完整Vitest以`npm test -- --maxWorkers=1`通過1,067檔／21,305項（1,255.26秒、exit0）；`server:typecheck`與`check:bundle`亦通過，隔離worktree沒有追蹤的候選JSON需驗證。本輪未驗證逐卡online或完整對局。原工作區未追蹤檔案不納入提交，下方日期較早的結果屬歷史證據。
 
@@ -878,7 +894,15 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
+升級 Playwright 時，先驗證新版能在 Ubuntu 26.04 安裝 Chromium 並完成完整 Browser Smoke，再評估解除 runner 版本固定。
+
+使用全新種子對照五色整局勝率，排除已記錄及可重建的 seed。部分歷史對局未留下可重建的 seed，與這些歷史樣本的獨立性仍無法證明。
+
+2026-11-05：依第四場真實父局面另行重現 Broken Seal 第二段支援選擇，並檢查 AI 同名 Tearcrown 替換的評分與支援機會成本；目前僅記錄疑點，尚未修正或宣稱可提升勝率。
+
 2026-10-30：先用已開封資料診斷 BS9 噴牌對黑與黑色反向護欄的差異，再封存下一候選與新種子；保留綠色 v36.3 及各色直接／反向護欄。已開封樣本不重標為新效益，採用前須完成整批門檻及既有 bundle 預算問題。
+
+後續新增戰鬥洗牌成本時，沿命令與規則 API 傳遞同一個 shuffle 上下文，並保留真實狀態的種子重播及自訂洗牌回歸。
 
 - ST9 裁定修補本機必要驗證已通過；提交後確認 PR head 的 CI，再由審查決定是否合併。PR #127 已合併；test-state、正式完整對局與逐卡 online 的驗收界線維持。
 
