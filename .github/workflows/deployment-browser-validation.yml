@@ -32,7 +32,8 @@ jobs:
       (github.event.deployment_status.state == 'success' &&
       (github.event.deployment.environment == 'Preview' ||
       github.event.deployment.environment == 'Production'))
-    runs-on: ubuntu-latest
+    # Playwright 1.60.0 cannot install Chromium on Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - id: trust
