@@ -193,6 +193,8 @@ ST6-006續批：原圖重讀、strict verified=1、候選Chrome雙尺寸18案、
 
 ## 開發背景
 
+GitHub Actions 將 `ubuntu-latest` 切至 Ubuntu 26.04 後，Playwright 1.60.0 在 Browser Smoke 的 Chromium 安裝步驟失敗，瀏覽器測試未啟動。
+
 藍色競技場實戰覆盤發現，Lv.5 搜尋會在強制棄手牌的 EXTRA 仍待付款時評估盤面，因而看不到實際登場後可支付的攻擊。
 
 2026-11-05：以使用者匯出的第四場正式離線紀錄覆盤競技場綠（TeaCatChi）對社群藍色 Sea Build，分開記錄實戰、有限替代分支與介面待查事項，詳見[第四場覆盤](docs/teacatchi-sea-build-replay-review-2026-11-05.md)。
@@ -592,6 +594,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+Browser Smoke 的 Playwright 工作固定使用 Ubuntu 24.04；仍會跑離線 AI、牌組編輯與好友房同步的原有煙霧測試，PR Gate 維持原有通過條件。
+
 Lv.5 以遮蔽後的玩家視角和正式規則指令預測藍色 EXTRA 付款。若遇到可能 Refresh、仍有待處理效果或無法合法宣告的攻擊，便跳過預測。測試使用正式離線對局衍生的遮蔽局面。 隔離版本完整 Vitest 1,070 檔／21,321 項、lint、build 與 AI Browser 煙霧檢查 6／6 均通過。
 
 2026-11-05：第四場 251 筆指令完整重播與匯出終局一致，T17 我方勝利、Break 6：10；Mystic 四次移除共 15 張 HP 卡。T17 不解凍仍獲勝的省牌分支已驗證，Broken Seal 第二段選擇介面尚待重現。這是含既有未提交修改的本機對局證據，本次只提交[覆盤文件](docs/teacatchi-sea-build-replay-review-2026-11-05.md)。
@@ -889,6 +893,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+升級 Playwright 時，先驗證新版能在 Ubuntu 26.04 安裝 Chromium 並完成完整 Browser Smoke，再評估解除 runner 版本固定。
 
 使用全新種子對照五色整局勝率，排除已記錄及可重建的 seed。部分歷史對局未留下可重建的 seed，與這些歷史樣本的獨立性仍無法證明。
 
